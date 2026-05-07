@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(which node *)",
+      "Read(//c/Users/sethp/AppData/Roaming/npm/**)"
+    ]
+  }
+}

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TikTok PvP Stats</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    header h1 { font-size: 26px; color: #FFD93D; letter-spacing: 1px; }
+    header p  { font-size: 13px; color: #888; margin-top: 4px; }
+
+    .columns {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .col { background: rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; }
+
+    .col-header {
+      padding: 14px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .col-header.kills  { background: rgba(255,107,107,0.25); color: #FF6B6B; }
+    .col-header.hp     { background: rgba(107,203,119,0.25); color: #6BCB77; }
+    .col-header.str    { background: rgba(77,150,255,0.25);  color: #4D96FF; }
+
+    .col-body { padding: 8px 0; }
+
+    .row {
+      display: flex;
+      align-items: center;
+      padding: 8px 16px;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      transition: background 0.2s;
+    }
+    .row:last-child { border-bottom: none; }
+    .row:hover { background: rgba(255,255,255,0.04); }
+
+    .rank {
+      font-size: 12px;
+      font-weight: 700;
+      color: #555;
+      width: 20px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .rank.gold   { color: #FFD700; }
+    .rank.silver { color: #C0C0C0; }
+    .rank.bronze { color: #CD7F32; }
+
+    .alive-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .alive-dot.alive { background: #6BCB77; box-shadow: 0 0 4px #6BCB77; }
+    .alive-dot.dead  { background: #555; }
+
+    .name {
+      flex: 1;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: #ddd;
+    }
+
+    .value {
+      font-size: 14px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .col-header.kills  ~ .col-body .value { color: #FF6B6B; }
+    .col-header.hp     ~ .col-body .value { color: #6BCB77; }
+    .col-header.str    ~ .col-body .value { color: #4D96FF; }
+
+    /* Override specificity with explicit classes */
+    .value.kills-val { color: #FF6B6B; }
+    .value.hp-val    { color: #6BCB77; }
+    .value.str-val   { color: #4D96FF; }
+
+    .empty { padding: 20px 16px; color: #555; font-size: 13px; text-align: center; }
+
+    #conn {
+      position: fixed;
+      top: 10px; right: 14px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+    }
+  </style>
+</head>
+<body>
+  <div id="conn">Connecting...</div>
+
+  <header>
+    <h1>🏆 Battle Leaderboard</h1>
+    <p id="subtitle">Loading...</p>
+  </header>
+
+  <div class="columns">
+    <div class="col">
+      <div class="col-header kills">☠️ Top Kills</div>
+      <div class="col-body" id="kills-list"><div class="empty">No data</div></div>
+    </div>
+    <div class="col">
+      <div class="col-header hp">❤️ Most HP</div>
+      <div class="col-body" id="hp-list"><div class="empty">No data</div></div>
+    </div>
+    <div class="col">
+      <div class="col-header str">⚔️ Highest Strength</div>
+      <div class="col-body" id="str-list"><div class="empty">No data</div></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+  <script>
+    let players = {};
+
+    const socket = io('http://localhost:3000');
+    socket.on('connect',    () => { document.getElementById('conn').textContent = '🔴 LIVE'; });
+    socket.on('disconnect', () => { document.getElementById('conn').textContent = 'Reconnecting...'; });
+    socket.on('gameState',  (state) => { players = state; render(); });
+
+    const RANK_CLASS = ['gold', 'silver', 'bronze'];
+
+    function buildRow(p, i, valueKey, valueCls) {
+      const rk = document.createElement('div');
+      rk.className = 'row';
+
+      const rank = document.createElement('span');
+      rank.className = 'rank ' + (RANK_CLASS[i] || '');
+      rank.textContent = i + 1;
+
+      const dot = document.createElement('span');
+      dot.className = 'alive-dot ' + (p.alive ? 'alive' : 'dead');
+
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.title = p.nickname;
+      name.textContent = p.nickname.slice(0, 18);
+
+      const val = document.createElement('span');
+      val.className = 'value ' + valueCls;
+      val.textContent = p[valueKey];
+
+      rk.append(rank, dot, name, val);
+      return rk;
+    }
+
+    function fillList(id, sorted, valueKey, valueCls) {
+      const el = document.getElementById(id);
+      el.innerHTML = '';
+      if (sorted.length === 0) {
+        el.innerHTML = '<div class="empty">No players yet</div>';
+        return;
+      }
+      sorted.forEach((p, i) => el.appendChild(buildRow(p, i, valueKey, valueCls)));
+    }
+
+    function render() {
+      const list = Object.values(players);
+      const alive = list.filter(p => p.alive).length;
+      document.getElementById('subtitle').textContent =
+        `${list.length} total players · ${alive} alive`;
+
+      fillList(
+        'kills-list',
+        [...list].sort((a, b) => b.kills - a.kills || b.maxHp - a.maxHp).slice(0, 10),
+        'kills', 'kills-val'
+      );
+      fillList(
+        'hp-list',
+        [...list].sort((a, b) => b.maxHp - a.maxHp || b.kills - a.kills).slice(0, 10),
+        'maxHp', 'hp-val'
+      );
+      fillList(
+        'str-list',
+        [...list].sort((a, b) => b.strength - a.strength || b.kills - a.kills).slice(0, 10),
+        'strength', 'str-val'
+      );
+    }
+  </script>
+</body>
+</html>

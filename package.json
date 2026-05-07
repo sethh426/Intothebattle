@@ -1,0 +1,17 @@
+{
+  "name": "tiktok-pvp-battle",
+  "version": "1.0.0",
+  "description": "TikTok LIVE PvP Battle Game",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@tiktool/live": "latest",
+    "dotenv": "^17.4.2",
+    "express": "^4.18.2",
+    "multer": "^2.1.1",
+    "socket.io": "^4.7.5"
+  }
+}

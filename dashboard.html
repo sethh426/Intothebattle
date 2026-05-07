@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TikTok PvP Control Dashboard</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #fff;
+      margin: 0;
+      padding: 24px;
+      min-height: 100vh;
+    }
+    h1 { font-size: 22px; margin-bottom: 24px; color: #FFD93D; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      max-width: 700px;
+    }
+    .card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 20px;
+    }
+    .card h2 { font-size: 14px; color: #aaa; margin-bottom: 14px; text-transform: uppercase; letter-spacing: 1px; }
+
+    label { display: block; font-size: 13px; color: #ccc; margin-bottom: 6px; }
+    input[type="text"], input[type="file"] {
+      width: 100%;
+      padding: 9px 12px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      color: #fff;
+      font-size: 14px;
+      margin-bottom: 12px;
+    }
+    input[type="text"]:focus, input[type="file"]:focus { outline: none; border-color: #4D96FF; }
+    input[type="file"]::file-selector-button {
+      background: #4D96FF;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+    input[type="file"]::file-selector-button:hover { opacity: 0.85; }
+
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      flex: 1;
+      padding: 10px 14px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      min-width: 100px;
+    }
+    button:hover { opacity: 0.85; }
+    .btn-green  { background: #6BCB77; color: #000; }
+    .btn-red    { background: #FF6B6B; color: #fff; }
+    .btn-blue   { background: #4D96FF; color: #fff; }
+    .btn-yellow { background: #FFD93D; color: #000; }
+    .btn-gray   { background: rgba(255,255,255,0.15); color: #fff; }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #555;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .dot.green  { background: #6BCB77; box-shadow: 0 0 6px #6BCB77; }
+    .dot.red    { background: #FF6B6B; }
+    .dot.yellow { background: #FFD93D; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    .stat { font-size: 22px; font-weight: 700; color: #FFD93D; }
+    .stat-label { font-size: 12px; color: #888; margin-top: 2px; }
+
+    .links { margin-top: 20px; max-width: 700px; }
+    .links a {
+      display: inline-block;
+      margin-right: 16px;
+      color: #4D96FF;
+      text-decoration: none;
+      font-size: 13px;
+    }
+    .links a:hover { text-decoration: underline; }
+
+    #toast {
+      position: fixed; bottom: 20px; right: 20px;
+      background: #333; color: #fff;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    #toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <h1>🎮 TikTok PvP Control Dashboard</h1>
+
+  <div class="grid">
+
+    <!-- TikTok Connection -->
+    <div class="card">
+      <h2>TikTok LIVE</h2>
+      <div class="status-row">
+        <div class="dot" id="tiktok-dot"></div>
+        <span id="tiktok-label">Disconnected</span>
+      </div>
+      <label for="username">Username</label>
+      <input type="text" id="username" placeholder="@tiktok_username">
+      <div class="btn-row">
+        <button class="btn-green" onclick="connect()">Connect</button>
+        <button class="btn-red"   onclick="resetTikTok()">Disconnect</button>
+      </div>
+    </div>
+
+    <!-- Overlay Status -->
+    <div class="card">
+      <h2>Overlay</h2>
+      <div class="status-row">
+        <div class="dot" id="overlay-dot"></div>
+        <span id="overlay-label">No overlay connected</span>
+      </div>
+      <div class="status-row" style="margin-top:6px">
+        <span style="color:#aaa; font-size:12px">Active players:</span>
+        <span id="player-count" style="margin-left:6px; font-weight:700; color:#FFD93D">—</span>
+      </div>
+      <div class="btn-row" style="margin-top:12px">
+        <button class="btn-blue"   onclick="reloadOverlay()">↺ Reload Overlay</button>
+        <button class="btn-gray"   onclick="clearPlayers()">🗑 Clear Players</button>
+      </div>
+    </div>
+
+    <!-- Background Upload -->
+    <div class="card">
+      <h2>Background</h2>
+      <label for="bgUpload">Upload Image</label>
+      <input type="file" id="bgUpload" name="background" accept="image/*">
+      <div class="btn-row">
+        <button class="btn-blue" onclick="uploadBackground()">Upload BG</button>
+        <button class="btn-yellow" onclick="clearBackground()">Clear BG</button>
+      </div>
+      <div style="margin-top:12px; font-size:12px; color:#aaa;">
+        <div id="bgStatus">No background set</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="links">
+    <a href="/overlay.html" target="_blank">↗ Open Overlay</a>
+    <a href="/stats"        target="_blank">↗ Open Stats</a>
+    <a href="/state"        target="_blank">↗ Raw State JSON</a>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+  <script>
+    const socket = io('http://localhost:3000');
+
+    socket.on('overlayCount', (count) => {
+      setOverlayStatus(count);
+    });
+    socket.on('gameState', (state) => {
+      const alive = Object.values(state).filter(p => p.alive).length;
+      document.getElementById('player-count').textContent = alive;
+    });
+
+    function setOverlayStatus(count) {
+      const dot   = document.getElementById('overlay-dot');
+      const label = document.getElementById('overlay-label');
+      if (count > 0) {
+        dot.className   = 'dot green';
+        label.textContent = `Connected (${count} source${count > 1 ? 's' : ''})`;
+      } else {
+        dot.className   = 'dot red';
+        label.textContent = 'No overlay connected';
+      }
+    }
+
+    function setTikTokStatus(state, username) {
+      const dot   = document.getElementById('tiktok-dot');
+      const label = document.getElementById('tiktok-label');
+      if (state === 'connected') {
+        dot.className   = 'dot green';
+        label.textContent = `Connected to @${username}`;
+      } else if (state === 'connecting') {
+        dot.className   = 'dot yellow';
+        label.textContent = 'Connecting...';
+      } else {
+        dot.className   = 'dot red';
+        label.textContent = 'Disconnected';
+      }
+    }
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    function connect() {
+      const username = document.getElementById('username').value.trim().replace(/^@/, '');
+      if (!username) { toast('Enter a username first'); return; }
+      setTikTokStatus('connecting', username);
+      fetch('/api/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          setTikTokStatus('connected', username);
+          toast('Connected to @' + username);
+        } else {
+          setTikTokStatus('disconnected');
+          toast('Error: ' + (d.error || 'Unknown'));
+        }
+      })
+      .catch(() => { setTikTokStatus('disconnected'); toast('Connection failed'); });
+    }
+
+    function resetTikTok() {
+      fetch('/api/reset', { method: 'POST' })
+        .then(() => { setTikTokStatus('disconnected'); toast('TikTok disconnected'); })
+        .catch(() => toast('Reset failed'));
+    }
+
+    function reloadOverlay() {
+      fetch('/api/overlay/reload', { method: 'POST' })
+        .then(() => toast('Reload signal sent to overlay'))
+        .catch(() => toast('Failed to send reload'));
+    }
+
+    function clearPlayers() {
+      if (!confirm('Remove all active players from the overlay?')) return;
+      fetch('/api/players/clear', { method: 'POST' })
+        .then(() => toast('Players cleared'))
+        .catch(() => toast('Failed to clear players'));
+    }
+
+    function uploadBackground() {
+      const file = document.getElementById('bgUpload').files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('background', file);
+      fetch('/api/background/upload', { method: 'POST', body: formData })
+        .then(async r => {
+          const text = await r.text();
+          try {
+            const d = JSON.parse(text);
+            return d;
+          } catch (e) {
+            throw new Error('Invalid JSON response: ' + text.slice(0, 200));
+          }
+        })
+        .then(d => {
+          if (d.success) {
+            toast('Background uploaded!');
+            document.getElementById('bgStatus').textContent = '✅ Background set: ' + file.name;
+          } else {
+            toast('Error: ' + (d.error || 'Unknown'));
+          }
+        })
+        .catch(err => toast('Upload failed: ' + err.message));
+    }
+
+    function clearBackground() {
+      fetch('/api/background/clear', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+          if (d.success) {
+            toast('Background cleared');
+            document.getElementById('bgStatus').textContent = 'No background set';
+            document.getElementById('bgUpload').value = '';
+          } else {
+            toast('Error: ' + (d.error || 'Unknown'));
+          }
+        })
+        .catch(() => toast('Clear failed'));
+    }
+
+    // Load initial status
+    fetch('/api/status')
+      .then(r => r.json())
+      .then(d => {
+        if (d.username) document.getElementById('username').value = d.username;
+        setTikTokStatus(d.connected ? 'connected' : 'disconnected', d.username);
+        setOverlayStatus(d.overlayCount || 0);
+        document.getElementById('player-count').textContent = d.playerCount ?? '—';
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>
