@@ -7,7 +7,7 @@
 <title>PvP Battle Overlay</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  
+
   html, body {
     width: 100%;
     height: 100%;
@@ -20,7 +20,6 @@
     background: linear-gradient(135deg, #b8f2b8 0%, #88d688 50%, #9be99b 100%);
   }
 
-  /* Canvas */
   #canvas {
     position: absolute;
     top: 0;
@@ -30,7 +29,6 @@
     display: block;
   }
 
-  /* UI Container */
   .ui {
     position: absolute;
     inset: 0;
@@ -38,7 +36,6 @@
     z-index: 100;
   }
 
-  /* Panels */
   .panel {
     position: absolute;
     background: rgba(8, 12, 24, 0.85);
@@ -51,7 +48,6 @@
     color: #fff;
   }
 
-  /* Bottom Left - Status */
   .status {
     bottom: 12px;
     left: 12px;
@@ -101,12 +97,11 @@
     50% { opacity: 0.5; }
   }
 
-  /* Top Right - Leaderboard */
   .leaderboard {
     top: 12px;
     right: 12px;
-    width: 260px;
-    max-height: 280px;
+    width: 280px;
+    max-height: 220px;
   }
 
   .board-title {
@@ -169,7 +164,6 @@
     text-align: right;
   }
 
-  /* Bottom - Event Log */
   .eventlog {
     right: 12px;
     bottom: 12px;
@@ -178,13 +172,6 @@
     max-height: 120px;
     overflow-y: auto;
     overflow-x: hidden;
-  }
-
-  .leaderboard {
-    top: 12px;
-    right: 12px;
-    width: 280px;
-    max-height: 220px;
   }
 
   .controls {
@@ -219,7 +206,7 @@
   }
 
   .controls.hidden {
-    display: none;
+    opacity: 0.15;
   }
 
   .control-row {
@@ -279,7 +266,6 @@
     color: #ffe6cc;
   }
 
-  /* Scrollbar */
   .eventlog::-webkit-scrollbar {
     width: 6px;
   }
@@ -289,7 +275,6 @@
     border-radius: 3px;
   }
 
-  /* Damage Numbers */
   .dmg-number {
     position: absolute;
     font-size: 32px;
@@ -343,6 +328,7 @@
     <div class="log-title">⚔️ Events</div>
     <div id="eventlog"></div>
   </div>
+
   <div class="panel controls" id="layoutControls">
     <div class="controls-title">
       <span>⚙️ Layout Controls</span>
@@ -358,11 +344,15 @@
       <input id="gapYControl" type="range" min="100" max="1000" step="10" value="260" />
       <span id="gapYValue">260</span>
     </label>
-  </div></div>
+  </div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
 <script>
 let players = {};
+const lastPlayerPositions = {};
+let backgroundImg = null;
+
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
@@ -372,6 +362,7 @@ const gapXValue = document.getElementById('gapXValue');
 const gapYValue = document.getElementById('gapYValue');
 const toggleControls = document.getElementById('toggleControls');
 const layoutControls = document.getElementById('layoutControls');
+
 let layoutGapX = gapXControl ? Number(gapXControl.value) : 150;
 let layoutGapY = gapYControl ? Number(gapYControl.value) : 260;
 
@@ -403,13 +394,15 @@ if (toggleControls && layoutControls) {
 
 syncGapLabels();
 
-// Setup canvas
 function setupCanvas() {
   const dpr = window.devicePixelRatio || 1;
+
   canvas.width = window.innerWidth * dpr;
   canvas.height = window.innerHeight * dpr;
+
   canvas.style.width = window.innerWidth + 'px';
   canvas.style.height = window.innerHeight + 'px';
+
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
@@ -422,20 +415,23 @@ function getTopPlayers(count = 20) {
     .sort((a, b) => {
       const aForce = a.forceSpawn ? 1 : 0;
       const bForce = b.forceSpawn ? 1 : 0;
+
       if (aForce !== bForce) return bForce - aForce;
 
       const aHp = a.hp != null ? a.hp : (a.maxHp || 0);
       const bHp = b.hp != null ? b.hp : (b.maxHp || 0);
       const hpDiff = bHp - aHp;
+
       if (hpDiff !== 0) return hpDiff;
+
       const aMax = a.maxHp || 0;
       const bMax = b.maxHp || 0;
+
       return bMax - aMax;
     })
     .slice(0, count);
 }
 
-// Attack Animation
 class Attack {
   constructor(fromX, fromY, toX, toY, isKill, isSpecial = false) {
     this.fromX = fromX;
@@ -445,7 +441,8 @@ class Attack {
     this.isKill = isKill;
     this.isSpecial = isSpecial;
     this.startTime = Date.now();
-    this.duration = 500;
+    this.duration = 650;
+    this.progress = 0;
   }
 
   update() {
@@ -461,12 +458,11 @@ class Attack {
     const y = this.fromY + (this.toY - this.fromY) * easeOut;
 
     const glowColor = this.isSpecial ? '255, 100, 100' : '100, 215, 255';
-    const coreColor = this.isSpecial ? '255, 180, 180' : '180, 240, 255';
-    const orbColor = this.isSpecial ? '255, 150, 150' : '150, 220, 255';
+    const coreColor = this.isSpecial ? '255, 220, 120' : '180, 240, 255';
+    const orbColor = this.isSpecial ? '255, 217, 61' : '150, 220, 255';
 
-    // Outer glow
-    ctx.strokeStyle = `rgba(${glowColor}, ${alpha * 0.2})`;
-    ctx.lineWidth = this.isSpecial ? 20 : 16;
+    ctx.strokeStyle = `rgba(${glowColor}, ${alpha * 0.22})`;
+    ctx.lineWidth = this.isSpecial ? 24 : 16;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -474,15 +470,13 @@ class Attack {
     ctx.lineTo(this.toX, this.toY);
     ctx.stroke();
 
-    // Main beam
-    ctx.strokeStyle = `rgba(${glowColor}, ${alpha * 0.8})`;
-    ctx.lineWidth = this.isSpecial ? 8 : 6;
+    ctx.strokeStyle = `rgba(${glowColor}, ${alpha * 0.85})`;
+    ctx.lineWidth = this.isSpecial ? 10 : 6;
     ctx.beginPath();
     ctx.moveTo(this.fromX, this.fromY);
     ctx.lineTo(this.toX, this.toY);
     ctx.stroke();
 
-    // Core bright line
     ctx.strokeStyle = `rgba(${coreColor}, ${alpha})`;
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -490,35 +484,32 @@ class Attack {
     ctx.lineTo(this.toX, this.toY);
     ctx.stroke();
 
-    // Projectile orb
     ctx.fillStyle = `rgba(${orbColor}, ${alpha})`;
-    ctx.shadowColor = `rgba(${glowColor}, ${alpha * 0.6})`;
-    ctx.shadowBlur = 12;
+    ctx.shadowColor = `rgba(${glowColor}, ${alpha * 0.7})`;
+    ctx.shadowBlur = 16;
     ctx.beginPath();
-    ctx.arc(x, y, this.isSpecial ? 10 : 7, 0, Math.PI * 2);
+    ctx.arc(x, y, this.isSpecial ? 12 : 8, 0, Math.PI * 2);
     ctx.fill();
+
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
 
-    // Impact ring - expands outward
-    ctx.strokeStyle = `rgba(100, 215, 255, ${alpha * 0.5})`;
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(${glowColor}, ${alpha * 0.6})`;
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(this.toX, this.toY, 10 + 20 * this.progress, 0, Math.PI * 2);
+    ctx.arc(this.toX, this.toY, 12 + 26 * this.progress, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Inner impact ring
-    ctx.strokeStyle = `rgba(150, 220, 255, ${alpha * 0.3})`;
+    ctx.strokeStyle = `rgba(${coreColor}, ${alpha * 0.35})`;
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.arc(this.toX, this.toY, 5 + 15 * this.progress, 0, Math.PI * 2);
+    ctx.arc(this.toX, this.toY, 6 + 18 * this.progress, 0, Math.PI * 2);
     ctx.stroke();
   }
 }
 
 const attacks = [];
 
-// Socket
 const socket = io({ transports: ['websocket', 'polling'] });
 
 socket.on('connect', () => {
@@ -531,52 +522,65 @@ socket.on('disconnect', () => {
 });
 
 socket.on('gameState', (state) => {
-  players = state;
+  players = state || {};
   updateUI();
 });
 
 socket.on('attack', ({ attacker, target, damage, killed, special }) => {
-  if (players[attacker] && players[target]) {
-    players[target].hp = Math.max(0, (players[target].hp || 0) - damage);
-    if (killed) players[target].alive = false;
+  const fromPos = getAnimationPos(attacker);
+  const toPos = getAnimationPos(target);
 
-    const fromPos = getPlayerPos(players[attacker]);
-    const toPos = getPlayerPos(players[target]);
-    
-    // Only create animation if both positions are valid (not center fallback)
-    if (fromPos && toPos) {
-      attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, killed, special));
+  if (players[attacker] && players[target]) {
+    attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, killed, special));
+
+    players[target].hp = Math.max(0, (players[target].hp || 0) - damage);
+
+    if (killed) {
+      players[target].alive = false;
     }
 
     const attackerName = players[attacker].nickname || attacker.slice(0, 10);
     const targetName = players[target].nickname || target.slice(0, 10);
-    addLog(`⚔️ ${attackerName} → ${targetName} -${damage}${special ? ' ⚡' : ''}${killed ? ' 💀' : ''}`, killed ? 'kill' : '');
+
+    addLog(
+      `⚔️ ${attackerName} → ${targetName} -${damage}${special ? ' ⚡' : ''}${killed ? ' 💀' : ''}`,
+      killed ? 'kill' : ''
+    );
+
     showDmg(toPos.x, toPos.y, damage, killed);
-    
     updateUI();
   }
 });
 
-socket.on('giftAttack', ({ attacker, target, damage, diamonds }) => {
-  if (players[attacker] && players[target]) {
-    players[target].hp = Math.max(0, (players[target].hp || 0) - damage);
-    if (players[target].hp === 0) players[target].alive = false;
+socket.on('giftAttack', ({ attacker, target, damage, killed }) => {
+  const fromPos = getAnimationPos(attacker);
+  const toPos = getAnimationPos(target);
 
-    const fromPos = getPlayerPos(players[attacker]);
-    const toPos = getPlayerPos(players[target]);
-    
-    // Only create animation if both positions are valid
-    if (fromPos && toPos) {
-      attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, false));
+  if (players[attacker] && players[target]) {
+    attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, killed, true));
+
+    players[target].hp = Math.max(0, (players[target].hp || 0) - damage);
+
+    if (killed || players[target].hp === 0) {
+      players[target].alive = false;
     }
 
     const attackerName = players[attacker].nickname || attacker.slice(0, 10);
     const targetName = players[target].nickname || target.slice(0, 10);
-    addLog(`🎁 ${attackerName} → ${targetName} -${damage}`, 'gift');
-    showDmg(toPos.x, toPos.y, damage, false);
-    
+
+    addLog(
+      `🎁 ${attackerName} → ${targetName} -${damage}${killed ? ' 💀' : ''}`,
+      killed ? 'kill' : 'gift'
+    );
+
+    showDmg(toPos.x, toPos.y, damage, killed);
     updateUI();
   }
+});
+
+socket.on('giftEffect', ({ attacker, giftName, diamonds }) => {
+  const attackerName = players[attacker]?.nickname || attacker || 'Someone';
+  addLog(`🎁 ${attackerName} sent ${giftName || 'a gift'} (${diamonds || 0} 💎)`, 'gift');
 });
 
 socket.on('respawn', ({ uniqueId }) => {
@@ -586,65 +590,102 @@ socket.on('respawn', ({ uniqueId }) => {
   }
 });
 
-// Helper functions - MAJOR POSITIONING UPDATE
+socket.on('backgroundChanged', ({ filename }) => {
+  if (!filename) {
+    backgroundImg = null;
+    return;
+  }
+
+  const img = new Image();
+
+  img.onload = () => {
+    backgroundImg = img;
+  };
+
+  img.src = `/background/${filename}?v=${Date.now()}`;
+});
+
+socket.on('forceReload', () => {
+  location.reload();
+});
+
 function getPlayerPos(player) {
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
   const alive = Object.values(players).filter(p => p.alive);
-  if (!alive.length) return { x: width / 2, y: height / 2 };
+
+  if (!alive.length) {
+    return { x: width / 2, y: height / 2 };
+  }
 
   const sorted = getTopPlayers(20);
-  const idx = sorted.findIndex(p => p.uniqueId === player.uniqueId);
-  if (idx === -1) return { x: width / 2, y: height / 2 };
+  const playerId = player.uniqueId;
+  const idx = sorted.findIndex(p => p.uniqueId === playerId);
 
-  // Layout config
+  if (idx === -1) {
+    return lastPlayerPositions[playerId] || { x: width / 2, y: height / 2 };
+  }
+
   const cols = 5;
   const rows = 4;
-  
-  // Reserve a centered play area with margins around UI panels
+
   const leftBuffer = 260;
-  const rightBuffer = 260;
-  const topBuffer = 240;
-  const botBuffer = 340;
-  
-  // Available play area
-  const playW = width - leftBuffer - rightBuffer;
-  const playH = height - topBuffer - botBuffer;
-  
-  // Grid spacing with gaps
+  const rightBuffer = 320;
+  const topBuffer = 180;
+  const botBuffer = 280;
+
+  const playW = Math.max(400, width - leftBuffer - rightBuffer);
+  const playH = Math.max(300, height - topBuffer - botBuffer);
+
   const gapX = layoutGapX;
   const gapY = layoutGapY;
-  const cellW = (playW - gapX * (cols - 1)) / cols;
-  const cellH = (playH - gapY * (rows - 1)) / rows;
-  
-  // Center the grid inside the available play area
+
+  const cellW = Math.max(80, (playW - gapX * (cols - 1)) / cols);
+  const cellH = Math.max(80, (playH - gapY * (rows - 1)) / rows);
+
   const gridWidth = cols * cellW + (cols - 1) * gapX;
   const gridHeight = rows * cellH + (rows - 1) * gapY;
+
   const startX = leftBuffer + Math.max(0, (playW - gridWidth) / 2);
   const startY = topBuffer + Math.max(0, (playH - gridHeight) / 2);
 
-  // Grid position
   const col = idx % cols;
   const row = Math.floor(idx / cols);
-  
-  // Final coordinates
+
   const x = startX + col * (cellW + gapX) + cellW / 2;
   const y = startY + row * (cellH + gapY) + cellH / 2;
-  
+
   return { x, y };
+}
+
+function getAnimationPos(uniqueId) {
+  if (lastPlayerPositions[uniqueId]) {
+    return lastPlayerPositions[uniqueId];
+  }
+
+  if (players[uniqueId]) {
+    return getPlayerPos(players[uniqueId]);
+  }
+
+  return {
+    x: canvas.clientWidth / 2,
+    y: canvas.clientHeight / 2,
+  };
 }
 
 function updateUI() {
   const alive = Object.values(players).filter(p => p.alive);
   const shown = Math.min(20, alive.length);
+
   document.getElementById('playerCount').textContent = alive.length;
   document.getElementById('showingCount').textContent = `${shown} / ${alive.length}`;
 
   const top3 = getTopPlayers(3);
+
   const html = top3.map((p, i) => `
     <div class="board-entry rank-${i + 1}">
       <span class="rank-num">${i + 1}</span>
-      <span class="rank-name">${p.nickname.slice(0, 14)}</span>
+      <span class="rank-name">${(p.nickname || p.uniqueId || 'Player').slice(0, 14)}</span>
       <span class="rank-score">${Math.round(p.hp || 0)} HP</span>
     </div>
   `).join('');
@@ -655,20 +696,53 @@ function updateUI() {
 function addLog(msg, type) {
   const log = document.getElementById('eventlog');
   const entry = document.createElement('div');
-  entry.className = `log-entry ${type}`;
+
+  entry.className = `log-entry ${type || ''}`;
   entry.textContent = msg;
+
   log.insertBefore(entry, log.firstChild);
-  while (log.children.length > 2) log.removeChild(log.lastChild);
+
+  while (log.children.length > 6) {
+    log.removeChild(log.lastChild);
+  }
 }
 
 function showDmg(x, y, dmg, isKill) {
   const el = document.createElement('div');
+
   el.className = `dmg-number ${isKill ? 'kill' : ''}`;
   el.textContent = isKill ? '💀 KILL!' : `-${dmg}`;
   el.style.left = (x - 20) + 'px';
   el.style.top = (y - 30) + 'px';
+
   document.querySelector('.ui').appendChild(el);
+
   setTimeout(() => el.remove(), 700);
+}
+
+function drawBackground() {
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+
+  if (!backgroundImg) {
+    const gradient = ctx.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, '#b8f2b8');
+    gradient.addColorStop(0.5, '#88d688');
+    gradient.addColorStop(1, '#9be99b');
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+    return;
+  }
+
+  const img = backgroundImg;
+  const scale = Math.max(width / img.width, height / img.height);
+  const drawW = img.width * scale;
+  const drawH = img.height * scale;
+  const x = (width - drawW) / 2;
+  const y = (height - drawH) / 2;
+
+  ctx.drawImage(img, x, y, drawW, drawH);
 }
 
 function drawPlayers() {
@@ -676,17 +750,21 @@ function drawPlayers() {
 
   sorted.forEach((player, idx) => {
     const pos = getPlayerPos(player);
+
+    if (player.uniqueId) {
+      lastPlayerPositions[player.uniqueId] = { x: pos.x, y: pos.y };
+    }
+
     const rank = idx + 1;
     const hpPct = Math.max(0, Math.min(1, (player.hp || 100) / (player.maxHp || 100)));
-    const hpValue = Math.round((player.hp || 100));
-    const maxHp = (player.maxHp || 100);
-    
-    // Scale based on rank
+    const hpValue = Math.round(player.hp || 100);
+    const maxHp = player.maxHp || 100;
+
     let size = 20;
     let nameSize = 20;
     let barWidth = 140;
     let emojiSize = 64;
-    
+
     if (rank === 1) {
       size = 24;
       nameSize = 24;
@@ -710,43 +788,44 @@ function drawPlayers() {
     }
 
     const glowRadius = Math.max(size + 10, emojiSize / 2 + 12);
+    const name = player.nickname || player.uniqueId || 'Player';
 
-    // Player name - above emoji
     ctx.font = `bold ${nameSize}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#fff';
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 3;
-    ctx.strokeText(player.nickname.slice(0, 14), pos.x, pos.y - size - 8);
-    ctx.fillText(player.nickname.slice(0, 14), pos.x, pos.y - size - 8);
+    ctx.strokeText(name.slice(0, 14), pos.x, pos.y - size - 8);
+    ctx.fillText(name.slice(0, 14), pos.x, pos.y - size - 8);
 
-    // Subtle glow
     ctx.fillStyle = `rgba(100, 200, 255, 0.1)`;
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, glowRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    // Diamond emoji
     ctx.font = `${emojiSize}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('💎', pos.x, pos.y);
 
-    // HP bar background
     const barY = pos.y + Math.max(size, emojiSize / 2) + 36;
+
     ctx.fillStyle = '#0a0e1a';
     ctx.fillRect(pos.x - barWidth / 2, barY, barWidth, 18);
+
     ctx.strokeStyle = '#64c8ff';
     ctx.lineWidth = 2;
     ctx.strokeRect(pos.x - barWidth / 2, barY, barWidth, 18);
 
-    // HP bar fill
-    const hpColor = '#ff3333';
-    ctx.fillStyle = hpColor;
-    ctx.fillRect(pos.x - barWidth / 2 + 2, barY + 2, Math.max(0, (barWidth - 4) * hpPct), 14);
+    ctx.fillStyle = '#ff3333';
+    ctx.fillRect(
+      pos.x - barWidth / 2 + 2,
+      barY + 2,
+      Math.max(0, (barWidth - 4) * hpPct),
+      14
+    );
 
-    // HP number below bar
     ctx.font = `18px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
@@ -758,21 +837,17 @@ function drawPlayers() {
   });
 }
 
-// Main loop
 let lastTime = Date.now();
+
 function animate() {
   const now = Date.now();
-  const dt = (now - lastTime) / 1000;
   lastTime = now;
 
-  // Clear with subtle green motion trail
-  ctx.fillStyle = 'rgba(144, 238, 144, 0.08)';
-  ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
 
-  // Draw players with clean rendering
+  drawBackground();
   drawPlayers();
 
-  // Update and draw attacks
   for (let i = attacks.length - 1; i >= 0; i--) {
     if (!attacks[i].update()) {
       attacks.splice(i, 1);
@@ -790,7 +865,6 @@ function animate() {
 animate();
 updateUI();
 
-// Cache bust
 if (!location.search.includes('v=')) {
   location.replace(location.pathname + '?v=' + Date.now());
 }
