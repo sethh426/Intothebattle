@@ -634,8 +634,8 @@ function getPlayerPos(player) {
   const topBuffer = height * 0.15;
   const botBuffer = height * 0.25;
 
-  const playW = Math.max(400, width - leftBuffer - rightBuffer);
-  const playH = Math.max(300, height - topBuffer - botBuffer);
+  const playW = Math.max(0, width - leftBuffer - rightBuffer);
+  const playH = Math.max(0, height - topBuffer - botBuffer);
 
   const gapX = layoutGapX;
   const gapY = layoutGapY;
