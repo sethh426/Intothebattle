@@ -796,9 +796,8 @@ function drawPlayers() {
     ctx.fillStyle = '#fff';
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 3;
-    ctx.strokeText(name.slice(0, 14), pos.x, pos.y - size - 8);
-    ctx.fillText(name.slice(0, 14), pos.x, pos.y - size - 8);
-
+    ctx.strokeText(name.slice(0, 14), pos.x, pos.y - emojiSize / 2 - 18);
+    ctx.fillText(name.slice(0, 14), pos.x, pos.y - emojiSize / 2 - 18);
     ctx.fillStyle = `rgba(100, 200, 255, 0.1)`;
     ctx.beginPath();
     ctx.arc(pos.x, pos.y, glowRadius, 0, Math.PI * 2);
