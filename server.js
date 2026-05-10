@@ -838,7 +838,6 @@ function setupTikTokEvents(tiktokClient) {
 
   tiktokClient.on('chat', (e) => {
       console.log('CHAT EVENT:', JSON.stringify(e, null, 2));
-  const id = e.user?.uniqueId;
     const id = e.user?.uniqueId;
     const nick = e.user?.nickname || id;
     const comment = e.comment || '';
