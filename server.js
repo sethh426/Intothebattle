@@ -782,11 +782,11 @@ setInterval(() => {
     p.x += p.vx;
     p.y += p.vy;
 
-    if (p.x < 20 || p.x > 780) p.vx *= -1;
-    if (p.y < 20 || p.y > 460) p.vy *= -1;
+    if (p.x < 20 || p.x > 980) p.vx *= -1;
+    if (p.y < 20 || p.y > 1800) p.vy *= -1;
 
-    p.x = Math.max(20, Math.min(780, p.x));
-    p.y = Math.max(20, Math.min(460, p.y));
+    p.x = Math.max(20, Math.min(980, p.x));
+    p.y = Math.max(20, Math.min(1800, p.y));
   }
 
   io.emit('gameState', players);
