@@ -200,7 +200,10 @@
   </style>
 </head>
 <body>
-  <h1>🎮 TikTok PvP Control Dashboard</h1>
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+    <h1>🎮 TikTok PvP Control Dashboard</h1>
+    <button class="btn-gray" onclick="window.location='/dashboard/logout'">Logout</button>
+  </div>
 
   <div class="grid">
 
@@ -271,6 +274,26 @@
         <button class="btn-green" onclick="spawnTestPlayers()">Spawn Test Players</button>
         <button class="btn-blue" onclick="testNormalAttack()">Test @ Attack</button>
         <button class="btn-yellow" onclick="testGiftAttack()">Test Gift Attack</button>
+      </div>
+    </div>
+
+    <!-- Developer Menu -->
+    <div class="card">
+      <h2>Developer</h2>
+      <div class="status-row">
+        <span style="color:#aaa; font-size:12px">Overlay sound control</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn-blue" onclick="sendDevSound('laser')">Play Laser</button>
+        <button class="btn-green" onclick="sendDevSound('heal')">Play Heal</button>
+        <button class="btn-yellow" onclick="sendDevSound('special')">Play Special</button>
+      </div>
+      <div class="status-row" style="margin-top:12px; gap:10px; align-items:center;">
+        <input id="developerSoundToggle" type="checkbox" checked onchange="toggleOverlaySound()" style="margin:0;" />
+        <label for="developerSoundToggle" style="margin:0; color:#ccc; font-size:13px;">Overlay sounds enabled</label>
+      </div>
+      <div style="margin-top:12px; font-size:12px; color:#aaa;">
+        Use this panel to test or mute overlay audio cues from the dashboard.
       </div>
     </div>
 
@@ -494,15 +517,79 @@
       callTestRoute('/api/test/gift', 'Test gift attack sent');
     }
 
-    fetch('/api/test/status')
+    function sendDevSound(type) {
+      fetch('/api/dev/sound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type })
+      })
       .then(r => r.json())
       .then(d => {
-        if (d.enabled) {
-          document.getElementById('devTestCard').style.display = 'block';
+        if (d.success) {
+          toast(`Dev sound sent: ${type}`);
+        } else {
+          toast(`Failed: ${d.error || 'Unknown'}`);
         }
       })
-      .catch(() => {});
+      .catch(() => toast('Sound command failed'));
+    }
 
+    function toggleOverlaySound() {
+      const enabled = document.getElementById('developerSoundToggle').checked;
+      fetch('/api/dev/sound-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          toast(`Overlay sounds ${enabled ? 'enabled' : 'disabled'}`);
+        } else {
+          toast(`Failed: ${d.error || 'Unknown'}`);
+        }
+      })
+      .catch(() => toast('Sound toggle failed'));
+    }
+
+    // Load initial status
+
+    function sendDevSound(type) {
+      fetch('/api/dev/sound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          toast(`Dev sound sent: ${type}`);
+        } else {
+          toast(`Failed: ${d.error || 'Unknown'}`);
+        }
+      })
+      .catch(() => toast('Sound command failed'));
+    }
+
+    function toggleOverlaySound() {
+      const enabled = document.getElementById('developerSoundToggle').checked;
+      fetch('/api/dev/sound-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          toast(`Overlay sounds ${enabled ? 'enabled' : 'disabled'}`);
+        } else {
+          toast(`Failed: ${d.error || 'Unknown'}`);
+        }
+      })
+      .catch(() => toast('Sound toggle failed'));
+    }
+
+    // Load initial status
     fetch('/api/status')
       .then(r => r.json())
       .then(d => {
@@ -518,6 +605,15 @@
         setOverlayStatus(d.overlayCount || 0);
 
         document.getElementById('player-count').textContent = d.playerCount ?? '—';
+      })
+      .catch(() => {});
+
+    fetch('/api/test/status')
+      .then(r => r.json())
+      .then(d => {
+        if (d.enabled) {
+          document.getElementById('devTestCard').style.display = 'block';
+        }
       })
       .catch(() => {});
   </script>
