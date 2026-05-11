@@ -14,7 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 const API_KEY = process.env.API_KEY;
-const DEV_TEST_MODE = process.env.DEV_TEST_MODE === 'true';
+let DEV_TEST_MODE = process.env.DEV_TEST_MODE === 'true';
 const PORT = process.env.PORT || 3000;
 
 let currentStreamer = process.argv[2] || '';
@@ -538,7 +538,20 @@ app.get('/api/status', (_req, res) => {
     overlayCount,
     playerCount: Object.values(players).filter((p) => p.alive).length,
     background: currentBackground,
+    devTestMode: DEV_TEST_MODE,
   });
+});
+
+app.post('/api/dev/test-mode', (req, res) => {
+  const { enabled } = req.body || {};
+
+  if (typeof enabled !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'Invalid enabled value' });
+  }
+
+  DEV_TEST_MODE = enabled;
+  io.emit('devModeChanged', { enabled });
+  res.json({ success: true, enabled: DEV_TEST_MODE });
 });
 
 app.post('/api/dev/sound', (req, res) => {

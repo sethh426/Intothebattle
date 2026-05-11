@@ -262,12 +262,24 @@
       </div>
     </div>
 
+    <div class="card">
+      <h2>Developer Mode</h2>
+      <div class="status-row">
+        <span id="devModeLabel" style="color:#ccc; font-size:13px;">Developer mode is OFF</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn-blue" id="devModeToggleBtn" onclick="toggleDevMode()">Enable Dev Mode</button>
+      </div>
+      <div style="margin-top:12px; font-size:12px; color:#aaa;">
+        Toggle dev test routes without editing .env.
+      </div>
+    </div>
+
     <div class="card" id="devTestCard" style="display:none;">
       <h2>Developer Test Tools</h2>
 
       <p class="dev-note">
         Temporary buttons for testing overlay animations without TikTok LIVE.
-        Before final submission, set <b>DEV_TEST_MODE=false</b> in the .env file.
       </p>
 
       <div class="btn-row">
@@ -331,6 +343,35 @@
         dot.className = 'dot red';
         label.textContent = 'No overlay connected';
       }
+    }
+
+    let devModeEnabled = false;
+
+    function updateDevModeUI(enabled) {
+      devModeEnabled = enabled;
+      document.getElementById('devModeLabel').textContent = enabled ? 'Developer mode is ON' : 'Developer mode is OFF';
+      document.getElementById('devModeToggleBtn').textContent = enabled ? 'Disable Dev Mode' : 'Enable Dev Mode';
+      document.getElementById('devTestCard').style.display = enabled ? 'block' : 'none';
+    }
+
+    function toggleDevMode() {
+      const enabled = !devModeEnabled;
+
+      fetch('/api/dev/test-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          updateDevModeUI(d.enabled);
+          toast(`Developer mode ${d.enabled ? 'enabled' : 'disabled'}`);
+        } else {
+          toast(`Failed: ${d.error || 'Unknown'}`);
+        }
+      })
+      .catch(() => toast('Dev mode toggle failed'));
     }
 
     function setTikTokStatus(state, username) {
@@ -603,6 +644,7 @@
 
         setTikTokStatus(d.connected ? 'connected' : 'disconnected', d.username);
         setOverlayStatus(d.overlayCount || 0);
+        updateDevModeUI(!!d.devTestMode);
 
         document.getElementById('player-count').textContent = d.playerCount ?? '—';
       })

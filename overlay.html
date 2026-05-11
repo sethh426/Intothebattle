@@ -539,7 +539,18 @@ function playTone(frequency, duration = 0.12, type = 'triangle', volume = 0.18, 
 
 function playSound(name) {
   if (!overlaySoundEnabled) return;
-  if (!audioReady && audioCtx.state === 'suspended') return;
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume()
+      .then(() => {
+        audioReady = true;
+        playSound(name);
+      })
+      .catch(() => {
+        // Audio could not resume yet; wait for a user gesture.
+      });
+    return;
+  }
+  if (!audioReady) return;
   switch (name) {
     case 'single':
       playTone(860, 0.08, 'square', 0.2);
