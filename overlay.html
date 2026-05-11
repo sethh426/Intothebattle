@@ -516,8 +516,7 @@ class Attack {
   }
 }
 
-const attacks = [];
-
+const attacks = [];let overlaySoundEnabled = true;
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let audioReady = audioCtx.state !== 'suspended';
 
@@ -547,6 +546,7 @@ function playTone(frequency, duration = 0.12, type = 'triangle', volume = 0.18, 
 }
 
 function playSound(name) {
+  if (!overlaySoundEnabled) return;
   if (!audioReady && audioCtx.state === 'suspended') return;
   switch (name) {
     case 'laser':
@@ -581,6 +581,16 @@ socket.on('disconnect', () => {
 socket.on('gameState', (state) => {
   players = state;
   updateUI();
+});
+
+socket.on('soundSettings', ({ enabled }) => {
+  overlaySoundEnabled = !!enabled;
+});
+
+socket.on('devSound', ({ type }) => {
+  if (['laser', 'heal', 'special'].includes(type)) {
+    playSound(type);
+  }
 });
 
 socket.on('attack', ({ attacker, target, damage, killed, special }) => {

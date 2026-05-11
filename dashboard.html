@@ -172,6 +172,26 @@
       </div>
     </div>
 
+    <!-- Developer Menu -->
+    <div class="card">
+      <h2>Developer</h2>
+      <div class="status-row">
+        <span style="color:#aaa; font-size:12px">Overlay sound control</span>
+      </div>
+      <div class="btn-row">
+        <button class="btn-blue" onclick="sendDevSound('laser')">Play Laser</button>
+        <button class="btn-green" onclick="sendDevSound('heal')">Play Heal</button>
+        <button class="btn-yellow" onclick="sendDevSound('special')">Play Special</button>
+      </div>
+      <div class="status-row" style="margin-top:12px; gap:10px; align-items:center;">
+        <input id="developerSoundToggle" type="checkbox" checked onchange="toggleOverlaySound()" style="margin:0;" />
+        <label for="developerSoundToggle" style="margin:0; color:#ccc; font-size:13px;">Overlay sounds enabled</label>
+      </div>
+      <div style="margin-top:12px; font-size:12px; color:#aaa;">
+        Use this panel to test or mute overlay audio cues from the dashboard.
+      </div>
+    </div>
+
   </div>
 
   <div class="links">
@@ -308,6 +328,41 @@
           }
         })
         .catch(() => toast('Clear failed'));
+    }
+
+    function sendDevSound(type) {
+      fetch('/api/dev/sound', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          toast(`Dev sound sent: ${type}`);
+        } else {
+          toast(`Failed: ${d.error || 'Unknown'}`);
+        }
+      })
+      .catch(() => toast('Sound command failed'));
+    }
+
+    function toggleOverlaySound() {
+      const enabled = document.getElementById('developerSoundToggle').checked;
+      fetch('/api/dev/sound-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled })
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          toast(`Overlay sounds ${enabled ? 'enabled' : 'disabled'}`);
+        } else {
+          toast(`Failed: ${d.error || 'Unknown'}`);
+        }
+      })
+      .catch(() => toast('Sound toggle failed'));
     }
 
     // Load initial status

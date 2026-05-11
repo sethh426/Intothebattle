@@ -332,6 +332,24 @@ app.get('/api/status', (_req, res) => {
   });
 });
 
+app.post('/api/dev/sound', (req, res) => {
+  const { type } = req.body || {};
+  if (!['laser', 'heal', 'special'].includes(type)) {
+    return res.status(400).json({ success: false, error: 'Invalid sound type' });
+  }
+  io.emit('devSound', { type });
+  res.json({ success: true });
+});
+
+app.post('/api/dev/sound-settings', (req, res) => {
+  const { enabled } = req.body || {};
+  if (typeof enabled !== 'boolean') {
+    return res.status(400).json({ success: false, error: 'Invalid enabled value' });
+  }
+  io.emit('soundSettings', { enabled });
+  res.json({ success: true });
+});
+
 app.post('/api/connect', (req, res) => {
   const { username } = req.body;
   if (!username) return res.json({ success: false, error: 'Username required' });
