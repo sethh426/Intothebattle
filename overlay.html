@@ -314,6 +314,13 @@
       <span class="status-value" id="playerCount">0</span>
     </div>
     <div class="status-row">
+      <span class="status-label">Audio:</span>
+      <span class="status-value" id="audioStatus">Enabled</span>
+    </div>
+    <div class="status-row">
+      <button id="enableAudioBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;">Enable Audio</button>
+    </div>
+    <div class="status-row">
       <span class="status-label">Showing:</span>
       <span class="status-value" id="showingCount">0 / 0</span>
     </div>
@@ -362,6 +369,8 @@ const gapXValue = document.getElementById('gapXValue');
 const gapYValue = document.getElementById('gapYValue');
 const toggleControls = document.getElementById('toggleControls');
 const layoutControls = document.getElementById('layoutControls');
+const audioStatusLabel = document.getElementById('audioStatus');
+const enableAudioBtn = document.getElementById('enableAudioBtn');
 
 let layoutGapX = gapXControl ? Number(gapXControl.value) : 150;
 let layoutGapY = gapYControl ? Number(gapYControl.value) : 260;
@@ -389,6 +398,43 @@ if (toggleControls && layoutControls) {
   toggleControls.addEventListener('click', () => {
     const hidden = layoutControls.classList.toggle('hidden');
     toggleControls.textContent = hidden ? 'Show' : 'Hide';
+  });
+}
+
+function setAudioStatus() {
+  if (!audioStatusLabel) return;
+
+  if (!overlaySoundEnabled) {
+    audioStatusLabel.textContent = 'Muted';
+    return;
+  }
+
+  if (audioCtx.state === 'suspended') {
+    audioStatusLabel.textContent = 'Click to enable';
+    return;
+  }
+
+  audioStatusLabel.textContent = audioReady ? 'Ready' : 'Unavailable';
+}
+
+function resumeAudio() {
+  if (!audioCtx) return;
+
+  audioCtx.resume()
+    .then(() => {
+      audioReady = true;
+      setAudioStatus();
+      playTone(880, 0.05, 'square', 0.1);
+    })
+    .catch(() => {
+      setAudioStatus();
+    });
+}
+
+if (enableAudioBtn) {
+  enableAudioBtn.addEventListener('click', (event) => {
+    event.stopPropagation();
+    resumeAudio();
   });
 }
 
@@ -514,9 +560,10 @@ let audioReady = audioCtx.state !== 'suspended';
 
 document.addEventListener('click', () => {
   if (audioCtx.state === 'suspended') {
-    audioCtx.resume().then(() => { audioReady = true; }).catch(() => {});
+    resumeAudio();
   } else {
     audioReady = true;
+    setAudioStatus();
   }
 }, { once: true });
 
@@ -543,6 +590,7 @@ function playSound(name) {
     audioCtx.resume()
       .then(() => {
         audioReady = true;
+        setAudioStatus();
         playSound(name);
       })
       .catch(() => {
