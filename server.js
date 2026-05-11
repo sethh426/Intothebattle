@@ -579,6 +579,10 @@ app.post('/api/connect', (req, res) => {
     return res.json({ success: false, error: 'Username required' });
   }
 
+  if (!API_KEY) {
+    return res.status(500).json({ success: false, error: 'Missing TikTok API_KEY in .env' });
+  }
+
   connectToStreamer(username);
   res.json({ success: true });
 });
