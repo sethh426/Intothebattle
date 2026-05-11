@@ -518,6 +518,54 @@ class Attack {
 
 const attacks = [];
 
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let audioReady = audioCtx.state !== 'suspended';
+
+document.addEventListener('click', () => {
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume().then(() => { audioReady = true; }).catch(() => {});
+  } else {
+    audioReady = true;
+  }
+}, { once: true });
+
+function playTone(frequency, duration = 0.12, type = 'triangle', volume = 0.18, when = 0) {
+  if (!audioCtx || !audioReady) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = frequency;
+  gain.gain.value = volume;
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  const start = audioCtx.currentTime + when;
+  const stop = start + duration;
+  gain.gain.setValueAtTime(volume, start);
+  gain.gain.exponentialRampToValueAtTime(0.001, stop);
+  osc.start(start);
+  osc.stop(stop);
+}
+
+function playSound(name) {
+  if (!audioReady && audioCtx.state === 'suspended') return;
+  switch (name) {
+    case 'laser':
+      playTone(740, 0.08, 'square', 0.2);
+      playTone(1120, 0.1, 'triangle', 0.12, 0.03);
+      break;
+    case 'special':
+      playTone(520, 0.12, 'sawtooth', 0.18);
+      playTone(840, 0.14, 'triangle', 0.14, 0.02);
+      break;
+    case 'heal':
+      playTone(520, 0.14, 'triangle', 0.14);
+      playTone(660, 0.16, 'sine', 0.1, 0.05);
+      break;
+    default:
+      break;
+  }
+}
+
 // Socket
 const socket = io({ transports: ['websocket', 'polling'] });
 
@@ -546,6 +594,7 @@ socket.on('attack', ({ attacker, target, damage, killed, special }) => {
     // Only create animation if both positions are valid (not center fallback)
     if (fromPos && toPos) {
       attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, killed, special));
+      playSound(special ? 'special' : 'laser');
     }
 
     const attackerName = players[attacker].nickname || attacker.slice(0, 10);
@@ -583,6 +632,14 @@ socket.on('respawn', ({ uniqueId }) => {
   if (players[uniqueId]) {
     const playerName = players[uniqueId].nickname || uniqueId.slice(0, 10);
     addLog(`✨ ${playerName} respawned!`, '');
+  }
+});
+
+socket.on('heal', ({ uniqueId, amount }) => {
+  if (players[uniqueId]) {
+    const playerName = players[uniqueId].nickname || uniqueId.slice(0, 10);
+    addLog(`💚 ${playerName} healed +${amount} HP`, 'gift');
+    playSound('heal');
   }
 });
 

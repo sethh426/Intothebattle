@@ -17,6 +17,24 @@ const PLAYERS_FILE = path.join(__dirname, 'players.json');
 const BG_DIR = path.join(__dirname, 'backgrounds');
 const BG_FILE = path.join(BG_DIR, 'current-bg.json');
 
+const DASHBOARD_OWNER_EMAIL = 'mrpipper33@gmail.com';
+const DASHBOARD_PASSWORD = 'Lololo90!';
+const DASHBOARD_COOKIE_NAME = 'dashboard_auth';
+const DASHBOARD_COOKIE_VALUE = Buffer.from(`${DASHBOARD_OWNER_EMAIL}:${DASHBOARD_PASSWORD}`).toString('base64');
+
+function parseCookies(req) {
+  const cookieHeader = req.headers.cookie || '';
+  return Object.fromEntries(cookieHeader.split(';').map(part => {
+    const [name, ...rest] = part.trim().split('=');
+    return [name, rest.join('=')];
+  }).filter(([name]) => name));
+}
+
+function isDashboardAuthed(req) {
+  const cookies = parseCookies(req);
+  return cookies[DASHBOARD_COOKIE_NAME] === DASHBOARD_COOKIE_VALUE;
+}
+
 function loadPlayerStats() {
   try {
     if (fs.existsSync(PLAYERS_FILE)) {
@@ -109,6 +127,7 @@ function awardStats(uniqueId, nickname, hpBoost = 0, strBoost = 0) {
   if (hpBoost > 0) {
     p.maxHp += Math.floor(hpBoost * 0.5);
     p.hp = Math.min(p.maxHp, p.hp + hpBoost);
+    io.emit('heal', { uniqueId, amount: hpBoost });
   }
   p.strength  += strBoost;
   p.lastActive = Date.now();
@@ -198,6 +217,13 @@ const app        = express();
 const httpServer = createServer(app);
 const io         = new Server(httpServer, { cors: { origin: '*' } });
 
+app.use(express.urlencoded({ extended: false }));
+app.use((req, res, next) => {
+  if (req.path === '/dashboard.html' || req.path === '/dashboard-login.html') {
+    return res.redirect('/dashboard');
+  }
+  next();
+});
 app.use(express.static(__dirname));
 app.use(express.json());
 
@@ -271,7 +297,28 @@ io.on('connection', (socket) => {
 });
 
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
-app.get('/dashboard', (_req, res) => res.sendFile(path.join(__dirname, 'dashboard.html')));
+app.get('/dashboard/login', (_req, res) => res.sendFile(path.join(__dirname, 'dashboard-login.html')));
+app.post('/dashboard/login', (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const password = String(req.body.password || '');
+
+  if (email === DASHBOARD_OWNER_EMAIL && password === DASHBOARD_PASSWORD) {
+    res.setHeader('Set-Cookie', `${DASHBOARD_COOKIE_NAME}=${DASHBOARD_COOKIE_VALUE}; Path=/; HttpOnly; Max-Age=86400; SameSite=Lax`);
+    return res.redirect('/dashboard');
+  }
+
+  return res.status(401).send('Invalid email or password.');
+});
+app.get('/dashboard/logout', (_req, res) => {
+  res.setHeader('Set-Cookie', `${DASHBOARD_COOKIE_NAME}=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax`);
+  res.redirect('/dashboard/login');
+});
+app.get('/dashboard', (req, res) => {
+  if (!isDashboardAuthed(req)) {
+    return res.redirect('/dashboard/login');
+  }
+  return res.sendFile(path.join(__dirname, 'dashboard.html'));
+});
 app.get('/stats',     (_req, res) => res.sendFile(path.join(__dirname, 'stats.html')));
 app.get('/state',     (_req, res) => res.json(players));
 

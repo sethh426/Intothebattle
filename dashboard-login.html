@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard Login</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #11131f;
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .login-card {
+      width: min(420px, calc(100vw - 32px));
+      padding: 32px;
+      border-radius: 16px;
+      background: rgba(20, 28, 60, 0.96);
+      border: 1px solid rgba(255,255,255,0.07);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+    }
+    h1 { margin: 0 0 14px; font-size: 24px; color: #FFD93D; }
+    p { margin: 0 0 24px; color: #ccc; line-height: 1.6; }
+    label { display: block; margin-bottom: 6px; color: #aaa; font-size: 13px; }
+    input {
+      width: 100%;
+      padding: 12px 14px;
+      margin-bottom: 18px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+      font-size: 15px;
+    }
+    input:focus { outline: none; border-color: #4D96FF; }
+    button {
+      width: 100%;
+      padding: 12px 14px;
+      border: none;
+      border-radius: 10px;
+      background: #4D96FF;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .footer { margin-top: 18px; font-size: 13px; color: #7d8aa3; }
+  </style>
+</head>
+<body>
+  <div class="login-card">
+    <h1>Dashboard Login</h1>
+    <p>Owner access only. Please sign in with the owner email and password.</p>
+    <form action="/dashboard/login" method="POST">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="username" required placeholder="mrpipper33@gmail.com" />
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Enter password" />
+      <button type="submit">Sign in</button>
+    </form>
+    <div class="footer">If you don’t have the owner credentials, you cannot access the dashboard.</div>
+  </div>
+</body>
+</html>
