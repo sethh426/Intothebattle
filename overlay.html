@@ -541,6 +541,15 @@ function playSound(name) {
   if (!overlaySoundEnabled) return;
   if (!audioReady && audioCtx.state === 'suspended') return;
   switch (name) {
+    case 'single':
+      playTone(860, 0.08, 'square', 0.2);
+      playTone(1180, 0.1, 'triangle', 0.12, 0.03);
+      break;
+    case 'triple':
+      playTone(760, 0.08, 'square', 0.18);
+      playTone(980, 0.08, 'square', 0.16, 0.05);
+      playTone(1200, 0.1, 'triangle', 0.12, 0.08);
+      break;
     case 'laser':
       playTone(740, 0.08, 'square', 0.2);
       playTone(1120, 0.1, 'triangle', 0.12, 0.03);
@@ -591,7 +600,7 @@ socket.on('attack', ({ attacker, target, damage, killed, special }) => {
   if (players[attacker] && players[target]) {
     if (fromPos && toPos) {
       attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, killed, special));
-      playSound(special ? 'special' : 'laser');
+      playSound('single');
     }
 
     players[target].hp = Math.max(0, (players[target].hp || 0) - damage);
@@ -619,6 +628,7 @@ socket.on('giftAttack', ({ attacker, target, damage, killed }) => {
 
   if (players[attacker] && players[target]) {
     attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, killed, true));
+    playSound('triple');
 
     players[target].hp = Math.max(0, (players[target].hp || 0) - damage);
 
