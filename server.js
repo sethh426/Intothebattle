@@ -190,7 +190,7 @@ function spawnPlayer(uniqueId, nickname) {
 function awardStats(uniqueId, nickname, hpBoost = 0, strBoost = 0) {
   if (!uniqueId) return;
 
-  if (!players[uniqueId]) {
+  if (!players[uniqueId] || !players[uniqueId].alive) {
     spawnPlayer(uniqueId, nickname);
   }
 
