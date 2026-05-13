@@ -774,7 +774,7 @@ function getPlayerPos(player) {
     return { x: width / 2, y: height / 2 };
   }
 
-  const sorted = getTopPlayers(20);
+  const sorted = getTopPlayers(5);
   const playerId = player.uniqueId;
   const idx = sorted.findIndex(p => p.uniqueId === playerId);
 
@@ -902,7 +902,7 @@ function drawBackground() {
 }
 
 function drawPlayers() {
-  const sorted = getTopPlayers(20);
+  const sorted = getTopPlayers(5);
 
   sorted.forEach((player, idx) => {
     const pos = getPlayerPos(player);
