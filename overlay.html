@@ -379,9 +379,12 @@ const enableAudioBtn = document.getElementById('enableAudioBtn');
 
 let layoutGapX = gapXControl ? Number(gapXControl.value) : 150;
 let layoutGapY = gapYControl ? Number(gapYControl.value) : 260;
+let offsetY = 0;
 
 function syncGapLabels() {
   if (gapXValue) gapXValue.textContent = layoutGapX;
+    if (document.getElementById('offsetYValue')) document.getElementById('offsetYValue').textContent = offsetY;
+
   if (gapYValue) gapYValue.textContent = layoutGapY;
 }
 
@@ -390,6 +393,15 @@ if (gapXControl) {
     layoutGapX = Number(gapXControl.value);
     syncGapLabels();
   });
+  
+  const offsetYControl = document.getElementById('offsetYControl');
+if (offsetYControl) {
+  offsetYControl.addEventListener('input', () => {
+    offsetY = Number(offsetYControl.value);
+    document.getElementById('offsetYValue').textContent = offsetY;
+  });
+}
+
 }
 
 if (gapYControl) {
