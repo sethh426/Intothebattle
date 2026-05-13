@@ -626,7 +626,7 @@ function playSound(name) {
   }
 }
 
-const socket = io({ transports: ['websocket', 'polling'] });
+const socket = io({ transports: ['polling'] });
 
 socket.on('connect', () => {
   document.getElementById('serverStatus').textContent = '🟢 LIVE';
