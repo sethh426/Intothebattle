@@ -626,7 +626,7 @@ function playSound(name) {
   }
 }
 
-const socket = io({ transports: ['polling'] });
+const socket = io();
 
 socket.on('connect', () => {
   document.getElementById('serverStatus').textContent = '🟢 LIVE';
@@ -747,7 +747,8 @@ socket.on('heal', ({ uniqueId, amount }) => {
   }
 });
 
-// function getPlayerPos(player) {
+// Helper functions - MAJOR POSITIONING UPDATE
+function getPlayerPos(player) {
   const width = canvas.clientWidth;
   const height = canvas.clientHeight;
   const alive = Object.values(players).filter(p => p.alive);
