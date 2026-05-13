@@ -572,6 +572,11 @@ class Attack {
 }
 
 const attacks = [];let overlaySoundEnabled = true;
+const laserSound = new Audio('Single%20shot.m4a');
+const giftSound = new Audio('New%20Project.m4a');
+laserSound.preload = 'auto';
+giftSound.preload = 'auto';
+
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let audioReady = audioCtx.state !== 'suspended';
 
@@ -618,14 +623,13 @@ function playSound(name) {
   if (!audioReady) return;
   switch (name) {
     case 'single':
-      playTone(860, 0.08, 'square', 0.2);
-      playTone(1180, 0.1, 'triangle', 0.12, 0.03);
-      break;
+  laserSound.currentTime = 0;
+  laserSound.play().catch(() => {});
+  break;
     case 'triple':
-      playTone(760, 0.08, 'square', 0.18);
-      playTone(980, 0.08, 'square', 0.16, 0.05);
-      playTone(1200, 0.1, 'triangle', 0.12, 0.08);
-      break;
+  giftSound.currentTime = 0;
+  giftSound.play().catch(() => {});
+  break;
     case 'laser':
       playTone(740, 0.08, 'square', 0.2);
       playTone(1120, 0.1, 'triangle', 0.12, 0.03);
