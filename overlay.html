@@ -803,7 +803,7 @@ function getPlayerPos(player) {
   const gridHeight = rows * cellH + (rows - 1) * gapY;
 
   const startX = leftBuffer + Math.max(0, (playW - gridWidth) / 2);
-  const startY = topBuffer + Math.max(0, (playH - gridHeight) / 2);
+  const startY = topBuffer + Math.max(0, (playH - gridHeight) / 2) + offsetY;
 
   const col = idx % cols;
   const row = Math.floor(idx / cols);
