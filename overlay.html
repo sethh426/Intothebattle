@@ -472,7 +472,7 @@ function setupCanvas() {
 setupCanvas();
 window.addEventListener('resize', setupCanvas);
 
-function getTopPlayers(count = 20) {
+function getTopPlayers(count = 5) {
   return Object.values(players)
     .filter(p => p.alive)
     .sort((a, b) => {
