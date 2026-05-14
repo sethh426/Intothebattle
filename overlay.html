@@ -362,6 +362,12 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
 <script>
 let players = {};
+// Fixed anchor point where lasers go when target is off-screen
+// This is the center of the player banner strip at the bottom of the overlay
+const OFF_SCREEN_ANCHOR = {
+  x: () => canvas.clientWidth / 2,
+  y: () => canvas.clientHeight * 0.72   // ~72% down = banner strip center
+};
 const lastPlayerPositions = {};
 let backgroundImg = null;
 
@@ -829,7 +835,7 @@ function getAnimationPos(uniqueId) {
 
   return {
     x: canvas.clientWidth / 2,
-    y: canvas.clientHeight / 2,
+    y: canvas.clientHeight * 0.72,
   };
 }
 
