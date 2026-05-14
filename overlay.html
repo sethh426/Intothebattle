@@ -630,13 +630,13 @@ function playSound(name) {
   giftSound.currentTime = 0;
   giftSound.play().catch(() => {});
   break;
-    case 'laser':
-      playTone(740, 0.08, 'square', 0.2);
-      playTone(1120, 0.1, 'triangle', 0.12, 0.03);
+        case 'laser':
+      laserSound.currentTime = 0;
+      laserSound.play().catch(() => {});
       break;
-    case 'special':
-      playTone(520, 0.12, 'sawtooth', 0.18);
-      playTone(840, 0.14, 'triangle', 0.14, 0.02);
+        case 'special':
+      giftSound.currentTime = 0;
+      giftSound.play().catch(() => {});
       break;
     case 'heal':
       playTone(520, 0.14, 'triangle', 0.14);
