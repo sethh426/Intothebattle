@@ -789,7 +789,7 @@ function getPlayerPos(player) {
   const idx = sorted.findIndex(p => p.uniqueId === playerId);
 
   if (idx === -1) {
-    return lastPlayerPositions[playerId] || { x: width / 2, y: height / 2 };
+    return lastPlayerPositions[playerId] || { x: width / 2, y: height * 0.72 };
   }
 
   const cols = 5;
