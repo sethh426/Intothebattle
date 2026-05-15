@@ -423,6 +423,11 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.static(__dirname));
+app.use('/audio', (req, res, next) => {
+  const filepath = path.join(AUDIO_DIR, path.basename(req.path));
+  if (!isSafePath(AUDIO_DIR, filepath)) return res.status(403).send('Forbidden');
+  next();
+}, express.static(AUDIO_DIR));
 app.use(express.json());
 
 // ─── BACKGROUND SETUP ─────────────────────────────────────────────────────────
@@ -449,6 +454,30 @@ const upload = multer({
       cb(null, name);
     },
   }),
+  const ALLOWED_AUDIO_EXTS  = new Set(['.mp3','.m4a','.wav','.ogg','.webm','.aac','.flac']);
+const ALLOWED_AUDIO_MIMES = new Set([
+  'audio/mpeg','audio/mp3','audio/mp4','audio/x-m4a',
+  'audio/wav','audio/wave','audio/x-wav',
+  'audio/ogg','audio/webm','audio/aac',
+  'audio/flac','audio/x-flac','video/webm',
+]);
+
+const audioUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => { ensureDir(AUDIO_DIR); cb(null, AUDIO_DIR); },
+    filename:    (_req, file, cb) => {
+      const ext     = path.extname(file.originalname || '').toLowerCase();
+      const safeExt = ALLOWED_AUDIO_EXTS.has(ext) ? ext : '.mp3';
+      cb(null, `audio-${Date.now()}-${Math.random().toString(36).slice(2)}${safeExt}`);
+    },
+  }),
+  limits:     { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const ok  = ALLOWED_AUDIO_EXTS.has(ext) && ALLOWED_AUDIO_MIMES.has(file.mimetype);
+    ok ? cb(null, true) : cb(new Error('Invalid audio type. Use MP3, M4A, WAV, OGG, AAC, FLAC, or WEBM.'));
+  },
+});
   limits: {
     fileSize: 10 * 1024 * 1024,
   },
@@ -518,6 +547,7 @@ io.on('connection', (socket) => {
       io.emit('overlayCount', overlayCount);
 
       socket.emit('gameState', players);
+      socket.emit('audioConfig', audioConfig);
 
       if (currentBackground) {
         socket.emit('backgroundChanged', { filename: currentBackground.filename });
@@ -731,6 +761,72 @@ app.get('/background/:filename', (req, res) => {
 
   return res.sendFile(filepath);
 });
+app.get('/api/audio', (_req, res) => {
+  res.json({ success: true, library: audioLibrary, config: audioConfig });
+});
+
+app.post('/api/audio/upload', (req, res) => {
+  res.type('application/json');
+  ensureDir(AUDIO_DIR);
+  audioUpload.single('audio')(req, res, (err) => {
+    if (err)       return res.status(400).json({ success: false, error: err.message });
+    if (!req.file) return res.status(400).json({ success: false, error: 'No audio file uploaded.' });
+    const entry = {
+      filename:     req.file.filename,
+      originalName: req.file.originalname,
+      size:         req.file.size,
+      uploadedAt:   new Date().toISOString(),
+    };
+    audioLibrary.push(entry);
+    saveAudioConfig();
+    console.log(`🔊 Audio uploaded: ${req.file.originalname} → ${req.file.filename}`);
+    res.json({ success: true, file: entry });
+  });
+});
+
+app.post('/api/audio/assign', (req, res) => {
+  const { event, filename } = req.body;
+  const validEvents = Object.keys(DEFAULT_AUDIO_CONFIG);
+  if (!validEvents.includes(event)) {
+    return res.status(400).json({ success: false, error: `Invalid event. Must be one of: ${validEvents.join(', ')}` });
+  }
+  if (filename === null || filename === '') {
+    audioConfig[event] = null;
+    saveAudioConfig();
+    io.emit('audioConfig', audioConfig);
+    return res.json({ success: true, event, filename: null });
+  }
+  if (!audioLibrary.some(f => f.filename === filename)) {
+    return res.status(404).json({ success: false, error: 'File not found in audio library.' });
+  }
+  audioConfig[event] = filename;
+  saveAudioConfig();
+  io.emit('audioConfig', audioConfig);
+  console.log(`🔊 Assigned "${filename}" to event "${event}"`);
+  res.json({ success: true, event, filename });
+});
+
+app.delete('/api/audio/delete/:filename', (req, res) => {
+  const { filename } = req.params;
+  const filepath = path.join(AUDIO_DIR, filename);
+  if (!isSafePath(AUDIO_DIR, filepath)) {
+    return res.status(403).json({ success: false, error: 'Forbidden' });
+  }
+  const before = audioLibrary.length;
+  audioLibrary = audioLibrary.filter(f => f.filename !== filename);
+  if (audioLibrary.length === before) {
+    return res.status(404).json({ success: false, error: 'File not found in library.' });
+  }
+  let changed = false;
+  for (const ev of Object.keys(audioConfig)) {
+    if (audioConfig[ev] === filename) { audioConfig[ev] = null; changed = true; }
+  }
+  try { if (fs.existsSync(filepath)) fs.unlinkSync(filepath); } catch (e) {}
+  saveAudioConfig();
+  if (changed) io.emit('audioConfig', audioConfig);
+  console.log(`🗑️ Deleted audio: ${filename}`);
+  res.json({ success: true, filename, configUpdated: changed });
+});
 
 // ─── DEV TEST ROUTES ──────────────────────────────────────────────────────────
 function requireDevTestMode(_req, res, next) {
@@ -933,6 +1029,7 @@ httpServer.listen(PORT, () => {
 
   loadPlayerStats();
   loadCurrentBackground();
+  loadAudioConfig();
 
   if (currentStreamer) {
     connectToStreamer(currentStreamer);
