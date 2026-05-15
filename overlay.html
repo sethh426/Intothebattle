@@ -154,8 +154,6 @@ toggleControls.addEventListener('click', () => {
 const audioStatusLabel = document.getElementById('audioStatus');
 const enableAudioBtn   = document.getElementById('enableAudioBtn');
 let overlaySoundEnabled = true;
-const laserSound = new Audio('Singleshot.m4a');
-const giftSound  = new Audio('tripleshot.mp3');
 laserSound.preload = 'auto';
 giftSound.preload  = 'auto';
 
@@ -197,22 +195,34 @@ function playTone(frequency, duration = 0.12, type = 'triangle', volume = 0.18, 
   osc.stop(stop);
 }
 
-function playSound(name) {
+let audioConfig = { attack: null, gift: null, kill: null, respawn: null, heal: null };
+const audioCache = {};
+
+function getAudio(filename) {
+  if (!filename) return null;
+  if (!audioCache[filename]) {
+    audioCache[filename] = new Audio(`/audio/${filename}`);
+    audioCache[filename].preload = 'auto';
+  }
+  return audioCache[filename];
+}
+
+function playSound(event) {
   if (!overlaySoundEnabled) return;
   if (audioCtx.state === 'suspended') {
-    audioCtx.resume().then(() => { audioReady = true; setAudioStatus(); playSound(name); }).catch(() => {});
+    audioCtx.resume().then(() => { audioReady = true; playSound(event); }).catch(() => {});
     return;
   }
-  if (!audioReady) return;
-  switch (name) {
-    case 'single': case 'laser':   laserSound.currentTime = 0; laserSound.play().catch(() => {}); break;
-    case 'triple': case 'special': giftSound.currentTime  = 0; giftSound.play().catch(()  => {}); break;
-    case 'heal':
-      playTone(520, 0.14, 'triangle', 0.14);
-      playTone(660, 0.16, 'sine',     0.10, 0.05);
-      break;
-  }
+  const audio = getAudio(audioConfig[event]);
+  if (audio) { audio.currentTime = 0; audio.play().catch(() => {}); }
 }
+
+socket.on('audioConfig', (cfg) => {
+  Object.assign(audioConfig, cfg);
+  Object.values(audioConfig).filter(Boolean).forEach(f => getAudio(f));
+});
+
+socket.on('soundEvent', ({ event }) => playSound(event));
 
 // ── Player helpers ────────────────────────────────────────────────────────────
 function getTopPlayers(count = 5) {
@@ -400,7 +410,7 @@ socket.on('attack', ({ attacker, target, damage, killed, special }) => {
 
   if (players[attacker] && players[target]) {
     attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, killed, special));
-    playSound('single');
+    playSound('attack');
 
     players[target].hp = Math.max(0, (players[target].hp || 0) - damage);
     if (killed) players[target].alive = false;
@@ -422,7 +432,7 @@ socket.on('giftAttack', ({ attacker, target, damage, killed }) => {
 
   if (players[attacker] && players[target]) {
     attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, killed, true));
-    playSound('triple');
+    playSound('gift');
 
     players[target].hp = Math.max(0, (players[target].hp || 0) - damage);
     if (killed || players[target].hp === 0) players[target].alive = false;
