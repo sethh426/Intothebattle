@@ -249,14 +249,14 @@ function awardStats(uniqueId, nickname, hpBoost = 0, strBoost = 0) {
 
 function dealDamage(attackerId, targetId, multiplier = 1) {
   const attacker = players[attackerId];
-  const target = players[targetId];
+  const target   = players[targetId];
 
   if (!attacker?.alive || !target?.alive || attackerId === targetId) return null;
 
   const dmg = Math.floor(
     attacker.strength *
-      multiplier *
-      (1 - CFG.ATTACK_VARIANCE / 2 + Math.random() * CFG.ATTACK_VARIANCE)
+    multiplier *
+    (1 - CFG.ATTACK_VARIANCE / 2 + Math.random() * CFG.ATTACK_VARIANCE)
   );
 
   target.hp = Math.max(0, target.hp - dmg);
@@ -269,11 +269,13 @@ function dealDamage(attackerId, targetId, multiplier = 1) {
     killed = true;
 
     console.log(`💀 @${targetId} defeated by @${attackerId}!`);
+    io.emit('soundEvent', { event: 'kill' });
 
     setTimeout(() => {
       spawnPlayer(targetId, target.nickname);
-      io.emit('respawn', { uniqueId: targetId });
-      io.emit('gameState', players);
+      io.emit('respawn',    { uniqueId: targetId });
+      io.emit('soundEvent', { event: 'respawn' });
+      io.emit('gameState',  players);
     }, CFG.RESPAWN_DELAY_MS);
   }
 
@@ -283,10 +285,10 @@ function dealDamage(attackerId, targetId, multiplier = 1) {
 
   return {
     attacker: attackerId,
-    target: targetId,
-    damage: dmg,
+    target:   targetId,
+    damage:   dmg,
     killed,
-    special: multiplier > 1,
+    special:  multiplier > 1,
   };
 }
 
@@ -1189,7 +1191,7 @@ function setupTikTokEvents(tiktokClient) {
     }
 
     awardStats(id, nick, CFG.LIKE_HP_BOOST, 0);
-
+io.emit('soundEvent', { event: 'heal' });
     io.emit('gameState', players);
   });
 
