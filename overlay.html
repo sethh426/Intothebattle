@@ -63,7 +63,9 @@ body { font-family: 'Arial', sans-serif; background: #000; }
     <div class="status-row"><span class="status-label">Server:</span><span class="status-value" id="serverStatus">Connecting...</span></div>
     <div class="status-row"><span class="status-label">Players:</span><span class="status-value" id="playerCount">0</span></div>
     <div class="status-row"><span class="status-label">Audio:</span><span class="status-value" id="audioStatus">Enabled</span></div>
-    <div class="status-row"><button id="enableAudioBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;">Enable Audio</button></div>
+    <div class="status-row">
+      <button id="enableAudioBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;">Enable Audio</button>
+    </div>
     <div class="status-row"><span class="status-label">Showing:</span><span class="status-value" id="showingCount">0 / 0</span></div>
   </div>
   <div class="panel leaderboard">
@@ -135,7 +137,7 @@ let offsetX    = Number(offsetXControl.value);
 let offsetY    = Number(offsetYControl.value);
 
 function syncLabels() {
-  gapXValue.textContent   = layoutGapX;
+  gapXValue.textContent    = layoutGapX;
   offsetXValue.textContent = offsetX;
   offsetYValue.textContent = offsetY;
 }
@@ -154,15 +156,26 @@ toggleControls.addEventListener('click', () => {
 const audioStatusLabel = document.getElementById('audioStatus');
 const enableAudioBtn   = document.getElementById('enableAudioBtn');
 let overlaySoundEnabled = true;
-laserSound.preload = 'auto';
-giftSound.preload  = 'auto';
 
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let audioReady = audioCtx.state !== 'suspended';
 
+// Dynamic audio config — populated from server, no hardcoded filenames
+let audioConfig = { attack: null, gift: null, kill: null, respawn: null, heal: null };
+const audioCache = {};
+
+function getAudio(filename) {
+  if (!filename) return null;
+  if (!audioCache[filename]) {
+    audioCache[filename] = new Audio(`/audio/${filename}`);
+    audioCache[filename].preload = 'auto';
+  }
+  return audioCache[filename];
+}
+
 function setAudioStatus() {
-  if (!overlaySoundEnabled)          { audioStatusLabel.textContent = 'Muted';           return; }
-  if (audioCtx.state === 'suspended'){ audioStatusLabel.textContent = 'Click to enable'; return; }
+  if (!overlaySoundEnabled)           { audioStatusLabel.textContent = 'Muted';           return; }
+  if (audioCtx.state === 'suspended') { audioStatusLabel.textContent = 'Click to enable'; return; }
   audioStatusLabel.textContent = audioReady ? 'Ready' : 'Unavailable';
 }
 
@@ -182,9 +195,9 @@ function playTone(frequency, duration = 0.12, type = 'triangle', volume = 0.18, 
   if (!audioCtx || !audioReady) return;
   const osc  = audioCtx.createOscillator();
   const gain = audioCtx.createGain();
-  osc.type = type;
+  osc.type            = type;
   osc.frequency.value = frequency;
-  gain.gain.value = volume;
+  gain.gain.value     = volume;
   osc.connect(gain);
   gain.connect(audioCtx.destination);
   const start = audioCtx.currentTime + when;
@@ -195,34 +208,16 @@ function playTone(frequency, duration = 0.12, type = 'triangle', volume = 0.18, 
   osc.stop(stop);
 }
 
-let audioConfig = { attack: null, gift: null, kill: null, respawn: null, heal: null };
-const audioCache = {};
-
-function getAudio(filename) {
-  if (!filename) return null;
-  if (!audioCache[filename]) {
-    audioCache[filename] = new Audio(`/audio/${filename}`);
-    audioCache[filename].preload = 'auto';
-  }
-  return audioCache[filename];
-}
-
 function playSound(event) {
   if (!overlaySoundEnabled) return;
   if (audioCtx.state === 'suspended') {
-    audioCtx.resume().then(() => { audioReady = true; playSound(event); }).catch(() => {});
+    audioCtx.resume().then(() => { audioReady = true; setAudioStatus(); playSound(event); }).catch(() => {});
     return;
   }
+  if (!audioReady) return;
   const audio = getAudio(audioConfig[event]);
   if (audio) { audio.currentTime = 0; audio.play().catch(() => {}); }
 }
-
-socket.on('audioConfig', (cfg) => {
-  Object.assign(audioConfig, cfg);
-  Object.values(audioConfig).filter(Boolean).forEach(f => getAudio(f));
-});
-
-socket.on('soundEvent', ({ event }) => playSound(event));
 
 // ── Player helpers ────────────────────────────────────────────────────────────
 function getTopPlayers(count = 5) {
@@ -248,7 +243,7 @@ function getHordePlayer() {
     hordeCount: rest.length,
     hp:         rest.reduce((s, p) => s + (p.hp    || 0),   0),
     maxHp:      rest.reduce((s, p) => s + (p.maxHp || 100), 0),
-    alive: true,
+    alive:   true,
     isHorde: true,
   };
 }
@@ -276,38 +271,26 @@ function getPlayerPos(player) {
   const botBuffer   = height * 0.25;
   const playW       = Math.max(0, width  - leftBuffer - rightBuffer);
   const playH       = Math.max(0, height - topBuffer  - botBuffer);
-  const gapX        = layoutGapX;
-  const cellW       = Math.max(80, (playW - gapX * (cols - 1)) / cols);
+  const cellW       = Math.max(80, (playW - layoutGapX * (cols - 1)) / cols);
   const cellH       = Math.max(80, playH);
-  const gridWidth   = cols * cellW + (cols - 1) * gapX;
+  const gridWidth   = cols * cellW + (cols - 1) * layoutGapX;
   const startX      = leftBuffer + Math.max(0, (playW - gridWidth) / 2) + offsetX;
   const startY      = topBuffer  + offsetY;
 
   return {
-    x: startX + (idx % cols) * (cellW + gapX) + cellW / 2,
+    x: startX + (idx % cols) * (cellW + layoutGapX) + cellW / 2,
     y: startY + cellH / 2,
   };
 }
 
-// ── KEY FIX: resolveParticipant + fixed getAnimationPos ──────────────────────
-
-// If a participant is not in the top 5, treat them as the horde
 function resolveParticipant(uniqueId) {
-  const inTop5 = getTopPlayers(5).some(p => p.uniqueId === uniqueId);
-  return inTop5 ? uniqueId : HORDE_ID;
+  return getTopPlayers(5).some(p => p.uniqueId === uniqueId) ? uniqueId : HORDE_ID;
 }
 
-// Always returns a valid, current position — never uses stale off-screen cache
 function getAnimationPos(uniqueId) {
-  if (uniqueId === HORDE_ID) {
-    return lastPlayerPositions[HORDE_ID] || getHordePos();
-  }
-  // Only trust the cache if the player is currently on-screen (top 5)
+  if (uniqueId === HORDE_ID) return lastPlayerPositions[HORDE_ID] || getHordePos();
   const inTop5 = getTopPlayers(5).some(p => p.uniqueId === uniqueId);
-  if (inTop5) {
-    return lastPlayerPositions[uniqueId] || getPlayerPos(players[uniqueId]);
-  }
-  // Off-screen players always anchor to the horde position
+  if (inTop5) return lastPlayerPositions[uniqueId] || getPlayerPos(players[uniqueId]);
   return lastPlayerPositions[HORDE_ID] || getHordePos();
 }
 
@@ -370,12 +353,25 @@ const attacks = [];
 // ── Socket ────────────────────────────────────────────────────────────────────
 const socket = io();
 
-socket.on('connect',    () => { document.getElementById('serverStatus').textContent = '🟢 LIVE'; socket.emit('register', { type: 'overlay' }); });
-socket.on('disconnect', () => { document.getElementById('serverStatus').textContent = 'Offline'; });
-socket.on('gameState',  (state) => { players = state || {}; updateUI(); });
-socket.on('soundSettings', ({ enabled }) => { overlaySoundEnabled = !!enabled; });
-socket.on('devSound',  ({ type }) => { if (['laser','heal','special'].includes(type)) playSound(type); });
-socket.on('forceReload', () => location.reload());
+socket.on('connect', () => {
+  document.getElementById('serverStatus').textContent = '🟢 LIVE';
+  socket.emit('register', { type: 'overlay' });
+});
+socket.on('disconnect', () => {
+  document.getElementById('serverStatus').textContent = 'Offline';
+});
+socket.on('gameState',     (state) => { players = state || {}; updateUI(); });
+socket.on('soundSettings', ({ enabled }) => { overlaySoundEnabled = !!enabled; setAudioStatus(); });
+socket.on('forceReload',   () => location.reload());
+
+// Receive audio assignments from server — pre-cache all assigned files
+socket.on('audioConfig', (cfg) => {
+  Object.assign(audioConfig, cfg);
+  Object.values(audioConfig).filter(Boolean).forEach(f => getAudio(f));
+});
+
+// Server-driven sound events (kill, respawn, heal fired from server.js)
+socket.on('soundEvent', ({ event }) => playSound(event));
 
 socket.on('backgroundChanged', ({ filename }) => {
   if (!filename) { backgroundImg = null; return; }
@@ -400,9 +396,7 @@ socket.on('giftEffect', ({ attacker, giftName, diamonds }) => {
   addLog(`🎁 ${name} sent ${giftName || 'a gift'} (${diamonds || 0} 💎)`, 'gift');
 });
 
-// ── Attack handlers (THE KEY FIX) ────────────────────────────────────────────
 socket.on('attack', ({ attacker, target, damage, killed, special }) => {
-  // Resolve both ends: if either is not in top 5, redirect to horde anchor
   const effectiveAttacker = resolveParticipant(attacker);
   const effectiveTarget   = resolveParticipant(target);
   const fromPos = getAnimationPos(effectiveAttacker);
@@ -424,7 +418,6 @@ socket.on('attack', ({ attacker, target, damage, killed, special }) => {
 });
 
 socket.on('giftAttack', ({ attacker, target, damage, killed }) => {
-  // Same fix: resolve both participants before getting positions
   const effectiveAttacker = resolveParticipant(attacker);
   const effectiveTarget   = resolveParticipant(target);
   const fromPos = getAnimationPos(effectiveAttacker);
@@ -517,22 +510,18 @@ function drawPlayers() {
     else if (rank === 3) { nameSize = 22; barWidth = 150; emojiSize = 76; }
     else if (rank <= 5)  { nameSize = 20; barWidth = 144; emojiSize = 72; }
 
-    // Name
     ctx.font = `bold ${nameSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
     ctx.strokeText(name, pos.x, pos.y - emojiSize / 2 - 18);
     ctx.fillStyle = '#fff';
     ctx.fillText(name,   pos.x, pos.y - emojiSize / 2 - 18);
 
-    // Glow ring
     ctx.fillStyle = 'rgba(100,200,255,0.1)';
     ctx.beginPath(); ctx.arc(pos.x, pos.y, emojiSize / 2 + 12, 0, Math.PI * 2); ctx.fill();
 
-    // Emoji
     ctx.font = `${emojiSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('💎', pos.x, pos.y);
 
-    // HP bar
     const barY = pos.y + emojiSize / 2 + 36;
     ctx.fillStyle = '#0a0e1a';
     ctx.fillRect(pos.x - barWidth / 2, barY, barWidth, 18);
@@ -541,7 +530,6 @@ function drawPlayers() {
     ctx.fillStyle = '#ff3333';
     ctx.fillRect(pos.x - barWidth / 2 + 2, barY + 2, Math.max(0, (barWidth - 4) * hpPct), 14);
 
-    // HP text
     ctx.font = '18px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
     ctx.strokeText(`${hpValue}/${maxHp}`, pos.x, barY + 22);
@@ -549,40 +537,35 @@ function drawPlayers() {
     ctx.fillText(`${hpValue}/${maxHp}`,   pos.x, barY + 22);
   });
 
-  // Horde boss
+  // ── Horde boss ───────────────────────────────────────────────────────────
   const horde = getHordePlayer();
   if (horde) {
-    const pos = getHordePos();
+    const pos      = getHordePos();
     lastPlayerPositions[HORDE_ID] = { x: pos.x, y: pos.y };
 
     const hpPct    = Math.max(0, Math.min(1, horde.hp / (horde.maxHp || 1)));
     const barWidth = 160, emojiSize = 80;
     const pulse    = 0.5 + 0.5 * Math.sin(Date.now() / 400);
 
-    // Pulsing danger glow
     ctx.fillStyle = `rgba(255,60,60,${0.08 + pulse * 0.08})`;
     ctx.beginPath(); ctx.arc(pos.x, pos.y, emojiSize / 2 + 24, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = `rgba(255,80,80,${0.3 + pulse * 0.3})`; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(pos.x, pos.y, emojiSize / 2 + 28, 0, Math.PI * 2); ctx.stroke();
 
-    // Name
     ctx.font = 'bold 18px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
     ctx.strokeText('⚔ THE HORDE', pos.x, pos.y - emojiSize / 2 - 22);
     ctx.fillStyle = '#ff6666';
     ctx.fillText('⚔ THE HORDE',   pos.x, pos.y - emojiSize / 2 - 22);
 
-    // Count
     ctx.font = 'bold 13px Arial'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
     ctx.strokeText(`${horde.hordeCount} players`, pos.x, pos.y - emojiSize / 2 - 6);
     ctx.fillStyle = '#ffaaaa';
     ctx.fillText(`${horde.hordeCount} players`,   pos.x, pos.y - emojiSize / 2 - 6);
 
-    // Emoji
     ctx.font = `${emojiSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('💀', pos.x, pos.y);
 
-    // HP bar
     const barY = pos.y + emojiSize / 2 + 14;
     ctx.fillStyle = '#0a0e1a';
     ctx.fillRect(pos.x - barWidth / 2, barY, barWidth, 18);
@@ -591,7 +574,6 @@ function drawPlayers() {
     ctx.fillStyle = `rgba(255,${Math.floor(80 + hpPct * 80)},0,1)`;
     ctx.fillRect(pos.x - barWidth / 2 + 2, barY + 2, Math.max(0, (barWidth - 4) * hpPct), 14);
 
-    // HP text
     ctx.font = '14px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
     ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
     ctx.strokeText(`${Math.round(horde.hp)}/${Math.round(horde.maxHp)}`, pos.x, barY + 22);
