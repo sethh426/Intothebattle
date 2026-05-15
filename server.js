@@ -45,11 +45,21 @@ const players = {};
 const PLAYERS_FILE = path.join(__dirname, 'players.json');
 const BG_DIR = path.join(__dirname, 'backgrounds');
 const BG_FILE = path.join(BG_DIR, 'current-bg.json');
+const AUDIO_DIR      = path.join(__dirname, 'audio');
+const AUDIO_CFG_FILE = path.join(AUDIO_DIR, 'audio-config.json');
+const DEFAULT_AUDIO_CONFIG = {
+  attack:  null,
+  gift:    null,
+  kill:    null,
+  respawn: null,
+  heal:    null,
+};
+let audioConfig  = { ...DEFAULT_AUDIO_CONFIG };
+let audioLibrary = []; // all uploaded files
 
-function ensureBackgroundDir() {
-  if (!fs.existsSync(BG_DIR)) {
-    fs.mkdirSync(BG_DIR, { recursive: true });
-  }
+function ensureDir(dir) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
 }
 
 function isSafePath(baseDir, targetPath) {
@@ -136,6 +146,35 @@ function savePlayerStats() {
     console.error('Error saving player stats:', err);
   }
 }
+function loadAudioConfig() {
+  try {
+    ensureDir(AUDIO_DIR);
+    if (fs.existsSync(AUDIO_CFG_FILE)) {
+      const saved  = JSON.parse(fs.readFileSync(AUDIO_CFG_FILE, 'utf8'));
+      audioConfig  = { ...DEFAULT_AUDIO_CONFIG, ...(saved.config  || {}) };
+      audioLibrary = Array.isArray(saved.library) ? saved.library : [];
+      audioLibrary = audioLibrary.filter(entry => {
+        const fp = path.join(AUDIO_DIR, entry.filename);
+        return isSafePath(AUDIO_DIR, fp) && fs.existsSync(fp);
+      });
+      console.log(`🔊 Loaded audio config (${audioLibrary.length} files)`);
+    }
+  } catch (err) {
+    console.error('Error loading audio config:', err);
+  }
+}
+
+function saveAudioConfig() {
+  try {
+    ensureDir(AUDIO_DIR);
+    fs.writeFileSync(AUDIO_CFG_FILE, JSON.stringify(
+      { config: audioConfig, library: audioLibrary }, null, 2
+    ));
+  } catch (err) {
+    console.error('Error saving audio config:', err);
+  }
+}
+
 
 // ─── GAME HELPERS ─────────────────────────────────────────────────────────────
 function randomColor() {
@@ -387,7 +426,7 @@ app.use(express.static(__dirname));
 app.use(express.json());
 
 // ─── BACKGROUND SETUP ─────────────────────────────────────────────────────────
-ensureBackgroundDir();
+ensureDir(BG_DIR);
 
 const ALLOWED_BACKGROUND_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
 const ALLOWED_BACKGROUND_MIMES = new Set([
@@ -400,7 +439,7 @@ const ALLOWED_BACKGROUND_MIMES = new Set([
 const upload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => {
-      ensureBackgroundDir();
+      ensureDir(BG_DIR);
       cb(null, BG_DIR);
     },
     filename: (_req, file, cb) => {
@@ -433,7 +472,7 @@ let currentBackground = null;
 
 function loadCurrentBackground() {
   try {
-    ensureBackgroundDir();
+    ensureDir(BG_DIR);
 
     if (fs.existsSync(BG_FILE)) {
       currentBackground = JSON.parse(fs.readFileSync(BG_FILE, 'utf8'));
@@ -446,7 +485,7 @@ function loadCurrentBackground() {
 
 function saveBackgroundMeta(filename) {
   try {
-    ensureBackgroundDir();
+    ensureDir(BG_DIR);
     currentBackground = { filename };
     fs.writeFileSync(BG_FILE, JSON.stringify(currentBackground, null, 2));
   } catch (err) {
@@ -610,7 +649,7 @@ app.post('/api/players/clear', (_req, res) => {
 // ─── BACKGROUND ROUTES ────────────────────────────────────────────────────────
 app.post('/api/background/upload', (req, res) => {
   res.type('application/json');
-  ensureBackgroundDir();
+  ensureDir(BG_DIR);
 
   upload.single('background')(req, res, (err) => {
     try {
