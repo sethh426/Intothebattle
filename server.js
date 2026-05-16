@@ -1,5 +1,6 @@
 import { TikTokLive } from '@tiktool/live';
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
@@ -7,6 +8,11 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import multer from 'multer';
+import authRoutes from './tiktokbr/routes/auth.js';
+import adminRoutes from './tiktokbr/routes/admin.js';
+import requireAccess from './tiktokbr/middleware/auth.js';
+import db from './tiktokbr/db/db.js';
+import jwt from 'jsonwebtoken';
 
 dotenv.config();
 
@@ -431,8 +437,50 @@ const app        = express();
 const httpServer = createServer(app);
 const io         = new Server(httpServer, { cors: { origin: '*' } });
 
+app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+
+app.use('/', authRoutes);
+app.use('/admin', adminRoutes);
+
+app.get('/overlay.html', requireAccess, (req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
+app.get('/overlay', requireAccess, (req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
+app.get('/admin-panel', requireAccess, (_req, res) => res.redirect('/admin'));
+
+function parseCookieHeader(header = '') {
+  return Object.fromEntries(
+    header.split(';').map((part) => {
+      const [name, ...rest] = part.trim().split('=');
+      return [name, rest.join('=')];
+    }).filter(([name]) => name)
+  );
+}
+
+io.use((socket, next) => {
+  const cookies = parseCookieHeader(socket.handshake.headers.cookie || '');
+  const token = cookies.session_token;
+  if (!token) return next(new Error('Unauthorized'));
+
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
+  } catch (_err) {
+    return next(new Error('Unauthorized'));
+  }
+
+  const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
+  if (!row || row.is_revoked || new Date(row.expires_at) < new Date()) {
+    return next(new Error('Unauthorized'));
+  }
+
+  const fp = cookies.fp;
+  if (row.fingerprint && (!fp || row.fingerprint !== fp)) {
+    return next(new Error('Unauthorized'));
+  }
+
+  socket.accessCode = row;
+  next();
+});
 
 app.use((req, res, next) => {
   if (req.path === '/dashboard.html' || req.path === '/dashboard-login.html') {
