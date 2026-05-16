@@ -41,9 +41,20 @@ body { font-family: 'Arial', sans-serif; background: #000; }
 .controls-title { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: #64c8ff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid rgba(100,200,255,0.2); padding-bottom: 6px; }
 .controls-title button { background: rgba(255,255,255,0.08); border: 1px solid rgba(100,200,255,0.25); color: #fff; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 11px; }
 .controls.hidden { opacity: 0.15; }
-.control-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; margin: 10px 0; font-size: 12px; }
-.control-row span { color: #e1f7ff; }
+.control-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 6px; margin: 8px 0; font-size: 12px; }
+.control-row span:first-child { color: #e1f7ff; }
+.control-row span:last-child { color: #64c8ff; font-weight: 600; font-size: 11px; min-width: 28px; text-align: right; }
 .control-row input[type="range"] { width: 100%; }
+.control-section-label {
+  border-top: 1px solid rgba(100,200,255,0.15);
+  margin: 10px 0 4px;
+  padding-top: 8px;
+  font-size: 10px;
+  color: #64c8ff;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 700;
+}
 .log-title { font-size: 12px; font-weight: 700; color: #64c8ff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid rgba(100,200,255,0.2); padding-bottom: 6px; }
 .log-entry { padding: 4px 6px; margin: 2px 0; background: rgba(255,255,255,0.04); border-left: 2px solid rgba(100,200,255,0.3); border-radius: 4px; font-size: 10px; line-height: 1.2; color: #ddd; }
 .log-entry.kill { background: rgba(255,51,51,0.12); border-left-color: #ff4444; color: #ffdddd; font-weight: 600; }
@@ -81,25 +92,54 @@ body { font-family: 'Arial', sans-serif; background: #000; }
       <span>⚙️ Layout</span>
       <button id="toggleControls">Hide</button>
     </div>
-    <label class="control-row">
-      <span>Column Gap</span>
-      <input id="gapXControl" type="range" min="0" max="220" step="10" value="150" />
-      <span id="gapXValue">150</span>
-    </label>
-    <label class="control-row">
-      <span>Horizontal Offset</span>
-      <input id="offsetXControl" type="range" min="-500" max="500" step="10" value="0" />
-      <span id="offsetXValue">0</span>
-    </label>
-    <label class="control-row">
-      <span>Vertical Position</span>
-      <input id="offsetYControl" type="range" min="-500" max="500" step="10" value="0" />
-      <span id="offsetYValue">0</span>
-    </label>
+
+```
+<!-- Layout Controls -->
+<label class="control-row">
+  <span>Column Gap</span>
+  <input id="gapXControl" type="range" min="0" max="220" step="10" value="150" />
+  <span id="gapXValue">150</span>
+</label>
+<label class="control-row">
+  <span>Horizontal Offset</span>
+  <input id="offsetXControl" type="range" min="-500" max="500" step="10" value="0" />
+  <span id="offsetXValue">0</span>
+</label>
+<label class="control-row">
+  <span>Vertical Position</span>
+  <input id="offsetYControl" type="range" min="-500" max="500" step="10" value="0" />
+  <span id="offsetYValue">0</span>
+</label>
+
+<!-- Border Controls -->
+<div class="control-section-label">⬛ Border</div>
+<label class="control-row">
+  <span>Top Padding</span>
+  <input id="borderTopPadControl" type="range" min="0" max="200" step="5" value="90" />
+  <span id="borderTopPadValue">90</span>
+</label>
+<label class="control-row">
+  <span>Bottom Padding</span>
+  <input id="borderBotPadControl" type="range" min="0" max="200" step="5" value="90" />
+  <span id="borderBotPadValue">90</span>
+</label>
+<label class="control-row">
+  <span>Col Half-Width</span>
+  <input id="borderHalfWControl" type="range" min="20" max="200" step="5" value="80" />
+  <span id="borderHalfWValue">80</span>
+</label>
+<label class="control-row">
+  <span>Opacity</span>
+  <input id="borderOpacityControl" type="range" min="0" max="100" step="5" value="100" />
+  <span id="borderOpacityValue">100%</span>
+</label>
+```
+
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
 let players = {};
@@ -132,20 +172,44 @@ const offsetYValue   = document.getElementById('offsetYValue');
 const toggleControls = document.getElementById('toggleControls');
 const layoutControls = document.getElementById('layoutControls');
 
-let layoutGapX = Number(gapXControl.value);
-let offsetX    = Number(offsetXControl.value);
-let offsetY    = Number(offsetYControl.value);
+// ── Border controls ───────────────────────────────────────────────────────────
+const borderTopPadControl  = document.getElementById('borderTopPadControl');
+const borderBotPadControl  = document.getElementById('borderBotPadControl');
+const borderHalfWControl   = document.getElementById('borderHalfWControl');
+const borderOpacityControl = document.getElementById('borderOpacityControl');
+const borderTopPadValue    = document.getElementById('borderTopPadValue');
+const borderBotPadValue    = document.getElementById('borderBotPadValue');
+const borderHalfWValue     = document.getElementById('borderHalfWValue');
+const borderOpacityValue   = document.getElementById('borderOpacityValue');
+
+let layoutGapX    = Number(gapXControl.value);
+let offsetX       = Number(offsetXControl.value);
+let offsetY       = Number(offsetYControl.value);
+let borderTopPad  = Number(borderTopPadControl.value);
+let borderBotPad  = Number(borderBotPadControl.value);
+let borderHalfW   = Number(borderHalfWControl.value);
+let borderOpacity = Number(borderOpacityControl.value) / 100;
 
 function syncLabels() {
-  gapXValue.textContent    = layoutGapX;
-  offsetXValue.textContent = offsetX;
-  offsetYValue.textContent = offsetY;
+  gapXValue.textContent        = layoutGapX;
+  offsetXValue.textContent     = offsetX;
+  offsetYValue.textContent     = offsetY;
+  borderTopPadValue.textContent = borderTopPad;
+  borderBotPadValue.textContent = borderBotPad;
+  borderHalfWValue.textContent  = borderHalfW;
+  borderOpacityValue.textContent = Math.round(borderOpacity * 100) + '%';
 }
 syncLabels();
 
 gapXControl.addEventListener('input',    () => { layoutGapX = Number(gapXControl.value);    syncLabels(); });
 offsetXControl.addEventListener('input', () => { offsetX    = Number(offsetXControl.value); syncLabels(); });
 offsetYControl.addEventListener('input', () => { offsetY    = Number(offsetYControl.value); syncLabels(); });
+
+borderTopPadControl.addEventListener('input',  () => { borderTopPad  = Number(borderTopPadControl.value);             syncLabels(); });
+borderBotPadControl.addEventListener('input',  () => { borderBotPad  = Number(borderBotPadControl.value);             syncLabels(); });
+borderHalfWControl.addEventListener('input',   () => { borderHalfW   = Number(borderHalfWControl.value);              syncLabels(); });
+borderOpacityControl.addEventListener('input', () => { borderOpacity = Number(borderOpacityControl.value) / 100;      syncLabels(); });
+
 toggleControls.addEventListener('click', () => {
   const hidden = layoutControls.classList.toggle('hidden');
   toggleControls.textContent = hidden ? 'Show' : 'Hide';
@@ -453,14 +517,20 @@ const attacks = [];
 // ── Neon column borders ───────────────────────────────────────────────────────
 function drawColumnBorders(sorted, posCache, hordePos) {
   if (!sorted.length || !posCache.length) return;
+  if (borderOpacity <= 0) return;
 
-  const topPad    = 90;
-  const bottomPad = 90;
-  const topY      = posCache[0].y - topPad;
-  const bottomY   = hordePos.y   + bottomPad;
+  const topY    = posCache[0].y - borderTopPad;
+  const bottomY = hordePos.y   + borderBotPad;
 
-  let colHalfW = 80;
-  if (posCache.length > 1) colHalfW = (posCache[1].x - posCache[0].x) / 2;
+  // Use the slider-controlled half-width, but fall back to computed if only 1 player
+  let colHalfW = borderHalfW;
+  if (posCache.length > 1) {
+    // Use the slider as an override offset on top of the computed value
+    const computedHalf = (posCache[1].x - posCache[0].x) / 2;
+    colHalfW = borderHalfW === 80
+      ? computedHalf          // default: auto
+      : borderHalfW;          // user has moved the slider
+  }
 
   const firstX = posCache[0].x - colHalfW;
   const lastX  = posCache[posCache.length - 1].x + colHalfW;
@@ -471,6 +541,9 @@ function drawColumnBorders(sorted, posCache, hordePos) {
     borderXs.push((posCache[i].x + posCache[i + 1].x) / 2);
   }
   borderXs.push(lastX);
+
+  ctx.save();
+  ctx.globalAlpha = borderOpacity;
 
   // Draw each vertical neon line
   borderXs.forEach(bx => {
@@ -531,7 +604,7 @@ function drawColumnBorders(sorted, posCache, hordePos) {
   ctx.strokeStyle = botLineH; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(firstX, bottomY); ctx.lineTo(lastX, bottomY); ctx.stroke();
 
-  // Subtle column fill tint — gives each column a faint sectioned panel feel
+  // Subtle column fill tint
   const colCount = posCache.length;
   for (let i = 0; i < colCount; i++) {
     const x1 = i === 0            ? firstX : (posCache[i - 1].x + posCache[i].x) / 2;
@@ -542,6 +615,8 @@ function drawColumnBorders(sorted, posCache, hordePos) {
       : 'rgba(80, 160, 220, 0.012)';
     ctx.fillRect(x1, topY, x2 - x1, bottomY - topY);
   }
+
+  ctx.restore();
 }
 
 // ── Socket ────────────────────────────────────────────────────────────────────
@@ -827,5 +902,6 @@ if (!location.search.includes('v=')) {
   location.replace(location.pathname + '?v=' + Date.now());
 }
 </script>
+
 </body>
 </html>
