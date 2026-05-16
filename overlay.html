@@ -341,7 +341,7 @@ function getHordePos(posCache) {
   let baseY = 300;
   if (posCache && posCache.length) {
     // player y + half of largest emoji (44) + HP bar area (~35) + gap (50)
-    baseY = Math.max(...posCache.map(p => p.y)) + 44 + 35 + 50;
+    baseY = Math.max(...posCache.map(p => p.y)) + 44 + 35 + 85;
   }
   return {
     x: canvas.clientWidth / 2 + offsetX,
