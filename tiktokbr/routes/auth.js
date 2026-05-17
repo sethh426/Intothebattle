@@ -43,7 +43,7 @@ function renderLoginPage({ error = '', message = '' } = {}) {
     label { display: block; margin-top: 12px; font-size: 13px; color: #a8b8ff; }
     input[type=text], input[type=password] { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: #fff; }
     button { margin-top: 18px; width: 100%; padding: 12px; border: none; border-radius: 10px; background: #4b90ff; color: white; font-weight: 700; cursor: pointer; }
-    .links { margin-top: 16px; display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+    .links { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
     .links a { color: #8fb8ff; font-size: 13px; text-decoration: none; }
     .notice { margin-top: 16px; padding: 12px; border-radius: 10px; background: rgba(255,255,255,0.05); }
     .error { color: #ff9fa8; }
@@ -63,6 +63,7 @@ function renderLoginPage({ error = '', message = '' } = {}) {
     </form>
     <div class="links">
       <a href="${PAYPAL_LINK}" target="_blank" rel="noopener">Don't have a code? Subscribe here</a>
+      <a href="/my-code">Already subscribed? Get your code here</a>
       <a href="/redeem-promo">Have a promo code?</a>
     </div>
   </div>
@@ -71,7 +72,7 @@ function renderLoginPage({ error = '', message = '' } = {}) {
     function setFingerprint(fp) {
       const input = document.getElementById('fp');
       if (input) input.value = fp;
-            document.cookie = 'fp=' + fp + '; path=/; sameSite=strict;' + (location.protocol === 'https:' ? ' secure;' : '');
+      document.cookie = 'fp=' + fp + '; path=/; sameSite=strict;' + (location.protocol === 'https:' ? ' secure;' : '');
     }
     if (window.Fingerprint2) {
       Fingerprint2.get(function(components) {
@@ -115,7 +116,7 @@ function renderPromoPage({ error = '', message = '', code = '' } = {}) {
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${code ? `<div class="code-box">${escapeHtml(code)}</div><p style="margin-top: 12px;">Save this access code now — you will not be able to recover it later.</p>` : ''}
-    <form method="POST" action="/auth/redeem-promo">
+    <form method="POST" action="/redeem-promo">
       <label for="promo">Promo code</label>
       <input id="promo" name="promo" type="text" autocomplete="off" required />
       <button type="submit">Redeem</button>
@@ -137,10 +138,6 @@ function getCookieOptions(httpOnly = true) {
 
 function sanitizeCode(value) {
   return String(value || '').trim().toUpperCase();
-}
-
-function sessionIsActive(row, currentSessionToken) {
-  return row.session_token && row.session_token !== '' && row.session_token !== currentSessionToken;
 }
 
 router.get('/login', (req, res) => {
