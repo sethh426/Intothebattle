@@ -10,6 +10,7 @@ import fs from 'fs';
 import multer from 'multer';
 import authRoutes from './tiktokbr/routes/auth.js';
 import adminRoutes from './tiktokbr/routes/admin.js';
+import paypalRoutes from './tiktokbr/routes/paypal.js';
 import requireAccess from './tiktokbr/middleware/auth.js';
 import db from './tiktokbr/db/db.js';
 import jwt from 'jsonwebtoken';
@@ -77,8 +78,8 @@ function isSafePath(baseDir, targetPath) {
 }
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
-const DASHBOARD_OWNER_EMAIL  = 'mrpipper33@gmail.com';
-const DASHBOARD_PASSWORD     = 'Lololo90!';
+const DASHBOARD_OWNER_EMAIL  = process.env.DASHBOARD_EMAIL    || '';
+const DASHBOARD_PASSWORD     = process.env.DASHBOARD_PASSWORD || '';
 const DASHBOARD_COOKIE_NAME  = 'dashboard_auth';
 const DASHBOARD_COOKIE_VALUE = Buffer.from(`${DASHBOARD_OWNER_EMAIL}:${DASHBOARD_PASSWORD}`).toString('base64');
 
@@ -443,10 +444,9 @@ app.use(express.json());
 
 app.use('/', authRoutes);
 app.use('/admin', adminRoutes);
-app.use('/', authRoutes);
-app.use('/admin', adminRoutes);
+app.use('/', paypalRoutes);
 
-app.get('/', (req, res) => res.redirect('/login'));
+app.get('/', (_req, res) => res.redirect('/login'));
 app.get('/overlay.html', requireAccess, (req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
 app.get('/overlay', requireAccess, (req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
 app.get('/admin-panel', requireAccess, (_req, res) => res.redirect('/admin'));
