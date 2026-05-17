@@ -12,4 +12,10 @@ db.pragma('journal_mode = WAL');
 const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
 db.exec(schema);
 
+try {
+  db.exec('ALTER TABLE access_codes ADD COLUMN paypal_subscription_id TEXT');
+} catch (_) {
+  // column already exists, ignore
+}
+
 export default db;
