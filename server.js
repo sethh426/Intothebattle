@@ -443,7 +443,10 @@ app.use(express.json());
 
 app.use('/', authRoutes);
 app.use('/admin', adminRoutes);
+app.use('/', authRoutes);
+app.use('/admin', adminRoutes);
 
+app.get('/', (req, res) => res.redirect('/login'));
 app.get('/overlay.html', requireAccess, (req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
 app.get('/overlay', requireAccess, (req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
 app.get('/admin-panel', requireAccess, (_req, res) => res.redirect('/admin'));
