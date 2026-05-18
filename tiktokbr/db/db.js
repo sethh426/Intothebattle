@@ -18,4 +18,14 @@ try {
   // column already exists, ignore
 }
 
+// ─── SEED: BETA ACCESS CODE ───────────────────────────────────────────────────
+try {
+  db.prepare(`
+    INSERT OR IGNORE INTO access_codes (code, email, expires_at)
+    VALUES ('BETA1', 'beta@tiktokbr.com', '2099-12-31 23:59:59')
+  `).run();
+} catch (_) {
+  // already exists, ignore
+}
+
 export default db;
