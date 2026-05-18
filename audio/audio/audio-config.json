@@ -7,14 +7,14 @@
     "heal": null
   },
   "library": [
-    { "filename": "8-bit heal.mp3", "originalName": "8-bit heal.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
-    { "filename": "sample gift laser shot.m4a", "originalName": "sample gift laser shot.m4a", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
-    { "filename": "sample respawn.mp3", "originalName": "sample respawn.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
-    { "filename": "sample sound 4.mp3", "originalName": "sample sound 4.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
-    { "filename": "sample sound 5.mp3", "originalName": "sample sound 5.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
-    { "filename": "sample sound 6.mp3", "originalName": "sample sound 6.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
-    { "filename": "sample sound 7.mp3", "originalName": "sample sound 7.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
-    { "filename": "single laser zap.mp3", "originalName": "single laser zap.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
-    { "filename": "sword cut.mp3", "originalName": "sword cut.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" }
+    { "filename": "sound1.mp3", "originalName": "sound1.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound2.mp3", "originalName": "sound2.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound3.mp3", "originalName": "sound3.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound4.mp3", "originalName": "sound4.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound5.mp3", "originalName": "sound5.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound6.mp3", "originalName": "sound6.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound7.mp3", "originalName": "sound7.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound8.m4a", "originalName": "sound8.m4a", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound9.mp3", "originalName": "sound9.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" }
   ]
 }
