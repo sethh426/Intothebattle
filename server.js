@@ -540,8 +540,15 @@ app.get('/dashboard/logout', (_req, res) => {
 });
 
 app.get('/dashboard', (req, res) => {
-  if (!isDashboardAuthed(req)) return res.redirect('/dashboard/login');
-  res.sendFile(path.join(__dirname, 'dashboard.html'));
+  if (isDashboardAuthed(req)) return res.sendFile(path.join(__dirname, 'dashboard.html'));
+  const token = req.cookies.session_token;
+  if (token) {
+    const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
+    if (row && !row.is_revoked && new Date(row.expires_at) > new Date()) {
+      return res.sendFile(path.join(__dirname, 'dashboard.html'));
+    }
+  }
+  res.redirect('/dashboard/login');
 });
 
 app.get('/stats', (_req, res) => res.sendFile(path.join(__dirname, 'stats.html')));
