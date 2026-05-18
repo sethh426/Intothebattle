@@ -147,7 +147,7 @@ router.get('/login', (req, res) => {
     const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
     if (row && !row.is_revoked && new Date(row.expires_at) > new Date()) {
       if (!row.fingerprint || (fp && row.fingerprint === fp)) {
-        return res.redirect('/overlay');
+        return res.redirect('/dashboard');
       }
     }
   }
@@ -180,7 +180,7 @@ router.post('/login', loginLimiter, (req, res) => {
 
   res.cookie('session_token', sessionToken, getCookieOptions(true));
   res.cookie('fp', fingerprint, getCookieOptions(false));
-  res.redirect('/overlay');
+  res.redirect('/dashboard');
 });
 
 router.post('/logout', (req, res) => {
