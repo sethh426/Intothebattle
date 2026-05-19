@@ -191,6 +191,7 @@
     .badge-kill    { background: rgba(255,107,107,0.2); color: #FF6B6B; }
     .badge-respawn { background: rgba(107,203,119,0.2); color: #6BCB77; }
     .badge-heal    { background: rgba(199,125,255,0.2); color: #C77DFF; }
+    .badge-follow  { background: rgba(255,107,181,0.2); color: #FF6BB5; }
 
     .assign-select {
       width: 100%;
@@ -536,14 +537,13 @@ function toggleOverlaySound() {
 }
 
 // ── Audio Manager ─────────────────────────────────────────────────────────────
-const EVENTS = ['attack', 'gift', 'kill', 'respawn', 'heal'];
-const EVENT_LABELS = { attack: '⚔️ Attack', gift: '🎁 Gift', kill: '💀 Kill', respawn: '✨ Respawn', heal: '💚 Heal' };
-const EVENT_BADGES = { attack: 'badge-attack', gift: 'badge-gift', kill: 'badge-kill', respawn: 'badge-respawn', heal: 'badge-heal' };
+const EVENTS = ['attack', 'gift', 'kill', 'respawn', 'heal', 'follow'];
+const EVENT_LABELS = { attack: '⚔️ Attack', gift: '🎁 Gift', kill: '💀 Kill', respawn: '✨ Respawn', heal: '💚 Heal', follow: '❤️ Follow' };
+const EVENT_BADGES = { attack: 'badge-attack', gift: 'badge-gift', kill: 'badge-kill', respawn: 'badge-respawn', heal: 'badge-heal', follow: 'badge-follow' };
 
 let audioLibraryData = [];
-let audioConfigData  = { attack: null, gift: null, kill: null, respawn: null, heal: null };
+let audioConfigData  = { attack: null, gift: null, kill: null, respawn: null, heal: null, follow: null };
 
-// Pre-load a preview Audio object for each file
 const previewCache = {};
 function getPreviewAudio(filename) {
   if (!previewCache[filename]) previewCache[filename] = new Audio(`/audio/${filename}`);
@@ -565,16 +565,9 @@ function formatBytes(bytes) {
 function renderAudioLibrary() {
   const container = document.getElementById('audioLibrary');
   const empty     = document.getElementById('audioLibraryEmpty');
-
-  // Remove existing rows (keep the empty placeholder)
   [...container.querySelectorAll('.audio-file-row')].forEach(el => el.remove());
-
-  if (!audioLibraryData.length) {
-    empty.style.display = 'block';
-    return;
-  }
+  if (!audioLibraryData.length) { empty.style.display = 'block'; return; }
   empty.style.display = 'none';
-
   audioLibraryData.forEach(file => {
     const row = document.createElement('div');
     row.className = 'audio-file-row';
@@ -591,21 +584,13 @@ function renderAudioLibrary() {
 function renderAssignTable() {
   const tbody = document.getElementById('assignTableBody');
   tbody.innerHTML = '';
-
   EVENTS.forEach(event => {
     const currentFile = audioConfigData[event];
     const tr = document.createElement('tr');
-
-    // Build select options
     const options = audioLibraryData.map(f => `
-      <option value="${f.filename}" ${currentFile === f.filename ? 'selected' : ''}>
-        ${f.originalName}
-      </option>`).join('');
-
+      <option value="${f.filename}" ${currentFile === f.filename ? 'selected' : ''}>${f.originalName}</option>`).join('');
     tr.innerHTML = `
-      <td>
-        <span class="event-badge ${EVENT_BADGES[event]}">${EVENT_LABELS[event]}</span>
-      </td>
+      <td><span class="event-badge ${EVENT_BADGES[event]}">${EVENT_LABELS[event]}</span></td>
       <td>
         <div style="display:flex;gap:6px;align-items:center;">
           <select class="assign-select" onchange="assignAudio('${event}', this.value)">
@@ -625,8 +610,8 @@ function loadAudioData() {
   .then(r => r.json())
   .then(d => {
     if (!d.success) return;
-    audioLibraryData = d.library  || [];
-    audioConfigData  = d.config   || {};
+    audioLibraryData = d.library || [];
+    audioConfigData  = d.config  || {};
     renderAudioLibrary();
     renderAssignTable();
   })
@@ -636,16 +621,11 @@ function loadAudioData() {
 function uploadAudioFile(file) {
   if (!file) return;
   const allowed = ['.mp3','.m4a','.wav','.ogg','.webm','.aac','.flac'];
-  if (!allowed.some(e => file.name.toLowerCase().endsWith(e))) {
-    toast('Invalid audio format. Use MP3, M4A, WAV, OGG, AAC, FLAC, or WEBM.');
-    return;
-  }
+  if (!allowed.some(e => file.name.toLowerCase().endsWith(e))) { toast('Invalid audio format. Use MP3, M4A, WAV, OGG, AAC, FLAC, or WEBM.'); return; }
   if (file.size > 20 * 1024 * 1024) { toast('File too large. Maximum size is 20MB.'); return; }
-
   const fd = new FormData();
   fd.append('audio', file);
   toast(`Uploading ${file.name}…`);
-
   fetch('/api/audio/upload', { method: 'POST', body: fd })
   .then(r => r.json())
   .then(d => {
@@ -694,7 +674,7 @@ function deleteAudioFile(filename, originalName) {
 }
 
 // ── Drop zone wiring ──────────────────────────────────────────────────────────
-const dropZone      = document.getElementById('dropZone');
+const dropZone       = document.getElementById('dropZone');
 const audioFileInput = document.getElementById('audioFileInput');
 
 audioFileInput.addEventListener('change', () => {
