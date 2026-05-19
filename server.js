@@ -62,6 +62,7 @@ const DEFAULT_AUDIO_CONFIG = {
   kill:    null,
   respawn: null,
   heal:    null,
+  follow:  null,
 };
 let audioConfig  = { ...DEFAULT_AUDIO_CONFIG };
 let audioLibrary = [];
@@ -192,14 +193,30 @@ function deleteCurrentBackgroundFile() {
 function loadAudioConfig() {
   try {
     ensureDir(AUDIO_DIR);
+
+    // ── Seed from repo if runtime config is missing or empty ──────────────────
+    if (!fs.existsSync(AUDIO_CFG_FILE)) {
+      const repoConfig = path.join(__dirname, 'audio', 'audio-config.json');
+      if (fs.existsSync(repoConfig)) {
+        fs.copyFileSync(repoConfig, AUDIO_CFG_FILE);
+        console.log('🔊 Seeded audio-config.json from repo');
+      }
+    }
+
     if (fs.existsSync(AUDIO_CFG_FILE)) {
       const saved  = JSON.parse(fs.readFileSync(AUDIO_CFG_FILE, 'utf8'));
       audioConfig  = { ...DEFAULT_AUDIO_CONFIG, ...(saved.config  || {}) };
       audioLibrary = Array.isArray(saved.library) ? saved.library : [];
+
+      // For repo-seeded files, don't filter by fs.existsSync since files
+      // are served from the repo path, not the runtime AUDIO_DIR
       audioLibrary = audioLibrary.filter(entry => {
-        const fp = path.join(AUDIO_DIR, entry.filename);
-        return isSafePath(AUDIO_DIR, fp) && fs.existsSync(fp);
+        const runtimePath = path.join(AUDIO_DIR, entry.filename);
+        const repoPath    = path.join(__dirname, 'audio', entry.filename);
+        return isSafePath(AUDIO_DIR, runtimePath) &&
+          (fs.existsSync(runtimePath) || fs.existsSync(repoPath));
       });
+
       console.log(`🔊 Loaded audio config (${audioLibrary.length} files)`);
     }
   } catch (err) {
@@ -438,6 +455,7 @@ const app        = express();
 const httpServer = createServer(app);
 const io         = new Server(httpServer, { cors: { origin: '*' } });
 
+app.set('trust proxy', 1);
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
@@ -495,8 +513,15 @@ app.use((req, res, next) => {
 app.use(express.static(__dirname));
 
 app.use('/audio', (req, res, next) => {
-  const filepath = path.join(AUDIO_DIR, path.basename(req.path));
-  if (!isSafePath(AUDIO_DIR, filepath)) return res.status(403).send('Forbidden');
+  const filename = path.basename(req.path);
+  const runtimePath = path.join(AUDIO_DIR, filename);
+  const repoPath    = path.join(__dirname, 'audio', filename);
+
+  if (!isSafePath(AUDIO_DIR, runtimePath)) return res.status(403).send('Forbidden');
+
+  // Serve from runtime first, fall back to repo
+  if (fs.existsSync(runtimePath)) return res.sendFile(runtimePath);
+  if (fs.existsSync(repoPath))    return res.sendFile(repoPath);
   next();
 }, express.static(AUDIO_DIR));
 
@@ -963,6 +988,16 @@ function setupTikTokEvents(tiktokClient) {
     if (!players[id]) spawnPlayer(id, nick);
     awardStats(id, nick, 0, CFG.SOCIAL_STRENGTH_BOOST);
     io.emit('gameState', players);
+  });
+
+  // ─── FOLLOW EVENT ─────────────────────────────────────────────────────────
+  tiktokClient.on('follow', (e) => {
+    const id   = e.user?.uniqueId;
+    const nick = e.user?.nickname || id;
+    if (!id) return;
+    console.log(`❤️  @${nick} followed!`);
+    io.emit('soundEvent', { event: 'follow' });
+    io.emit('follow', { uniqueId: id, nickname: nick });
   });
 
   tiktokClient.on('error', (err) => {
