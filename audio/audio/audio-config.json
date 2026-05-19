@@ -4,7 +4,8 @@
     "gift": null,
     "kill": null,
     "respawn": null,
-    "heal": null
+    "heal": null,
+    "follow": null
   },
   "library": [
     { "filename": "sound1.mp3", "originalName": "sound1.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
