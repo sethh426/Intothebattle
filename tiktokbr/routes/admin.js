@@ -48,7 +48,7 @@ function requireAdminAuth(req, res, next) {
   next();
 }
 
-function renderAdminPage({ message = '', error = '', codes = [], promos = [] } = {}) {
+function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [] } = {}) {
   const codeRows = codes.map((code) => {
     const status = code.is_revoked ? 'Revoked' : new Date(code.expires_at) < new Date() ? 'Expired' : 'Active';
     return `<tr>
@@ -102,13 +102,14 @@ function renderAdminPage({ message = '', error = '', codes = [], promos = [] } =
   <div class="wrapper">
     <h1>Admin Panel</h1>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
+    ${createdCode ? `<div class="notice success">New access code created: <strong>${escapeHtml(createdCode)}</strong> <button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(createdCode)}')">Copy</button></div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
     <div class="grid">
       <div class="card">
         <h2>Issue access code</h2>
         <form method="POST" action="/admin/issue-code">
-          <label>Email (optional)</label>
-          <input name="email" type="text" />
+          <label>Email (optional, stored for tracking only)</label>
+          <input name="email" type="text" placeholder="buyer@example.com" />
           <label>Days</label>
           <input name="days" type="number" min="1" value="30" />
           <button type="submit">Issue Code</button>
@@ -227,7 +228,7 @@ router.get('/logout', (req, res) => {
 router.get('/', requireAdminAuth, (req, res) => {
   const codes = db.prepare('SELECT * FROM access_codes ORDER BY expires_at DESC').all();
   const promos = db.prepare('SELECT * FROM promo_codes ORDER BY created_at DESC').all();
-  res.send(renderAdminPage({ codes, promos }));
+  res.send(renderAdminPage({ createdCode: String(req.query.createdCode || '').trim(), message: String(req.query.message || ''), error: String(req.query.error || ''), codes, promos }));
 });
 
 router.post('/issue-code', requireAdminAuth, (req, res) => {
@@ -237,7 +238,7 @@ router.post('/issue-code', requireAdminAuth, (req, res) => {
   const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
 
   db.prepare('INSERT INTO access_codes (code, email, expires_at) VALUES (?, ?, ?)').run(code, email, expiresAt);
-  res.redirect(`/admin?message=${encodeURIComponent(`Issued code ${code}`)}`);
+  res.redirect(`/admin?message=${encodeURIComponent('Issued new access code')}&createdCode=${encodeURIComponent(code)}`);
 });
 
 router.post('/extend-code', requireAdminAuth, (req, res) => {

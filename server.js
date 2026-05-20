@@ -64,8 +64,12 @@ const DEFAULT_AUDIO_CONFIG = {
   heal:    null,
   follow:  null,
 };
-let audioConfig  = { ...DEFAULT_AUDIO_CONFIG };
-let audioLibrary = [];
+const DEFAULT_OVERLAY_SETTINGS = {
+  laserColor: '#7afcff',
+};
+let audioConfig      = { ...DEFAULT_AUDIO_CONFIG };
+let audioLibrary     = [];
+let overlaySettings  = { ...DEFAULT_OVERLAY_SETTINGS };
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function ensureDir(dir) {
@@ -195,8 +199,12 @@ function loadAudioConfig() {
     ensureDir(AUDIO_DIR);
 
     if (!fs.existsSync(AUDIO_CFG_FILE)) {
-      const repoConfig = path.join(__dirname, 'audio', 'audio-config.json');
-      if (fs.existsSync(repoConfig)) {
+      const repoConfigCandidates = [
+        path.join(__dirname, 'audio', 'audio-config.json'),
+        path.join(__dirname, 'audio', 'audio', 'audio-config.json')
+      ];
+      const repoConfig = repoConfigCandidates.find(p => fs.existsSync(p));
+      if (repoConfig) {
         fs.copyFileSync(repoConfig, AUDIO_CFG_FILE);
         console.log('🔊 Seeded audio-config.json from repo');
       }
@@ -206,6 +214,41 @@ function loadAudioConfig() {
       const saved  = JSON.parse(fs.readFileSync(AUDIO_CFG_FILE, 'utf8'));
       audioConfig  = { ...DEFAULT_AUDIO_CONFIG, ...(saved.config  || {}) };
       audioLibrary = Array.isArray(saved.library) ? saved.library : [];
+      overlaySettings = { ...DEFAULT_OVERLAY_SETTINGS, ...(saved.settings || {}) };
+
+      const repoFiles = fs.existsSync(AUDIO_DIR)
+        ? fs.readdirSync(AUDIO_DIR).filter(file => {
+            const ext = path.extname(file).toLowerCase();
+            return ['.mp3', '.m4a', '.wav', '.ogg', '.aac', '.flac', '.webm'].includes(ext);
+          })
+        : [];
+
+      if (!audioLibrary.length) {
+        audioLibrary = repoFiles.map(filename => {
+          const filePath = path.join(AUDIO_DIR, filename);
+          return {
+            filename,
+            originalName: filename,
+            size: fs.existsSync(filePath) ? fs.statSync(filePath).size : 0,
+            uploadedAt: new Date().toISOString(),
+          };
+        });
+      } else {
+        const knownFilenames = new Set(audioLibrary.map(entry => entry.filename));
+        repoFiles.forEach(filename => {
+          if (filename === path.basename(AUDIO_CFG_FILE)) return;
+          if (!knownFilenames.has(filename)) {
+            const filePath = path.join(AUDIO_DIR, filename);
+            const size = fs.existsSync(filePath) ? fs.statSync(filePath).size : 0;
+            audioLibrary.push({
+              filename,
+              originalName: filename,
+              size,
+              uploadedAt: new Date().toISOString(),
+            });
+          }
+        });
+      }
 
       audioLibrary = audioLibrary.filter(entry => {
         const runtimePath = path.join(AUDIO_DIR, entry.filename);
@@ -214,6 +257,16 @@ function loadAudioConfig() {
           (fs.existsSync(runtimePath) || fs.existsSync(repoPath));
       });
 
+      audioLibrary.sort((a, b) => a.originalName.localeCompare(b.originalName, undefined, { numeric: true, sensitivity: 'base' }));
+
+      const allUnassigned = Object.values(audioConfig).every(val => !val);
+      if (allUnassigned && audioLibrary.length) {
+        const eventOrder = ['attack', 'gift', 'kill', 'respawn', 'heal', 'follow'];
+        eventOrder.forEach((event, idx) => {
+          if (idx < audioLibrary.length) audioConfig[event] = audioLibrary[idx].filename;
+        });
+      }
+
       console.log(`🔊 Loaded audio config (${audioLibrary.length} files)`);
     }
   } catch (err) {
@@ -221,11 +274,12 @@ function loadAudioConfig() {
   }
 }
 
+
 function saveAudioConfig() {
   try {
     ensureDir(AUDIO_DIR);
     fs.writeFileSync(AUDIO_CFG_FILE, JSON.stringify(
-      { config: audioConfig, library: audioLibrary }, null, 2
+      { config: audioConfig, library: audioLibrary, settings: overlaySettings }, null, 2
     ));
   } catch (err) {
     console.error('Error saving audio config:', err);
@@ -307,6 +361,7 @@ function spawnPlayer(uniqueId, nickname) {
     vx: (Math.random() - 0.5) * 2,
     vy: (Math.random() - 0.5) * 2,
     color:               ex?.color               || randomColor(),
+    iconEmoji:           ex?.iconEmoji           || '💎',
     messageBoostExpires: ex?.messageBoostExpires || 0,
     forceSpawn:          ex?.forceSpawn          || false,
   };
@@ -387,6 +442,22 @@ function extractMentions(comment = '') {
   return [...String(comment).matchAll(/@([^\s@]+)/g)]
     .map(match => cleanMention(match[1]))
     .filter(Boolean);
+}
+
+function getTopPlayers(count = 20) {
+  return Object.values(players)
+    .filter(p => p.alive)
+    .sort((a, b) => {
+      const aF = a.forceSpawn ? 1 : 0;
+      const bF = b.forceSpawn ? 1 : 0;
+      if (aF !== bF) return bF - aF;
+      const aHp = a.hp != null ? a.hp : (a.maxHp || 0);
+      const bHp = b.hp != null ? b.hp : (b.maxHp || 0);
+      const hpDiff = bHp - aHp;
+      if (hpDiff !== 0) return hpDiff;
+      return (b.maxHp || 0) - (a.maxHp || 0);
+    })
+    .slice(0, count);
 }
 
 function handleMentionAttack(attackerId, attackerNick, comment) {
@@ -524,6 +595,7 @@ io.on('connection', (socket) => {
       // Send current state to the newly connected overlay
       socket.emit('gameState',   players);
       socket.emit('audioConfig', audioConfig);   // ← pushes current assignments
+      socket.emit('laserColor', overlaySettings.laserColor);
       if (currentBackground) {
         socket.emit('backgroundChanged', { filename: currentBackground.filename });
       }
@@ -617,6 +689,15 @@ app.post('/api/dev/sound-settings', (req, res) => {
   res.json({ success: true });
 });
 
+app.post('/api/dev/laser-color', (req, res) => {
+  const { color } = req.body || {};
+  if (typeof color !== 'string' || !color.trim()) return res.status(400).json({ success: false, error: 'Invalid color' });
+  overlaySettings.laserColor = color.trim();
+  saveAudioConfig();
+  io.emit('laserColor', overlaySettings.laserColor);
+  res.json({ success: true, color: overlaySettings.laserColor });
+});
+
 app.post('/api/connect', (req, res) => {
   const { username } = req.body;
   if (!username) return res.json({ success: false, error: 'Username required' });
@@ -677,7 +758,7 @@ app.get('/background/:filename', (req, res) => {
 
 // ─── AUDIO ROUTES ─────────────────────────────────────────────────────────────
 app.get('/api/audio', (_req, res) => {
-  res.json({ success: true, library: audioLibrary, config: audioConfig });
+  res.json({ success: true, library: audioLibrary, config: audioConfig, settings: overlaySettings });
 });
 
 app.post('/api/audio/upload', (req, res) => {
@@ -900,6 +981,24 @@ function setupTikTokEvents(tiktokClient) {
     if (!id) return;
 
     awardStats(id, nick, 0, CFG.CHAT_STRENGTH_BOOST);
+
+    const iconMatch = comment.match(/^\s*(?:!emoji|\/emoji|emoji)\s+(.+)/i);
+    if (iconMatch) {
+      const requestedIcon = String(iconMatch[1]).trim().split(/\s+/)[0];
+      const topPlayers = getTopPlayers(5).map(p => p.uniqueId);
+      if (topPlayers.includes(id)) {
+        if (!players[id]) spawnPlayer(id, nick);
+        if (players[id]) {
+          players[id].iconEmoji = requestedIcon || players[id].iconEmoji || '💎';
+          players[id].lastActive = Date.now();
+          io.emit('gameState', players);
+          console.log(`🎭 @${nick} updated icon emoji to ${players[id].iconEmoji}`);
+        }
+      } else {
+        console.log(`⚠️ @${nick} is not in the top 5 and cannot change icon emoji`);
+      }
+      return;
+    }
 
     if (/\bspawn\b/i.test(comment)) {
       if (!players[id]?.alive) {

@@ -179,6 +179,10 @@ button:hover { opacity: 0.85; }
       <button class="btn-green"  onclick="sendDevSound('heal')">Play Heal</button>
       <button class="btn-yellow" onclick="sendDevSound('special')">Play Special</button>
     </div>
+    <div style="margin-top:16px;">
+      <label for="laserColorPicker" style="font-size:13px;color:#ccc;display:block;margin-bottom:8px;">Laser color</label>
+      <input id="laserColorPicker" type="color" value="#7afcff" style="width:80px;border:none;background:none;cursor:pointer;" onchange="setLaserColor(this.value)" />
+    </div>
     <div class="status-row" style="margin-top:12px;gap:10px;align-items:center;">
       <input id="developerSoundToggle" type="checkbox" checked onchange="toggleOverlaySound()" style="margin:0;">
       <label for="developerSoundToggle" style="margin:0;color:#ccc;font-size:13px;">Overlay sounds enabled</label>
@@ -366,6 +370,17 @@ function sendDevSound(type) {
   .then(r => r.json()).then(d => { if (d.success) toast(`Dev sound sent: ${type}`); else toast(`Failed: ${d.error || 'Unknown'}`); }).catch(() => toast('Sound command failed'));
 }
 
+function setLaserColor(color) {
+  if (!color || typeof color !== 'string') return;
+  fetch('/api/dev/laser-color', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ color }) })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) throw new Error(d.error || 'Laser color update failed');
+    toast(`Laser color set to ${d.color}`);
+  })
+  .catch(err => toast(err.message));
+}
+
 function toggleOverlaySound() {
   const enabled = document.getElementById('developerSoundToggle').checked;
   fetch('/api/dev/sound-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) })
@@ -451,6 +466,10 @@ function loadAudioData() {
     if (!d.success) { toast('Failed to load audio data'); return; }
     audioLibraryData = d.library || [];
     audioConfigData  = { ...{ attack: null, gift: null, kill: null, respawn: null, heal: null, follow: null }, ...(d.config || {}) };
+    if (d.settings && d.settings.laserColor) {
+      const picker = document.getElementById('laserColorPicker');
+      if (picker) picker.value = d.settings.laserColor;
+    }
     renderAudioLibrary();
     renderAssignTable();
   })

@@ -112,38 +112,6 @@ body {
 </head>
 <body>
 <canvas id="canvas"></canvas>
-<div class="ui">
-  <div class="panel status">
-    <div class="status-title"><span class="live-indicator"></span>Battle Status</div>
-    <div class="status-row"><span class="status-label">Server:</span><span class="status-value" id="serverStatus">Connecting...</span></div>
-    <div class="status-row"><span class="status-label">Players:</span><span class="status-value" id="playerCount">0</span></div>
-    <div class="status-row"><span class="status-label">Showing:</span><span class="status-value" id="showingCount">0 / 0</span></div>
-  </div>
-  <div class="panel leaderboard">
-    <div class="board-title">🏆 Highest HP (Top 20)</div>
-    <div id="leaderboard"></div>
-  </div>
-  <div class="panel eventlog">
-    <div class="log-title">⚔️ Events</div>
-    <div id="eventlog"></div>
-  </div>
-  <div class="panel controls" id="layoutControls">
-    <div class="controls-title">
-      <span>⚙️ Layout Controls</span>
-      <button id="toggleControls">Hide</button>
-    </div>
-    <label class="control-row">
-      <span>Column Gap</span>
-      <input id="gapXControl" type="range" min="0" max="220" step="10" value="150" />
-      <span id="gapXValue">150</span>
-    </label>
-    <label class="control-row">
-      <span>Row Gap</span>
-      <input id="gapYControl" type="range" min="100" max="1000" step="10" value="260" />
-      <span id="gapYValue">260</span>
-    </label>
-  </div>
-</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
 <script>
@@ -151,6 +119,7 @@ body {
 let players        = {};
 let audioConfig    = {};   // event → filename, pushed from server
 let soundEnabled   = true; // toggled by dashboard sound-settings
+let laserColor     = '#7afcff';
 const lastPlayerPositions = {};
 let backgroundImg  = null;
 const audioCache   = {};   // filename → HTMLAudioElement
@@ -178,16 +147,16 @@ const gapYValue     = document.getElementById('gapYValue');
 const toggleBtn     = document.getElementById('toggleControls');
 const layoutControls = document.getElementById('layoutControls');
 
-let layoutGapX = Number(gapXControl.value);
-let layoutGapY = Number(gapYControl.value);
+let layoutGapX = gapXControl ? Number(gapXControl.value) : 150;
+let layoutGapY = gapYControl ? Number(gapYControl.value) : 260;
 
 function syncGapLabels() {
-  gapXValue.textContent = layoutGapX;
-  gapYValue.textContent = layoutGapY;
+  if (gapXValue) gapXValue.textContent = layoutGapX;
+  if (gapYValue) gapYValue.textContent = layoutGapY;
 }
-gapXControl.addEventListener('input', () => { layoutGapX = Number(gapXControl.value); syncGapLabels(); });
-gapYControl.addEventListener('input', () => { layoutGapY = Number(gapYControl.value); syncGapLabels(); });
-toggleBtn.addEventListener('click', () => {
+if (gapXControl) gapXControl.addEventListener('input', () => { layoutGapX = Number(gapXControl.value); syncGapLabels(); });
+if (gapYControl) gapYControl.addEventListener('input', () => { layoutGapY = Number(gapYControl.value); syncGapLabels(); });
+if (toggleBtn && layoutControls) toggleBtn.addEventListener('click', () => {
   const hidden = layoutControls.classList.toggle('hidden');
   toggleBtn.textContent = hidden ? 'Show' : 'Hide';
 });
@@ -220,16 +189,37 @@ function preloadAudioConfig(cfg) {
   }
 }
 
+function parseHexColor(value) {
+  if (typeof value !== 'string') return null;
+  const hex = value.trim().replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(hex)) return null;
+  return {
+    r: parseInt(hex.slice(0, 2), 16),
+    g: parseInt(hex.slice(2, 4), 16),
+    b: parseInt(hex.slice(4, 6), 16),
+  };
+}
+
+function updateLaserColor(color) {
+  if (typeof color !== 'string') return;
+  const parsed = parseHexColor(color);
+  if (parsed) {
+    laserColor = `#${color.replace('#', '')}`;
+  }
+}
+
 // ── Socket ────────────────────────────────────────────────────────────────────
 const socket = io({ transports: ['websocket', 'polling'] });
 
 socket.on('connect', () => {
-  document.getElementById('serverStatus').textContent = '🟢 LIVE';
+  const statusEl = document.getElementById('serverStatus');
+  if (statusEl) statusEl.textContent = '🟢 LIVE';
   socket.emit('register', { type: 'overlay' });
 });
 
 socket.on('disconnect', () => {
-  document.getElementById('serverStatus').textContent = 'Offline';
+  const statusEl = document.getElementById('serverStatus');
+  if (statusEl) statusEl.textContent = 'Offline';
 });
 
 socket.on('gameState', (state) => {
@@ -241,6 +231,10 @@ socket.on('gameState', (state) => {
 socket.on('audioConfig', (cfg) => {
   audioConfig = cfg || {};
   preloadAudioConfig(audioConfig);
+});
+
+socket.on('laserColor', (color) => {
+  updateLaserColor(color);
 });
 
 // ── Sound event from server (attack / kill / gift / heal / respawn / follow) ─
@@ -407,19 +401,26 @@ const attacks = [];
 function updateUI() {
   const alive  = Object.values(players).filter(p => p.alive);
   const shown  = Math.min(20, alive.length);
-  document.getElementById('playerCount').textContent  = alive.length;
-  document.getElementById('showingCount').textContent = `${shown} / ${alive.length}`;
-  const top3 = getTopPlayers(3);
-  document.getElementById('leaderboard').innerHTML = top3.map((p, i) => `
-    <div class="board-entry rank-${i + 1}">
-      <span class="rank-num">${i + 1}</span>
-      <span class="rank-name">${(p.nickname || p.uniqueId || 'Player').slice(0, 14)}</span>
-      <span class="rank-score">${Math.round(p.hp || 0)} HP</span>
-    </div>`).join('') || '<div class="board-entry">No players</div>';
+  const playerCountEl  = document.getElementById('playerCount');
+  const showingCountEl = document.getElementById('showingCount');
+  const leaderboardEl  = document.getElementById('leaderboard');
+
+  if (playerCountEl) playerCountEl.textContent  = alive.length;
+  if (showingCountEl) showingCountEl.textContent = `${shown} / ${alive.length}`;
+  if (leaderboardEl) {
+    const top3 = getTopPlayers(3);
+    leaderboardEl.innerHTML = top3.map((p, i) => `
+      <div class="board-entry rank-${i + 1}">
+        <span class="rank-num">${i + 1}</span>
+        <span class="rank-name">${(p.nickname || p.uniqueId || 'Player').slice(0, 14)}</span>
+        <span class="rank-score">${Math.round(p.hp || 0)} HP</span>
+      </div>`).join('') || '<div class="board-entry">No players</div>';
+  }
 }
 
 function addLog(msg, type) {
-  const log   = document.getElementById('eventlog');
+  const log = document.getElementById('eventlog');
+  if (!log) return;
   const entry = document.createElement('div');
   entry.className = `log-entry ${type || ''}`;
   entry.textContent = msg;
@@ -431,9 +432,11 @@ function showDmg(x, y, dmg, isKill) {
   const el = document.createElement('div');
   el.className  = `dmg-number ${isKill ? 'kill' : ''}`;
   el.textContent = isKill ? '💀 KILL!' : `-${dmg}`;
+  el.style.position = 'absolute';
   el.style.left  = (x - 20) + 'px';
   el.style.top   = (y - 30) + 'px';
-  document.querySelector('.ui').appendChild(el);
+  el.style.pointerEvents = 'none';
+  document.body.appendChild(el);
   setTimeout(() => el.remove(), 700);
 }
 
@@ -482,7 +485,7 @@ function drawPlayers() {
     ctx.beginPath(); ctx.arc(pos.x, pos.y, glowR, 0, Math.PI * 2); ctx.fill();
 
     ctx.font = `${emojiSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('💎', pos.x, pos.y);
+    ctx.fillText(player.iconEmoji || '💎', pos.x, pos.y);
 
     const barY = pos.y + Math.max(size, emojiSize / 2) + 36;
     ctx.fillStyle = '#0a0e1a'; ctx.fillRect(pos.x - barWidth / 2, barY, barWidth, 18);

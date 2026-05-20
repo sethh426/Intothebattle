@@ -20,6 +20,9 @@
     .eyebrow::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #7c93ff; box-shadow: 0 0 24px rgba(124,147,255,0.5); }
     h1 { font-size: clamp(2.4rem, 4vw, 4.4rem); margin: 0; letter-spacing: -0.05em; }
     p.lead { max-width: 780px; color: #c8d3ff; font-size: 1.05rem; }
+    .top-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+    .action-button { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 22px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); background: rgba(79, 140, 255, 0.12); color: #f7fbff; text-decoration: none; font-weight: 700; transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease; }
+    .action-button:hover { transform: translateY(-2px); background: rgba(79, 140, 255, 0.22); box-shadow: 0 16px 36px rgba(79, 140, 255, 0.18); }
     .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 360px); gap: 24px; align-items: center; }
     .hero-card { padding: 28px; border-radius: 28px; background: rgba(16, 26, 54, 0.92); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 24px 80px rgba(0,0,0,0.25); }
     .hero-card h2 { margin-top: 0; color: #ffd966; font-size: 1.3rem; }
@@ -61,6 +64,9 @@
       <span class="eyebrow">Welcome back</span>
       <h1>Control the TikTok PvP battle experience from one polished command center.</h1>
       <p class="lead">This page gives you a quick breakdown of the platform, shows how damage, health, and audio are represented, and links you directly into the live overlay, stats tracker, and admin dashboard.</p>
+      <div class="top-actions">
+        <a class="action-button" href="/dashboard/logout">Logout and return to login</a>
+      </div>
     </header>
 
     <div class="hero-grid">
