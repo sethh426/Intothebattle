@@ -28,7 +28,7 @@ const insertCode = db.prepare(`
 
 const seedBetaCodes = db.transaction(() => {
   for (let i = 1; i <= 25; i++) {
-    insertCode.run(`betatester${i}`, `betatester${i}@tiktokbr.com`);
+    insertCode.run(`Betatester${i}`, `betatester${i}@tiktokbr.com`);
   }
 });
 
