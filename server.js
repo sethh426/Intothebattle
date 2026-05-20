@@ -194,7 +194,6 @@ function loadAudioConfig() {
   try {
     ensureDir(AUDIO_DIR);
 
-    // ── Seed from repo if runtime config is missing or empty ──────────────────
     if (!fs.existsSync(AUDIO_CFG_FILE)) {
       const repoConfig = path.join(__dirname, 'audio', 'audio-config.json');
       if (fs.existsSync(repoConfig)) {
@@ -208,8 +207,6 @@ function loadAudioConfig() {
       audioConfig  = { ...DEFAULT_AUDIO_CONFIG, ...(saved.config  || {}) };
       audioLibrary = Array.isArray(saved.library) ? saved.library : [];
 
-      // For repo-seeded files, don't filter by fs.existsSync since files
-      // are served from the repo path, not the runtime AUDIO_DIR
       audioLibrary = audioLibrary.filter(entry => {
         const runtimePath = path.join(AUDIO_DIR, entry.filename);
         const repoPath    = path.join(__dirname, 'audio', entry.filename);
@@ -361,13 +358,7 @@ function dealDamage(attackerId, targetId, multiplier = 1) {
 
   console.log(`⚡ @${attackerId} → @${targetId} for ${dmg} dmg${killed ? ' (KILL!)' : ''}${multiplier > 1 ? ' (SPECIAL!)' : ''}`);
 
-  return {
-    attacker: attackerId,
-    target:   targetId,
-    damage:   dmg,
-    killed,
-    special:  multiplier > 1,
-  };
+  return { attacker: attackerId, target: targetId, damage: dmg, killed, special: multiplier > 1 };
 }
 
 function normalizeName(value = '') {
@@ -434,7 +425,7 @@ function handleMentionAttack(attackerId, attackerNick, comment) {
 
     const result = dealDamage(attackerId, target.uniqueId, multiplier);
     if (result) {
-      io.emit('attack', result);
+      io.emit('attack',    result);
       io.emit('soundEvent', { event: 'attack' });
       io.emit('commentDamage', {
         attacker: attackerNick,
@@ -465,9 +456,9 @@ app.use('/admin', adminRoutes);
 app.use('/', paypalRoutes);
 
 app.get('/', (_req, res) => res.redirect('/login'));
-app.get('/overlay.html', requireAccess, (req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
-app.get('/overlay', requireAccess, (req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
-app.get('/admin-panel', requireAccess, (_req, res) => res.redirect('/admin'));
+app.get('/overlay.html', requireAccess, (_req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
+app.get('/overlay',      requireAccess, (_req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
+app.get('/admin-panel',  requireAccess, (_req, res) => res.redirect('/admin'));
 
 function parseCookieHeader(header = '') {
   return Object.fromEntries(
@@ -480,25 +471,21 @@ function parseCookieHeader(header = '') {
 
 io.use((socket, next) => {
   const cookies = parseCookieHeader(socket.handshake.headers.cookie || '');
-  const token = cookies.session_token;
+  const token   = cookies.session_token;
   if (!token) return next(new Error('Unauthorized'));
-
   try {
     jwt.verify(token, process.env.JWT_SECRET);
   } catch (_err) {
     return next(new Error('Unauthorized'));
   }
-
   const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
   if (!row || row.is_revoked || new Date(row.expires_at) < new Date()) {
     return next(new Error('Unauthorized'));
   }
-
   const fp = cookies.fp;
   if (row.fingerprint && (!fp || row.fingerprint !== fp)) {
     return next(new Error('Unauthorized'));
   }
-
   socket.accessCode = row;
   next();
 });
@@ -512,14 +499,14 @@ app.use((req, res, next) => {
 
 app.use(express.static(__dirname));
 
+// ─── AUDIO STATIC SERVE ───────────────────────────────────────────────────────
+// Serves uploaded audio files; falls back to any files committed in /audio/
 app.use('/audio', (req, res, next) => {
-  const filename = path.basename(req.path);
+  const filename    = path.basename(req.path);
   const runtimePath = path.join(AUDIO_DIR, filename);
   const repoPath    = path.join(__dirname, 'audio', filename);
 
   if (!isSafePath(AUDIO_DIR, runtimePath)) return res.status(403).send('Forbidden');
-
-  // Serve from runtime first, fall back to repo
   if (fs.existsSync(runtimePath)) return res.sendFile(runtimePath);
   if (fs.existsSync(repoPath))    return res.sendFile(repoPath);
   next();
@@ -533,11 +520,14 @@ io.on('connection', (socket) => {
     if (type === 'overlay') {
       overlayCount++;
       io.emit('overlayCount', overlayCount);
-      socket.emit('gameState',    players);
-      socket.emit('audioConfig',  audioConfig);
+
+      // Send current state to the newly connected overlay
+      socket.emit('gameState',   players);
+      socket.emit('audioConfig', audioConfig);   // ← pushes current assignments
       if (currentBackground) {
         socket.emit('backgroundChanged', { filename: currentBackground.filename });
       }
+
       socket.on('disconnect', () => {
         overlayCount = Math.max(0, overlayCount - 1);
         io.emit('overlayCount', overlayCount);
@@ -664,8 +654,8 @@ app.post('/api/background/clear', (_req, res) => {
 
 app.get('/background/:filename', (req, res) => {
   const filepath = path.join(BG_DIR, req.params.filename);
-  if (!isSafePath(BG_DIR, filepath))  return res.status(403).send('Forbidden');
-  if (!fs.existsSync(filepath))       return res.status(404).send('Background not found');
+  if (!isSafePath(BG_DIR, filepath)) return res.status(403).send('Forbidden');
+  if (!fs.existsSync(filepath))      return res.status(404).send('Background not found');
   return res.sendFile(filepath);
 });
 
@@ -710,14 +700,14 @@ app.post('/api/audio/assign', (req, res) => {
   }
   audioConfig[event] = filename;
   saveAudioConfig();
-  io.emit('audioConfig', audioConfig);
+  io.emit('audioConfig', audioConfig);   // ← push updated config live to overlay
   console.log(`🔊 Assigned "${filename}" to event "${event}"`);
   res.json({ success: true, event, filename });
 });
 
 app.delete('/api/audio/delete/:filename', (req, res) => {
   const { filename } = req.params;
-  const filepath = path.join(AUDIO_DIR, filename);
+  const filepath     = path.join(AUDIO_DIR, filename);
   if (!isSafePath(AUDIO_DIR, filepath)) return res.status(403).json({ success: false, error: 'Forbidden' });
   const before = audioLibrary.length;
   audioLibrary = audioLibrary.filter(f => f.filename !== filename);
@@ -779,9 +769,9 @@ app.post('/api/test/attack', requireDevTestMode, (_req, res) => {
 
 app.post('/api/test/gift', requireDevTestMode, (_req, res) => {
   ensureTestPlayers();
-  const attackerId = 'test_charlie';
-  const diamonds   = 25;
-  const targets    = ['test_alpha', 'test_bravo', 'test_delta'];
+  const attackerId  = 'test_charlie';
+  const diamonds    = 25;
+  const targets     = ['test_alpha', 'test_bravo', 'test_delta'];
   const attacksMade = [];
 
   awardStats(attackerId, players[attackerId].nickname,
@@ -797,8 +787,8 @@ app.post('/api/test/gift', requireDevTestMode, (_req, res) => {
     const target = players[targetId];
     if (!target?.alive) return;
     const damage = diamonds;
-    target.hp = Math.max(0, target.hp - damage);
-    let killed = false;
+    target.hp    = Math.max(0, target.hp - damage);
+    let killed   = false;
     if (target.hp === 0) {
       killed = true; target.alive = false; players[attackerId].kills++;
       setTimeout(() => {
@@ -924,8 +914,8 @@ function setupTikTokEvents(tiktokClient) {
     else if (!players[id].alive && boardHasSpace) spawnPlayer(id, nick);
 
     if (players[id]) {
-      players[id].forceSpawn  = true;
-      players[id].lastActive  = Date.now();
+      players[id].forceSpawn = true;
+      players[id].lastActive = Date.now();
     }
 
     awardStats(id, nick, diamonds * CFG.GIFT_HP_PER_DIAMOND, diamonds * CFG.GIFT_STR_PER_DIAMOND);
@@ -944,8 +934,8 @@ function setupTikTokEvents(tiktokClient) {
 
       targetsToAttack.forEach(target => {
         const damage = diamonds;
-        target.hp = Math.max(0, target.hp - damage);
-        let killed = false;
+        target.hp    = Math.max(0, target.hp - damage);
+        let killed   = false;
 
         if (target.hp === 0) {
           killed = true;
@@ -990,7 +980,6 @@ function setupTikTokEvents(tiktokClient) {
     io.emit('gameState', players);
   });
 
-  // ─── FOLLOW EVENT ─────────────────────────────────────────────────────────
   tiktokClient.on('follow', (e) => {
     const id   = e.user?.uniqueId;
     const nick = e.user?.nickname || id;
