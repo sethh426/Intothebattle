@@ -53,7 +53,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     const status = code.is_revoked ? 'Revoked' : new Date(code.expires_at) < new Date() ? 'Expired' : 'Active';
     return `<tr>
       <td>${escapeHtml(code.code)}</td>
-      <td>${escapeHtml(code.email || '')}</td>
+      <td>${escapeHtml(code.owner_name || code.email || '')}</td>
       <td>${escapeHtml(code.created_at)}</td>
       <td>${escapeHtml(code.expires_at)}</td>
       <td>${status}</td>
@@ -108,10 +108,11 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       <div class="card">
         <h2>Issue access code</h2>
         <form method="POST" action="/admin/issue-code">
-          <label>Email (optional, stored for tracking only)</label>
-          <input name="email" type="text" placeholder="buyer@example.com" />
+          <label>Name (optional, stored for tracking only)</label>
+          <input name="name" type="text" placeholder="Customer or buyer name" />
           <label>Days</label>
-          <input name="days" type="number" min="1" value="30" />
+          <input name="days" type="number" min="0" value="30" />
+          <label><input name="permanent" type="checkbox" value="1" /> Permanent code (no expiry)</label>
           <button type="submit">Issue Code</button>
         </form>
       </div>
@@ -156,7 +157,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     <div class="card" style="margin-top: 24px;">
       <h2>Access codes</h2>
       <table>
-        <thead><tr><th>Code</th><th>Email</th><th>Created</th><th>Expires</th><th>Status</th><th>Type</th><th>Last Seen</th></tr></thead>
+        <thead><tr><th>Code</th><th>Name / Email</th><th>Created</th><th>Expires</th><th>Status</th><th>Type</th><th>Last Seen</th></tr></thead>
         <tbody>${codeRows}</tbody>
       </table>
     </div>
@@ -232,12 +233,16 @@ router.get('/', requireAdminAuth, (req, res) => {
 });
 
 router.post('/issue-code', requireAdminAuth, (req, res) => {
-  const email = String(req.body.email || '').trim().toLowerCase() || null;
-  const days = Math.max(1, Number(req.body.days) || 30);
+  const ownerName = String(req.body.name || '').trim() || null;
+  const days = Number(req.body.days);
+  const permanent = req.body.permanent === '1';
   const code = uuidv4().replace(/-/g, '').toUpperCase();
-  const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+  const expiresAt = permanent
+    ? '2099-12-31 23:59:59'
+    : new Date(Date.now() + Math.max(1, days || 30) * 24 * 60 * 60 * 1000)
+      .toISOString().slice(0, 19).replace('T', ' ');
 
-  db.prepare('INSERT INTO access_codes (code, email, expires_at) VALUES (?, ?, ?)').run(code, email, expiresAt);
+  db.prepare('INSERT INTO access_codes (code, owner_name, expires_at) VALUES (?, ?, ?)').run(code, ownerName, expiresAt);
   res.redirect(`/admin?message=${encodeURIComponent('Issued new access code')}&createdCode=${encodeURIComponent(code)}`);
 });
 
