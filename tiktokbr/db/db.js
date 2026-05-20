@@ -14,24 +14,24 @@ db.exec(schema);
 
 try {
   db.exec('ALTER TABLE access_codes ADD COLUMN owner_name TEXT');
-} catch (_) {
-  // column already exists, ignore
-}
+} catch (_) {}
 
 try {
   db.exec('ALTER TABLE access_codes ADD COLUMN paypal_subscription_id TEXT');
-} catch (_) {
-  // column already exists, ignore
-}
+} catch (_) {}
 
-// ─── SEED: BETA ACCESS CODE ───────────────────────────────────────────────────
-try {
-  db.prepare(`
-    INSERT OR IGNORE INTO access_codes (code, email, expires_at)
-    VALUES ('BETA1', 'beta@tiktokbr.com', '2099-12-31 23:59:59')
-  `).run();
-} catch (_) {
-  // already exists, ignore
-}
+// ─── SEED: BETA ACCESS CODES (betatester1–betatester25) ──────────────────────
+const insertCode = db.prepare(`
+  INSERT OR IGNORE INTO access_codes (code, email, expires_at)
+  VALUES (?, ?, '2099-12-31 23:59:59')
+`);
+
+const seedBetaCodes = db.transaction(() => {
+  for (let i = 1; i <= 25; i++) {
+    insertCode.run(`betatester${i}`, `betatester${i}@tiktokbr.com`);
+  }
+});
+
+seedBetaCodes();
 
 export default db;
