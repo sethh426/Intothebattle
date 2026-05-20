@@ -20,36 +20,13 @@ body { font-family: 'Arial', sans-serif; background: #000; }
   backdrop-filter: blur(6px);
   font-size: 12px; color: #fff;
 }
-.status { bottom: 12px; left: 12px; width: 220px; min-height: 100px; }
-.status-title { font-size: 12px; font-weight: 700; color: #64c8ff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid rgba(100,200,255,0.2); padding-bottom: 6px; }
-.status-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
-.status-label { color: #a0c0ff; }
-.status-value { color: #64c8ff; font-weight: 600; }
-.live-indicator { display: inline-block; width: 8px; height: 8px; background: #ff4444; border-radius: 50%; margin-right: 4px; animation: blink 1.3s infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.5} }
-.leaderboard { top: 12px; right: 12px; width: 220px; max-height: 220px; }
-.board-title { font-size: 12px; font-weight: 700; color: #ffd93d; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid rgba(255,217,61,0.2); padding-bottom: 6px; }
-.board-entry { display: flex; justify-content: space-between; align-items: center; padding: 7px 8px; margin: 4px 0; background: rgba(100,200,255,0.08); border: 1px solid rgba(100,200,255,0.15); border-radius: 6px; font-size: 12px; }
-.board-entry.rank-1 { background: rgba(255,217,61,0.12); border-color: rgba(255,217,61,0.3); }
-.board-entry.rank-2 { background: rgba(200,200,200,0.08); border-color: rgba(200,200,200,0.2); }
-.board-entry.rank-3 { background: rgba(200,100,100,0.08); border-color: rgba(200,100,100,0.2); }
-.rank-num { min-width: 18px; font-weight: 700; color: #64c8ff; }
-.rank-name { flex: 1; margin: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rank-score { color: #ffd93d; font-weight: 700; min-width: 30px; text-align: right; }
-.eventlog { right: 12px; bottom: 12px; width: 220px; height: 120px; max-height: 120px; overflow-y: auto; overflow-x: hidden; }
-.controls { top: 250px; right: 12px; width: 220px; pointer-events: auto; }
+.controls { top: 12px; right: 12px; width: 220px; pointer-events: auto; }
 .controls-title { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: #64c8ff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid rgba(100,200,255,0.2); padding-bottom: 6px; }
 .controls-title button { background: rgba(255,255,255,0.08); border: 1px solid rgba(100,200,255,0.25); color: #fff; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 11px; }
 .controls.hidden { opacity: 0.15; }
 .control-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; margin: 10px 0; font-size: 12px; }
 .control-row span { color: #e1f7ff; }
 .control-row input[type="range"] { width: 100%; }
-.log-title { font-size: 12px; font-weight: 700; color: #64c8ff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid rgba(100,200,255,0.2); padding-bottom: 6px; }
-.log-entry { padding: 4px 6px; margin: 2px 0; background: rgba(255,255,255,0.04); border-left: 2px solid rgba(100,200,255,0.3); border-radius: 4px; font-size: 10px; line-height: 1.2; color: #ddd; }
-.log-entry.kill { background: rgba(255,51,51,0.12); border-left-color: #ff4444; color: #ffdddd; font-weight: 600; }
-.log-entry.gift { background: rgba(255,217,61,0.12); border-left-color: #ffd93d; color: #ffe6cc; }
-.eventlog::-webkit-scrollbar { width: 6px; }
-.eventlog::-webkit-scrollbar-thumb { background: rgba(100,200,255,0.3); border-radius: 3px; }
 .dmg-number { position: absolute; font-size: 32px; font-weight: 900; color: #ff3333; text-shadow: 0 0 12px rgba(255,51,51,0.8), 2px 2px 6px rgba(0,0,0,0.95); pointer-events: none; animation: dmgFloat 0.7s ease-out forwards; z-index: 30; }
 @keyframes dmgFloat { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-60px) scale(0.5)} }
 .dmg-number.kill { color: #ffd93d; font-size: 40px; text-shadow: 0 0 16px rgba(255,217,61,0.9), 2px 2px 6px rgba(0,0,0,0.95); }
@@ -58,24 +35,6 @@ body { font-family: 'Arial', sans-serif; background: #000; }
 <body>
 <canvas id="canvas"></canvas>
 <div class="ui">
-  <div class="panel status">
-    <div class="status-title"><span class="live-indicator"></span>Battle Status</div>
-    <div class="status-row"><span class="status-label">Server:</span><span class="status-value" id="serverStatus">Connecting...</span></div>
-    <div class="status-row"><span class="status-label">Players:</span><span class="status-value" id="playerCount">0</span></div>
-    <div class="status-row"><span class="status-label">Audio:</span><span class="status-value" id="audioStatus">Enabled</span></div>
-    <div class="status-row">
-      <button id="enableAudioBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;">Enable Audio</button>
-    </div>
-    <div class="status-row"><span class="status-label">Showing:</span><span class="status-value" id="showingCount">0 / 0</span></div>
-  </div>
-  <div class="panel leaderboard">
-    <div class="board-title">🏆 Highest HP (Top 3)</div>
-    <div id="leaderboard"></div>
-  </div>
-  <div class="panel eventlog">
-    <div class="log-title">⚔️ Events</div>
-    <div id="eventlog"></div>
-  </div>
   <div class="panel controls" id="layoutControls">
     <div class="controls-title">
       <span>⚙️ Layout</span>
@@ -134,16 +93,16 @@ setupCanvas();
 window.addEventListener('resize', setupCanvas);
 
 // ── Layout controls ───────────────────────────────────────────────────────────
-const gapXControl       = document.getElementById('gapXControl');
-const offsetXControl    = document.getElementById('offsetXControl');
-const offsetYControl    = document.getElementById('offsetYControl');
+const gapXControl        = document.getElementById('gapXControl');
+const offsetXControl     = document.getElementById('offsetXControl');
+const offsetYControl     = document.getElementById('offsetYControl');
 const layoutScaleControl = document.getElementById('layoutScaleControl');
-const gapXValue         = document.getElementById('gapXValue');
-const offsetXValue      = document.getElementById('offsetXValue');
-const offsetYValue      = document.getElementById('offsetYValue');
-const layoutScaleValue  = document.getElementById('layoutScaleValue');
-const toggleControls    = document.getElementById('toggleControls');
-const layoutControls    = document.getElementById('layoutControls');
+const gapXValue          = document.getElementById('gapXValue');
+const offsetXValue       = document.getElementById('offsetXValue');
+const offsetYValue       = document.getElementById('offsetYValue');
+const layoutScaleValue   = document.getElementById('layoutScaleValue');
+const toggleControls     = document.getElementById('toggleControls');
+const layoutControls     = document.getElementById('layoutControls');
 
 let layoutGapX  = Number(gapXControl.value);
 let offsetX     = Number(offsetXControl.value);
@@ -158,10 +117,10 @@ function syncLabels() {
 }
 syncLabels();
 
-gapXControl.addEventListener('input',        () => { layoutGapX  = Number(gapXControl.value);                        syncLabels(); });
-offsetXControl.addEventListener('input',     () => { offsetX     = Number(offsetXControl.value);                     syncLabels(); });
-offsetYControl.addEventListener('input',     () => { offsetY     = Number(offsetYControl.value);                     syncLabels(); });
-layoutScaleControl.addEventListener('input', () => { layoutScale = Number(layoutScaleControl.value) / 100;           syncLabels(); });
+gapXControl.addEventListener('input',        () => { layoutGapX  = Number(gapXControl.value);           syncLabels(); });
+offsetXControl.addEventListener('input',     () => { offsetX     = Number(offsetXControl.value);         syncLabels(); });
+offsetYControl.addEventListener('input',     () => { offsetY     = Number(offsetYControl.value);         syncLabels(); });
+layoutScaleControl.addEventListener('input', () => { layoutScale = Number(layoutScaleControl.value)/100; syncLabels(); });
 
 toggleControls.addEventListener('click', () => {
   const hidden = layoutControls.classList.toggle('hidden');
@@ -169,26 +128,16 @@ toggleControls.addEventListener('click', () => {
 });
 
 // ── Audio ─────────────────────────────────────────────────────────────────────
-const audioStatusLabel = document.getElementById('audioStatus');
-const enableAudioBtn   = document.getElementById('enableAudioBtn');
-
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 let audioReady = audioCtx.state !== 'suspended';
 
-function setAudioStatus() {
-  if (!soundEnabled)              { audioStatusLabel.textContent = 'Muted';           return; }
-  if (audioCtx.state==='suspended'){ audioStatusLabel.textContent = 'Click to enable'; return; }
-  audioStatusLabel.textContent = audioReady ? 'Ready' : 'Unavailable';
-}
-
 function resumeAudio() {
-  audioCtx.resume().then(() => { audioReady = true; setAudioStatus(); }).catch(() => setAudioStatus());
+  audioCtx.resume().then(() => { audioReady = true; }).catch(() => {});
 }
 
-enableAudioBtn.addEventListener('click', (e) => { e.stopPropagation(); resumeAudio(); });
 document.addEventListener('click', () => {
   if (audioCtx.state === 'suspended') resumeAudio();
-  else { audioReady = true; setAudioStatus(); }
+  else audioReady = true;
 }, { once: true });
 
 function getAudio(filename) {
@@ -288,7 +237,6 @@ function getPlayerPos(player) {
   };
 }
 
-// Redirect off-screen participants to horde anchor
 function resolveParticipant(uniqueId) {
   return getTopPlayers(5).some(p => p.uniqueId === uniqueId) ? uniqueId : HORDE_ID;
 }
@@ -464,7 +412,6 @@ class Attack {
       ctx.beginPath(); ctx.arc(this.toX,this.toY,14+(1-this.progress)*8,0,Math.PI*2); ctx.fill();
 
     } else {
-      // beam (default)
       ctx.strokeStyle = `${strikeColor}${alpha*0.22})`; ctx.lineWidth = this.isSpecial ? 26 : 18;
       ctx.beginPath(); ctx.moveTo(this.fromX,this.fromY); ctx.lineTo(this.toX,this.toY); ctx.stroke();
       ctx.strokeStyle = `${strikeColor}${midAlpha})`;    ctx.lineWidth = this.isSpecial ? 10 : 6;
@@ -524,7 +471,6 @@ function drawColumnBorders(posCache, hordePos) {
     ctx.beginPath(); ctx.moveTo(bx,topY); ctx.lineTo(bx,bottomY); ctx.stroke();
   });
 
-  // Top cap — cyan
   const tg = ctx.createLinearGradient(firstX,0,lastX,0);
   tg.addColorStop(0,'rgba(100,200,255,0)'); tg.addColorStop(0.1,'rgba(160,220,255,0.75)');
   tg.addColorStop(0.9,'rgba(160,220,255,0.75)'); tg.addColorStop(1,'rgba(100,200,255,0)');
@@ -536,7 +482,6 @@ function drawColumnBorders(posCache, hordePos) {
   ctx.strokeStyle=tgg; ctx.lineWidth=14;
   ctx.beginPath(); ctx.moveTo(firstX,topY); ctx.lineTo(lastX,topY); ctx.stroke();
 
-  // Bottom cap — red
   const bg = ctx.createLinearGradient(firstX,0,lastX,0);
   bg.addColorStop(0,'rgba(255,80,80,0)'); bg.addColorStop(0.1,'rgba(255,120,120,0.7)');
   bg.addColorStop(0.9,'rgba(255,120,120,0.7)'); bg.addColorStop(1,'rgba(255,80,80,0)');
@@ -548,10 +493,9 @@ function drawColumnBorders(posCache, hordePos) {
   ctx.strokeStyle=bgg; ctx.lineWidth=14;
   ctx.beginPath(); ctx.moveTo(firstX,bottomY); ctx.lineTo(lastX,bottomY); ctx.stroke();
 
-  // Alternating column fill tint
   for (let i = 0; i < posCache.length; i++) {
-    const x1 = i===0             ? firstX : (posCache[i-1].x+posCache[i].x)/2;
-    const x2 = i===posCache.length-1 ? lastX : (posCache[i].x+posCache[i+1].x)/2;
+    const x1 = i===0                  ? firstX : (posCache[i-1].x+posCache[i].x)/2;
+    const x2 = i===posCache.length-1  ? lastX  : (posCache[i].x+posCache[i+1].x)/2;
     ctx.fillStyle = i%2===1 ? 'rgba(100,200,255,0.025)' : 'rgba(80,160,220,0.012)';
     ctx.fillRect(x1, topY, x2-x1, bottomY-topY);
   }
@@ -560,25 +504,21 @@ function drawColumnBorders(posCache, hordePos) {
 // ── Socket ────────────────────────────────────────────────────────────────────
 const socket = io({ transports: ['websocket','polling'] });
 
-socket.on('connect', () => {
-  document.getElementById('serverStatus').textContent = '🟢 LIVE';
-  socket.emit('register', { type: 'overlay' });
-});
-socket.on('disconnect', () => { document.getElementById('serverStatus').textContent = 'Offline'; });
-socket.on('gameState',  (state) => { players = state || {}; updateUI(); });
+socket.on('connect',    () => socket.emit('register', { type: 'overlay' }));
+socket.on('gameState',  (state) => { players = state || {}; });
 
 socket.on('audioConfig', (cfg) => { audioConfig = cfg || {}; preloadAudioConfig(audioConfig); });
 
 socket.on('overlaySettings', (s) => {
   if (!s) return;
-  if (typeof s.shotType  === 'string' && s.shotType)  shotType  = s.shotType;
+  if (typeof s.shotType  === 'string' && s.shotType)      shotType  = s.shotType;
   if (typeof s.shotSpeed === 'number' && s.shotSpeed > 0) shotSpeed = s.shotSpeed;
   if (typeof s.laserColor === 'string') updateLaserColor(s.laserColor);
 });
 
 socket.on('laserColor',    (color)       => updateLaserColor(color));
 socket.on('soundEvent',    ({ event })   => playSound(event));
-socket.on('soundSettings', ({ enabled }) => { soundEnabled = !!enabled; setAudioStatus(); });
+socket.on('soundSettings', ({ enabled }) => { soundEnabled = !!enabled; });
 socket.on('devSound',      ({ type })    => { const map={laser:'attack',heal:'heal',special:'kill'}; playSound(map[type]||type); });
 socket.on('forceReload',   ()            => location.reload());
 
@@ -589,21 +529,11 @@ socket.on('backgroundChanged', ({ filename }) => {
   img.src = `/background/${filename}?v=${Date.now()}`;
 });
 
-socket.on('respawn', ({ uniqueId }) => {
-  if (players[uniqueId]) addLog(`✨ ${players[uniqueId].nickname || uniqueId.slice(0,10)} respawned!`, '');
-});
-
 socket.on('heal', ({ uniqueId, amount }) => {
-  if (players[uniqueId]) {
-    addLog(`💚 ${players[uniqueId].nickname || uniqueId.slice(0,10)} healed +${amount} HP`, 'gift');
-    playSound('heal');
-  }
+  if (players[uniqueId]) playSound('heal');
 });
 
-socket.on('giftEffect', ({ attacker, giftName, diamonds }) => {
-  const name = players[attacker]?.nickname || attacker || 'Someone';
-  addLog(`🎁 ${name} sent ${giftName||'a gift'} (${diamonds||0} 💎)`, 'gift');
-});
+socket.on('giftEffect', ({ attacker, giftName, diamonds }) => {});
 
 socket.on('attack', ({ attacker, target, damage, killed, special }) => {
   const effA    = resolveParticipant(attacker);
@@ -615,11 +545,7 @@ socket.on('attack', ({ attacker, target, damage, killed, special }) => {
     playSound('attack');
     players[target].hp = Math.max(0,(players[target].hp||0)-damage);
     if (killed) players[target].alive = false;
-    const aName = players[attacker].nickname||attacker.slice(0,10);
-    const tName = players[target].nickname  ||target.slice(0,10);
-    addLog(`⚔️ ${aName} → ${tName} -${damage}${special?' ⚡':''}${killed?' 💀':''}`, killed?'kill':'');
     showDmg(toPos.x,toPos.y,damage,killed);
-    updateUI();
   }
 });
 
@@ -633,39 +559,11 @@ socket.on('giftAttack', ({ attacker, target, damage, killed }) => {
     playSound('gift');
     players[target].hp = Math.max(0,(players[target].hp||0)-damage);
     if (killed||players[target].hp===0) players[target].alive = false;
-    const aName = players[attacker].nickname||attacker.slice(0,10);
-    const tName = players[target].nickname  ||target.slice(0,10);
-    addLog(`🎁 ${aName} → ${tName} -${damage}${killed?' 💀':''}`, killed?'kill':'gift');
     showDmg(toPos.x,toPos.y,damage,killed);
-    updateUI();
   }
 });
 
 // ── UI helpers ────────────────────────────────────────────────────────────────
-function updateUI() {
-  const alive = Object.values(players).filter(p => p.alive);
-  document.getElementById('playerCount').textContent  = alive.length;
-  document.getElementById('showingCount').textContent = `${Math.min(20,alive.length)} / ${alive.length}`;
-  const top3 = getTopPlayers(3);
-  document.getElementById('leaderboard').innerHTML = top3.length
-    ? top3.map((p,i) => `
-        <div class="board-entry rank-${i+1}">
-          <span class="rank-num">${i+1}</span>
-          <span class="rank-name">${(p.nickname||p.uniqueId||'Player').slice(0,14)}</span>
-          <span class="rank-score">${Math.round(p.hp||0)} HP</span>
-        </div>`).join('')
-    : '<div class="board-entry">No players</div>';
-}
-
-function addLog(msg, type) {
-  const log   = document.getElementById('eventlog');
-  const entry = document.createElement('div');
-  entry.className   = `log-entry ${type||''}`;
-  entry.textContent = msg;
-  log.insertBefore(entry, log.firstChild);
-  while (log.children.length > 6) log.removeChild(log.lastChild);
-}
-
 function showDmg(x, y, dmg, isKill) {
   const el = document.createElement('div');
   el.className   = `dmg-number ${isKill?'kill':''}`;
@@ -697,17 +595,14 @@ function drawPlayers() {
   const hordePos = getHordePos();
   const posCache = [];
 
-  // Compute + cache positions
   sorted.forEach(player => {
     const pos = getPlayerPos(player);
     posCache.push(pos);
     if (player.uniqueId) lastPlayerPositions[player.uniqueId] = { x: pos.x, y: pos.y };
   });
 
-  // Neon borders behind players
   if (sorted.length > 0) drawColumnBorders(posCache, hordePos);
 
-  // Draw each top-5 player
   sorted.forEach((player, idx) => {
     const pos     = posCache[idx];
     const rank    = idx + 1;
@@ -746,7 +641,6 @@ function drawPlayers() {
     ctx.fillStyle='#fff'; ctx.fillText(`${hpValue}/${maxHp}`,pos.x,barY+19);
   });
 
-  // ── Horde boss — bottom center ────────────────────────────────────────────
   const horde = getHordePlayer();
   if (horde) {
     const pos      = hordePos;
@@ -814,7 +708,6 @@ function animate() {
 }
 
 animate();
-updateUI();
 
 if (!location.search.includes('v=')) {
   location.replace(location.pathname + '?v=' + Date.now());
