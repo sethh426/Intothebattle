@@ -7,72 +7,107 @@
 <title>PvP Battle Overlay</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
-body { font-family: 'Arial', sans-serif; background: #000; }
-#canvas { position: absolute; top: 0; left: 0; width: 100%; display: block; }
+html, body {
+  width: 100%; height: 100%;
+  overflow: hidden; background: #8edc8e;
+}
+body {
+  font-family: 'Arial', sans-serif;
+  background: linear-gradient(135deg, #b8f2b8 0%, #88d688 50%, #9be99b 100%);
+}
+#canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
 .ui { position: absolute; inset: 0; pointer-events: none; z-index: 100; }
 .panel {
   position: absolute;
-  background: rgba(8, 12, 24, 0.85);
-  border: 1px solid rgba(100, 200, 255, 0.25);
+  background: rgba(8,12,24,0.85);
+  border: 1px solid rgba(100,200,255,0.25);
   border-radius: 8px; padding: 12px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.6);
   backdrop-filter: blur(6px);
   font-size: 12px; color: #fff;
 }
-.status { bottom: 12px; left: 12px; width: 220px; min-height: 100px; }
-.status-title { font-size: 12px; font-weight: 700; color: #64c8ff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid rgba(100,200,255,0.2); padding-bottom: 6px; }
+.status { bottom: 12px; left: 12px; width: 280px; min-height: 100px; }
+.status-title {
+  font-size: 12px; font-weight: 700; color: #64c8ff;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 8px; border-bottom: 1px solid rgba(100,200,255,0.2);
+  padding-bottom: 6px;
+}
 .status-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 12px; }
 .status-label { color: #a0c0ff; }
 .status-value { color: #64c8ff; font-weight: 600; }
-.live-indicator { display: inline-block; width: 8px; height: 8px; background: #ff4444; border-radius: 50%; margin-right: 4px; animation: pulse 1.3s infinite; }
+.live-indicator {
+  display: inline-block; width: 8px; height: 8px;
+  background: #ff4444; border-radius: 50%; margin-right: 4px;
+  animation: pulse 1s infinite;
+}
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-.leaderboard { top: 12px; right: 12px; width: 220px; max-height: 220px; }
-.board-title { font-size: 12px; font-weight: 700; color: #ffd93d; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid rgba(255,217,61,0.2); padding-bottom: 6px; }
-.board-entry { display: flex; justify-content: space-between; align-items: center; padding: 7px 8px; margin: 4px 0; background: rgba(100,200,255,0.08); border: 1px solid rgba(100,200,255,0.15); border-radius: 6px; font-size: 12px; }
+.leaderboard { top: 12px; right: 12px; width: 280px; max-height: 220px; }
+.board-title {
+  font-size: 12px; font-weight: 700; color: #ffd93d;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 8px; border-bottom: 1px solid rgba(255,217,61,0.2);
+  padding-bottom: 6px;
+}
+.board-entry {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 8px; margin: 4px 0;
+  background: rgba(100,200,255,0.08);
+  border: 1px solid rgba(100,200,255,0.15);
+  border-radius: 6px; font-size: 12px; transition: all 0.1s;
+}
 .board-entry.rank-1 { background: rgba(255,217,61,0.12); border-color: rgba(255,217,61,0.3); }
 .board-entry.rank-2 { background: rgba(200,200,200,0.08); border-color: rgba(200,200,200,0.2); }
 .board-entry.rank-3 { background: rgba(200,100,100,0.08); border-color: rgba(200,100,100,0.2); }
-.rank-num { min-width: 18px; font-weight: 700; color: #64c8ff; }
+.rank-num  { min-width: 18px; font-weight: 700; color: #64c8ff; }
 .rank-name { flex: 1; margin: 0 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rank-score { color: #ffd93d; font-weight: 700; min-width: 30px; text-align: right; }
-.eventlog { right: 12px; bottom: 80px; width: 220px; height: 120px; max-height: 120px; overflow-y: auto; overflow-x: hidden; }
-/* Controls pinned to bottom center */
-.controls {
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 500px;
-  pointer-events: auto;
+.eventlog { right: 12px; bottom: 12px; width: 280px; height: 120px; max-height: 120px; overflow-y: auto; overflow-x: hidden; }
+.controls { top: 250px; right: 12px; width: 280px; pointer-events: auto; }
+.controls-title {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; font-weight: 700; color: #64c8ff;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 8px; border-bottom: 1px solid rgba(100,200,255,0.2); padding-bottom: 6px;
 }
-.controls-title { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; color: #64c8ff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid rgba(100,200,255,0.2); padding-bottom: 6px; }
-.controls-title button { background: rgba(255,255,255,0.08); border: 1px solid rgba(100,200,255,0.25); color: #fff; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 11px; }
-.controls.hidden { opacity: 0.15; pointer-events: none; }
-.controls-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; }
-.control-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px; margin: 6px 0; font-size: 12px; }
-.control-row span:first-child { color: #e1f7ff; }
-.control-row span:last-child { color: #64c8ff; font-weight: 600; font-size: 11px; min-width: 36px; text-align: right; }
+.controls-title button {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(100,200,255,0.25);
+  color: #fff; padding: 4px 8px; border-radius: 6px; cursor: pointer; font-size: 11px;
+}
+.controls.hidden { opacity: 0.15; }
+.control-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; margin: 10px 0; font-size: 12px; }
+.control-row span { color: #e1f7ff; }
 .control-row input[type="range"] { width: 100%; }
-.control-section-label {
-  grid-column: 1 / -1;
-  border-top: 1px solid rgba(100,200,255,0.15);
-  margin: 6px 0 2px;
-  padding-top: 6px;
-  font-size: 10px;
-  color: #64c8ff;
-  text-transform: uppercase;
-  letter-spacing: 0.8px;
-  font-weight: 700;
+.eventlog > #eventlog { max-height: calc(100% - 26px); overflow-y: auto; }
+.log-title {
+  font-size: 12px; font-weight: 700; color: #64c8ff;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 8px; border-bottom: 1px solid rgba(100,200,255,0.2); padding-bottom: 6px;
 }
-.log-title { font-size: 12px; font-weight: 700; color: #64c8ff; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; border-bottom: 1px solid rgba(100,200,255,0.2); padding-bottom: 6px; }
-.log-entry { padding: 4px 6px; margin: 2px 0; background: rgba(255,255,255,0.04); border-left: 2px solid rgba(100,200,255,0.3); border-radius: 4px; font-size: 10px; line-height: 1.2; color: #ddd; }
-.log-entry.kill { background: rgba(255,51,51,0.12); border-left-color: #ff4444; color: #ffdddd; font-weight: 600; }
-.log-entry.gift { background: rgba(255,217,61,0.12); border-left-color: #ffd93d; color: #ffe6cc; }
+.log-entry {
+  padding: 4px 6px; margin: 2px 0;
+  background: rgba(255,255,255,0.04);
+  border-left: 2px solid rgba(100,200,255,0.3);
+  border-radius: 4px; font-size: 10px; line-height: 1.2; color: #ddd;
+}
+.log-entry.kill  { background: rgba(255,51,51,0.12);  border-left-color: #ff4444; color: #ffdddd; font-weight: 600; }
+.log-entry.gift  { background: rgba(255,217,61,0.12); border-left-color: #ffd93d; color: #ffe6cc; }
 .eventlog::-webkit-scrollbar { width: 6px; }
 .eventlog::-webkit-scrollbar-thumb { background: rgba(100,200,255,0.3); border-radius: 3px; }
-.dmg-number { position: absolute; font-size: 32px; font-weight: 900; color: #ff3333; text-shadow: 0 0 12px rgba(255,51,51,0.8), 2px 2px 6px rgba(0,0,0,0.95); pointer-events: none; animation: dmgFloat 0.7s ease-out forwards; z-index: 30; }
-@keyframes dmgFloat { 0%{opacity:1;transform:translateY(0) scale(1)} 100%{opacity:0;transform:translateY(-60px) scale(0.5)} }
-.dmg-number.kill { color: #ffd93d; font-size: 40px; text-shadow: 0 0 16px rgba(255,217,61,0.9), 2px 2px 6px rgba(0,0,0,0.95); }
+.dmg-number {
+  position: absolute; font-size: 32px; font-weight: 900; color: #ff3333;
+  text-shadow: 0 0 12px rgba(255,51,51,0.8), 2px 2px 6px rgba(0,0,0,0.95);
+  pointer-events: none; animation: dmgFloat 0.7s ease-out forwards; z-index: 30;
+}
+@keyframes dmgFloat {
+  0%   { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-60px) scale(0.5); }
+}
+.dmg-number.kill {
+  color: #ffd93d; font-size: 40px;
+  text-shadow: 0 0 16px rgba(255,217,61,0.9), 2px 2px 6px rgba(0,0,0,0.95);
+}
 </style>
 </head>
 <body>
@@ -82,610 +117,409 @@ body { font-family: 'Arial', sans-serif; background: #000; }
     <div class="status-title"><span class="live-indicator"></span>Battle Status</div>
     <div class="status-row"><span class="status-label">Server:</span><span class="status-value" id="serverStatus">Connecting...</span></div>
     <div class="status-row"><span class="status-label">Players:</span><span class="status-value" id="playerCount">0</span></div>
-    <div class="status-row"><span class="status-label">Audio:</span><span class="status-value" id="audioStatus">Enabled</span></div>
-    <div class="status-row">
-      <button id="enableAudioBtn" style="font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;">Enable Audio</button>
-    </div>
     <div class="status-row"><span class="status-label">Showing:</span><span class="status-value" id="showingCount">0 / 0</span></div>
   </div>
   <div class="panel leaderboard">
-    <div class="board-title">🏆 Highest HP (Top 3)</div>
+    <div class="board-title">🏆 Highest HP (Top 20)</div>
     <div id="leaderboard"></div>
   </div>
   <div class="panel eventlog">
     <div class="log-title">⚔️ Events</div>
     <div id="eventlog"></div>
   </div>
-
-  <!-- Layout controls — bottom center, 2-column grid -->
-
   <div class="panel controls" id="layoutControls">
     <div class="controls-title">
-      <span>⚙️ Layout</span>
+      <span>⚙️ Layout Controls</span>
       <button id="toggleControls">Hide</button>
     </div>
-    <div class="controls-grid">
-      <label class="control-row">
-        <span>Column Gap</span>
-        <input id="gapXControl" type="range" min="0" max="220" step="10" value="150" />
-        <span id="gapXValue">150</span>
-      </label>
-      <label class="control-row">
-        <span>Horizontal Offset</span>
-        <input id="offsetXControl" type="range" min="-500" max="500" step="10" value="0" />
-        <span id="offsetXValue">0</span>
-      </label>
-      <label class="control-row">
-        <span>Vertical Position</span>
-        <input id="offsetYControl" type="range" min="-500" max="500" step="10" value="0" />
-        <span id="offsetYValue">0</span>
-      </label>
-      <label class="control-row">
-        <span>Canvas Height</span>
-        <input id="canvasHeightControl" type="range" min="10" max="100" step="1" value="100" />
-        <span id="canvasHeightValue">100%</span>
-      </label>
-
-```
-  <div class="control-section-label">⬛ Border</div>
-
-  <label class="control-row">
-    <span>Border Height</span>
-    <input id="borderHeightControl" type="range" min="50" max="800" step="10" value="300" />
-    <span id="borderHeightValue">300</span>
-  </label>
-  <label class="control-row">
-    <span>Top Padding</span>
-    <input id="borderTopPadControl" type="range" min="0" max="200" step="5" value="90" />
-    <span id="borderTopPadValue">90</span>
-  </label>
-</div>
-```
-
+    <label class="control-row">
+      <span>Column Gap</span>
+      <input id="gapXControl" type="range" min="0" max="220" step="10" value="150" />
+      <span id="gapXValue">150</span>
+    </label>
+    <label class="control-row">
+      <span>Row Gap</span>
+      <input id="gapYControl" type="range" min="100" max="1000" step="10" value="260" />
+      <span id="gapYValue">260</span>
+    </label>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
-
 <script>
 // ── State ─────────────────────────────────────────────────────────────────────
-let players = {};
+let players        = {};
+let audioConfig    = {};   // event → filename, pushed from server
+let soundEnabled   = true; // toggled by dashboard sound-settings
 const lastPlayerPositions = {};
-let backgroundImg = null;
-const HORDE_ID = '__horde__';
+let backgroundImg  = null;
+const audioCache   = {};   // filename → HTMLAudioElement
 
 // ── Canvas ────────────────────────────────────────────────────────────────────
 const canvas = document.getElementById('canvas');
 const ctx    = canvas.getContext('2d');
 
-let canvasHeightPct = 100;
-
 function setupCanvas() {
   const dpr = window.devicePixelRatio || 1;
-  const w   = window.innerWidth;
-  const h   = Math.round(window.innerHeight * canvasHeightPct / 100);
-  canvas.width  = w * dpr;
-  canvas.height = h * dpr;
-  canvas.style.width  = w + 'px';
-  canvas.style.height = h + 'px';
+  canvas.width  = window.innerWidth  * dpr;
+  canvas.height = window.innerHeight * dpr;
+  canvas.style.width  = window.innerWidth  + 'px';
+  canvas.style.height = window.innerHeight + 'px';
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 setupCanvas();
 window.addEventListener('resize', setupCanvas);
 
 // ── Layout controls ───────────────────────────────────────────────────────────
-const gapXControl         = document.getElementById('gapXControl');
-const offsetXControl      = document.getElementById('offsetXControl');
-const offsetYControl      = document.getElementById('offsetYControl');
-const canvasHeightControl = document.getElementById('canvasHeightControl');
-const borderHeightControl = document.getElementById('borderHeightControl');
-const borderTopPadControl = document.getElementById('borderTopPadControl');
-const gapXValue           = document.getElementById('gapXValue');
-const offsetXValue        = document.getElementById('offsetXValue');
-const offsetYValue        = document.getElementById('offsetYValue');
-const canvasHeightValue   = document.getElementById('canvasHeightValue');
-const borderHeightValue   = document.getElementById('borderHeightValue');
-const borderTopPadValue   = document.getElementById('borderTopPadValue');
-const toggleControls      = document.getElementById('toggleControls');
-const layoutControls      = document.getElementById('layoutControls');
+const gapXControl   = document.getElementById('gapXControl');
+const gapYControl   = document.getElementById('gapYControl');
+const gapXValue     = document.getElementById('gapXValue');
+const gapYValue     = document.getElementById('gapYValue');
+const toggleBtn     = document.getElementById('toggleControls');
+const layoutControls = document.getElementById('layoutControls');
 
-let layoutGapX   = Number(gapXControl.value);
-let offsetX      = Number(offsetXControl.value);
-let offsetY      = Number(offsetYControl.value);
-let borderHeight = Number(borderHeightControl.value);
-let borderTopPad = Number(borderTopPadControl.value);
+let layoutGapX = Number(gapXControl.value);
+let layoutGapY = Number(gapYControl.value);
 
-function syncLabels() {
-  gapXValue.textContent         = layoutGapX;
-  offsetXValue.textContent      = offsetX;
-  offsetYValue.textContent      = offsetY;
-  canvasHeightValue.textContent = canvasHeightPct + '%';
-  borderHeightValue.textContent = borderHeight;
-  borderTopPadValue.textContent = borderTopPad;
+function syncGapLabels() {
+  gapXValue.textContent = layoutGapX;
+  gapYValue.textContent = layoutGapY;
 }
-syncLabels();
-
-gapXControl.addEventListener('input',    () => { layoutGapX = Number(gapXControl.value);   syncLabels(); });
-offsetXControl.addEventListener('input', () => { offsetX    = Number(offsetXControl.value); syncLabels(); });
-offsetYControl.addEventListener('input', () => { offsetY    = Number(offsetYControl.value); syncLabels(); });
-canvasHeightControl.addEventListener('input', () => {
-  canvasHeightPct = Number(canvasHeightControl.value);
-  syncLabels();
-  setupCanvas();
-});
-borderHeightControl.addEventListener('input',  () => { borderHeight = Number(borderHeightControl.value); syncLabels(); });
-borderTopPadControl.addEventListener('input',  () => { borderTopPad = Number(borderTopPadControl.value); syncLabels(); });
-
-toggleControls.addEventListener('click', () => {
+gapXControl.addEventListener('input', () => { layoutGapX = Number(gapXControl.value); syncGapLabels(); });
+gapYControl.addEventListener('input', () => { layoutGapY = Number(gapYControl.value); syncGapLabels(); });
+toggleBtn.addEventListener('click', () => {
   const hidden = layoutControls.classList.toggle('hidden');
-  toggleControls.textContent = hidden ? 'Show' : 'Hide';
+  toggleBtn.textContent = hidden ? 'Show' : 'Hide';
 });
+syncGapLabels();
 
 // ── Audio ─────────────────────────────────────────────────────────────────────
-const audioStatusLabel = document.getElementById('audioStatus');
-const enableAudioBtn   = document.getElementById('enableAudioBtn');
-let overlaySoundEnabled = true;
-
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let audioReady = audioCtx.state !== 'suspended';
-
-let audioConfig = { attack: null, gift: null, kill: null, respawn: null, heal: null };
-const audioCache = {};
-
 function getAudio(filename) {
-  if (!filename) return null;
   if (!audioCache[filename]) {
-    audioCache[filename] = new Audio(`/audio/${filename}`);
+    audioCache[filename] = new Audio(`/audio/${encodeURIComponent(filename)}`);
     audioCache[filename].preload = 'auto';
   }
   return audioCache[filename];
 }
 
-function setAudioStatus() {
-  if (!overlaySoundEnabled)           { audioStatusLabel.textContent = 'Muted';           return; }
-  if (audioCtx.state === 'suspended') { audioStatusLabel.textContent = 'Click to enable'; return; }
-  audioStatusLabel.textContent = audioReady ? 'Ready' : 'Unavailable';
-}
-
-function resumeAudio() {
-  audioCtx.resume()
-    .then(() => { audioReady = true; setAudioStatus(); playTone(880, 0.05, 'square', 0.1); })
-    .catch(() => setAudioStatus());
-}
-
-enableAudioBtn.addEventListener('click', (e) => { e.stopPropagation(); resumeAudio(); });
-document.addEventListener('click', () => {
-  if (audioCtx.state === 'suspended') resumeAudio();
-  else { audioReady = true; setAudioStatus(); }
-}, { once: true });
-
-function playTone(frequency, duration = 0.12, type = 'triangle', volume = 0.18, when = 0) {
-  if (!audioCtx || !audioReady) return;
-  const osc  = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = type; osc.frequency.value = frequency; gain.gain.value = volume;
-  osc.connect(gain); gain.connect(audioCtx.destination);
-  const start = audioCtx.currentTime + when;
-  const stop  = start + duration;
-  gain.gain.setValueAtTime(volume, start);
-  gain.gain.exponentialRampToValueAtTime(0.001, stop);
-  osc.start(start); osc.stop(stop);
-}
-
 function playSound(event) {
-  if (!overlaySoundEnabled) return;
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume().then(() => { audioReady = true; setAudioStatus(); playSound(event); }).catch(() => {});
-    return;
-  }
-  if (!audioReady) return;
-  const audio = getAudio(audioConfig[event]);
-  if (audio) { audio.currentTime = 0; audio.play().catch(() => {}); }
+  if (!soundEnabled) return;
+  const filename = audioConfig[event];
+  if (!filename) return;
+  try {
+    const audio = getAudio(filename);
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+  } catch (_e) {}
 }
 
-// ── Player helpers ────────────────────────────────────────────────────────────
-function getTopPlayers(count = 5) {
+// Preload all configured sounds so first play is instant
+function preloadAudioConfig(cfg) {
+  for (const filename of Object.values(cfg)) {
+    if (filename) getAudio(filename);
+  }
+}
+
+// ── Socket ────────────────────────────────────────────────────────────────────
+const socket = io({ transports: ['websocket', 'polling'] });
+
+socket.on('connect', () => {
+  document.getElementById('serverStatus').textContent = '🟢 LIVE';
+  socket.emit('register', { type: 'overlay' });
+});
+
+socket.on('disconnect', () => {
+  document.getElementById('serverStatus').textContent = 'Offline';
+});
+
+socket.on('gameState', (state) => {
+  players = state || {};
+  updateUI();
+});
+
+// ── Audio config pushed from server ──────────────────────────────────────────
+socket.on('audioConfig', (cfg) => {
+  audioConfig = cfg || {};
+  preloadAudioConfig(audioConfig);
+});
+
+// ── Sound event from server (attack / kill / gift / heal / respawn / follow) ─
+socket.on('soundEvent', ({ event }) => {
+  playSound(event);
+});
+
+// ── Dev panel: test sound buttons ─────────────────────────────────────────────
+socket.on('devSound', ({ type }) => {
+  // Map dev panel button names to event names
+  const map = { laser: 'attack', heal: 'heal', special: 'kill' };
+  playSound(map[type] || type);
+});
+
+// ── Dev panel: enable/disable overlay sounds ──────────────────────────────────
+socket.on('soundSettings', ({ enabled }) => {
+  soundEnabled = !!enabled;
+});
+
+socket.on('attack', ({ attacker, target, damage, killed, special }) => {
+  const fromPos = getAnimationPos(attacker);
+  const toPos   = getAnimationPos(target);
+  if (players[attacker] && players[target]) {
+    attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, killed, special));
+    players[target].hp = Math.max(0, (players[target].hp || 0) - damage);
+    if (killed) players[target].alive = false;
+    const aName = players[attacker].nickname || attacker.slice(0, 10);
+    const tName = players[target].nickname   || target.slice(0, 10);
+    addLog(`⚔️ ${aName} → ${tName} -${damage}${special ? ' ⚡' : ''}${killed ? ' 💀' : ''}`, killed ? 'kill' : '');
+    showDmg(toPos.x, toPos.y, damage, killed);
+    updateUI();
+  }
+});
+
+socket.on('giftAttack', ({ attacker, target, damage, killed }) => {
+  const fromPos = getAnimationPos(attacker);
+  const toPos   = getAnimationPos(target);
+  if (players[attacker] && players[target]) {
+    attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, killed, true));
+    players[target].hp = Math.max(0, (players[target].hp || 0) - damage);
+    if (killed || players[target].hp === 0) players[target].alive = false;
+    const aName = players[attacker].nickname || attacker.slice(0, 10);
+    const tName = players[target].nickname   || target.slice(0, 10);
+    addLog(`🎁 ${aName} → ${tName} -${damage}${killed ? ' 💀' : ''}`, killed ? 'kill' : 'gift');
+    showDmg(toPos.x, toPos.y, damage, killed);
+    updateUI();
+  }
+});
+
+socket.on('giftEffect', ({ attacker, giftName, diamonds }) => {
+  const aName = players[attacker]?.nickname || attacker || 'Someone';
+  addLog(`🎁 ${aName} sent ${giftName || 'a gift'} (${diamonds || 0} 💎)`, 'gift');
+});
+
+socket.on('respawn', ({ uniqueId }) => {
+  if (players[uniqueId]) {
+    const name = players[uniqueId].nickname || uniqueId.slice(0, 10);
+    addLog(`✨ ${name} respawned!`, '');
+  }
+});
+
+socket.on('backgroundChanged', ({ filename }) => {
+  if (!filename) { backgroundImg = null; return; }
+  const img  = new Image();
+  img.onload = () => { backgroundImg = img; };
+  img.src    = `/background/${filename}?v=${Date.now()}`;
+});
+
+socket.on('forceReload', () => { location.reload(); });
+
+// ── Player positioning ────────────────────────────────────────────────────────
+function getTopPlayers(count = 20) {
   return Object.values(players)
-    .filter(p => p.alive && p.uniqueId !== HORDE_ID)
+    .filter(p => p.alive)
     .sort((a, b) => {
-      const aF = a.forceSpawn ? 1 : 0, bF = b.forceSpawn ? 1 : 0;
+      const aF = a.forceSpawn ? 1 : 0;
+      const bF = b.forceSpawn ? 1 : 0;
       if (aF !== bF) return bF - aF;
-      const aHp = a.hp ?? (a.maxHp || 0);
-      const bHp = b.hp ?? (b.maxHp || 0);
-      return bHp - aHp || (b.maxHp || 0) - (a.maxHp || 0);
+      const aHp   = a.hp   != null ? a.hp   : (a.maxHp   || 0);
+      const bHp   = b.hp   != null ? b.hp   : (b.maxHp   || 0);
+      const hpDiff = bHp - aHp;
+      if (hpDiff !== 0) return hpDiff;
+      return (b.maxHp || 0) - (a.maxHp || 0);
     })
     .slice(0, count);
 }
 
-function getHordePlayer() {
-  const top5ids = new Set(getTopPlayers(5).map(p => p.uniqueId));
-  const rest    = Object.values(players).filter(p => p.alive && p.uniqueId !== HORDE_ID && !top5ids.has(p.uniqueId));
-  if (!rest.length) return null;
-  return {
-    uniqueId:   HORDE_ID,
-    nickname:   'THE HORDE',
-    hordeCount: rest.length,
-    hp:         rest.reduce((s, p) => s + (p.hp    || 0),   0),
-    maxHp:      rest.reduce((s, p) => s + (p.maxHp || 100), 0),
-    alive: true, isHorde: true,
-  };
-}
-
-// ── Position helpers ──────────────────────────────────────────────────────────
 function getPlayerPos(player) {
-  if (!player) return { x: canvas.clientWidth / 2 + offsetX, y: 200 + offsetY };
   const width  = canvas.clientWidth;
   const height = canvas.clientHeight;
-  const sorted = getTopPlayers(5);
+  const sorted = getTopPlayers(20);
   const idx    = sorted.findIndex(p => p.uniqueId === player.uniqueId);
-  if (idx === -1) return { x: canvas.clientWidth / 2 + offsetX, y: 200 + offsetY };
 
-  const cols        = 5;
-  const leftBuffer  = 20;
-  const rightBuffer = 20;
-  const topBuffer   = height * 0.08;
-  const playW       = Math.max(0, width - leftBuffer - rightBuffer);
-  const cellW       = Math.max(80, (playW - layoutGapX * (cols - 1)) / cols);
-  const gridWidth   = cols * cellW + (cols - 1) * layoutGapX;
-  const startX      = leftBuffer + Math.max(0, (playW - gridWidth) / 2) + offsetX;
-  const startY      = topBuffer + offsetY;
+  if (idx === -1) return lastPlayerPositions[player.uniqueId] || { x: width / 2, y: height / 2 };
+
+  const cols = 5, rows = 4;
+  const leftBuffer = 260, rightBuffer = 320, topBuffer = 180, botBuffer = 280;
+  const playW  = Math.max(400, width  - leftBuffer - rightBuffer);
+  const playH  = Math.max(300, height - topBuffer  - botBuffer);
+  const cellW  = Math.max(80, (playW - layoutGapX * (cols - 1)) / cols);
+  const cellH  = Math.max(80, (playH - layoutGapY * (rows - 1)) / rows);
+  const gridW  = cols * cellW + (cols - 1) * layoutGapX;
+  const gridH  = rows * cellH + (rows - 1) * layoutGapY;
+  const startX = leftBuffer + Math.max(0, (playW - gridW) / 2);
+  const startY = topBuffer  + Math.max(0, (playH - gridH) / 2);
+  const col    = idx % cols;
+  const row    = Math.floor(idx / cols);
 
   return {
-    x: startX + (idx % cols) * (cellW + layoutGapX) + cellW / 2,
-    y: startY + 100,
+    x: startX + col * (cellW + layoutGapX) + cellW / 2,
+    y: startY + row * (cellH + layoutGapY) + cellH / 2,
   };
-}
-
-// Horde sits just below the player HP bars, not far down the screen
-function getHordePos(posCache) {
-  let baseY = 300;
-  if (posCache && posCache.length) {
-    // player y + half of largest emoji (44) + HP bar area (~35) + gap (50)
-    baseY = Math.max(...posCache.map(p => p.y)) + 44 + 35 + 85;
-  }
-  return {
-    x: canvas.clientWidth / 2 + offsetX,
-    y: baseY,
-  };
-}
-
-function resolveParticipant(uniqueId) {
-  return getTopPlayers(5).some(p => p.uniqueId === uniqueId) ? uniqueId : HORDE_ID;
 }
 
 function getAnimationPos(uniqueId) {
-  if (uniqueId === HORDE_ID) return lastPlayerPositions[HORDE_ID] || { x: canvas.clientWidth / 2, y: 400 };
-  const inTop5 = getTopPlayers(5).some(p => p.uniqueId === uniqueId);
-  if (inTop5) return lastPlayerPositions[uniqueId] || getPlayerPos(players[uniqueId]);
-  return lastPlayerPositions[HORDE_ID] || { x: canvas.clientWidth / 2, y: 400 };
-}
-
-// ── Impact particles ──────────────────────────────────────────────────────────
-const impacts = [];
-
-class ImpactEffect {
-  constructor(x, y, isKill, isSpecial) {
-    this.x = x; this.y = y;
-    this.isKill    = isKill;
-    this.isSpecial = isSpecial;
-    this.startTime = Date.now();
-    this.duration  = isKill ? 900 : 600;
-    this.progress  = 0;
-    const count = isKill ? 22 : isSpecial ? 16 : 10;
-    const baseColor = isKill ? [255,217,61] : isSpecial ? [255,100,100] : [100,215,255];
-    this.particles = Array.from({ length: count }, () => {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 1.5 + Math.random() * (isKill ? 5 : 3.5);
-      return { x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, r: 2+Math.random()*(isKill?6:4), color: baseColor, life: 0.6+Math.random()*0.4 };
-    });
-    this.rings = isKill ? 3 : isSpecial ? 2 : 1;
-  }
-  update() {
-    this.progress = Math.min(1, (Date.now() - this.startTime) / this.duration);
-    this.particles.forEach(p => { p.x+=p.vx; p.y+=p.vy; p.vx*=0.88; p.vy*=0.88; });
-    return this.progress < 1;
-  }
-  draw(ctx) {
-    const t=this.progress, alpha=1-t;
-    const baseColor = this.isKill?'255,217,61':this.isSpecial?'255,100,100':'100,215,255';
-    const coreColor = this.isKill?'255,255,200':this.isSpecial?'255,220,120':'180,240,255';
-    for (let r=0;r<this.rings;r++) {
-      const delay=r*0.15, ringT=Math.max(0,Math.min(1,(t-delay)/(1-delay)));
-      if(ringT<=0) continue;
-      const radius=(this.isKill?60:40)*ringT+(r*12), rAlpha=(1-ringT)*(this.isKill?0.9:0.7);
-      ctx.strokeStyle=`rgba(${baseColor},${rAlpha})`; ctx.lineWidth=this.isKill?3:2;
-      ctx.beginPath(); ctx.arc(this.x,this.y,radius,0,Math.PI*2); ctx.stroke();
-      if(r===0&&ringT<0.25) { ctx.fillStyle=`rgba(${coreColor},${(0.25-ringT)*2})`; ctx.beginPath(); ctx.arc(this.x,this.y,radius*0.5,0,Math.PI*2); ctx.fill(); }
-    }
-    this.particles.forEach(p => {
-      const pAlpha=alpha*p.life;
-      ctx.shadowColor=`rgba(${p.color.join(',')},${pAlpha*0.8})`; ctx.shadowBlur=8;
-      ctx.fillStyle=`rgba(${p.color.join(',')},${pAlpha})`;
-      ctx.beginPath(); ctx.arc(p.x,p.y,p.r*(1-t*0.5),0,Math.PI*2); ctx.fill();
-    });
-    ctx.shadowColor='transparent'; ctx.shadowBlur=0;
-    if(t<0.18) {
-      const fa=(0.18-t)/0.18, fr=this.isKill?36:22;
-      const grd=ctx.createRadialGradient(this.x,this.y,0,this.x,this.y,fr);
-      grd.addColorStop(0,`rgba(${coreColor},${fa})`); grd.addColorStop(0.5,`rgba(${baseColor},${fa*0.5})`); grd.addColorStop(1,`rgba(${baseColor},0)`);
-      ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(this.x,this.y,fr,0,Math.PI*2); ctx.fill();
-    }
-    if(this.isKill&&t<0.5) {
-      const la=(0.5-t)/0.5, ll=28+30*t;
-      ctx.strokeStyle=`rgba(255,255,180,${la*0.9})`; ctx.lineWidth=2;
-      for(let i=0;i<8;i++) { const a=(Math.PI*2/8)*i+t*0.5; ctx.beginPath(); ctx.moveTo(this.x+Math.cos(a)*8,this.y+Math.sin(a)*8); ctx.lineTo(this.x+Math.cos(a)*ll,this.y+Math.sin(a)*ll); ctx.stroke(); }
-    }
-  }
+  if (lastPlayerPositions[uniqueId]) return lastPlayerPositions[uniqueId];
+  if (players[uniqueId]) return getPlayerPos(players[uniqueId]);
+  return { x: canvas.clientWidth / 2, y: canvas.clientHeight / 2 };
 }
 
 // ── Attack animation ──────────────────────────────────────────────────────────
 class Attack {
-  constructor(fromX,fromY,toX,toY,isKill,isSpecial=false) {
-    this.fromX=fromX; this.fromY=fromY; this.toX=toX; this.toY=toY;
-    this.isKill=isKill; this.isSpecial=isSpecial;
-    this.startTime=Date.now(); this.duration=550; this.progress=0; this.impactSpawned=false;
+  constructor(fromX, fromY, toX, toY, isKill, isSpecial = false) {
+    this.fromX = fromX; this.fromY = fromY;
+    this.toX   = toX;   this.toY   = toY;
+    this.isKill    = isKill;
+    this.isSpecial = isSpecial;
+    this.startTime = Date.now();
+    this.duration  = 650;
+    this.progress  = 0;
   }
   update() {
-    this.progress=Math.min(1,(Date.now()-this.startTime)/this.duration);
-    if(this.progress>=1&&!this.impactSpawned) { this.impactSpawned=true; impacts.push(new ImpactEffect(this.toX,this.toY,this.isKill,this.isSpecial)); }
-    return this.progress<1;
+    this.progress = Math.min(1, (Date.now() - this.startTime) / this.duration);
+    return this.progress < 1;
   }
   draw(ctx) {
-    const alpha=1-this.progress, easeOut=1-Math.pow(1-this.progress,2);
-    const x=this.fromX+(this.toX-this.fromX)*easeOut, y=this.fromY+(this.toY-this.fromY)*easeOut;
-    const glowColor=this.isSpecial?'255,100,100':'100,215,255';
-    const coreColor=this.isSpecial?'255,220,120':'180,240,255';
-    const orbColor=this.isSpecial?'255,217,61':'150,220,255';
-    ctx.lineCap='round'; ctx.lineJoin='round';
-    ctx.strokeStyle=`rgba(${glowColor},${alpha*0.22})`; ctx.lineWidth=this.isSpecial?24:16;
-    ctx.beginPath(); ctx.moveTo(this.fromX,this.fromY); ctx.lineTo(this.toX,this.toY); ctx.stroke();
-    ctx.strokeStyle=`rgba(${glowColor},${alpha*0.85})`; ctx.lineWidth=this.isSpecial?10:6;
-    ctx.beginPath(); ctx.moveTo(this.fromX,this.fromY); ctx.lineTo(this.toX,this.toY); ctx.stroke();
-    ctx.strokeStyle=`rgba(${coreColor},${alpha})`; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.moveTo(this.fromX,this.fromY); ctx.lineTo(this.toX,this.toY); ctx.stroke();
-    ctx.fillStyle=`rgba(${orbColor},${alpha})`; ctx.shadowColor=`rgba(${glowColor},${alpha*0.7})`; ctx.shadowBlur=16;
-    ctx.beginPath(); ctx.arc(x,y,this.isSpecial?12:8,0,Math.PI*2); ctx.fill();
-    ctx.shadowColor='transparent'; ctx.shadowBlur=0;
+    const alpha     = 1 - this.progress;
+    const easeOut   = 1 - Math.pow(1 - this.progress, 2);
+    const x         = this.fromX + (this.toX - this.fromX) * easeOut;
+    const y         = this.fromY + (this.toY - this.fromY) * easeOut;
+    const glowColor = this.isSpecial ? '255,100,100'   : '100,215,255';
+    const coreColor = this.isSpecial ? '255,220,120'   : '180,240,255';
+    const orbColor  = this.isSpecial ? '255,217,61'    : '150,220,255';
+
+    ctx.strokeStyle = `rgba(${glowColor},${alpha * 0.22})`; ctx.lineWidth = this.isSpecial ? 24 : 16; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(this.fromX, this.fromY); ctx.lineTo(this.toX, this.toY); ctx.stroke();
+    ctx.strokeStyle = `rgba(${glowColor},${alpha * 0.85})`; ctx.lineWidth = this.isSpecial ? 10 : 6;
+    ctx.beginPath(); ctx.moveTo(this.fromX, this.fromY); ctx.lineTo(this.toX, this.toY); ctx.stroke();
+    ctx.strokeStyle = `rgba(${coreColor},${alpha})`; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(this.fromX, this.fromY); ctx.lineTo(this.toX, this.toY); ctx.stroke();
+    ctx.fillStyle = `rgba(${orbColor},${alpha})`; ctx.shadowColor = `rgba(${glowColor},${alpha * 0.7})`; ctx.shadowBlur = 16;
+    ctx.beginPath(); ctx.arc(x, y, this.isSpecial ? 12 : 8, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+    ctx.strokeStyle = `rgba(${glowColor},${alpha * 0.6})`; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(this.toX, this.toY, 12 + 26 * this.progress, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = `rgba(${coreColor},${alpha * 0.35})`; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(this.toX, this.toY, 6 + 18 * this.progress, 0, Math.PI * 2); ctx.stroke();
   }
 }
 
 const attacks = [];
 
-// ── Neon column borders ───────────────────────────────────────────────────────
-function drawColumnBorders(sorted, posCache, hordePos) {
-  if (!sorted.length || !posCache.length) return;
-
-  // topY = borderTopPad above the player row; bottomY = topY + borderHeight
-  const topY    = posCache[0].y - borderTopPad;
-  const bottomY = topY + borderHeight;
-
-  let colHalfW = 80;
-  if (posCache.length > 1) colHalfW = (posCache[1].x - posCache[0].x) / 2;
-
-  const firstX = posCache[0].x - colHalfW;
-  const lastX  = posCache[posCache.length - 1].x + colHalfW;
-
-  const borderXs = [firstX];
-  for (let i = 0; i < posCache.length - 1; i++) borderXs.push((posCache[i].x + posCache[i+1].x) / 2);
-  borderXs.push(lastX);
-
-  borderXs.forEach(bx => {
-    const gg = ctx.createLinearGradient(bx,topY,bx,bottomY);
-    gg.addColorStop(0,'rgba(100,200,255,0)'); gg.addColorStop(0.06,'rgba(100,200,255,0.10)');
-    gg.addColorStop(0.5,'rgba(100,200,255,0.14)'); gg.addColorStop(0.94,'rgba(100,200,255,0.10)'); gg.addColorStop(1,'rgba(100,200,255,0)');
-    ctx.strokeStyle=gg; ctx.lineWidth=18; ctx.beginPath(); ctx.moveTo(bx,topY); ctx.lineTo(bx,bottomY); ctx.stroke();
-    const lg = ctx.createLinearGradient(bx,topY,bx,bottomY);
-    lg.addColorStop(0,'rgba(100,200,255,0)'); lg.addColorStop(0.06,'rgba(100,200,255,0.7)');
-    lg.addColorStop(0.5,'rgba(160,220,255,0.9)'); lg.addColorStop(0.94,'rgba(100,200,255,0.7)'); lg.addColorStop(1,'rgba(100,200,255,0)');
-    ctx.strokeStyle=lg; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(bx,topY); ctx.lineTo(bx,bottomY); ctx.stroke();
-  });
-
-  // Top cap
-  const tg=ctx.createLinearGradient(firstX,0,lastX,0);
-  tg.addColorStop(0,'rgba(100,200,255,0)'); tg.addColorStop(0.1,'rgba(100,200,255,0.12)'); tg.addColorStop(0.9,'rgba(100,200,255,0.12)'); tg.addColorStop(1,'rgba(100,200,255,0)');
-  ctx.strokeStyle=tg; ctx.lineWidth=18; ctx.beginPath(); ctx.moveTo(firstX,topY); ctx.lineTo(lastX,topY); ctx.stroke();
-  const tl=ctx.createLinearGradient(firstX,0,lastX,0);
-  tl.addColorStop(0,'rgba(100,200,255,0)'); tl.addColorStop(0.1,'rgba(160,220,255,0.75)'); tl.addColorStop(0.9,'rgba(160,220,255,0.75)'); tl.addColorStop(1,'rgba(100,200,255,0)');
-  ctx.strokeStyle=tl; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(firstX,topY); ctx.lineTo(lastX,topY); ctx.stroke();
-
-  // Bottom cap
-  const bg=ctx.createLinearGradient(firstX,0,lastX,0);
-  bg.addColorStop(0,'rgba(255,80,80,0)'); bg.addColorStop(0.1,'rgba(255,80,80,0.10)'); bg.addColorStop(0.9,'rgba(255,80,80,0.10)'); bg.addColorStop(1,'rgba(255,80,80,0)');
-  ctx.strokeStyle=bg; ctx.lineWidth=18; ctx.beginPath(); ctx.moveTo(firstX,bottomY); ctx.lineTo(lastX,bottomY); ctx.stroke();
-  const bl=ctx.createLinearGradient(firstX,0,lastX,0);
-  bl.addColorStop(0,'rgba(255,80,80,0)'); bl.addColorStop(0.1,'rgba(255,120,120,0.7)'); bl.addColorStop(0.9,'rgba(255,120,120,0.7)'); bl.addColorStop(1,'rgba(255,80,80,0)');
-  ctx.strokeStyle=bl; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(firstX,bottomY); ctx.lineTo(lastX,bottomY); ctx.stroke();
-
-  // Column tint
-  for (let i=0;i<posCache.length;i++) {
-    const x1=i===0?firstX:(posCache[i-1].x+posCache[i].x)/2;
-    const x2=i===posCache.length-1?lastX:(posCache[i].x+posCache[i+1].x)/2;
-    ctx.fillStyle=i%2===1?'rgba(100,200,255,0.025)':'rgba(80,160,220,0.012)';
-    ctx.fillRect(x1,topY,x2-x1,bottomY-topY);
-  }
-}
-
-// ── Socket ────────────────────────────────────────────────────────────────────
-const socket = io();
-socket.on('connect', () => { document.getElementById('serverStatus').textContent='🟢 LIVE'; socket.emit('register',{type:'overlay'}); });
-socket.on('disconnect', () => { document.getElementById('serverStatus').textContent='Offline'; });
-socket.on('gameState',     (state) => { players=state||{}; updateUI(); });
-socket.on('soundSettings', ({enabled}) => { overlaySoundEnabled=!!enabled; setAudioStatus(); });
-socket.on('forceReload',   () => location.reload());
-socket.on('audioConfig', (cfg) => { Object.assign(audioConfig,cfg); Object.values(audioConfig).filter(Boolean).forEach(f=>getAudio(f)); });
-socket.on('soundEvent', ({event}) => playSound(event));
-socket.on('backgroundChanged', ({filename}) => {
-  if(!filename){backgroundImg=null;return;}
-  const img=new Image(); img.onload=()=>{backgroundImg=img;}; img.src=`/background/${filename}?v=${Date.now()}`;
-});
-socket.on('respawn', ({uniqueId}) => { if(players[uniqueId]) addLog(`✨ ${players[uniqueId].nickname||uniqueId.slice(0,10)} respawned!`,''); });
-socket.on('heal', ({uniqueId,amount}) => { if(players[uniqueId]){addLog(`💚 ${players[uniqueId].nickname||uniqueId.slice(0,10)} healed +${amount} HP`,'gift');playSound('heal');} });
-socket.on('giftEffect', ({attacker,giftName,diamonds}) => { const name=players[attacker]?.nickname||attacker||'Someone'; addLog(`🎁 ${name} sent ${giftName||'a gift'} (${diamonds||0} 💎)`,'gift'); });
-socket.on('attack', ({attacker,target,damage,killed,special}) => {
-  const ea=resolveParticipant(attacker), et=resolveParticipant(target);
-  const fp=getAnimationPos(ea), tp=getAnimationPos(et);
-  if(players[attacker]&&players[target]) {
-    attacks.push(new Attack(fp.x,fp.y,tp.x,tp.y,killed,special)); playSound('attack');
-    players[target].hp=Math.max(0,(players[target].hp||0)-damage);
-    if(killed) players[target].alive=false;
-    addLog(`⚔️ ${players[attacker].nickname||attacker.slice(0,10)} → ${players[target].nickname||target.slice(0,10)} -${damage}${special?' ⚡':''}${killed?' 💀':''}`,killed?'kill':'');
-    showDmg(tp.x,tp.y,damage,killed); updateUI();
-  }
-});
-socket.on('giftAttack', ({attacker,target,damage,killed}) => {
-  const ea=resolveParticipant(attacker), et=resolveParticipant(target);
-  const fp=getAnimationPos(ea), tp=getAnimationPos(et);
-  if(players[attacker]&&players[target]) {
-    attacks.push(new Attack(fp.x,fp.y,tp.x,tp.y,killed,true)); playSound('gift');
-    players[target].hp=Math.max(0,(players[target].hp||0)-damage);
-    if(killed||players[target].hp===0) players[target].alive=false;
-    addLog(`🎁 ${players[attacker].nickname||attacker.slice(0,10)} → ${players[target].nickname||target.slice(0,10)} -${damage}${killed?' 💀':''}`,killed?'kill':'gift');
-    showDmg(tp.x,tp.y,damage,killed); updateUI();
-  }
-});
-
 // ── UI helpers ────────────────────────────────────────────────────────────────
 function updateUI() {
-  const alive=Object.values(players).filter(p=>p.alive);
-  document.getElementById('playerCount').textContent=alive.length;
-  document.getElementById('showingCount').textContent=`${Math.min(20,alive.length)} / ${alive.length}`;
-  const top3=getTopPlayers(3);
-  document.getElementById('leaderboard').innerHTML=top3.length
-    ?top3.map((p,i)=>`<div class="board-entry rank-${i+1}"><span class="rank-num">${i+1}</span><span class="rank-name">${(p.nickname||p.uniqueId||'Player').slice(0,14)}</span><span class="rank-score">${Math.round(p.hp||0)} HP</span></div>`).join('')
-    :'<div class="board-entry">No players</div>';
+  const alive  = Object.values(players).filter(p => p.alive);
+  const shown  = Math.min(20, alive.length);
+  document.getElementById('playerCount').textContent  = alive.length;
+  document.getElementById('showingCount').textContent = `${shown} / ${alive.length}`;
+  const top3 = getTopPlayers(3);
+  document.getElementById('leaderboard').innerHTML = top3.map((p, i) => `
+    <div class="board-entry rank-${i + 1}">
+      <span class="rank-num">${i + 1}</span>
+      <span class="rank-name">${(p.nickname || p.uniqueId || 'Player').slice(0, 14)}</span>
+      <span class="rank-score">${Math.round(p.hp || 0)} HP</span>
+    </div>`).join('') || '<div class="board-entry">No players</div>';
 }
 
-function addLog(msg,type) {
-  const log=document.getElementById('eventlog');
-  const entry=document.createElement('div');
-  entry.className=`log-entry ${type||''}`; entry.textContent=msg;
-  log.insertBefore(entry,log.firstChild);
-  while(log.children.length>6) log.removeChild(log.lastChild);
+function addLog(msg, type) {
+  const log   = document.getElementById('eventlog');
+  const entry = document.createElement('div');
+  entry.className = `log-entry ${type || ''}`;
+  entry.textContent = msg;
+  log.insertBefore(entry, log.firstChild);
+  while (log.children.length > 6) log.removeChild(log.lastChild);
 }
 
-function showDmg(x,y,dmg,isKill) {
-  const el=document.createElement('div');
-  el.className=`dmg-number ${isKill?'kill':''}`;
-  el.textContent=isKill?'💀 KILL!':`-${dmg}`;
-  el.style.left=(x-20)+'px'; el.style.top=(y-30)+'px';
+function showDmg(x, y, dmg, isKill) {
+  const el = document.createElement('div');
+  el.className  = `dmg-number ${isKill ? 'kill' : ''}`;
+  el.textContent = isKill ? '💀 KILL!' : `-${dmg}`;
+  el.style.left  = (x - 20) + 'px';
+  el.style.top   = (y - 30) + 'px';
   document.querySelector('.ui').appendChild(el);
-  setTimeout(()=>el.remove(),700);
+  setTimeout(() => el.remove(), 700);
 }
 
-// ── Drawing ───────────────────────────────────────────────────────────────────
+// ── Draw ──────────────────────────────────────────────────────────────────────
 function drawBackground() {
-  const w=canvas.clientWidth,h=canvas.clientHeight;
-  if(!backgroundImg) {
-    const g=ctx.createLinearGradient(0,0,0,h);
-    g.addColorStop(0,'#0d1117'); g.addColorStop(0.5,'#111827'); g.addColorStop(1,'#0d1117');
-    ctx.fillStyle=g; ctx.fillRect(0,0,w,h); return;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!backgroundImg) {
+    const g = ctx.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0,   '#b8f2b8');
+    g.addColorStop(0.5, '#88d688');
+    g.addColorStop(1,   '#9be99b');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    return;
   }
-  const scale=Math.max(w/backgroundImg.width,h/backgroundImg.height);
-  const dw=backgroundImg.width*scale, dh=backgroundImg.height*scale;
-  ctx.drawImage(backgroundImg,(w-dw)/2,(h-dh)/2,dw,dh);
+  const scale = Math.max(w / backgroundImg.width, h / backgroundImg.height);
+  const dw    = backgroundImg.width  * scale;
+  const dh    = backgroundImg.height * scale;
+  ctx.drawImage(backgroundImg, (w - dw) / 2, (h - dh) / 2, dw, dh);
 }
 
 function drawPlayers() {
-  const sorted=getTopPlayers(5);
-  const posCache=[];
+  const sorted = getTopPlayers(20);
+  sorted.forEach((player, idx) => {
+    const pos  = getPlayerPos(player);
+    if (player.uniqueId) lastPlayerPositions[player.uniqueId] = { x: pos.x, y: pos.y };
 
-  sorted.forEach(player => {
-    const pos=getPlayerPos(player);
-    posCache.push(pos);
-    if(player.uniqueId) lastPlayerPositions[player.uniqueId]={x:pos.x,y:pos.y};
+    const rank   = idx + 1;
+    const hpPct  = Math.max(0, Math.min(1, (player.hp || 100) / (player.maxHp || 100)));
+    const hpVal  = Math.round(player.hp || 100);
+    const maxHp  = player.maxHp || 100;
+    let size = 20, nameSize = 20, barWidth = 140, emojiSize = 64;
+    if      (rank === 1)  { size = 24; nameSize = 24; barWidth = 180; emojiSize = 88; }
+    else if (rank === 2)  { size = 22; nameSize = 22; barWidth = 164; emojiSize = 80; }
+    else if (rank === 3)  { size = 22; nameSize = 22; barWidth = 150; emojiSize = 76; }
+    else if (rank <= 6)   { size = 21; nameSize = 20; barWidth = 144; emojiSize = 72; }
+
+    const glowR = Math.max(size + 10, emojiSize / 2 + 12);
+    const name  = (player.nickname || player.uniqueId || 'Player').slice(0, 14);
+
+    ctx.font = `bold ${nameSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    ctx.strokeText(name, pos.x, pos.y - size - 8);
+    ctx.fillText(name,   pos.x, pos.y - size - 8);
+
+    ctx.fillStyle = 'rgba(100,200,255,0.1)';
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, glowR, 0, Math.PI * 2); ctx.fill();
+
+    ctx.font = `${emojiSize}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('💎', pos.x, pos.y);
+
+    const barY = pos.y + Math.max(size, emojiSize / 2) + 36;
+    ctx.fillStyle = '#0a0e1a'; ctx.fillRect(pos.x - barWidth / 2, barY, barWidth, 18);
+    ctx.strokeStyle = '#64c8ff'; ctx.lineWidth = 2;
+    ctx.strokeRect(pos.x - barWidth / 2, barY, barWidth, 18);
+    ctx.fillStyle = '#ff3333';
+    ctx.fillRect(pos.x - barWidth / 2 + 2, barY + 2, Math.max(0, (barWidth - 4) * hpPct), 14);
+    ctx.font = '18px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+    ctx.strokeText(`${hpVal}/${maxHp}`, pos.x, barY + 22);
+    ctx.fillText(`${hpVal}/${maxHp}`,   pos.x, barY + 22);
   });
-
-  const hordePos=getHordePos(posCache);
-
-  if(sorted.length>0) drawColumnBorders(sorted,posCache,hordePos);
-
-  sorted.forEach((player,idx) => {
-    const pos=posCache[idx], rank=idx+1;
-    const hpPct=Math.max(0,Math.min(1,(player.hp||100)/(player.maxHp||100)));
-    const hpValue=Math.round(player.hp||100), maxHp=player.maxHp||100;
-    const name=(player.nickname||player.uniqueId||'Player').slice(0,14);
-    let nameSize=20,barWidth=130,emojiSize=64;
-    if(rank===1){nameSize=24;barWidth=170;emojiSize=88;}
-    else if(rank===2){nameSize=22;barWidth=155;emojiSize=80;}
-    else if(rank===3){nameSize=22;barWidth=142;emojiSize=76;}
-    else if(rank<=5){nameSize=20;barWidth=130;emojiSize=72;}
-
-    ctx.font=`bold ${nameSize}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.strokeText(name,pos.x,pos.y-emojiSize/2-18);
-    ctx.fillStyle='#fff'; ctx.fillText(name,pos.x,pos.y-emojiSize/2-18);
-
-    ctx.fillStyle='rgba(100,200,255,0.08)';
-    ctx.beginPath(); ctx.arc(pos.x,pos.y,emojiSize/2+12,0,Math.PI*2); ctx.fill();
-
-    ctx.font=`${emojiSize}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('🔱',pos.x,pos.y);
-
-    const barY=pos.y+emojiSize/2+16;
-    ctx.fillStyle='#0a0e1a'; ctx.fillRect(pos.x-barWidth/2,barY,barWidth,16);
-    ctx.strokeStyle='#64c8ff'; ctx.lineWidth=1.5; ctx.strokeRect(pos.x-barWidth/2,barY,barWidth,16);
-    ctx.fillStyle=hpPct>0.5?'#2ecc71':hpPct>0.25?'#f39c12':'#ff3333';
-    ctx.fillRect(pos.x-barWidth/2+2,barY+2,Math.max(0,(barWidth-4)*hpPct),12);
-    ctx.font='13px Arial'; ctx.textAlign='center'; ctx.textBaseline='top';
-    ctx.strokeStyle='#000'; ctx.lineWidth=2; ctx.strokeText(`${hpValue}/${maxHp}`,pos.x,barY+19);
-    ctx.fillStyle='#fff'; ctx.fillText(`${hpValue}/${maxHp}`,pos.x,barY+19);
-  });
-
-  // ── Horde ─────────────────────────────────────────────────────────────────
-  const horde=getHordePlayer();
-  if(horde) {
-    const pos=hordePos;
-    lastPlayerPositions[HORDE_ID]={x:pos.x,y:pos.y};
-    const hpPct=Math.max(0,Math.min(1,horde.hp/(horde.maxHp||1)));
-    const barWidth=220,emojiSize=96;
-    const pulse=0.5+0.5*Math.sin(Date.now()/400);
-
-    ctx.fillStyle=`rgba(255,60,60,${0.06+pulse*0.07})`;
-    ctx.beginPath(); ctx.arc(pos.x,pos.y,emojiSize/2+36,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle=`rgba(255,80,80,${0.22+pulse*0.22})`; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(pos.x,pos.y,emojiSize/2+40,0,Math.PI*2); ctx.stroke();
-    ctx.strokeStyle=`rgba(255,60,60,${0.10+pulse*0.10})`; ctx.lineWidth=8;
-    ctx.beginPath(); ctx.arc(pos.x,pos.y,emojiSize/2+52,0,Math.PI*2); ctx.stroke();
-
-    ctx.font='bold 20px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.strokeText('⚔ THE HORDE',pos.x,pos.y-emojiSize/2-26);
-    ctx.fillStyle='#ff6666'; ctx.fillText('⚔ THE HORDE',pos.x,pos.y-emojiSize/2-26);
-    ctx.font='bold 13px Arial'; ctx.strokeStyle='#000'; ctx.lineWidth=2;
-    ctx.strokeText(`${horde.hordeCount} players`,pos.x,pos.y-emojiSize/2-8);
-    ctx.fillStyle='#ffaaaa'; ctx.fillText(`${horde.hordeCount} players`,pos.x,pos.y-emojiSize/2-8);
-
-    ctx.font=`${emojiSize}px Arial`; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('💀',pos.x,pos.y);
-
-    const barY=pos.y+emojiSize/2+16;
-    ctx.fillStyle='#0a0e1a'; ctx.fillRect(pos.x-barWidth/2,barY,barWidth,20);
-    ctx.strokeStyle='#ff4444'; ctx.lineWidth=2; ctx.strokeRect(pos.x-barWidth/2,barY,barWidth,20);
-    ctx.fillStyle=`rgba(255,${Math.floor(60+hpPct*100)},0,1)`;
-    ctx.fillRect(pos.x-barWidth/2+2,barY+2,Math.max(0,(barWidth-4)*hpPct),16);
-    ctx.font='14px Arial'; ctx.textAlign='center'; ctx.textBaseline='top';
-    ctx.strokeStyle='#000'; ctx.lineWidth=2;
-    ctx.strokeText(`${Math.round(horde.hp)}/${Math.round(horde.maxHp)}`,pos.x,barY+23);
-    ctx.fillStyle='#ffcccc'; ctx.fillText(`${Math.round(horde.hp)}/${Math.round(horde.maxHp)}`,pos.x,barY+23);
-  }
 }
 
-// ── Main loop ─────────────────────────────────────────────────────────────────
 function animate() {
-  ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);
-  drawBackground(); drawPlayers();
-  ctx.save(); ctx.globalCompositeOperation='lighter';
-  for(let i=attacks.length-1;i>=0;i--){if(!attacks[i].update())attacks.splice(i,1);else attacks[i].draw(ctx);}
-  ctx.restore();
-  ctx.save(); ctx.globalCompositeOperation='lighter';
-  for(let i=impacts.length-1;i>=0;i--){if(!impacts[i].update())impacts.splice(i,1);else impacts[i].draw(ctx);}
-  ctx.restore();
+  ctx.clearRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+  drawBackground();
+  drawPlayers();
+  for (let i = attacks.length - 1; i >= 0; i--) {
+    if (!attacks[i].update()) {
+      attacks.splice(i, 1);
+    } else {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      attacks[i].draw(ctx);
+      ctx.restore();
+    }
+  }
   requestAnimationFrame(animate);
 }
 
 animate();
 updateUI();
 
-if(!location.search.includes('v=')) location.replace(location.pathname+'?v='+Date.now());
+if (!location.search.includes('v=')) {
+  location.replace(location.pathname + '?v=' + Date.now());
+}
 </script>
-
 </body>
 </html>
