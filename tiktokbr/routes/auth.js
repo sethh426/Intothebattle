@@ -160,7 +160,7 @@ router.post('/login', loginLimiter, (req, res) => {
   if (!submittedCode) return res.status(400).send(renderLoginPage({ error: 'Please enter a code.' }));
   if (!fingerprint) return res.status(400).send(renderLoginPage({ error: 'Device fingerprint is required.' }));
 
-  const row = db.prepare('SELECT * FROM access_codes WHERE code = ?').get(submittedCode);
+  const row = db.prepare('SELECT * FROM access_codes WHERE UPPER(code) = ?').get(submittedCode);
   if (!row) return res.status(400).send(renderLoginPage({ error: 'Invalid code' }));
   if (row.is_revoked) return res.status(400).send(renderLoginPage({ error: 'This code has been revoked' }));
   if (new Date(row.expires_at) < new Date()) return res.status(400).send(renderLoginPage({ error: 'This code has expired — please renew your subscription' }));
