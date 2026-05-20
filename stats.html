@@ -1,205 +1,491 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>TikTok PvP Stats</title>
+  <meta charset="UTF-8" />
+  <title>Battle Leaderboard</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { min-height: 100%; }
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #1a1a2e, #16213e);
-      color: #fff;
-      min-height: 100vh;
-      padding: 20px;
+      background: radial-gradient(circle at top left, #2f4d7f 0%, #0d1321 38%, #080b13 100%);
+      color: #f7fafc;
+      line-height: 1.5;
+      padding: 24px;
     }
-
-    header {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    header h1 { font-size: 26px; color: #FFD93D; letter-spacing: 1px; }
-    header p  { font-size: 13px; color: #888; margin-top: 4px; }
-
-    .columns {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      max-width: 900px;
+    .page {
+      max-width: 1400px;
       margin: 0 auto;
     }
-
-    .col { background: rgba(255,255,255,0.05); border-radius: 12px; overflow: hidden; }
-
-    .col-header {
-      padding: 14px 16px;
-      font-size: 13px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 1px;
+    .hero {
       display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 3vw, 3rem);
+      letter-spacing: 0.04em;
+      color: #ffd873;
+    }
+    .hero p {
+      max-width: 760px;
+      color: #d8e2ff;
+      margin-top: 10px;
+    }
+    .hero .status-pill {
+      align-self: flex-end;
+      display: inline-flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 0.96rem;
+      color: #d8e2ff;
+    }
+    .pill {
+      display: inline-flex;
       align-items: center;
       gap: 8px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      color: #eef2ff;
+      font-weight: 600;
     }
-    .col-header.kills  { background: rgba(255,107,107,0.25); color: #FF6B6B; }
-    .col-header.hp     { background: rgba(107,203,119,0.25); color: #6BCB77; }
-    .col-header.str    { background: rgba(77,150,255,0.25);  color: #4D96FF; }
-
-    .col-body { padding: 8px 0; }
-
-    .row {
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+      gap: 20px;
+    }
+    .panel {
+      background: rgba(9, 16, 36, 0.95);
+      border: 1px solid rgba(163, 213, 255, 0.08);
+      border-radius: 24px;
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.24);
+      overflow: hidden;
+    }
+    .panel-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
       display: flex;
+      justify-content: space-between;
       align-items: center;
-      padding: 8px 16px;
-      gap: 10px;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
-      transition: background 0.2s;
+      gap: 14px;
     }
-    .row:last-child { border-bottom: none; }
-    .row:hover { background: rgba(255,255,255,0.04); }
-
-    .rank {
-      font-size: 12px;
-      font-weight: 700;
-      color: #555;
-      width: 20px;
-      text-align: right;
-      flex-shrink: 0;
+    .panel-header h2 {
+      font-size: 1.05rem;
+      letter-spacing: 0.04em;
+      margin: 0;
+      color: #d9e4ff;
     }
-    .rank.gold   { color: #FFD700; }
-    .rank.silver { color: #C0C0C0; }
-    .rank.bronze { color: #CD7F32; }
-
-    .alive-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .alive-dot.alive { background: #6BCB77; box-shadow: 0 0 4px #6BCB77; }
-    .alive-dot.dead  { background: #555; }
-
-    .name {
-      flex: 1;
-      font-size: 13px;
+    .panel-header span {
+      color: #8fb4ff;
+      font-size: 0.95rem;
       white-space: nowrap;
+    }
+    .panel-body {
+      padding: 16px 20px 22px;
+      display: grid;
+      gap: 14px;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 18px;
+      padding: 18px 16px;
+    }
+    .stat-card strong {
+      display: block;
+      font-size: 1.5rem;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+    .stat-card small {
+      color: #a9baff;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .leader-list,
+    .list-group {
+      display: grid;
+      gap: 10px;
+    }
+    .leader-row,
+    .list-row {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 16px;
+      padding: 14px 16px;
+    }
+    .leader-row .name,
+    .list-row .name {
+      color: #e7efff;
+      font-weight: 600;
       overflow: hidden;
       text-overflow: ellipsis;
-      color: #ddd;
+      white-space: nowrap;
     }
-
-    .value {
-      font-size: 14px;
+    .leader-row .value,
+    .list-row .value {
       font-weight: 700;
-      flex-shrink: 0;
+      color: #ffd873;
+      text-align: right;
     }
-    .col-header.kills  ~ .col-body .value { color: #FF6B6B; }
-    .col-header.hp     ~ .col-body .value { color: #6BCB77; }
-    .col-header.str    ~ .col-body .value { color: #4D96FF; }
-
-    /* Override specificity with explicit classes */
-    .value.kills-val { color: #FF6B6B; }
-    .value.hp-val    { color: #6BCB77; }
-    .value.str-val   { color: #4D96FF; }
-
-    .empty { padding: 20px 16px; color: #555; font-size: 13px; text-align: center; }
-
-    #conn {
-      position: fixed;
-      top: 10px; right: 14px;
-      font-size: 11px;
-      color: rgba(255,255,255,0.35);
+    .leader-row .rank {
+      color: #8fb4ff;
+      font-size: 0.95rem;
+      font-weight: 700;
+      text-align: right;
+    }
+    .list-row .badge {
+      display: inline-block;
+      color: #c4d5ff;
+      font-size: 0.8rem;
+      background: rgba(255,255,255,0.05);
+      border-radius: 999px;
+      padding: 4px 10px;
+    }
+    .panel.small {
+      background: rgba(255,255,255,0.03);
+    }
+    .panel.tall {
+      min-height: 540px;
+    }
+    .event-log {
+      max-height: 420px;
+      overflow-y: auto;
+      display: grid;
+      gap: 10px;
+      padding-right: 4px;
+    }
+    .event-entry {
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      border-left: 4px solid rgba(255,255,255,0.12);
+      color: #d8e2ff;
+      font-size: 0.96rem;
+      line-height: 1.4;
+    }
+    .event-entry.kill { border-color: #ff9b6c; background: rgba(255,155,108,0.08); }
+    .event-entry.gift { border-color: #ffd873; background: rgba(255,216,115,0.08); }
+    .event-entry.respawn { border-color: #6ee7b7; }
+    .event-entry.follow { border-color: #7c3aed; }
+    .control-row {
+      display: grid;
+      gap: 10px;
+    }
+    .range-row {
+      display: grid;
+      gap: 10px;
+    }
+    label {
+      font-size: 0.95rem;
+      color: #c7d2ff;
+    }
+    input[type='range'] {
+      width: 100%;
+      accent-color: #7dd3fc;
+      margin-top: 6px;
+    }
+    .control-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 6px;
+    }
+    .button {
+      border: none;
+      border-radius: 14px;
+      padding: 12px 18px;
+      background: #457bff;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .button:hover { transform: translateY(-1px); background: #5a8cff; }
+    .footer-note {
+      margin-top: 16px;
+      color: #9ca3af;
+      font-size: 0.92rem;
+    }
+    @media (max-width: 1100px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 680px) {
+      body { padding: 16px; }
+      .panel-header, .panel-body { padding: 16px; }
+      .hero { flex-direction: column; }
     }
   </style>
 </head>
 <body>
-  <div id="conn">Connecting...</div>
+  <div class="page">
+    <header class="hero">
+      <div>
+        <h1>🏆 Battle Leaderboard</h1>
+        <p>Live PvP data, player rankings, event feed, and overlay layout controls all in one place.</p>
+      </div>
+      <div class="status-pill">
+        <span class="pill">Status: <strong id="connectStatus">Connecting...</strong></span>
+        <span class="pill">Players: <strong id="playerCount">0</strong></span>
+        <span class="pill">Alive: <strong id="aliveCount">0</strong></span>
+      </div>
+    </header>
 
-  <header>
-    <h1>🏆 Battle Leaderboard</h1>
-    <p id="subtitle">Loading...</p>
-  </header>
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Battle Summary</h2>
+          <span id="summaryText">Waiting for game state...</span>
+        </div>
+        <div class="panel-body stat-grid">
+          <div class="stat-card">
+            <strong id="topKills">0</strong>
+            <small>Top Kills</small>
+          </div>
+          <div class="stat-card">
+            <strong id="topHp">0</strong>
+            <small>Highest HP</small>
+          </div>
+          <div class="stat-card">
+            <strong id="topStrength">0</strong>
+            <small>Highest Strength</small>
+          </div>
+          <div class="stat-card">
+            <strong id="recentEvents">0</strong>
+            <small>Recent Events</small>
+          </div>
+        </div>
+      </section>
 
-  <div class="columns">
-    <div class="col">
-      <div class="col-header kills">☠️ Top Kills</div>
-      <div class="col-body" id="kills-list"><div class="empty">No data</div></div>
+      <section class="panel tall">
+        <div class="panel-header">
+          <h2>Highest HP Leaderboard</h2>
+          <span>Top 20 players by HP</span>
+        </div>
+        <div class="panel-body leader-list" id="hpBoard"></div>
+      </section>
     </div>
-    <div class="col">
-      <div class="col-header hp">❤️ Most HP</div>
-      <div class="col-body" id="hp-list"><div class="empty">No data</div></div>
+
+    <div class="grid" style="margin-top: 20px;">
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Top Kills</h2>
+          <span>Best performers</span>
+        </div>
+        <div class="panel-body list-group" id="killsList"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Top Strength</h2>
+          <span>Most powerful</span>
+        </div>
+        <div class="panel-body list-group" id="strList"></div>
+      </section>
     </div>
-    <div class="col">
-      <div class="col-header str">⚔️ Highest Strength</div>
-      <div class="col-body" id="str-list"><div class="empty">No data</div></div>
-    </div>
+
+    <section class="panel" style="margin-top: 20px;">
+      <div class="panel-header">
+        <h2>Live Event Feed</h2>
+        <span>Latest battle activity</span>
+      </div>
+      <div class="panel-body event-log" id="eventLog"></div>
+    </section>
+
+    <section class="panel" style="margin-top: 20px;">
+      <div class="panel-header">
+        <h2>Overlay Layout Controls</h2>
+        <span>Adjust overlay spacing</span>
+      </div>
+      <div class="panel-body control-row">
+        <label>
+          Column gap: <strong id="gapXValue">150</strong>
+          <input id="gapXControl" type="range" min="0" max="240" step="10" value="150" />
+        </label>
+        <label>
+          Row gap: <strong id="gapYValue">260</strong>
+          <input id="gapYControl" type="range" min="100" max="1000" step="10" value="260" />
+        </label>
+        <div class="control-actions">
+          <button class="button" id="syncOverlay">Sync Overlay Layout</button>
+          <button class="button" id="clearLog">Clear Feed</button>
+        </div>
+        <div class="footer-note">Changes are broadcast live to any connected overlay windows.</div>
+      </div>
+    </section>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
   <script>
-    let players = {};
+    const players = {};
+    const eventLog = document.getElementById('eventLog');
+    const connectStatus = document.getElementById('connectStatus');
+    const playerCount = document.getElementById('playerCount');
+    const aliveCount = document.getElementById('aliveCount');
+    const summaryText = document.getElementById('summaryText');
+    const topKills = document.getElementById('topKills');
+    const topHp = document.getElementById('topHp');
+    const topStrength = document.getElementById('topStrength');
+    const recentEvents = document.getElementById('recentEvents');
+    const hpBoard = document.getElementById('hpBoard');
+    const killsList = document.getElementById('killsList');
+    const strList = document.getElementById('strList');
+    const gapXControl = document.getElementById('gapXControl');
+    const gapYControl = document.getElementById('gapYControl');
+    const gapXValue = document.getElementById('gapXValue');
+    const gapYValue = document.getElementById('gapYValue');
+    const syncOverlay = document.getElementById('syncOverlay');
+    const clearLog = document.getElementById('clearLog');
 
-    const socket = io('http://localhost:3000');
-    socket.on('connect',    () => { document.getElementById('conn').textContent = '🔴 LIVE'; });
-    socket.on('disconnect', () => { document.getElementById('conn').textContent = 'Reconnecting...'; });
-    socket.on('gameState',  (state) => { players = state; render(); });
+    let layoutGapX = Number(gapXControl.value);
+    let layoutGapY = Number(gapYControl.value);
 
-    const RANK_CLASS = ['gold', 'silver', 'bronze'];
+    const socket = io();
 
-    function buildRow(p, i, valueKey, valueCls) {
-      const rk = document.createElement('div');
-      rk.className = 'row';
+    socket.on('connect', () => {
+      connectStatus.textContent = '🟢 LIVE';
+      socket.emit('register', { type: 'leaderboard' });
+      sendLayoutUpdate();
+    });
 
-      const rank = document.createElement('span');
-      rank.className = 'rank ' + (RANK_CLASS[i] || '');
-      rank.textContent = i + 1;
+    socket.on('disconnect', () => {
+      connectStatus.textContent = 'Offline';
+    });
 
-      const dot = document.createElement('span');
-      dot.className = 'alive-dot ' + (p.alive ? 'alive' : 'dead');
+    socket.on('gameState', (state) => {
+      Object.assign(players, state || {});
+      render();
+    });
 
-      const name = document.createElement('span');
-      name.className = 'name';
-      name.title = p.nickname;
-      name.textContent = p.nickname.slice(0, 18);
+    socket.on('attack', ({ attacker, target, damage, killed, special }) => {
+      const attackerName = players[attacker]?.nickname || attacker || 'Player';
+      const targetName = players[target]?.nickname || target || 'Player';
+      addLog(`⚔️ ${attackerName} → ${targetName} -${damage}${special ? ' ⚡' : ''}${killed ? ' 💀' : ''}`, killed ? 'kill' : '');
+    });
 
-      const val = document.createElement('span');
-      val.className = 'value ' + valueCls;
-      val.textContent = p[valueKey];
+    socket.on('giftAttack', ({ attacker, target, damage, killed }) => {
+      const attackerName = players[attacker]?.nickname || attacker || 'Player';
+      const targetName = players[target]?.nickname || target || 'Player';
+      addLog(`🎁 ${attackerName} → ${targetName} -${damage}${killed ? ' 💀' : ''}`, killed ? 'kill' : 'gift');
+    });
 
-      rk.append(rank, dot, name, val);
-      return rk;
+    socket.on('giftEffect', ({ attacker, giftName, diamonds }) => {
+      const name = players[attacker]?.nickname || attacker || 'Someone';
+      addLog(`🎁 ${name} sent ${giftName || 'a gift'} (${diamonds || 0} 💎)`, 'gift');
+    });
+
+    socket.on('respawn', ({ uniqueId }) => {
+      const name = players[uniqueId]?.nickname || uniqueId || 'Player';
+      addLog(`✨ ${name} respawned!`, 'respawn');
+    });
+
+    socket.on('follow', ({ uniqueId, nickname }) => {
+      addLog(`❤️ ${nickname || uniqueId} gained a follower`, 'follow');
+    });
+
+    socket.on('layoutUpdate', ({ gapX, gapY }) => {
+      if (typeof gapX === 'number') gapXControl.value = gapX;
+      if (typeof gapY === 'number') gapYControl.value = gapY;
+      layoutGapX = Number(gapXControl.value);
+      layoutGapY = Number(gapYControl.value);
+      updateLayoutLabels();
+    });
+
+    function addLog(message, type) {
+      const entry = document.createElement('div');
+      entry.className = `event-entry ${type || ''}`;
+      entry.textContent = message;
+      eventLog.prepend(entry);
+      while (eventLog.children.length > 18) eventLog.removeChild(eventLog.lastChild);
+      recentEvents.textContent = eventLog.children.length;
     }
 
-    function fillList(id, sorted, valueKey, valueCls) {
-      const el = document.getElementById(id);
-      el.innerHTML = '';
-      if (sorted.length === 0) {
-        el.innerHTML = '<div class="empty">No players yet</div>';
+    function sortPlayers(key, direction = 'desc', fallback = 'maxHp') {
+      return Object.values(players)
+        .filter(p => p)
+        .sort((a, b) => {
+          const aValue = Number(a[key] ?? 0);
+          const bValue = Number(b[key] ?? 0);
+          let diff = direction === 'desc' ? bValue - aValue : aValue - bValue;
+          if (diff !== 0) return diff;
+          return Number(b[fallback] ?? 0) - Number(a[fallback] ?? 0);
+        });
+    }
+
+    function buildRow(player, index, valueKey, valueClass) {
+      const row = document.createElement('div');
+      row.className = 'list-row';
+      row.innerHTML = `
+        <span class="rank">${index + 1}</span>
+        <span class="name" title="${player.nickname || player.uniqueId || 'Player'}">${(player.nickname || player.uniqueId || 'Player').slice(0, 20)}</span>
+        <span class="value ${valueClass}">${player[valueKey] ?? 0}</span>
+      `;
+      return row;
+    }
+
+    function fillBox(container, list, key, cls) {
+      container.innerHTML = '';
+      if (list.length === 0) {
+        container.innerHTML = '<div class="event-entry">Waiting for players...</div>';
         return;
       }
-      sorted.forEach((p, i) => el.appendChild(buildRow(p, i, valueKey, valueCls)));
+      list.slice(0, 12).forEach((player, idx) => container.appendChild(buildRow(player, idx, key, cls)));
     }
 
     function render() {
-      const list = Object.values(players);
-      const alive = list.filter(p => p.alive).length;
-      document.getElementById('subtitle').textContent =
-        `${list.length} total players · ${alive} alive`;
+      const allPlayers = Object.values(players);
+      const alive = allPlayers.filter(p => p.alive).length;
+      const total = allPlayers.length;
+      const topKillsPlayers = sortPlayers('kills', 'desc');
+      const topHpPlayers = sortPlayers('maxHp', 'desc');
+      const topStrengthPlayers = sortPlayers('strength', 'desc');
 
-      fillList(
-        'kills-list',
-        [...list].sort((a, b) => b.kills - a.kills || b.maxHp - a.maxHp).slice(0, 10),
-        'kills', 'kills-val'
-      );
-      fillList(
-        'hp-list',
-        [...list].sort((a, b) => b.maxHp - a.maxHp || b.kills - a.kills).slice(0, 10),
-        'maxHp', 'hp-val'
-      );
-      fillList(
-        'str-list',
-        [...list].sort((a, b) => b.strength - a.strength || b.kills - a.kills).slice(0, 10),
-        'strength', 'str-val'
-      );
+      playerCount.textContent = total;
+      aliveCount.textContent = alive;
+      summaryText.textContent = `${total} players · ${alive} alive · top HP ranking refreshed live`;
+      topKills.textContent = topKillsPlayers[0]?.kills ?? 0;
+      topHp.textContent = topHpPlayers[0]?.maxHp ?? 0;
+      topStrength.textContent = topStrengthPlayers[0]?.strength ?? 0;
+
+      fillBox(killsList, topKillsPlayers, 'kills', 'kills-val');
+      fillBox(strList, topStrengthPlayers, 'strength', 'str-val');
+      fillBox(hpBoard, topHpPlayers, 'maxHp', 'hp-val');
     }
+
+    function updateLayoutLabels() {
+      gapXValue.textContent = layoutGapX;
+      gapYValue.textContent = layoutGapY;
+    }
+
+    function sendLayoutUpdate() {
+      layoutGapX = Number(gapXControl.value);
+      layoutGapY = Number(gapYControl.value);
+      updateLayoutLabels();
+      socket.emit('layoutUpdate', { gapX: layoutGapX, gapY: layoutGapY });
+    }
+
+    gapXControl.addEventListener('input', sendLayoutUpdate);
+    gapYControl.addEventListener('input', sendLayoutUpdate);
+    syncOverlay.addEventListener('click', sendLayoutUpdate);
+    clearLog.addEventListener('click', () => {
+      eventLog.innerHTML = '';
+      recentEvents.textContent = '0';
+    });
+
+    updateLayoutLabels();
   </script>
 </body>
 </html>

@@ -534,6 +534,11 @@ io.on('connection', (socket) => {
       });
     }
   });
+
+  socket.on('layoutUpdate', (settings) => {
+    io.emit('layoutUpdate', settings);
+  });
+  });
 });
 
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
@@ -544,7 +549,7 @@ app.post('/dashboard/login', (req, res) => {
   const password = String(req.body.password || '');
   if (email === DASHBOARD_OWNER_EMAIL && password === DASHBOARD_PASSWORD) {
     res.setHeader('Set-Cookie', `${DASHBOARD_COOKIE_NAME}=${DASHBOARD_COOKIE_VALUE}; Path=/; HttpOnly; Max-Age=86400; SameSite=Lax`);
-    return res.redirect('/dashboard');
+    return res.redirect('/dashboard/welcome');
   }
   return res.status(401).send('Invalid email or password.');
 });
@@ -561,6 +566,18 @@ app.get('/dashboard', (req, res) => {
     const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
     if (row && !row.is_revoked && new Date(row.expires_at) > new Date()) {
       return res.sendFile(path.join(__dirname, 'dashboard.html'));
+    }
+  }
+  res.redirect('/dashboard/login');
+});
+
+app.get('/dashboard/welcome', (req, res) => {
+  if (isDashboardAuthed(req)) return res.sendFile(path.join(__dirname, 'dashboard-welcome.html'));
+  const token = req.cookies.session_token;
+  if (token) {
+    const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
+    if (row && !row.is_revoked && new Date(row.expires_at) > new Date()) {
+      return res.sendFile(path.join(__dirname, 'dashboard-welcome.html'));
     }
   }
   res.redirect('/dashboard/login');
@@ -847,10 +864,10 @@ setInterval(() => {
 // ─── START ────────────────────────────────────────────────────────────────────
 httpServer.listen(PORT, () => {
   console.log('\n🎮 PvP Game Server running!');
-  console.log(`   Overlay    → http://localhost:${PORT}/overlay.html`);
-  console.log(`   Dashboard  → http://localhost:${PORT}/dashboard`);
-  console.log(`   Stats      → http://localhost:${PORT}/stats`);
-  console.log(`   State JSON → http://localhost:${PORT}/state`);
+  console.log(`   Overlay   → http://localhost:${PORT}/overlay.html`);
+  console.log(`   Dashboard → http://localhost:${PORT}/dashboard`);
+  console.log(`   Stats     → http://localhost:${PORT}/stats`);
+  console.log(`   State JSON   → http://localhost:${PORT}/state`);
   console.log(`   Dev Tests  → ${DEV_TEST_MODE ? 'ENABLED' : 'DISABLED'}\n`);
 
   loadPlayerStats();

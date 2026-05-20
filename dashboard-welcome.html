@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome | TikTok PvP Battle</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      background: #050710;
+      color: #e7efff;
+      line-height: 1.6;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top left, rgba(49, 92, 255, 0.25), transparent 28%), radial-gradient(circle at bottom right, rgba(255, 206, 0, 0.18), transparent 22%), #050710; }
+    .page { max-width: 1240px; margin: 0 auto; padding: 28px 24px 40px; }
+    header { display: grid; gap: 16px; margin-bottom: 40px; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 10px; color: #7c93ff; font-size: 0.92rem; letter-spacing: 0.12em; text-transform: uppercase; }
+    .eyebrow::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #7c93ff; box-shadow: 0 0 24px rgba(124,147,255,0.5); }
+    h1 { font-size: clamp(2.4rem, 4vw, 4.4rem); margin: 0; letter-spacing: -0.05em; }
+    p.lead { max-width: 780px; color: #c8d3ff; font-size: 1.05rem; }
+    .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 360px); gap: 24px; align-items: center; }
+    .hero-card { padding: 28px; border-radius: 28px; background: rgba(16, 26, 54, 0.92); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 24px 80px rgba(0,0,0,0.25); }
+    .hero-card h2 { margin-top: 0; color: #ffd966; font-size: 1.3rem; }
+    .hero-card p { color: #c8d3ff; margin: 16px 0 0; font-size: 0.98rem; }
+    .hero-card ul { margin: 18px 0 0; padding-left: 20px; color: #d8e4ff; }
+    .hero-card li { margin-bottom: 10px; }
+    .hero-card li strong { color: #ffce6b; }
+    .section-grid { display: grid; gap: 24px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 40px; }
+    .section { padding: 28px; border-radius: 28px; background: rgba(8, 15, 34, 0.95); border: 1px solid rgba(147, 190, 255, 0.08); }
+    .section h2 { margin-top: 0; font-size: 1.2rem; color: #a4c8ff; }
+    .section p { color: #d8e8ff; }
+    .section small { display: block; margin-top: 12px; color: #8b9ee8; }
+    .feature-list { display: grid; gap: 16px; margin-top: 18px; }
+    .feature-card { padding: 20px; border-radius: 22px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); }
+    .feature-card h3 { margin: 0 0 10px; font-size: 1rem; color: #fff; }
+    .feature-card p { margin: 0; color: #c8d3ff; font-size: 0.95rem; }
+    .links-grid { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .link-card { display: flex; flex-direction: column; gap: 14px; padding: 24px; border-radius: 26px; background: rgba(19, 32, 67, 0.95); border: 1px solid rgba(124,147,255,0.09); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02); }
+    .link-card h3 { margin: 0; font-size: 1.1rem; color: #fff; }
+    .link-card p { margin: 0; color: #c8d3ff; font-size: 0.95rem; flex: 1; }
+    .link-card a { display: inline-flex; align-items: center; justify-content: center; padding: 12px 16px; border-radius: 999px; background: linear-gradient(135deg, #6f8aff, #4db3ff); color: #fff; text-decoration: none; font-weight: 700; transition: transform 0.16s ease, box-shadow 0.16s ease; }
+    .link-card a:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(77,179,255,0.25); }
+    .feature-pill { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 999px; padding: 8px 12px; font-size: 0.9rem; color: #d3e1ff; }
+    .footer { margin-top: 32px; padding: 22px 24px; border-radius: 24px; background: rgba(11, 19, 45, 0.98); border: 1px solid rgba(255,255,255,0.06); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; }
+    .footer div { color: #a7b5dd; }
+    .footer a { color: #8abfff; text-decoration: none; font-weight: 700; }
+    @media (max-width: 960px) {
+      .hero-grid, .section-grid, .links-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      .page { padding: 18px 16px 26px; }
+      .hero-card, .section, .link-card, .footer { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <span class="eyebrow">Welcome back</span>
+      <h1>Control the TikTok PvP battle experience from one polished command center.</h1>
+      <p class="lead">This page gives you a quick breakdown of the platform, shows how damage, health, and audio are represented, and links you directly into the live overlay, stats tracker, and admin dashboard.</p>
+    </header>
+
+    <div class="hero-grid">
+      <section class="hero-card">
+        <h2>What you get</h2>
+        <p>Instant access to live battle metrics plus easy navigation to the control dashboard, the spectator overlay, and the leaderboard stats page.</p>
+        <ul>
+          <li><strong>Live player state</strong> including health, kills, and strength.</li>
+          <li><strong>Event-driven audio</strong> for attacks, heals, respawns, and gifts.</li>
+          <li><strong>Overlay-ready visuals</strong> that work with TikTok Live and staged game scenes.</li>
+          <li><strong>Polished admin UX</strong> built for fast, confident control.</li>
+        </ul>
+      </section>
+      <aside class="hero-card">
+        <h2>Quick facts</h2>
+        <p>Use this portal to understand the app structure, then jump into the page you need with confidence.</p>
+        <div class="feature-list">
+          <div class="feature-card">
+            <h3>Damage & Combat</h3>
+            <p>Attacks reduce HP in real time and trigger kill or hit effects. Every combat event is logged and highlighted instantly.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Health Points</h3>
+            <p>Player HP is tracked continuously and shown on the leaderboard. Maximum HP values determine who is currently winning the battle.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Audio Feedback</h3>
+            <p>Sound cues are pushed live to the overlay so viewers instantly feel kills, heals, gift attacks, and respawns.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="section-grid">
+      <section class="section">
+        <h2>How to use the app</h2>
+        <p>Start here after login and choose where you want to go next. The dashboard is your admin control room, the overlay is the live viewer-facing stage, and stats is the deeper leaderboard analysis.</p>
+        <small>Recommended flow: review the feature page, open the overlay, then use the dashboard for live controls.</small>
+      </section>
+      <section class="section">
+        <h2>Core concepts</h2>
+        <p>The app is built around three live systems: game state, spectator overlay, and analytics. Each section of this page explains one of those systems and links you into it.</p>
+        <div class="feature-list">
+          <div class="feature-card">
+            <h3>Live state</h3>
+            <p>Players are tracked by HP, kills, and strength. All updates are pushed via sockets to every connected client.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Overlay</h3>
+            <p>The overlay is designed to be clean and immersive, with no panels blocking the view of the battle action.</p>
+          </div>
+          <div class="feature-card">
+            <h3>Stats</h3>
+            <p>The stats page is the dedicated leaderboard and event feed system, making it easy to explore performance trends.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="links-grid">
+      <article class="link-card">
+        <h3>Admin Dashboard</h3>
+        <p>Control overlay reloads, sound settings, and live state testing from the main application dashboard.</p>
+        <a href="/dashboard">Open Dashboard</a>
+      </article>
+      <article class="link-card">
+        <h3>Live Overlay</h3>
+        <p>Open the overlay to see the viewer-facing battlefield with clean visuals and event animations.</p>
+        <a href="/overlay.html" target="_blank">Open Overlay</a>
+      </article>
+      <article class="link-card">
+        <h3>Stats Page</h3>
+        <p>View the dedicated leaderboard, recent event feed, and live usage details in an optimized analytics layout.</p>
+        <a href="/stats" target="_blank">Open Stats</a>
+      </article>
+    </div>
+
+    <div class="footer">
+      <div>
+        <div class="feature-pill">Feature: live damage and HP tracking</div>
+        <div class="feature-pill">Feature: audio cues for every key event</div>
+        <div class="feature-pill">Feature: instant access to app sections</div>
+      </div>
+      <div>Need faster access? Use the links above or navigate directly from the app header.</div>
+    </div>
+  </main>
+</body>
+</html>
