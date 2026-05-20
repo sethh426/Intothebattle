@@ -538,7 +538,6 @@ io.on('connection', (socket) => {
   socket.on('layoutUpdate', (settings) => {
     io.emit('layoutUpdate', settings);
   });
-  });
 });
 
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
