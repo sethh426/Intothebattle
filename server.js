@@ -66,6 +66,8 @@ const DEFAULT_AUDIO_CONFIG = {
 };
 const DEFAULT_OVERLAY_SETTINGS = {
   laserColor: '#7afcff',
+  shotType:   'beam',
+  shotSpeed:  1,
 };
 let audioConfig      = { ...DEFAULT_AUDIO_CONFIG };
 let audioLibrary     = [];
@@ -595,6 +597,7 @@ io.on('connection', (socket) => {
       // Send current state to the newly connected overlay
       socket.emit('gameState',   players);
       socket.emit('audioConfig', audioConfig);   // ← pushes current assignments
+      socket.emit('overlaySettings', overlaySettings);
       socket.emit('laserColor', overlaySettings.laserColor);
       if (currentBackground) {
         socket.emit('backgroundChanged', { filename: currentBackground.filename });
@@ -694,8 +697,27 @@ app.post('/api/dev/laser-color', (req, res) => {
   if (typeof color !== 'string' || !color.trim()) return res.status(400).json({ success: false, error: 'Invalid color' });
   overlaySettings.laserColor = color.trim();
   saveAudioConfig();
+  io.emit('overlaySettings', overlaySettings);
   io.emit('laserColor', overlaySettings.laserColor);
   res.json({ success: true, color: overlaySettings.laserColor });
+});
+
+app.post('/api/dev/overlay-settings', (req, res) => {
+  const { shotType, shotSpeed, color } = req.body || {};
+  const validTypes = ['beam', 'pulse', 'waves', 'burst', 'ripple'];
+  if (typeof shotType === 'string' && shotType) {
+    if (!validTypes.includes(shotType)) return res.status(400).json({ success: false, error: `Invalid shot type. Must be one of: ${validTypes.join(', ')}` });
+    overlaySettings.shotType = shotType;
+  }
+  if (typeof shotSpeed === 'number' && shotSpeed > 0 && shotSpeed <= 3) {
+    overlaySettings.shotSpeed = shotSpeed;
+  }
+  if (typeof color === 'string' && color.trim()) {
+    overlaySettings.laserColor = color.trim();
+  }
+  saveAudioConfig();
+  io.emit('overlaySettings', overlaySettings);
+  res.json({ success: true, settings: overlaySettings });
 });
 
 app.post('/api/connect', (req, res) => {

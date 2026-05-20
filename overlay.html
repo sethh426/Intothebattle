@@ -120,6 +120,8 @@ let players        = {};
 let audioConfig    = {};   // event → filename, pushed from server
 let soundEnabled   = true; // toggled by dashboard sound-settings
 let laserColor     = '#7afcff';
+let shotType       = 'beam';
+let shotSpeed      = 1;
 const lastPlayerPositions = {};
 let backgroundImg  = null;
 const audioCache   = {};   // filename → HTMLAudioElement
@@ -233,6 +235,13 @@ socket.on('audioConfig', (cfg) => {
   preloadAudioConfig(audioConfig);
 });
 
+socket.on('overlaySettings', (settings) => {
+  if (!settings) return;
+  if (typeof settings.shotType === 'string' && settings.shotType) shotType = settings.shotType;
+  if (typeof settings.shotSpeed === 'number' && settings.shotSpeed > 0) shotSpeed = settings.shotSpeed;
+  if (typeof settings.laserColor === 'string' && settings.laserColor) updateLaserColor(settings.laserColor);
+});
+
 socket.on('laserColor', (color) => {
   updateLaserColor(color);
 });
@@ -258,7 +267,7 @@ socket.on('attack', ({ attacker, target, damage, killed, special }) => {
   const fromPos = getAnimationPos(attacker);
   const toPos   = getAnimationPos(target);
   if (players[attacker] && players[target]) {
-    attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, killed, special));
+    attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, shotType, shotSpeed, killed, special));
     players[target].hp = Math.max(0, (players[target].hp || 0) - damage);
     if (killed) players[target].alive = false;
     const aName = players[attacker].nickname || attacker.slice(0, 10);
@@ -273,7 +282,7 @@ socket.on('giftAttack', ({ attacker, target, damage, killed }) => {
   const fromPos = getAnimationPos(attacker);
   const toPos   = getAnimationPos(target);
   if (players[attacker] && players[target]) {
-    attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, killed, true));
+    attacks.push(new Attack(fromPos.x, fromPos.y, toPos.x, toPos.y, shotType, shotSpeed, killed, true));
     players[target].hp = Math.max(0, (players[target].hp || 0) - damage);
     if (killed || players[target].hp === 0) players[target].alive = false;
     const aName = players[attacker].nickname || attacker.slice(0, 10);
@@ -357,13 +366,15 @@ function getAnimationPos(uniqueId) {
 
 // ── Attack animation ──────────────────────────────────────────────────────────
 class Attack {
-  constructor(fromX, fromY, toX, toY, isKill, isSpecial = false) {
+  constructor(fromX, fromY, toX, toY, shotType = 'beam', shotSpeed = 1, isKill = false, isSpecial = false) {
     this.fromX = fromX; this.fromY = fromY;
     this.toX   = toX;   this.toY   = toY;
+    this.shotType  = shotType;
+    this.shotSpeed = Math.max(0.6, Math.min(2.2, shotSpeed));
     this.isKill    = isKill;
     this.isSpecial = isSpecial;
     this.startTime = Date.now();
-    this.duration  = 650;
+    this.duration  = 700 / this.shotSpeed;
     this.progress  = 0;
   }
   update() {
@@ -371,27 +382,100 @@ class Attack {
     return this.progress < 1;
   }
   draw(ctx) {
-    const alpha     = 1 - this.progress;
-    const easeOut   = 1 - Math.pow(1 - this.progress, 2);
-    const x         = this.fromX + (this.toX - this.fromX) * easeOut;
-    const y         = this.fromY + (this.toY - this.fromY) * easeOut;
-    const glowColor = this.isSpecial ? '255,100,100'   : '100,215,255';
-    const coreColor = this.isSpecial ? '255,220,120'   : '180,240,255';
-    const orbColor  = this.isSpecial ? '255,217,61'    : '150,220,255';
+    const alpha   = 1 - this.progress;
+    const easeOut = 1 - Math.pow(1 - this.progress, 2);
+    const currentX = this.fromX + (this.toX - this.fromX) * easeOut;
+    const currentY = this.fromY + (this.toY - this.fromY) * easeOut;
+    const baseColor = this.isSpecial ? '#FFD56B' : laserColor;
+    const outerColor = this.isSpecial ? 'rgba(255,213,107,0.35)' : `rgba(122,252,255,0.35)`;
+    const innerColor = this.isSpecial ? 'rgba(255,242,190,0.95)' : `rgba(200,255,255,0.96)`;
+    const strikeColor = this.isSpecial ? 'rgba(255,140,77,' : 'rgba(122,252,255,';
+    const waveAlpha = Math.max(0.18, alpha * 0.9);
+    const midAlpha = Math.max(0.3, alpha * 0.7);
 
-    ctx.strokeStyle = `rgba(${glowColor},${alpha * 0.22})`; ctx.lineWidth = this.isSpecial ? 24 : 16; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    ctx.beginPath(); ctx.moveTo(this.fromX, this.fromY); ctx.lineTo(this.toX, this.toY); ctx.stroke();
-    ctx.strokeStyle = `rgba(${glowColor},${alpha * 0.85})`; ctx.lineWidth = this.isSpecial ? 10 : 6;
-    ctx.beginPath(); ctx.moveTo(this.fromX, this.fromY); ctx.lineTo(this.toX, this.toY); ctx.stroke();
-    ctx.strokeStyle = `rgba(${coreColor},${alpha})`; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(this.fromX, this.fromY); ctx.lineTo(this.toX, this.toY); ctx.stroke();
-    ctx.fillStyle = `rgba(${orbColor},${alpha})`; ctx.shadowColor = `rgba(${glowColor},${alpha * 0.7})`; ctx.shadowBlur = 16;
-    ctx.beginPath(); ctx.arc(x, y, this.isSpecial ? 12 : 8, 0, Math.PI * 2); ctx.fill();
-    ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
-    ctx.strokeStyle = `rgba(${glowColor},${alpha * 0.6})`; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(this.toX, this.toY, 12 + 26 * this.progress, 0, Math.PI * 2); ctx.stroke();
-    ctx.strokeStyle = `rgba(${coreColor},${alpha * 0.35})`; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(this.toX, this.toY, 6 + 18 * this.progress, 0, Math.PI * 2); ctx.stroke();
+    const pathX = this.toX - this.fromX;
+    const pathY = this.toY - this.fromY;
+    const pathLength = Math.hypot(pathX, pathY);
+    const angle = Math.atan2(pathY, pathX);
+    const waveOffset = Math.sin(this.progress * Math.PI * 3) * 20;
+
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (this.shotType === 'pulse') {
+      const ringRadius = 12 + this.progress * 50;
+      ctx.strokeStyle = `${outerColor}`;
+      ctx.lineWidth = 10;
+      ctx.beginPath(); ctx.arc(this.fromX, this.fromY, ringRadius, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = `rgba(255,255,255,${alpha * 0.6})`;
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(this.fromX, this.fromY, ringRadius + 10, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = `${innerColor}`;
+      ctx.beginPath(); ctx.arc(this.fromX, this.fromY, 10 + (1 - alpha) * 4, 0, Math.PI * 2); ctx.fill();
+    } else if (this.shotType === 'waves') {
+      const waveCount = 5;
+      ctx.strokeStyle = `${strikeColor}${waveAlpha})`;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      for (let i = 0; i <= waveCount; i += 1) {
+        const t = i / waveCount;
+        const px = this.fromX + pathX * t;
+        const py = this.fromY + pathY * t;
+        const offset = Math.sin((t + this.progress) * Math.PI * 4) * 16 * (1 - t);
+        const ox = px + Math.cos(angle + Math.PI / 2) * offset;
+        const oy = py + Math.sin(angle + Math.PI / 2) * offset;
+        if (i === 0) ctx.moveTo(ox, oy);
+        else ctx.lineTo(ox, oy);
+      }
+      ctx.stroke();
+      ctx.fillStyle = `${innerColor}`;
+      ctx.beginPath(); ctx.arc(currentX, currentY, 9, 0, Math.PI * 2); ctx.fill();
+    } else if (this.shotType === 'burst') {
+      const pieces = 4;
+      for (let i = 0; i < pieces; i += 1) {
+        const t = (this.progress + i / pieces * 0.4) % 1;
+        const bx = this.fromX + pathX * t;
+        const by = this.fromY + pathY * t;
+        const radius = 6 + 4 * Math.sin((t + i) * Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${alpha * 0.8})`;
+        ctx.beginPath(); ctx.arc(bx, by, radius, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.strokeStyle = `${strikeColor}${waveAlpha})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(this.fromX, this.fromY); ctx.lineTo(currentX, currentY); ctx.stroke();
+    } else if (this.shotType === 'ripple') {
+      const rippleRadius = 12 + this.progress * pathLength * 0.45;
+      ctx.strokeStyle = `${outerColor}`;
+      ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(this.toX, this.toY, rippleRadius, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = `${outerColor}`;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(this.toX, this.toY, rippleRadius + 18, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = `rgba(255,255,255,${midAlpha})`;
+      ctx.beginPath(); ctx.arc(this.toX, this.toY, 14 + (1 - this.progress) * 8, 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.strokeStyle = `${strikeColor}${alpha * 0.22})`;
+      ctx.lineWidth = this.isSpecial ? 26 : 18;
+      ctx.beginPath(); ctx.moveTo(this.fromX, this.fromY); ctx.lineTo(this.toX, this.toY); ctx.stroke();
+      ctx.strokeStyle = `${strikeColor}${midAlpha})`;
+      ctx.lineWidth = this.isSpecial ? 10 : 6;
+      ctx.beginPath(); ctx.moveTo(this.fromX, this.fromY); ctx.lineTo(this.toX, this.toY); ctx.stroke();
+      ctx.strokeStyle = `${innerColor}`;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(this.fromX, this.fromY); ctx.lineTo(this.toX, this.toY); ctx.stroke();
+      ctx.fillStyle = `${innerColor}`;
+      ctx.shadowColor = `${strikeColor}${alpha * 0.5})`;
+      ctx.shadowBlur = 18;
+      ctx.beginPath(); ctx.arc(currentX, currentY, this.isSpecial ? 12 : 8, 0, Math.PI * 2); ctx.fill();
+      ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+    }
+
+    if (this.shotType !== 'ripple') {
+      const ringRadius = 12 + this.progress * 22;
+      ctx.strokeStyle = `rgba(255,255,255,${alpha * 0.35})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(this.toX, this.toY, ringRadius, 0, Math.PI * 2); ctx.stroke();
+    }
   }
 }
 

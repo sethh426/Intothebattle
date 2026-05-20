@@ -170,6 +170,24 @@ button:hover { opacity: 0.85; }
 
   <!-- Developer Sound -->
   <div class="card">
+    <h2>Laser Style</h2>
+    <div class="status-row">
+      <span style="color:#aaa;font-size:12px">Choose the overlay attack animation style</span>
+    </div>
+    <label for="laserStyleSelect">Shot style</label>
+    <select id="laserStyleSelect" onchange="setShotStyle(this.value)">
+      <option value="beam">Beam</option>
+      <option value="pulse">Pulse</option>
+      <option value="waves">Sound Waves</option>
+      <option value="burst">Burst</option>
+      <option value="ripple">Ripple</option>
+    </select>
+    <label for="shotSpeedRange" style="margin-top:10px;">Animation speed <span id="shotSpeedValue">1.0x</span></label>
+    <input id="shotSpeedRange" type="range" min="0.6" max="2.2" step="0.1" value="1" onchange="setShotSpeed(this.value)" />
+    <div style="margin-top:14px;font-size:12px;color:#aaa;">Pick a style and speed that fits your stream vibe. Settings persist across reloads.</div>
+  </div>
+
+  <div class="card">
     <h2>Developer</h2>
     <div class="status-row">
       <span style="color:#aaa;font-size:12px">Overlay sound control</span>
@@ -381,6 +399,41 @@ function setLaserColor(color) {
   .catch(err => toast(err.message));
 }
 
+function setShotStyle(type) {
+  if (!type) return;
+  fetch('/api/dev/overlay-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shotType: type }) })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) throw new Error(d.error || 'Shot style update failed');
+    toast(`Shot style set to ${type}`);
+  })
+  .catch(err => toast(err.message));
+}
+
+function setShotSpeed(value) {
+  const speed = Number(value) || 1;
+  document.getElementById('shotSpeedValue').textContent = `${speed.toFixed(1)}x`;
+  fetch('/api/dev/overlay-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shotSpeed: speed }) })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) throw new Error(d.error || 'Shot speed update failed');
+    toast(`Animation speed set to ${speed.toFixed(1)}x`);
+  })
+  .catch(err => toast(err.message));
+}
+
+function applyShotStyleUI(settings) {
+  if (!settings) return;
+  const styleSelect = document.getElementById('laserStyleSelect');
+  if (styleSelect && settings.shotType) styleSelect.value = settings.shotType;
+  const speedRange = document.getElementById('shotSpeedRange');
+  const speedValue = document.getElementById('shotSpeedValue');
+  if (speedRange && typeof settings.shotSpeed === 'number') {
+    speedRange.value = settings.shotSpeed;
+    if (speedValue) speedValue.textContent = `${settings.shotSpeed.toFixed(1)}x`;
+  }
+}
+
 function toggleOverlaySound() {
   const enabled = document.getElementById('developerSoundToggle').checked;
   fetch('/api/dev/sound-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) })
@@ -466,9 +519,10 @@ function loadAudioData() {
     if (!d.success) { toast('Failed to load audio data'); return; }
     audioLibraryData = d.library || [];
     audioConfigData  = { ...{ attack: null, gift: null, kill: null, respawn: null, heal: null, follow: null }, ...(d.config || {}) };
-    if (d.settings && d.settings.laserColor) {
+    if (d.settings) {
       const picker = document.getElementById('laserColorPicker');
-      if (picker) picker.value = d.settings.laserColor;
+      if (picker && d.settings.laserColor) picker.value = d.settings.laserColor;
+      applyShotStyleUI(d.settings);
     }
     renderAudioLibrary();
     renderAssignTable();
