@@ -15,89 +15,68 @@
 –surface:#161b22;
 –surface2:#1c2330;
 –surface3:#21262d;
-  </div>
-
-  <!-- Developer Test Tools -->
-  <div class="card">
-    <h2>Overlay Test</h2>
-    <p class="dev-note">Trigger live overlay events and confirm lasers, animations, and sound.</p>
-    <div class="btn-row">
-      <button class="btn-green"  onclick="testOverlayAttack()">Test Attack</button>
-      <button class="btn-yellow" onclick="testOverlayGift()">Test Gift</button>
-      <button class="btn-purple" onclick="testOverlayHeal()">Test Heal</button>
-      <button class="btn-blue"   onclick="testOverlayKill()">Test Kill</button>
-    </div>
-  </div>
-
-  <!-- Developer Test Tools (hidden until dev mode on) -->
-  <div class="card" id="devTestCard" style="display:none;">
-    <h2>Developer Test Tools</h2>
-    <p class="dev-note">Temporary buttons for testing overlay animations without TikTok LIVE.</p>
-    <div class="btn-row">
-      <button class="btn-green"  onclick="spawnTestPlayers()">Spawn Test Players</button>
-      <button class="btn-blue"   onclick="testNormalAttack()">Test @ Attack</button>
-      <button class="btn-yellow" onclick="testGiftAttack()">Test Gift Attack</button>
-    </div>
-
-  <div class="toggle-row">
-    <div>
-      <div class="toggle-info">Dev Mode</div>
-      <div class="toggle-hint">Toggle test routes without editing .env</div>
-    </div>
-    <label class="toggle-switch">
-      <input type="checkbox"/>
-      <span class="toggle-track"></span>
-    </label>
-  </div>
-
-  </div>
-box-shadow:var(–shadow);
+–border:#30363d;
+–text:#e6edf3;
+–text2:#8b949e;
+–text3:#484f58;
+–blue:#58a6ff;
+–blue-dim:rgba(88,166,255,.12);
+–green:#3fb950;
+–green-dim:rgba(63,185,80,.12);
+–red:#f85149;
+–red-dim:rgba(248,81,73,.12);
+–yellow:#e3b341;
+–yellow-dim:rgba(227,179,65,.12);
+–orange:#d29922;
+–purple:#bc8cff;
+–purple-dim:rgba(188,140,255,.12);
+–pink:#f778ba;
+–radius:10px;
+–radius-sm:6px;
+–shadow:0 1px 3px rgba(0,0,0,.4);
+–shadow-md:0 4px 16px rgba(0,0,0,.3);
 }
 
-.header-brand{
-display:flex;
-align-items:center;
-gap:12px;
-}
-
-.header-icon{
-width:36px;
-height:36px;
-background:linear-gradient(135deg,#58a6ff,#bc8cff);
-border-radius:8px;
-display:flex;
-align-items:center;
-justify-content:center;
-font-size:18px;
-}
-
-.header-title{
-font-size:15px;
-font-weight:700;
+body{
+background:var(–bg);
 color:var(–text);
-letter-spacing:-.3px;
+font-family:‘DM Sans’,sans-serif;
+min-height:100vh;
+padding:20px;
 }
 
-.header-sub{
-font-size:12px;
-color:var(–text2);
-font-weight:400;
-margin-top:1px;
+/* ── TOAST ── */
+#toast{
+position:fixed;bottom:24px;left:50%;
+transform:translateX(-50%) translateY(20px);
+background:var(–surface2);border:1px solid var(–border);
+color:var(–text);padding:10px 20px;border-radius:var(–radius);
+font-size:13px;font-weight:500;box-shadow:var(–shadow-md);
+opacity:0;transition:opacity .3s,transform .3s;
+pointer-events:none;z-index:9999;white-space:nowrap;
 }
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-.header-actions{
-display:flex;
-align-items:center;
-gap:10px;
+/* ── HEADER ── */
+.header{
+display:flex;align-items:center;justify-content:space-between;
+background:var(–surface);border:1px solid var(–border);
+border-radius:var(–radius);padding:14px 20px;
+margin-bottom:20px;box-shadow:var(–shadow);
 }
+.header-brand{display:flex;align-items:center;gap:12px;}
+.header-icon{
+width:36px;height:36px;
+background:linear-gradient(135deg,#58a6ff,#bc8cff);
+border-radius:8px;display:flex;align-items:center;
+justify-content:center;font-size:18px;
+}
+.header-title{font-size:15px;font-weight:700;color:var(–text);letter-spacing:-.3px;}
+.header-sub{font-size:12px;color:var(–text2);margin-top:1px;}
+.header-actions{display:flex;align-items:center;gap:10px;}
 
 /* ── GRID ── */
-.grid{
-display:grid;
-grid-template-columns:repeat(12,1fr);
-gap:16px;
-}
-
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px;}
 .col-6{grid-column:span 6;}
 .col-4{grid-column:span 4;}
 .col-8{grid-column:span 8;}
@@ -105,470 +84,208 @@ gap:16px;
 
 /* ── CARD ── */
 .card{
-background:var(–surface);
-border:1px solid var(–border);
-border-radius:var(–radius);
-padding:20px;
-box-shadow:var(–shadow);
+background:var(–surface);border:1px solid var(–border);
+border-radius:var(–radius);padding:20px;box-shadow:var(–shadow);
 transition:border-color .2s,box-shadow .2s;
 }
 .card:hover{
 border-color:rgba(88,166,255,.3);
 box-shadow:0 0 0 1px rgba(88,166,255,.08),var(–shadow-md);
 }
-
-.card-header{
-display:flex;
-align-items:center;
-justify-content:space-between;
-margin-bottom:18px;
-}
-
-.card-title{
-font-size:11px;
-font-weight:700;
-text-transform:uppercase;
-letter-spacing:1.2px;
-color:var(–text2);
-}
-
+.card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(–text2);}
 .card-badge{
-font-size:10px;
-font-weight:600;
-padding:3px 8px;
-border-radius:20px;
-background:var(–surface3);
-color:var(–text2);
+font-size:10px;font-weight:600;padding:3px 8px;
+border-radius:20px;background:var(–surface3);color:var(–text2);
 font-family:‘Space Mono’,monospace;
 }
 
 /* ── STATUS CHIP ── */
 .status-chip{
-display:inline-flex;
-align-items:center;
-gap:7px;
-padding:6px 12px;
-border-radius:20px;
-font-size:12px;
-font-weight:500;
+display:inline-flex;align-items:center;gap:7px;
+padding:6px 12px;border-radius:20px;font-size:12px;font-weight:500;
 margin-bottom:16px;
 }
+.status-chip.online {background:var(–green-dim);color:var(–green);border:1px solid rgba(63,185,80,.2);}
+.status-chip.offline{background:var(–red-dim);  color:var(–red);  border:1px solid rgba(248,81,73,.2);}
+.status-chip.idle   {background:var(–yellow-dim);color:var(–orange);border:1px solid rgba(210,153,34,.2);}
 
-.status-chip.online{
-background:var(–green-dim);
-color:var(–green);
-border:1px solid rgba(63,185,80,.2);
-}
-
-.status-chip.offline{
-background:var(–red-dim);
-color:var(–red);
-border:1px solid rgba(248,81,73,.2);
-}
-
-.status-chip.idle{
-background:var(–yellow-dim);
-color:var(–orange);
-border:1px solid rgba(210,153,34,.2);
-}
-
-.pulse{
-width:7px;height:7px;
-border-radius:50%;
-background:currentColor;
-flex-shrink:0;
-}
-
-.pulse.animated{
-animation:blink 1.4s ease-in-out infinite;
-}
-
+.pulse{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.pulse.animated{animation:blink 1.4s ease-in-out infinite;}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
 
 /* ── INPUTS ── */
-.input-group{
-margin-bottom:14px;
-}
-
-.input-label{
-font-size:12px;
-font-weight:500;
-color:var(–text2);
-margin-bottom:6px;
-display:block;
-}
+.input-group{margin-bottom:14px;}
+.input-label{font-size:12px;font-weight:500;color:var(–text2);margin-bottom:6px;display:block;}
 
 input[type=text],select{
-width:100%;
-background:var(–surface3);
-border:1px solid var(–border);
-border-radius:var(–radius-sm);
-padding:10px 14px;
-color:var(–text);
-font-size:13px;
-font-family:‘DM Sans’,sans-serif;
-transition:border-color .2s,box-shadow .2s;
-appearance:none;
+width:100%;background:var(–surface3);border:1px solid var(–border);
+border-radius:var(–radius-sm);padding:10px 14px;color:var(–text);
+font-size:13px;font-family:‘DM Sans’,sans-serif;
+transition:border-color .2s,box-shadow .2s;appearance:none;
 }
-
 input[type=text]:focus,select:focus{
-outline:none;
-border-color:var(–blue);
-box-shadow:0 0 0 3px rgba(88,166,255,.15);
+outline:none;border-color:var(–blue);box-shadow:0 0 0 3px rgba(88,166,255,.15);
 }
-
 input[type=text]::placeholder{color:var(–text3);}
-
 select{
 background-image:url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘12’ height=‘8’ viewBox=‘0 0 12 8’%3E%3Cpath d=‘M1 1l5 5 5-5’ stroke=’%238b949e’ stroke-width=‘1.5’ fill=‘none’ stroke-linecap=‘round’/%3E%3C/svg%3E”);
-background-repeat:no-repeat;
-background-position:right 12px center;
-padding-right:34px;
-cursor:pointer;
+background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;cursor:pointer;
 }
-
 select option{background:var(–surface2);}
 
 /* ── BUTTONS ── */
 .btn{
-display:inline-flex;
-align-items:center;
-justify-content:center;
-gap:7px;
-border:none;
-border-radius:var(–radius-sm);
-padding:10px 18px;
-font-size:13px;
-font-weight:600;
-font-family:‘DM Sans’,sans-serif;
-cursor:pointer;
-transition:opacity .15s,transform .15s,box-shadow .15s;
-white-space:nowrap;
+display:inline-flex;align-items:center;justify-content:center;gap:7px;
+border:none;border-radius:var(–radius-sm);padding:10px 18px;
+font-size:13px;font-weight:600;font-family:‘DM Sans’,sans-serif;
+cursor:pointer;transition:opacity .15s,transform .15s;white-space:nowrap;
 }
-
 .btn:hover{opacity:.85;transform:translateY(-1px);}
 .btn:active{transform:translateY(0);}
-
-.btn-primary{
-background:var(–blue);
-color:#0d1117;
-}
-.btn-success{
-background:var(–green);
-color:#0d1117;
-}
-.btn-danger{
-background:var(–red);
-color:#fff;
-}
-.btn-warning{
-background:var(–orange);
-color:#0d1117;
-}
-.btn-secondary{
-background:var(–surface3);
-color:var(–text);
-border:1px solid var(–border);
-}
-.btn-ghost{
-background:transparent;
-color:var(–text2);
-border:1px solid var(–border);
-}
+.btn-primary  {background:var(–blue);  color:#0d1117;}
+.btn-success  {background:var(–green); color:#0d1117;}
+.btn-danger   {background:var(–red);   color:#fff;}
+.btn-warning  {background:var(–orange);color:#0d1117;}
+.btn-secondary{background:var(–surface3);color:var(–text);border:1px solid var(–border);}
+.btn-ghost    {background:transparent;color:var(–text2);border:1px solid var(–border);}
 .btn-ghost:hover{color:var(–text);border-color:var(–text2);}
-
+.btn-purple   {background:var(–purple);color:#0d1117;}
 .btn-icon{
-width:32px;height:32px;
-padding:0;
-border-radius:var(–radius-sm);
-background:var(–surface3);
-color:var(–text2);
-border:1px solid var(–border);
+width:32px;height:32px;padding:0;border-radius:var(–radius-sm);
+background:var(–surface3);color:var(–text2);border:1px solid var(–border);
 }
 .btn-icon:hover{color:var(–text);border-color:var(–text2);}
-
-.btn-row{
-display:flex;
-gap:10px;
-flex-wrap:wrap;
-}
+.btn-row{display:flex;gap:10px;flex-wrap:wrap;}
 
 /* ── FILE INPUT ── */
 .file-input-wrapper{
-position:relative;
-display:flex;
-align-items:center;
-gap:10px;
-padding:10px 14px;
-background:var(–surface3);
-border:1px solid var(–border);
-border-radius:var(–radius-sm);
-margin-bottom:14px;
-cursor:pointer;
-transition:border-color .2s;
+position:relative;display:flex;align-items:center;gap:10px;
+padding:10px 14px;background:var(–surface3);border:1px solid var(–border);
+border-radius:var(–radius-sm);margin-bottom:14px;cursor:pointer;transition:border-color .2s;
 }
 .file-input-wrapper:hover{border-color:var(–blue);}
-.file-input-wrapper input{
-position:absolute;inset:0;opacity:0;cursor:pointer;
-}
+.file-input-wrapper input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
 .file-label{font-size:12px;color:var(–text2);}
-.file-tag{
-font-size:11px;
-font-weight:600;
-padding:3px 8px;
-background:var(–blue-dim);
-color:var(–blue);
-border-radius:4px;
-}
+.file-tag{font-size:11px;font-weight:600;padding:3px 8px;background:var(–blue-dim);color:var(–blue);border-radius:4px;}
 
 /* ── DROP ZONE ── */
 .drop-zone{
-border:1px dashed rgba(88,166,255,.3);
-background:rgba(88,166,255,.03);
-border-radius:var(–radius);
-padding:32px 20px;
-text-align:center;
-margin-bottom:16px;
-cursor:pointer;
-transition:border-color .2s,background .2s;
-position:relative;
+border:1px dashed rgba(88,166,255,.3);background:rgba(88,166,255,.03);
+border-radius:var(–radius);padding:32px 20px;text-align:center;
+margin-bottom:16px;cursor:pointer;transition:border-color .2s,background .2s;position:relative;
 }
-.drop-zone:hover{
-border-color:var(–blue);
-background:rgba(88,166,255,.07);
-}
-.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(–blue);background:rgba(88,166,255,.07);}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
 .drop-icon{font-size:28px;margin-bottom:8px;}
 .drop-text{font-size:13px;font-weight:500;color:var(–text2);}
 .drop-hint{font-size:11px;color:var(–text3);margin-top:4px;font-family:‘Space Mono’,monospace;}
 
-/* ── AUDIO FILES ── */
+/* ── AUDIO ROWS ── */
 .audio-files{display:flex;flex-direction:column;gap:6px;}
-
-.audio-row{
-display:flex;
-align-items:center;
-gap:10px;
-padding:9px 12px;
-background:var(–surface3);
-border:1px solid var(–border);
-border-radius:var(–radius-sm);
-transition:border-color .2s;
+.audio-file-row{
+display:flex;align-items:center;gap:10px;padding:9px 12px;
+background:var(–surface3);border:1px solid var(–border);
+border-radius:var(–radius-sm);transition:border-color .2s;
 }
-.audio-row:hover{border-color:rgba(88,166,255,.3);}
-
-.audio-icon{
-width:28px;height:28px;
-border-radius:6px;
-background:linear-gradient(135deg,#58a6ff22,#bc8cff22);
-border:1px solid rgba(88,166,255,.2);
-display:flex;align-items:center;justify-content:center;
-font-size:13px;
-flex-shrink:0;
-}
-
-.audio-name{
-flex:1;
-font-size:13px;
-font-weight:500;
-}
-
-.audio-nick{
-font-size:11px;
-color:var(–text2);
-font-family:‘Space Mono’,monospace;
-}
-
-.audio-size{
-font-size:11px;
-color:var(–text3);
-font-family:‘Space Mono’,monospace;
-}
+.audio-file-row:hover{border-color:rgba(88,166,255,.3);}
+.audio-file-name{flex:1;font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.audio-file-size{font-size:11px;color:var(–text3);font-family:‘Space Mono’,monospace;white-space:nowrap;}
 
 /* ── ASSIGN TABLE ── */
-.assign-grid{
-display:flex;
-flex-direction:column;
-gap:6px;
-}
-
-.assign-row{
-display:grid;
-grid-template-columns:auto 1fr auto;
-align-items:center;
-gap:10px;
-padding:8px 12px;
-background:var(–surface3);
-border:1px solid var(–border);
-border-radius:var(–radius-sm);
-transition:border-color .2s;
-}
-.assign-row:hover{border-color:rgba(88,166,255,.3);}
+.assign-table{width:100%;border-collapse:collapse;}
+.assign-table td{padding:5px 6px;vertical-align:middle;}
+.assign-table tr+tr td{border-top:1px solid var(–border);}
+.assign-select{width:100%;}
 
 /* ── BADGES ── */
-.badge{
-display:inline-flex;
-align-items:center;
-gap:5px;
-padding:4px 10px;
-border-radius:20px;
-font-size:11px;
-font-weight:700;
-letter-spacing:.3px;
-white-space:nowrap;
+.badge,.event-badge{
+display:inline-flex;align-items:center;gap:5px;
+padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;
+letter-spacing:.3px;white-space:nowrap;
 }
-.b-attack{background:rgba(88,166,255,.15);color:#58a6ff;}
-.b-gift{background:rgba(227,179,65,.15);color:#e3b341;}
-.b-kill{background:rgba(248,81,73,.15);color:#f85149;}
-.b-respawn{background:rgba(63,185,80,.15);color:#3fb950;}
-.b-heal{background:rgba(188,140,255,.15);color:#bc8cff;}
-.b-follow{background:rgba(247,120,186,.15);color:#f778ba;}
+.b-attack,.badge-attack  {background:rgba(88,166,255,.15); color:#58a6ff;}
+.b-gift,  .badge-gift    {background:rgba(227,179,65,.15); color:#e3b341;}
+.b-kill,  .badge-kill    {background:rgba(248,81,73,.15);  color:#f85149;}
+.b-respawn,.badge-respawn{background:rgba(63,185,80,.15);  color:#3fb950;}
+.b-heal,  .badge-heal    {background:rgba(188,140,255,.15);color:#bc8cff;}
+.b-follow,.badge-follow  {background:rgba(247,120,186,.15);color:#f778ba;}
 
 /* ── STAT ROW ── */
-.stat-row{
-display:flex;
-align-items:center;
-justify-content:space-between;
-padding:10px 0;
-border-bottom:1px solid var(–border);
-}
+.stat-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(–border);}
 .stat-row:last-child{border-bottom:none;}
 .stat-label{font-size:12px;color:var(–text2);}
-.stat-value{
-font-size:13px;
-font-weight:700;
-font-family:‘Space Mono’,monospace;
-}
+.stat-value{font-size:13px;font-weight:700;font-family:‘Space Mono’,monospace;}
 
 /* ── DIVIDER ── */
-.divider{
-height:1px;
-background:var(–border);
-margin:16px 0;
-}
+.divider{height:1px;background:var(–border);margin:16px 0;}
 
-/* ── SPEED SLIDER ── */
-.slider-row{
-display:flex;
-align-items:center;
-gap:12px;
-margin-top:8px;
-}
-.slider-label{font-size:12px;color:var(–text2);min-width:54px;}
+/* ── SLIDER ── */
+.slider-row{display:flex;align-items:center;gap:12px;margin-top:8px;}
+.slider-label{font-size:12px;color:var(–text2);min-width:48px;}
 input[type=range]{
-flex:1;
--webkit-appearance:none;
-height:4px;
-border-radius:2px;
-background:var(–border);
-outline:none;
+flex:1;-webkit-appearance:none;height:4px;border-radius:2px;
+background:var(–border);outline:none;
 }
 input[type=range]::-webkit-slider-thumb{
--webkit-appearance:none;
-width:14px;height:14px;
-border-radius:50%;
-background:var(–blue);
-cursor:pointer;
-box-shadow:0 0 0 3px rgba(88,166,255,.2);
-}
-.slider-val{
-font-size:11px;
-font-family:‘Space Mono’,monospace;
-color:var(–blue);
-min-width:28px;
-text-align:right;
+-webkit-appearance:none;width:14px;height:14px;border-radius:50%;
+background:var(–blue);cursor:pointer;box-shadow:0 0 0 3px rgba(88,166,255,.2);
 }
 
-/* ── DEV TOGGLE ── */
+/* ── TOGGLE ── */
 .toggle-row{
-display:flex;
-align-items:center;
-justify-content:space-between;
-padding:12px 14px;
-background:var(–surface3);
-border:1px solid var(–border);
-border-radius:var(–radius-sm);
-margin-top:4px;
+display:flex;align-items:center;justify-content:space-between;
+padding:12px 14px;background:var(–surface3);border:1px solid var(–border);
+border-radius:var(–radius-sm);margin-top:4px;
 }
 .toggle-info{font-size:13px;font-weight:500;}
 .toggle-hint{font-size:11px;color:var(–text2);margin-top:2px;}
-
-.toggle-switch{
-position:relative;
-width:38px;height:20px;
-}
+.toggle-switch{position:relative;width:38px;height:20px;}
 .toggle-switch input{opacity:0;width:0;height:0;}
 .toggle-track{
-position:absolute;inset:0;
-background:var(–border);
-border-radius:10px;
-cursor:pointer;
-transition:background .2s;
+position:absolute;inset:0;background:var(–border);
+border-radius:10px;cursor:pointer;transition:background .2s;
 }
 .toggle-track::after{
-content:’’;
-position:absolute;
-left:3px;top:3px;
-width:14px;height:14px;
-border-radius:50%;
-background:#fff;
-transition:transform .2s;
+content:’’;position:absolute;left:3px;top:3px;
+width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s;
 }
-.toggle-switch input:checked + .toggle-track{background:var(–blue);}
-.toggle-switch input:checked + .toggle-track::after{transform:translateX(18px);}
+.toggle-switch input:checked+.toggle-track{background:var(–blue);}
+.toggle-switch input:checked+.toggle-track::after{transform:translateX(18px);}
 
-/* ── FOOTER LINKS ── */
-.footer{
-margin-top:24px;
-display:flex;
-gap:12px;
-flex-wrap:wrap;
-}
-
-.footer-cta{
-display:inline-flex;
-align-items:center;
-gap:8px;
-padding:12px 22px;
-background:var(–green);
-color:#0d1117;
-border-radius:var(–radius);
-text-decoration:none;
-font-size:13px;
-font-weight:700;
-transition:opacity .2s,transform .15s;
-}
-.footer-cta:hover{opacity:.85;transform:translateY(-1px);}
-
-.footer-link{
-display:inline-flex;
-align-items:center;
-gap:6px;
-padding:12px 18px;
-background:var(–surface);
-border:1px solid var(–border);
-color:var(–text2);
-border-radius:var(–radius);
-text-decoration:none;
-font-size:13px;
-font-weight:500;
-transition:border-color .2s,color .2s;
-}
-.footer-link:hover{border-color:var(–blue);color:var(–text);}
+/* ── DEV NOTE ── */
+.dev-note{font-size:12px;color:var(–text2);margin-bottom:14px;line-height:1.5;}
 
 /* ── SECTION LABEL ── */
 .section-label{
-font-size:11px;
-font-weight:700;
-text-transform:uppercase;
-letter-spacing:1px;
-color:var(–text3);
-margin-bottom:10px;
+font-size:11px;font-weight:700;text-transform:uppercase;
+letter-spacing:1px;color:var(–text3);margin-bottom:10px;
 }
+
+/* ── AUDIO LAYOUT ── */
+.audio-layout{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;}
+
+/* ── FOOTER ── */
+.footer{margin-top:24px;display:flex;gap:12px;flex-wrap:wrap;}
+.footer-cta{
+display:inline-flex;align-items:center;gap:8px;padding:12px 22px;
+background:var(–green);color:#0d1117;border-radius:var(–radius);
+text-decoration:none;font-size:13px;font-weight:700;
+transition:opacity .2s,transform .15s;border:none;cursor:pointer;
+}
+.footer-cta:hover{opacity:.85;transform:translateY(-1px);}
+.footer-link{
+display:inline-flex;align-items:center;gap:6px;padding:12px 18px;
+background:var(–surface);border:1px solid var(–border);color:var(–text2);
+border-radius:var(–radius);text-decoration:none;font-size:13px;font-weight:500;
+transition:border-color .2s,color .2s;cursor:pointer;
+}
+.footer-link:hover{border-color:var(–blue);color:var(–text);}
 
 /* ── RESPONSIVE ── */
 @media(max-width:900px){
 .col-6,.col-4,.col-8{grid-column:span 12;}
+.audio-layout{grid-template-columns:1fr;}
 body{padding:14px;}
 }
 </style>
@@ -576,7 +293,9 @@ body{padding:14px;}
 </head>
 <body>
 
-<!-- HEADER -->
+<div id="toast"></div>
+
+<!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
 
 <div class="header">
   <div class="header-brand">
@@ -591,11 +310,11 @@ body{padding:14px;}
       <span class="pulse animated"></span>
       Live
     </div>
-    <button class="btn btn-ghost">Logout</button>
+    <button class="btn btn-ghost" onclick="resetTikTok()">Logout</button>
   </div>
 </div>
 
-<!-- GRID -->
+<!-- ══ MAIN GRID ════════════════════════════════════════════════════════════ -->
 
 <div class="grid">
 
@@ -608,25 +327,19 @@ body{padding:14px;}
     </div>
 
 ```
-<div class="status-chip offline">
-  <span class="pulse"></span>
-  Disconnected
+<div class="status-chip offline" id="tiktok-chip">
+  <span class="pulse" id="tiktok-dot"></span>
+  <span id="tiktok-label">Disconnected</span>
 </div>
 
 <div class="input-group">
   <label class="input-label">Username</label>
-  <input type="text" placeholder="@tiktok_username"/>
+  <input type="text" id="username" placeholder="@tiktok_username"/>
 </div>
 
 <div class="btn-row">
-  <button class="btn btn-success" style="flex:1">
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M4 6l1.5 1.5L8 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-    Connect
-  </button>
-  <button class="btn btn-danger" style="flex:1">
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9 3L3 9M3 3l6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-    Disconnect
-  </button>
+  <button class="btn btn-success" style="flex:1" onclick="connect()">✓ Connect</button>
+  <button class="btn btn-danger"  style="flex:1" onclick="resetTikTok()">✕ Disconnect</button>
 </div>
 ```
 
@@ -641,14 +354,14 @@ body{padding:14px;}
     </div>
 
 ```
-<div class="status-chip offline">
-  <span class="pulse"></span>
-  No overlay connected
+<div class="status-chip offline" id="overlay-chip">
+  <span class="pulse" id="overlay-dot"></span>
+  <span id="overlay-label">No overlay connected</span>
 </div>
 
 <div class="stat-row">
   <span class="stat-label">Active Players</span>
-  <span class="stat-value" style="color:var(--yellow)">0</span>
+  <span class="stat-value" style="color:var(--yellow)" id="player-count">—</span>
 </div>
 <div class="stat-row">
   <span class="stat-label">Events/sec</span>
@@ -658,11 +371,8 @@ body{padding:14px;}
 <div class="divider"></div>
 
 <div class="btn-row">
-  <button class="btn btn-primary" style="flex:1">
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6a4 4 0 1 0 8 0 4 4 0 0 0-8 0m4-4v1m0 6v1M2 6H1m10 0h-1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-    Reload Overlay
-  </button>
-  <button class="btn btn-secondary">Clear Players</button>
+  <button class="btn btn-primary" style="flex:1" onclick="reloadOverlay()">↺ Reload Overlay</button>
+  <button class="btn btn-secondary" onclick="clearPlayers()">Clear Players</button>
 </div>
 ```
 
@@ -677,19 +387,17 @@ body{padding:14px;}
 
 ```
 <div class="file-input-wrapper">
-  <input type="file" accept="image/*"/>
+  <input type="file" id="bgUpload" accept="image/jpeg,image/png,image/gif,image/webp"/>
   <span class="file-tag">IMG</span>
   <span class="file-label">No file selected</span>
 </div>
 
 <div class="btn-row">
-  <button class="btn btn-primary" style="flex:1">Upload BG</button>
-  <button class="btn btn-warning">Clear</button>
+  <button class="btn btn-primary" style="flex:1" onclick="uploadBackground()">Upload BG</button>
+  <button class="btn btn-warning" onclick="clearBackground()">Clear</button>
 </div>
 
-<p style="font-size:11px;color:var(--text3);margin-top:10px;">
-  No background set
-</p>
+<p style="font-size:11px;color:var(--text3);margin-top:10px;" id="bgStatus">No background set</p>
 ```
 
   </div>
@@ -705,67 +413,88 @@ body{padding:14px;}
 ```
 <div class="input-group">
   <label class="input-label">Shot Style</label>
-  <select id="shotStyle">
-    <option>Beam</option>
-    <option>Pulse</option>
-    <option>Waves</option>
+  <select id="laserStyleSelect" onchange="setShotStyle(this.value)">
+    <option value="beam">Beam</option>
+    <option value="pulse">Pulse</option>
+    <option value="wave">Wave</option>
   </select>
 </div>
 
 <div class="input-group">
-  <label class="input-label">Animation Speed — <span id="speedLabel">1.0×</span></label>
+  <label class="input-label">
+    Animation Speed — <span id="shotSpeedValue">1.0×</span>
+  </label>
   <div class="slider-row">
     <span class="slider-label">Slower</span>
-    <input type="range" min="0.5" max="3" step="0.1" value="1"
-      oninput="document.getElementById('speedLabel').textContent=parseFloat(this.value).toFixed(1)+'×'"/>
+    <input type="range" id="shotSpeedRange" min="0.5" max="3" step="0.1" value="1"
+           oninput="setShotSpeed(this.value)"/>
     <span class="slider-label" style="text-align:right">Faster</span>
   </div>
 </div>
 
-<button class="btn btn-primary" style="width:100%;margin-top:4px">Save Style</button>
+<div class="input-group" style="margin-bottom:0">
+  <label class="input-label">Laser Color</label>
+  <input type="color" id="laserColorPicker" value="#58a6ff"
+         style="width:100%;height:36px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--surface3);cursor:pointer;padding:2px 4px;"
+         onchange="setLaserColor(this.value)"/>
+</div>
+
+<button class="btn btn-primary" style="width:100%;margin-top:14px" onclick="saveLaserStyle()">Save Style</button>
 ```
 
   </div>
 
   <!-- Developer Mode -->
 
-<<<<<<< HEAD
   <div class="card col-4">
     <div class="card-header">
       <span class="card-title">Developer Mode</span>
-=======
-  <div class="card">
-    <h2>Overlay Test</h2>
-    <p class="dev-note">Trigger live overlay events and confirm lasers, animations, and sound.</p>
-    <div class="btn-row">
-      <button class="btn-green"  onclick="testOverlayAttack()">Test Attack</button>
-      <button class="btn-yellow" onclick="testOverlayGift()">Test Gift</button>
-      <button class="btn-purple" onclick="testOverlayHeal()">Test Heal</button>
-      <button class="btn-blue"   onclick="testOverlayKill()">Test Kill</button>
-    </div>
-  </div>
-
-  <!-- Developer Test Tools (hidden until dev mode on) -->
-  <div class="card" id="devTestCard" style="display:none;">
-    <h2>Developer Test Tools</h2>
-    <p class="dev-note">Temporary buttons for testing overlay animations without TikTok LIVE.</p>
-    <div class="btn-row">
-      <button class="btn-green"  onclick="spawnTestPlayers()">Spawn Test Players</button>
-      <button class="btn-blue"   onclick="testNormalAttack()">Test @ Attack</button>
-      <button class="btn-yellow" onclick="testGiftAttack()">Test Gift Attack</button>
->>>>>>> 9af0a06 (Issue: display access code on /claim; remove email delivery; improve overlay text outline; observability scaffolding)
     </div>
 
 ```
+<!-- Overlay test buttons (always visible) -->
+<p class="dev-note">Trigger live overlay events and confirm lasers, animations, and sound.</p>
+<div class="btn-row" style="margin-bottom:16px">
+  <button class="btn btn-success" onclick="testOverlayAttack()">Test Attack</button>
+  <button class="btn btn-warning" onclick="testOverlayGift()">Test Gift</button>
+  <button class="btn btn-purple"  onclick="testOverlayHeal()">Test Heal</button>
+  <button class="btn btn-danger"  onclick="testOverlayKill()">Test Kill</button>
+</div>
+
+<div class="divider"></div>
+
+<!-- Dev mode toggle -->
 <div class="toggle-row">
   <div>
-    <div class="toggle-info">Dev Mode</div>
+    <div class="toggle-info" id="devModeLabel">Developer mode is OFF</div>
     <div class="toggle-hint">Toggle test routes without editing .env</div>
   </div>
   <label class="toggle-switch">
-    <input type="checkbox"/>
+    <input type="checkbox" id="devModeCheck" onchange="toggleDevMode()"/>
     <span class="toggle-track"></span>
   </label>
+</div>
+
+<!-- Hidden test tools shown only when dev mode is ON -->
+<div id="devTestCard" style="display:none;margin-top:14px">
+  <div class="divider" style="margin-top:0"></div>
+  <p class="dev-note" style="margin-top:12px">Spawn test players without a live TikTok connection.</p>
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="spawnTestPlayers()">Spawn Test Players</button>
+    <button class="btn btn-secondary" onclick="testNormalAttack()">Test @ Attack</button>
+    <button class="btn btn-secondary" onclick="testGiftAttack()">Test Gift Attack</button>
+  </div>
+
+  <div class="toggle-row" style="margin-top:12px">
+    <div>
+      <div class="toggle-info">Overlay Sounds</div>
+      <div class="toggle-hint">Play sounds during overlay tests</div>
+    </div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="developerSoundToggle" onchange="toggleOverlaySound()"/>
+      <span class="toggle-track"></span>
+    </label>
+  </div>
 </div>
 ```
 
@@ -776,214 +505,38 @@ body{padding:14px;}
   <div class="card col-12">
     <div class="card-header">
       <span class="card-title">🔊 Audio Manager</span>
-      <span class="card-badge">9 sounds loaded</span>
+      <span class="card-badge" id="audioCountBadge">0 sounds loaded</span>
     </div>
 
 ```
-<div class="drop-zone">
-  <input type="file" accept="audio/*" multiple/>
+<div class="drop-zone" id="dropZone">
+  <input type="file" id="audioFileInput" accept="audio/*"/>
   <div class="drop-icon">🎵</div>
-  <div class="drop-text">Drag & drop audio files here</div>
+  <div class="drop-text">Drag &amp; drop audio files here</div>
   <div class="drop-hint">MP3 · M4A · WAV · OGG · AAC · FLAC · WEBM · Max 20MB</div>
 </div>
 
-<button class="btn btn-primary" style="width:100%;margin-bottom:20px">
-  📂 Browse & Upload Audio File
+<button class="btn btn-primary" style="width:100%;margin-bottom:20px"
+        onclick="document.getElementById('audioFileInput').click()">
+  📂 Browse &amp; Upload Audio File
 </button>
 
-<div style="display:grid;grid-template-columns:1.1fr .9fr;gap:24px;">
+<div class="audio-layout">
 
   <!-- Uploaded Files -->
   <div>
     <div class="section-label">Uploaded Files</div>
-    <div class="audio-files">
-
-      <div class="audio-row">
-        <div class="audio-icon">🎵</div>
-        <div class="audio-name">sound1.mp3</div>
-        <div class="audio-nick">Eating</div>
-        <div class="audio-size">0 B</div>
-        <button class="btn btn-icon">▶</button>
-        <button class="btn btn-icon" style="color:var(--red)">✕</button>
-      </div>
-
-      <div class="audio-row">
-        <div class="audio-icon">🎵</div>
-        <div class="audio-name">sound2.mp3</div>
-        <div class="audio-nick">Trophy</div>
-        <div class="audio-size">0 B</div>
-        <button class="btn btn-icon">▶</button>
-        <button class="btn btn-icon" style="color:var(--red)">✕</button>
-      </div>
-
-      <div class="audio-row">
-        <div class="audio-icon">🎵</div>
-        <div class="audio-name">sound3.mp3</div>
-        <div class="audio-nick">Explosion</div>
-        <div class="audio-size">0 B</div>
-        <button class="btn btn-icon">▶</button>
-        <button class="btn btn-icon" style="color:var(--red)">✕</button>
-      </div>
-
-      <div class="audio-row">
-        <div class="audio-icon">🎵</div>
-        <div class="audio-name">sound4.mp3</div>
-        <div class="audio-nick">Ring</div>
-        <div class="audio-size">0 B</div>
-        <button class="btn btn-icon">▶</button>
-        <button class="btn btn-icon" style="color:var(--red)">✕</button>
-      </div>
-
-      <div class="audio-row">
-        <div class="audio-icon">🎵</div>
-        <div class="audio-name">sound5.mp3</div>
-        <div class="audio-nick">8bit</div>
-        <div class="audio-size">0 B</div>
-        <button class="btn btn-icon">▶</button>
-        <button class="btn btn-icon" style="color:var(--red)">✕</button>
-      </div>
-
-      <div class="audio-row">
-        <div class="audio-icon">🎵</div>
-        <div class="audio-name">sound6.mp3</div>
-        <div class="audio-nick">Sword</div>
-        <div class="audio-size">0 B</div>
-        <button class="btn btn-icon">▶</button>
-        <button class="btn btn-icon" style="color:var(--red)">✕</button>
-      </div>
-
-      <div class="audio-row">
-        <div class="audio-icon">🎵</div>
-        <div class="audio-name">sound7.mp3</div>
-        <div class="audio-nick">Respawn</div>
-        <div class="audio-size">0 B</div>
-        <button class="btn btn-icon">▶</button>
-        <button class="btn btn-icon" style="color:var(--red)">✕</button>
-      </div>
-
-      <div class="audio-row">
-        <div class="audio-icon">🎵</div>
-        <div class="audio-name">sound8.m4a</div>
-        <div class="audio-nick">Gift</div>
-        <div class="audio-size">0 B</div>
-        <button class="btn btn-icon">▶</button>
-        <button class="btn btn-icon" style="color:var(--red)">✕</button>
-      </div>
-
-      <div class="audio-row">
-        <div class="audio-icon">🎵</div>
-        <div class="audio-name">sound9.mp3</div>
-        <div class="audio-nick">Singleshot</div>
-        <div class="audio-size">0 B</div>
-        <button class="btn btn-icon">▶</button>
-        <button class="btn btn-icon" style="color:var(--red)">✕</button>
-      </div>
-
+    <div class="audio-files" id="audioLibrary">
+      <p id="audioLibraryEmpty" style="font-size:12px;color:var(--text3);padding:8px 0;">No audio files uploaded yet.</p>
     </div>
   </div>
 
   <!-- Event Assignments -->
   <div>
     <div class="section-label">Event Assignments</div>
-    <div class="assign-grid">
-
-      <div class="assign-row">
-        <span class="badge b-attack">⚔ ATTACK</span>
-        <select class="assign-select" style="margin:0">
-          <option>sound1.mp3 — Eating</option>
-          <option>sound2.mp3 — Trophy</option>
-          <option>sound3.mp3 — Explosion</option>
-          <option>sound4.mp3 — Ring</option>
-          <option>sound5.mp3 — 8bit</option>
-          <option>sound6.mp3 — Sword</option>
-          <option>sound7.mp3 — Respawn</option>
-          <option>sound8.m4a — Gift</option>
-          <option>sound9.mp3 — Singleshot</option>
-        </select>
-        <button class="btn btn-icon">▶</button>
-      </div>
-
-      <div class="assign-row">
-        <span class="badge b-gift">🎁 GIFT</span>
-        <select class="assign-select" style="margin:0">
-          <option>sound2.mp3 — Trophy</option>
-          <option>sound1.mp3 — Eating</option>
-          <option>sound8.m4a — Gift</option>
-          <option>sound3.mp3 — Explosion</option>
-          <option>sound4.mp3 — Ring</option>
-          <option>sound5.mp3 — 8bit</option>
-          <option>sound6.mp3 — Sword</option>
-          <option>sound7.mp3 — Respawn</option>
-          <option>sound9.mp3 — Singleshot</option>
-        </select>
-        <button class="btn btn-icon">▶</button>
-      </div>
-
-      <div class="assign-row">
-        <span class="badge b-kill">💀 KILL</span>
-        <select class="assign-select" style="margin:0">
-          <option>sound3.mp3 — Explosion</option>
-          <option>sound1.mp3 — Eating</option>
-          <option>sound2.mp3 — Trophy</option>
-          <option>sound4.mp3 — Ring</option>
-          <option>sound5.mp3 — 8bit</option>
-          <option>sound6.mp3 — Sword</option>
-          <option>sound7.mp3 — Respawn</option>
-          <option>sound8.m4a — Gift</option>
-          <option>sound9.mp3 — Singleshot</option>
-        </select>
-        <button class="btn btn-icon">▶</button>
-      </div>
-
-      <div class="assign-row">
-        <span class="badge b-respawn">✚ RESPAWN</span>
-        <select class="assign-select" style="margin:0">
-          <option>sound4.mp3 — Ring</option>
-          <option>sound1.mp3 — Eating</option>
-          <option>sound2.mp3 — Trophy</option>
-          <option>sound3.mp3 — Explosion</option>
-          <option>sound5.mp3 — 8bit</option>
-          <option>sound6.mp3 — Sword</option>
-          <option>sound7.mp3 — Respawn</option>
-          <option>sound8.m4a — Gift</option>
-          <option>sound9.mp3 — Singleshot</option>
-        </select>
-        <button class="btn btn-icon">▶</button>
-      </div>
-
-      <div class="assign-row">
-        <span class="badge b-heal">💚 HEAL</span>
-        <select class="assign-select" style="margin:0">
-          <option>sound5.mp3 — 8bit</option>
-          <option>sound1.mp3 — Eating</option>
-          <option>sound2.mp3 — Trophy</option>
-          <option>sound3.mp3 — Explosion</option>
-          <option>sound4.mp3 — Ring</option>
-          <option>sound6.mp3 — Sword</option>
-          <option>sound7.mp3 — Respawn</option>
-          <option>sound8.m4a — Gift</option>
-          <option>sound9.mp3 — Singleshot</option>
-        </select>
-        <button class="btn btn-icon">▶</button>
-      </div>
-
-      <div class="assign-row">
-        <span class="badge b-follow">❤ FOLLOW</span>
-        <select class="assign-select" style="margin:0">
-          <option>sound6.mp3 — Sword</option>
-          <option>sound1.mp3 — Eating</option>
-          <option>sound2.mp3 — Trophy</option>
-          <option>sound3.mp3 — Explosion</option>
-          <option>sound4.mp3 — Ring</option>
-          <option>sound5.mp3 — 8bit</option>
-          <option>sound7.mp3 — Respawn</option>
-          <option>sound8.m4a — Gift</option>
-          <option>sound9.mp3 — Singleshot</option>
-        </select>
-        <button class="btn btn-icon">▶</button>
-      </div>
-
-    </div>
+    <table class="assign-table">
+      <tbody id="assignTableBody"></tbody>
+    </table>
   </div>
 
 </div>
@@ -993,16 +546,22 @@ body{padding:14px;}
 
 </div>
 
-<!-- FOOTER -->
+<!-- ══ FOOTER ═══════════════════════════════════════════════════════════════ -->
 
 <div class="footer">
-  <a href="#" class="footer-cta">🖥️ Open Overlay</a>
-  <a href="#" class="footer-link">↗ Stats</a>
-  <a href="#" class="footer-link">↗ Raw JSON</a>
+  <button class="footer-cta" onclick="window.open('/overlay','_blank')">🖥️ Open Overlay</button>
+  <button class="footer-link" onclick="window.open('/stats','_blank')">↗ Stats</button>
+  <button class="footer-link" onclick="window.open('/api/status','_blank')">↗ Raw JSON</button>
 </div>
 
-<<<<<<< HEAD
-=======
+<!-- ══ SOCKET.IO + SCRIPTS ══════════════════════════════════════════════════ -->
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+// ── Socket ────────────────────────────────────────────────────────────────────
+const socket = io();
+
 socket.on('overlayCount', setOverlayStatus);
 socket.on('gameState', (state) => {
   const alive = Object.values(state || {}).filter(p => p.alive).length;
@@ -1019,23 +578,37 @@ function toast(msg) {
 
 // ── Status helpers ────────────────────────────────────────────────────────────
 function setOverlayStatus(count) {
+  const chip  = document.getElementById('overlay-chip');
   const dot   = document.getElementById('overlay-dot');
   const label = document.getElementById('overlay-label');
   if (count > 0) {
-    dot.className  = 'dot green';
+    chip.className  = 'status-chip online';
+    dot.className   = 'pulse animated';
     label.textContent = `Connected (${count} source${count > 1 ? 's' : ''})`;
   } else {
-    dot.className  = 'dot red';
+    chip.className  = 'status-chip offline';
+    dot.className   = 'pulse';
     label.textContent = 'No overlay connected';
   }
 }
 
 function setTikTokStatus(state, username) {
+  const chip  = document.getElementById('tiktok-chip');
   const dot   = document.getElementById('tiktok-dot');
   const label = document.getElementById('tiktok-label');
-  if      (state === 'connected')   { dot.className = 'dot green';  label.textContent = `Connected to @${username}`; }
-  else if (state === 'connecting')  { dot.className = 'dot yellow'; label.textContent = 'Connecting...'; }
-  else                              { dot.className = 'dot red';    label.textContent = 'Disconnected'; }
+  if (state === 'connected') {
+    chip.className    = 'status-chip online';
+    dot.className     = 'pulse animated';
+    label.textContent = `Connected to @${username}`;
+  } else if (state === 'connecting') {
+    chip.className    = 'status-chip idle';
+    dot.className     = 'pulse animated';
+    label.textContent = 'Connecting…';
+  } else {
+    chip.className    = 'status-chip offline';
+    dot.className     = 'pulse';
+    label.textContent = 'Disconnected';
+  }
 }
 
 // ── Dev mode ──────────────────────────────────────────────────────────────────
@@ -1043,18 +616,22 @@ let devModeEnabled = false;
 
 function updateDevModeUI(enabled) {
   devModeEnabled = enabled;
-  document.getElementById('devModeLabel').textContent      = enabled ? 'Developer mode is ON'  : 'Developer mode is OFF';
-  document.getElementById('devModeToggleBtn').textContent  = enabled ? 'Disable Dev Mode'       : 'Enable Dev Mode';
-  document.getElementById('devTestCard').style.display     = enabled ? 'block'                  : 'none';
+  document.getElementById('devModeLabel').textContent = enabled ? 'Developer mode is ON' : 'Developer mode is OFF';
+  document.getElementById('devModeCheck').checked     = enabled;
+  document.getElementById('devTestCard').style.display = enabled ? 'block' : 'none';
 }
 
 function toggleDevMode() {
   fetch('/api/dev/test-mode', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ enabled: !devModeEnabled }),
   })
   .then(r => r.json())
-  .then(d => { if (d.success) { updateDevModeUI(d.enabled); toast(`Developer mode ${d.enabled ? 'enabled' : 'disabled'}`); } else toast(`Failed: ${d.error || 'Unknown'}`); })
+  .then(d => {
+    if (d.success) { updateDevModeUI(d.enabled); toast(`Developer mode ${d.enabled ? 'enabled' : 'disabled'}`); }
+    else toast(`Failed: ${d.error || 'Unknown'}`);
+  })
   .catch(() => toast('Dev mode toggle failed'));
 }
 
@@ -1064,11 +641,15 @@ function connect() {
   if (!username) { toast('Enter a username first'); return; }
   setTikTokStatus('connecting', username);
   fetch('/api/connect', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username }),
   })
   .then(r => r.json())
-  .then(d => { if (d.success) { setTikTokStatus('connected', username); toast('Connection request sent for @' + username); } else { setTikTokStatus('disconnected'); toast('Error: ' + (d.error || 'Unknown')); } })
+  .then(d => {
+    if (d.success) { setTikTokStatus('connected', username); toast('Connection request sent for @' + username); }
+    else { setTikTokStatus('disconnected'); toast('Error: ' + (d.error || 'Unknown')); }
+  })
   .catch(() => { setTikTokStatus('disconnected'); toast('Connection failed'); });
 }
 
@@ -1080,12 +661,16 @@ function resetTikTok() {
 
 // ── Overlay ───────────────────────────────────────────────────────────────────
 function reloadOverlay() {
-  fetch('/api/overlay/reload', { method: 'POST' }).then(() => toast('Reload signal sent to overlay')).catch(() => toast('Failed to send reload'));
+  fetch('/api/overlay/reload', { method: 'POST' })
+  .then(() => toast('Reload signal sent to overlay'))
+  .catch(() => toast('Failed to send reload'));
 }
 
 function clearPlayers() {
   if (!confirm('Remove all active players from the overlay?')) return;
-  fetch('/api/players/clear', { method: 'POST' }).then(() => toast('Players cleared')).catch(() => toast('Failed to clear players'));
+  fetch('/api/players/clear', { method: 'POST' })
+  .then(() => toast('Players cleared'))
+  .catch(() => toast('Failed to clear players'));
 }
 
 // ── Background ────────────────────────────────────────────────────────────────
@@ -1095,11 +680,13 @@ function uploadBackground() {
   if (!file) { toast('Please choose a background image first'); return; }
   const allowedTypes = ['image/jpeg','image/png','image/gif','image/webp'];
   const allowedExts  = ['.jpg','.jpeg','.png','.gif','.webp'];
-  if (!allowedTypes.includes(file.type) || !allowedExts.some(e => file.name.toLowerCase().endsWith(e))) { toast('Invalid file. Please upload JPG, PNG, GIF, or WEBP only.'); return; }
+  if (!allowedTypes.includes(file.type) || !allowedExts.some(e => file.name.toLowerCase().endsWith(e))) {
+    toast('Invalid file. Please upload JPG, PNG, GIF, or WEBP only.'); return;
+  }
   if (file.size > 10 * 1024 * 1024) { toast('Image is too large. Maximum size is 10MB.'); return; }
   const fd = new FormData();
   fd.append('background', file);
-  toast('Uploading background...');
+  toast('Uploading background…');
   fetch('/api/background/upload', { method: 'POST', body: fd, headers: { Accept: 'application/json' } })
   .then(async r => { const data = JSON.parse(await r.text()); if (!r.ok || !data.success) throw new Error(data.error || 'Upload failed'); return data; })
   .then(() => { toast('Background uploaded!'); document.getElementById('bgStatus').textContent = '✅ Background set: ' + file.name; })
@@ -1110,69 +697,65 @@ function clearBackground() {
   fetch('/api/background/clear', { method: 'POST' })
   .then(r => r.json())
   .then(d => {
-    if (d.success) { toast('Background cleared'); document.getElementById('bgStatus').textContent = 'No background set'; document.getElementById('bgUpload').value = ''; }
-    else toast('Error: ' + (d.error || 'Unknown'));
+    if (d.success) {
+      toast('Background cleared');
+      document.getElementById('bgStatus').textContent = 'No background set';
+      document.getElementById('bgUpload').value = '';
+    } else toast('Error: ' + (d.error || 'Unknown'));
   })
   .catch(() => toast('Clear failed'));
 }
 
-// ── Dev test ──────────────────────────────────────────────────────────────────
-function callTestRoute(url, msg) {
-  fetch(url, { method: 'POST' }).then(r => r.json()).then(d => { if (d.success) toast(msg); else toast('Test failed: ' + (d.error || 'Unknown')); }).catch(() => toast('Test request failed'));
-}
-function spawnTestPlayers() { callTestRoute('/api/test/spawn',  'Test players spawned'); }
-function testNormalAttack()  { callTestRoute('/api/test/attack', 'Test @ attack sent'); }
-function testGiftAttack()    { callTestRoute('/api/test/gift',   'Test gift attack sent'); }
-
-// ── Dev sound ─────────────────────────────────────────────────────────────────
-function sendDevSound(type) {
-  fetch('/api/dev/sound', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type }) })
-  .then(r => r.json()).then(d => { if (d.success) toast(`Dev sound sent: ${type}`); else toast(`Failed: ${d.error || 'Unknown'}`); }).catch(() => toast('Sound command failed'));
-}
-
-function testOverlayAttack() { runOverlayTest('attack'); }
-function testOverlayGift()   { runOverlayTest('gift'); }
-function testOverlayHeal()   { runOverlayTest('heal'); }
-function testOverlayKill()   { runOverlayTest('kill'); }
-
-function runOverlayTest(action) {
-  fetch(`/api/overlay/test/${encodeURIComponent(action)}`, { method: 'POST' })
-    .then(r => r.json())
-    .then(d => { if (d.success) toast(`Overlay test sent: ${action}`); else toast(`Failed: ${d.error || 'Unknown'}`); })
-    .catch(() => toast('Overlay test failed'));
-}
-
+// ── Laser / Shot Style ────────────────────────────────────────────────────────
 function setLaserColor(color) {
   if (!color || typeof color !== 'string') return;
-  fetch('/api/dev/laser-color', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ color }) })
-  .then(r => r.json())
-  .then(d => {
-    if (!d.success) throw new Error(d.error || 'Laser color update failed');
-    toast(`Laser color set to ${d.color}`);
+  fetch('/api/dev/laser-color', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ color }),
   })
+  .then(r => r.json())
+  .then(d => { if (!d.success) throw new Error(d.error || 'Laser color update failed'); toast(`Laser color set to ${d.color}`); })
   .catch(err => toast(err.message));
 }
 
 function setShotStyle(type) {
   if (!type) return;
-  fetch('/api/dev/overlay-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shotType: type }) })
-  .then(r => r.json())
-  .then(d => {
-    if (!d.success) throw new Error(d.error || 'Shot style update failed');
-    toast(`Shot style set to ${type}`);
+  fetch('/api/dev/overlay-settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shotType: type }),
   })
+  .then(r => r.json())
+  .then(d => { if (!d.success) throw new Error(d.error || 'Shot style update failed'); toast(`Shot style set to ${type}`); })
   .catch(err => toast(err.message));
 }
 
 function setShotSpeed(value) {
   const speed = Number(value) || 1;
-  document.getElementById('shotSpeedValue').textContent = `${speed.toFixed(1)}x`;
-  fetch('/api/dev/overlay-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shotSpeed: speed }) })
-  .then(r => r.json())
-  .then(d => {
-    if (!d.success) throw new Error(d.error || 'Shot speed update failed');
-    toast(`Animation speed set to ${speed.toFixed(1)}x`);
+  document.getElementById('shotSpeedValue').textContent = `${speed.toFixed(1)}×`;
+  fetch('/api/dev/overlay-settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shotSpeed: speed }),
   })
+  .then(r => r.json())
+  .then(d => { if (!d.success) throw new Error(d.error || 'Shot speed update failed'); toast(`Animation speed set to ${speed.toFixed(1)}×`); })
+  .catch(err => toast(err.message));
+}
+
+function saveLaserStyle() {
+  const type  = document.getElementById('laserStyleSelect').value;
+  const speed = parseFloat(document.getElementById('shotSpeedRange').value) || 1;
+  const color = document.getElementById('laserColorPicker').value;
+  fetch('/api/dev/overlay-settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shotType: type, shotSpeed: speed }),
+  })
+  .then(r => r.json())
+  .then(d => { if (!d.success) throw new Error(d.error || 'Save failed'); return setLaserColor(color); })
+  .then(() => toast('Laser style saved'))
   .catch(err => toast(err.message));
 }
 
@@ -1184,20 +767,49 @@ function applyShotStyleUI(settings) {
   const speedValue = document.getElementById('shotSpeedValue');
   if (speedRange && typeof settings.shotSpeed === 'number') {
     speedRange.value = settings.shotSpeed;
-    if (speedValue) speedValue.textContent = `${settings.shotSpeed.toFixed(1)}x`;
+    if (speedValue) speedValue.textContent = `${settings.shotSpeed.toFixed(1)}×`;
   }
 }
 
+// ── Dev test buttons ──────────────────────────────────────────────────────────
+function callTestRoute(url, msg) {
+  fetch(url, { method: 'POST' })
+  .then(r => r.json())
+  .then(d => { if (d.success) toast(msg); else toast('Test failed: ' + (d.error || 'Unknown')); })
+  .catch(() => toast('Test request failed'));
+}
+function spawnTestPlayers() { callTestRoute('/api/test/spawn',  'Test players spawned'); }
+function testNormalAttack()  { callTestRoute('/api/test/attack', 'Test @ attack sent'); }
+function testGiftAttack()    { callTestRoute('/api/test/gift',   'Test gift attack sent'); }
+
+function runOverlayTest(action) {
+  fetch(`/api/overlay/test/${encodeURIComponent(action)}`, { method: 'POST' })
+  .then(r => r.json())
+  .then(d => { if (d.success) toast(`Overlay test sent: ${action}`); else toast(`Failed: ${d.error || 'Unknown'}`); })
+  .catch(() => toast('Overlay test failed'));
+}
+function testOverlayAttack() { runOverlayTest('attack'); }
+function testOverlayGift()   { runOverlayTest('gift'); }
+function testOverlayHeal()   { runOverlayTest('heal'); }
+function testOverlayKill()   { runOverlayTest('kill'); }
+
+// ── Overlay sound toggle ──────────────────────────────────────────────────────
 function toggleOverlaySound() {
   const enabled = document.getElementById('developerSoundToggle').checked;
-  fetch('/api/dev/sound-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) })
-  .then(r => r.json()).then(d => { if (d.success) toast(`Overlay sounds ${enabled ? 'enabled' : 'disabled'}`); else toast(`Failed: ${d.error || 'Unknown'}`); }).catch(() => toast('Sound toggle failed'));
+  fetch('/api/dev/sound-settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled }),
+  })
+  .then(r => r.json())
+  .then(d => { if (d.success) toast(`Overlay sounds ${enabled ? 'enabled' : 'disabled'}`); else toast(`Failed: ${d.error || 'Unknown'}`); })
+  .catch(() => toast('Sound toggle failed'));
 }
 
 // ── Audio Manager ─────────────────────────────────────────────────────────────
 const EVENTS = ['attack', 'gift', 'kill', 'respawn', 'heal', 'follow'];
-const EVENT_LABELS  = { attack: '⚔️ Attack', gift: '🎁 Gift', kill: '💀 Kill', respawn: '✨ Respawn', heal: '💚 Heal', follow: '❤️ Follow' };
-const EVENT_BADGES  = { attack: 'badge-attack', gift: 'badge-gift', kill: 'badge-kill', respawn: 'badge-respawn', heal: 'badge-heal', follow: 'badge-follow' };
+const EVENT_LABELS = { attack: '⚔️ Attack', gift: '🎁 Gift', kill: '💀 Kill', respawn: '✚ Respawn', heal: '💚 Heal', follow: '❤️ Follow' };
+const EVENT_BADGES = { attack: 'badge-attack', gift: 'badge-gift', kill: 'badge-kill', respawn: 'badge-respawn', heal: 'badge-heal', follow: 'badge-follow' };
 
 let audioLibraryData = [];
 let audioConfigData  = { attack: null, gift: null, kill: null, respawn: null, heal: null, follow: null };
@@ -1207,16 +819,14 @@ function getPreviewAudio(filename) {
   if (!previewCache[filename]) previewCache[filename] = new Audio(`/audio/${encodeURIComponent(filename)}`);
   return previewCache[filename];
 }
-
 function previewAudio(filename) {
   const audio = getPreviewAudio(filename);
   audio.currentTime = 0;
   audio.play().catch(() => toast('Could not play preview — try clicking the page first to unlock audio'));
 }
-
 function formatBytes(bytes) {
-  if (bytes < 1024)           return bytes + ' B';
-  if (bytes < 1024 * 1024)    return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024)        return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
@@ -1226,16 +836,18 @@ function renderAudioLibrary() {
   [...container.querySelectorAll('.audio-file-row')].forEach(el => el.remove());
   if (!audioLibraryData.length) { empty.style.display = 'block'; return; }
   empty.style.display = 'none';
+  document.getElementById('audioCountBadge').textContent = `${audioLibraryData.length} sound${audioLibraryData.length !== 1 ? 's' : ''} loaded`;
   audioLibraryData.forEach(file => {
     const row = document.createElement('div');
     row.className = 'audio-file-row';
     const safeName = file.originalName.replace(/'/g, "\\'");
     const safeFile = file.filename.replace(/'/g, "\\'");
     row.innerHTML = `
+      <span style="font-size:16px">🎵</span>
       <span class="audio-file-name" title="${file.originalName}">${file.originalName}</span>
       <span class="audio-file-size">${formatBytes(file.size)}</span>
-      <button class="btn-gray btn-sm" onclick="previewAudio('${safeFile}')">▶ Play</button>
-      <button class="btn-red  btn-sm" onclick="deleteAudioFile('${safeFile}', '${safeName}')">🗑</button>
+      <button class="btn btn-icon" title="Preview" onclick="previewAudio('${safeFile}')">▶</button>
+      <button class="btn btn-icon" style="color:var(--red)" title="Delete" onclick="deleteAudioFile('${safeFile}','${safeName}')">✕</button>
     `;
     container.appendChild(row);
   });
@@ -1246,19 +858,21 @@ function renderAssignTable() {
   tbody.innerHTML = '';
   EVENTS.forEach(event => {
     const currentFile = audioConfigData[event];
-    const tr          = document.createElement('tr');
-    const options     = audioLibraryData.map(f =>
+    const tr = document.createElement('tr');
+    const options = audioLibraryData.map(f =>
       `<option value="${f.filename}" ${currentFile === f.filename ? 'selected' : ''}>${f.originalName}</option>`
     ).join('');
     tr.innerHTML = `
-      <td><span class="event-badge ${EVENT_BADGES[event]}">${EVENT_LABELS[event]}</span></td>
-      <td>
-        <div style="display:flex;gap:6px;align-items:center;">
-          <select class="assign-select" onchange="assignAudio('${event}', this.value)">
+      <td style="white-space:nowrap;padding-right:10px">
+        <span class="event-badge ${EVENT_BADGES[event]}">${EVENT_LABELS[event]}</span>
+      </td>
+      <td style="width:100%">
+        <div style="display:flex;gap:6px;align-items:center">
+          <select class="assign-select" onchange="assignAudio('${event}',this.value)">
             <option value="">— None —</option>
             ${options}
           </select>
-          ${currentFile ? `<button class="btn-gray btn-sm" onclick="previewAudio('${currentFile.replace(/'/g,"\\'")}')">▶</button>` : ''}
+          ${currentFile ? `<button class="btn btn-icon" onclick="previewAudio('${currentFile.replace(/'/g,"\\'")}')">▶</button>` : ''}
         </div>
       </td>
     `;
@@ -1287,7 +901,9 @@ function loadAudioData() {
 function uploadAudioFile(file) {
   if (!file) return;
   const allowed = ['.mp3','.m4a','.wav','.ogg','.webm','.aac','.flac'];
-  if (!allowed.some(e => file.name.toLowerCase().endsWith(e))) { toast('Invalid audio format. Use MP3, M4A, WAV, OGG, AAC, FLAC, or WEBM.'); return; }
+  if (!allowed.some(e => file.name.toLowerCase().endsWith(e))) {
+    toast('Invalid audio format. Use MP3, M4A, WAV, OGG, AAC, FLAC, or WEBM.'); return;
+  }
   if (file.size > 20 * 1024 * 1024) { toast('File too large. Maximum size is 20MB.'); return; }
   const fd = new FormData();
   fd.append('audio', file);
@@ -1306,7 +922,8 @@ function uploadAudioFile(file) {
 
 function assignAudio(event, filename) {
   fetch('/api/audio/assign', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ event, filename: filename || '' }),
   })
   .then(r => r.json())
@@ -1328,9 +945,7 @@ function deleteAudioFile(filename, originalName) {
     toast(`🗑 Deleted: ${originalName}`);
     audioLibraryData = audioLibraryData.filter(f => f.filename !== filename);
     if (d.configUpdated) {
-      for (const ev of EVENTS) {
-        if (audioConfigData[ev] === filename) audioConfigData[ev] = null;
-      }
+      for (const ev of EVENTS) { if (audioConfigData[ev] === filename) audioConfigData[ev] = null; }
     }
     renderAudioLibrary();
     renderAssignTable();
@@ -1346,9 +961,9 @@ audioFileInput.addEventListener('change', () => {
   if (audioFileInput.files[0]) uploadAudioFile(audioFileInput.files[0]);
   audioFileInput.value = '';
 });
-dropZone.addEventListener('dragover',  (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', (e) => {
+dropZone.addEventListener('drop', e => {
   e.preventDefault();
   dropZone.classList.remove('dragover');
   const file = e.dataTransfer.files[0];
@@ -1359,8 +974,8 @@ dropZone.addEventListener('drop', (e) => {
 fetch('/api/status')
 .then(r => r.json())
 .then(d => {
-  if (d.username)              document.getElementById('username').value = d.username;
-  if (d.background?.filename)  document.getElementById('bgStatus').textContent = '✅ Background set: ' + d.background.filename;
+  if (d.username)             document.getElementById('username').value = d.username;
+  if (d.background?.filename) document.getElementById('bgStatus').textContent = '✅ Background set: ' + d.background.filename;
   setTikTokStatus(d.connected ? 'connected' : 'disconnected', d.username);
   setOverlayStatus(d.overlayCount || 0);
   updateDevModeUI(!!d.devTestMode);
@@ -1368,10 +983,13 @@ fetch('/api/status')
 })
 .catch(() => {});
 
-fetch('/api/test/status').then(r => r.json()).then(d => { if (d.enabled) document.getElementById('devTestCard').style.display = 'block'; }).catch(() => {});
+fetch('/api/test/status')
+.then(r => r.json())
+.then(d => { if (d.enabled) document.getElementById('devTestCard').style.display = 'block'; })
+.catch(() => {});
 
 loadAudioData();
 </script>
->>>>>>> 9af0a06 (Issue: display access code on /claim; remove email delivery; improve overlay text outline; observability scaffolding)
+
 </body>
 </html>
