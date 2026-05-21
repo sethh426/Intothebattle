@@ -14,8 +14,15 @@
 ```
 #overlay-wrap {
   position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
   background: #02040a;
+}
+
+#overlay-positioner {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  transition: top 0.05s linear;
 }
 
 #overlay-rect {
@@ -52,15 +59,47 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
 /* ── UI / panel layer ── */
 .ui { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
 
-.layout-panel {
-  position: absolute; top: 16px; right: 16px; width: 240px;
-  padding: 14px 16px; border-radius: 16px;
-  background: rgba(6,10,20,0.82); backdrop-filter: blur(16px);
-  border: 1px solid rgba(100,200,255,0.14);
-  box-shadow: 0 0 30px rgba(0,0,0,0.5);
-  pointer-events: auto; transition: 0.25s ease;
+/* Wrapper anchors panel + tab together at top-right */
+.panel-wrapper {
+  position: absolute; top: 16px; right: 0;
+  display: flex; align-items: flex-start;
+  pointer-events: auto;
 }
-.layout-panel.hidden { opacity: 0.15; transform: scale(0.97); pointer-events: none; }
+
+/* The pull-tab — always visible */
+.panel-tab {
+  width: 28px;
+  background: rgba(6,10,20,0.88);
+  border: 1px solid rgba(100,200,255,0.2);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  padding: 10px 0;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  color: #8fd8ff; font-size: 10px; font-weight: 800;
+  letter-spacing: 1px; text-transform: uppercase;
+  writing-mode: vertical-rl; text-orientation: mixed;
+  user-select: none;
+  transition: background 0.2s;
+}
+.panel-tab:hover { background: rgba(20,40,70,0.95); }
+.panel-tab-icon { font-size: 13px; writing-mode: horizontal-tb; }
+
+.layout-panel {
+  width: 240px;
+  padding: 14px 16px; border-radius: 0 0 0 16px;
+  background: rgba(6,10,20,0.92); backdrop-filter: blur(16px);
+  border: 1px solid rgba(100,200,255,0.14);
+  border-right: none;
+  box-shadow: -8px 0 30px rgba(0,0,0,0.5);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
+  transform-origin: right top;
+}
+.layout-panel.hidden {
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
 .layout-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .layout-title { color: #8fd8ff; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
 .layout-btn {
@@ -80,18 +119,21 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
 <body>
 
 <div id="overlay-wrap">
+  <div id="overlay-positioner">
   <div id="overlay-rect">
     <canvas id="canvas"></canvas>
     <!-- damage numbers will be injected here, relative to the rect -->
-  </div>
-</div>
+  </div><!-- /overlay-rect -->
+  </div><!-- /overlay-positioner -->
+</div><!-- /overlay-wrap -->
 
 <div class="ui">
-  <div class="layout-panel" id="layoutPanel">
-    <div class="layout-header">
-      <div class="layout-title">⚡ Layout</div>
-      <button class="layout-btn" id="togglePanel">Hide</button>
+  <div class="panel-wrapper">
+    <div class="panel-tab" id="togglePanel">
+      <span class="panel-tab-icon">⚡</span>
+      LAYOUT
     </div>
+    <div class="layout-panel" id="layoutPanel">
     <div class="control">
       <div class="control-top"><span>Column Gap</span><span id="gapValue">0</span></div>
       <input id="gapControl" type="range" min="0" max="200" value="0" />
@@ -108,8 +150,13 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
       <div class="control-top"><span>Layout Height</span><span id="heightValue">20%</span></div>
       <input id="heightControl" type="range" min="10" max="55" value="20" />
     </div>
-  </div>
-</div>
+    <div class="control">
+      <div class="control-top"><span>Screen Position</span><span id="screenYValue">↕ Centre</span></div>
+      <input id="screenYControl" type="range" min="-50" max="50" value="0" />
+    </div>
+    </div><!-- /layout-panel -->
+  </div><!-- /panel-wrapper -->
+</div><!-- /ui -->
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
 
@@ -146,6 +193,9 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
   const offsetXControl = document.getElementById('offsetXControl');
   const offsetYControl = document.getElementById('offsetYControl');
   const heightControl  = document.getElementById('heightControl');
+  const screenYControl = document.getElementById('screenYControl');
+  const positioner     = document.getElementById('overlay-positioner');
+
   function syncValues() {
     document.getElementById('gapValue').textContent    = layoutGap;
     document.getElementById('offsetXValue').textContent= offsetX;
@@ -160,12 +210,20 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     rectEl.style.height = pct + 'vh';
     resizeCanvas();
   };
+  screenYControl.oninput = () => {
+    const v = +screenYControl.value;   // -50 to +50
+    const topVh = 50 - v;             // 0=top, 50=centre, 100=bottom; inverted so right=up
+    document.getElementById('screenYValue').textContent =
+      v === 0 ? '↕ Centre' : v > 0 ? `▲ ${v}%` : `▼ ${Math.abs(v)}%`;
+    positioner.style.top = topVh + 'vh';
+  };
   syncValues();
 
   const panel = document.getElementById('layoutPanel');
-  document.getElementById('togglePanel').onclick = () => {
+  const tab   = document.getElementById('togglePanel');
+  tab.onclick = () => {
     panel.classList.toggle('hidden');
-    document.getElementById('togglePanel').textContent = panel.classList.contains('hidden') ? 'Show' : 'Hide';
+    tab.querySelector('.panel-tab-icon').textContent = panel.classList.contains('hidden') ? '⚙' : '⚡';
   };
 
   /* ── Audio ── */
