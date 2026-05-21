@@ -7,125 +7,82 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <title>Battle Royale Overlay</title>
-
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #02040a; font-family: 'Segoe UI', sans-serif; }
 
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #02040a;
-      font-family: 'Segoe UI', sans-serif;
-    }
+```
+#overlay-wrap {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: #02040a;
+}
 
-    /* ── Outer wrapper: centres the 80×20 overlay rectangle ── */
-    #overlay-wrap {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #02040a;
-    }
+#overlay-rect {
+  position: relative;
+  width: 80vw; height: 20vh; min-height: 140px;
+  overflow: visible;   /* allow damage numbers to float above */
+  border: 1px solid rgba(140,80,255,0.45);
+  border-radius: 10px;
+  box-shadow: 0 0 48px rgba(140,80,255,0.3), inset 0 0 4px rgba(255,255,255,0.05);
+}
 
-    /* ── The overlay rectangle: 80 vw wide, 20 vh tall ── */
-    #overlay-rect {
-      position: relative;
-      width: 80vw;
-      height: 20vh;
-      min-height: 140px;
-      overflow: hidden;
-      border: 1px solid rgba(140, 80, 255, 0.45);
-      border-radius: 10px;
-      box-shadow: 0 0 48px rgba(140, 80, 255, 0.3), 0 0 4px rgba(255,255,255,0.05) inset;
-    }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: 10px; overflow: hidden; }
 
-    canvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
+/* Damage numbers are children of #overlay-rect so coords match the canvas */
+.damage {
+  position: absolute;
+  font-weight: 900; font-size: clamp(18px,3vw,28px);
+  color: #ff5050;
+  text-shadow: 0 0 16px rgba(255,80,80,0.95), 2px 2px 8px rgba(0,0,0,0.9);
+  animation: floatDamage 0.8s ease-out forwards;
+  pointer-events: none; z-index: 999;
+  transform: translate(-50%, -50%);   /* centre on the given x/y */
+  white-space: nowrap;
+}
+.damage.kill {
+  color: #ffd84f; font-size: clamp(22px,4vw,34px);
+  text-shadow: 0 0 20px rgba(255,216,79,0.95);
+}
+@keyframes floatDamage {
+  0%   { opacity: 1; transform: translate(-50%,-50%) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%,-130%) scale(0.65); }
+}
 
-    /* ── UI layer sits on top of the canvas ── */
-    .ui {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      pointer-events: none;
-    }
+/* ── UI / panel layer ── */
+.ui { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
 
-    /* ── Layout Panel ── */
-    .layout-panel {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      width: 240px;
-      padding: 14px 16px;
-      border-radius: 16px;
-      background: rgba(6, 10, 20, 0.82);
-      backdrop-filter: blur(16px);
-      border: 1px solid rgba(100, 200, 255, 0.14);
-      box-shadow: 0 0 30px rgba(0,0,0,0.5);
-      pointer-events: auto;
-      transition: 0.25s ease;
-    }
-    .layout-panel.hidden { opacity: 0.15; transform: scale(0.97); pointer-events: none; }
+.layout-panel {
+  position: absolute; top: 16px; right: 16px; width: 240px;
+  padding: 14px 16px; border-radius: 16px;
+  background: rgba(6,10,20,0.82); backdrop-filter: blur(16px);
+  border: 1px solid rgba(100,200,255,0.14);
+  box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  pointer-events: auto; transition: 0.25s ease;
+}
+.layout-panel.hidden { opacity: 0.15; transform: scale(0.97); pointer-events: none; }
+.layout-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.layout-title { color: #8fd8ff; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+.layout-btn {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+  color: white; border-radius: 8px; padding: 5px 10px; font-size: 11px; cursor: pointer; transition: 0.2s;
+}
+.layout-btn:hover { background: rgba(255,255,255,0.12); }
+.control { margin-bottom: 13px; }
+.control-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.control-top span { font-size: 11px; color: #cfefff; }
+.control input { width: 100%; appearance: none; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.08); outline: none; }
+.control input::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9); cursor: pointer; }
+```
 
-    .layout-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 14px;
-    }
-    .layout-title {
-      color: #8fd8ff; font-size: 12px; font-weight: 800;
-      letter-spacing: 1px; text-transform: uppercase;
-    }
-    .layout-btn {
-      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-      color: white; border-radius: 8px; padding: 5px 10px; font-size: 11px;
-      cursor: pointer; transition: 0.2s;
-    }
-    .layout-btn:hover { background: rgba(255,255,255,0.12); }
-
-    .control { margin-bottom: 13px; }
-    .control-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
-    .control-top span { font-size: 11px; color: #cfefff; }
-    .control input {
-      width: 100%; appearance: none; height: 5px; border-radius: 999px;
-      background: rgba(255,255,255,0.08); outline: none;
-    }
-    .control input::-webkit-slider-thumb {
-      appearance: none; width: 16px; height: 16px; border-radius: 50%;
-      background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9); cursor: pointer;
-    }
-
-    /* ── Damage Numbers ── */
-    .damage {
-      position: absolute; font-weight: 900; font-size: clamp(20px,4vw,30px);
-      color: #ff5050;
-      text-shadow: 0 0 16px rgba(255,80,80,0.95), 2px 2px 8px rgba(0,0,0,0.9);
-      animation: floatDamage 0.8s ease-out forwards;
-      pointer-events: none; z-index: 999;
-    }
-    .damage.kill {
-      color: #ffd84f; font-size: clamp(26px,5vw,38px);
-      text-shadow: 0 0 20px rgba(255,216,79,0.95);
-    }
-    @keyframes floatDamage {
-      0%   { opacity: 1; transform: translateY(0) scale(1); }
-      100% { opacity: 0; transform: translateY(-55px) scale(0.6); }
-    }
   </style>
-
 </head>
-
 <body>
 
 <div id="overlay-wrap">
   <div id="overlay-rect">
     <canvas id="canvas"></canvas>
+    <!-- damage numbers will be injected here, relative to the rect -->
   </div>
 </div>
 
@@ -135,29 +92,22 @@
       <div class="layout-title">⚡ Layout</div>
       <button class="layout-btn" id="togglePanel">Hide</button>
     </div>
-
-```
-<div class="control">
-  <div class="control-top"><span>Column Gap</span><span id="gapValue">0</span></div>
-  <input id="gapControl" type="range" min="0" max="200" value="0" />
-</div>
-
-<div class="control">
-  <div class="control-top"><span>Horizontal Offset</span><span id="offsetXValue">0</span></div>
-  <input id="offsetXControl" type="range" min="-400" max="400" value="0" />
-</div>
-
-<div class="control">
-  <div class="control-top"><span>Vertical Position</span><span id="offsetYValue">0</span></div>
-  <input id="offsetYControl" type="range" min="-200" max="200" value="0" />
-</div>
-
-<div class="control">
-  <div class="control-top"><span>Layout Height</span><span id="heightValue">20%</span></div>
-  <input id="heightControl" type="range" min="10" max="55" value="20" />
-</div>
-```
-
+    <div class="control">
+      <div class="control-top"><span>Column Gap</span><span id="gapValue">0</span></div>
+      <input id="gapControl" type="range" min="0" max="200" value="0" />
+    </div>
+    <div class="control">
+      <div class="control-top"><span>Horizontal Offset</span><span id="offsetXValue">0</span></div>
+      <input id="offsetXControl" type="range" min="-400" max="400" value="0" />
+    </div>
+    <div class="control">
+      <div class="control-top"><span>Vertical Position</span><span id="offsetYValue">0</span></div>
+      <input id="offsetYControl" type="range" min="-200" max="200" value="0" />
+    </div>
+    <div class="control">
+      <div class="control-top"><span>Layout Height</span><span id="heightValue">20%</span></div>
+      <input id="heightControl" type="range" min="10" max="55" value="20" />
+    </div>
   </div>
 </div>
 
@@ -165,403 +115,262 @@
 
 <script>
 (function () {
+  const canvas = document.getElementById('canvas');
+  const ctx    = canvas.getContext('2d');
+  const rectEl = document.getElementById('overlay-rect');
 
-  /* ── State ── */
-  const canvas  = document.getElementById('canvas');
-  const ctx     = canvas.getContext('2d');
-  const rectEl  = document.getElementById('overlay-rect');
-
-  let players    = {};
-  let attacks    = [];
-  let layoutGap  = 0;
-  let offsetX    = 0;
-  let offsetY    = 0;
-  let layoutScale = 1;
-
+  let players = {}, attacks = [];
+  let layoutGap = 0, offsetX = 0, offsetY = 0, layoutScale = 1;
   let backgroundImg = null;
-  const audioCache  = {};
-  let audioConfig   = {};
-  let soundEnabled  = true;
-
+  const audioCache = {}; let audioConfig = {}, soundEnabled = true;
   const HORDE_ID = '__HORDE__';
   let currentScale = 1;
 
-  /* ── Safe socket (works without a server too) ── */
   let socket;
-  try {
-    socket = io({ transports: ['websocket', 'polling'] });
-  } catch(e) {
-    socket = { on(){}, emit(){} };
-  }
+  try { socket = io({ transports: ['websocket','polling'] }); }
+  catch(e) { socket = { on(){}, emit(){} }; }
 
-  /* ── Canvas resize ── */
+  /* ── Resize ── */
   function resizeCanvas() {
     const dpr = window.devicePixelRatio || 1;
-    const w = rectEl.offsetWidth;
-    const h = rectEl.offsetHeight;
-    canvas.width  = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width  = w + 'px';
-    canvas.style.height = h + 'px';
+    const w = rectEl.offsetWidth, h = rectEl.offsetHeight;
+    canvas.width  = w * dpr; canvas.height = h * dpr;
+    canvas.style.width = w+'px'; canvas.style.height = h+'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
   /* ── Controls ── */
-  const gapControl    = document.getElementById('gapControl');
-  const offsetXControl= document.getElementById('offsetXControl');
-  const offsetYControl= document.getElementById('offsetYControl');
-  const heightControl = document.getElementById('heightControl');
-
-  const gapValue    = document.getElementById('gapValue');
-  const offsetXValue= document.getElementById('offsetXValue');
-  const offsetYValue= document.getElementById('offsetYValue');
-  const heightValue = document.getElementById('heightValue');
-
+  const gapControl = document.getElementById('gapControl');
+  const offsetXControl = document.getElementById('offsetXControl');
+  const offsetYControl = document.getElementById('offsetYControl');
+  const heightControl  = document.getElementById('heightControl');
   function syncValues() {
-    gapValue.textContent    = layoutGap;
-    offsetXValue.textContent= offsetX;
-    offsetYValue.textContent= offsetY;
+    document.getElementById('gapValue').textContent    = layoutGap;
+    document.getElementById('offsetXValue').textContent= offsetX;
+    document.getElementById('offsetYValue').textContent= offsetY;
   }
-
-  gapControl.oninput    = () => { layoutGap = +gapControl.value;    syncValues(); };
-  offsetXControl.oninput= () => { offsetX   = +offsetXControl.value; syncValues(); };
-  offsetYControl.oninput= () => { offsetY   = +offsetYControl.value; syncValues(); };
-
-  heightControl.oninput = () => {
+  gapControl.oninput     = () => { layoutGap = +gapControl.value;     syncValues(); };
+  offsetXControl.oninput = () => { offsetX   = +offsetXControl.value; syncValues(); };
+  offsetYControl.oninput = () => { offsetY   = +offsetYControl.value; syncValues(); };
+  heightControl.oninput  = () => {
     const pct = +heightControl.value;
-    heightValue.textContent = pct + '%';
+    document.getElementById('heightValue').textContent = pct + '%';
     rectEl.style.height = pct + 'vh';
     resizeCanvas();
   };
-
   syncValues();
 
-  const panel      = document.getElementById('layoutPanel');
-  const toggleBtn  = document.getElementById('togglePanel');
-  toggleBtn.onclick = () => {
+  const panel = document.getElementById('layoutPanel');
+  document.getElementById('togglePanel').onclick = () => {
     panel.classList.toggle('hidden');
-    toggleBtn.textContent = panel.classList.contains('hidden') ? 'Show' : 'Hide';
+    document.getElementById('togglePanel').textContent = panel.classList.contains('hidden') ? 'Show' : 'Hide';
   };
 
   /* ── Audio ── */
-  function getAudio(f) {
-    if (!audioCache[f]) { const a = new Audio(`/audio/${f}`); a.preload='auto'; audioCache[f]=a; }
-    return audioCache[f];
-  }
-  function playSound(type) {
-    if (!soundEnabled) return;
-    const f = audioConfig[type]; if (!f) return;
-    try { const a = getAudio(f); a.currentTime=0; a.play().catch(()=>{}); } catch(e){}
-  }
+  function getAudio(f) { if (!audioCache[f]) { const a=new Audio(`/audio/${f}`); a.preload='auto'; audioCache[f]=a; } return audioCache[f]; }
+  function playSound(type) { if (!soundEnabled) return; const f=audioConfig[type]; if (!f) return; try { const a=getAudio(f); a.currentTime=0; a.play().catch(()=>{}); } catch(e){} }
 
   /* ── Helpers ── */
   function topPlayers() {
-    return Object.values(players)
-      .filter(p => p.alive && p.uniqueId !== HORDE_ID)
-      .sort((a,b) => (b.hp||0)-(a.hp||0))
-      .slice(0, 5);
+    return Object.values(players).filter(p=>p.alive && p.uniqueId!==HORDE_ID)
+      .sort((a,b)=>(b.hp||0)-(a.hp||0)).slice(0,5);
   }
-
   function hordePlayer() {
-    const ids = new Set(topPlayers().map(p => p.uniqueId));
-    const rest = Object.values(players).filter(p => p.alive && !ids.has(p.uniqueId));
+    const ids = new Set(topPlayers().map(p=>p.uniqueId));
+    const rest = Object.values(players).filter(p=>p.alive && !ids.has(p.uniqueId));
     if (!rest.length) return null;
-    return {
-      uniqueId: HORDE_ID, nickname: 'THE HORDE',
-      hp: rest.reduce((s,p) => s+(p.hp||0), 0),
-      maxHp: rest.reduce((s,p) => s+(p.maxHp||100), 0),
-      hordeCount: rest.length, alive: true
-    };
+    return { uniqueId:HORDE_ID, nickname:'THE HORDE',
+      hp: rest.reduce((s,p)=>s+(p.hp||0),0),
+      maxHp: rest.reduce((s,p)=>s+(p.maxHp||100),0),
+      hordeCount: rest.length, alive:true };
   }
 
-  /* ── Canvas dimensions shorthand ── */
   function cw() { return rectEl.offsetWidth; }
   function ch() { return rectEl.offsetHeight; }
 
-  /* ──────────────────────────────────────────────
-     LAYOUT:
-     The rectangle is split into two rows:
-       TOP ROW  (60% height) — 5 player cards
-       BOTTOM ROW (40% height) — horde bar
-  ────────────────────────────────────────────── */
-
   function getPlayerPosition(index) {
-    const W = cw(), H = ch();
-    const cellW = (W * 0.82) / 5;
-    const gap   = layoutGap * currentScale;
-    const totalW = cellW * 5 + gap * 4;
-    const startX = (W - totalW) / 2 + offsetX;
-    return {
-      x: startX + index * (cellW + gap) + cellW / 2,
-      y: H * 0.30 + offsetY        // vertical centre of the top 60%
-    };
+    const W=cw(), cellW=(W*0.82)/5, gap=layoutGap*currentScale;
+    const totalW=cellW*5+gap*4, startX=(W-totalW)/2+offsetX;
+    return { x: startX+index*(cellW+gap)+cellW/2, y: ch()*0.30+offsetY };
   }
-
   function getHordePosition() {
-    return {
-      x: cw() / 2 + offsetX,
-      y: ch() * 0.78 + offsetY     // centre of the bottom 40%
-    };
+    return { x: cw()/2+offsetX, y: ch()*0.78+offsetY };
   }
 
   /* ── Background ── */
   function drawBackground() {
-    const W = cw(), H = ch();
+    const W=cw(), H=ch();
     if (backgroundImg) {
-      const scale = Math.max(W/backgroundImg.width, H/backgroundImg.height);
-      const dw = backgroundImg.width*scale, dh = backgroundImg.height*scale;
-      ctx.drawImage(backgroundImg, (W-dw)/2, (H-dh)/2, dw, dh);
+      const scale=Math.max(W/backgroundImg.width,H/backgroundImg.height);
+      ctx.drawImage(backgroundImg,(W-backgroundImg.width*scale)/2,(H-backgroundImg.height*scale)/2,backgroundImg.width*scale,backgroundImg.height*scale);
     } else {
-      // Dark gradient background
-      const g = ctx.createLinearGradient(0,0,0,H);
-      g.addColorStop(0, '#0d1a2e');
-      g.addColorStop(1, '#050b12');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, W, H);
-
-      // Subtle grid
-      ctx.strokeStyle = 'rgba(100,200,255,0.04)';
-      ctx.lineWidth = 1;
-      for (let x=0; x<W; x+=60) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-      for (let y=0; y<H; y+=30) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-
-      // Divider line between players and horde rows
-      const divY = H * 0.60;
-      ctx.strokeStyle = 'rgba(140,80,255,0.25)';
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(0, divY); ctx.lineTo(W, divY); ctx.stroke();
+      const g=ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0,'#0d1a2e'); g.addColorStop(1,'#050b12');
+      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      ctx.strokeStyle='rgba(100,200,255,0.04)'; ctx.lineWidth=1;
+      for(let x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+      for(let y=0;y<H;y+=30){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+      ctx.strokeStyle='rgba(140,80,255,0.25)'; ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(0,H*0.60);ctx.lineTo(W,H*0.60);ctx.stroke();
     }
   }
 
-  /* ── Player Card (compact for the bar layout) ── */
+  /* ── Player Card ── */
   function drawPlayerCard(player, pos, rank) {
-    const hp       = player.hp || 0;
-    const maxHp    = player.maxHp || 100;
-    const hpPct    = Math.max(0, Math.min(1, hp/maxHp));
-    const H        = ch();
-    const rowH     = H * 0.60;            // top row height
-    const cardH    = rowH * 0.84;         // card uses 84% of row height
-    const cardW    = cardH * 0.72;
+    const hp=player.hp||0, maxHp=player.maxHp||100;
+    const hpPct=Math.max(0,Math.min(1,hp/maxHp));
+    const H=ch(), rowH=H*0.60, cardH=rowH*0.84, cardW=cardH*0.72;
+    const cx=pos.x, cy=pos.y;
+    const avatarR=cardH*0.26, avatarY=cy-cardH*0.14;
+    const nameY=avatarY-avatarR-cardH*0.06;
+    const barW=cardW*0.88, barH=Math.max(6,cardH*0.09);
+    const barX=cx-barW/2, barY=avatarY+avatarR+cardH*0.05;
+    const hpTextY=barY+barH+cardH*0.07;
 
-    const cx = pos.x, cy = pos.y;
-    const avatarR  = cardH * 0.26;        // avatar circle radius
-    const avatarY  = cy - cardH * 0.14;
-    const nameY    = avatarY - avatarR - cardH * 0.06;
-    const barW     = cardW * 0.88;
-    const barH     = Math.max(6, cardH * 0.09);
-    const barX     = cx - barW/2;
-    const barY     = avatarY + avatarR + cardH * 0.05;
-    const hpTextY  = barY + barH + cardH * 0.07;
+    const glow=ctx.createRadialGradient(cx,cy,0,cx,cy,avatarR*2.5);
+    glow.addColorStop(0,'rgba(122,252,255,0.18)');glow.addColorStop(1,'rgba(122,252,255,0)');
+    ctx.fillStyle=glow; ctx.beginPath();ctx.arc(cx,cy,avatarR*2.5,0,Math.PI*2);ctx.fill();
 
-    // glow
-    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, avatarR*2.5);
-    glow.addColorStop(0, 'rgba(122,252,255,0.18)');
-    glow.addColorStop(1, 'rgba(122,252,255,0)');
-    ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(cx, cy, avatarR*2.5, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle=rank===1?'rgba(255,210,80,0.7)':'rgba(122,252,255,0.35)';
+    ctx.lineWidth=Math.max(2,avatarR*0.08);
+    ctx.beginPath();ctx.arc(cx,avatarY,avatarR,0,Math.PI*2);ctx.stroke();
+    ctx.fillStyle='rgba(8,18,30,0.92)';
+    ctx.beginPath();ctx.arc(cx,avatarY,avatarR-2,0,Math.PI*2);ctx.fill();
+    ctx.font=`${avatarR*1.3}px Arial`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(player.iconEmoji||'⚔️',cx,avatarY);
 
-    // outer ring
-    ctx.strokeStyle = rank === 1 ? 'rgba(255,210,80,0.7)' : 'rgba(122,252,255,0.35)';
-    ctx.lineWidth = Math.max(2, avatarR * 0.08);
-    ctx.beginPath(); ctx.arc(cx, avatarY, avatarR, 0, Math.PI*2); ctx.stroke();
+    const nameFontSize=Math.max(9,cardH*0.11);
+    ctx.font=`bold ${nameFontSize}px "Segoe UI"`;ctx.textBaseline='middle';
+    const name=(player.nickname||player.uniqueId||'Player').slice(0,13);
+    ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.strokeText(name,cx,nameY);
+    ctx.fillStyle='#fff';ctx.fillText(name,cx,nameY);
 
-    // avatar bg
-    ctx.fillStyle = 'rgba(8,18,30,0.92)';
-    ctx.beginPath(); ctx.arc(cx, avatarY, avatarR - 2, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(barX,barY,barW,barH);
+    const hpGrad=ctx.createLinearGradient(barX,0,barX+barW,0);
+    hpGrad.addColorStop(0,hpPct>0.5?'#2ecc71':hpPct>0.25?'#f39c12':'#ff4d4d');
+    hpGrad.addColorStop(1,'#ffffff55');
+    ctx.fillStyle=hpGrad;ctx.fillRect(barX+1,barY+1,(barW-2)*hpPct,barH-2);
+    ctx.strokeStyle='rgba(122,252,255,0.35)';ctx.lineWidth=1;ctx.strokeRect(barX,barY,barW,barH);
 
-    // emoji
-    ctx.font = `${avatarR * 1.3}px Arial`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(player.iconEmoji || '⚔️', cx, avatarY);
-
-    // name
-    const nameFontSize = Math.max(9, cardH * 0.11);
-    ctx.font = `bold ${nameFontSize}px "Segoe UI"`;
-    ctx.textBaseline = 'middle';
-    const name = (player.nickname || player.uniqueId || 'Player').slice(0, 13);
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
-    ctx.strokeText(name, cx, nameY);
-    ctx.fillStyle = '#fff'; ctx.fillText(name, cx, nameY);
-
-    // health bar
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(barX, barY, barW, barH);
-
-    const hpGrad = ctx.createLinearGradient(barX, 0, barX+barW, 0);
-    hpGrad.addColorStop(0, hpPct>0.5?'#2ecc71':hpPct>0.25?'#f39c12':'#ff4d4d');
-    hpGrad.addColorStop(1, '#ffffff55');
-    ctx.fillStyle = hpGrad;
-    ctx.fillRect(barX+1, barY+1, (barW-2)*hpPct, barH-2);
-
-    ctx.strokeStyle = 'rgba(122,252,255,0.35)';
-    ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH);
-
-    // hp text
-    const hpFontSize = Math.max(8, cardH * 0.085);
-    ctx.font = `${hpFontSize}px "Segoe UI"`;
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
-    ctx.strokeText(`${Math.round(hp)}/${maxHp}`, cx, hpTextY);
-    ctx.fillStyle = '#ccc'; ctx.fillText(`${Math.round(hp)}/${maxHp}`, cx, hpTextY);
+    const hpFontSize=Math.max(8,cardH*0.085);
+    ctx.font=`${hpFontSize}px "Segoe UI"`;
+    ctx.strokeStyle='#000';ctx.lineWidth=2.5;
+    ctx.strokeText(`${Math.round(hp)}/${maxHp}`,cx,hpTextY);
+    ctx.fillStyle='#ccc';ctx.fillText(`${Math.round(hp)}/${maxHp}`,cx,hpTextY);
   }
 
-  /* ── Horde (horizontal compact strip in bottom row) ── */
+  /* ── Horde ── */
   function drawHorde(horde) {
     if (!horde) return;
-    const pos    = getHordePosition();
-    const H      = ch();
-    const rowH   = H * 0.40;
-    const pulse  = 0.5 + Math.sin(Date.now()/350) * 0.5;
-    const skullR = rowH * 0.28;
-    const cx = pos.x, cy = pos.y;
+    const pos=getHordePosition(), H=ch(), rowH=H*0.40;
+    const pulse=0.5+Math.sin(Date.now()/350)*0.5;
+    const skullR=rowH*0.28, cx=pos.x, cy=pos.y;
 
-    // skull aura
-    ctx.beginPath();
-    ctx.arc(cx, cy, skullR + pulse*4, 0, Math.PI*2);
-    ctx.fillStyle = `rgba(255,70,70,${0.08+pulse*0.05})`;
-    ctx.fill();
+    ctx.beginPath();ctx.arc(cx,cy,skullR+pulse*4,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,70,70,${0.08+pulse*0.05})`;ctx.fill();
+    ctx.strokeStyle=`rgba(255,70,70,${0.5+pulse*0.3})`;
+    ctx.lineWidth=Math.max(2,skullR*0.1);
+    ctx.beginPath();ctx.arc(cx,cy,skullR*0.88,0,Math.PI*2);ctx.stroke();
+    ctx.font=`${skullR*1.5}px Arial`;ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('💀',cx,cy);
 
-    ctx.strokeStyle = `rgba(255,70,70,${0.5+pulse*0.3})`;
-    ctx.lineWidth = Math.max(2, skullR*0.1);
-    ctx.beginPath(); ctx.arc(cx, cy, skullR*0.88, 0, Math.PI*2); ctx.stroke();
+    const titleFont=Math.max(10,rowH*0.22);
+    ctx.font=`bold ${titleFont}px "Segoe UI"`;ctx.textAlign='right';ctx.textBaseline='middle';
+    ctx.strokeStyle='#000';ctx.lineWidth=4;
+    ctx.strokeText('⚔ THE HORDE',cx-skullR*1.35,cy-rowH*0.1);
+    ctx.fillStyle='#ff7b7b';ctx.fillText('⚔ THE HORDE',cx-skullR*1.35,cy-rowH*0.1);
+    ctx.font=`${Math.max(8,rowH*0.16)}px "Segoe UI"`;ctx.textAlign='right';
+    ctx.fillStyle='#ffc2c2';ctx.fillText(`${horde.hordeCount} players`,cx-skullR*1.35,cy+rowH*0.14);
 
-    // skull emoji
-    ctx.font = `${skullR*1.5}px Arial`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('💀', cx, cy);
-
-    // "THE HORDE" title (left of skull)
-    const titleFont = Math.max(10, rowH*0.22);
-    ctx.font = `bold ${titleFont}px "Segoe UI"`;
-    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
-    ctx.strokeText('⚔ THE HORDE', cx - skullR*1.35, cy - rowH*0.1);
-    ctx.fillStyle = '#ff7b7b';
-    ctx.fillText('⚔ THE HORDE', cx - skullR*1.35, cy - rowH*0.1);
-
-    // player count
-    const countFont = Math.max(8, rowH*0.16);
-    ctx.font = `${countFont}px "Segoe UI"`;
-    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#ffc2c2';
-    ctx.fillText(`${horde.hordeCount} players`, cx - skullR*1.35, cy + rowH*0.14);
-
-    // HP bar (right of skull)
-    const hpPct  = Math.min(1, horde.hp / Math.max(1, horde.maxHp));
-    const barW   = cw() * 0.28;
-    const barH2  = Math.max(8, rowH*0.16);
-    const barX   = cx + skullR*1.35;
-    const barY   = cy - barH2/2;
-
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(barX, barY, barW, barH2);
-
-    const rg = ctx.createLinearGradient(barX,0,barX+barW,0);
-    rg.addColorStop(0,'#ff2222'); rg.addColorStop(1,'#ff8888');
-    ctx.fillStyle = rg;
-    ctx.fillRect(barX+2, barY+2, (barW-4)*hpPct, barH2-4);
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-    ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH2);
-
-    // hp numbers
-    const hpFont = Math.max(8, rowH*0.14);
-    ctx.font = `${hpFont}px "Segoe UI"`;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.strokeStyle='#000'; ctx.lineWidth=2.5;
-    const hpStr = `${Math.round(horde.hp)} / ${Math.round(horde.maxHp)}`;
-    ctx.strokeText(hpStr, barX, barY + barH2 + rowH*0.12);
-    ctx.fillStyle = '#ffaaaa';
-    ctx.fillText(hpStr, barX, barY + barH2 + rowH*0.12);
+    const hpPct=Math.min(1,horde.hp/Math.max(1,horde.maxHp));
+    const barW=cw()*0.28, barH2=Math.max(8,rowH*0.16);
+    const barX=cx+skullR*1.35, barY=cy-barH2/2;
+    ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(barX,barY,barW,barH2);
+    const rg=ctx.createLinearGradient(barX,0,barX+barW,0);
+    rg.addColorStop(0,'#ff2222');rg.addColorStop(1,'#ff8888');
+    ctx.fillStyle=rg;ctx.fillRect(barX+2,barY+2,(barW-4)*hpPct,barH2-4);
+    ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;ctx.strokeRect(barX,barY,barW,barH2);
+    ctx.font=`${Math.max(8,rowH*0.14)}px "Segoe UI"`;ctx.textAlign='left';ctx.textBaseline='middle';
+    ctx.strokeStyle='#000';ctx.lineWidth=2.5;
+    const hpStr=`${Math.round(horde.hp)} / ${Math.round(horde.maxHp)}`;
+    ctx.strokeText(hpStr,barX,barY+barH2+rowH*0.12);
+    ctx.fillStyle='#ffaaaa';ctx.fillText(hpStr,barX,barY+barH2+rowH*0.12);
   }
 
   /* ── Attack Lines ── */
   class Attack {
-    constructor(from, to, special=false) {
-      this.from=from; this.to=to; this.special=special;
-      this.start=Date.now(); this.duration=550;
-    }
-    update() { return Date.now()-this.start < this.duration; }
-    draw() {
-      const progress = (Date.now()-this.start)/this.duration;
-      const alpha = 1-progress;
-      ctx.save();
-      ctx.globalCompositeOperation='lighter';
-      ctx.strokeStyle = this.special ? `rgba(255,170,80,${alpha})` : `rgba(122,252,255,${alpha})`;
-      ctx.lineWidth = this.special ? 8 : 5;
-      ctx.beginPath(); ctx.moveTo(this.from.x, this.from.y);
-      const tx = this.from.x+(this.to.x-this.from.x)*progress;
-      const ty = this.from.y+(this.to.y-this.from.y)*progress;
-      ctx.lineTo(tx, ty); ctx.stroke();
-      ctx.fillStyle='#fff';
-      ctx.beginPath(); ctx.arc(tx, ty, 5, 0, Math.PI*2); ctx.fill();
+    constructor(from,to,special=false){this.from=from;this.to=to;this.special=special;this.start=Date.now();this.duration=550;}
+    update(){return Date.now()-this.start<this.duration;}
+    draw(){
+      const progress=(Date.now()-this.start)/this.duration, alpha=1-progress;
+      ctx.save();ctx.globalCompositeOperation='lighter';
+      ctx.strokeStyle=this.special?`rgba(255,170,80,${alpha})`:`rgba(122,252,255,${alpha})`;
+      ctx.lineWidth=this.special?8:5;
+      ctx.beginPath();ctx.moveTo(this.from.x,this.from.y);
+      const tx=this.from.x+(this.to.x-this.from.x)*progress;
+      const ty=this.from.y+(this.to.y-this.from.y)*progress;
+      ctx.lineTo(tx,ty);ctx.stroke();
+      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(tx,ty,5,0,Math.PI*2);ctx.fill();
       ctx.restore();
     }
   }
 
-  /* ── Damage Numbers ── */
+  /* ── Damage Numbers — appended to rectEl so coords are rect-relative ── */
   function showDamage(x, y, dmg, kill) {
     const el = document.createElement('div');
     el.className = `damage${kill?' kill':''}`;
     el.textContent = kill ? '💀 KILL!' : `-${dmg}`;
-    el.style.left = x+'px'; el.style.top = y+'px';
-    document.querySelector('.ui').appendChild(el);
-    setTimeout(() => el.remove(), 800);
+    // x/y are canvas logical coords (same coordinate space as rectEl children)
+    el.style.left = x + 'px';
+    el.style.top  = y + 'px';
+    rectEl.appendChild(el);          // ← parent is the rect, not .ui
+    setTimeout(() => el.remove(), 850);
   }
 
   /* ── Socket ── */
-  socket.on('connect', () => socket.emit('register', { type:'overlay' }));
-  socket.on('gameState', state => { players = state || {}; });
-  socket.on('audioConfig', cfg  => { audioConfig = cfg || {}; });
+  socket.on('connect', () => socket.emit('register', {type:'overlay'}));
+  socket.on('gameState', state => { players = state||{}; });
+  socket.on('audioConfig', cfg => { audioConfig = cfg||{}; });
   socket.on('backgroundChanged', ({filename}) => {
-    if (!filename) { backgroundImg=null; return; }
-    const img = new Image();
-    img.onload = () => { backgroundImg=img; };
-    img.src = `/background/${filename}?v=${Date.now()}`;
+    if (!filename){backgroundImg=null;return;}
+    const img=new Image();img.onload=()=>{backgroundImg=img;};img.src=`/background/${filename}?v=${Date.now()}`;
   });
   socket.on('attack', data => {
-    const top = topPlayers();
-    const ai  = top.findIndex(p=>p.uniqueId===data.attacker);
-    const ti  = top.findIndex(p=>p.uniqueId===data.target);
-    const from = ai>=0 ? getPlayerPosition(ai) : getHordePosition();
-    const to   = ti>=0 ? getPlayerPosition(ti) : getHordePosition();
-    attacks.push(new Attack(from, to, data.special));
+    const top=topPlayers();
+    const ai=top.findIndex(p=>p.uniqueId===data.attacker);
+    const ti=top.findIndex(p=>p.uniqueId===data.target);
+    const from=ai>=0?getPlayerPosition(ai):getHordePosition();
+    const to  =ti>=0?getPlayerPosition(ti):getHordePosition();
+    attacks.push(new Attack(from,to,data.special));
     showDamage(to.x, to.y, data.damage, data.killed);
-    playSound(data.special ? 'gift' : 'attack');
+    playSound(data.special?'gift':'attack');
   });
 
-  /* ── Demo data (shows layout without a server) ── */
+  /* ── Demo data ── */
   players = {
-    p1: { uniqueId:'p1', nickname:'Kristiden',     hp:1235, maxHp:1352, alive:true, iconEmoji:'💎' },
-    p2: { uniqueId:'p2', nickname:'Ken Valentine', hp:997,  maxHp:997,  alive:true, iconEmoji:'💎' },
-    p3: { uniqueId:'p3', nickname:'VimiSha | Skin',hp:406,  maxHp:410,  alive:true, iconEmoji:'💎' },
-    p4: { uniqueId:'p4', nickname:'Sonya Barron',  hp:361,  maxHp:369,  alive:true, iconEmoji:'💎' },
-    p5: { uniqueId:'p5', nickname:'Anto | mom lif',hp:351,  maxHp:351,  alive:true, iconEmoji:'💎' },
-    h1: { uniqueId:'h1', nickname:'Member 1', hp:1200, maxHp:1500, alive:true },
-    h2: { uniqueId:'h2', nickname:'Member 2', hp:980,  maxHp:1200, alive:true },
+    p1:{uniqueId:'p1',nickname:'Kristiden',    hp:1235,maxHp:1352,alive:true,iconEmoji:'💎'},
+    p2:{uniqueId:'p2',nickname:'Ken Valentine',hp:997, maxHp:997, alive:true,iconEmoji:'💎'},
+    p3:{uniqueId:'p3',nickname:'VimiSha|Skin', hp:406, maxHp:410, alive:true,iconEmoji:'💎'},
+    p4:{uniqueId:'p4',nickname:'Sonya Barron', hp:361, maxHp:369, alive:true,iconEmoji:'💎'},
+    p5:{uniqueId:'p5',nickname:'Anto|mom lif', hp:351, maxHp:351, alive:true,iconEmoji:'💎'},
+    h1:{uniqueId:'h1',nickname:'Member 1',hp:1200,maxHp:1500,alive:true},
+    h2:{uniqueId:'h2',nickname:'Member 2',hp:980, maxHp:1200,alive:true},
   };
 
   /* ── Main Loop ── */
   function draw() {
     currentScale = Math.min(cw()/1920, ch()/200, 1.4) * layoutScale;
     if (currentScale < 0.05) currentScale = 0.05;
-
-    ctx.clearRect(0, 0, cw(), ch());
+    ctx.clearRect(0,0,cw(),ch());
     drawBackground();
-
-    const top = topPlayers();
-    top.forEach((p,i) => drawPlayerCard(p, getPlayerPosition(i), i+1));
-
+    topPlayers().forEach((p,i) => drawPlayerCard(p, getPlayerPosition(i), i+1));
     drawHorde(hordePlayer());
-
     attacks = attacks.filter(a => { const alive=a.update(); if(alive) a.draw(); return alive; });
     requestAnimationFrame(draw);
   }
-
   draw();
-
 })();
 </script>
 
