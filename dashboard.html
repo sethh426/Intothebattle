@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -82,14 +83,58 @@ button:hover { opacity: 0.85; }
   transition: opacity 0.2s;
 }
 .browse-btn-label span:hover { opacity: 0.85; }
-.links { margin-top: 20px; max-width: 900px; }
-.links a { display: inline-block; margin-right: 16px; color: #4D96FF; text-decoration: none; font-size: 13px; }
-.links a:hover { text-decoration: underline; }
+
+/* ── Quick Links Bar ── */
+.quick-links {
+display: flex; gap: 12px; flex-wrap: wrap;
+max-width: 900px; margin-top: 20px; align-items: center;
+}
+
+.overlay-btn {
+display: inline-flex; align-items: center; gap: 10px;
+padding: 16px 32px;
+background: linear-gradient(135deg, #6BCB77, #4ade80);
+color: #000;
+font-size: 16px; font-weight: 800;
+border-radius: 10px;
+text-decoration: none;
+letter-spacing: 0.5px;
+box-shadow: 0 0 20px rgba(107,203,119,0.45), 0 4px 12px rgba(0,0,0,0.4);
+transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+position: relative;
+overflow: hidden;
+}
+.overlay-btn::before {
+content: ‘’;
+position: absolute; inset: 0;
+background: linear-gradient(120deg, rgba(255,255,255,0.18) 0%, transparent 60%);
+pointer-events: none;
+}
+.overlay-btn:hover {
+transform: translateY(-2px) scale(1.02);
+box-shadow: 0 0 32px rgba(107,203,119,0.65), 0 8px 20px rgba(0,0,0,0.4);
+filter: brightness(1.08);
+}
+.overlay-btn:active { transform: translateY(0) scale(0.99); }
+.overlay-btn-icon { font-size: 20px; }
+
+.link-pill {
+display: inline-flex; align-items: center; gap: 6px;
+padding: 10px 18px;
+background: rgba(255,255,255,0.07);
+border: 1px solid rgba(255,255,255,0.12);
+color: #aaa; font-size: 13px; font-weight: 500;
+border-radius: 8px; text-decoration: none;
+transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.link-pill:hover { background: rgba(255,255,255,0.13); color: #fff; border-color: rgba(255,255,255,0.25); }
+
 #toast { position: fixed; bottom: 20px; right: 20px; background: #333; color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 420px; z-index: 9999; }
 #toast.show { opacity: 1; }
 .dev-note { font-size: 12px; color: #aaa; line-height: 1.5; margin-bottom: 12px; }
 @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } .card.full-width { grid-column: 1; } }
 </style>
+
 </head>
 <body>
 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
@@ -100,6 +145,7 @@ button:hover { opacity: 0.85; }
 <div class="grid">
 
   <!-- TikTok LIVE -->
+
   <div class="card">
     <h2>TikTok LIVE</h2>
     <div class="status-row">
@@ -115,6 +161,7 @@ button:hover { opacity: 0.85; }
   </div>
 
   <!-- Overlay -->
+
   <div class="card">
     <h2>Overlay</h2>
     <div class="status-row">
@@ -132,6 +179,7 @@ button:hover { opacity: 0.85; }
   </div>
 
   <!-- Background -->
+
   <div class="card">
     <h2>Background</h2>
     <label for="bgUpload">Upload Image</label>
@@ -146,6 +194,7 @@ button:hover { opacity: 0.85; }
   </div>
 
   <!-- Developer Mode -->
+
   <div class="card">
     <h2>Developer Mode</h2>
     <div class="status-row">
@@ -158,6 +207,7 @@ button:hover { opacity: 0.85; }
   </div>
 
   <!-- Developer Test Tools (hidden until dev mode on) -->
+
   <div class="card" id="devTestCard" style="display:none;">
     <h2>Developer Test Tools</h2>
     <p class="dev-note">Temporary buttons for testing overlay animations without TikTok LIVE.</p>
@@ -168,7 +218,8 @@ button:hover { opacity: 0.85; }
     </div>
   </div>
 
-  <!-- Developer Sound -->
+  <!-- Laser Style -->
+
   <div class="card">
     <h2>Laser Style</h2>
     <div class="status-row">
@@ -209,65 +260,67 @@ button:hover { opacity: 0.85; }
   </div>
 
   <!-- Audio Manager -->
+
   <div class="card full-width">
     <h2>🔊 Audio Manager</h2>
 
-    <!-- Drop zone (desktop drag & drop) -->
-    <div class="drop-zone" id="dropZone">
-      <div class="drop-zone-icon">🎵</div>
-      <div>Drag &amp; drop an audio file here</div>
-      <div style="font-size:11px;margin-top:4px;color:#666;">MP3 · M4A · WAV · OGG · AAC · FLAC · WEBM &nbsp;·&nbsp; Max 20MB</div>
-      <input type="file" id="audioFileInput" accept=".mp3,.m4a,.wav,.ogg,.webm,.aac,.flac">
+```
+<div class="drop-zone" id="dropZone">
+  <div class="drop-zone-icon">🎵</div>
+  <div>Drag &amp; drop an audio file here</div>
+  <div style="font-size:11px;margin-top:4px;color:#666;">MP3 · M4A · WAV · OGG · AAC · FLAC · WEBM &nbsp;·&nbsp; Max 20MB</div>
+  <input type="file" id="audioFileInput" accept=".mp3,.m4a,.wav,.ogg,.webm,.aac,.flac">
+</div>
+
+<label class="browse-btn-label" for="audioFileInput">
+  <span>📁 Browse &amp; Upload Audio File</span>
+</label>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:4px;">
+  <div>
+    <label style="color:#aaa;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Uploaded Files</label>
+    <div class="audio-library" id="audioLibrary">
+      <div class="audio-empty" id="audioLibraryEmpty">No audio files uploaded yet</div>
     </div>
+  </div>
+  <div>
+    <label style="color:#aaa;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Event Assignments</label>
+    <table class="assign-table">
+      <thead><tr><th>Event</th><th>Sound File</th></tr></thead>
+      <tbody id="assignTableBody"></tbody>
+    </table>
+  </div>
+</div>
+```
 
-    <!-- Explicit browse button — works reliably on iOS Safari -->
-    <label class="browse-btn-label" for="audioFileInput">
-      <span>📁 Browse &amp; Upload Audio File</span>
-    </label>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:4px;">
-
-      <!-- Library -->
-      <div>
-        <label style="color:#aaa;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Uploaded Files</label>
-        <div class="audio-library" id="audioLibrary">
-          <div class="audio-empty" id="audioLibraryEmpty">No audio files uploaded yet</div>
-        </div>
-      </div>
-
-      <!-- Event assignments -->
-      <div>
-        <label style="color:#aaa;font-size:12px;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Event Assignments</label>
-        <table class="assign-table">
-          <thead><tr><th>Event</th><th>Sound File</th></tr></thead>
-          <tbody id="assignTableBody"></tbody>
-        </table>
-      </div>
-    </div>
   </div>
 
 </div><!-- /grid -->
 
-<div class="links">
-  <a href="/overlay.html" target="_blank">↗ Open Overlay</a>
-  <a href="/stats"         target="_blank">↗ Open Stats</a>
-  <a href="/state"         target="_blank">↗ Raw State JSON</a>
+<!-- ── Quick Links Bar ── -->
+
+<div class="quick-links">
+  <a href="/overlay.html" target="_blank" class="overlay-btn">
+    <span class="overlay-btn-icon">🖥️</span>
+    Open Overlay
+    <span style="font-size:13px;opacity:0.7;margin-left:2px;">↗</span>
+  </a>
+  <a href="/stats"  target="_blank" class="link-pill">↗ Stats</a>
+  <a href="/state"  target="_blank" class="link-pill">↗ Raw State JSON</a>
 </div>
 
 <div id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
-<script>
-// ── Socket ────────────────────────────────────────────────────────────────────
-const socket = io();
 
+<script>
+const socket = io();
 socket.on('overlayCount', setOverlayStatus);
 socket.on('gameState', (state) => {
   const alive = Object.values(state || {}).filter(p => p.alive).length;
   document.getElementById('player-count').textContent = alive;
 });
 
-// ── Toast ─────────────────────────────────────────────────────────────────────
 function toast(msg) {
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -275,78 +328,56 @@ function toast(msg) {
   setTimeout(() => el.classList.remove('show'), 3500);
 }
 
-// ── Status helpers ────────────────────────────────────────────────────────────
 function setOverlayStatus(count) {
   const dot   = document.getElementById('overlay-dot');
   const label = document.getElementById('overlay-label');
-  if (count > 0) {
-    dot.className  = 'dot green';
-    label.textContent = `Connected (${count} source${count > 1 ? 's' : ''})`;
-  } else {
-    dot.className  = 'dot red';
-    label.textContent = 'No overlay connected';
-  }
+  if (count > 0) { dot.className = 'dot green'; label.textContent = `Connected (${count} source${count > 1 ? 's' : ''})`; }
+  else           { dot.className = 'dot red';   label.textContent = 'No overlay connected'; }
 }
 
 function setTikTokStatus(state, username) {
   const dot   = document.getElementById('tiktok-dot');
   const label = document.getElementById('tiktok-label');
-  if      (state === 'connected')   { dot.className = 'dot green';  label.textContent = `Connected to @${username}`; }
-  else if (state === 'connecting')  { dot.className = 'dot yellow'; label.textContent = 'Connecting...'; }
-  else                              { dot.className = 'dot red';    label.textContent = 'Disconnected'; }
+  if      (state === 'connected')  { dot.className = 'dot green';  label.textContent = `Connected to @${username}`; }
+  else if (state === 'connecting') { dot.className = 'dot yellow'; label.textContent = 'Connecting...'; }
+  else                             { dot.className = 'dot red';    label.textContent = 'Disconnected'; }
 }
 
-// ── Dev mode ──────────────────────────────────────────────────────────────────
 let devModeEnabled = false;
-
 function updateDevModeUI(enabled) {
   devModeEnabled = enabled;
-  document.getElementById('devModeLabel').textContent      = enabled ? 'Developer mode is ON'  : 'Developer mode is OFF';
-  document.getElementById('devModeToggleBtn').textContent  = enabled ? 'Disable Dev Mode'       : 'Enable Dev Mode';
-  document.getElementById('devTestCard').style.display     = enabled ? 'block'                  : 'none';
+  document.getElementById('devModeLabel').textContent     = enabled ? 'Developer mode is ON'  : 'Developer mode is OFF';
+  document.getElementById('devModeToggleBtn').textContent = enabled ? 'Disable Dev Mode'       : 'Enable Dev Mode';
+  document.getElementById('devTestCard').style.display    = enabled ? 'block'                  : 'none';
 }
-
 function toggleDevMode() {
-  fetch('/api/dev/test-mode', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ enabled: !devModeEnabled }),
-  })
+  fetch('/api/dev/test-mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: !devModeEnabled }) })
   .then(r => r.json())
   .then(d => { if (d.success) { updateDevModeUI(d.enabled); toast(`Developer mode ${d.enabled ? 'enabled' : 'disabled'}`); } else toast(`Failed: ${d.error || 'Unknown'}`); })
   .catch(() => toast('Dev mode toggle failed'));
 }
 
-// ── TikTok ────────────────────────────────────────────────────────────────────
 function connect() {
   const username = document.getElementById('username').value.trim().replace(/^@/, '');
   if (!username) { toast('Enter a username first'); return; }
   setTikTokStatus('connecting', username);
-  fetch('/api/connect', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username }),
-  })
+  fetch('/api/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }) })
   .then(r => r.json())
   .then(d => { if (d.success) { setTikTokStatus('connected', username); toast('Connection request sent for @' + username); } else { setTikTokStatus('disconnected'); toast('Error: ' + (d.error || 'Unknown')); } })
   .catch(() => { setTikTokStatus('disconnected'); toast('Connection failed'); });
 }
-
 function resetTikTok() {
-  fetch('/api/reset', { method: 'POST' })
-  .then(() => { setTikTokStatus('disconnected'); toast('TikTok disconnected'); })
-  .catch(() => toast('Reset failed'));
+  fetch('/api/reset', { method: 'POST' }).then(() => { setTikTokStatus('disconnected'); toast('TikTok disconnected'); }).catch(() => toast('Reset failed'));
 }
 
-// ── Overlay ───────────────────────────────────────────────────────────────────
 function reloadOverlay() {
   fetch('/api/overlay/reload', { method: 'POST' }).then(() => toast('Reload signal sent to overlay')).catch(() => toast('Failed to send reload'));
 }
-
 function clearPlayers() {
   if (!confirm('Remove all active players from the overlay?')) return;
   fetch('/api/players/clear', { method: 'POST' }).then(() => toast('Players cleared')).catch(() => toast('Failed to clear players'));
 }
 
-// ── Background ────────────────────────────────────────────────────────────────
 function uploadBackground() {
   const input = document.getElementById('bgUpload');
   const file  = input.files[0];
@@ -363,18 +394,12 @@ function uploadBackground() {
   .then(() => { toast('Background uploaded!'); document.getElementById('bgStatus').textContent = '✅ Background set: ' + file.name; })
   .catch(err => toast('Upload failed: ' + err.message));
 }
-
 function clearBackground() {
-  fetch('/api/background/clear', { method: 'POST' })
-  .then(r => r.json())
-  .then(d => {
-    if (d.success) { toast('Background cleared'); document.getElementById('bgStatus').textContent = 'No background set'; document.getElementById('bgUpload').value = ''; }
-    else toast('Error: ' + (d.error || 'Unknown'));
-  })
+  fetch('/api/background/clear', { method: 'POST' }).then(r => r.json())
+  .then(d => { if (d.success) { toast('Background cleared'); document.getElementById('bgStatus').textContent = 'No background set'; document.getElementById('bgUpload').value = ''; } else toast('Error: ' + (d.error || 'Unknown')); })
   .catch(() => toast('Clear failed'));
 }
 
-// ── Dev test ──────────────────────────────────────────────────────────────────
 function callTestRoute(url, msg) {
   fetch(url, { method: 'POST' }).then(r => r.json()).then(d => { if (d.success) toast(msg); else toast('Test failed: ' + (d.error || 'Unknown')); }).catch(() => toast('Test request failed'));
 }
@@ -382,90 +407,60 @@ function spawnTestPlayers() { callTestRoute('/api/test/spawn',  'Test players sp
 function testNormalAttack()  { callTestRoute('/api/test/attack', 'Test @ attack sent'); }
 function testGiftAttack()    { callTestRoute('/api/test/gift',   'Test gift attack sent'); }
 
-// ── Dev sound ─────────────────────────────────────────────────────────────────
 function sendDevSound(type) {
   fetch('/api/dev/sound', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type }) })
   .then(r => r.json()).then(d => { if (d.success) toast(`Dev sound sent: ${type}`); else toast(`Failed: ${d.error || 'Unknown'}`); }).catch(() => toast('Sound command failed'));
 }
-
 function setLaserColor(color) {
   if (!color || typeof color !== 'string') return;
   fetch('/api/dev/laser-color', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ color }) })
-  .then(r => r.json())
-  .then(d => {
-    if (!d.success) throw new Error(d.error || 'Laser color update failed');
-    toast(`Laser color set to ${d.color}`);
-  })
-  .catch(err => toast(err.message));
+  .then(r => r.json()).then(d => { if (!d.success) throw new Error(d.error || 'Laser color update failed'); toast(`Laser color set to ${d.color}`); }).catch(err => toast(err.message));
 }
-
 function setShotStyle(type) {
   if (!type) return;
   fetch('/api/dev/overlay-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shotType: type }) })
-  .then(r => r.json())
-  .then(d => {
-    if (!d.success) throw new Error(d.error || 'Shot style update failed');
-    toast(`Shot style set to ${type}`);
-  })
-  .catch(err => toast(err.message));
+  .then(r => r.json()).then(d => { if (!d.success) throw new Error(d.error || 'Shot style update failed'); toast(`Shot style set to ${type}`); }).catch(err => toast(err.message));
 }
-
 function setShotSpeed(value) {
   const speed = Number(value) || 1;
   document.getElementById('shotSpeedValue').textContent = `${speed.toFixed(1)}x`;
   fetch('/api/dev/overlay-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shotSpeed: speed }) })
-  .then(r => r.json())
-  .then(d => {
-    if (!d.success) throw new Error(d.error || 'Shot speed update failed');
-    toast(`Animation speed set to ${speed.toFixed(1)}x`);
-  })
-  .catch(err => toast(err.message));
+  .then(r => r.json()).then(d => { if (!d.success) throw new Error(d.error || 'Shot speed update failed'); toast(`Animation speed set to ${speed.toFixed(1)}x`); }).catch(err => toast(err.message));
 }
-
 function applyShotStyleUI(settings) {
   if (!settings) return;
   const styleSelect = document.getElementById('laserStyleSelect');
   if (styleSelect && settings.shotType) styleSelect.value = settings.shotType;
   const speedRange = document.getElementById('shotSpeedRange');
   const speedValue = document.getElementById('shotSpeedValue');
-  if (speedRange && typeof settings.shotSpeed === 'number') {
-    speedRange.value = settings.shotSpeed;
-    if (speedValue) speedValue.textContent = `${settings.shotSpeed.toFixed(1)}x`;
-  }
+  if (speedRange && typeof settings.shotSpeed === 'number') { speedRange.value = settings.shotSpeed; if (speedValue) speedValue.textContent = `${settings.shotSpeed.toFixed(1)}x`; }
 }
-
 function toggleOverlaySound() {
   const enabled = document.getElementById('developerSoundToggle').checked;
   fetch('/api/dev/sound-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) })
   .then(r => r.json()).then(d => { if (d.success) toast(`Overlay sounds ${enabled ? 'enabled' : 'disabled'}`); else toast(`Failed: ${d.error || 'Unknown'}`); }).catch(() => toast('Sound toggle failed'));
 }
 
-// ── Audio Manager ─────────────────────────────────────────────────────────────
 const EVENTS = ['attack', 'gift', 'kill', 'respawn', 'heal', 'follow'];
-const EVENT_LABELS  = { attack: '⚔️ Attack', gift: '🎁 Gift', kill: '💀 Kill', respawn: '✨ Respawn', heal: '💚 Heal', follow: '❤️ Follow' };
-const EVENT_BADGES  = { attack: 'badge-attack', gift: 'badge-gift', kill: 'badge-kill', respawn: 'badge-respawn', heal: 'badge-heal', follow: 'badge-follow' };
-
+const EVENT_LABELS = { attack: '⚔️ Attack', gift: '🎁 Gift', kill: '💀 Kill', respawn: '✨ Respawn', heal: '💚 Heal', follow: '❤️ Follow' };
+const EVENT_BADGES = { attack: 'badge-attack', gift: 'badge-gift', kill: 'badge-kill', respawn: 'badge-respawn', heal: 'badge-heal', follow: 'badge-follow' };
 let audioLibraryData = [];
 let audioConfigData  = { attack: null, gift: null, kill: null, respawn: null, heal: null, follow: null };
-
 const previewCache = {};
 function getPreviewAudio(filename) {
   if (!previewCache[filename]) previewCache[filename] = new Audio(`/audio/${encodeURIComponent(filename)}`);
   return previewCache[filename];
 }
-
 function previewAudio(filename) {
   const audio = getPreviewAudio(filename);
   audio.currentTime = 0;
   audio.play().catch(() => toast('Could not play preview — try clicking the page first to unlock audio'));
 }
-
 function formatBytes(bytes) {
-  if (bytes < 1024)           return bytes + ' B';
-  if (bytes < 1024 * 1024)    return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
-
 function renderAudioLibrary() {
   const container = document.getElementById('audioLibrary');
   const empty     = document.getElementById('audioLibraryEmpty');
@@ -486,16 +481,13 @@ function renderAudioLibrary() {
     container.appendChild(row);
   });
 }
-
 function renderAssignTable() {
   const tbody = document.getElementById('assignTableBody');
   tbody.innerHTML = '';
   EVENTS.forEach(event => {
     const currentFile = audioConfigData[event];
-    const tr          = document.createElement('tr');
-    const options     = audioLibraryData.map(f =>
-      `<option value="${f.filename}" ${currentFile === f.filename ? 'selected' : ''}>${f.originalName}</option>`
-    ).join('');
+    const tr = document.createElement('tr');
+    const options = audioLibraryData.map(f => `<option value="${f.filename}" ${currentFile === f.filename ? 'selected' : ''}>${f.originalName}</option>`).join('');
     tr.innerHTML = `
       <td><span class="event-badge ${EVENT_BADGES[event]}">${EVENT_LABELS[event]}</span></td>
       <td>
@@ -511,10 +503,8 @@ function renderAssignTable() {
     tbody.appendChild(tr);
   });
 }
-
 function loadAudioData() {
-  fetch('/api/audio')
-  .then(r => r.json())
+  fetch('/api/audio').then(r => r.json())
   .then(d => {
     if (!d.success) { toast('Failed to load audio data'); return; }
     audioLibraryData = d.library || [];
@@ -529,7 +519,6 @@ function loadAudioData() {
   })
   .catch(() => toast('Could not reach /api/audio'));
 }
-
 function uploadAudioFile(file) {
   if (!file) return;
   const allowed = ['.mp3','.m4a','.wav','.ogg','.webm','.aac','.flac'];
@@ -538,75 +527,40 @@ function uploadAudioFile(file) {
   const fd = new FormData();
   fd.append('audio', file);
   toast(`Uploading ${file.name}…`);
-  fetch('/api/audio/upload', { method: 'POST', body: fd })
-  .then(r => r.json())
-  .then(d => {
-    if (!d.success) throw new Error(d.error || 'Upload failed');
-    toast(`✅ Uploaded: ${file.name}`);
-    audioLibraryData.push(d.file);
-    renderAudioLibrary();
-    renderAssignTable();
-  })
+  fetch('/api/audio/upload', { method: 'POST', body: fd }).then(r => r.json())
+  .then(d => { if (!d.success) throw new Error(d.error || 'Upload failed'); toast(`✅ Uploaded: ${file.name}`); audioLibraryData.push(d.file); renderAudioLibrary(); renderAssignTable(); })
   .catch(err => toast('Upload failed: ' + err.message));
 }
-
 function assignAudio(event, filename) {
-  fetch('/api/audio/assign', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ event, filename: filename || '' }),
-  })
+  fetch('/api/audio/assign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event, filename: filename || '' }) })
   .then(r => r.json())
-  .then(d => {
-    if (!d.success) throw new Error(d.error || 'Assign failed');
-    audioConfigData[event] = filename || null;
-    renderAssignTable();
-    toast(filename ? `✅ Assigned to ${event}` : `Cleared ${event} sound`);
-  })
+  .then(d => { if (!d.success) throw new Error(d.error || 'Assign failed'); audioConfigData[event] = filename || null; renderAssignTable(); toast(filename ? `✅ Assigned to ${event}` : `Cleared ${event} sound`); })
   .catch(err => toast('Assign failed: ' + err.message));
 }
-
 function deleteAudioFile(filename, originalName) {
   if (!confirm(`Delete "${originalName}"? This will also unassign it from any event.`)) return;
-  fetch(`/api/audio/delete/${encodeURIComponent(filename)}`, { method: 'DELETE' })
-  .then(r => r.json())
+  fetch(`/api/audio/delete/${encodeURIComponent(filename)}`, { method: 'DELETE' }).then(r => r.json())
   .then(d => {
     if (!d.success) throw new Error(d.error || 'Delete failed');
     toast(`🗑 Deleted: ${originalName}`);
     audioLibraryData = audioLibraryData.filter(f => f.filename !== filename);
-    if (d.configUpdated) {
-      for (const ev of EVENTS) {
-        if (audioConfigData[ev] === filename) audioConfigData[ev] = null;
-      }
-    }
-    renderAudioLibrary();
-    renderAssignTable();
+    if (d.configUpdated) { for (const ev of EVENTS) { if (audioConfigData[ev] === filename) audioConfigData[ev] = null; } }
+    renderAudioLibrary(); renderAssignTable();
   })
   .catch(err => toast('Delete failed: ' + err.message));
 }
 
-// ── Drop zone wiring ──────────────────────────────────────────────────────────
 const dropZone       = document.getElementById('dropZone');
 const audioFileInput = document.getElementById('audioFileInput');
-
-audioFileInput.addEventListener('change', () => {
-  if (audioFileInput.files[0]) uploadAudioFile(audioFileInput.files[0]);
-  audioFileInput.value = '';
-});
+audioFileInput.addEventListener('change', () => { if (audioFileInput.files[0]) uploadAudioFile(audioFileInput.files[0]); audioFileInput.value = ''; });
 dropZone.addEventListener('dragover',  (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', (e) => {
-  e.preventDefault();
-  dropZone.classList.remove('dragover');
-  const file = e.dataTransfer.files[0];
-  if (file) uploadAudioFile(file);
-});
+dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); const file = e.dataTransfer.files[0]; if (file) uploadAudioFile(file); });
 
-// ── Initial load ──────────────────────────────────────────────────────────────
-fetch('/api/status')
-.then(r => r.json())
+fetch('/api/status').then(r => r.json())
 .then(d => {
-  if (d.username)              document.getElementById('username').value = d.username;
-  if (d.background?.filename)  document.getElementById('bgStatus').textContent = '✅ Background set: ' + d.background.filename;
+  if (d.username)             document.getElementById('username').value = d.username;
+  if (d.background?.filename) document.getElementById('bgStatus').textContent = '✅ Background set: ' + d.background.filename;
   setTikTokStatus(d.connected ? 'connected' : 'disconnected', d.username);
   setOverlayStatus(d.overlayCount || 0);
   updateDevModeUI(!!d.devTestMode);
@@ -615,8 +569,8 @@ fetch('/api/status')
 .catch(() => {});
 
 fetch('/api/test/status').then(r => r.json()).then(d => { if (d.enabled) document.getElementById('devTestCard').style.display = 'block'; }).catch(() => {});
-
 loadAudioData();
 </script>
+
 </body>
 </html>
