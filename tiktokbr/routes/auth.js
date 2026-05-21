@@ -26,7 +26,10 @@ const COOKIE_OPTIONS = {
 };
 
 function escapeHtml(value) {
-  return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 function renderLoginPage({ error = '', message = '' } = {}) {
@@ -35,38 +38,172 @@ function renderLoginPage({ error = '', message = '' } = {}) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login - TIKTOKBR</title>
+  <title>Login - PvP Stream Commander</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    body { background: #040714; color: #f5f7ff; font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-    .container { width: min(420px, 90vw); padding: 24px; background: rgba(10,16,36,0.95); border: 1px solid rgba(100, 180, 255, 0.2); border-radius: 14px; }
-    h1 { margin-bottom: 18px; font-size: 22px; }
-    label { display: block; margin-top: 12px; font-size: 13px; color: #a8b8ff; }
-    input[type=text], input[type=password] { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: #fff; }
-    button { margin-top: 18px; width: 100%; padding: 12px; border: none; border-radius: 10px; background: #4b90ff; color: white; font-weight: 700; cursor: pointer; }
-    .links { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
-    .links a { color: #8fb8ff; font-size: 13px; text-decoration: none; }
-    .notice { margin-top: 16px; padding: 12px; border-radius: 10px; background: rgba(255,255,255,0.05); }
-    .error { color: #ff9fa8; }
-    .success { color: #b9ffb0; }
+    :root {
+      --green: #6BCB77;
+      --blue:  #4D96FF;
+      --bg:    #050d1a;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: #e8eef8;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(77,150,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(77,150,255,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      animation: gridShift 20s linear infinite;
+    }
+    @keyframes gridShift { from { background-position: 0 0; } to { background-position: 48px 48px; } }
+    .orb {
+      position: fixed; border-radius: 50%;
+      filter: blur(90px); pointer-events: none; z-index: 0;
+    }
+    .orb-1 { width: 420px; height: 420px; background: rgba(77,150,255,0.1);  top: -140px; right: -80px; }
+    .orb-2 { width: 360px; height: 360px; background: rgba(107,203,119,0.07); bottom: -80px; left: -100px; }
+    .card {
+      position: relative; z-index: 1;
+      width: min(420px, 100%);
+      background: rgba(8,18,40,0.92);
+      border: 1px solid rgba(77,150,255,0.15);
+      border-radius: 20px;
+      padding: 44px 36px;
+      box-shadow: 0 0 60px rgba(77,150,255,0.08), 0 24px 48px rgba(0,0,0,0.5);
+      backdrop-filter: blur(20px);
+      animation: fadeUp 0.5s ease both;
+    }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(18px); } to { opacity:1; transform: translateY(0); } }
+    .card-header { text-align: center; margin-bottom: 32px; }
+    .card-icon { font-size: 40px; margin-bottom: 14px; display: block; }
+    .card-title {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 30px; font-weight: 700; color: #fff; letter-spacing: 0.5px;
+    }
+    .card-sub { font-size: 14px; color: #5a7a9e; margin-top: 6px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label {
+      display: block; font-size: 11px; font-weight: 600;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: #5a7a9e; margin-bottom: 8px;
+    }
+    input[type=text], input[type=password] {
+      width: 100%; padding: 14px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(77,150,255,0.2);
+      border-radius: 10px;
+      color: #e8eef8; font-size: 16px; font-family: 'DM Sans', sans-serif;
+      letter-spacing: 2px; outline: none;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    input[type=text]:focus, input[type=password]:focus {
+      border-color: var(--blue);
+      background: rgba(77,150,255,0.06);
+      box-shadow: 0 0 0 3px rgba(77,150,255,0.1);
+    }
+    input::placeholder { color: rgba(255,255,255,0.18); letter-spacing: 0; }
+    .btn-enter {
+      width: 100%; padding: 15px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--blue), #6ab0ff);
+      border: none; color: #fff;
+      font-size: 16px; font-weight: 700; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; letter-spacing: 0.5px;
+      box-shadow: 0 0 24px rgba(77,150,255,0.3);
+      transition: filter 0.15s, transform 0.15s, box-shadow 0.15s;
+      position: relative; overflow: hidden;
+    }
+    .btn-enter::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(120deg, rgba(255,255,255,0.15), transparent 60%);
+      pointer-events: none;
+    }
+    .btn-enter:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 0 36px rgba(77,150,255,0.45); }
+    .btn-enter:active { transform: translateY(0); }
+    .links { margin-top: 24px; display: flex; flex-direction: column; gap: 10px; }
+    .link-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02);
+      text-decoration: none; color: #7a9abf;
+      font-size: 14px; font-weight: 500;
+      transition: background 0.2s, border-color 0.2s, color 0.2s;
+    }
+    .link-item:hover { background: rgba(77,150,255,0.08); border-color: rgba(77,150,255,0.25); color: #e8eef8; }
+    .link-item .link-icon { font-size: 16px; flex-shrink: 0; }
+    .link-item .link-arrow { margin-left: auto; opacity: 0.4; font-size: 12px; }
+    .link-item.highlight {
+      border-color: rgba(107,203,119,0.25);
+      background: rgba(107,203,119,0.05);
+      color: #9adba4;
+    }
+    .link-item.highlight:hover { background: rgba(107,203,119,0.1); border-color: rgba(107,203,119,0.4); color: var(--green); }
+    .notice {
+      padding: 12px 14px; border-radius: 10px;
+      font-size: 13px; margin-bottom: 20px;
+    }
+    .error  { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.25); color: #ff8f8f; }
+    .success { background: rgba(107,203,119,0.1); border: 1px solid rgba(107,203,119,0.25); color: #9adba4; }
+    .page-footer {
+      position: relative; z-index: 1;
+      margin-top: 24px; text-align: center;
+      font-size: 12px; color: #2a4060;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Enter access code</h1>
-    ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-icon">🎮</span>
+      <div class="card-title">PvP Stream Commander</div>
+      <div class="card-sub">Enter your access code to get started</div>
+    </div>
+    ${error   ? `<div class="notice error">${escapeHtml(error)}</div>`     : ''}
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     <form method="POST" action="/login">
-      <label for="code">Access code</label>
-      <input id="code" name="code" type="text" autocomplete="off" required />
-      <input id="fp" name="fingerprint" type="hidden" />
-      <button type="submit">Enter</button>
+      <div class="form-group">
+        <label for="code">Access Code</label>
+        <input id="code" name="code" type="text" autocomplete="off" required placeholder="XXXX-XXXX-XXXX" />
+        <input id="fp" name="fingerprint" type="hidden" />
+      </div>
+      <button type="submit" class="btn-enter">Enter →</button>
     </form>
     <div class="links">
-      <a href="${PAYPAL_LINK}" target="_blank" rel="noopener">Don't have a code? Subscribe here</a>
-      <a href="/my-code">Already subscribed? Get your code here</a>
-      <a href="/redeem-promo">Have a promo code?</a>
+      <a href="${PAYPAL_LINK}" target="_blank" rel="noopener" class="link-item highlight">
+        <span class="link-icon">💳</span>
+        Purchase for only $8.50/month
+        <span class="link-arrow">↗</span>
+      </a>
+      <a href="/my-code" class="link-item">
+        <span class="link-icon">📬</span>
+        Already subscribed? Get your code here
+        <span class="link-arrow">→</span>
+      </a>
+      <a href="/redeem-promo" class="link-item">
+        <span class="link-icon">🎟️</span>
+        Have a promo code?
+        <span class="link-arrow">→</span>
+      </a>
     </div>
   </div>
+  <div class="page-footer">PvP Stream Commander &nbsp;·&nbsp; Beta</div>
   <script src="https://cdn.jsdelivr.net/npm/fingerprintjs2@2/dist/fingerprint2.min.js"></script>
   <script>
     function setFingerprint(fp) {
@@ -76,7 +213,7 @@ function renderLoginPage({ error = '', message = '' } = {}) {
     }
     if (window.Fingerprint2) {
       Fingerprint2.get(function(components) {
-        var values = components.map(function(component) { return component.value; });
+        var values = components.map(function(c) { return c.value; });
         setFingerprint(Fingerprint2.x64hash128(values.join(''), 31));
       });
     } else {
@@ -95,45 +232,138 @@ function renderPromoPage({ error = '', message = '', code = '' } = {}) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Redeem Promo - TIKTOKBR</title>
+  <title>Redeem Promo - PvP Stream Commander</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    body { background: #050a17; color: #eef2ff; font-family: Arial, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-    .container { width: min(520px, 92vw); padding: 24px; background: rgba(12, 18, 38, 0.96); border-radius: 14px; border: 1px solid rgba(115, 160, 255, 0.2); }
-    h1 { margin-bottom: 18px; font-size: 22px; }
-    label { display: block; margin-top: 12px; font-size: 13px; color: #a8b8ff; }
-    input[type=text] { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: #fff; }
-    button { margin-top: 18px; width: 100%; padding: 12px; border: none; border-radius: 10px; background: #4b90ff; color: white; font-weight: 700; cursor: pointer; }
-    .notice { margin-top: 16px; padding: 12px; border-radius: 10px; background: rgba(255,255,255,0.05); }
-    .error { color: #ff9fa8; }
-    .success { color: #b9ffb0; }
-    .code-box { margin-top: 18px; padding: 16px; border-radius: 12px; background: rgba(75,144,255,0.16); font-size: 18px; font-weight: 700; letter-spacing: 0.08em; text-align: center; }
-    a { color: #8fb8ff; text-decoration: none; }
+    :root { --green: #6BCB77; --blue: #4D96FF; --bg: #050d1a; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg); color: #e8eef8;
+      min-height: 100vh; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px; position: relative; overflow: hidden;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(77,150,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(77,150,255,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      animation: gridShift 20s linear infinite;
+    }
+    @keyframes gridShift { from { background-position: 0 0; } to { background-position: 48px 48px; } }
+    .orb { position: fixed; border-radius: 50%; filter: blur(90px); pointer-events: none; z-index: 0; }
+    .orb-1 { width: 420px; height: 420px; background: rgba(77,150,255,0.1);  top: -140px; right: -80px; }
+    .orb-2 { width: 360px; height: 360px; background: rgba(107,203,119,0.07); bottom: -80px; left: -100px; }
+    .card {
+      position: relative; z-index: 1;
+      width: min(480px, 100%);
+      background: rgba(8,18,40,0.92);
+      border: 1px solid rgba(77,150,255,0.15); border-radius: 20px;
+      padding: 44px 36px;
+      box-shadow: 0 0 60px rgba(77,150,255,0.08), 0 24px 48px rgba(0,0,0,0.5);
+      backdrop-filter: blur(20px);
+      animation: fadeUp 0.5s ease both;
+    }
+    @keyframes fadeUp { from { opacity:0; transform: translateY(18px); } to { opacity:1; transform: translateY(0); } }
+    .card-header { text-align: center; margin-bottom: 32px; }
+    .card-icon { font-size: 40px; margin-bottom: 14px; display: block; }
+    .card-title { font-family: 'Rajdhani', sans-serif; font-size: 28px; font-weight: 700; color: #fff; }
+    .card-sub { font-size: 14px; color: #5a7a9e; margin-top: 6px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label {
+      display: block; font-size: 11px; font-weight: 600;
+      letter-spacing: 1px; text-transform: uppercase; color: #5a7a9e; margin-bottom: 8px;
+    }
+    input[type=text] {
+      width: 100%; padding: 14px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(77,150,255,0.2); border-radius: 10px;
+      color: #e8eef8; font-size: 16px; font-family: 'DM Sans', sans-serif;
+      letter-spacing: 2px; outline: none;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    input[type=text]:focus {
+      border-color: var(--blue); background: rgba(77,150,255,0.06);
+      box-shadow: 0 0 0 3px rgba(77,150,255,0.1);
+    }
+    input::placeholder { color: rgba(255,255,255,0.18); letter-spacing: 0; }
+    .btn-redeem {
+      width: 100%; padding: 15px; border-radius: 10px;
+      background: linear-gradient(135deg, var(--green), #4ade80);
+      border: none; color: #000;
+      font-size: 16px; font-weight: 700; font-family: 'DM Sans', sans-serif;
+      cursor: pointer; letter-spacing: 0.5px;
+      box-shadow: 0 0 24px rgba(107,203,119,0.25);
+      transition: filter 0.15s, transform 0.15s;
+    }
+    .btn-redeem:hover { filter: brightness(1.08); transform: translateY(-1px); }
+    .notice {
+      padding: 12px 14px; border-radius: 10px;
+      font-size: 13px; margin-bottom: 20px;
+    }
+    .error   { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.25); color: #ff8f8f; }
+    .success { background: rgba(107,203,119,0.1); border: 1px solid rgba(107,203,119,0.25); color: #9adba4; }
+    .code-box {
+      margin: 20px 0; padding: 20px;
+      border-radius: 12px;
+      background: rgba(77,150,255,0.1); border: 1px solid rgba(77,150,255,0.25);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 24px; font-weight: 700; letter-spacing: 4px;
+      text-align: center; color: #fff;
+    }
+    .code-warning {
+      font-size: 13px; color: #ff9f40; text-align: center;
+      margin-bottom: 20px; padding: 10px 14px;
+      background: rgba(255,159,64,0.08); border: 1px solid rgba(255,159,64,0.2);
+      border-radius: 8px;
+    }
+    .back-link {
+      display: block; text-align: center; margin-top: 24px;
+      font-size: 14px; color: #5a7a9e; text-decoration: none;
+      transition: color 0.2s;
+    }
+    .back-link:hover { color: #e8eef8; }
+    .page-footer {
+      position: relative; z-index: 1;
+      margin-top: 24px; text-align: center;
+      font-size: 12px; color: #2a4060;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Redeem a promo code</h1>
-    ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
-    ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
-    ${code ? `<div class="code-box">${escapeHtml(code)}</div><p style="margin-top: 12px;">Save this access code now — you will not be able to recover it later.</p>` : ''}
-    <form method="POST" action="/redeem-promo">
-      <label for="promo">Promo code</label>
-      <input id="promo" name="promo" type="text" autocomplete="off" required />
-      <button type="submit">Redeem</button>
-    </form>
-    <div style="margin-top: 18px; font-size: 13px; color: #b8c4e0;">
-      Have an access code? <a href="/login">Login here</a>.
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-icon">🎟️</span>
+      <div class="card-title">Redeem a Promo Code</div>
+      <div class="card-sub">Enter your promo code to receive access</div>
     </div>
+    ${error   ? `<div class="notice error">${escapeHtml(error)}</div>`     : ''}
+    ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
+    ${code    ? `
+      <div class="code-box">${escapeHtml(code)}</div>
+      <div class="code-warning">⚠️ Save this access code now — you will not be able to recover it later.</div>
+    ` : ''}
+    <form method="POST" action="/redeem-promo">
+      <div class="form-group">
+        <label for="promo">Promo Code</label>
+        <input id="promo" name="promo" type="text" autocomplete="off" required placeholder="Enter promo code" />
+      </div>
+      <button type="submit" class="btn-redeem">Redeem →</button>
+    </form>
+    <a href="/login" class="back-link">← Back to login</a>
   </div>
+  <div class="page-footer">PvP Stream Commander &nbsp;·&nbsp; Beta</div>
 </body>
 </html>`;
 }
 
 function getCookieOptions(httpOnly = true) {
-  return {
-    ...COOKIE_OPTIONS,
-    httpOnly,
-  };
+  return { ...COOKIE_OPTIONS, httpOnly };
 }
 
 function sanitizeCode(value) {
@@ -169,7 +399,6 @@ router.post('/login', loginLimiter, (req, res) => {
   if (row.session_token && row.session_token !== '' && row.session_token !== currentCookie) {
     return res.status(400).send(renderLoginPage({ error: 'This code is already in use on another device' }));
   }
-
   if (row.fingerprint && row.fingerprint !== fingerprint) {
     return res.status(400).send(renderLoginPage({ error: 'This code is locked to another device — contact support' }));
   }
@@ -206,7 +435,6 @@ router.post('/redeem-promo', promoLimiter, (req, res) => {
   if (!promoRow || promoRow.uses_remaining <= 0) {
     return res.status(400).send(renderPromoPage({ error: 'Invalid or expired promo code' }));
   }
-
   if (promoRow.expires_at && new Date(promoRow.expires_at) < new Date()) {
     return res.status(400).send(renderPromoPage({ error: 'This promo code has expired' }));
   }
