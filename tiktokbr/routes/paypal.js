@@ -17,6 +17,8 @@ function issueCode(email, days = 30) {
   return { code, expiresAt };
 }
 
+// (Previously had email-sending helpers here; removed — codes will be shown on a claim page)
+
 async function getPayPalAccessToken() {
   const clientId     = process.env.PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
@@ -94,9 +96,10 @@ router.post('/api/paypal/webhook', express.json(), async (req, res) => {
         return res.json({ success: true, message: 'Already issued' });
       }
 
-      const { code } = issueCode(email, 30);
+      const { code, expiresAt } = issueCode(email, 30);
       db.prepare('UPDATE access_codes SET paypal_subscription_id = ? WHERE code = ?').run(subId, code);
       console.log(`✅ Issued code ${code} to ${email} (sub: ${subId})`);
+      // Note: not emailing codes. Buyers can view their code at /claim?sub=<subscription-id> or via /my-code
       return res.json({ success: true });
     }
 
@@ -235,3 +238,24 @@ function renderMyCodeResult({ error = '', code = '', expiresAt = '' } = {}) {
 }
 
 export default router;
+
+// ─── Public claim page: show issued code for a subscription id ───────────────
+router.get('/claim', (req, res) => {
+  const sub = String(req.query.sub || '').trim();
+  const email = String(req.query.email || '').trim().toLowerCase();
+  if (!sub) {
+    return res.status(400).send(`<p>Missing subscription id. Use the link provided after subscribing or use <a href="/my-code">/my-code</a> to retrieve by email.</p>`);
+  }
+  const row = db.prepare('SELECT * FROM access_codes WHERE paypal_subscription_id = ? LIMIT 1').get(sub);
+  if (!row) {
+    return res.status(404).send(`<p>No code found for that subscription id. If you paid via PayPal, try <a href="/my-code">retrieving by email</a>.</p>`);
+  }
+  if (row.is_revoked) {
+    return res.status(400).send(`<p>This subscription/code has been revoked or expired.</p>`);
+  }
+  if (email && row.email && email !== row.email.toLowerCase()) {
+    return res.status(403).send(`<p>Email does not match subscription. Use the PayPal email used for purchase or visit <a href="/my-code">/my-code</a>.</p>`);
+  }
+  // Render simple page with the code
+  return res.send(`<!doctype html><html><head><meta charset="utf-8"><title>Your Access Code</title><style>body{font-family:Arial,Helvetica,sans-serif;background:#041023;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0} .card{background:#071224;padding:28px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);max-width:560px;width:90%} .code{font-weight:800;letter-spacing:0.12em;font-size:20px;background:linear-gradient(90deg,#fff,#e8f6ff);-webkit-background-clip:text;background-clip:text;color:transparent;padding:12px;border-radius:8px;text-align:center} .note{color:#cfe6ff;margin-top:12px;font-size:13px}</style></head><body><div class="card"><h2>Your Access Code</h2><div class="code">${escapeHtml(row.code)}</div><div class="note">Active until ${escapeHtml(String(row.expires_at).slice(0,10))}. Save this code now — it will not be emailed. If you lose it, visit <a href="/my-code">/my-code</a> to retrieve by PayPal email.</div></div></body></html>`);
+});

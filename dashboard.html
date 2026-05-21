@@ -15,52 +15,42 @@
 –surface:#161b22;
 –surface2:#1c2330;
 –surface3:#21262d;
-–border:#30363d;
-–border-hover:#58a6ff;
-–blue:#58a6ff;
-–blue-dim:rgba(88,166,255,.12);
-–green:#3fb950;
-–green-dim:rgba(63,185,80,.12);
-–red:#f85149;
-–red-dim:rgba(248,81,73,.12);
-–yellow:#d29922;
-–yellow-dim:rgba(210,153,34,.12);
-–purple:#bc8cff;
-–purple-dim:rgba(188,140,255,.12);
-–orange:#e3b341;
-–pink:#f778ba;
-–text:#e6edf3;
-–text2:#8b949e;
-–text3:#484f58;
-–radius:12px;
-–radius-sm:8px;
-–shadow:0 1px 3px rgba(1,4,9,.5);
-–shadow-md:0 4px 16px rgba(1,4,9,.6);
-}
+  </div>
 
-body{
-font-family:‘DM Sans’,sans-serif;
-background:var(–bg);
-color:var(–text);
-min-height:100vh;
-padding:24px 28px 48px;
-}
+  <!-- Developer Test Tools -->
+  <div class="card">
+    <h2>Overlay Test</h2>
+    <p class="dev-note">Trigger live overlay events and confirm lasers, animations, and sound.</p>
+    <div class="btn-row">
+      <button class="btn-green"  onclick="testOverlayAttack()">Test Attack</button>
+      <button class="btn-yellow" onclick="testOverlayGift()">Test Gift</button>
+      <button class="btn-purple" onclick="testOverlayHeal()">Test Heal</button>
+      <button class="btn-blue"   onclick="testOverlayKill()">Test Kill</button>
+    </div>
+  </div>
 
-/* ── SCROLLBAR ── */
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:var(–surface)}
-::-webkit-scrollbar-thumb{background:var(–border);border-radius:3px}
+  <!-- Developer Test Tools (hidden until dev mode on) -->
+  <div class="card" id="devTestCard" style="display:none;">
+    <h2>Developer Test Tools</h2>
+    <p class="dev-note">Temporary buttons for testing overlay animations without TikTok LIVE.</p>
+    <div class="btn-row">
+      <button class="btn-green"  onclick="spawnTestPlayers()">Spawn Test Players</button>
+      <button class="btn-blue"   onclick="testNormalAttack()">Test @ Attack</button>
+      <button class="btn-yellow" onclick="testGiftAttack()">Test Gift Attack</button>
+    </div>
 
-/* ── HEADER ── */
-.header{
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding:14px 20px;
-background:var(–surface);
-border:1px solid var(–border);
-border-radius:var(–radius);
-margin-bottom:24px;
+  <div class="toggle-row">
+    <div>
+      <div class="toggle-info">Dev Mode</div>
+      <div class="toggle-hint">Toggle test routes without editing .env</div>
+    </div>
+    <label class="toggle-switch">
+      <input type="checkbox"/>
+      <span class="toggle-track"></span>
+    </label>
+  </div>
+
+  </div>
 box-shadow:var(–shadow);
 }
 
@@ -739,9 +729,31 @@ body{padding:14px;}
 
   <!-- Developer Mode -->
 
+<<<<<<< HEAD
   <div class="card col-4">
     <div class="card-header">
       <span class="card-title">Developer Mode</span>
+=======
+  <div class="card">
+    <h2>Overlay Test</h2>
+    <p class="dev-note">Trigger live overlay events and confirm lasers, animations, and sound.</p>
+    <div class="btn-row">
+      <button class="btn-green"  onclick="testOverlayAttack()">Test Attack</button>
+      <button class="btn-yellow" onclick="testOverlayGift()">Test Gift</button>
+      <button class="btn-purple" onclick="testOverlayHeal()">Test Heal</button>
+      <button class="btn-blue"   onclick="testOverlayKill()">Test Kill</button>
+    </div>
+  </div>
+
+  <!-- Developer Test Tools (hidden until dev mode on) -->
+  <div class="card" id="devTestCard" style="display:none;">
+    <h2>Developer Test Tools</h2>
+    <p class="dev-note">Temporary buttons for testing overlay animations without TikTok LIVE.</p>
+    <div class="btn-row">
+      <button class="btn-green"  onclick="spawnTestPlayers()">Spawn Test Players</button>
+      <button class="btn-blue"   onclick="testNormalAttack()">Test @ Attack</button>
+      <button class="btn-yellow" onclick="testGiftAttack()">Test Gift Attack</button>
+>>>>>>> 9af0a06 (Issue: display access code on /claim; remove email delivery; improve overlay text outline; observability scaffolding)
     </div>
 
 ```
@@ -989,5 +1001,377 @@ body{padding:14px;}
   <a href="#" class="footer-link">↗ Raw JSON</a>
 </div>
 
+<<<<<<< HEAD
+=======
+socket.on('overlayCount', setOverlayStatus);
+socket.on('gameState', (state) => {
+  const alive = Object.values(state || {}).filter(p => p.alive).length;
+  document.getElementById('player-count').textContent = alive;
+});
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+// ── Status helpers ────────────────────────────────────────────────────────────
+function setOverlayStatus(count) {
+  const dot   = document.getElementById('overlay-dot');
+  const label = document.getElementById('overlay-label');
+  if (count > 0) {
+    dot.className  = 'dot green';
+    label.textContent = `Connected (${count} source${count > 1 ? 's' : ''})`;
+  } else {
+    dot.className  = 'dot red';
+    label.textContent = 'No overlay connected';
+  }
+}
+
+function setTikTokStatus(state, username) {
+  const dot   = document.getElementById('tiktok-dot');
+  const label = document.getElementById('tiktok-label');
+  if      (state === 'connected')   { dot.className = 'dot green';  label.textContent = `Connected to @${username}`; }
+  else if (state === 'connecting')  { dot.className = 'dot yellow'; label.textContent = 'Connecting...'; }
+  else                              { dot.className = 'dot red';    label.textContent = 'Disconnected'; }
+}
+
+// ── Dev mode ──────────────────────────────────────────────────────────────────
+let devModeEnabled = false;
+
+function updateDevModeUI(enabled) {
+  devModeEnabled = enabled;
+  document.getElementById('devModeLabel').textContent      = enabled ? 'Developer mode is ON'  : 'Developer mode is OFF';
+  document.getElementById('devModeToggleBtn').textContent  = enabled ? 'Disable Dev Mode'       : 'Enable Dev Mode';
+  document.getElementById('devTestCard').style.display     = enabled ? 'block'                  : 'none';
+}
+
+function toggleDevMode() {
+  fetch('/api/dev/test-mode', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: !devModeEnabled }),
+  })
+  .then(r => r.json())
+  .then(d => { if (d.success) { updateDevModeUI(d.enabled); toast(`Developer mode ${d.enabled ? 'enabled' : 'disabled'}`); } else toast(`Failed: ${d.error || 'Unknown'}`); })
+  .catch(() => toast('Dev mode toggle failed'));
+}
+
+// ── TikTok ────────────────────────────────────────────────────────────────────
+function connect() {
+  const username = document.getElementById('username').value.trim().replace(/^@/, '');
+  if (!username) { toast('Enter a username first'); return; }
+  setTikTokStatus('connecting', username);
+  fetch('/api/connect', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username }),
+  })
+  .then(r => r.json())
+  .then(d => { if (d.success) { setTikTokStatus('connected', username); toast('Connection request sent for @' + username); } else { setTikTokStatus('disconnected'); toast('Error: ' + (d.error || 'Unknown')); } })
+  .catch(() => { setTikTokStatus('disconnected'); toast('Connection failed'); });
+}
+
+function resetTikTok() {
+  fetch('/api/reset', { method: 'POST' })
+  .then(() => { setTikTokStatus('disconnected'); toast('TikTok disconnected'); })
+  .catch(() => toast('Reset failed'));
+}
+
+// ── Overlay ───────────────────────────────────────────────────────────────────
+function reloadOverlay() {
+  fetch('/api/overlay/reload', { method: 'POST' }).then(() => toast('Reload signal sent to overlay')).catch(() => toast('Failed to send reload'));
+}
+
+function clearPlayers() {
+  if (!confirm('Remove all active players from the overlay?')) return;
+  fetch('/api/players/clear', { method: 'POST' }).then(() => toast('Players cleared')).catch(() => toast('Failed to clear players'));
+}
+
+// ── Background ────────────────────────────────────────────────────────────────
+function uploadBackground() {
+  const input = document.getElementById('bgUpload');
+  const file  = input.files[0];
+  if (!file) { toast('Please choose a background image first'); return; }
+  const allowedTypes = ['image/jpeg','image/png','image/gif','image/webp'];
+  const allowedExts  = ['.jpg','.jpeg','.png','.gif','.webp'];
+  if (!allowedTypes.includes(file.type) || !allowedExts.some(e => file.name.toLowerCase().endsWith(e))) { toast('Invalid file. Please upload JPG, PNG, GIF, or WEBP only.'); return; }
+  if (file.size > 10 * 1024 * 1024) { toast('Image is too large. Maximum size is 10MB.'); return; }
+  const fd = new FormData();
+  fd.append('background', file);
+  toast('Uploading background...');
+  fetch('/api/background/upload', { method: 'POST', body: fd, headers: { Accept: 'application/json' } })
+  .then(async r => { const data = JSON.parse(await r.text()); if (!r.ok || !data.success) throw new Error(data.error || 'Upload failed'); return data; })
+  .then(() => { toast('Background uploaded!'); document.getElementById('bgStatus').textContent = '✅ Background set: ' + file.name; })
+  .catch(err => toast('Upload failed: ' + err.message));
+}
+
+function clearBackground() {
+  fetch('/api/background/clear', { method: 'POST' })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) { toast('Background cleared'); document.getElementById('bgStatus').textContent = 'No background set'; document.getElementById('bgUpload').value = ''; }
+    else toast('Error: ' + (d.error || 'Unknown'));
+  })
+  .catch(() => toast('Clear failed'));
+}
+
+// ── Dev test ──────────────────────────────────────────────────────────────────
+function callTestRoute(url, msg) {
+  fetch(url, { method: 'POST' }).then(r => r.json()).then(d => { if (d.success) toast(msg); else toast('Test failed: ' + (d.error || 'Unknown')); }).catch(() => toast('Test request failed'));
+}
+function spawnTestPlayers() { callTestRoute('/api/test/spawn',  'Test players spawned'); }
+function testNormalAttack()  { callTestRoute('/api/test/attack', 'Test @ attack sent'); }
+function testGiftAttack()    { callTestRoute('/api/test/gift',   'Test gift attack sent'); }
+
+// ── Dev sound ─────────────────────────────────────────────────────────────────
+function sendDevSound(type) {
+  fetch('/api/dev/sound', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type }) })
+  .then(r => r.json()).then(d => { if (d.success) toast(`Dev sound sent: ${type}`); else toast(`Failed: ${d.error || 'Unknown'}`); }).catch(() => toast('Sound command failed'));
+}
+
+function testOverlayAttack() { runOverlayTest('attack'); }
+function testOverlayGift()   { runOverlayTest('gift'); }
+function testOverlayHeal()   { runOverlayTest('heal'); }
+function testOverlayKill()   { runOverlayTest('kill'); }
+
+function runOverlayTest(action) {
+  fetch(`/api/overlay/test/${encodeURIComponent(action)}`, { method: 'POST' })
+    .then(r => r.json())
+    .then(d => { if (d.success) toast(`Overlay test sent: ${action}`); else toast(`Failed: ${d.error || 'Unknown'}`); })
+    .catch(() => toast('Overlay test failed'));
+}
+
+function setLaserColor(color) {
+  if (!color || typeof color !== 'string') return;
+  fetch('/api/dev/laser-color', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ color }) })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) throw new Error(d.error || 'Laser color update failed');
+    toast(`Laser color set to ${d.color}`);
+  })
+  .catch(err => toast(err.message));
+}
+
+function setShotStyle(type) {
+  if (!type) return;
+  fetch('/api/dev/overlay-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shotType: type }) })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) throw new Error(d.error || 'Shot style update failed');
+    toast(`Shot style set to ${type}`);
+  })
+  .catch(err => toast(err.message));
+}
+
+function setShotSpeed(value) {
+  const speed = Number(value) || 1;
+  document.getElementById('shotSpeedValue').textContent = `${speed.toFixed(1)}x`;
+  fetch('/api/dev/overlay-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ shotSpeed: speed }) })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) throw new Error(d.error || 'Shot speed update failed');
+    toast(`Animation speed set to ${speed.toFixed(1)}x`);
+  })
+  .catch(err => toast(err.message));
+}
+
+function applyShotStyleUI(settings) {
+  if (!settings) return;
+  const styleSelect = document.getElementById('laserStyleSelect');
+  if (styleSelect && settings.shotType) styleSelect.value = settings.shotType;
+  const speedRange = document.getElementById('shotSpeedRange');
+  const speedValue = document.getElementById('shotSpeedValue');
+  if (speedRange && typeof settings.shotSpeed === 'number') {
+    speedRange.value = settings.shotSpeed;
+    if (speedValue) speedValue.textContent = `${settings.shotSpeed.toFixed(1)}x`;
+  }
+}
+
+function toggleOverlaySound() {
+  const enabled = document.getElementById('developerSoundToggle').checked;
+  fetch('/api/dev/sound-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled }) })
+  .then(r => r.json()).then(d => { if (d.success) toast(`Overlay sounds ${enabled ? 'enabled' : 'disabled'}`); else toast(`Failed: ${d.error || 'Unknown'}`); }).catch(() => toast('Sound toggle failed'));
+}
+
+// ── Audio Manager ─────────────────────────────────────────────────────────────
+const EVENTS = ['attack', 'gift', 'kill', 'respawn', 'heal', 'follow'];
+const EVENT_LABELS  = { attack: '⚔️ Attack', gift: '🎁 Gift', kill: '💀 Kill', respawn: '✨ Respawn', heal: '💚 Heal', follow: '❤️ Follow' };
+const EVENT_BADGES  = { attack: 'badge-attack', gift: 'badge-gift', kill: 'badge-kill', respawn: 'badge-respawn', heal: 'badge-heal', follow: 'badge-follow' };
+
+let audioLibraryData = [];
+let audioConfigData  = { attack: null, gift: null, kill: null, respawn: null, heal: null, follow: null };
+
+const previewCache = {};
+function getPreviewAudio(filename) {
+  if (!previewCache[filename]) previewCache[filename] = new Audio(`/audio/${encodeURIComponent(filename)}`);
+  return previewCache[filename];
+}
+
+function previewAudio(filename) {
+  const audio = getPreviewAudio(filename);
+  audio.currentTime = 0;
+  audio.play().catch(() => toast('Could not play preview — try clicking the page first to unlock audio'));
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024)           return bytes + ' B';
+  if (bytes < 1024 * 1024)    return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function renderAudioLibrary() {
+  const container = document.getElementById('audioLibrary');
+  const empty     = document.getElementById('audioLibraryEmpty');
+  [...container.querySelectorAll('.audio-file-row')].forEach(el => el.remove());
+  if (!audioLibraryData.length) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  audioLibraryData.forEach(file => {
+    const row = document.createElement('div');
+    row.className = 'audio-file-row';
+    const safeName = file.originalName.replace(/'/g, "\\'");
+    const safeFile = file.filename.replace(/'/g, "\\'");
+    row.innerHTML = `
+      <span class="audio-file-name" title="${file.originalName}">${file.originalName}</span>
+      <span class="audio-file-size">${formatBytes(file.size)}</span>
+      <button class="btn-gray btn-sm" onclick="previewAudio('${safeFile}')">▶ Play</button>
+      <button class="btn-red  btn-sm" onclick="deleteAudioFile('${safeFile}', '${safeName}')">🗑</button>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function renderAssignTable() {
+  const tbody = document.getElementById('assignTableBody');
+  tbody.innerHTML = '';
+  EVENTS.forEach(event => {
+    const currentFile = audioConfigData[event];
+    const tr          = document.createElement('tr');
+    const options     = audioLibraryData.map(f =>
+      `<option value="${f.filename}" ${currentFile === f.filename ? 'selected' : ''}>${f.originalName}</option>`
+    ).join('');
+    tr.innerHTML = `
+      <td><span class="event-badge ${EVENT_BADGES[event]}">${EVENT_LABELS[event]}</span></td>
+      <td>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <select class="assign-select" onchange="assignAudio('${event}', this.value)">
+            <option value="">— None —</option>
+            ${options}
+          </select>
+          ${currentFile ? `<button class="btn-gray btn-sm" onclick="previewAudio('${currentFile.replace(/'/g,"\\'")}')">▶</button>` : ''}
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function loadAudioData() {
+  fetch('/api/audio')
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) { toast('Failed to load audio data'); return; }
+    audioLibraryData = d.library || [];
+    audioConfigData  = { ...{ attack: null, gift: null, kill: null, respawn: null, heal: null, follow: null }, ...(d.config || {}) };
+    if (d.settings) {
+      const picker = document.getElementById('laserColorPicker');
+      if (picker && d.settings.laserColor) picker.value = d.settings.laserColor;
+      applyShotStyleUI(d.settings);
+    }
+    renderAudioLibrary();
+    renderAssignTable();
+  })
+  .catch(() => toast('Could not reach /api/audio'));
+}
+
+function uploadAudioFile(file) {
+  if (!file) return;
+  const allowed = ['.mp3','.m4a','.wav','.ogg','.webm','.aac','.flac'];
+  if (!allowed.some(e => file.name.toLowerCase().endsWith(e))) { toast('Invalid audio format. Use MP3, M4A, WAV, OGG, AAC, FLAC, or WEBM.'); return; }
+  if (file.size > 20 * 1024 * 1024) { toast('File too large. Maximum size is 20MB.'); return; }
+  const fd = new FormData();
+  fd.append('audio', file);
+  toast(`Uploading ${file.name}…`);
+  fetch('/api/audio/upload', { method: 'POST', body: fd })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) throw new Error(d.error || 'Upload failed');
+    toast(`✅ Uploaded: ${file.name}`);
+    audioLibraryData.push(d.file);
+    renderAudioLibrary();
+    renderAssignTable();
+  })
+  .catch(err => toast('Upload failed: ' + err.message));
+}
+
+function assignAudio(event, filename) {
+  fetch('/api/audio/assign', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event, filename: filename || '' }),
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) throw new Error(d.error || 'Assign failed');
+    audioConfigData[event] = filename || null;
+    renderAssignTable();
+    toast(filename ? `✅ Assigned to ${event}` : `Cleared ${event} sound`);
+  })
+  .catch(err => toast('Assign failed: ' + err.message));
+}
+
+function deleteAudioFile(filename, originalName) {
+  if (!confirm(`Delete "${originalName}"? This will also unassign it from any event.`)) return;
+  fetch(`/api/audio/delete/${encodeURIComponent(filename)}`, { method: 'DELETE' })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.success) throw new Error(d.error || 'Delete failed');
+    toast(`🗑 Deleted: ${originalName}`);
+    audioLibraryData = audioLibraryData.filter(f => f.filename !== filename);
+    if (d.configUpdated) {
+      for (const ev of EVENTS) {
+        if (audioConfigData[ev] === filename) audioConfigData[ev] = null;
+      }
+    }
+    renderAudioLibrary();
+    renderAssignTable();
+  })
+  .catch(err => toast('Delete failed: ' + err.message));
+}
+
+// ── Drop zone wiring ──────────────────────────────────────────────────────────
+const dropZone       = document.getElementById('dropZone');
+const audioFileInput = document.getElementById('audioFileInput');
+
+audioFileInput.addEventListener('change', () => {
+  if (audioFileInput.files[0]) uploadAudioFile(audioFileInput.files[0]);
+  audioFileInput.value = '';
+});
+dropZone.addEventListener('dragover',  (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', ()  => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) uploadAudioFile(file);
+});
+
+// ── Initial load ──────────────────────────────────────────────────────────────
+fetch('/api/status')
+.then(r => r.json())
+.then(d => {
+  if (d.username)              document.getElementById('username').value = d.username;
+  if (d.background?.filename)  document.getElementById('bgStatus').textContent = '✅ Background set: ' + d.background.filename;
+  setTikTokStatus(d.connected ? 'connected' : 'disconnected', d.username);
+  setOverlayStatus(d.overlayCount || 0);
+  updateDevModeUI(!!d.devTestMode);
+  document.getElementById('player-count').textContent = d.playerCount ?? '—';
+})
+.catch(() => {});
+
+fetch('/api/test/status').then(r => r.json()).then(d => { if (d.enabled) document.getElementById('devTestCard').style.display = 'block'; }).catch(() => {});
+
+loadAudioData();
+</script>
+>>>>>>> 9af0a06 (Issue: display access code on /claim; remove email delivery; improve overlay text outline; observability scaffolding)
 </body>
 </html>

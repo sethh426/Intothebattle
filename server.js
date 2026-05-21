@@ -6,6 +6,11 @@ import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
+import pino from 'pino';
+import * as Sentry from '@sentry/node';
+import { createClient as createRedisClient } from 'redis';
+import { createAdapter } from '@socket.io/redis-adapter';
+import promClient from 'prom-client';
 import fs from 'fs';
 import multer from 'multer';
 import authRoutes from './tiktokbr/routes/auth.js';
@@ -16,6 +21,20 @@ import db from './tiktokbr/db/db.js';
 import jwt from 'jsonwebtoken';
 
 dotenv.config();
+
+// ─── Observability & Logging ───────────────────────────────────────────────
+const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
+if (process.env.SENTRY_DSN) {
+  Sentry.init({ dsn: process.env.SENTRY_DSN });
+  logger.info('Sentry initialized');
+}
+
+// Prometheus metrics
+const collectDefaultMetrics = promClient.collectDefaultMetrics;
+const register = promClient.register;
+collectDefaultMetrics({ prefix: 'tiktokbr_' });
+const overlayGauge = new promClient.Gauge({ name: 'tiktokbr_overlay_count', help: 'Number of connected overlay clients' });
+const playerGauge  = new promClient.Gauge({ name: 'tiktokbr_player_count',  help: 'Number of alive players' });
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -519,6 +538,22 @@ const app        = express();
 const httpServer = createServer(app);
 const io         = new Server(httpServer, { cors: { origin: '*' } });
 
+// Wire Redis adapter if configured (enables scaling Socket.IO across nodes)
+if (process.env.REDIS_URL) {
+  (async () => {
+    try {
+      const pubClient = createRedisClient({ url: process.env.REDIS_URL });
+      const subClient = pubClient.duplicate();
+      await pubClient.connect();
+      await subClient.connect();
+      io.adapter(createAdapter(pubClient, subClient));
+      logger.info({ redis: process.env.REDIS_URL }, 'Redis adapter connected for Socket.IO');
+    } catch (err) {
+      logger.error({ err }, 'Failed to initialize Redis adapter for Socket.IO');
+    }
+  })();
+}
+
 app.set('trust proxy', 1);
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
@@ -572,6 +607,16 @@ app.use((req, res, next) => {
 
 app.use(express.static(__dirname));
 
+// Expose Prometheus metrics
+app.get('/metrics', async (_req, res) => {
+  try {
+    res.setHeader('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  } catch (err) {
+    res.status(500).end(err.message);
+  }
+});
+
 // ─── AUDIO STATIC SERVE ───────────────────────────────────────────────────────
 // Serves uploaded audio files; falls back to any files committed in /audio/
 app.use('/audio', (req, res, next) => {
@@ -592,7 +637,8 @@ io.on('connection', (socket) => {
   socket.on('register', ({ type } = {}) => {
     if (type === 'overlay') {
       overlayCount++;
-      io.emit('overlayCount', overlayCount);
+    io.emit('overlayCount', overlayCount);
+    try { overlayGauge.set(overlayCount); } catch (_) {}
 
       // Send current state to the newly connected overlay
       socket.emit('gameState',   players);
@@ -606,6 +652,7 @@ io.on('connection', (socket) => {
       socket.on('disconnect', () => {
         overlayCount = Math.max(0, overlayCount - 1);
         io.emit('overlayCount', overlayCount);
+        try { overlayGauge.set(overlayCount); } catch (_) {}
       });
     }
   });
@@ -729,7 +776,12 @@ app.post('/api/connect', (req, res) => {
 });
 
 app.post('/api/reset',          (_req, res) => { disconnectStreamer(); res.json({ success: true }); });
-app.post('/api/overlay/reload', (_req, res) => { io.emit('forceReload'); res.json({ success: true }); });
+app.post('/api/overlay/reload', (_req, res) => {
+  // Emit a cache-busting timestamp so overlays reload with a fresh ?v= param
+  const v = Date.now();
+  io.emit('forceReload', { v });
+  res.json({ success: true });
+});
 
 app.post('/api/players/clear', (_req, res) => {
   for (const id in players) { players[id].alive = false; players[id].forceSpawn = false; }
@@ -928,6 +980,63 @@ app.post('/api/test/gift', requireDevTestMode, (_req, res) => {
   res.json({ success: true, attacks: attacksMade });
 });
 
+app.post('/api/overlay/test/attack', (_req, res) => {
+  ensureTestPlayers();
+  const result = handleMentionAttack('test_alpha', 'Alpha', '@test_bravo');
+  if (result) {
+    io.emit('attack', result);
+    io.emit('soundEvent', { event: result.killed ? 'kill' : 'attack' });
+    io.emit('gameState', players);
+  }
+  res.json({ success: true, result });
+});
+
+app.post('/api/overlay/test/gift', (_req, res) => {
+  ensureTestPlayers();
+  const attackerId = 'test_charlie';
+  const diamonds   = 20;
+  const targets    = ['test_alpha', 'test_bravo', 'test_delta'];
+  const attacks    = [];
+
+  targets.forEach(targetId => {
+    const target = players[targetId];
+    if (!target?.alive) return;
+    const damage   = diamonds;
+    target.hp      = Math.max(0, target.hp - damage);
+    let killed     = false;
+    if (target.hp === 0) {
+      killed = true;
+      target.alive = false;
+      players[attackerId].kills++;
+      setTimeout(() => {
+        spawnPlayer(target.uniqueId, target.nickname);
+        io.emit('respawn', { uniqueId: target.uniqueId });
+        io.emit('gameState', players);
+      }, CFG.RESPAWN_DELAY_MS);
+    }
+    const giftAttack = { attacker: attackerId, target: targetId, damage, killed, diamonds };
+    attacks.push(giftAttack);
+    io.emit('giftAttack', giftAttack);
+    io.emit('soundEvent', { event: killed ? 'kill' : 'gift' });
+  });
+
+  io.emit('giftEffect', { attacker: attackerId, giftName: 'Test Gift', diamonds });
+  io.emit('gameState', players);
+  res.json({ success: true, attacks });
+});
+
+app.post('/api/overlay/test/heal', (_req, res) => {
+  ensureTestPlayers();
+  io.emit('soundEvent', { event: 'heal' });
+  res.json({ success: true });
+});
+
+app.post('/api/overlay/test/kill', (_req, res) => {
+  ensureTestPlayers();
+  io.emit('soundEvent', { event: 'kill' });
+  res.json({ success: true });
+});
+
 // API 404
 app.use('/api', (req, res) => {
   res.status(404).json({ success: false, error: `API endpoint not found: ${req.method} ${req.originalUrl}` });
@@ -939,7 +1048,7 @@ setInterval(() => {
   for (const id of Object.keys(players)) {
     if (players[id].lastActive < cutoff) {
       delete players[id];
-      console.log(`🪦 Removed idle player: @${id}`);
+      logger.info({ player: id }, 'Removed idle player due to inactivity');
     }
   }
   io.emit('gameState', players);
@@ -960,17 +1069,18 @@ setInterval(() => {
     p.y = Math.max(20, Math.min(1800, p.y));
   }
   io.emit('gameState', players);
+  try { playerGauge.set(Object.values(players).filter(p => p.alive).length); } catch (_) {}
   if (++saveCounter >= 100) { savePlayerStats(); saveCounter = 0; }
 }, 100);
 
 // ─── START ────────────────────────────────────────────────────────────────────
 httpServer.listen(PORT, () => {
-  console.log('\n🎮 PvP Game Server running!');
-  console.log(`   Overlay   → http://localhost:${PORT}/overlay.html`);
-  console.log(`   Dashboard → http://localhost:${PORT}/dashboard`);
-  console.log(`   Stats     → http://localhost:${PORT}/stats`);
-  console.log(`   State JSON   → http://localhost:${PORT}/state`);
-  console.log(`   Dev Tests  → ${DEV_TEST_MODE ? 'ENABLED' : 'DISABLED'}\n`);
+  logger.info('\n🎮 PvP Game Server running!');
+  logger.info({ url: `http://localhost:${PORT}/overlay.html` }, 'Overlay URL');
+  logger.info({ url: `http://localhost:${PORT}/dashboard` }, 'Dashboard URL');
+  logger.info({ url: `http://localhost:${PORT}/stats` }, 'Stats URL');
+  logger.info({ url: `http://localhost:${PORT}/state` }, 'State JSON URL');
+  logger.info({ devTestMode: DEV_TEST_MODE }, 'Dev test mode');
 
   loadPlayerStats();
   loadCurrentBackground();

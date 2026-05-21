@@ -5,11 +5,18 @@
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "start:dev": "NODE_ENV=development node server.js"
   },
   "dependencies": {
     "@tiktool/live": "latest",
+    "@socket.io/redis-adapter": "^7.1.0",
     "bcryptjs": "^2.4.3",
+    "prom-client": "^14.2.0",
+    "pino": "^8.13.0",
+    "redis": "^4.6.7",
+    "nodemailer": "^6.9.3",
+    "@sentry/node": "^8.15.0",
     "better-sqlite3": "^12.10.0",
     "cookie-parser": "^1.4.6",
     "dotenv": "^17.4.2",
