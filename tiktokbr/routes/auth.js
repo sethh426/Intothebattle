@@ -38,7 +38,7 @@ function renderLoginPage({ error = '', message = '' } = {}) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login - PvP Stream Commander</title>
+  <title>Login - Battle Royale LIVE</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
@@ -172,7 +172,7 @@ function renderLoginPage({ error = '', message = '' } = {}) {
   <div class="card">
     <div class="card-header">
       <span class="card-icon">🎮</span>
-      <div class="card-title">PvP Stream Commander</div>
+      <div class="card-title"> Battle Royale- An Interactive tool for TikTok LIVE. </div>
       <div class="card-sub">Enter your access code to get started</div>
     </div>
     ${error   ? `<div class="notice error">${escapeHtml(error)}</div>`     : ''}
@@ -203,7 +203,7 @@ function renderLoginPage({ error = '', message = '' } = {}) {
       </a>
     </div>
   </div>
-  <div class="page-footer">PvP Stream Commander &nbsp;·&nbsp; Beta</div>
+  <div class="page-footer">Battle Royale- An Interactive tool for TikTok LIVE.&nbsp;·&nbsp; Beta</div>
   <script src="https://cdn.jsdelivr.net/npm/fingerprintjs2@2/dist/fingerprint2.min.js"></script>
   <script>
     function setFingerprint(fp) {
@@ -232,7 +232,7 @@ function renderPromoPage({ error = '', message = '', code = '' } = {}) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Redeem Promo - PvP Stream Commander</title>
+  <title>Redeem Promo - Battle Royale- An Interactive tool for TikTok LIVE.</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
@@ -357,7 +357,7 @@ function renderPromoPage({ error = '', message = '', code = '' } = {}) {
     </form>
     <a href="/login" class="back-link">← Back to login</a>
   </div>
-  <div class="page-footer">PvP Stream Commander &nbsp;·&nbsp; Beta</div>
+  <div class="page-footer">Battle Royale- An Interactive tool for TikTok LIVE. &nbsp;·&nbsp; Beta</div>
 </body>
 </html>`;
 }
