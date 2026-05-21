@@ -9,11 +9,7 @@
   <title>Battle Royale Overlay</title>
 
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     html, body {
       width: 100%;
@@ -23,8 +19,26 @@
       font-family: 'Segoe UI', sans-serif;
     }
 
-    body {
-      background: radial-gradient(circle at top, #162235 0%, #081018 45%, #02040a 100%);
+    /* ── Outer wrapper: centres the 80×20 overlay rectangle ── */
+    #overlay-wrap {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #02040a;
+    }
+
+    /* ── The overlay rectangle: 80 vw wide, 20 vh tall ── */
+    #overlay-rect {
+      position: relative;
+      width: 80vw;
+      height: 20vh;
+      min-height: 140px;
+      overflow: hidden;
+      border: 1px solid rgba(140, 80, 255, 0.45);
+      border-radius: 10px;
+      box-shadow: 0 0 48px rgba(140, 80, 255, 0.3), 0 0 4px rgba(255,255,255,0.05) inset;
     }
 
     canvas {
@@ -35,617 +49,520 @@
       display: block;
     }
 
-    /* ───────────────── UI Layer ───────────────── */
+    /* ── UI layer sits on top of the canvas ── */
     .ui {
-      position: absolute;
+      position: fixed;
       inset: 0;
       z-index: 100;
       pointer-events: none;
     }
 
-    /* ───────────────── Layout Panel ───────────────── */
+    /* ── Layout Panel ── */
     .layout-panel {
       position: absolute;
-      top: 20px;
-      right: 20px;
-      width: 280px;
-      max-width: calc(100vw - 40px);
-      padding: 18px;
-      border-radius: 22px;
-      background: rgba(6, 10, 20, 0.72);
+      top: 16px;
+      right: 16px;
+      width: 240px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(6, 10, 20, 0.82);
       backdrop-filter: blur(16px);
       border: 1px solid rgba(100, 200, 255, 0.14);
-      box-shadow: 0 0 40px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+      box-shadow: 0 0 30px rgba(0,0,0,0.5);
       pointer-events: auto;
       transition: 0.25s ease;
     }
-
-    .layout-panel.hidden {
-      opacity: 0.16;
-      transform: scale(0.98);
-    }
+    .layout-panel.hidden { opacity: 0.15; transform: scale(0.97); pointer-events: none; }
 
     .layout-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
     }
-
     .layout-title {
-      color: #8fd8ff;
-      font-size: clamp(12px, 2vw, 13px);
-      font-weight: 800;
-      letter-spacing: 1px;
-      text-transform: uppercase;
+      color: #8fd8ff; font-size: 12px; font-weight: 800;
+      letter-spacing: 1px; text-transform: uppercase;
     }
-
     .layout-btn {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      color: white;
-      border-radius: 10px;
-      padding: 6px 12px;
-      font-size: 11px;
-      cursor: pointer;
-      transition: 0.2s ease;
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      color: white; border-radius: 8px; padding: 5px 10px; font-size: 11px;
+      cursor: pointer; transition: 0.2s;
     }
+    .layout-btn:hover { background: rgba(255,255,255,0.12); }
 
-    .layout-btn:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    .control {
-      margin-bottom: 16px;
-    }
-
-    .control-top {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 8px;
-    }
-
-    .control-top span {
-      font-size: clamp(11px, 2vw, 12px);
-      color: #cfefff;
-    }
-
+    .control { margin-bottom: 13px; }
+    .control-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .control-top span { font-size: 11px; color: #cfefff; }
     .control input {
-      width: 100%;
-      appearance: none;
-      height: 6px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, 0.08);
-      outline: none;
+      width: 100%; appearance: none; height: 5px; border-radius: 999px;
+      background: rgba(255,255,255,0.08); outline: none;
     }
-
     .control input::-webkit-slider-thumb {
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: #7afcff;
-      border: none;
-      box-shadow: 0 0 12px rgba(122, 252, 255, 0.9);
-      cursor: pointer;
+      appearance: none; width: 16px; height: 16px; border-radius: 50%;
+      background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9); cursor: pointer;
     }
 
-    /* ───────────────── Damage Numbers ───────────────── */
+    /* ── Damage Numbers ── */
     .damage {
-      position: absolute;
-      font-weight: 900;
-      font-size: clamp(24px, 5vw, 34px);
+      position: absolute; font-weight: 900; font-size: clamp(20px,4vw,30px);
       color: #ff5050;
-      text-shadow: 0 0 18px rgba(255, 80, 80, 0.95), 0 0 32px rgba(255, 80, 80, 0.5), 2px 2px 10px rgba(0, 0, 0, 0.9);
+      text-shadow: 0 0 16px rgba(255,80,80,0.95), 2px 2px 8px rgba(0,0,0,0.9);
       animation: floatDamage 0.8s ease-out forwards;
-      pointer-events: none;
-      z-index: 999;
+      pointer-events: none; z-index: 999;
     }
-
     .damage.kill {
-      color: #ffd84f;
-      font-size: clamp(32px, 6vw, 44px);
-      text-shadow: 0 0 22px rgba(255, 216, 79, 0.95), 0 0 40px rgba(255, 216, 79, 0.65);
+      color: #ffd84f; font-size: clamp(26px,5vw,38px);
+      text-shadow: 0 0 20px rgba(255,216,79,0.95);
     }
-
     @keyframes floatDamage {
-      0% { opacity: 1; transform: translateY(0) scale(1); }
-      100% { opacity: 0; transform: translateY(-70px) scale(0.65); }
-    }
-
-    /* Smaller panel on mobile */
-    @media (max-width: 600px) {
-      .layout-panel {
-        right: 5px;
-        top: 5px;
-        padding: 12px;
-        width: 220px;
-      }
+      0%   { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-55px) scale(0.6); }
     }
   </style>
+
 </head>
 
 <body>
 
-<canvas id="canvas"></canvas>
+<div id="overlay-wrap">
+  <div id="overlay-rect">
+    <canvas id="canvas"></canvas>
+  </div>
+</div>
 
 <div class="ui">
-
   <div class="layout-panel" id="layoutPanel">
-
     <div class="layout-header">
-      <div class="layout-title">⚡ Arena Layout</div>
+      <div class="layout-title">⚡ Layout</div>
       <button class="layout-btn" id="togglePanel">Hide</button>
     </div>
 
-    <div class="control">
-      <div class="control-top">
-        <span>Column Gap</span>
-        <span id="gapValue">150</span>
-      </div>
-      <input id="gapControl" type="range" min="0" max="240" value="150" />
-    </div>
+```
+<div class="control">
+  <div class="control-top"><span>Column Gap</span><span id="gapValue">0</span></div>
+  <input id="gapControl" type="range" min="0" max="200" value="0" />
+</div>
 
-    <div class="control">
-      <div class="control-top">
-        <span>Horizontal Offset</span>
-        <span id="offsetXValue">0</span>
-      </div>
-      <input id="offsetXControl" type="range" min="-600" max="600" value="0" />
-    </div>
+<div class="control">
+  <div class="control-top"><span>Horizontal Offset</span><span id="offsetXValue">0</span></div>
+  <input id="offsetXControl" type="range" min="-400" max="400" value="0" />
+</div>
 
-    <div class="control">
-      <div class="control-top">
-        <span>Vertical Offset</span>
-        <span id="offsetYValue">0</span>
-      </div>
-      <input id="offsetYControl" type="range" min="-500" max="500" value="0" />
-    </div>
+<div class="control">
+  <div class="control-top"><span>Vertical Position</span><span id="offsetYValue">0</span></div>
+  <input id="offsetYControl" type="range" min="-200" max="200" value="0" />
+</div>
 
-    <div class="control">
-      <div class="control-top">
-        <span>Layout Scale</span>
-        <span id="scaleValue">100%</span>
-      </div>
-      <input id="scaleControl" type="range" min="40" max="160" value="100" />
-    </div>
+<div class="control">
+  <div class="control-top"><span>Layout Height</span><span id="heightValue">20%</span></div>
+  <input id="heightControl" type="range" min="10" max="55" value="20" />
+</div>
+```
 
   </div>
-
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
 
 <script>
-  (function () {
+(function () {
 
-    /* ───────────────── State ───────────────── */
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
+  /* ── State ── */
+  const canvas  = document.getElementById('canvas');
+  const ctx     = canvas.getContext('2d');
+  const rectEl  = document.getElementById('overlay-rect');
 
-    let players = {};
-    let attacks = [];
-    let particles = [];
+  let players    = {};
+  let attacks    = [];
+  let layoutGap  = 0;
+  let offsetX    = 0;
+  let offsetY    = 0;
+  let layoutScale = 1;
 
-    let layoutGap = 150;          // base gap (design pixels, will be scaled)
-    let offsetX = 0;
-    let offsetY = 0;
-    let layoutScale = 1;          // user-controlled scale (0.4 – 1.6)
+  let backgroundImg = null;
+  const audioCache  = {};
+  let audioConfig   = {};
+  let soundEnabled  = true;
 
-    let backgroundImg = null;
+  const HORDE_ID = '__HORDE__';
+  let currentScale = 1;
 
-    const audioCache = {};
-    let audioConfig = {};
-    let soundEnabled = true;
+  /* ── Safe socket (works without a server too) ── */
+  let socket;
+  try {
+    socket = io({ transports: ['websocket', 'polling'] });
+  } catch(e) {
+    socket = { on(){}, emit(){} };
+  }
 
-    const HORDE_ID = '__HORDE__';
+  /* ── Canvas resize ── */
+  function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = rectEl.offsetWidth;
+    const h = rectEl.offsetHeight;
+    canvas.width  = w * dpr;
+    canvas.height = h * dpr;
+    canvas.style.width  = w + 'px';
+    canvas.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
 
-    // global scale factor computed each frame from viewport + user slider
-    let currentScale = 1;
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
 
-    const socket = io({ transports: ['websocket', 'polling'] });
+  /* ── Controls ── */
+  const gapControl    = document.getElementById('gapControl');
+  const offsetXControl= document.getElementById('offsetXControl');
+  const offsetYControl= document.getElementById('offsetYControl');
+  const heightControl = document.getElementById('heightControl');
 
-    /* ───────────────── Canvas Resize ───────────────── */
-    function resizeCanvas() {
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = innerWidth * dpr;
-      canvas.height = innerHeight * dpr;
-      canvas.style.width = innerWidth + 'px';
-      canvas.style.height = innerHeight + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
+  const gapValue    = document.getElementById('gapValue');
+  const offsetXValue= document.getElementById('offsetXValue');
+  const offsetYValue= document.getElementById('offsetYValue');
+  const heightValue = document.getElementById('heightValue');
 
+  function syncValues() {
+    gapValue.textContent    = layoutGap;
+    offsetXValue.textContent= offsetX;
+    offsetYValue.textContent= offsetY;
+  }
+
+  gapControl.oninput    = () => { layoutGap = +gapControl.value;    syncValues(); };
+  offsetXControl.oninput= () => { offsetX   = +offsetXControl.value; syncValues(); };
+  offsetYControl.oninput= () => { offsetY   = +offsetYControl.value; syncValues(); };
+
+  heightControl.oninput = () => {
+    const pct = +heightControl.value;
+    heightValue.textContent = pct + '%';
+    rectEl.style.height = pct + 'vh';
     resizeCanvas();
-    window.addEventListener('resize', () => {
-      resizeCanvas();
-    });
+  };
 
-    /* ───────────────── Controls ───────────────── */
-    const gapControl = document.getElementById('gapControl');
-    const offsetXControl = document.getElementById('offsetXControl');
-    const offsetYControl = document.getElementById('offsetYControl');
-    const scaleControl = document.getElementById('scaleControl');
+  syncValues();
 
-    const gapValue = document.getElementById('gapValue');
-    const offsetXValue = document.getElementById('offsetXValue');
-    const offsetYValue = document.getElementById('offsetYValue');
-    const scaleValue = document.getElementById('scaleValue');
+  const panel      = document.getElementById('layoutPanel');
+  const toggleBtn  = document.getElementById('togglePanel');
+  toggleBtn.onclick = () => {
+    panel.classList.toggle('hidden');
+    toggleBtn.textContent = panel.classList.contains('hidden') ? 'Show' : 'Hide';
+  };
 
-    function syncValues() {
-      gapValue.textContent = layoutGap;
-      offsetXValue.textContent = offsetX;
-      offsetYValue.textContent = offsetY;
-      scaleValue.textContent = Math.round(layoutScale * 100) + '%';
-    }
+  /* ── Audio ── */
+  function getAudio(f) {
+    if (!audioCache[f]) { const a = new Audio(`/audio/${f}`); a.preload='auto'; audioCache[f]=a; }
+    return audioCache[f];
+  }
+  function playSound(type) {
+    if (!soundEnabled) return;
+    const f = audioConfig[type]; if (!f) return;
+    try { const a = getAudio(f); a.currentTime=0; a.play().catch(()=>{}); } catch(e){}
+  }
 
-    gapControl.oninput = () => {
-      layoutGap = Number(gapControl.value);
-      syncValues();
+  /* ── Helpers ── */
+  function topPlayers() {
+    return Object.values(players)
+      .filter(p => p.alive && p.uniqueId !== HORDE_ID)
+      .sort((a,b) => (b.hp||0)-(a.hp||0))
+      .slice(0, 5);
+  }
+
+  function hordePlayer() {
+    const ids = new Set(topPlayers().map(p => p.uniqueId));
+    const rest = Object.values(players).filter(p => p.alive && !ids.has(p.uniqueId));
+    if (!rest.length) return null;
+    return {
+      uniqueId: HORDE_ID, nickname: 'THE HORDE',
+      hp: rest.reduce((s,p) => s+(p.hp||0), 0),
+      maxHp: rest.reduce((s,p) => s+(p.maxHp||100), 0),
+      hordeCount: rest.length, alive: true
     };
-    offsetXControl.oninput = () => {
-      offsetX = Number(offsetXControl.value);
-      syncValues();
+  }
+
+  /* ── Canvas dimensions shorthand ── */
+  function cw() { return rectEl.offsetWidth; }
+  function ch() { return rectEl.offsetHeight; }
+
+  /* ──────────────────────────────────────────────
+     LAYOUT:
+     The rectangle is split into two rows:
+       TOP ROW  (60% height) — 5 player cards
+       BOTTOM ROW (40% height) — horde bar
+  ────────────────────────────────────────────── */
+
+  function getPlayerPosition(index) {
+    const W = cw(), H = ch();
+    const cellW = (W * 0.82) / 5;
+    const gap   = layoutGap * currentScale;
+    const totalW = cellW * 5 + gap * 4;
+    const startX = (W - totalW) / 2 + offsetX;
+    return {
+      x: startX + index * (cellW + gap) + cellW / 2,
+      y: H * 0.30 + offsetY        // vertical centre of the top 60%
     };
-    offsetYControl.oninput = () => {
-      offsetY = Number(offsetYControl.value);
-      syncValues();
+  }
+
+  function getHordePosition() {
+    return {
+      x: cw() / 2 + offsetX,
+      y: ch() * 0.78 + offsetY     // centre of the bottom 40%
     };
-    scaleControl.oninput = () => {
-      layoutScale = Number(scaleControl.value) / 100;
-      syncValues();
-    };
-    syncValues();
+  }
 
-    const panel = document.getElementById('layoutPanel');
-    const togglePanel = document.getElementById('togglePanel');
-    togglePanel.onclick = () => {
-      panel.classList.toggle('hidden');
-      togglePanel.textContent = panel.classList.contains('hidden') ? 'Show' : 'Hide';
-    };
+  /* ── Background ── */
+  function drawBackground() {
+    const W = cw(), H = ch();
+    if (backgroundImg) {
+      const scale = Math.max(W/backgroundImg.width, H/backgroundImg.height);
+      const dw = backgroundImg.width*scale, dh = backgroundImg.height*scale;
+      ctx.drawImage(backgroundImg, (W-dw)/2, (H-dh)/2, dw, dh);
+    } else {
+      // Dark gradient background
+      const g = ctx.createLinearGradient(0,0,0,H);
+      g.addColorStop(0, '#0d1a2e');
+      g.addColorStop(1, '#050b12');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
 
-    /* ───────────────── Audio ───────────────── */
-    function getAudio(filename) {
-      if (!audioCache[filename]) {
-        const audio = new Audio(`/audio/${filename}`);
-        audio.preload = 'auto';
-        audioCache[filename] = audio;
-      }
-      return audioCache[filename];
-    }
-
-    function playSound(type) {
-      if (!soundEnabled) return;
-      const filename = audioConfig[type];
-      if (!filename) return;
-      try {
-        const audio = getAudio(filename);
-        audio.currentTime = 0;
-        audio.play().catch(() => {});
-      } catch (e) {}
-    }
-
-    /* ───────────────── Helpers ───────────────── */
-    function topPlayers() {
-      return Object.values(players)
-        .filter(p => p.alive && p.uniqueId !== HORDE_ID)
-        .sort((a, b) => (b.hp || 0) - (a.hp || 0))
-        .slice(0, 5);
-    }
-
-    function hordePlayer() {
-      const ids = new Set(topPlayers().map(p => p.uniqueId));
-      const rest = Object.values(players).filter(p => p.alive && !ids.has(p.uniqueId));
-      if (!rest.length) return null;
-      return {
-        uniqueId: HORDE_ID,
-        nickname: 'THE HORDE',
-        hp: rest.reduce((s, p) => s + (p.hp || 0), 0),
-        maxHp: rest.reduce((s, p) => s + (p.maxHp || 100), 0),
-        hordeCount: rest.length,
-        alive: true
-      };
-    }
-
-    /* ───────────────── Position Helpers (use currentScale) ───────────────── */
-    function getPlayerPosition(index) {
-      const cellWidth = 180 * currentScale;
-      const gap = layoutGap * currentScale;
-      const totalWidth = (cellWidth * 5) + (gap * 4);
-      const startX = (innerWidth - totalWidth) / 2 + offsetX;
-      return {
-        x: startX + index * (cellWidth + gap) + cellWidth / 2,
-        y: 160 * currentScale + offsetY
-      };
-    }
-
-    function getHordePosition() {
-      return {
-        x: innerWidth / 2 + offsetX,
-        y: innerHeight - (400 * currentScale) + offsetY   // 
-      };
-    }
-
-    /* ───────────────── Background ───────────────── */
-    function drawBackground() {
-      const w = innerWidth;
-      const h = innerHeight;
-      if (backgroundImg) {
-        const scale = Math.max(w / backgroundImg.width, h / backgroundImg.height);
-        const dw = backgroundImg.width * scale;
-        const dh = backgroundImg.height * scale;
-        ctx.drawImage(backgroundImg, (w - dw) / 2, (h - dh) / 2, dw, dh);
-      } else {
-        const gradient = ctx.createLinearGradient(0, 0, 0, h);
-        gradient.addColorStop(0, '#0b1320');
-        gradient.addColorStop(0.5, '#08111c');
-        gradient.addColorStop(1, '#02040a');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, w, h);
-        drawGrid();
-      }
-    }
-
-    function drawGrid() {
-      ctx.strokeStyle = 'rgba(100,200,255,0.05)';
+      // Subtle grid
+      ctx.strokeStyle = 'rgba(100,200,255,0.04)';
       ctx.lineWidth = 1;
-      for (let x = 0; x < innerWidth; x += 70) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, innerHeight);
-        ctx.stroke();
-      }
-      for (let y = 0; y < innerHeight; y += 70) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(innerWidth, y);
-        ctx.stroke();
-      }
+      for (let x=0; x<W; x+=60) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+      for (let y=0; y<H; y+=30) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+      // Divider line between players and horde rows
+      const divY = H * 0.60;
+      ctx.strokeStyle = 'rgba(140,80,255,0.25)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, divY); ctx.lineTo(W, divY); ctx.stroke();
     }
+  }
 
-    /* ───────────────── Players Card (scaled) ───────────────── */
-    function drawPlayerCard(player, pos, rank) {
-      const hp = player.hp || 0;
-      const maxHp = player.maxHp || 100;
-      const hpPercent = Math.max(0, Math.min(1, hp / maxHp));
+  /* ── Player Card (compact for the bar layout) ── */
+  function drawPlayerCard(player, pos, rank) {
+    const hp       = player.hp || 0;
+    const maxHp    = player.maxHp || 100;
+    const hpPct    = Math.max(0, Math.min(1, hp/maxHp));
+    const H        = ch();
+    const rowH     = H * 0.60;            // top row height
+    const cardH    = rowH * 0.84;         // card uses 84% of row height
+    const cardW    = cardH * 0.72;
 
-      const ringRadius = (rank === 1 ? 72 : 60) * currentScale;
+    const cx = pos.x, cy = pos.y;
+    const avatarR  = cardH * 0.26;        // avatar circle radius
+    const avatarY  = cy - cardH * 0.14;
+    const nameY    = avatarY - avatarR - cardH * 0.06;
+    const barW     = cardW * 0.88;
+    const barH     = Math.max(6, cardH * 0.09);
+    const barX     = cx - barW/2;
+    const barY     = avatarY + avatarR + cardH * 0.05;
+    const hpTextY  = barY + barH + cardH * 0.07;
 
-      // glow
-      const glow = ctx.createRadialGradient(pos.x, pos.y, 10 * currentScale, pos.x, pos.y, 120 * currentScale);
-      glow.addColorStop(0, 'rgba(122,252,255,0.32)');
-      glow.addColorStop(1, 'rgba(122,252,255,0)');
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, 120 * currentScale, 0, Math.PI * 2);
-      ctx.fill();
+    // glow
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, avatarR*2.5);
+    glow.addColorStop(0, 'rgba(122,252,255,0.18)');
+    glow.addColorStop(1, 'rgba(122,252,255,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(cx, cy, avatarR*2.5, 0, Math.PI*2); ctx.fill();
 
-      // outer ring
-      ctx.strokeStyle = 'rgba(122,252,255,0.35)';
-      ctx.lineWidth = 5 * currentScale;
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, ringRadius, 0, Math.PI * 2);
-      ctx.stroke();
+    // outer ring
+    ctx.strokeStyle = rank === 1 ? 'rgba(255,210,80,0.7)' : 'rgba(122,252,255,0.35)';
+    ctx.lineWidth = Math.max(2, avatarR * 0.08);
+    ctx.beginPath(); ctx.arc(cx, avatarY, avatarR, 0, Math.PI*2); ctx.stroke();
 
-      // avatar background
-      ctx.fillStyle = 'rgba(8,18,30,0.95)';
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, ringRadius - 5 * currentScale, 0, Math.PI * 2);
-      ctx.fill();
+    // avatar bg
+    ctx.fillStyle = 'rgba(8,18,30,0.92)';
+    ctx.beginPath(); ctx.arc(cx, avatarY, avatarR - 2, 0, Math.PI*2); ctx.fill();
 
-      const iconSize = (rank === 1 ? 82 : 68) * currentScale;
-      ctx.font = `${iconSize}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(player.iconEmoji || '⚔️', pos.x, pos.y);
+    // emoji
+    ctx.font = `${avatarR * 1.3}px Arial`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(player.iconEmoji || '⚔️', cx, avatarY);
 
-      // name
-      const nameSize = (rank === 1 ? 24 : 20) * currentScale;
-      ctx.font = `bold ${nameSize}px "Segoe UI"`;
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 4 * currentScale;
-      const name = (player.nickname || player.uniqueId || 'Player').slice(0, 14);
-      const nameY = pos.y - 105 * currentScale;
-      ctx.strokeText(name, pos.x, nameY);
-      ctx.fillStyle = '#fff';
-      ctx.fillText(name, pos.x, nameY);
+    // name
+    const nameFontSize = Math.max(9, cardH * 0.11);
+    ctx.font = `bold ${nameFontSize}px "Segoe UI"`;
+    ctx.textBaseline = 'middle';
+    const name = (player.nickname || player.uniqueId || 'Player').slice(0, 13);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    ctx.strokeText(name, cx, nameY);
+    ctx.fillStyle = '#fff'; ctx.fillText(name, cx, nameY);
 
-      // health bar
-      const barWidth = (rank === 1 ? 190 : 160) * currentScale;
-      const barHeight = 16 * currentScale;
-      const barX = pos.x - barWidth / 2;
-      const barY = pos.y + ringRadius + 24 * currentScale;
+    // health bar
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(barX, barY, barW, barH);
 
-      ctx.fillStyle = 'rgba(0,0,0,0.55)';
-      ctx.fillRect(barX, barY, barWidth, barHeight);
+    const hpGrad = ctx.createLinearGradient(barX, 0, barX+barW, 0);
+    hpGrad.addColorStop(0, hpPct>0.5?'#2ecc71':hpPct>0.25?'#f39c12':'#ff4d4d');
+    hpGrad.addColorStop(1, '#ffffff55');
+    ctx.fillStyle = hpGrad;
+    ctx.fillRect(barX+1, barY+1, (barW-2)*hpPct, barH-2);
 
-      const hpGradient = ctx.createLinearGradient(barX, 0, barX + barWidth, 0);
-      hpGradient.addColorStop(0, hpPercent > 0.5 ? '#2ecc71' : hpPercent > 0.25 ? '#f39c12' : '#ff4d4d');
-      hpGradient.addColorStop(1, '#ffffff');
-      ctx.fillStyle = hpGradient;
-      ctx.fillRect(barX + 2 * currentScale, barY + 2 * currentScale, (barWidth - 4 * currentScale) * hpPercent, barHeight - 4 * currentScale);
+    ctx.strokeStyle = 'rgba(122,252,255,0.35)';
+    ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH);
 
-      ctx.strokeStyle = 'rgba(122,252,255,0.4)';
-      ctx.lineWidth = 1 * currentScale;
-      ctx.strokeRect(barX, barY, barWidth, barHeight);
+    // hp text
+    const hpFontSize = Math.max(8, cardH * 0.085);
+    ctx.font = `${hpFontSize}px "Segoe UI"`;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
+    ctx.strokeText(`${Math.round(hp)}/${maxHp}`, cx, hpTextY);
+    ctx.fillStyle = '#ccc'; ctx.fillText(`${Math.round(hp)}/${maxHp}`, cx, hpTextY);
+  }
 
-      // hp text
-      const hpFontSize = 13 * currentScale;
-      ctx.font = `${hpFontSize}px "Segoe UI"`;
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 3 * currentScale;
-      const hpText = `${Math.round(hp)}/${maxHp}`;
-      const hpTextY = barY + 32 * currentScale;
-      ctx.strokeText(hpText, pos.x, hpTextY);
-      ctx.fillStyle = '#fff';
-      ctx.fillText(hpText, pos.x, hpTextY);
+  /* ── Horde (horizontal compact strip in bottom row) ── */
+  function drawHorde(horde) {
+    if (!horde) return;
+    const pos    = getHordePosition();
+    const H      = ch();
+    const rowH   = H * 0.40;
+    const pulse  = 0.5 + Math.sin(Date.now()/350) * 0.5;
+    const skullR = rowH * 0.28;
+    const cx = pos.x, cy = pos.y;
+
+    // skull aura
+    ctx.beginPath();
+    ctx.arc(cx, cy, skullR + pulse*4, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,70,70,${0.08+pulse*0.05})`;
+    ctx.fill();
+
+    ctx.strokeStyle = `rgba(255,70,70,${0.5+pulse*0.3})`;
+    ctx.lineWidth = Math.max(2, skullR*0.1);
+    ctx.beginPath(); ctx.arc(cx, cy, skullR*0.88, 0, Math.PI*2); ctx.stroke();
+
+    // skull emoji
+    ctx.font = `${skullR*1.5}px Arial`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('💀', cx, cy);
+
+    // "THE HORDE" title (left of skull)
+    const titleFont = Math.max(10, rowH*0.22);
+    ctx.font = `bold ${titleFont}px "Segoe UI"`;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+    ctx.strokeText('⚔ THE HORDE', cx - skullR*1.35, cy - rowH*0.1);
+    ctx.fillStyle = '#ff7b7b';
+    ctx.fillText('⚔ THE HORDE', cx - skullR*1.35, cy - rowH*0.1);
+
+    // player count
+    const countFont = Math.max(8, rowH*0.16);
+    ctx.font = `${countFont}px "Segoe UI"`;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffc2c2';
+    ctx.fillText(`${horde.hordeCount} players`, cx - skullR*1.35, cy + rowH*0.14);
+
+    // HP bar (right of skull)
+    const hpPct  = Math.min(1, horde.hp / Math.max(1, horde.maxHp));
+    const barW   = cw() * 0.28;
+    const barH2  = Math.max(8, rowH*0.16);
+    const barX   = cx + skullR*1.35;
+    const barY   = cy - barH2/2;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(barX, barY, barW, barH2);
+
+    const rg = ctx.createLinearGradient(barX,0,barX+barW,0);
+    rg.addColorStop(0,'#ff2222'); rg.addColorStop(1,'#ff8888');
+    ctx.fillStyle = rg;
+    ctx.fillRect(barX+2, barY+2, (barW-4)*hpPct, barH2-4);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH2);
+
+    // hp numbers
+    const hpFont = Math.max(8, rowH*0.14);
+    ctx.font = `${hpFont}px "Segoe UI"`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle='#000'; ctx.lineWidth=2.5;
+    const hpStr = `${Math.round(horde.hp)} / ${Math.round(horde.maxHp)}`;
+    ctx.strokeText(hpStr, barX, barY + barH2 + rowH*0.12);
+    ctx.fillStyle = '#ffaaaa';
+    ctx.fillText(hpStr, barX, barY + barH2 + rowH*0.12);
+  }
+
+  /* ── Attack Lines ── */
+  class Attack {
+    constructor(from, to, special=false) {
+      this.from=from; this.to=to; this.special=special;
+      this.start=Date.now(); this.duration=550;
     }
-
-    /* ───────────────── Horde (scaled) ───────────────── */
-    function drawHorde(horde) {
-      if (!horde) return;
-      const pos = getHordePosition();
-      const pulse = 0.5 + Math.sin(Date.now() / 350) * 0.5;
-
-      // aura
-      const auraRadius = 130 * currentScale;
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, auraRadius + pulse * 10 * currentScale, 0, Math.PI * 2);
-      ctx.fillStyle = `rgba(255,70,70,${0.08 + pulse * 0.05})`;
-      ctx.fill();
-
-      ctx.strokeStyle = `rgba(255,70,70,${0.4 + pulse * 0.3})`;
-      ctx.lineWidth = 6 * currentScale;
-      ctx.beginPath();
-      ctx.arc(pos.x, pos.y, 92 * currentScale, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // skull emoji
-      const skullSize = 96 * currentScale;
-      ctx.font = `${skullSize}px Arial`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('💀', pos.x, pos.y);
-
-      // title
-      const titleSize = 24 * currentScale;
-      ctx.font = `bold ${titleSize}px "Segoe UI"`;
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 5 * currentScale;
-      const titleY = pos.y - 130 * currentScale;
-      ctx.strokeText('⚔ THE HORDE', pos.x, titleY);
-      ctx.fillStyle = '#ff7b7b';
-      ctx.fillText('⚔ THE HORDE', pos.x, titleY);
-
-      // count
-      const countSize = 14 * currentScale;
-      ctx.font = `bold ${countSize}px "Segoe UI"`;
-      ctx.fillStyle = '#ffc2c2';
-      const countY = pos.y - 100 * currentScale;
-      ctx.fillText(`${horde.hordeCount} players`, pos.x, countY);
-
-      // HP bar
-      const hpPercent = horde.hp / horde.maxHp;
-      const barWidth = 280 * currentScale;
-      const barHeight = 20 * currentScale;
-      const barX = pos.x - barWidth / 2;
-      const barY = pos.y + 100 * currentScale;
-
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(barX, barY, barWidth, barHeight);
-      ctx.fillStyle = '#ff4444';
-      ctx.fillRect(barX + 2 * currentScale, barY + 2 * currentScale, (barWidth - 4 * currentScale) * hpPercent, barHeight - 4 * currentScale);
-      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
-      ctx.lineWidth = 1 * currentScale;
-      ctx.strokeRect(barX, barY, barWidth, barHeight);
+    update() { return Date.now()-this.start < this.duration; }
+    draw() {
+      const progress = (Date.now()-this.start)/this.duration;
+      const alpha = 1-progress;
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      ctx.strokeStyle = this.special ? `rgba(255,170,80,${alpha})` : `rgba(122,252,255,${alpha})`;
+      ctx.lineWidth = this.special ? 8 : 5;
+      ctx.beginPath(); ctx.moveTo(this.from.x, this.from.y);
+      const tx = this.from.x+(this.to.x-this.from.x)*progress;
+      const ty = this.from.y+(this.to.y-this.from.y)*progress;
+      ctx.lineTo(tx, ty); ctx.stroke();
+      ctx.fillStyle='#fff';
+      ctx.beginPath(); ctx.arc(tx, ty, 5, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
     }
+  }
 
-    /* ───────────────── Attacks ───────────────── */
-    class Attack {
-      constructor(from, to, special = false) {
-        this.from = from;
-        this.to = to;
-        this.special = special;
-        this.start = Date.now();
-        this.duration = 550;
-      }
-      update() {
-        return Date.now() - this.start < this.duration;
-      }
-      draw() {
-        const progress = (Date.now() - this.start) / this.duration;
-        const alpha = 1 - progress;
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.strokeStyle = this.special ? `rgba(255,170,80,${alpha})` : `rgba(122,252,255,${alpha})`;
-        ctx.lineWidth = (this.special ? 10 : 6) * currentScale;
-        ctx.beginPath();
-        ctx.moveTo(this.from.x, this.from.y);
-        const currentX = this.from.x + (this.to.x - this.from.x) * progress;
-        const currentY = this.from.y + (this.to.y - this.from.y) * progress;
-        ctx.lineTo(currentX, currentY);
-        ctx.stroke();
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(currentX, currentY, 8 * currentScale, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-    }
+  /* ── Damage Numbers ── */
+  function showDamage(x, y, dmg, kill) {
+    const el = document.createElement('div');
+    el.className = `damage${kill?' kill':''}`;
+    el.textContent = kill ? '💀 KILL!' : `-${dmg}`;
+    el.style.left = x+'px'; el.style.top = y+'px';
+    document.querySelector('.ui').appendChild(el);
+    setTimeout(() => el.remove(), 800);
+  }
 
-    /* ───────────────── Damage Number (UI) ───────────────── */
-    function showDamage(x, y, dmg, kill) {
-      const el = document.createElement('div');
-      el.className = `damage ${kill ? 'kill' : ''}`;
-      el.textContent = kill ? '💀 KILL!' : `-${dmg}`;
-      el.style.left = x + 'px';
-      el.style.top = y + 'px';
-      document.querySelector('.ui').appendChild(el);
-      setTimeout(() => el.remove(), 800);
-    }
+  /* ── Socket ── */
+  socket.on('connect', () => socket.emit('register', { type:'overlay' }));
+  socket.on('gameState', state => { players = state || {}; });
+  socket.on('audioConfig', cfg  => { audioConfig = cfg || {}; });
+  socket.on('backgroundChanged', ({filename}) => {
+    if (!filename) { backgroundImg=null; return; }
+    const img = new Image();
+    img.onload = () => { backgroundImg=img; };
+    img.src = `/background/${filename}?v=${Date.now()}`;
+  });
+  socket.on('attack', data => {
+    const top = topPlayers();
+    const ai  = top.findIndex(p=>p.uniqueId===data.attacker);
+    const ti  = top.findIndex(p=>p.uniqueId===data.target);
+    const from = ai>=0 ? getPlayerPosition(ai) : getHordePosition();
+    const to   = ti>=0 ? getPlayerPosition(ti) : getHordePosition();
+    attacks.push(new Attack(from, to, data.special));
+    showDamage(to.x, to.y, data.damage, data.killed);
+    playSound(data.special ? 'gift' : 'attack');
+  });
 
-    /* ───────────────── Socket Events ───────────────── */
-    socket.on('connect', () => {
-      socket.emit('register', { type: 'overlay' });
-    });
+  /* ── Demo data (shows layout without a server) ── */
+  players = {
+    p1: { uniqueId:'p1', nickname:'Kristiden',     hp:1235, maxHp:1352, alive:true, iconEmoji:'💎' },
+    p2: { uniqueId:'p2', nickname:'Ken Valentine', hp:997,  maxHp:997,  alive:true, iconEmoji:'💎' },
+    p3: { uniqueId:'p3', nickname:'VimiSha | Skin',hp:406,  maxHp:410,  alive:true, iconEmoji:'💎' },
+    p4: { uniqueId:'p4', nickname:'Sonya Barron',  hp:361,  maxHp:369,  alive:true, iconEmoji:'💎' },
+    p5: { uniqueId:'p5', nickname:'Anto | mom lif',hp:351,  maxHp:351,  alive:true, iconEmoji:'💎' },
+    h1: { uniqueId:'h1', nickname:'Member 1', hp:1200, maxHp:1500, alive:true },
+    h2: { uniqueId:'h2', nickname:'Member 2', hp:980,  maxHp:1200, alive:true },
+  };
 
-    socket.on('gameState', (state) => {
-      players = state || {};
-    });
+  /* ── Main Loop ── */
+  function draw() {
+    currentScale = Math.min(cw()/1920, ch()/200, 1.4) * layoutScale;
+    if (currentScale < 0.05) currentScale = 0.05;
 
-    socket.on('audioConfig', (cfg) => {
-      audioConfig = cfg || {};
-    });
+    ctx.clearRect(0, 0, cw(), ch());
+    drawBackground();
 
-    socket.on('backgroundChanged', ({ filename }) => {
-      if (!filename) {
-        backgroundImg = null;
-        return;
-      }
-      const img = new Image();
-      img.onload = () => { backgroundImg = img; };
-      img.src = `/background/${filename}?v=${Date.now()}`;
-    });
+    const top = topPlayers();
+    top.forEach((p,i) => drawPlayerCard(p, getPlayerPosition(i), i+1));
 
-    socket.on('attack', data => {
-      const top = topPlayers();
-      const attackerIndex = top.findIndex(p => p.uniqueId === data.attacker);
-      const targetIndex = top.findIndex(p => p.uniqueId === data.target);
+    drawHorde(hordePlayer());
 
-      const from = attackerIndex >= 0 ? getPlayerPosition(attackerIndex) : getHordePosition();
-      const to = targetIndex >= 0 ? getPlayerPosition(targetIndex) : getHordePosition();
+    attacks = attacks.filter(a => { const alive=a.update(); if(alive) a.draw(); return alive; });
+    requestAnimationFrame(draw);
+  }
 
-      attacks.push(new Attack(from, to, data.special));
-      showDamage(to.x, to.y, data.damage, data.killed);
-      playSound(data.special ? 'gift' : 'attack');
-    });
+  draw();
 
-    /* ───────────────── Main Draw Loop ───────────────── */
-    function draw() {
-      // Compute responsive scale factor
-      const baseScale = Math.min(innerWidth / 1920, innerHeight / 1080, 1.2);
-      currentScale = baseScale * layoutScale;   // combine automatic + user scaling
-
-      ctx.clearRect(0, 0, innerWidth, innerHeight);
-      drawBackground();
-
-      const top = topPlayers();
-      top.forEach((player, index) => {
-        drawPlayerCard(player, getPlayerPosition(index), index + 1);
-      });
-
-      drawHorde(hordePlayer());
-
-      attacks = attacks.filter(a => {
-        const alive = a.update();
-        if (alive) a.draw();
-        return alive;
-      });
-
-      requestAnimationFrame(draw);
-    }
-
-    draw();
-  })();
+})();
 </script>
 
 </body>
