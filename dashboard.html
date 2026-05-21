@@ -1,804 +1,992 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
+<meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
 <title>TikTok PvP Control Center</title>
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
-}
+*{margin:0;padding:0;box-sizing:border-box;}
 
 :root{
-  --bg:#070b14;
-  --panel:#101826;
-  --blue:#4D96FF;
-  --green:#6BCB77;
-  --red:#FF6B6B;
-  --yellow:#FFD93D;
-  --purple:#C77DFF;
-  --text:#ffffff;
-  --muted:#94a3b8;
+–bg:#0d1117;
+–surface:#161b22;
+–surface2:#1c2330;
+–surface3:#21262d;
+–border:#30363d;
+–border-hover:#58a6ff;
+–blue:#58a6ff;
+–blue-dim:rgba(88,166,255,.12);
+–green:#3fb950;
+–green-dim:rgba(63,185,80,.12);
+–red:#f85149;
+–red-dim:rgba(248,81,73,.12);
+–yellow:#d29922;
+–yellow-dim:rgba(210,153,34,.12);
+–purple:#bc8cff;
+–purple-dim:rgba(188,140,255,.12);
+–orange:#e3b341;
+–pink:#f778ba;
+–text:#e6edf3;
+–text2:#8b949e;
+–text3:#484f58;
+–radius:12px;
+–radius-sm:8px;
+–shadow:0 1px 3px rgba(1,4,9,.5);
+–shadow-md:0 4px 16px rgba(1,4,9,.6);
 }
 
 body{
-  font-family:'Inter',sans-serif;
-  background:
-    radial-gradient(circle at top left, rgba(77,150,255,.18), transparent 30%),
-    radial-gradient(circle at top right, rgba(199,125,255,.12), transparent 24%),
-    linear-gradient(180deg,#050816 0%,#0b1220 100%);
-  color:var(--text);
-  min-height:100vh;
-  padding:30px;
+font-family:‘DM Sans’,sans-serif;
+background:var(–bg);
+color:var(–text);
+min-height:100vh;
+padding:24px 28px 48px;
 }
 
-/* ===== HEADER ===== */
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:var(–surface)}
+::-webkit-scrollbar-thumb{background:var(–border);border-radius:3px}
 
-.dashboard-header{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  margin-bottom:30px;
-  flex-wrap:wrap;
-  gap:20px;
+/* ── HEADER ── */
+.header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:14px 20px;
+background:var(–surface);
+border:1px solid var(–border);
+border-radius:var(–radius);
+margin-bottom:24px;
+box-shadow:var(–shadow);
 }
 
-.dashboard-title{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
+.header-brand{
+display:flex;
+align-items:center;
+gap:12px;
 }
 
-.dashboard-title h1{
-  font-size:36px;
-  font-weight:800;
-  letter-spacing:-1px;
+.header-icon{
+width:36px;
+height:36px;
+background:linear-gradient(135deg,#58a6ff,#bc8cff);
+border-radius:8px;
+display:flex;
+align-items:center;
+justify-content:center;
+font-size:18px;
 }
 
-.dashboard-title p{
-  color:var(--muted);
-  font-size:14px;
+.header-title{
+font-size:15px;
+font-weight:700;
+color:var(–text);
+letter-spacing:-.3px;
 }
 
-/* ===== GRID ===== */
+.header-sub{
+font-size:12px;
+color:var(–text2);
+font-weight:400;
+margin-top:1px;
+}
 
+.header-actions{
+display:flex;
+align-items:center;
+gap:10px;
+}
+
+/* ── GRID ── */
 .grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
-  gap:22px;
-  align-items:start;
+display:grid;
+grid-template-columns:repeat(12,1fr);
+gap:16px;
 }
 
-/* ===== CARDS ===== */
+.col-6{grid-column:span 6;}
+.col-4{grid-column:span 4;}
+.col-8{grid-column:span 8;}
+.col-12{grid-column:span 12;}
 
+/* ── CARD ── */
 .card{
-  position:relative;
-
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255,255,255,.05),
-      rgba(255,255,255,.02)
-    );
-
-  border:1px solid rgba(255,255,255,.08);
-
-  border-radius:24px;
-
-  padding:24px;
-
-  overflow:hidden;
-
-  backdrop-filter:blur(18px);
-
-  box-shadow:
-    0 12px 30px rgba(0,0,0,.35),
-    inset 0 1px 0 rgba(255,255,255,.04);
-
-  transition:.25s ease;
+background:var(–surface);
+border:1px solid var(–border);
+border-radius:var(–radius);
+padding:20px;
+box-shadow:var(–shadow);
+transition:border-color .2s,box-shadow .2s;
 }
-
-.card::before{
-  content:'';
-
-  position:absolute;
-  inset:0;
-
-  border-radius:24px;
-
-  padding:1px;
-
-  background:
-    linear-gradient(
-      135deg,
-      rgba(77,150,255,.7),
-      rgba(199,125,255,.35),
-      transparent 70%
-    );
-
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-
-  -webkit-mask-composite:xor;
-
-  pointer-events:none;
-}
-
 .card:hover{
-  transform:translateY(-3px);
-
-  box-shadow:
-    0 0 35px rgba(77,150,255,.15),
-    0 16px 40px rgba(0,0,0,.45);
+border-color:rgba(88,166,255,.3);
+box-shadow:0 0 0 1px rgba(88,166,255,.08),var(–shadow-md);
 }
 
-.card.full-width{
-  grid-column:1/-1;
+.card-header{
+display:flex;
+align-items:center;
+justify-content:space-between;
+margin-bottom:18px;
 }
 
-.card h2{
-  font-size:13px;
-  text-transform:uppercase;
-  letter-spacing:1.5px;
-  color:#7fb8ff;
-  margin-bottom:18px;
+.card-title{
+font-size:11px;
+font-weight:700;
+text-transform:uppercase;
+letter-spacing:1.2px;
+color:var(–text2);
 }
 
-/* ===== STATUS ===== */
-
-.status-row{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin-bottom:14px;
+.card-badge{
+font-size:10px;
+font-weight:600;
+padding:3px 8px;
+border-radius:20px;
+background:var(–surface3);
+color:var(–text2);
+font-family:‘Space Mono’,monospace;
 }
 
-.dot{
-  width:12px;
-  height:12px;
-  border-radius:50%;
-  background:#555;
+/* ── STATUS CHIP ── */
+.status-chip{
+display:inline-flex;
+align-items:center;
+gap:7px;
+padding:6px 12px;
+border-radius:20px;
+font-size:12px;
+font-weight:500;
+margin-bottom:16px;
 }
 
-.dot.green{
-  background:var(--green);
-  box-shadow:0 0 12px var(--green);
+.status-chip.online{
+background:var(–green-dim);
+color:var(–green);
+border:1px solid rgba(63,185,80,.2);
 }
 
-.dot.red{
-  background:var(--red);
-  box-shadow:0 0 12px var(--red);
+.status-chip.offline{
+background:var(–red-dim);
+color:var(–red);
+border:1px solid rgba(248,81,73,.2);
 }
 
-.dot.yellow{
-  background:var(--yellow);
-  box-shadow:0 0 12px var(--yellow);
-  animation:pulse 1s infinite;
+.status-chip.idle{
+background:var(–yellow-dim);
+color:var(–orange);
+border:1px solid rgba(210,153,34,.2);
 }
 
-@keyframes pulse{
-  0%,100%{opacity:1}
-  50%{opacity:.4}
+.pulse{
+width:7px;height:7px;
+border-radius:50%;
+background:currentColor;
+flex-shrink:0;
 }
 
-/* ===== INPUTS ===== */
-
-label{
-  display:block;
-  margin-bottom:8px;
-  color:#cbd5e1;
-  font-size:13px;
+.pulse.animated{
+animation:blink 1.4s ease-in-out infinite;
 }
 
-input[type="text"],
-input[type="file"],
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ── INPUTS ── */
+.input-group{
+margin-bottom:14px;
+}
+
+.input-label{
+font-size:12px;
+font-weight:500;
+color:var(–text2);
+margin-bottom:6px;
+display:block;
+}
+
+input[type=text],select{
+width:100%;
+background:var(–surface3);
+border:1px solid var(–border);
+border-radius:var(–radius-sm);
+padding:10px 14px;
+color:var(–text);
+font-size:13px;
+font-family:‘DM Sans’,sans-serif;
+transition:border-color .2s,box-shadow .2s;
+appearance:none;
+}
+
+input[type=text]:focus,select:focus{
+outline:none;
+border-color:var(–blue);
+box-shadow:0 0 0 3px rgba(88,166,255,.15);
+}
+
+input[type=text]::placeholder{color:var(–text3);}
+
 select{
-  width:100%;
-  background:rgba(255,255,255,.05);
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:14px;
-  padding:14px 16px;
-  color:white;
-  font-size:14px;
-  margin-bottom:14px;
-  transition:.2s ease;
+background-image:url(“data:image/svg+xml,%3Csvg xmlns=‘http://www.w3.org/2000/svg’ width=‘12’ height=‘8’ viewBox=‘0 0 12 8’%3E%3Cpath d=‘M1 1l5 5 5-5’ stroke=’%238b949e’ stroke-width=‘1.5’ fill=‘none’ stroke-linecap=‘round’/%3E%3C/svg%3E”);
+background-repeat:no-repeat;
+background-position:right 12px center;
+padding-right:34px;
+cursor:pointer;
 }
 
-input[type="text"]:focus,
-input[type="file"]:focus,
-select:focus{
-  outline:none;
-  border-color:var(--blue);
+select option{background:var(–surface2);}
 
-  box-shadow:
-    0 0 0 4px rgba(77,150,255,.12);
+/* ── BUTTONS ── */
+.btn{
+display:inline-flex;
+align-items:center;
+justify-content:center;
+gap:7px;
+border:none;
+border-radius:var(–radius-sm);
+padding:10px 18px;
+font-size:13px;
+font-weight:600;
+font-family:‘DM Sans’,sans-serif;
+cursor:pointer;
+transition:opacity .15s,transform .15s,box-shadow .15s;
+white-space:nowrap;
 }
 
-select option{
-  background:#111827;
-  color:white;
-}
+.btn:hover{opacity:.85;transform:translateY(-1px);}
+.btn:active{transform:translateY(0);}
 
-/* ===== BUTTONS ===== */
+.btn-primary{
+background:var(–blue);
+color:#0d1117;
+}
+.btn-success{
+background:var(–green);
+color:#0d1117;
+}
+.btn-danger{
+background:var(–red);
+color:#fff;
+}
+.btn-warning{
+background:var(–orange);
+color:#0d1117;
+}
+.btn-secondary{
+background:var(–surface3);
+color:var(–text);
+border:1px solid var(–border);
+}
+.btn-ghost{
+background:transparent;
+color:var(–text2);
+border:1px solid var(–border);
+}
+.btn-ghost:hover{color:var(–text);border-color:var(–text2);}
+
+.btn-icon{
+width:32px;height:32px;
+padding:0;
+border-radius:var(–radius-sm);
+background:var(–surface3);
+color:var(–text2);
+border:1px solid var(–border);
+}
+.btn-icon:hover{color:var(–text);border-color:var(–text2);}
 
 .btn-row{
-  display:flex;
-  gap:12px;
-  flex-wrap:wrap;
+display:flex;
+gap:10px;
+flex-wrap:wrap;
 }
 
-button{
-  flex:1;
-  min-width:120px;
-
-  border:none;
-  border-radius:14px;
-
-  padding:13px 18px;
-
-  font-size:13px;
-  font-weight:700;
-
-  cursor:pointer;
-
-  transition:.2s ease;
-
-  color:white;
+/* ── FILE INPUT ── */
+.file-input-wrapper{
+position:relative;
+display:flex;
+align-items:center;
+gap:10px;
+padding:10px 14px;
+background:var(–surface3);
+border:1px solid var(–border);
+border-radius:var(–radius-sm);
+margin-bottom:14px;
+cursor:pointer;
+transition:border-color .2s;
+}
+.file-input-wrapper:hover{border-color:var(–blue);}
+.file-input-wrapper input{
+position:absolute;inset:0;opacity:0;cursor:pointer;
+}
+.file-label{font-size:12px;color:var(–text2);}
+.file-tag{
+font-size:11px;
+font-weight:600;
+padding:3px 8px;
+background:var(–blue-dim);
+color:var(–blue);
+border-radius:4px;
 }
 
-button:hover{
-  transform:translateY(-2px);
-  filter:brightness(1.08);
-}
-
-.btn-blue{
-  background:
-    linear-gradient(135deg,#4D96FF,#2563eb);
-
-  box-shadow:
-    0 0 18px rgba(77,150,255,.35);
-}
-
-.btn-green{
-  background:
-    linear-gradient(135deg,#6BCB77,#22c55e);
-
-  color:black;
-
-  box-shadow:
-    0 0 18px rgba(107,203,119,.35);
-}
-
-.btn-red{
-  background:
-    linear-gradient(135deg,#FF6B6B,#ef4444);
-}
-
-.btn-yellow{
-  background:
-    linear-gradient(135deg,#FFD93D,#facc15);
-
-  color:black;
-}
-
-.btn-purple{
-  background:
-    linear-gradient(135deg,#C77DFF,#9333ea);
-}
-
-.btn-gray{
-  background:rgba(255,255,255,.08);
-  border:1px solid rgba(255,255,255,.08);
-}
-
-.btn-sm{
-  flex:none;
-  min-width:unset;
-  padding:8px 12px;
-  font-size:12px;
-}
-
-/* ===== DROPZONE ===== */
-
+/* ── DROP ZONE ── */
 .drop-zone{
-  position:relative;
-
-  border:2px dashed rgba(77,150,255,.3);
-
-  background:rgba(255,255,255,.03);
-
-  border-radius:18px;
-
-  padding:40px 20px;
-
-  text-align:center;
-
-  transition:.2s ease;
-
-  margin-bottom:16px;
+border:1px dashed rgba(88,166,255,.3);
+background:rgba(88,166,255,.03);
+border-radius:var(–radius);
+padding:32px 20px;
+text-align:center;
+margin-bottom:16px;
+cursor:pointer;
+transition:border-color .2s,background .2s;
+position:relative;
 }
-
 .drop-zone:hover{
-  border-color:var(--blue);
+border-color:var(–blue);
+background:rgba(88,166,255,.07);
+}
+.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.drop-icon{font-size:28px;margin-bottom:8px;}
+.drop-text{font-size:13px;font-weight:500;color:var(–text2);}
+.drop-hint{font-size:11px;color:var(–text3);margin-top:4px;font-family:‘Space Mono’,monospace;}
 
-  background:rgba(77,150,255,.06);
+/* ── AUDIO FILES ── */
+.audio-files{display:flex;flex-direction:column;gap:6px;}
 
-  box-shadow:
-    0 0 24px rgba(77,150,255,.15);
+.audio-row{
+display:flex;
+align-items:center;
+gap:10px;
+padding:9px 12px;
+background:var(–surface3);
+border:1px solid var(–border);
+border-radius:var(–radius-sm);
+transition:border-color .2s;
+}
+.audio-row:hover{border-color:rgba(88,166,255,.3);}
+
+.audio-icon{
+width:28px;height:28px;
+border-radius:6px;
+background:linear-gradient(135deg,#58a6ff22,#bc8cff22);
+border:1px solid rgba(88,166,255,.2);
+display:flex;align-items:center;justify-content:center;
+font-size:13px;
+flex-shrink:0;
 }
 
-.drop-zone input{
-  position:absolute;
-  inset:0;
-  opacity:0;
-  cursor:pointer;
+.audio-name{
+flex:1;
+font-size:13px;
+font-weight:500;
 }
 
-.drop-zone-icon{
-  font-size:42px;
-  margin-bottom:12px;
+.audio-nick{
+font-size:11px;
+color:var(–text2);
+font-family:‘Space Mono’,monospace;
 }
 
-/* ===== AUDIO FILES ===== */
-
-.audio-file-row{
-  display:flex;
-  align-items:center;
-  gap:10px;
-
-  padding:12px;
-
-  border-radius:14px;
-
-  background:rgba(255,255,255,.03);
-
-  border:1px solid rgba(255,255,255,.05);
-
-  margin-bottom:10px;
+.audio-size{
+font-size:11px;
+color:var(–text3);
+font-family:‘Space Mono’,monospace;
 }
 
-.audio-file-name{
-  flex:1;
+/* ── ASSIGN TABLE ── */
+.assign-grid{
+display:flex;
+flex-direction:column;
+gap:6px;
 }
 
-.audio-file-size{
-  color:#64748b;
-  font-size:12px;
+.assign-row{
+display:grid;
+grid-template-columns:auto 1fr auto;
+align-items:center;
+gap:10px;
+padding:8px 12px;
+background:var(–surface3);
+border:1px solid var(–border);
+border-radius:var(–radius-sm);
+transition:border-color .2s;
+}
+.assign-row:hover{border-color:rgba(88,166,255,.3);}
+
+/* ── BADGES ── */
+.badge{
+display:inline-flex;
+align-items:center;
+gap:5px;
+padding:4px 10px;
+border-radius:20px;
+font-size:11px;
+font-weight:700;
+letter-spacing:.3px;
+white-space:nowrap;
+}
+.b-attack{background:rgba(88,166,255,.15);color:#58a6ff;}
+.b-gift{background:rgba(227,179,65,.15);color:#e3b341;}
+.b-kill{background:rgba(248,81,73,.15);color:#f85149;}
+.b-respawn{background:rgba(63,185,80,.15);color:#3fb950;}
+.b-heal{background:rgba(188,140,255,.15);color:#bc8cff;}
+.b-follow{background:rgba(247,120,186,.15);color:#f778ba;}
+
+/* ── STAT ROW ── */
+.stat-row{
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:10px 0;
+border-bottom:1px solid var(–border);
+}
+.stat-row:last-child{border-bottom:none;}
+.stat-label{font-size:12px;color:var(–text2);}
+.stat-value{
+font-size:13px;
+font-weight:700;
+font-family:‘Space Mono’,monospace;
 }
 
-/* ===== TABLE ===== */
-
-.assign-table{
-  width:100%;
-  border-collapse:collapse;
+/* ── DIVIDER ── */
+.divider{
+height:1px;
+background:var(–border);
+margin:16px 0;
 }
 
-.assign-table th{
-  text-align:left;
-  padding:12px;
-  color:#7fb8ff;
-  font-size:12px;
+/* ── SPEED SLIDER ── */
+.slider-row{
+display:flex;
+align-items:center;
+gap:12px;
+margin-top:8px;
+}
+.slider-label{font-size:12px;color:var(–text2);min-width:54px;}
+input[type=range]{
+flex:1;
+-webkit-appearance:none;
+height:4px;
+border-radius:2px;
+background:var(–border);
+outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+-webkit-appearance:none;
+width:14px;height:14px;
+border-radius:50%;
+background:var(–blue);
+cursor:pointer;
+box-shadow:0 0 0 3px rgba(88,166,255,.2);
+}
+.slider-val{
+font-size:11px;
+font-family:‘Space Mono’,monospace;
+color:var(–blue);
+min-width:28px;
+text-align:right;
 }
 
-.assign-table td{
-  padding:12px;
-  border-top:1px solid rgba(255,255,255,.05);
+/* ── DEV TOGGLE ── */
+.toggle-row{
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:12px 14px;
+background:var(–surface3);
+border:1px solid var(–border);
+border-radius:var(–radius-sm);
+margin-top:4px;
+}
+.toggle-info{font-size:13px;font-weight:500;}
+.toggle-hint{font-size:11px;color:var(–text2);margin-top:2px;}
+
+.toggle-switch{
+position:relative;
+width:38px;height:20px;
+}
+.toggle-switch input{opacity:0;width:0;height:0;}
+.toggle-track{
+position:absolute;inset:0;
+background:var(–border);
+border-radius:10px;
+cursor:pointer;
+transition:background .2s;
+}
+.toggle-track::after{
+content:’’;
+position:absolute;
+left:3px;top:3px;
+width:14px;height:14px;
+border-radius:50%;
+background:#fff;
+transition:transform .2s;
+}
+.toggle-switch input:checked + .toggle-track{background:var(–blue);}
+.toggle-switch input:checked + .toggle-track::after{transform:translateX(18px);}
+
+/* ── FOOTER LINKS ── */
+.footer{
+margin-top:24px;
+display:flex;
+gap:12px;
+flex-wrap:wrap;
 }
 
-.assign-select{
-  width:100%;
+.footer-cta{
+display:inline-flex;
+align-items:center;
+gap:8px;
+padding:12px 22px;
+background:var(–green);
+color:#0d1117;
+border-radius:var(–radius);
+text-decoration:none;
+font-size:13px;
+font-weight:700;
+transition:opacity .2s,transform .15s;
+}
+.footer-cta:hover{opacity:.85;transform:translateY(-1px);}
+
+.footer-link{
+display:inline-flex;
+align-items:center;
+gap:6px;
+padding:12px 18px;
+background:var(–surface);
+border:1px solid var(–border);
+color:var(–text2);
+border-radius:var(–radius);
+text-decoration:none;
+font-size:13px;
+font-weight:500;
+transition:border-color .2s,color .2s;
+}
+.footer-link:hover{border-color:var(–blue);color:var(–text);}
+
+/* ── SECTION LABEL ── */
+.section-label{
+font-size:11px;
+font-weight:700;
+text-transform:uppercase;
+letter-spacing:1px;
+color:var(–text3);
+margin-bottom:10px;
 }
 
-/* ===== BADGES ===== */
-
-.event-badge{
-  display:inline-block;
-  padding:5px 10px;
-  border-radius:999px;
-  font-size:11px;
-  font-weight:700;
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+.col-6,.col-4,.col-8{grid-column:span 12;}
+body{padding:14px;}
 }
-
-.badge-attack{
-  background:rgba(77,150,255,.18);
-  color:#4D96FF;
-}
-
-.badge-gift{
-  background:rgba(255,217,61,.18);
-  color:#FFD93D;
-}
-
-.badge-kill{
-  background:rgba(255,107,107,.18);
-  color:#FF6B6B;
-}
-
-.badge-respawn{
-  background:rgba(107,203,119,.18);
-  color:#6BCB77;
-}
-
-.badge-heal{
-  background:rgba(199,125,255,.18);
-  color:#C77DFF;
-}
-
-.badge-follow{
-  background:rgba(255,107,181,.18);
-  color:#FF6BB5;
-}
-
-/* ===== QUICK LINKS ===== */
-
-.quick-links{
-  display:flex;
-  gap:16px;
-  flex-wrap:wrap;
-  margin-top:30px;
-}
-
-.overlay-btn{
-  display:flex;
-  align-items:center;
-  gap:12px;
-
-  padding:18px 30px;
-
-  border-radius:18px;
-
-  text-decoration:none;
-
-  font-size:16px;
-  font-weight:800;
-
-  color:black;
-
-  background:
-    linear-gradient(135deg,#6BCB77,#4ade80);
-
-  box-shadow:
-    0 0 30px rgba(107,203,119,.35);
-
-  transition:.2s ease;
-}
-
-.overlay-btn:hover{
-  transform:translateY(-2px) scale(1.02);
-}
-
-.link-pill{
-  display:flex;
-  align-items:center;
-
-  padding:14px 18px;
-
-  border-radius:14px;
-
-  text-decoration:none;
-
-  color:#dbeafe;
-
-  background:rgba(255,255,255,.04);
-
-  border:1px solid rgba(255,255,255,.08);
-
-  transition:.2s ease;
-}
-
-.link-pill:hover{
-  background:rgba(255,255,255,.08);
-}
-
-/* ===== MOBILE ===== */
-
-@media(max-width:760px){
-
-  body{
-    padding:18px;
-  }
-
-  .dashboard-title h1{
-    font-size:28px;
-  }
-
-  .grid{
-    grid-template-columns:1fr;
-  }
-
-  .btn-row{
-    flex-direction:column;
-  }
-
-}
-
 </style>
-</head>
 
+</head>
 <body>
 
-<div class="dashboard-header">
+<!-- HEADER -->
 
-  <div class="dashboard-title">
-    <h1>🎮 TikTok PvP Control Center</h1>
-    <p>Realtime overlay battle management system</p>
+<div class="header">
+  <div class="header-brand">
+    <div class="header-icon">🎮</div>
+    <div>
+      <div class="header-title">TikTok PvP Control Center</div>
+      <div class="header-sub">Realtime overlay battle management</div>
+    </div>
   </div>
-
-  <button class="btn-gray">
-    Logout
-  </button>
-
+  <div class="header-actions">
+    <div class="status-chip online" style="margin:0">
+      <span class="pulse animated"></span>
+      Live
+    </div>
+    <button class="btn btn-ghost">Logout</button>
+  </div>
 </div>
+
+<!-- GRID -->
 
 <div class="grid">
 
-  <!-- TikTok -->
+  <!-- TikTok LIVE -->
 
-  <div class="card">
-
-    <h2>TikTok LIVE</h2>
-
-    <div class="status-row">
-      <div class="dot green"></div>
-      <span>Connected to @streamer</span>
+  <div class="card col-6">
+    <div class="card-header">
+      <span class="card-title">TikTok Live</span>
+      <span class="card-badge">WebSocket</span>
     </div>
 
-    <label>Username</label>
+```
+<div class="status-chip offline">
+  <span class="pulse"></span>
+  Disconnected
+</div>
 
-    <input
-      type="text"
-      placeholder="@tiktok_username"
-    />
+<div class="input-group">
+  <label class="input-label">Username</label>
+  <input type="text" placeholder="@tiktok_username"/>
+</div>
 
-    <div class="btn-row">
-      <button class="btn-green">
-        Connect
-      </button>
-
-      <button class="btn-red">
-        Disconnect
-      </button>
-    </div>
+<div class="btn-row">
+  <button class="btn btn-success" style="flex:1">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.5"/><path d="M4 6l1.5 1.5L8 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    Connect
+  </button>
+  <button class="btn btn-danger" style="flex:1">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M9 3L3 9M3 3l6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    Disconnect
+  </button>
+</div>
+```
 
   </div>
 
   <!-- Overlay -->
 
-  <div class="card">
-
-    <h2>Overlay</h2>
-
-    <div class="status-row">
-      <div class="dot green"></div>
-      <span>Overlay Connected</span>
+  <div class="card col-6">
+    <div class="card-header">
+      <span class="card-title">Overlay</span>
+      <span class="card-badge">Browser Source</span>
     </div>
 
-    <div class="status-row">
-      <span style="color:#94a3b8">
-        Active Players:
-      </span>
+```
+<div class="status-chip offline">
+  <span class="pulse"></span>
+  No overlay connected
+</div>
 
-      <strong style="color:#FFD93D">
-        128
-      </strong>
-    </div>
+<div class="stat-row">
+  <span class="stat-label">Active Players</span>
+  <span class="stat-value" style="color:var(--yellow)">0</span>
+</div>
+<div class="stat-row">
+  <span class="stat-label">Events/sec</span>
+  <span class="stat-value" style="color:var(--green)">—</span>
+</div>
 
-    <div class="btn-row">
+<div class="divider"></div>
 
-      <button class="btn-blue">
-        Reload Overlay
-      </button>
-
-      <button class="btn-gray">
-        Clear Players
-      </button>
-
-    </div>
+<div class="btn-row">
+  <button class="btn btn-primary" style="flex:1">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6a4 4 0 1 0 8 0 4 4 0 0 0-8 0m4-4v1m0 6v1M2 6H1m10 0h-1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    Reload Overlay
+  </button>
+  <button class="btn btn-secondary">Clear Players</button>
+</div>
+```
 
   </div>
 
   <!-- Background -->
 
-  <div class="card">
-
-    <h2>Background</h2>
-
-    <label>Upload Image</label>
-
-    <input type="file" />
-
-    <div class="btn-row">
-
-      <button class="btn-blue">
-        Upload BG
-      </button>
-
-      <button class="btn-yellow">
-        Clear BG
-      </button>
-
+  <div class="card col-4">
+    <div class="card-header">
+      <span class="card-title">Background</span>
     </div>
+
+```
+<div class="file-input-wrapper">
+  <input type="file" accept="image/*"/>
+  <span class="file-tag">IMG</span>
+  <span class="file-label">No file selected</span>
+</div>
+
+<div class="btn-row">
+  <button class="btn btn-primary" style="flex:1">Upload BG</button>
+  <button class="btn btn-warning">Clear</button>
+</div>
+
+<p style="font-size:11px;color:var(--text3);margin-top:10px;">
+  No background set
+</p>
+```
 
   </div>
 
   <!-- Laser Style -->
 
-  <div class="card">
-
-    <h2>Laser Style</h2>
-
-    <label>Shot Style</label>
-
-    <select>
-      <option>Beam</option>
-      <option>Pulse</option>
-      <option>Waves</option>
-      <option>Burst</option>
-    </select>
-
-    <div class="btn-row">
-
-      <button class="btn-purple">
-        Save Style
-      </button>
-
+  <div class="card col-4">
+    <div class="card-header">
+      <span class="card-title">Laser Style</span>
+      <span class="card-badge">Animation</span>
     </div>
+
+```
+<div class="input-group">
+  <label class="input-label">Shot Style</label>
+  <select id="shotStyle">
+    <option>Beam</option>
+    <option>Pulse</option>
+    <option>Waves</option>
+  </select>
+</div>
+
+<div class="input-group">
+  <label class="input-label">Animation Speed — <span id="speedLabel">1.0×</span></label>
+  <div class="slider-row">
+    <span class="slider-label">Slower</span>
+    <input type="range" min="0.5" max="3" step="0.1" value="1"
+      oninput="document.getElementById('speedLabel').textContent=parseFloat(this.value).toFixed(1)+'×'"/>
+    <span class="slider-label" style="text-align:right">Faster</span>
+  </div>
+</div>
+
+<button class="btn btn-primary" style="width:100%;margin-top:4px">Save Style</button>
+```
+
+  </div>
+
+  <!-- Developer Mode -->
+
+  <div class="card col-4">
+    <div class="card-header">
+      <span class="card-title">Developer Mode</span>
+    </div>
+
+```
+<div class="toggle-row">
+  <div>
+    <div class="toggle-info">Dev Mode</div>
+    <div class="toggle-hint">Toggle test routes without editing .env</div>
+  </div>
+  <label class="toggle-switch">
+    <input type="checkbox"/>
+    <span class="toggle-track"></span>
+  </label>
+</div>
+```
 
   </div>
 
   <!-- Audio Manager -->
 
-  <div class="card full-width">
-
-    <h2>🔊 Audio Manager</h2>
-
-    <div class="drop-zone">
-
-      <div class="drop-zone-icon">
-        🎵
-      </div>
-
-      <div>
-        Drag & Drop Audio Files
-      </div>
-
-      <input type="file" />
-
+  <div class="card col-12">
+    <div class="card-header">
+      <span class="card-title">🔊 Audio Manager</span>
+      <span class="card-badge">9 sounds loaded</span>
     </div>
 
-    <div style="
-      display:grid;
-      grid-template-columns:1.1fr .9fr;
-      gap:24px;
-      margin-top:10px;
-    ">
+```
+<div class="drop-zone">
+  <input type="file" accept="audio/*" multiple/>
+  <div class="drop-icon">🎵</div>
+  <div class="drop-text">Drag & drop audio files here</div>
+  <div class="drop-hint">MP3 · M4A · WAV · OGG · AAC · FLAC · WEBM · Max 20MB</div>
+</div>
 
-      <!-- Uploaded -->
+<button class="btn btn-primary" style="width:100%;margin-bottom:20px">
+  📂 Browse & Upload Audio File
+</button>
 
-      <div>
+<div style="display:grid;grid-template-columns:1.1fr .9fr;gap:24px;">
 
-        <h2 style="margin-bottom:14px">
-          Uploaded Files
-        </h2>
+  <!-- Uploaded Files -->
+  <div>
+    <div class="section-label">Uploaded Files</div>
+    <div class="audio-files">
 
-        <div class="audio-file-row">
-
-          <div class="audio-file-name">
-            laser.mp3
-          </div>
-
-          <div class="audio-file-size">
-            1.2MB
-          </div>
-
-          <button class="btn-gray btn-sm">
-            ▶
-          </button>
-
-        </div>
-
-        <div class="audio-file-row">
-
-          <div class="audio-file-name">
-            heal.wav
-          </div>
-
-          <div class="audio-file-size">
-            840KB
-          </div>
-
-          <button class="btn-gray btn-sm">
-            ▶
-          </button>
-
-        </div>
-
+      <div class="audio-row">
+        <div class="audio-icon">🎵</div>
+        <div class="audio-name">sound1.mp3</div>
+        <div class="audio-nick">Eating</div>
+        <div class="audio-size">0 B</div>
+        <button class="btn btn-icon">▶</button>
+        <button class="btn btn-icon" style="color:var(--red)">✕</button>
       </div>
 
-      <!-- Assignments -->
+      <div class="audio-row">
+        <div class="audio-icon">🎵</div>
+        <div class="audio-name">sound2.mp3</div>
+        <div class="audio-nick">Trophy</div>
+        <div class="audio-size">0 B</div>
+        <button class="btn btn-icon">▶</button>
+        <button class="btn btn-icon" style="color:var(--red)">✕</button>
+      </div>
 
-      <div>
+      <div class="audio-row">
+        <div class="audio-icon">🎵</div>
+        <div class="audio-name">sound3.mp3</div>
+        <div class="audio-nick">Explosion</div>
+        <div class="audio-size">0 B</div>
+        <button class="btn btn-icon">▶</button>
+        <button class="btn btn-icon" style="color:var(--red)">✕</button>
+      </div>
 
-        <h2 style="margin-bottom:14px">
-          Event Assignments
-        </h2>
+      <div class="audio-row">
+        <div class="audio-icon">🎵</div>
+        <div class="audio-name">sound4.mp3</div>
+        <div class="audio-nick">Ring</div>
+        <div class="audio-size">0 B</div>
+        <button class="btn btn-icon">▶</button>
+        <button class="btn btn-icon" style="color:var(--red)">✕</button>
+      </div>
 
-        <table class="assign-table">
+      <div class="audio-row">
+        <div class="audio-icon">🎵</div>
+        <div class="audio-name">sound5.mp3</div>
+        <div class="audio-nick">8bit</div>
+        <div class="audio-size">0 B</div>
+        <button class="btn btn-icon">▶</button>
+        <button class="btn btn-icon" style="color:var(--red)">✕</button>
+      </div>
 
-          <thead>
-            <tr>
-              <th>Event</th>
-              <th>Sound</th>
-            </tr>
-          </thead>
+      <div class="audio-row">
+        <div class="audio-icon">🎵</div>
+        <div class="audio-name">sound6.mp3</div>
+        <div class="audio-nick">Sword</div>
+        <div class="audio-size">0 B</div>
+        <button class="btn btn-icon">▶</button>
+        <button class="btn btn-icon" style="color:var(--red)">✕</button>
+      </div>
 
-          <tbody>
+      <div class="audio-row">
+        <div class="audio-icon">🎵</div>
+        <div class="audio-name">sound7.mp3</div>
+        <div class="audio-nick">Respawn</div>
+        <div class="audio-size">0 B</div>
+        <button class="btn btn-icon">▶</button>
+        <button class="btn btn-icon" style="color:var(--red)">✕</button>
+      </div>
 
-            <tr>
-              <td>
-                <span class="event-badge badge-attack">
-                  Attack
-                </span>
-              </td>
+      <div class="audio-row">
+        <div class="audio-icon">🎵</div>
+        <div class="audio-name">sound8.m4a</div>
+        <div class="audio-nick">Gift</div>
+        <div class="audio-size">0 B</div>
+        <button class="btn btn-icon">▶</button>
+        <button class="btn btn-icon" style="color:var(--red)">✕</button>
+      </div>
 
-              <td>
-                <select class="assign-select">
-                  <option>laser.mp3</option>
-                </select>
-              </td>
-            </tr>
-
-            <tr>
-              <td>
-                <span class="event-badge badge-heal">
-                  Heal
-                </span>
-              </td>
-
-              <td>
-                <select class="assign-select">
-                  <option>heal.wav</option>
-                </select>
-              </td>
-            </tr>
-
-          </tbody>
-
-        </table>
-
+      <div class="audio-row">
+        <div class="audio-icon">🎵</div>
+        <div class="audio-name">sound9.mp3</div>
+        <div class="audio-nick">Singleshot</div>
+        <div class="audio-size">0 B</div>
+        <button class="btn btn-icon">▶</button>
+        <button class="btn btn-icon" style="color:var(--red)">✕</button>
       </div>
 
     </div>
+  </div>
+
+  <!-- Event Assignments -->
+  <div>
+    <div class="section-label">Event Assignments</div>
+    <div class="assign-grid">
+
+      <div class="assign-row">
+        <span class="badge b-attack">⚔ ATTACK</span>
+        <select class="assign-select" style="margin:0">
+          <option>sound1.mp3 — Eating</option>
+          <option>sound2.mp3 — Trophy</option>
+          <option>sound3.mp3 — Explosion</option>
+          <option>sound4.mp3 — Ring</option>
+          <option>sound5.mp3 — 8bit</option>
+          <option>sound6.mp3 — Sword</option>
+          <option>sound7.mp3 — Respawn</option>
+          <option>sound8.m4a — Gift</option>
+          <option>sound9.mp3 — Singleshot</option>
+        </select>
+        <button class="btn btn-icon">▶</button>
+      </div>
+
+      <div class="assign-row">
+        <span class="badge b-gift">🎁 GIFT</span>
+        <select class="assign-select" style="margin:0">
+          <option>sound2.mp3 — Trophy</option>
+          <option>sound1.mp3 — Eating</option>
+          <option>sound8.m4a — Gift</option>
+          <option>sound3.mp3 — Explosion</option>
+          <option>sound4.mp3 — Ring</option>
+          <option>sound5.mp3 — 8bit</option>
+          <option>sound6.mp3 — Sword</option>
+          <option>sound7.mp3 — Respawn</option>
+          <option>sound9.mp3 — Singleshot</option>
+        </select>
+        <button class="btn btn-icon">▶</button>
+      </div>
+
+      <div class="assign-row">
+        <span class="badge b-kill">💀 KILL</span>
+        <select class="assign-select" style="margin:0">
+          <option>sound3.mp3 — Explosion</option>
+          <option>sound1.mp3 — Eating</option>
+          <option>sound2.mp3 — Trophy</option>
+          <option>sound4.mp3 — Ring</option>
+          <option>sound5.mp3 — 8bit</option>
+          <option>sound6.mp3 — Sword</option>
+          <option>sound7.mp3 — Respawn</option>
+          <option>sound8.m4a — Gift</option>
+          <option>sound9.mp3 — Singleshot</option>
+        </select>
+        <button class="btn btn-icon">▶</button>
+      </div>
+
+      <div class="assign-row">
+        <span class="badge b-respawn">✚ RESPAWN</span>
+        <select class="assign-select" style="margin:0">
+          <option>sound4.mp3 — Ring</option>
+          <option>sound1.mp3 — Eating</option>
+          <option>sound2.mp3 — Trophy</option>
+          <option>sound3.mp3 — Explosion</option>
+          <option>sound5.mp3 — 8bit</option>
+          <option>sound6.mp3 — Sword</option>
+          <option>sound7.mp3 — Respawn</option>
+          <option>sound8.m4a — Gift</option>
+          <option>sound9.mp3 — Singleshot</option>
+        </select>
+        <button class="btn btn-icon">▶</button>
+      </div>
+
+      <div class="assign-row">
+        <span class="badge b-heal">💚 HEAL</span>
+        <select class="assign-select" style="margin:0">
+          <option>sound5.mp3 — 8bit</option>
+          <option>sound1.mp3 — Eating</option>
+          <option>sound2.mp3 — Trophy</option>
+          <option>sound3.mp3 — Explosion</option>
+          <option>sound4.mp3 — Ring</option>
+          <option>sound6.mp3 — Sword</option>
+          <option>sound7.mp3 — Respawn</option>
+          <option>sound8.m4a — Gift</option>
+          <option>sound9.mp3 — Singleshot</option>
+        </select>
+        <button class="btn btn-icon">▶</button>
+      </div>
+
+      <div class="assign-row">
+        <span class="badge b-follow">❤ FOLLOW</span>
+        <select class="assign-select" style="margin:0">
+          <option>sound6.mp3 — Sword</option>
+          <option>sound1.mp3 — Eating</option>
+          <option>sound2.mp3 — Trophy</option>
+          <option>sound3.mp3 — Explosion</option>
+          <option>sound4.mp3 — Ring</option>
+          <option>sound5.mp3 — 8bit</option>
+          <option>sound7.mp3 — Respawn</option>
+          <option>sound8.m4a — Gift</option>
+          <option>sound9.mp3 — Singleshot</option>
+        </select>
+        <button class="btn btn-icon">▶</button>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+```
 
   </div>
 
 </div>
 
-<!-- QUICK LINKS -->
+<!-- FOOTER -->
 
-<div class="quick-links">
-
-  <a href="#" class="overlay-btn">
-    🖥️ Open Overlay
-  </a>
-
-  <a href="#" class="link-pill">
-    ↗ Stats
-  </a>
-
-  <a href="#" class="link-pill">
-    ↗ Raw JSON
-  </a>
-
+<div class="footer">
+  <a href="#" class="footer-cta">🖥️ Open Overlay</a>
+  <a href="#" class="footer-link">↗ Stats</a>
+  <a href="#" class="footer-link">↗ Raw JSON</a>
 </div>
 
 </body>
