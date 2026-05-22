@@ -182,24 +182,60 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
   function cw() { return rectEl.offsetWidth; }
   function ch() { return rectEl.offsetHeight; }
 
+  // Improved clamp: keeps cards on screen but allows wide adjustment
   function clampOverlaySettings() {
     const W = cw(), H = ch();
+    // approximate card width based on current card height (dynamic)
     const cardH = H * 0.60 * 0.84;
-    const gapMax = Math.max(0, (W - W * 0.82) / 4);
-    layoutGap = Math.max(0, Math.min(gapMax, layoutGap));
-    const offsetMax = Math.max(0, (W - (W * 0.82 + layoutGap * 4)) / 2);
-    offsetX = Math.max(-offsetMax, Math.min(offsetMax, offsetX));
-    const minOffsetY = Math.max(-H * 0.18, cardH / 2 - H * 0.30);
-    const maxOffsetY = Math.min(H * 0.15, H * 0.22);
-    offsetY = Math.max(minOffsetY, Math.min(maxOffsetY, offsetY));
-    if (gapControl) gapControl.max = Math.round(gapMax);
+    const cardW = cardH * 0.72;
+    const totalCardsWidth = cardW * 5;
+    const maxGap = Math.max(0, (W - totalCardsWidth) / 4);
+    layoutGap = Math.min(maxGap, Math.max(0, layoutGap));
+
+    const totalRowWidth = cardW * 5 + layoutGap * 4;
+    const maxOffsetX = Math.max(0, (W - totalRowWidth) / 2);
+    offsetX = Math.min(maxOffsetX, Math.max(-maxOffsetX, offsetX));
+
+    const minOffsetY = -H * 0.2;
+    const maxOffsetY = H * 0.3;
+    offsetY = Math.min(maxOffsetY, Math.max(minOffsetY, offsetY));
+
+    // Update slider max values dynamically
+    if (gapControl) gapControl.max = Math.round(maxGap);
+    if (offsetXControl) {
+      offsetXControl.max = Math.round(maxOffsetX);
+      offsetXControl.min = -Math.round(maxOffsetX);
+    }
+    if (offsetYControl) {
+      offsetYControl.min = Math.round(minOffsetY);
+      offsetYControl.max = Math.round(maxOffsetY);
+    }
   }
 
+  // Position for top‑5 players (fast)
   function getPlayerPosition(index) {
     const W = cw(), cellW = (W * 0.82) / 5, gap = layoutGap * currentScale;
     const totalW = cellW * 5 + gap * 4, startX = (W - totalW) / 2 + offsetX;
     return { x: startX + index * (cellW + gap) + cellW / 2, y: ch() * 0.30 + offsetY };
   }
+
+  // NEW: Position for ANY alive player (used when not in top‑5)
+  function getPositionForPlayer(uniqueId) {
+    const allAlive = Object.values(players).filter(p => p.alive && p.uniqueId !== HORDE_ID);
+    const index = allAlive.findIndex(p => p.uniqueId === uniqueId);
+    if (index === -1) return null;
+    const total = allAlive.length;
+    const W = cw();
+    const cellW = (W * 0.82) / total;
+    const gap = layoutGap * currentScale;
+    const totalW = cellW * total + gap * (total - 1);
+    const startX = (W - totalW) / 2 + offsetX;
+    return {
+      x: startX + index * (cellW + gap) + cellW / 2,
+      y: ch() * 0.30 + offsetY
+    };
+  }
+
   function getHordePosition() {
     return { x: cw() / 2 + offsetX, y: ch() * 0.78 + offsetY };
   }
@@ -220,6 +256,8 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     canvas.style.width  = w + 'px';
     canvas.style.height = h + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    clampOverlaySettings();   // update ranges after resize
+    syncValues();
   }
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
@@ -234,9 +272,12 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
 
   function syncValues() {
     clampOverlaySettings();
-    document.getElementById('gapValue').textContent    = layoutGap;
-    document.getElementById('offsetXValue').textContent = offsetX;
-    document.getElementById('offsetYValue').textContent = offsetY;
+    document.getElementById('gapValue').textContent    = Math.round(layoutGap);
+    document.getElementById('offsetXValue').textContent = Math.round(offsetX);
+    document.getElementById('offsetYValue').textContent = Math.round(offsetY);
+    if (gapControl) gapControl.value = layoutGap;
+    if (offsetXControl) offsetXControl.value = offsetX;
+    if (offsetYControl) offsetYControl.value = offsetY;
   }
 
   gapControl.oninput     = () => { layoutGap = +gapControl.value;     syncValues(); };
@@ -473,7 +514,7 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     ctx.fillText(hpStr, barX, barY + barH2 + rowH * 0.12);
   }
 
-  // ─── LASER EFFECTS ──────────────────────────
+  // ─── LASER EFFECTS (unchanged) ──────────────
   function drawNeonLaser(ctx, from, to, progress, special, time) {
     const headX = from.x + (to.x - from.x) * progress;
     const headY = from.y + (to.y - from.y) * progress;
@@ -720,27 +761,43 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     setTimeout(() => el.remove(), 900);
   }
 
-  // ─── FIRE ATTACK ────────────────────────────
+  // ─── FIRE ATTACK (UPDATED: works for any player) ──────────
   function fireAttack(attackerId, targetId, damage, killed, special, effect) {
     const top   = topPlayers();
     const horde = hordePlayer();
-    let from;
+
+    let from = null;
     if (attackerId === HORDE_ID) {
-      if (!horde) return; from = getHordePosition();
+      if (horde) from = getHordePosition();
     } else {
-      const ai = top.findIndex(p => p.uniqueId === attackerId);
-      if (ai === -1) return; from = getPlayerPosition(ai);
+      const topIdx = top.findIndex(p => p.uniqueId === attackerId);
+      if (topIdx !== -1) {
+        from = getPlayerPosition(topIdx);
+      } else {
+        from = getPositionForPlayer(attackerId);
+      }
     }
-    let to;
+
+    let to = null;
     if (targetId === HORDE_ID) {
-      if (!horde) return; to = getHordePosition();
+      if (horde) to = getHordePosition();
     } else {
-      const ti = top.findIndex(p => p.uniqueId === targetId);
-      if (ti === -1) return; to = getPlayerPosition(ti);
+      const topIdx = top.findIndex(p => p.uniqueId === targetId);
+      if (topIdx !== -1) {
+        to = getPlayerPosition(topIdx);
+      } else {
+        to = getPositionForPlayer(targetId);
+      }
     }
+
+    if (!from || !to) {
+      console.warn(`Attack skipped: cannot find positions for attacker=${attackerId} target=${targetId}`);
+      return;
+    }
+
     let effectType;
     if (effect) {
-      const e   = String(effect).toLowerCase();
+      const e = String(effect).toLowerCase();
       const map = { fire:'fire', bubble:'bubble', bubbles:'bubble', neon:'neon', ripple:'ripple', sphere:'sphere', laser:'laser', projectile:'projectile', gift:'gift', explosion:'explosion' };
       effectType = map[e] || e;
     } else if (special)  effectType = 'gift';
@@ -749,6 +806,7 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
       const pool = ['laser','projectile','neon','ripple','fire','bubble','sphere'];
       effectType = pool[Math.floor(Math.random() * pool.length)];
     }
+
     attacks.push(new Attack(from, to, effectType));
     showDamage(to.x, to.y, damage, killed);
     playSound(special ? 'gift' : 'attack');
@@ -770,7 +828,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
   // Boot
   initSocket();
   draw();
-
 })();
 </script>
 </body>
