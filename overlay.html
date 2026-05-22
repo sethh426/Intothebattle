@@ -19,16 +19,27 @@ transform: translate(-50%, -50%);
 transition: top 0.05s linear;
 }
 
-#overlay-rect {
+#overlay-viewbox {
 position: relative;
-width: 80vw; height: 20vh; min-height: 140px;
-overflow: visible;
-border: 1px solid rgba(140,80,255,0.45);
-border-radius: 10px;
-box-shadow: 0 0 48px rgba(140,80,255,0.3), inset 0 0 4px rgba(255,255,255,0.05);
+width: min(90vw, 1920px);
+max-height: 1080px;
+aspect-ratio: 16 / 9;
+pointer-events: none;
 }
 
-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: 10px; }
+#overlay-rect {
+position: relative;
+width: 100%;
+height: 100%;
+min-height: 240px;
+overflow: hidden;
+border-radius: 18px;
+background: rgba(4, 8, 18, 0.85);
+border: 1px solid rgba(180, 120, 255, 0.35);
+box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06), 0 0 48px rgba(140,80,255,0.18);
+}
+
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: 18px; }
 
 /* Damage numbers */
 .damage {
@@ -112,8 +123,10 @@ font-family: monospace; transition: 0.2s;
 
 <div id="overlay-wrap">
 <div id="overlay-positioner">
+<div id="overlay-viewbox">
 <div id="overlay-rect">
 <canvas id="canvas"></canvas>
+</div>
 </div>
 </div>
 </div>
@@ -241,6 +254,7 @@ const screenYControl = document.getElementById('screenYControl');
 const positioner = document.getElementById('overlay-positioner');
 
 function syncValues() {
+clampOverlaySettings();
 document.getElementById('gapValue').textContent = layoutGap;
 document.getElementById('offsetXValue').textContent = offsetX;
 document.getElementById('offsetYValue').textContent = offsetY;
@@ -253,6 +267,7 @@ const pct = +heightControl.value;
 document.getElementById('heightValue').textContent = pct + '%';
 rectEl.style.height = pct + 'vh';
 resizeCanvas();
+syncValues();
 };
 screenYControl.oninput = () => {
 const v = +screenYControl.value;
@@ -373,6 +388,7 @@ const screenYControl = document.getElementById('screenYControl');
 const positioner = document.getElementById('overlay-positioner');
 
 function syncValues() {
+clampOverlaySettings();
 document.getElementById('gapValue').textContent = layoutGap;
 document.getElementById('offsetXValue').textContent = offsetX;
 document.getElementById('offsetYValue').textContent = offsetY;
@@ -385,6 +401,7 @@ const pct = +heightControl.value;
 document.getElementById('heightValue').textContent = pct + '%';
 rectEl.style.height = pct + 'vh';
 resizeCanvas();
+syncValues();
 };
 screenYControl.oninput = () => {
 const v = +screenYControl.value;
@@ -446,6 +463,21 @@ alive: true
 
 function cw() { return rectEl.offsetWidth; }
 function ch() { return rectEl.offsetHeight; }
+
+function clampOverlaySettings() {
+  const W = cw();
+  const H = ch();
+  const cardH = H * 0.60 * 0.84;
+  const cardW = cardH * 0.72;
+  const gapMax = Math.max(0, (W - W * 0.82) / 4);
+  layoutGap = Math.max(0, Math.min(gapMax, layoutGap));
+  const offsetMax = Math.max(0, (W - (W * 0.82 + layoutGap * 4)) / 2);
+  offsetX = Math.max(-offsetMax, Math.min(offsetMax, offsetX));
+  const minOffsetY = Math.max(-H * 0.18, cardH / 2 - H * 0.30);
+  const maxOffsetY = Math.min(H * 0.15, H * 0.22);
+  offsetY = Math.max(minOffsetY, Math.min(maxOffsetY, offsetY));
+  if (gapControl) gapControl.max = Math.round(gapMax);
+}
 
 function getPlayerPosition(index) {
 const W = cw(), cellW = (W * 0.82) / 5, gap = layoutGap * currentScale;
