@@ -28,7 +28,7 @@
 #overlay-rect {
   position: relative;
   width: 80vw; height: 20vh; min-height: 140px;
-  overflow: visible;   /* allow damage numbers to float above */
+  overflow: visible;
   border: 1px solid rgba(140,80,255,0.45);
   border-radius: 10px;
   box-shadow: 0 0 48px rgba(140,80,255,0.3), inset 0 0 4px rgba(255,255,255,0.05);
@@ -36,15 +36,15 @@
 
 canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: 10px; overflow: hidden; }
 
-/* Damage numbers are children of #overlay-rect so coords match the canvas */
+/* Damage numbers are appended to body and positioned absolutely via getBoundingClientRect */
 .damage {
-  position: absolute;
+  position: fixed;   /* ← fixed so we can use viewport coords from getBoundingClientRect */
   font-weight: 900; font-size: clamp(18px,3vw,28px);
   color: #ff5050;
   text-shadow: 0 0 16px rgba(255,80,80,0.95), 2px 2px 8px rgba(0,0,0,0.9);
-  animation: floatDamage 0.8s ease-out forwards;
-  pointer-events: none; z-index: 999;
-  transform: translate(-50%, -50%);   /* centre on the given x/y */
+  animation: floatDamage 0.85s ease-out forwards;
+  pointer-events: none; z-index: 9999;
+  transform: translate(-50%, -50%);
   white-space: nowrap;
 }
 .damage.kill {
@@ -52,21 +52,19 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
   text-shadow: 0 0 20px rgba(255,216,79,0.95);
 }
 @keyframes floatDamage {
-  0%   { opacity: 1; transform: translate(-50%,-50%) scale(1.1); }
-  100% { opacity: 0; transform: translate(-50%,-130%) scale(0.65); }
+  0%   { opacity: 1; transform: translate(-50%,-50%) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%,-160%) scale(0.65); }
 }
 
 /* ── UI / panel layer ── */
 .ui { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
 
-/* Wrapper anchors panel + tab together at top-right */
 .panel-wrapper {
   position: absolute; top: 16px; right: 0;
   display: flex; align-items: flex-start;
   pointer-events: auto;
 }
 
-/* The pull-tab — always visible */
 .panel-tab {
   width: 28px;
   background: rgba(6,10,20,0.88);
@@ -112,6 +110,14 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
 .control-top span { font-size: 11px; color: #cfefff; }
 .control input { width: 100%; appearance: none; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.08); outline: none; }
 .control input::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9); cursor: pointer; }
+
+/* Demo badge */
+#demo-badge {
+  position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+  background: rgba(255,200,80,0.15); border: 1px solid rgba(255,200,80,0.4);
+  color: #ffd84f; font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  padding: 5px 14px; border-radius: 20px; pointer-events: none; z-index: 9999;
+}
 ```
 
   </style>
@@ -120,12 +126,11 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
 
 <div id="overlay-wrap">
   <div id="overlay-positioner">
-  <div id="overlay-rect">
-    <canvas id="canvas"></canvas>
-    <!-- damage numbers will be injected here, relative to the rect -->
-  </div><!-- /overlay-rect -->
-  </div><!-- /overlay-positioner -->
-</div><!-- /overlay-wrap -->
+    <div id="overlay-rect">
+      <canvas id="canvas"></canvas>
+    </div>
+  </div>
+</div>
 
 <div class="ui">
   <div class="panel-wrapper">
@@ -134,31 +139,31 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
       LAYOUT
     </div>
     <div class="layout-panel" id="layoutPanel">
-    <div class="control">
-      <div class="control-top"><span>Column Gap</span><span id="gapValue">0</span></div>
-      <input id="gapControl" type="range" min="0" max="200" value="0" />
+      <div class="control">
+        <div class="control-top"><span>Column Gap</span><span id="gapValue">0</span></div>
+        <input id="gapControl" type="range" min="0" max="200" value="0" />
+      </div>
+      <div class="control">
+        <div class="control-top"><span>Horizontal Offset</span><span id="offsetXValue">0</span></div>
+        <input id="offsetXControl" type="range" min="-400" max="400" value="0" />
+      </div>
+      <div class="control">
+        <div class="control-top"><span>Vertical Position</span><span id="offsetYValue">0</span></div>
+        <input id="offsetYControl" type="range" min="-200" max="200" value="0" />
+      </div>
+      <div class="control">
+        <div class="control-top"><span>Layout Height</span><span id="heightValue">20%</span></div>
+        <input id="heightControl" type="range" min="10" max="55" value="20" />
+      </div>
+      <div class="control">
+        <div class="control-top"><span>Screen Position</span><span id="screenYValue">↕ Centre</span></div>
+        <input id="screenYControl" type="range" min="-50" max="50" value="0" />
+      </div>
     </div>
-    <div class="control">
-      <div class="control-top"><span>Horizontal Offset</span><span id="offsetXValue">0</span></div>
-      <input id="offsetXControl" type="range" min="-400" max="400" value="0" />
-    </div>
-    <div class="control">
-      <div class="control-top"><span>Vertical Position</span><span id="offsetYValue">0</span></div>
-      <input id="offsetYControl" type="range" min="-200" max="200" value="0" />
-    </div>
-    <div class="control">
-      <div class="control-top"><span>Layout Height</span><span id="heightValue">20%</span></div>
-      <input id="heightControl" type="range" min="10" max="55" value="20" />
-    </div>
-    <div class="control">
-      <div class="control-top"><span>Screen Position</span><span id="screenYValue">↕ Centre</span></div>
-      <input id="screenYControl" type="range" min="-50" max="50" value="0" />
-    </div>
-    </div><!-- /layout-panel -->
-  </div><!-- /panel-wrapper -->
-</div><!-- /ui -->
+  </div>
+</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+<div id="demo-badge">⚡ DEMO MODE — attacks firing every 2s</div>
 
 <script>
 (function () {
@@ -173,8 +178,9 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
   const HORDE_ID = '__HORDE__';
   let currentScale = 1;
 
+  // ── Graceful socket (no-op if server absent) ──
   let socket;
-  try { socket = io({ transports: ['websocket','polling'] }); }
+  try { socket = io({ transports: ['websocket','polling'], timeout: 2000 }); }
   catch(e) { socket = { on(){}, emit(){} }; }
 
   /* ── Resize ── */
@@ -182,14 +188,15 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     const dpr = window.devicePixelRatio || 1;
     const w = rectEl.offsetWidth, h = rectEl.offsetHeight;
     canvas.width  = w * dpr; canvas.height = h * dpr;
-    canvas.style.width = w+'px'; canvas.style.height = h+'px';
+    canvas.style.width  = w + 'px';
+    canvas.style.height = h + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
   /* ── Controls ── */
-  const gapControl = document.getElementById('gapControl');
+  const gapControl     = document.getElementById('gapControl');
   const offsetXControl = document.getElementById('offsetXControl');
   const offsetYControl = document.getElementById('offsetYControl');
   const heightControl  = document.getElementById('heightControl');
@@ -197,9 +204,9 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
   const positioner     = document.getElementById('overlay-positioner');
 
   function syncValues() {
-    document.getElementById('gapValue').textContent    = layoutGap;
-    document.getElementById('offsetXValue').textContent= offsetX;
-    document.getElementById('offsetYValue').textContent= offsetY;
+    document.getElementById('gapValue').textContent     = layoutGap;
+    document.getElementById('offsetXValue').textContent = offsetX;
+    document.getElementById('offsetYValue').textContent = offsetY;
   }
   gapControl.oninput     = () => { layoutGap = +gapControl.value;     syncValues(); };
   offsetXControl.oninput = () => { offsetX   = +offsetXControl.value; syncValues(); };
@@ -211,8 +218,8 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     resizeCanvas();
   };
   screenYControl.oninput = () => {
-    const v = +screenYControl.value;   // -50 to +50
-    const topVh = 50 - v;             // 0=top, 50=centre, 100=bottom; inverted so right=up
+    const v = +screenYControl.value;
+    const topVh = 50 - v;
     document.getElementById('screenYValue').textContent =
       v === 0 ? '↕ Centre' : v > 0 ? `▲ ${v}%` : `▼ ${Math.abs(v)}%`;
     positioner.style.top = topVh + 'vh';
@@ -232,200 +239,284 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
 
   /* ── Helpers ── */
   function topPlayers() {
-    return Object.values(players).filter(p=>p.alive && p.uniqueId!==HORDE_ID)
-      .sort((a,b)=>(b.hp||0)-(a.hp||0)).slice(0,5);
+    return Object.values(players)
+      .filter(p => p.alive && p.uniqueId !== HORDE_ID)
+      .sort((a, b) => (b.hp || 0) - (a.hp || 0))
+      .slice(0, 5);
   }
   function hordePlayer() {
-    const ids = new Set(topPlayers().map(p=>p.uniqueId));
-    const rest = Object.values(players).filter(p=>p.alive && !ids.has(p.uniqueId));
+    const ids = new Set(topPlayers().map(p => p.uniqueId));
+    const rest = Object.values(players).filter(p => p.alive && !ids.has(p.uniqueId));
     if (!rest.length) return null;
-    return { uniqueId:HORDE_ID, nickname:'THE HORDE',
-      hp: rest.reduce((s,p)=>s+(p.hp||0),0),
-      maxHp: rest.reduce((s,p)=>s+(p.maxHp||100),0),
-      hordeCount: rest.length, alive:true };
+    return {
+      uniqueId: HORDE_ID, nickname: 'THE HORDE',
+      hp:    rest.reduce((s, p) => s + (p.hp    || 0),   0),
+      maxHp: rest.reduce((s, p) => s + (p.maxHp || 100), 0),
+      hordeCount: rest.length, alive: true
+    };
   }
 
   function cw() { return rectEl.offsetWidth; }
   function ch() { return rectEl.offsetHeight; }
 
   function getPlayerPosition(index) {
-    const W=cw(), cellW=(W*0.82)/5, gap=layoutGap*currentScale;
-    const totalW=cellW*5+gap*4, startX=(W-totalW)/2+offsetX;
-    return { x: startX+index*(cellW+gap)+cellW/2, y: ch()*0.30+offsetY };
+    const W = cw(), cellW = (W * 0.82) / 5, gap = layoutGap * currentScale;
+    const totalW = cellW * 5 + gap * 4, startX = (W - totalW) / 2 + offsetX;
+    return { x: startX + index * (cellW + gap) + cellW / 2, y: ch() * 0.30 + offsetY };
   }
   function getHordePosition() {
-    return { x: cw()/2+offsetX, y: ch()*0.78+offsetY };
+    return { x: cw() / 2 + offsetX, y: ch() * 0.78 + offsetY };
+  }
+
+  /* ── Canvas-local coords → viewport coords ── */
+  function canvasToViewport(cx, cy) {
+    const rect = canvas.getBoundingClientRect();
+    // canvas logical size == rectEl CSS size, so just scale by CSS size ratio
+    const scaleX = rect.width  / cw();
+    const scaleY = rect.height / ch();
+    return {
+      x: rect.left + cx * scaleX,
+      y: rect.top  + cy * scaleY
+    };
   }
 
   /* ── Background ── */
   function drawBackground() {
-    const W=cw(), H=ch();
+    const W = cw(), H = ch();
     if (backgroundImg) {
-      const scale=Math.max(W/backgroundImg.width,H/backgroundImg.height);
-      ctx.drawImage(backgroundImg,(W-backgroundImg.width*scale)/2,(H-backgroundImg.height*scale)/2,backgroundImg.width*scale,backgroundImg.height*scale);
+      const scale = Math.max(W / backgroundImg.width, H / backgroundImg.height);
+      ctx.drawImage(backgroundImg,
+        (W - backgroundImg.width  * scale) / 2,
+        (H - backgroundImg.height * scale) / 2,
+        backgroundImg.width * scale, backgroundImg.height * scale);
     } else {
-      const g=ctx.createLinearGradient(0,0,0,H);
-      g.addColorStop(0,'#0d1a2e'); g.addColorStop(1,'#050b12');
-      ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-      ctx.strokeStyle='rgba(100,200,255,0.04)'; ctx.lineWidth=1;
-      for(let x=0;x<W;x+=60){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
-      for(let y=0;y<H;y+=30){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
-      ctx.strokeStyle='rgba(140,80,255,0.25)'; ctx.lineWidth=1;
-      ctx.beginPath();ctx.moveTo(0,H*0.60);ctx.lineTo(W,H*0.60);ctx.stroke();
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#0d1a2e'); g.addColorStop(1, '#050b12');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = 'rgba(100,200,255,0.04)'; ctx.lineWidth = 1;
+      for (let x = 0; x < W; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(140,80,255,0.25)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, H * 0.60); ctx.lineTo(W, H * 0.60); ctx.stroke();
     }
   }
 
   /* ── Player Card ── */
   function drawPlayerCard(player, pos, rank) {
-    const hp=player.hp||0, maxHp=player.maxHp||100;
-    const hpPct=Math.max(0,Math.min(1,hp/maxHp));
-    const H=ch(), rowH=H*0.60, cardH=rowH*0.84, cardW=cardH*0.72;
-    const cx=pos.x, cy=pos.y;
-    const avatarR=cardH*0.26, avatarY=cy-cardH*0.14;
-    const nameY=avatarY-avatarR-cardH*0.06;
-    const barW=cardW*0.88, barH=Math.max(6,cardH*0.09);
-    const barX=cx-barW/2, barY=avatarY+avatarR+cardH*0.05;
-    const hpTextY=barY+barH+cardH*0.07;
+    const hp = player.hp || 0, maxHp = player.maxHp || 100;
+    const hpPct = Math.max(0, Math.min(1, hp / maxHp));
+    const H = ch(), cardH = H * 0.60 * 0.84, cardW = cardH * 0.72;
+    const cx = pos.x, cy = pos.y;
+    const avatarR = cardH * 0.26, avatarY = cy - cardH * 0.14;
+    const nameY = avatarY - avatarR - cardH * 0.06;
+    const barW = cardW * 0.88, barH = Math.max(6, cardH * 0.09);
+    const barX = cx - barW / 2, barY = avatarY + avatarR + cardH * 0.05;
+    const hpTextY = barY + barH + cardH * 0.07;
 
-    const glow=ctx.createRadialGradient(cx,cy,0,cx,cy,avatarR*2.5);
-    glow.addColorStop(0,'rgba(122,252,255,0.18)');glow.addColorStop(1,'rgba(122,252,255,0)');
-    ctx.fillStyle=glow; ctx.beginPath();ctx.arc(cx,cy,avatarR*2.5,0,Math.PI*2);ctx.fill();
+    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, avatarR * 2.5);
+    glow.addColorStop(0, 'rgba(122,252,255,0.18)'); glow.addColorStop(1, 'rgba(122,252,255,0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, avatarR * 2.5, 0, Math.PI * 2); ctx.fill();
 
-    ctx.strokeStyle=rank===1?'rgba(255,210,80,0.7)':'rgba(122,252,255,0.35)';
-    ctx.lineWidth=Math.max(2,avatarR*0.08);
-    ctx.beginPath();ctx.arc(cx,avatarY,avatarR,0,Math.PI*2);ctx.stroke();
-    ctx.fillStyle='rgba(8,18,30,0.92)';
-    ctx.beginPath();ctx.arc(cx,avatarY,avatarR-2,0,Math.PI*2);ctx.fill();
-    ctx.font=`${avatarR*1.3}px Arial`;ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText(player.iconEmoji||'⚔️',cx,avatarY);
+    ctx.strokeStyle = rank === 1 ? 'rgba(255,210,80,0.7)' : 'rgba(122,252,255,0.35)';
+    ctx.lineWidth = Math.max(2, avatarR * 0.08);
+    ctx.beginPath(); ctx.arc(cx, avatarY, avatarR, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(8,18,30,0.92)';
+    ctx.beginPath(); ctx.arc(cx, avatarY, avatarR - 2, 0, Math.PI * 2); ctx.fill();
+    ctx.font = `${avatarR * 1.3}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(player.iconEmoji || '⚔️', cx, avatarY);
 
-    const nameFontSize=Math.max(9,cardH*0.11);
-    ctx.font=`bold ${nameFontSize}px "Segoe UI"`;ctx.textBaseline='middle';
-    const name=(player.nickname||player.uniqueId||'Player').slice(0,13);
-    ctx.strokeStyle='#000';ctx.lineWidth=3;ctx.strokeText(name,cx,nameY);
-    ctx.fillStyle='#fff';ctx.fillText(name,cx,nameY);
+    const nameFontSize = Math.max(9, cardH * 0.11);
+    ctx.font = `bold ${nameFontSize}px "Segoe UI"`; ctx.textBaseline = 'middle';
+    const name = (player.nickname || player.uniqueId || 'Player').slice(0, 13);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeText(name, cx, nameY);
+    ctx.fillStyle = '#fff'; ctx.fillText(name, cx, nameY);
 
-    ctx.fillStyle='rgba(0,0,0,0.55)';ctx.fillRect(barX,barY,barW,barH);
-    const hpGrad=ctx.createLinearGradient(barX,0,barX+barW,0);
-    hpGrad.addColorStop(0,hpPct>0.5?'#2ecc71':hpPct>0.25?'#f39c12':'#ff4d4d');
-    hpGrad.addColorStop(1,'#ffffff55');
-    ctx.fillStyle=hpGrad;ctx.fillRect(barX+1,barY+1,(barW-2)*hpPct,barH-2);
-    ctx.strokeStyle='rgba(122,252,255,0.35)';ctx.lineWidth=1;ctx.strokeRect(barX,barY,barW,barH);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(barX, barY, barW, barH);
+    const hpGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    hpGrad.addColorStop(0, hpPct > 0.5 ? '#2ecc71' : hpPct > 0.25 ? '#f39c12' : '#ff4d4d');
+    hpGrad.addColorStop(1, '#ffffff55');
+    ctx.fillStyle = hpGrad; ctx.fillRect(barX + 1, barY + 1, (barW - 2) * hpPct, barH - 2);
+    ctx.strokeStyle = 'rgba(122,252,255,0.35)'; ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH);
 
-    const hpFontSize=Math.max(8,cardH*0.085);
-    ctx.font=`${hpFontSize}px "Segoe UI"`;
-    ctx.strokeStyle='#000';ctx.lineWidth=2.5;
-    ctx.strokeText(`${Math.round(hp)}/${maxHp}`,cx,hpTextY);
-    ctx.fillStyle='#ccc';ctx.fillText(`${Math.round(hp)}/${maxHp}`,cx,hpTextY);
+    const hpFontSize = Math.max(8, cardH * 0.085);
+    ctx.font = `${hpFontSize}px "Segoe UI"`;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
+    ctx.strokeText(`${Math.round(hp)}/${maxHp}`, cx, hpTextY);
+    ctx.fillStyle = '#ccc'; ctx.fillText(`${Math.round(hp)}/${maxHp}`, cx, hpTextY);
   }
 
   /* ── Horde ── */
   function drawHorde(horde) {
     if (!horde) return;
-    const pos=getHordePosition(), H=ch(), rowH=H*0.40;
-    const pulse=0.5+Math.sin(Date.now()/350)*0.5;
-    const skullR=rowH*0.28, cx=pos.x, cy=pos.y;
+    const pos = getHordePosition(), H = ch(), rowH = H * 0.40;
+    const pulse = 0.5 + Math.sin(Date.now() / 350) * 0.5;
+    const skullR = rowH * 0.28, cx = pos.x, cy = pos.y;
 
-    ctx.beginPath();ctx.arc(cx,cy,skullR+pulse*4,0,Math.PI*2);
-    ctx.fillStyle=`rgba(255,70,70,${0.08+pulse*0.05})`;ctx.fill();
-    ctx.strokeStyle=`rgba(255,70,70,${0.5+pulse*0.3})`;
-    ctx.lineWidth=Math.max(2,skullR*0.1);
-    ctx.beginPath();ctx.arc(cx,cy,skullR*0.88,0,Math.PI*2);ctx.stroke();
-    ctx.font=`${skullR*1.5}px Arial`;ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('💀',cx,cy);
+    ctx.beginPath(); ctx.arc(cx, cy, skullR + pulse * 4, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,70,70,${0.08 + pulse * 0.05})`; ctx.fill();
+    ctx.strokeStyle = `rgba(255,70,70,${0.5 + pulse * 0.3})`;
+    ctx.lineWidth = Math.max(2, skullR * 0.1);
+    ctx.beginPath(); ctx.arc(cx, cy, skullR * 0.88, 0, Math.PI * 2); ctx.stroke();
+    ctx.font = `${skullR * 1.5}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('💀', cx, cy);
 
-    const titleFont=Math.max(10,rowH*0.22);
-    ctx.font=`bold ${titleFont}px "Segoe UI"`;ctx.textAlign='right';ctx.textBaseline='middle';
-    ctx.strokeStyle='#000';ctx.lineWidth=4;
-    ctx.strokeText('⚔ THE HORDE',cx-skullR*1.35,cy-rowH*0.1);
-    ctx.fillStyle='#ff7b7b';ctx.fillText('⚔ THE HORDE',cx-skullR*1.35,cy-rowH*0.1);
-    ctx.font=`${Math.max(8,rowH*0.16)}px "Segoe UI"`;ctx.textAlign='right';
-    ctx.fillStyle='#ffc2c2';ctx.fillText(`${horde.hordeCount} players`,cx-skullR*1.35,cy+rowH*0.14);
+    const titleFont = Math.max(10, rowH * 0.22);
+    ctx.font = `bold ${titleFont}px "Segoe UI"`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+    ctx.strokeText('⚔ THE HORDE', cx - skullR * 1.35, cy - rowH * 0.1);
+    ctx.fillStyle = '#ff7b7b'; ctx.fillText('⚔ THE HORDE', cx - skullR * 1.35, cy - rowH * 0.1);
+    ctx.font = `${Math.max(8, rowH * 0.16)}px "Segoe UI"`; ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffc2c2'; ctx.fillText(`${horde.hordeCount} players`, cx - skullR * 1.35, cy + rowH * 0.14);
 
-    const hpPct=Math.min(1,horde.hp/Math.max(1,horde.maxHp));
-    const barW=cw()*0.28, barH2=Math.max(8,rowH*0.16);
-    const barX=cx+skullR*1.35, barY=cy-barH2/2;
-    ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(barX,barY,barW,barH2);
-    const rg=ctx.createLinearGradient(barX,0,barX+barW,0);
-    rg.addColorStop(0,'#ff2222');rg.addColorStop(1,'#ff8888');
-    ctx.fillStyle=rg;ctx.fillRect(barX+2,barY+2,(barW-4)*hpPct,barH2-4);
-    ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;ctx.strokeRect(barX,barY,barW,barH2);
-    ctx.font=`${Math.max(8,rowH*0.14)}px "Segoe UI"`;ctx.textAlign='left';ctx.textBaseline='middle';
-    ctx.strokeStyle='#000';ctx.lineWidth=2.5;
-    const hpStr=`${Math.round(horde.hp)} / ${Math.round(horde.maxHp)}`;
-    ctx.strokeText(hpStr,barX,barY+barH2+rowH*0.12);
-    ctx.fillStyle='#ffaaaa';ctx.fillText(hpStr,barX,barY+barH2+rowH*0.12);
+    const hpPct = Math.min(1, horde.hp / Math.max(1, horde.maxHp));
+    const barW = cw() * 0.28, barH2 = Math.max(8, rowH * 0.16);
+    const barX = cx + skullR * 1.35, barY = cy - barH2 / 2;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(barX, barY, barW, barH2);
+    const rg = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    rg.addColorStop(0, '#ff2222'); rg.addColorStop(1, '#ff8888');
+    ctx.fillStyle = rg; ctx.fillRect(barX + 2, barY + 2, (barW - 4) * hpPct, barH2 - 4);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH2);
+    ctx.font = `${Math.max(8, rowH * 0.14)}px "Segoe UI"`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
+    const hpStr = `${Math.round(horde.hp)} / ${Math.round(horde.maxHp)}`;
+    ctx.strokeText(hpStr, barX, barY + barH2 + rowH * 0.12);
+    ctx.fillStyle = '#ffaaaa'; ctx.fillText(hpStr, barX, barY + barH2 + rowH * 0.12);
   }
 
   /* ── Attack Lines ── */
   class Attack {
-    constructor(from,to,special=false){this.from=from;this.to=to;this.special=special;this.start=Date.now();this.duration=550;}
-    update(){return Date.now()-this.start<this.duration;}
-    draw(){
-      const progress=(Date.now()-this.start)/this.duration, alpha=1-progress;
-      ctx.save();ctx.globalCompositeOperation='lighter';
-      ctx.strokeStyle=this.special?`rgba(255,170,80,${alpha})`:`rgba(122,252,255,${alpha})`;
-      ctx.lineWidth=this.special?8:5;
-      ctx.beginPath();ctx.moveTo(this.from.x,this.from.y);
-      const tx=this.from.x+(this.to.x-this.from.x)*progress;
-      const ty=this.from.y+(this.to.y-this.from.y)*progress;
-      ctx.lineTo(tx,ty);ctx.stroke();
-      ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(tx,ty,5,0,Math.PI*2);ctx.fill();
+    constructor(from, to, special = false) {
+      this.from = from; this.to = to; this.special = special;
+      this.start = Date.now(); this.duration = 550;
+    }
+    update() { return Date.now() - this.start < this.duration; }
+    draw() {
+      const progress = (Date.now() - this.start) / this.duration;
+      const alpha = 1 - progress;
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+
+      if (this.special) {
+        // Gift / special: fat glowing orange laser with sparkle head
+        ctx.shadowColor = 'rgba(255,170,80,0.9)';
+        ctx.shadowBlur  = 18;
+        ctx.strokeStyle = `rgba(255,200,80,${alpha})`;
+        ctx.lineWidth   = 10;
+      } else {
+        // Normal attack: cyan laser
+        ctx.shadowColor = 'rgba(122,252,255,0.9)';
+        ctx.shadowBlur  = 14;
+        ctx.strokeStyle = `rgba(122,252,255,${alpha})`;
+        ctx.lineWidth   = 5;
+      }
+
+      const tx = this.from.x + (this.to.x - this.from.x) * progress;
+      const ty = this.from.y + (this.to.y - this.from.y) * progress;
+
+      ctx.beginPath(); ctx.moveTo(this.from.x, this.from.y); ctx.lineTo(tx, ty); ctx.stroke();
+
+      // Bolt head
+      const headR = this.special ? 8 : 5;
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      ctx.beginPath(); ctx.arc(tx, ty, headR, 0, Math.PI * 2); ctx.fill();
+
+      // Extra glow ring on special
+      if (this.special) {
+        ctx.strokeStyle = `rgba(255,255,100,${alpha * 0.6})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(tx, ty, headR + 6, 0, Math.PI * 2); ctx.stroke();
+      }
       ctx.restore();
     }
   }
 
-  /* ── Damage Numbers — appended to rectEl so coords are rect-relative ── */
-  function showDamage(x, y, dmg, kill) {
+  /* ── Damage Numbers — appended to body, positioned via viewport coords ── */
+  function showDamage(canvasX, canvasY, dmg, kill) {
+    const vp = canvasToViewport(canvasX, canvasY);
     const el = document.createElement('div');
-    el.className = `damage${kill?' kill':''}`;
-    el.textContent = kill ? '💀 KILL!' : `-${dmg}`;
-    // x/y are canvas logical coords (same coordinate space as rectEl children)
-    el.style.left = x + 'px';
-    el.style.top  = y + 'px';
-    rectEl.appendChild(el);          // ← parent is the rect, not .ui
-    setTimeout(() => el.remove(), 850);
+    el.className = `damage${kill ? ' kill' : ''}`;
+    el.textContent = kill ? '💀 KILL!' : `-${Math.round(dmg)}`;
+    el.style.left = vp.x + 'px';
+    el.style.top  = vp.y + 'px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 900);
   }
 
-  /* ── Socket ── */
-  socket.on('connect', () => socket.emit('register', {type:'overlay'}));
-  socket.on('gameState', state => { players = state||{}; });
-  socket.on('audioConfig', cfg => { audioConfig = cfg||{}; });
-  socket.on('backgroundChanged', ({filename}) => {
-    if (!filename){backgroundImg=null;return;}
-    const img=new Image();img.onload=()=>{backgroundImg=img;};img.src=`/background/${filename}?v=${Date.now()}`;
+  /* ── Socket events ── */
+  socket.on('connect', () => socket.emit('register', { type: 'overlay' }));
+  socket.on('gameState', state => { players = state || {}; });
+  socket.on('audioConfig', cfg  => { audioConfig = cfg || {}; });
+  socket.on('backgroundChanged', ({ filename }) => {
+    if (!filename) { backgroundImg = null; return; }
+    const img = new Image();
+    img.onload = () => { backgroundImg = img; };
+    img.src = `/background/${filename}?v=${Date.now()}`;
   });
   socket.on('attack', data => {
-    const top=topPlayers();
-    const ai=top.findIndex(p=>p.uniqueId===data.attacker);
-    const ti=top.findIndex(p=>p.uniqueId===data.target);
-    const from=ai>=0?getPlayerPosition(ai):getHordePosition();
-    const to  =ti>=0?getPlayerPosition(ti):getHordePosition();
-    attacks.push(new Attack(from,to,data.special));
-    showDamage(to.x, to.y, data.damage, data.killed);
-    playSound(data.special?'gift':'attack');
+    fireAttack(data.attacker, data.target, data.damage, data.killed, data.special);
   });
+
+  /* ── Shared attack handler (socket + demo) ── */
+  function fireAttack(attackerId, targetId, damage, killed, special) {
+    const top = topPlayers();
+    const ai  = top.findIndex(p => p.uniqueId === attackerId);
+    const ti  = top.findIndex(p => p.uniqueId === targetId);
+    const from = ai >= 0 ? getPlayerPosition(ai) : getHordePosition();
+    const to   = ti >= 0 ? getPlayerPosition(ti) : getHordePosition();
+    attacks.push(new Attack(from, to, special));
+    showDamage(to.x, to.y, damage, killed);
+    playSound(special ? 'gift' : 'attack');
+  }
+
+  /* ── Demo Attack Loop ── */
+  // Fires a random attack every 2 seconds so you can see lasers + damage numbers
+  // without a live socket server. Remove this block in production.
+  function randomDemoAttack() {
+    const top = topPlayers();
+    const horde = hordePlayer();
+    if (!top.length) return;
+
+    const allTargets = [...top.map(p => p.uniqueId)];
+    if (horde) allTargets.push(HORDE_ID);
+
+    const isSpecial = Math.random() < 0.3;
+    const fromId = top[Math.floor(Math.random() * top.length)].uniqueId;
+    const toId   = allTargets[Math.floor(Math.random() * allTargets.length)];
+    const damage = Math.round(20 + Math.random() * 80);
+
+    fireAttack(fromId, toId, damage, false, isSpecial);
+  }
+
+  // Also trigger a horde → player attack occasionally
+  function randomHordeAttack() {
+    const top = topPlayers();
+    if (!top.length || !hordePlayer()) return;
+    const toId = top[Math.floor(Math.random() * top.length)].uniqueId;
+    fireAttack(HORDE_ID, toId, Math.round(15 + Math.random() * 60), false, false);
+  }
+
+  setInterval(randomDemoAttack,  2000);
+  setInterval(randomHordeAttack, 3100);
 
   /* ── Demo data ── */
   players = {
-    p1:{uniqueId:'p1',nickname:'Kristiden',    hp:1235,maxHp:1352,alive:true,iconEmoji:'💎'},
-    p2:{uniqueId:'p2',nickname:'Ken Valentine',hp:997, maxHp:997, alive:true,iconEmoji:'💎'},
-    p3:{uniqueId:'p3',nickname:'VimiSha|Skin', hp:406, maxHp:410, alive:true,iconEmoji:'💎'},
-    p4:{uniqueId:'p4',nickname:'Sonya Barron', hp:361, maxHp:369, alive:true,iconEmoji:'💎'},
-    p5:{uniqueId:'p5',nickname:'Anto|mom lif', hp:351, maxHp:351, alive:true,iconEmoji:'💎'},
-    h1:{uniqueId:'h1',nickname:'Member 1',hp:1200,maxHp:1500,alive:true},
-    h2:{uniqueId:'h2',nickname:'Member 2',hp:980, maxHp:1200,alive:true},
+    p1: { uniqueId:'p1', nickname:'Kristiden',     hp:1235, maxHp:1352, alive:true, iconEmoji:'💎' },
+    p2: { uniqueId:'p2', nickname:'Ken Valentine', hp:997,  maxHp:997,  alive:true, iconEmoji:'💎' },
+    p3: { uniqueId:'p3', nickname:'VimiSha|Skin',  hp:406,  maxHp:410,  alive:true, iconEmoji:'💎' },
+    p4: { uniqueId:'p4', nickname:'Sonya Barron',  hp:361,  maxHp:369,  alive:true, iconEmoji:'💎' },
+    p5: { uniqueId:'p5', nickname:'Anto|mom lif',  hp:351,  maxHp:351,  alive:true, iconEmoji:'💎' },
+    h1: { uniqueId:'h1', nickname:'Member 1',      hp:1200, maxHp:1500, alive:true },
+    h2: { uniqueId:'h2', nickname:'Member 2',      hp:980,  maxHp:1200, alive:true },
   };
 
   /* ── Main Loop ── */
   function draw() {
-    currentScale = Math.min(cw()/1920, ch()/200, 1.4) * layoutScale;
+    currentScale = Math.min(cw() / 1920, ch() / 200, 1.4) * layoutScale;
     if (currentScale < 0.05) currentScale = 0.05;
-    ctx.clearRect(0,0,cw(),ch());
+    ctx.clearRect(0, 0, cw(), ch());
     drawBackground();
-    topPlayers().forEach((p,i) => drawPlayerCard(p, getPlayerPosition(i), i+1));
+    topPlayers().forEach((p, i) => drawPlayerCard(p, getPlayerPosition(i), i + 1));
     drawHorde(hordePlayer());
-    attacks = attacks.filter(a => { const alive=a.update(); if(alive) a.draw(); return alive; });
+    attacks = attacks.filter(a => { const alive = a.update(); if (alive) a.draw(); return alive; });
     requestAnimationFrame(draw);
   }
   draw();
