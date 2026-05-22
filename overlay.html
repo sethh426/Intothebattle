@@ -6,121 +6,129 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Battle Royale Overlay</title>
+  <title>Battle Royale Overlay · Live</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #02040a; font-family: 'Segoe UI', sans-serif; }
 
-```
-#overlay-wrap {
-  position: absolute; inset: 0;
-  background: #02040a;
-}
+    #overlay-wrap {
+      position: absolute; inset: 0;
+      background: #02040a;
+    }
 
-#overlay-positioner {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  transition: top 0.05s linear;
-}
+    #overlay-positioner {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      transition: top 0.05s linear;
+    }
 
-#overlay-rect {
-  position: relative;
-  width: 80vw; height: 20vh; min-height: 140px;
-  overflow: visible;
-  border: 1px solid rgba(140,80,255,0.45);
-  border-radius: 10px;
-  box-shadow: 0 0 48px rgba(140,80,255,0.3), inset 0 0 4px rgba(255,255,255,0.05);
-}
+    #overlay-rect {
+      position: relative;
+      width: 80vw; height: 20vh; min-height: 140px;
+      overflow: visible;
+      border: 1px solid rgba(140,80,255,0.45);
+      border-radius: 10px;
+      box-shadow: 0 0 48px rgba(140,80,255,0.3), inset 0 0 4px rgba(255,255,255,0.05);
+    }
 
-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: 10px; overflow: hidden; }
+    canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: 10px; overflow: hidden; }
 
-/* Damage numbers are appended to body and positioned absolutely via getBoundingClientRect */
-.damage {
-  position: fixed;   /* ← fixed so we can use viewport coords from getBoundingClientRect */
-  font-weight: 900; font-size: clamp(18px,3vw,28px);
-  color: #ff5050;
-  text-shadow: 0 0 16px rgba(255,80,80,0.95), 2px 2px 8px rgba(0,0,0,0.9);
-  animation: floatDamage 0.85s ease-out forwards;
-  pointer-events: none; z-index: 9999;
-  transform: translate(-50%, -50%);
-  white-space: nowrap;
-}
-.damage.kill {
-  color: #ffd84f; font-size: clamp(22px,4vw,34px);
-  text-shadow: 0 0 20px rgba(255,216,79,0.95);
-}
-@keyframes floatDamage {
-  0%   { opacity: 1; transform: translate(-50%,-50%) scale(1.15); }
-  100% { opacity: 0; transform: translate(-50%,-160%) scale(0.65); }
-}
+    /* Damage numbers */
+    .damage {
+      position: fixed;
+      font-weight: 900; font-size: clamp(18px,3vw,28px);
+      color: #ff5050;
+      text-shadow: 0 0 16px rgba(255,80,80,0.95), 2px 2px 8px rgba(0,0,0,0.9);
+      animation: floatDamage 0.85s ease-out forwards;
+      pointer-events: none; z-index: 9999;
+      transform: translate(-50%, -50%);
+      white-space: nowrap;
+    }
+    .damage.kill {
+      color: #ffd84f; font-size: clamp(22px,4vw,34px);
+      text-shadow: 0 0 20px rgba(255,216,79,0.95);
+    }
+    @keyframes floatDamage {
+      0%   { opacity: 1; transform: translate(-50%,-50%) scale(1.15); }
+      100% { opacity: 0; transform: translate(-50%,-160%) scale(0.65); }
+    }
 
-/* ── UI / panel layer ── */
-.ui { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
+    /* UI panel */
+    .ui { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
+    .panel-wrapper {
+      position: absolute; top: 16px; right: 0;
+      display: flex; align-items: flex-start;
+      pointer-events: auto;
+    }
+    .panel-tab {
+      width: 28px;
+      background: rgba(6,10,20,0.88);
+      border: 1px solid rgba(100,200,255,0.2);
+      border-right: none;
+      border-radius: 8px 0 0 8px;
+      padding: 10px 0;
+      cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      color: #8fd8ff; font-size: 10px; font-weight: 800;
+      letter-spacing: 1px; text-transform: uppercase;
+      writing-mode: vertical-rl; text-orientation: mixed;
+      user-select: none;
+      transition: background 0.2s;
+    }
+    .panel-tab:hover { background: rgba(20,40,70,0.95); }
+    .panel-tab-icon { font-size: 13px; writing-mode: horizontal-tb; }
 
-.panel-wrapper {
-  position: absolute; top: 16px; right: 0;
-  display: flex; align-items: flex-start;
-  pointer-events: auto;
-}
+    .layout-panel {
+      width: 240px;
+      padding: 14px 16px; border-radius: 0 0 0 16px;
+      background: rgba(6,10,20,0.92); backdrop-filter: blur(16px);
+      border: 1px solid rgba(100,200,255,0.14);
+      border-right: none;
+      box-shadow: -8px 0 30px rgba(0,0,0,0.5);
+      transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
+      transform-origin: right top;
+    }
+    .layout-panel.hidden {
+      transform: translateX(100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    .layout-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .layout-title { color: #8fd8ff; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+    .layout-btn {
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      color: white; border-radius: 8px; padding: 5px 10px; font-size: 11px; cursor: pointer; transition: 0.2s;
+    }
+    .layout-btn:hover { background: rgba(255,255,255,0.12); }
+    .control { margin-bottom: 13px; }
+    .control-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .control-top span { font-size: 11px; color: #cfefff; }
+    .control input { width: 100%; appearance: none; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.08); outline: none; }
+    .control input::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9); cursor: pointer; }
 
-.panel-tab {
-  width: 28px;
-  background: rgba(6,10,20,0.88);
-  border: 1px solid rgba(100,200,255,0.2);
-  border-right: none;
-  border-radius: 8px 0 0 8px;
-  padding: 10px 0;
-  cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  color: #8fd8ff; font-size: 10px; font-weight: 800;
-  letter-spacing: 1px; text-transform: uppercase;
-  writing-mode: vertical-rl; text-orientation: mixed;
-  user-select: none;
-  transition: background 0.2s;
-}
-.panel-tab:hover { background: rgba(20,40,70,0.95); }
-.panel-tab-icon { font-size: 13px; writing-mode: horizontal-tb; }
-
-.layout-panel {
-  width: 240px;
-  padding: 14px 16px; border-radius: 0 0 0 16px;
-  background: rgba(6,10,20,0.92); backdrop-filter: blur(16px);
-  border: 1px solid rgba(100,200,255,0.14);
-  border-right: none;
-  box-shadow: -8px 0 30px rgba(0,0,0,0.5);
-  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
-  transform-origin: right top;
-}
-.layout-panel.hidden {
-  transform: translateX(100%);
-  opacity: 0;
-  pointer-events: none;
-}
-.layout-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.layout-title { color: #8fd8ff; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
-.layout-btn {
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-  color: white; border-radius: 8px; padding: 5px 10px; font-size: 11px; cursor: pointer; transition: 0.2s;
-}
-.layout-btn:hover { background: rgba(255,255,255,0.12); }
-.control { margin-bottom: 13px; }
-.control-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
-.control-top span { font-size: 11px; color: #cfefff; }
-.control input { width: 100%; appearance: none; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.08); outline: none; }
-.control input::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9); cursor: pointer; }
-
-/* Demo badge */
-#demo-badge {
-  position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
-  background: rgba(255,200,80,0.15); border: 1px solid rgba(255,200,80,0.4);
-  color: #ffd84f; font-size: 11px; font-weight: 700; letter-spacing: 1px;
-  padding: 5px 14px; border-radius: 20px; pointer-events: none; z-index: 9999;
-}
-```
-
+    /* Connection status badge */
+    #status-badge {
+      position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(8px);
+      border-radius: 24px;
+      padding: 4px 16px;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      color: #aaa;
+      pointer-events: none;
+      z-index: 9999;
+      font-family: monospace;
+      transition: 0.2s;
+    }
+    #status-badge.connected { color: #7aff87; text-shadow: 0 0 4px #2eff5e; }
+    #status-badge.disconnected { color: #ff8866; }
   </style>
+  <!-- Socket.IO client (required for live data) -->
+  <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 
@@ -162,30 +170,91 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     </div>
   </div>
 </div>
+<div id="status-badge" class="disconnected">⚡ CONNECTING...</div>
 
 <script>
 (function () {
   const canvas = document.getElementById('canvas');
   const ctx    = canvas.getContext('2d');
   const rectEl = document.getElementById('overlay-rect');
+  const statusDiv = document.getElementById('status-badge');
 
-  let players = {}, attacks = [];
+  let players = {};           // will be populated by server
+  let attacks = [];
   let layoutGap = 0, offsetX = 0, offsetY = 0, layoutScale = 1;
   let backgroundImg = null;
   const audioCache = {}; let audioConfig = {}, soundEnabled = true;
   const HORDE_ID = '__HORDE__';
   let currentScale = 1;
+  let socket = null;
+  let isConnected = false;
 
-  // ── Graceful socket (no-op if server absent) ──
-  let socket;
-  try { socket = io({ transports: ['websocket','polling'], timeout: 2000 }); }
-  catch(e) { socket = { on(){}, emit(){} }; }
+  // ── Socket.IO connection (live data) ──
+  function initSocket() {
+    try {
+      socket = io({ transports: ['websocket', 'polling'], timeout: 5000 });
+      
+      socket.on('connect', () => {
+        console.log('[Live] Socket connected');
+        isConnected = true;
+        statusDiv.textContent = '🟢 LIVE · CONNECTED';
+        statusDiv.className = 'connected';
+        socket.emit('register', { type: 'overlay' });
+      });
 
-  /* ── Resize ── */
+      socket.on('disconnect', () => {
+        console.warn('[Live] Socket disconnected');
+        isConnected = false;
+        statusDiv.textContent = '🔴 DISCONNECTED · waiting...';
+        statusDiv.className = 'disconnected';
+      });
+
+      socket.on('connect_error', (err) => {
+        console.error('[Live] Connection error:', err);
+        statusDiv.textContent = '⚠️ SERVER ERROR · retrying';
+        statusDiv.className = 'disconnected';
+      });
+
+      // Real game state from server
+      socket.on('gameState', (state) => {
+        if (state && typeof state === 'object') {
+          players = state;
+          console.log('[Live] gameState updated, players:', Object.keys(players).length);
+        } else {
+          console.warn('[Live] Invalid gameState received', state);
+        }
+      });
+
+      socket.on('audioConfig', (cfg) => {
+        if (cfg) audioConfig = cfg;
+      });
+
+      socket.on('backgroundChanged', ({ filename }) => {
+        if (!filename) {
+          backgroundImg = null;
+          return;
+        }
+        const img = new Image();
+        img.onload = () => { backgroundImg = img; };
+        img.src = `/background/${filename}?v=${Date.now()}`;
+      });
+
+      socket.on('attack', (data) => {
+        fireAttack(data.attacker, data.target, data.damage, data.killed, data.special);
+      });
+
+    } catch (err) {
+      console.error('[Live] Failed to init socket:', err);
+      statusDiv.textContent = '❌ SOCKET ERROR · no live data';
+    }
+  }
+
+  // ── Resize & canvas scaling ──
   function resizeCanvas() {
     const dpr = window.devicePixelRatio || 1;
     const w = rectEl.offsetWidth, h = rectEl.offsetHeight;
-    canvas.width  = w * dpr; canvas.height = h * dpr;
+    canvas.width  = w * dpr;
+    canvas.height = h * dpr;
     canvas.style.width  = w + 'px';
     canvas.style.height = h + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -193,7 +262,7 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
-  /* ── Controls ── */
+  // ── UI Controls ──
   const gapControl     = document.getElementById('gapControl');
   const offsetXControl = document.getElementById('offsetXControl');
   const offsetYControl = document.getElementById('offsetYControl');
@@ -231,26 +300,45 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     tab.querySelector('.panel-tab-icon').textContent = panel.classList.contains('hidden') ? '⚙' : '⚡';
   };
 
-  /* ── Audio ── */
-  function getAudio(f) { if (!audioCache[f]) { const a=new Audio(`/audio/${f}`); a.preload='auto'; audioCache[f]=a; } return audioCache[f]; }
-  function playSound(type) { if (!soundEnabled) return; const f=audioConfig[type]; if (!f) return; try { const a=getAudio(f); a.currentTime=0; a.play().catch(()=>{}); } catch(e){} }
+  // ── Audio helpers ──
+  function getAudio(f) {
+    if (!audioCache[f]) {
+      const a = new Audio(`/audio/${f}`);
+      a.preload = 'auto';
+      audioCache[f] = a;
+    }
+    return audioCache[f];
+  }
+  function playSound(type) {
+    if (!soundEnabled) return;
+    const f = audioConfig[type];
+    if (!f) return;
+    try {
+      const a = getAudio(f);
+      a.currentTime = 0;
+      a.play().catch(() => {});
+    } catch(e) {}
+  }
 
-  /* ── Helpers ── */
+  // ── Data extraction for top players & horde ──
   function topPlayers() {
     return Object.values(players)
       .filter(p => p.alive && p.uniqueId !== HORDE_ID)
       .sort((a, b) => (b.hp || 0) - (a.hp || 0))
       .slice(0, 5);
   }
+
   function hordePlayer() {
-    const ids = new Set(topPlayers().map(p => p.uniqueId));
-    const rest = Object.values(players).filter(p => p.alive && !ids.has(p.uniqueId));
+    const topSet = new Set(topPlayers().map(p => p.uniqueId));
+    const rest = Object.values(players).filter(p => p.alive && !topSet.has(p.uniqueId));
     if (!rest.length) return null;
     return {
-      uniqueId: HORDE_ID, nickname: 'THE HORDE',
-      hp:    rest.reduce((s, p) => s + (p.hp    || 0),   0),
+      uniqueId: HORDE_ID,
+      nickname: 'THE HORDE',
+      hp:    rest.reduce((s, p) => s + (p.hp    || 0), 0),
       maxHp: rest.reduce((s, p) => s + (p.maxHp || 100), 0),
-      hordeCount: rest.length, alive: true
+      hordeCount: rest.length,
+      alive: true
     };
   }
 
@@ -266,19 +354,15 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     return { x: cw() / 2 + offsetX, y: ch() * 0.78 + offsetY };
   }
 
-  /* ── Canvas-local coords → viewport coords ── */
+  // Convert canvas-local coords to viewport for damage numbers
   function canvasToViewport(cx, cy) {
     const rect = canvas.getBoundingClientRect();
-    // canvas logical size == rectEl CSS size, so just scale by CSS size ratio
     const scaleX = rect.width  / cw();
     const scaleY = rect.height / ch();
-    return {
-      x: rect.left + cx * scaleX,
-      y: rect.top  + cy * scaleY
-    };
+    return { x: rect.left + cx * scaleX, y: rect.top  + cy * scaleY };
   }
 
-  /* ── Background ── */
+  // ── Drawing routines ──
   function drawBackground() {
     const W = cw(), H = ch();
     if (backgroundImg) {
@@ -299,7 +383,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     }
   }
 
-  /* ── Player Card ── */
   function drawPlayerCard(player, pos, rank) {
     const hp = player.hp || 0, maxHp = player.maxHp || 100;
     const hpPct = Math.max(0, Math.min(1, hp / maxHp));
@@ -343,7 +426,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     ctx.fillStyle = '#ccc'; ctx.fillText(`${Math.round(hp)}/${maxHp}`, cx, hpTextY);
   }
 
-  /* ── Horde ── */
   function drawHorde(horde) {
     if (!horde) return;
     const pos = getHordePosition(), H = ch(), rowH = H * 0.40;
@@ -381,7 +463,7 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     ctx.fillStyle = '#ffaaaa'; ctx.fillText(hpStr, barX, barY + barH2 + rowH * 0.12);
   }
 
-  /* ── Attack Lines ── */
+  // Attack visual effect
   class Attack {
     constructor(from, to, special = false) {
       this.from = from; this.to = to; this.special = special;
@@ -392,32 +474,23 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
       const progress = (Date.now() - this.start) / this.duration;
       const alpha = 1 - progress;
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
-
       if (this.special) {
-        // Gift / special: fat glowing orange laser with sparkle head
         ctx.shadowColor = 'rgba(255,170,80,0.9)';
         ctx.shadowBlur  = 18;
         ctx.strokeStyle = `rgba(255,200,80,${alpha})`;
         ctx.lineWidth   = 10;
       } else {
-        // Normal attack: cyan laser
         ctx.shadowColor = 'rgba(122,252,255,0.9)';
         ctx.shadowBlur  = 14;
         ctx.strokeStyle = `rgba(122,252,255,${alpha})`;
         ctx.lineWidth   = 5;
       }
-
       const tx = this.from.x + (this.to.x - this.from.x) * progress;
       const ty = this.from.y + (this.to.y - this.from.y) * progress;
-
       ctx.beginPath(); ctx.moveTo(this.from.x, this.from.y); ctx.lineTo(tx, ty); ctx.stroke();
-
-      // Bolt head
       const headR = this.special ? 8 : 5;
       ctx.fillStyle = `rgba(255,255,255,${alpha})`;
       ctx.beginPath(); ctx.arc(tx, ty, headR, 0, Math.PI * 2); ctx.fill();
-
-      // Extra glow ring on special
       if (this.special) {
         ctx.strokeStyle = `rgba(255,255,100,${alpha * 0.6})`;
         ctx.lineWidth = 2;
@@ -427,7 +500,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     }
   }
 
-  /* ── Damage Numbers — appended to body, positioned via viewport coords ── */
   function showDamage(canvasX, canvasY, dmg, kill) {
     const vp = canvasToViewport(canvasX, canvasY);
     const el = document.createElement('div');
@@ -439,84 +511,52 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     setTimeout(() => el.remove(), 900);
   }
 
-  /* ── Socket events ── */
-  socket.on('connect', () => socket.emit('register', { type: 'overlay' }));
-  socket.on('gameState', state => { players = state || {}; });
-  socket.on('audioConfig', cfg  => { audioConfig = cfg || {}; });
-  socket.on('backgroundChanged', ({ filename }) => {
-    if (!filename) { backgroundImg = null; return; }
-    const img = new Image();
-    img.onload = () => { backgroundImg = img; };
-    img.src = `/background/${filename}?v=${Date.now()}`;
-  });
-  socket.on('attack', data => {
-    fireAttack(data.attacker, data.target, data.damage, data.killed, data.special);
-  });
-
-  /* ── Shared attack handler (socket + demo) ── */
+  // Attack dispatcher (from server or local)
   function fireAttack(attackerId, targetId, damage, killed, special) {
     const top = topPlayers();
-    const ai  = top.findIndex(p => p.uniqueId === attackerId);
-    const ti  = top.findIndex(p => p.uniqueId === targetId);
-    const from = ai >= 0 ? getPlayerPosition(ai) : getHordePosition();
-    const to   = ti >= 0 ? getPlayerPosition(ti) : getHordePosition();
+    const horde = hordePlayer();
+    const isAttackerHorde = attackerId === HORDE_ID;
+    const isTargetHorde   = targetId === HORDE_ID;
+
+    let from, to;
+    if (isAttackerHorde) {
+      from = getHordePosition();
+    } else {
+      const idx = top.findIndex(p => p.uniqueId === attackerId);
+      if (idx === -1) return; // attacker not visible
+      from = getPlayerPosition(idx);
+    }
+
+    if (isTargetHorde) {
+      to = getHordePosition();
+    } else {
+      const idx = top.findIndex(p => p.uniqueId === targetId);
+      if (idx === -1) return;
+      to = getPlayerPosition(idx);
+    }
+
     attacks.push(new Attack(from, to, special));
     showDamage(to.x, to.y, damage, killed);
     playSound(special ? 'gift' : 'attack');
   }
 
-  /* ── Demo Attack Loop ── */
-  // Fires a random attack every 2 seconds so you can see lasers + damage numbers
-  // without a live socket server. Remove this block in production.
-  function randomDemoAttack() {
-    const top = topPlayers();
-    const horde = hordePlayer();
-    if (!top.length) return;
-
-    const allTargets = [...top.map(p => p.uniqueId)];
-    if (horde) allTargets.push(HORDE_ID);
-
-    const isSpecial = Math.random() < 0.3;
-    const fromId = top[Math.floor(Math.random() * top.length)].uniqueId;
-    const toId   = allTargets[Math.floor(Math.random() * allTargets.length)];
-    const damage = Math.round(20 + Math.random() * 80);
-
-    fireAttack(fromId, toId, damage, false, isSpecial);
-  }
-
-  // Also trigger a horde → player attack occasionally
-  function randomHordeAttack() {
-    const top = topPlayers();
-    if (!top.length || !hordePlayer()) return;
-    const toId = top[Math.floor(Math.random() * top.length)].uniqueId;
-    fireAttack(HORDE_ID, toId, Math.round(15 + Math.random() * 60), false, false);
-  }
-
-  /* ── Demo data ── */
-  players = {
-    p1: { uniqueId:'p1', nickname:'Kristiden',     hp:1235, maxHp:1352, alive:true, iconEmoji:'💎' },
-    p2: { uniqueId:'p2', nickname:'Ken Valentine', hp:997,  maxHp:997,  alive:true, iconEmoji:'💎' },
-    p3: { uniqueId:'p3', nickname:'VimiSha|Skin',  hp:406,  maxHp:410,  alive:true, iconEmoji:'💎' },
-    p4: { uniqueId:'p4', nickname:'Sonya Barron',  hp:361,  maxHp:369,  alive:true, iconEmoji:'💎' },
-    p5: { uniqueId:'p5', nickname:'Anto|mom lif',  hp:351,  maxHp:351,  alive:true, iconEmoji:'💎' },
-    h1: { uniqueId:'h1', nickname:'Member 1',      hp:1200, maxHp:1500, alive:true },
-    h2: { uniqueId:'h2', nickname:'Member 2',      hp:980,  maxHp:1200, alive:true },
-  };
-
-  /* ── Main Loop ── */
+  // ── Animation loop ──
   function draw() {
     currentScale = Math.min(cw() / 1920, ch() / 200, 1.4) * layoutScale;
     if (currentScale < 0.05) currentScale = 0.05;
     ctx.clearRect(0, 0, cw(), ch());
     drawBackground();
-    topPlayers().forEach((p, i) => drawPlayerCard(p, getPlayerPosition(i), i + 1));
+    const topList = topPlayers();
+    topList.forEach((p, i) => drawPlayerCard(p, getPlayerPosition(i), i + 1));
     drawHorde(hordePlayer());
     attacks = attacks.filter(a => { const alive = a.update(); if (alive) a.draw(); return alive; });
     requestAnimationFrame(draw);
   }
+
+  // Start everything
+  initSocket();
   draw();
 })();
 </script>
-
 </body>
 </html>
