@@ -1038,15 +1038,28 @@ function renderAudioLibrary(){
     row.className = 'audio-row';
     row.innerHTML = `
       <div>🎵</div>
-      <div class="audio-name">
-        ${file.originalName}
-      </div>
-      <div class="audio-size">
-        ${formatBytes(file.size)}
+      <div class="audio-name">${file.originalName}</div>
+      <div class="audio-size">${formatBytes(file.size)}</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-secondary" onclick="playPreview('${file.filename}','${file.originalName.replace(/'/g,"\'")}')">▶ Play</button>
+        <a class="btn btn-secondary" href="/audio/${file.filename}" download style="text-decoration:none">⬇</a>
       </div>
     `;
     container.appendChild(row);
   });
+}
+
+let _currentPreview = null;
+function playPreview(filename, label){
+  try{
+    if(_currentPreview){ _currentPreview.pause(); _currentPreview = null; }
+    const a = new Audio('/audio/' + filename);
+    a.currentTime = 0;
+    a.play().catch(()=>{});
+    _currentPreview = a;
+    toast('Playing: ' + (label || filename));
+    a.onended = () => { _currentPreview = null; };
+  }catch(e){ console.warn('preview failed', e); }
 }
 function renderAssignTable(){
   const tbody =

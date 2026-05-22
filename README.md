@@ -102,6 +102,29 @@ The game uses these configured values in `server.js`:
   - if a gift message boost is active, multiplier becomes `2 * 1.5 = 3`
 - The attack is emitted via Socket.IO as `attack` with `attacker`, `target`, `damage`, `killed`, and `special`.
 
+### Chat Commands & Message Options
+
+- Special visual commands may be included in chat messages alongside `@username` mentions to request a specific attack animation. Commands are prefixed with `!` (case-insensitive). Examples:
+  - `!FIRE` — plays the fire beam effect
+  - `!BUBBLES` or `!BUBBLE` — plays the bubble torrent effect
+  - `!NEON` — plays the neon hyper-laser
+  - `!RIPPLE` — plays the ripple shockwave
+  - `!SPHERE` — plays the sphere-mapped plasma
+  - `!LASER` — forces the regular laser beam
+  - `!SHOT` or `!PROJECTILE` — fires a projectile attack
+  - `!GIFT` — renders the gift effect
+  - `!BOOM` or `!EXPLOSION` — renders an explosion on hit
+
+- Usage: include the command anywhere in the message together with one or more `@username` mentions. The server will apply the command to the first valid mention found and emit an `attack` event which includes an `effect` field indicating the requested visual. Overlays will honor the `effect` when present and fall back to default animations otherwise.
+
+Examples:
+
+- `@victim !FIRE` — attack `victim` with the fire beam effect
+- `!BUBBLES @victim` — attack `victim` with bubble torrent
+- `@a @b !NEON` — attacks the first valid mentioned player with neon laser
+
+Note: Effects are cosmetic and do not change damage calculation. Only players present on the top-5 board (or the virtual horde) will produce visible effects on overlays.
+
 ### Gift Effects
 
 - Gifts grant the sender:

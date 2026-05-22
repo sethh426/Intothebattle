@@ -207,7 +207,7 @@ img.src = `/background/${filename}?v=${Date.now()}`;
 });
 
 socket.on('attack', (data) => {
-fireAttack(data.attacker, data.target, data.damage, data.killed, data.special);
+fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect);
 });
 
 } catch (err) {
@@ -820,6 +820,7 @@ function showDamage(canvasX, canvasY, dmg, kill){
 // FIRE ATTACK — position validated: only top5 or horde
 // ═══════════════════════════════════════════════
 function fireAttack(attackerId, targetId, damage, killed, special){
+function fireAttack(attackerId, targetId, damage, killed, special, effect){
 	const top = topPlayers(); const horde = hordePlayer();
 	let from;
 	if (attackerId === HORDE_ID){ if (!horde) return; from = getHordePosition(); }
@@ -828,7 +829,11 @@ function fireAttack(attackerId, targetId, damage, killed, special){
 	if (targetId === HORDE_ID){ if (!horde) return; to = getHordePosition(); }
 	else { const ti = top.findIndex(p=>p.uniqueId===targetId); if (ti===-1) return; to = getPlayerPosition(ti); }
 	let effectType;
-	if (special) effectType='gift'; else if (killed) effectType='explosion'; else { const pool=['laser','projectile','neon','ripple','fire','bubble','sphere']; effectType = pool[Math.floor(Math.random()*pool.length)]; }
+	if (effect) {
+		const e = String(effect).toLowerCase();
+		const map = { fire:'fire', bubble:'bubble', bubbles:'bubble', neon:'neon', ripple:'ripple', sphere:'sphere', laser:'laser', projectile:'projectile', gift:'gift', explosion:'explosion' };
+		effectType = map[e] || e;
+	} else if (special) effectType='gift'; else if (killed) effectType='explosion'; else { const pool=['laser','projectile','neon','ripple','fire','bubble','sphere']; effectType = pool[Math.floor(Math.random()*pool.length)]; }
 	attacks.push(new Attack(from,to,effectType));
 	showDamage(to.x,to.y,damage,killed);
 	playSound(special? 'gift':'attack');

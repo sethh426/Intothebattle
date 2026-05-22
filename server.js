@@ -483,6 +483,28 @@ function getTopPlayers(count = 20) {
 
 function handleMentionAttack(attackerId, attackerNick, comment) {
   const mentions = extractMentions(comment);
+  // detect optional effect command (e.g. !fire, !bubbles, !neon)
+  const cmdMatch = String(comment || '').match(/!(fire|bubbles?|bubble|neon|ripple|sphere|laser|shot|projectile|gift|boom|explode|explosion)/i);
+  let requestedEffect = null;
+  if (cmdMatch) {
+    const cmd = String(cmdMatch[1] || '').toLowerCase();
+    const map = {
+      'fire': 'fire',
+      'bubbles': 'bubble',
+      'bubble': 'bubble',
+      'neon': 'neon',
+      'ripple': 'ripple',
+      'sphere': 'sphere',
+      'laser': 'laser',
+      'shot': 'projectile',
+      'projectile': 'projectile',
+      'gift': 'gift',
+      'boom': 'explosion',
+      'explode': 'explosion',
+      'explosion': 'explosion'
+    };
+    requestedEffect = map[cmd] || cmd;
+  }
   if (!mentions.length) return { handled: false, reason: 'No @mention found' };
 
   if (!players[attackerId]?.alive) {
@@ -517,6 +539,8 @@ function handleMentionAttack(attackerId, attackerNick, comment) {
 
     const result = dealDamage(attackerId, target.uniqueId, multiplier);
     if (result) {
+      // attach requested visual effect so overlays can render specific animations
+      if (requestedEffect) result.effect = requestedEffect;
       emitAttackAndSync(result);
       emitSoundAndSync('attack');
       io.emit('commentDamage', {
