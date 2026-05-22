@@ -517,8 +517,8 @@ function handleMentionAttack(attackerId, attackerNick, comment) {
 
     const result = dealDamage(attackerId, target.uniqueId, multiplier);
     if (result) {
-      io.emit('attack',    result);
-      io.emit('soundEvent', { event: 'attack' });
+      emitAttackAndSync(result);
+      emitSoundAndSync('attack');
       io.emit('commentDamage', {
         attacker: attackerNick,
         target:   target.nickname,
@@ -537,6 +537,26 @@ function handleMentionAttack(attackerId, attackerNick, comment) {
 const app        = express();
 const httpServer = createServer(app);
 const io         = new Server(httpServer, { cors: { origin: '*' } });
+
+// Helper: emit an attack event then shortly emit authoritative game state
+function emitAttackAndSync(result) {
+  if (!result) return;
+  if (!players[result.attacker] || !players[result.target]) {
+    logger.warn({ attacker: result.attacker, target: result.target }, 'Emitting attack for player(s) not present in state');
+  }
+  try { io.emit('attack', result); } catch (e) { logger.error({err:e}, 'emit attack failed'); }
+  // small delay to allow overlay clients to receive attack animation while state update follows
+  setTimeout(() => { try { io.emit('gameState', players); } catch (e) {} }, 40);
+}
+
+function emitGiftAttackAndSync(result) {
+  try { io.emit('giftAttack', result); } catch (e) { logger.error({err:e}, 'emit giftAttack failed'); }
+  setTimeout(() => { try { io.emit('gameState', players); } catch (e) {} }, 40);
+}
+
+function emitSoundAndSync(event) {
+  try { io.emit('soundEvent', { event }); } catch (e) { logger.error({err:e}, 'emit soundEvent failed'); }
+}
 
 // Wire Redis adapter if configured (enables scaling Socket.IO across nodes)
 if (process.env.REDIS_URL) {
@@ -970,8 +990,8 @@ app.post('/api/test/gift', requireDevTestMode, (_req, res) => {
     }
     const giftAttack = { attacker: attackerId, target: targetId, damage, killed, diamonds };
     attacksMade.push(giftAttack);
-    io.emit('giftAttack',  giftAttack);
-    io.emit('soundEvent',  { event: killed ? 'kill' : 'gift' });
+    emitGiftAttackAndSync(giftAttack);
+    emitSoundAndSync(killed ? 'kill' : 'gift');
   });
 
   io.emit('giftEffect', { attacker: attackerId, giftName: 'Test Gift', diamonds });
@@ -984,9 +1004,9 @@ app.post('/api/overlay/test/attack', (_req, res) => {
   ensureTestPlayers();
   const result = handleMentionAttack('test_alpha', 'Alpha', '@test_bravo');
   if (result) {
-    io.emit('attack', result);
-    io.emit('soundEvent', { event: result.killed ? 'kill' : 'attack' });
-    io.emit('gameState', players);
+    emitAttackAndSync(result);
+    emitSoundAndSync(result.killed ? 'kill' : 'attack');
+    // gameState will be emitted by sync helper; avoid duplicate immediate emission
   }
   res.json({ success: true, result });
 });
@@ -1016,8 +1036,8 @@ app.post('/api/overlay/test/gift', (_req, res) => {
     }
     const giftAttack = { attacker: attackerId, target: targetId, damage, killed, diamonds };
     attacks.push(giftAttack);
-    io.emit('giftAttack', giftAttack);
-    io.emit('soundEvent', { event: killed ? 'kill' : 'gift' });
+    emitGiftAttackAndSync(giftAttack);
+    emitSoundAndSync(killed ? 'kill' : 'gift');
   });
 
   io.emit('giftEffect', { attacker: attackerId, giftName: 'Test Gift', diamonds });
@@ -1197,8 +1217,8 @@ function setupTikTokEvents(tiktokClient) {
           }, CFG.RESPAWN_DELAY_MS);
         }
 
-        io.emit('giftAttack', { attacker: id, target: target.uniqueId, damage, killed, diamonds });
-        io.emit('soundEvent', { event: killed ? 'kill' : 'gift' });
+        emitGiftAttackAndSync({ attacker: id, target: target.uniqueId, damage, killed, diamonds });
+        emitSoundAndSync(killed ? 'kill' : 'gift');
         console.log(`🎁 @${id} → @${target.uniqueId} via gift for ${damage} dmg${killed ? ' (KILL!)' : ''}`);
       });
     }
@@ -1215,6 +1235,7 @@ function setupTikTokEvents(tiktokClient) {
     if (!players[id]) spawnPlayer(id, nick);
     awardStats(id, nick, CFG.LIKE_HP_BOOST, 0);
     io.emit('soundEvent', { event: 'heal' });
+    io.emit('like', { uniqueId: id, nickname: nick });
     io.emit('gameState',  players);
   });
 

@@ -1,6 +1,7 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db/db.js';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 
@@ -239,9 +240,43 @@ function renderMyCodeResult({ error = '', code = '', expiresAt = '' } = {}) {
 
 export default router;
 
+// ─── PayPal return handler: create a short-lived token and redirect to /claim ─
+router.get('/paypal-return', (req, res) => {
+  const sub = String(req.query.subscription_id || req.query.sub || '').trim();
+  if (!sub) return res.status(400).send('<p>Missing subscription id in return URL.</p>');
+  const secret = process.env.CLAIM_JWT_SECRET || process.env.JWT_SECRET;
+  if (!secret) return res.status(500).send('<p>Server not configured with claim token secret.</p>');
+  const ttl = Number(process.env.CLAIM_TOKEN_TTL || 3600); // seconds
+  try {
+    const token = jwt.sign({ sub }, secret, { expiresIn: ttl });
+    // Redirect buyer to the claim page with token
+    return res.redirect(302, `/claim?sub=${encodeURIComponent(sub)}&t=${encodeURIComponent(token)}`);
+  } catch (err) {
+    console.error('Failed to create claim token:', err);
+    return res.status(500).send('<p>Unable to create claim link.</p>');
+  }
+});
+
 // ─── Public claim page: show issued code for a subscription id ───────────────
 router.get('/claim', (req, res) => {
   const sub = String(req.query.sub || '').trim();
+  const token = String(req.query.t || req.query.token || '').trim();
+  // If a short-lived claim token is provided, validate it and allow access
+  if (token) {
+    try {
+      const secret = process.env.CLAIM_JWT_SECRET || process.env.JWT_SECRET;
+      const payload = jwt.verify(token, secret);
+      if (payload && payload.sub === sub) {
+        const row = db.prepare('SELECT * FROM access_codes WHERE paypal_subscription_id = ? LIMIT 1').get(sub);
+        if (!row) return res.status(404).send('<p>No code found for that subscription id.</p>');
+        if (row.is_revoked) return res.status(400).send('<p>This subscription/code has been revoked or expired.</p>');
+        return res.send(`<!doctype html><html><head><meta charset="utf-8"><title>Your Access Code</title><style>body{font-family:Arial,Helvetica,sans-serif;background:#041023;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;margin:0} .card{background:#071224;padding:28px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);max-width:560px;width:90%} .code{font-weight:800;letter-spacing:0.12em;font-size:20px;background:linear-gradient(90deg,#fff,#e8f6ff);-webkit-background-clip:text;background-clip:text;color:transparent;padding:12px;border-radius:8px;text-align:center} .note{color:#cfe6ff;margin-top:12px;font-size:13px}</style></head><body><div class="card"><h2>Your Access Code</h2><div class="code">${escapeHtml(row.code)}</div><div class="note">Active until ${escapeHtml(String(row.expires_at).slice(0,10))}. Save this code now — it will not be emailed.</div></div></body></html>`);
+      }
+    } catch (err) {
+      console.warn('Invalid claim token:', err && err.message);
+      // fall through to normal checks
+    }
+  }
   const email = String(req.query.email || '').trim().toLowerCase();
   if (!sub) {
     return res.status(400).send(`<p>Missing subscription id. Use the link provided after subscribing or use <a href="/my-code">/my-code</a> to retrieve by email.</p>`);
