@@ -708,5 +708,144 @@ ctx.beginPath(); ctx.arc(headX, headY, radius, 0, Math.PI * 2);
 ctx.fillStyle = coreGrad; ctx.fill();
 ctx.restore();
 }
+
+// ═══════════════════════════════════════════════
+// PARTICLE & ATTACK SYSTEM (inserted)
+// ═══════════════════════════════════════════════
+class Particle {
+	constructor(x, y, opts = {}) {
+		this.x = x; this.y = y;
+		this.vx = (Math.random() - 0.5) * (opts.speed || 4);
+		this.vy = (Math.random() - 0.5) * (opts.speed || 4) - (opts.rise || 0);
+		this.life = 1;
+		this.decay = opts.decay || (0.02 + Math.random() * 0.03);
+		this.r = opts.radius || (2 + Math.random() * 3);
+		this.color = opts.color || '#7afcff';
+		this.emoji = opts.emoji || null;
+		this.fs = opts.fontSize || 18;
+	}
+	update() {
+		this.x += this.vx; this.y += this.vy;
+		this.vy += 0.06;
+		this.life -= this.decay;
+		return this.life > 0;
+	}
+	draw(c) {
+		c.save();
+		c.globalAlpha = Math.max(0, this.life);
+		if (this.emoji) {
+			c.font = `${this.fs}px Arial`; c.textAlign = 'center'; c.textBaseline = 'middle';
+			c.fillText(this.emoji, this.x, this.y);
+		} else {
+			c.fillStyle = this.color;
+			c.shadowColor = this.color; c.shadowBlur = 8;
+			c.beginPath(); c.arc(this.x, this.y, this.r * Math.max(0, this.life), 0, Math.PI * 2); c.fill();
+		}
+		c.restore();
+	}
+}
+
+class Attack {
+	constructor(from, to, effectType = 'laser') {
+		this.from = from; this.to = to; this.effectType = effectType;
+		this.start = performance.now(); this.progress = 0; this.alpha = 1;
+		this.particles = []; this.trail = []; this._spawned = false; this._impacted = false;
+		switch (effectType) {
+			case 'laser': this.duration = 420; break;
+			case 'projectile': this.duration = 600; this.radius = 7; break;
+			case 'gift': this.duration = 900; break;
+			case 'explosion': this.duration = 750; this.rings = [{maxR:55},{maxR:38}]; break;
+			case 'neon': case 'ripple': case 'bubble': case 'sphere': this.duration = 550; break;
+			case 'fire': this.duration = 550; for (let i=0;i<40;i++) this.particles.push(new Particle(this.to?.x||0,this.to?.y||0,{speed:4+Math.random()*4,color:'#ff8844',radius:2+Math.random()*3,decay:0.03})); break;
+			default: this.duration = 500;
+		}
+	}
+	update() {
+		const elapsed = performance.now() - this.start;
+		this.progress = Math.min(1, elapsed / this.duration);
+		this.alpha = this.progress < 0.6 ? 1 : 1 - (this.progress - 0.6) / 0.4;
+		this.particles = this.particles.filter(p => p.update());
+		return elapsed < this.duration || this.particles.length > 0;
+	}
+	draw() {
+		const now = performance.now();
+		switch (this.effectType) {
+			case 'laser': this._drawLaser(); break;
+			case 'projectile': this._drawProjectile(); break;
+			case 'gift': this._drawGift(); break;
+			case 'explosion': this._drawExplosion(); break;
+			case 'neon': drawNeonLaser(ctx,this.from,this.to,this.progress,false,now); break;
+			case 'ripple': drawRippleLaser(ctx,this.from,this.to,this.progress,false,now); break;
+			case 'fire': drawFireLaser(ctx,this.from,this.to,this.progress,false,now,this.particles); break;
+			case 'bubble': drawBubbleLaser(ctx,this.from,this.to,this.progress,false,now); break;
+			case 'sphere': drawSphereLaser(ctx,this.from,this.to,this.progress,false,now); break;
+		}
+	}
+	_drawLaser(){
+		const {from,to,alpha} = this; const flicker = 0.75 + Math.random()*0.25;
+		ctx.save(); ctx.globalCompositeOperation='screen'; ctx.lineCap='round';
+		ctx.shadowColor='#7afcff'; ctx.shadowBlur=22; ctx.strokeStyle=`rgba(122,252,255,${alpha*flicker*0.5})`; ctx.lineWidth=14;
+		ctx.beginPath(); ctx.moveTo(from.x,from.y); ctx.lineTo(to.x,to.y); ctx.stroke();
+		ctx.strokeStyle=`rgba(255,255,255,${alpha*flicker})`; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(from.x,from.y); ctx.lineTo(to.x,to.y); ctx.stroke();
+		if (this.progress < 0.82) { ctx.beginPath(); ctx.arc(to.x,to.y,6,0,Math.PI*2); ctx.fillStyle=`rgba(255,255,255,${alpha})`; ctx.fill(); }
+		ctx.restore();
+	}
+	_drawProjectile(){
+		const {from,to,progress,radius=7} = this; const px = from.x + (to.x-from.x)*progress; const py = from.y + (to.y-from.y)*progress;
+		this.trail.push({x:px,y:py,a:this.alpha}); if (this.trail.length>18) this.trail.shift();
+		ctx.save(); ctx.globalCompositeOperation='screen';
+		for (let i=0;i<this.trail.length;i++){ const t=this.trail[i]; const a=(i/this.trail.length)*t.a*0.6; ctx.beginPath(); ctx.arc(t.x,t.y,Math.max(0.6,(i/this.trail.length)*radius*0.6),0,Math.PI*2); ctx.fillStyle=`rgba(122,252,255,${a})`; ctx.fill(); }
+		const grad = ctx.createRadialGradient(px,py,0,px,py,radius*2); grad.addColorStop(0,'rgba(255,255,255,1)'); grad.addColorStop(0.5,'rgba(122,252,255,0.9)'); grad.addColorStop(1,'rgba(122,252,255,0)'); ctx.beginPath(); ctx.arc(px,py,radius*2,0,Math.PI*2); ctx.fillStyle=grad; ctx.fill();
+		if (progress>0.9 && !this._impacted){ this._impacted=true; for(let i=0;i<12;i++) this.particles.push(new Particle(to.x,to.y,{speed:4+Math.random()*4,color:'#7afcff',radius:2+Math.random()*3,decay:0.03})); }
+		this.particles.forEach(p=>p.draw(ctx)); ctx.restore();
+	}
+	_drawGift(){ if (!this._spawned){ this._spawned=true; for(let i=0;i<18;i++) this.particles.push(new Particle(this.to.x,this.to.y,{speed:6+Math.random()*4,color:['#ffd84f','#ff9aff','#7afcff','#ff7777'][i%4],radius:2+Math.random()*3,decay:0.017})); }
+		ctx.save(); ctx.globalCompositeOperation='screen'; this.particles.forEach(p=>p.draw(ctx)); ctx.restore(); }
+	_drawExplosion(){ if (!this._spawned){ this._spawned=true; for(let i=0;i<28;i++) this.particles.push(new Particle(this.to.x,this.to.y,{speed:5+Math.random()*8,color:['#ff6644','#ffcc44','#ff2222'][i%3],radius:3+Math.random()*4,decay:0.015})); }
+		ctx.save(); ctx.globalCompositeOperation='screen'; this.particles.forEach(p=>p.draw(ctx)); ctx.restore(); }
+}
+
+// ═══════════════════════════════════════════════
+// DAMAGE NUMBERS
+// ═══════════════════════════════════════════════
+function showDamage(canvasX, canvasY, dmg, kill){
+	const vp = canvasToViewport(canvasX, canvasY);
+	const el = document.createElement('div'); el.className = `damage${kill? ' kill':''}`;
+	el.textContent = kill? '💀 KILL!' : `-${Math.round(dmg)}`;
+	el.style.left = vp.x + 'px'; el.style.top = vp.y + 'px'; document.body.appendChild(el);
+	setTimeout(()=>el.remove(), 900);
+}
+
+// ═══════════════════════════════════════════════
+// FIRE ATTACK — position validated: only top5 or horde
+// ═══════════════════════════════════════════════
+function fireAttack(attackerId, targetId, damage, killed, special){
+	const top = topPlayers(); const horde = hordePlayer();
+	let from;
+	if (attackerId === HORDE_ID){ if (!horde) return; from = getHordePosition(); }
+	else { const ai = top.findIndex(p=>p.uniqueId===attackerId); if (ai===-1) return; from = getPlayerPosition(ai); }
+	let to;
+	if (targetId === HORDE_ID){ if (!horde) return; to = getHordePosition(); }
+	else { const ti = top.findIndex(p=>p.uniqueId===targetId); if (ti===-1) return; to = getPlayerPosition(ti); }
+	let effectType;
+	if (special) effectType='gift'; else if (killed) effectType='explosion'; else { const pool=['laser','projectile','neon','ripple','fire','bubble','sphere']; effectType = pool[Math.floor(Math.random()*pool.length)]; }
+	attacks.push(new Attack(from,to,effectType));
+	showDamage(to.x,to.y,damage,killed);
+	playSound(special? 'gift':'attack');
+}
+
+// ═══════════════════════════════════════════════
+// ANIMATION LOOP
+// ═══════════════════════════════════════════════
+function draw(){
+	currentScale = Math.min(cw()/1920, ch()/200, 1.4) * layoutScale; if (currentScale<0.05) currentScale=0.05;
+	ctx.clearRect(0,0,cw(),ch()); drawBackground();
+	const topList = topPlayers(); topList.forEach((p,i)=> drawPlayerCard(p, getPlayerPosition(i), i+1)); drawHorde(hordePlayer());
+	attacks = attacks.filter(a=>{ const alive = a.update(); if (alive) a.draw(); return alive; });
+	requestAnimationFrame(draw);
+}
+
+// Boot
+initSocket(); draw();
 </body>
 </html>
