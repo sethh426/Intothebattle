@@ -707,21 +707,9 @@ io.on('connection', (socket) => {
 });
 
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
-app.get('/dashboard/login', (_req, res) => res.sendFile(path.join(__dirname, 'dashboard-login.html')));
-
-app.post('/dashboard/login', (req, res) => {
-  const email    = String(req.body.email    || '').trim().toLowerCase();
-  const password = String(req.body.password || '');
-  if (email === DASHBOARD_OWNER_EMAIL && password === DASHBOARD_PASSWORD) {
-    res.setHeader('Set-Cookie', `${DASHBOARD_COOKIE_NAME}=${DASHBOARD_COOKIE_VALUE}; Path=/; HttpOnly; Max-Age=86400; SameSite=Lax`);
-    return res.redirect('/dashboard/welcome');
-  }
-  return res.status(401).send('Invalid email or password.');
-});
-
 app.get('/dashboard/logout', (_req, res) => {
   res.setHeader('Set-Cookie', `${DASHBOARD_COOKIE_NAME}=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax`);
-  res.redirect('/dashboard/login');
+  res.redirect('/login');
 });
 
 app.get('/dashboard', (req, res) => {
@@ -733,7 +721,7 @@ app.get('/dashboard', (req, res) => {
       return res.sendFile(path.join(__dirname, 'dashboard.html'));
     }
   }
-  res.redirect('/dashboard/login');
+  res.redirect('/login');
 });
 
 app.get('/dashboard/welcome', (req, res) => {
@@ -745,7 +733,7 @@ app.get('/dashboard/welcome', (req, res) => {
       return res.sendFile(path.join(__dirname, 'dashboard-welcome.html'));
     }
   }
-  res.redirect('/dashboard/login');
+  res.redirect('/login');
 });
 
 app.get('/stats', (_req, res) => res.sendFile(path.join(__dirname, 'stats.html')));
