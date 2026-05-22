@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Login | TikTok PvP Battle</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: 'Inter', 'Segoe UI', sans-serif;
+      background: #050710;
+      color: #e7efff;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top left, rgba(49, 92, 255, 0.24), transparent 28%), radial-gradient(circle at bottom right, rgba(255, 206, 0, 0.18), transparent 22%), #050710; }
+    .page { max-width: 520px; margin: 0 auto; padding: 40px 24px; }
+    .brand { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+    .brand-mark { width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center; background: linear-gradient(135deg, #5aabff, #b789ff); box-shadow: 0 0 35px rgba(90, 171, 255, 0.24); font-size: 1.8rem; }
+    h1 { margin: 0 0 12px; font-size: clamp(2.1rem, 4vw, 2.8rem); line-height: 1.05; }
+    p { margin: 0 0 24px; color: #c8d3ff; font-size: 1rem; }
+    .card { background: rgba(12, 19, 38, 0.96); border: 1px solid rgba(255,255,255,0.08); border-radius: 28px; padding: 32px; box-shadow: 0 24px 80px rgba(0,0,0,0.22); }
+    .input-group { margin-bottom: 18px; }
+    label { display: block; margin-bottom: 8px; font-size: 0.95rem; color: #9cb1ff; }
+    input { width: 100%; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 14px 16px; background: rgba(255,255,255,0.04); color: #f7fbff; font-size: 1rem; }
+    input:focus { outline: none; border-color: rgba(90,171,255,0.8); box-shadow: 0 0 0 4px rgba(90,171,255,0.1); }
+    button { width: 100%; padding: 14px 16px; border: none; border-radius: 16px; background: linear-gradient(135deg, #5aabff, #b789ff); color: #09111b; font-size: 1rem; font-weight: 700; cursor: pointer; transition: transform 0.16s ease, box-shadow 0.16s ease; }
+    button:hover { transform: translateY(-1px); box-shadow: 0 18px 40px rgba(90,171,255,0.2); }
+    .help { margin-top: 20px; color: #9cb1ff; font-size: 0.95rem; }
+    .help a { color: #9cb1ff; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="brand">
+      <div class="brand-mark">🎮</div>
+      <div>
+        <p style="margin:0;color:#7c93ff;font-size:.95rem;letter-spacing:.08em;text-transform:uppercase;">Dashboard Access</p>
+        <h1>Sign in to the admin console</h1>
+      </div>
+    </div>
+    <p>Enter the dashboard owner credentials to manage the overlay, audio, and live battle settings.</p>
+    <div class="card">
+      <form method="POST" action="/dashboard/login">
+        <div class="input-group">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="username" required placeholder="admin@example.com" />
+        </div>
+        <div class="input-group">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required placeholder="••••••••" />
+        </div>
+        <button type="submit">Login</button>
+      </form>
+      <p class="help">If you do not have dashboard credentials, use the public access code login at <a href="/login">/login</a>.</p>
+    </div>
+  </main>
+</body>
+</html>
