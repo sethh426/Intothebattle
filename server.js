@@ -1,4 +1,4 @@
-import { TikTokLive } from ‘@tiktool/live’;
+import { TikTokLive } from '@tiktool/live';
 import express from ‘express’;
 import cookieParser from ‘cookie-parser’;
 import { createServer } from ‘http’;
