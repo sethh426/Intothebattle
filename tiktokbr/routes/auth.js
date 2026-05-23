@@ -21,7 +21,7 @@ const promoLimiter = rateLimit({
 const PAYPAL_LINK = process.env.PAYPAL_PAYMENT_LINK || 'https://www.paypal.com';
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  sameSite: 'strict',
+  sameSite: 'lax',
   secure: process.env.NODE_ENV === 'production',
 };
 
@@ -209,7 +209,7 @@ function renderLoginPage({ error = '', message = '' } = {}) {
     function setFingerprint(fp) {
       const input = document.getElementById('fp');
       if (input) input.value = fp;
-      document.cookie = 'fp=' + fp + '; path=/; sameSite=strict;' + (location.protocol === 'https:' ? ' secure;' : '');
+      document.cookie = 'fp=' + fp + '; path=/; sameSite=lax;' + (location.protocol === 'https:' ? ' secure;' : '');
     }
     if (window.Fingerprint2) {
       Fingerprint2.get(function(components) {
