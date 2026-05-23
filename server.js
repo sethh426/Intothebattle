@@ -607,33 +607,26 @@ app.get(’/admin-panel’,  requireAccess, (_req, res) => res.redirect(’/admi
 const cookieParserMiddleware = cookieParser();
 
 io.use((socket, next) => {
-const mockReq = { headers: { cookie: socket.handshake.headers.cookie || ‘’ } };
-const mockRes = {};
-cookieParserMiddleware(mockReq, mockRes, () => {
-const token = mockReq.cookies?.session_token;
-if (!token) {
-logger.warn(‘Socket auth failed: no session_token cookie’);
-return next(new Error(‘Unauthorized’));
-}
-try {
-jwt.verify(token, process.env.JWT_SECRET);
-} catch (_err) {
-logger.warn(‘Socket auth failed: invalid JWT’);
-return next(new Error(‘Unauthorized’));
-}
-const row = db.prepare(‘SELECT * FROM access_codes WHERE session_token = ?’).get(token);
-if (!row || row.is_revoked || new Date(row.expires_at) < new Date()) {
-logger.warn(‘Socket auth failed: invalid/expired access code’);
-return next(new Error(‘Unauthorized’));
-}
-const fp = mockReq.cookies?.fp;
-if (row.fingerprint && (!fp || row.fingerprint !== fp)) {
-logger.warn(‘Socket auth failed: fingerprint mismatch’);
-return next(new Error(‘Unauthorized’));
-}
-socket.accessCode = row;
-next();
-});
+  const mockReq = { headers: { cookie: socket.handshake.headers.cookie || '' } };
+  cookieParserMiddleware(mockReq, {}, () => {
+    const token = mockReq.cookies?.session_token;
+    if (!token) return next(new Error('Unauthorized'));
+    try {
+      jwt.verify(token, process.env.JWT_SECRET);
+    } catch (_err) {
+      return next(new Error('Unauthorized'));
+    }
+    const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
+    if (!row || row.is_revoked || new Date(row.expires_at) < new Date()) {
+      return next(new Error('Unauthorized'));
+    }
+    const fp = mockReq.cookies?.fp;
+    if (row.fingerprint && (!fp || row.fingerprint !== fp)) {
+      return next(new Error('Unauthorized'));
+    }
+    socket.accessCode = row;
+    next();
+  });
 });
 
 app.use((req, res, next) => {
