@@ -220,9 +220,9 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
   }
 
   // NEW: Position for ANY alive player (used when not in top‑5)
-  function getPositionForPlayer(uniqueId) {
+  function getPositionForPlayer(playerId) {
     const allAlive = Object.values(players).filter(p => p.alive && p.uniqueId !== HORDE_ID);
-    const index = allAlive.findIndex(p => p.uniqueId === uniqueId);
+    const index = allAlive.findIndex(p => p.uniqueId === playerId || p.id === playerId);
     if (index === -1) return null;
     const total = allAlive.length;
     const W = cw();
@@ -368,6 +368,7 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
       });
 
       socket.on('gameState', (state) => {
+        console.log('📦 gameState received. Player IDs:', Object.keys(state || {}).slice(0, 10));
         if (state && typeof state === 'object') players = state;
       });
 
@@ -381,7 +382,13 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
       });
 
       socket.on('attack', (data) => {
+        console.log('⚔️ attack event:', { attacker: data.attacker, target: data.target, damage: data.damage, killed: data.killed, special: data.special, effect: data.effect });
         fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect);
+      });
+
+      socket.on('giftAttack', ({ attacker, target, damage, killed }) => {
+        console.log('🎁 giftAttack event:', { attacker, target, damage, killed });
+        fireAttack(attacker, target, damage, killed, true);
       });
 
     } catch (err) {
