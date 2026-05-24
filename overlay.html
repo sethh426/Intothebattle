@@ -243,7 +243,7 @@ function fireAttack(attackerId, targetId, damage, killed) {
     let fromPos = null, toPos = null;
 
     // Attacker
-    const attackerTopIndex = top.findIndex(p => p.uniqueId === attackerId);
+    const attackerTopIndex = top.findIndex(p => (p.uniqueId === attackerId) || (p.id === attackerId));
     if (attackerTopIndex !== -1) {
         fromPos = getPosition(attackerTopIndex);
     } else if (attackerId === '__HORDE__') {
@@ -254,7 +254,7 @@ function fireAttack(attackerId, targetId, damage, killed) {
     }
 
     // Target
-    const targetTopIndex = top.findIndex(p => p.uniqueId === targetId);
+    const targetTopIndex = top.findIndex(p => (p.uniqueId === targetId) || (p.id === targetId));
     if (targetTopIndex !== -1) {
         toPos = getPosition(targetTopIndex);
     } else if (targetId === '__HORDE__') {
@@ -282,6 +282,7 @@ function initSocket() {
 
     socket.on('connect', () => {
         document.getElementById('status').innerHTML = '🟢 CONNECTED';
+        console.log('Overlay socket connected', socket.id);
         socket.emit('register', { type: 'overlay' });
     });
 
@@ -291,11 +292,40 @@ function initSocket() {
 
     socket.on('connect_error', (err) => {
         document.getElementById('status').innerHTML = `⚠️ ERROR: ${err.message}`;
+        console.error('Socket connect_error', err);
     });
 
     socket.on('gameState', (state) => {
-        if (state && typeof state === 'object') {
-            players = state;
+        try {
+            if (state && typeof state === 'object') {
+                // Normalize keys so each player has a `uniqueId` and is keyed by it.
+                const normalized = {};
+                for (const k in state) {
+                    const p = state[k] || {};
+                    p.uniqueId = p.uniqueId || p.id || k;
+                    normalized[p.uniqueId] = p;
+                }
+                players = normalized;
+                console.log('gameState received, players=', Object.keys(players).length);
+            }
+        } catch (e) {
+            console.error('Error applying gameState', e, state);
+        }
+
+        // If socket didn't provide state (or state empty), try HTTP fallback
+        if (!players || Object.keys(players).length === 0) {
+            fetch('/state').then(r => r.json()).then(s => {
+                try {
+                    const normalized = {};
+                    for (const k in s) {
+                        const p = s[k] || {};
+                        p.uniqueId = p.uniqueId || p.id || k;
+                        normalized[p.uniqueId] = p;
+                    }
+                    players = normalized;
+                    console.log('Fetched /state fallback, players=', Object.keys(players).length);
+                } catch (e) { console.error('Error normalizing /state', e, s); }
+            }).catch(err => console.warn('Fallback /state request failed', err));
         }
     });
 
