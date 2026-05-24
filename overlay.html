@@ -3,7 +3,6 @@
 <head>
 <meta charset="UTF-8" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-<meta http-equiv="Pragma" content="no-cache" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <title>Battle Royale Overlay · Professional Lasers</title>
 <style>
@@ -178,14 +177,11 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
   let socket = null;
   let isConnected = false;
 
-  // ─── HELPERS ────────────────────────────────
   function cw() { return rectEl.offsetWidth; }
   function ch() { return rectEl.offsetHeight; }
 
-  // Improved clamp: keeps cards on screen but allows wide adjustment
   function clampOverlaySettings() {
     const W = cw(), H = ch();
-    // approximate card width based on current card height (dynamic)
     const cardH = H * 0.60 * 0.84;
     const cardW = cardH * 0.72;
     const totalCardsWidth = cardW * 5;
@@ -200,7 +196,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     const maxOffsetY = H * 0.3;
     offsetY = Math.min(maxOffsetY, Math.max(minOffsetY, offsetY));
 
-    // Update slider max values dynamically
     if (gapControl) gapControl.max = Math.round(maxGap);
     if (offsetXControl) {
       offsetXControl.max = Math.round(maxOffsetX);
@@ -212,14 +207,12 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     }
   }
 
-  // Position for top‑5 players (fast)
   function getPlayerPosition(index) {
     const W = cw(), cellW = (W * 0.82) / 5, gap = layoutGap * currentScale;
     const totalW = cellW * 5 + gap * 4, startX = (W - totalW) / 2 + offsetX;
     return { x: startX + index * (cellW + gap) + cellW / 2, y: ch() * 0.30 + offsetY };
   }
 
-  // NEW: Position for ANY alive player (used when not in top‑5)
   function getPositionForPlayer(playerId) {
     const allAlive = Object.values(players).filter(p => p.alive && p.uniqueId !== HORDE_ID);
     const index = allAlive.findIndex(p => p.uniqueId === playerId || p.id === playerId);
@@ -247,7 +240,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     return { x: rect.left + cx * scaleX, y: rect.top + cy * scaleY };
   }
 
-  // ─── CANVAS RESIZE ──────────────────────────
   function resizeCanvas() {
     const dpr = window.devicePixelRatio || 1;
     const w = rectEl.offsetWidth, h = rectEl.offsetHeight;
@@ -256,13 +248,12 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     canvas.style.width  = w + 'px';
     canvas.style.height = h + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    clampOverlaySettings();   // update ranges after resize
+    clampOverlaySettings();
     syncValues();
   }
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
-  // ─── UI CONTROLS ────────────────────────────
   const gapControl     = document.getElementById('gapControl');
   const offsetXControl = document.getElementById('offsetXControl');
   const offsetYControl = document.getElementById('offsetYControl');
@@ -306,7 +297,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
       panel.classList.contains('hidden') ? '⚙' : '⚡';
   };
 
-  // ─── AUDIO ──────────────────────────────────
   function getAudio(f) {
     if (!audioCache[f]) {
       const a = new Audio(`/audio/${f}`);
@@ -322,7 +312,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     try { const a = getAudio(f); a.currentTime = 0; a.play().catch(() => {}); } catch(e) {}
   }
 
-  // ─── PLAYER DATA ────────────────────────────
   function topPlayers() {
     return Object.values(players)
       .filter(p => p.alive && p.uniqueId !== HORDE_ID)
@@ -344,7 +333,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     };
   }
 
-  // ─── SOCKET.IO ──────────────────────────────
   function initSocket() {
     try {
       socket = io({ transports: ['websocket', 'polling'], timeout: 5000 });
@@ -362,13 +350,13 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
         statusDiv.className   = 'disconnected';
       });
 
-      socket.on('connect_error', () => {
+      socket.on('connect_error', (err) => {
+        console.warn('Socket connection error:', err);
         statusDiv.textContent = '⚠️ SERVER ERROR · retrying';
         statusDiv.className   = 'disconnected';
       });
 
       socket.on('gameState', (state) => {
-        console.log('📦 gameState received. Player IDs:', Object.keys(state || {}).slice(0, 10));
         if (state && typeof state === 'object') players = state;
       });
 
@@ -382,22 +370,20 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
       });
 
       socket.on('attack', (data) => {
-        console.log('⚔️ attack event:', { attacker: data.attacker, target: data.target, damage: data.damage, killed: data.killed, special: data.special, effect: data.effect });
         fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect);
       });
 
       socket.on('giftAttack', ({ attacker, target, damage, killed }) => {
-        console.log('🎁 giftAttack event:', { attacker, target, damage, killed });
         fireAttack(attacker, target, damage, killed, true);
       });
 
     } catch (err) {
+      console.error('Socket init error:', err);
       statusDiv.textContent = '❌ SOCKET ERROR · no live data';
       statusDiv.className   = 'disconnected';
     }
   }
 
-  // ─── BACKGROUND ─────────────────────────────
   function drawBackground() {
     const W = cw(), H = ch();
     if (backgroundImg) {
@@ -418,7 +404,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     }
   }
 
-  // ─── PLAYER CARD ────────────────────────────
   function drawPlayerCard(player, pos, rank) {
     const hp    = player.hp    || 0;
     const maxHp = player.maxHp || 100;
@@ -431,28 +416,23 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     const barX   = cx - barW / 2, barY = avatarY + avatarR + cardH * 0.05;
     const hpTextY = barY + barH + cardH * 0.07;
 
-    // Glow aura
     const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, avatarR * 2.5);
     glow.addColorStop(0, 'rgba(122,252,255,0.18)');
     glow.addColorStop(1, 'rgba(122,252,255,0)');
     ctx.fillStyle = glow;
     ctx.beginPath(); ctx.arc(cx, cy, avatarR * 2.5, 0, Math.PI * 2); ctx.fill();
 
-    // Avatar ring
     ctx.strokeStyle = rank === 1 ? 'rgba(255,210,80,0.7)' : 'rgba(122,252,255,0.35)';
     ctx.lineWidth = Math.max(2, avatarR * 0.08);
     ctx.beginPath(); ctx.arc(cx, avatarY, avatarR, 0, Math.PI * 2); ctx.stroke();
 
-    // Avatar bg
     ctx.fillStyle = 'rgba(8,18,30,0.92)';
     ctx.beginPath(); ctx.arc(cx, avatarY, avatarR - 2, 0, Math.PI * 2); ctx.fill();
 
-    // Emoji
     ctx.font = `${avatarR * 1.3}px Arial`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(player.iconEmoji || '⚔️', cx, avatarY);
 
-    // Name
     const nameFontSize = Math.max(9, cardH * 0.11);
     ctx.font = `bold ${nameFontSize}px "Segoe UI"`;
     ctx.textBaseline = 'middle';
@@ -460,7 +440,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeText(name, cx, nameY);
     ctx.fillStyle = '#fff'; ctx.fillText(name, cx, nameY);
 
-    // HP bar
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(barX, barY, barW, barH);
     const hpGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
     hpGrad.addColorStop(0, hpPct > 0.5 ? '#2ecc71' : hpPct > 0.25 ? '#f39c12' : '#ff4d4d');
@@ -470,7 +449,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     ctx.strokeStyle = 'rgba(122,252,255,0.35)'; ctx.lineWidth = 1;
     ctx.strokeRect(barX, barY, barW, barH);
 
-    // HP text
     const hpFontSize = Math.max(8, cardH * 0.085);
     ctx.font = `${hpFontSize}px "Segoe UI"`;
     ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
@@ -479,7 +457,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     ctx.fillText(`${Math.round(hp)}/${maxHp}`, cx, hpTextY);
   }
 
-  // ─── HORDE ──────────────────────────────────
   function drawHorde(horde) {
     if (!horde) return;
     const pos = getHordePosition(), H = ch(), rowH = H * 0.40;
@@ -521,7 +498,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     ctx.fillText(hpStr, barX, barY + barH2 + rowH * 0.12);
   }
 
-  // ─── LASER EFFECTS (unchanged) ──────────────
   function drawNeonLaser(ctx, from, to, progress, special, time) {
     const headX = from.x + (to.x - from.x) * progress;
     const headY = from.y + (to.y - from.y) * progress;
@@ -620,7 +596,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     ctx.restore();
   }
 
-  // ─── PARTICLE ───────────────────────────────
   class Particle {
     constructor(x, y, opts = {}) {
       this.x = x; this.y = y;
@@ -652,7 +627,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     }
   }
 
-  // ─── ATTACK ─────────────────────────────────
   class Attack {
     constructor(from, to, effectType = 'laser') {
       this.from = from; this.to = to; this.effectType = effectType;
@@ -757,7 +731,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     }
   }
 
-  // ─── DAMAGE NUMBERS ─────────────────────────
   function showDamage(canvasX, canvasY, dmg, kill) {
     const vp = canvasToViewport(canvasX, canvasY);
     const el = document.createElement('div');
@@ -768,7 +741,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     setTimeout(() => el.remove(), 900);
   }
 
-  // ─── FIRE ATTACK (UPDATED: works for any player) ──────────
   function fireAttack(attackerId, targetId, damage, killed, special, effect) {
     const top   = topPlayers();
     const horde = hordePlayer();
@@ -819,7 +791,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     playSound(special ? 'gift' : 'attack');
   }
 
-  // ─── ANIMATION LOOP ─────────────────────────
   function draw() {
     currentScale = Math.min(cw() / 1920, ch() / 200, 1.4) * layoutScale;
     if (currentScale < 0.05) currentScale = 0.05;
@@ -832,7 +803,6 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     requestAnimationFrame(draw);
   }
 
-  // Boot
   initSocket();
   draw();
 })();
