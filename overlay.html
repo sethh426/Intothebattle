@@ -46,7 +46,7 @@ body { display: flex; align-items: center; justify-content: center; }
       <div class="control"><div class="control-top"><span>Horizontal Offset</span><span id="offsetXValue">0</span></div><input id="offsetXControl" type="range" min="-400" max="400" value="0" /></div>
       <div class="control"><div class="control-top"><span>Vertical Position</span><span id="offsetYValue">0</span></div><input id="offsetYControl" type="range" min="-200" max="200" value="0" /></div>
       <div class="control"><div class="control-top"><span>Layout Height</span><span id="heightValue">85%</span></div><input id="heightControl" type="range" min="30" max="100" value="85" /></div>
-      <div class="control"><div class="control-top"><span>Screen Position</span><span id="screenYValue">↕ Centre</span></div><input id="screenYControl" type="range" min="-50" max="50" value="0" /></div>
+      <div class="control"><div class="control-top"><span>Zoom</span><span id="zoomValue">100%</span></div><input id="zoomControl" type="range" min="60" max="140" value="100" /></div>
     </div>
   </div>
 </div>
@@ -62,7 +62,7 @@ body { display: flex; align-items: center; justify-content: center; }
   const offsetXControl = document.getElementById('offsetXControl');
   const offsetYControl = document.getElementById('offsetYControl');
   const heightControl = document.getElementById('heightControl');
-  const screenYControl = document.getElementById('screenYControl');
+  const zoomControl = document.getElementById('zoomControl');
   const togglePanel = document.getElementById('togglePanel');
   const layoutPanel = document.getElementById('layoutPanel');
   let players = {};
@@ -70,7 +70,7 @@ body { display: flex; align-items: center; justify-content: center; }
   let layoutGap = 0;
   let offsetX = 0;
   let offsetY = 0;
-  let screenYOffset = 0;
+  let layoutZoom = 1;
   let backgroundImg = null;
   let socket = null;
   let audioConfig = {};
@@ -89,14 +89,13 @@ body { display: flex; align-items: center; justify-content: center; }
     document.getElementById('offsetXValue').textContent = Math.round(offsetX);
     document.getElementById('offsetYValue').textContent = Math.round(offsetY);
     document.getElementById('heightValue').textContent = heightControl.value + '%';
-    const v = parseInt(screenYControl.value, 10);
-    document.getElementById('screenYValue').textContent = v === 0 ? '↕ Centre' : v > 0 ? `▲ ${v}%` : `▼ ${Math.abs(v)}%`;
+    document.getElementById('zoomValue').textContent = `${Math.round(layoutZoom * 100)}%`;
   }
   gapControl.oninput = () => { layoutGap = parseFloat(gapControl.value); updateControlLabels(); };
   offsetXControl.oninput = () => { offsetX = parseFloat(offsetXControl.value); updateControlLabels(); };
   offsetYControl.oninput = () => { offsetY = parseFloat(offsetYControl.value); updateControlLabels(); };
   heightControl.oninput = () => { container.style.height = heightControl.value + 'vh'; resizeCanvas(); updateControlLabels(); };
-  screenYControl.oninput = () => { screenYOffset = -parseFloat(screenYControl.value); updateControlLabels(); };
+  zoomControl.oninput = () => { layoutZoom = parseFloat(zoomControl.value) / 100; updateControlLabels(); };
   togglePanel.onclick = () => { layoutPanel.classList.toggle('hidden'); togglePanel.querySelector('.panel-tab-icon').textContent = layoutPanel.classList.contains('hidden') ? '⚙' : '⚡'; };
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
@@ -112,13 +111,17 @@ body { display: flex; align-items: center; justify-content: center; }
   function getPlayerPosition(index, total) {
     const W = cw();
     const H = ch();
-    const cardH = H * 0.5 * 0.84;
+    const cardH = H * 0.5 * 0.84 * layoutZoom;
     const cardW = cardH * 0.72;
     const totalWidth = cardW * total + layoutGap * Math.max(0, total - 1);
     const startX = (W - totalWidth) / 2 + offsetX;
-    return { x: startX + index * (cardW + layoutGap) + cardW / 2, y: H * (0.28 + screenYOffset * 0.005) + offsetY };
+    return { x: startX + index * (cardW + layoutGap) + cardW / 2, y: H * 0.28 + offsetY + (H * 0.16 * (1 - layoutZoom)) };
   }
-  function getHordePosition() { return { x: cw() / 2 + offsetX, y: ch() * (0.72 + screenYOffset * 0.005) + offsetY }; }
+  function getHordePosition() {
+    const W = cw();
+    const H = ch();
+    return { x: W / 2 + offsetX, y: H * 0.72 + offsetY + (H * 0.20 * (1 - layoutZoom)) };
+  }
   function canvasToViewport(cx, cy) { const rect = canvas.getBoundingClientRect(); const scaleX = rect.width / cw(); const scaleY = rect.height / ch(); return { x: rect.left + cx * scaleX, y: rect.top + cy * scaleY }; }
   function getAudio(filename) { if (!audioCache[filename]) { const audio = new Audio(`/audio/${filename}`); audio.preload = 'auto'; audioCache[filename] = audio; } return audioCache[filename]; }
   function playSound(type) { const filename = audioConfig[type]; if (!filename) return; try { const a = getAudio(filename); a.currentTime = 0; a.play().catch(() => {}); } catch (e) {} }
@@ -149,7 +152,7 @@ body { display: flex; align-items: center; justify-content: center; }
     const maxHp = player.maxHp || 100;
     const hpPct = Math.max(0, Math.min(1, hp / maxHp));
     const H = ch();
-    const cardH = H * 0.5 * 0.84;
+    const cardH = H * 0.5 * 0.84 * layoutZoom;
     const avatarR = cardH * 0.26;
     const avatarY = pos.y - cardH * 0.14;
     const nameY = avatarY - avatarR - cardH * 0.06;
@@ -211,7 +214,7 @@ body { display: flex; align-items: center; justify-content: center; }
     if (!horde) return;
     const pos = getHordePosition();
     const H = ch();
-    const ring = H * 0.28;
+    const ring = H * 0.28 * layoutZoom;
     const pulse = 0.5 + Math.sin(Date.now() / 350) * 0.5;
     ctx.fillStyle = `rgba(255,70,70,${0.08 + pulse * 0.05})`;
     ctx.beginPath();
