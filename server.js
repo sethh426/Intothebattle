@@ -1,3 +1,4 @@
+import socketAuth from './socketAuth.js';
 import { TikTokLive } from '@tiktool/live';
 import express from ‘express’;
 import cookieParser from ‘cookie-parser’;
