@@ -1,576 +1,339 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<title>Battle Royale Overlay · Professional Lasers</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Battle Royale Overlay · Fixed</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #02040a; font-family: 'Segoe UI', sans-serif; }
-
-#overlay-wrap { position: absolute; inset: 0; background: #02040a; }
-
-#overlay-positioner {
-  position: absolute;
-  left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
-  transition: top 0.05s linear;
-}
-
-#overlay-viewbox {
-  position: relative;
-  width: min(90vw, 1920px);
-  max-height: 1080px;
-  aspect-ratio: 16 / 9;
-  pointer-events: none;
-}
-
-#overlay-rect {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  min-height: 240px;
-  overflow: hidden;
-  border-radius: 18px;
-  background: rgba(4, 8, 18, 0.85);
-  border: 1px solid rgba(180, 120, 255, 0.35);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06), 0 0 48px rgba(140,80,255,0.18);
-}
-
-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: 18px; }
-
+body { background: #02040a; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+#canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: block; }
 .damage {
   position: fixed;
-  font-weight: 900; font-size: clamp(18px,3vw,28px);
+  font-weight: bold; font-size: 28px;
   color: #ff5050;
-  text-shadow: 0 0 16px rgba(255,80,80,0.95), 2px 2px 8px rgba(0,0,0,0.9);
-  animation: floatDamage 0.85s ease-out forwards;
+  text-shadow: 0 0 10px black;
+  animation: floatUp 0.8s ease-out forwards;
   pointer-events: none; z-index: 9999;
   transform: translate(-50%, -50%);
-  white-space: nowrap;
 }
-.damage.kill {
-  color: #ffd84f; font-size: clamp(22px,4vw,34px);
-  text-shadow: 0 0 20px rgba(255,216,79,0.95);
+.damage.kill { color: gold; font-size: 34px; }
+@keyframes floatUp {
+  0% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%,-150%) scale(0.8); }
 }
-@keyframes floatDamage {
-  0%   { opacity: 1; transform: translate(-50%,-50%) scale(1.15); }
-  100% { opacity: 0; transform: translate(-50%,-160%) scale(0.65); }
+#status {
+  position: fixed; bottom: 10px; left: 10px;
+  background: black; color: #0f0; padding: 4px 12px;
+  border-radius: 20px; font-family: monospace; font-size: 12px;
+  z-index: 1000;
 }
-
-.ui { position: fixed; inset: 0; z-index: 200; pointer-events: none; }
-.panel-wrapper {
-  position: absolute; top: 16px; right: 0;
-  display: flex; align-items: flex-start;
-  pointer-events: auto;
-}
-.panel-tab {
-  width: 28px;
-  background: rgba(6,10,20,0.88);
-  border: 1px solid rgba(100,200,255,0.2);
-  border-right: none; border-radius: 8px 0 0 8px;
-  padding: 10px 0; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-  color: #8fd8ff; font-size: 10px; font-weight: 800;
-  letter-spacing: 1px; text-transform: uppercase;
-  writing-mode: vertical-rl; text-orientation: mixed;
-  user-select: none; transition: background 0.2s;
-}
-.panel-tab:hover { background: rgba(20,40,70,0.95); }
-.panel-tab-icon { font-size: 13px; writing-mode: horizontal-tb; }
-
-.layout-panel {
-  width: 240px; padding: 14px 16px; border-radius: 0 0 0 16px;
-  background: rgba(6,10,20,0.92); backdrop-filter: blur(16px);
-  border: 1px solid rgba(100,200,255,0.14); border-right: none;
-  box-shadow: -8px 0 30px rgba(0,0,0,0.5);
-  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
-  transform-origin: right top;
-}
-.layout-panel.hidden { transform: translateX(100%); opacity: 0; pointer-events: none; }
-.layout-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.layout-title { color: #8fd8ff; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
-.layout-btn {
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
-  color: white; border-radius: 8px; padding: 5px 10px; font-size: 11px; cursor: pointer; transition: 0.2s;
-}
-.layout-btn:hover { background: rgba(255,255,255,0.12); }
-.control { margin-bottom: 13px; }
-.control-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
-.control-top span { font-size: 11px; color: #cfefff; }
-.control input { width: 100%; appearance: none; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.08); outline: none; }
-.control input::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9); cursor: pointer; }
-
-#status-badge {
-  position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
-  background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
-  border-radius: 24px; padding: 4px 16px;
-  font-size: 11px; font-weight: bold; letter-spacing: 1px;
-  color: #aaa; pointer-events: none; z-index: 9999;
-  font-family: monospace; transition: 0.2s;
-}
-#status-badge.connected    { color: #7aff87; text-shadow: 0 0 4px #2eff5e; }
-#status-badge.disconnected { color: #ff8866; }
 </style>
 <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-
-<div id="overlay-wrap">
-  <div id="overlay-positioner">
-    <div id="overlay-viewbox">
-      <div id="overlay-rect">
-        <canvas id="canvas"></canvas>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="ui">
-  <div class="panel-wrapper">
-    <div class="panel-tab" id="togglePanel">
-      <span class="panel-tab-icon">⚡</span>
-      LAYOUT
-    </div>
-    <div class="layout-panel" id="layoutPanel">
-      <div class="control">
-        <div class="control-top"><span>Column Gap</span><span id="gapValue">0</span></div>
-        <input id="gapControl" type="range" min="0" max="200" value="0" />
-      </div>
-      <div class="control">
-        <div class="control-top"><span>Horizontal Offset</span><span id="offsetXValue">0</span></div>
-        <input id="offsetXControl" type="range" min="-400" max="400" value="0" />
-      </div>
-      <div class="control">
-        <div class="control-top"><span>Vertical Position</span><span id="offsetYValue">0</span></div>
-        <input id="offsetYControl" type="range" min="-200" max="200" value="0" />
-      </div>
-      <div class="control">
-        <div class="control-top"><span>Layout Height</span><span id="heightValue">20%</span></div>
-        <input id="heightControl" type="range" min="10" max="55" value="20" />
-      </div>
-      <div class="control">
-        <div class="control-top"><span>Screen Position</span><span id="screenYValue">↕ Centre</span></div>
-        <input id="screenYControl" type="range" min="-50" max="50" value="0" />
-      </div>
-    </div>
-  </div>
-</div>
-<div id="status-badge" class="disconnected">⚡ CONNECTING...</div>
+<canvas id="canvas"></canvas>
+<div id="status">🔌 CONNECTING...</div>
 
 <script>
-(function () {
-  const canvas  = document.getElementById('canvas');
-  const ctx     = canvas.getContext('2d');
-  const rectEl  = document.getElementById('overlay-rect');
-  const statusDiv = document.getElementById('status-badge');
+// ------------------- UTILITIES -------------------
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let players = {};
+let attacks = [];
+let backgroundImg = null;
+let socket = null;
 
-  let players = {};
-  let attacks = [];
-  let layoutGap = 0, offsetX = 0, offsetY = 0, layoutScale = 1;
-  let backgroundImg = null;
-  const audioCache = {};
-  let audioConfig = {}, soundEnabled = true;
-  const HORDE_ID = '__HORDE__';
-  let currentScale = 1;
-  let socket = null;
-  let isConnected = false;
-
-  function cw() { return rectEl.offsetWidth; }
-  function ch() { return rectEl.offsetHeight; }
-
-  function clampOverlaySettings() {
-    const W = cw(), H = ch();
-    const cardH = H * 0.60 * 0.84;
-    const cardW = cardH * 0.72;
-    const totalCardsWidth = cardW * 5;
-    const maxGap = Math.max(0, (W - totalCardsWidth) / 4);
-    layoutGap = Math.min(maxGap, Math.max(0, layoutGap));
-
-    const totalRowWidth = cardW * 5 + layoutGap * 4;
-    const maxOffsetX = Math.max(0, (W - totalRowWidth) / 2);
-    offsetX = Math.min(maxOffsetX, Math.max(-maxOffsetX, offsetX));
-
-    const minOffsetY = -H * 0.2;
-    const maxOffsetY = H * 0.3;
-    offsetY = Math.min(maxOffsetY, Math.max(minOffsetY, offsetY));
-
-    if (gapControl) gapControl.max = Math.round(maxGap);
-    if (offsetXControl) {
-      offsetXControl.max = Math.round(maxOffsetX);
-      offsetXControl.min = -Math.round(maxOffsetX);
-    }
-    if (offsetYControl) {
-      offsetYControl.min = Math.round(minOffsetY);
-      offsetYControl.max = Math.round(maxOffsetY);
-    }
-  }
-
-  function getPlayerPosition(index) {
-    const W = cw(), cellW = (W * 0.82) / 5, gap = layoutGap * currentScale;
-    const totalW = cellW * 5 + gap * 4, startX = (W - totalW) / 2 + offsetX;
-    return { x: startX + index * (cellW + gap) + cellW / 2, y: ch() * 0.30 + offsetY };
-  }
-
-  function getPositionForPlayer(playerId) {
-    const allAlive = Object.values(players).filter(p => p.alive && p.uniqueId !== HORDE_ID);
-    const index = allAlive.findIndex(p => p.uniqueId === playerId || p.id === playerId);
-    if (index === -1) return null;
-    const total = allAlive.length;
-    const W = cw();
-    const cellW = (W * 0.82) / total;
-    const gap = layoutGap * currentScale;
-    const totalW = cellW * total + gap * (total - 1);
-    const startX = (W - totalW) / 2 + offsetX;
-    return {
-      x: startX + index * (cellW + gap) + cellW / 2,
-      y: ch() * 0.30 + offsetY
-    };
-  }
-
-  function getHordePosition() {
-    return { x: cw() / 2 + offsetX, y: ch() * 0.78 + offsetY };
-  }
-
-  function canvasToViewport(cx, cy) {
+// For damage numbers
+function showDamage(worldX, worldY, dmg, isKill) {
     const rect = canvas.getBoundingClientRect();
-    const scaleX = rect.width  / cw();
-    const scaleY = rect.height / ch();
-    return { x: rect.left + cx * scaleX, y: rect.top + cy * scaleY };
-  }
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const screenX = rect.left + worldX * (rect.width / canvas.width);
+    const screenY = rect.top + worldY * (rect.height / canvas.height);
+    const div = document.createElement('div');
+    div.className = 'damage' + (isKill ? ' kill' : '');
+    div.textContent = isKill ? '💀 KILL!' : `-${Math.round(dmg)}`;
+    div.style.left = screenX + 'px';
+    div.style.top = screenY + 'px';
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 800);
+}
 
-  function resizeCanvas() {
-    const dpr = window.devicePixelRatio || 1;
-    const w = rectEl.offsetWidth, h = rectEl.offsetHeight;
-    canvas.width  = w * dpr;
-    canvas.height = h * dpr;
-    canvas.style.width  = w + 'px';
-    canvas.style.height = h + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    clampOverlaySettings();
-    syncValues();
-  }
-  resizeCanvas();
-  window.addEventListener('resize', resizeCanvas);
+// ------------------- RENDERING -------------------
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
-  const gapControl     = document.getElementById('gapControl');
-  const offsetXControl = document.getElementById('offsetXControl');
-  const offsetYControl = document.getElementById('offsetYControl');
-  const heightControl  = document.getElementById('heightControl');
-  const screenYControl = document.getElementById('screenYControl');
-  const positioner     = document.getElementById('overlay-positioner');
-
-  function syncValues() {
-    clampOverlaySettings();
-    document.getElementById('gapValue').textContent    = Math.round(layoutGap);
-    document.getElementById('offsetXValue').textContent = Math.round(offsetX);
-    document.getElementById('offsetYValue').textContent = Math.round(offsetY);
-    if (gapControl) gapControl.value = layoutGap;
-    if (offsetXControl) offsetXControl.value = offsetX;
-    if (offsetYControl) offsetYControl.value = offsetY;
-  }
-
-  gapControl.oninput     = () => { layoutGap = +gapControl.value;     syncValues(); };
-  offsetXControl.oninput = () => { offsetX   = +offsetXControl.value; syncValues(); };
-  offsetYControl.oninput = () => { offsetY   = +offsetYControl.value; syncValues(); };
-  heightControl.oninput  = () => {
-    const pct = +heightControl.value;
-    document.getElementById('heightValue').textContent = pct + '%';
-    rectEl.style.height = pct + 'vh';
-    resizeCanvas();
-    syncValues();
-  };
-  screenYControl.oninput = () => {
-    const v = +screenYControl.value;
-    document.getElementById('screenYValue').textContent =
-      v === 0 ? '↕ Centre' : v > 0 ? `▲ ${v}%` : `▼ ${Math.abs(v)}%`;
-    positioner.style.top = (50 - v) + 'vh';
-  };
-  syncValues();
-
-  const panel = document.getElementById('layoutPanel');
-  const tab   = document.getElementById('togglePanel');
-  tab.onclick = () => {
-    panel.classList.toggle('hidden');
-    tab.querySelector('.panel-tab-icon').textContent =
-      panel.classList.contains('hidden') ? '⚙' : '⚡';
-  };
-
-  function getAudio(f) {
-    if (!audioCache[f]) {
-      const a = new Audio(`/audio/${f}`);
-      a.preload = 'auto';
-      audioCache[f] = a;
+// Background
+function drawBackground() {
+    if (backgroundImg) {
+        ctx.drawImage(backgroundImg, 0, 0, canvas.width, canvas.height);
+    } else {
+        ctx.fillStyle = '#0a0f1e';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = 'rgba(100,200,255,0.1)';
+        for (let i = 0; i < canvas.width; i += 80) {
+            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+        }
+        for (let i = 0; i < canvas.height; i += 80) {
+            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+        }
     }
-    return audioCache[f];
-  }
-  function playSound(type) {
-    if (!soundEnabled) return;
-    const f = audioConfig[type];
-    if (!f) return;
-    try { const a = getAudio(f); a.currentTime = 0; a.play().catch(() => {}); } catch(e) {}
-  }
+}
 
-  function topPlayers() {
+// Top 5 players (by HP)
+function topPlayers() {
     return Object.values(players)
-      .filter(p => p.alive && p.uniqueId !== HORDE_ID)
-      .sort((a, b) => (b.hp || 0) - (a.hp || 0))
-      .slice(0, 5);
-  }
+        .filter(p => p.alive)
+        .sort((a,b) => (b.hp||0) - (a.hp||0))
+        .slice(0,5);
+}
 
-  function hordePlayer() {
+// Position for top 5 (horizontal row)
+function getPosition(index) {
+    const total = 5;
+    const cardW = 180;
+    const gap = 20;
+    const totalW = total * cardW + (total-1) * gap;
+    const startX = (canvas.width - totalW) / 2;
+    const y = canvas.height * 0.3;
+    return { x: startX + index * (cardW + gap) + cardW/2, y: y };
+}
+
+// Draw a single player card
+function drawPlayer(p, idx) {
+    const pos = getPosition(idx);
+    const hp = p.hp || 0;
+    const maxHp = p.maxHp || 100;
+    const hpPercent = hp / maxHp;
+    const cardW = 180;
+    const cardH = 220;
+    const x = pos.x - cardW/2;
+    const y = pos.y - cardH/2;
+
+    // Card background
+    ctx.fillStyle = '#11151fe0';
+    ctx.shadowBlur = 0;
+    ctx.fillRect(x, y, cardW, cardH);
+    ctx.strokeStyle = '#7afcff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, cardW, cardH);
+
+    // Avatar circle
+    const avatarR = 50;
+    const avatarX = pos.x;
+    const avatarY = y + 70;
+    ctx.beginPath();
+    ctx.arc(avatarX, avatarY, avatarR, 0, Math.PI*2);
+    ctx.fillStyle = '#1e2a3a';
+    ctx.fill();
+    ctx.strokeStyle = '#7afcff';
+    ctx.stroke();
+    // Emoji
+    ctx.font = `${avatarR-10}px Arial`;
+    ctx.fillStyle = 'white';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(p.iconEmoji || '⚔️', avatarX, avatarY);
+
+    // Name
+    ctx.font = 'bold 16px "Segoe UI"';
+    ctx.fillStyle = '#fff';
+    ctx.fillText((p.nickname || p.uniqueId).slice(0,12), pos.x, y + 30);
+
+    // HP bar
+    const barW = cardW - 20;
+    const barH = 12;
+    const barX = x + 10;
+    const barY = y + cardH - 30;
+    ctx.fillStyle = '#2c2c2c';
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = hpPercent > 0.6 ? '#2ecc71' : (hpPercent > 0.3 ? '#f39c12' : '#e74c3c');
+    ctx.fillRect(barX, barY, barW * hpPercent, barH);
+
+    // HP text
+    ctx.font = '12px monospace';
+    ctx.fillStyle = '#ccc';
+    ctx.fillText(`${Math.round(hp)}/${maxHp}`, pos.x, barY - 5);
+}
+
+// Draw "THE HORDE" – all other players combined
+function drawHorde() {
     const topSet = new Set(topPlayers().map(p => p.uniqueId));
-    const rest   = Object.values(players).filter(p => p.alive && !topSet.has(p.uniqueId));
-    if (!rest.length) return null;
-    return {
-      uniqueId   : HORDE_ID,
-      nickname   : 'THE HORDE',
-      hp         : rest.reduce((s, p) => s + (p.hp    || 0),   0),
-      maxHp      : rest.reduce((s, p) => s + (p.maxHp || 100), 0),
-      hordeCount : rest.length,
-      alive      : true
-    };
-  }
+    const rest = Object.values(players).filter(p => p.alive && !topSet.has(p.uniqueId));
+    if (rest.length === 0) return;
 
-  // --- SOCKET CONNECTION (exactly like diagnostic) ---
-  function initSocket() {
+    const totalHp = rest.reduce((s,p) => s + (p.hp||0), 0);
+    const totalMaxHp = rest.reduce((s,p) => s + (p.maxHp||100), 0);
+    const hpPercent = totalHp / totalMaxHp;
+
+    const x = canvas.width/2;
+    const y = canvas.height * 0.75;
+    const w = 300;
+    const h = 100;
+
+    ctx.fillStyle = '#1a0f0fe0';
+    ctx.fillRect(x - w/2, y - h/2, w, h);
+    ctx.strokeStyle = '#ff4444';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x - w/2, y - h/2, w, h);
+
+    ctx.font = 'bold 22px "Segoe UI"';
+    ctx.fillStyle = '#ff8888';
+    ctx.textAlign = 'center';
+    ctx.fillText(`💀 THE HORDE (${rest.length})`, x, y - 20);
+
+    const barW = w - 40;
+    const barH = 14;
+    const barX = x - barW/2;
+    const barY = y + 10;
+    ctx.fillStyle = '#2c2c2c';
+    ctx.fillRect(barX, barY, barW, barH);
+    ctx.fillStyle = '#ff5555';
+    ctx.fillRect(barX, barY, barW * hpPercent, barH);
+    ctx.font = '12px monospace';
+    ctx.fillStyle = '#ffcccc';
+    ctx.fillText(`${Math.round(totalHp)}/${Math.round(totalMaxHp)}`, x, barY + 25);
+}
+
+// Simple laser effect
+class Laser {
+    constructor(from, to) {
+        this.from = from;
+        this.to = to;
+        this.start = performance.now();
+        this.duration = 400;
+    }
+    update() {
+        const elapsed = performance.now() - this.start;
+        this.progress = Math.min(1, elapsed / this.duration);
+        return elapsed < this.duration;
+    }
+    draw() {
+        const fromX = this.from.x;
+        const fromY = this.from.y;
+        const toX = this.to.x;
+        const toY = this.to.y;
+        const headX = fromX + (toX - fromX) * this.progress;
+        const headY = fromY + (toY - fromY) * this.progress;
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.beginPath();
+        ctx.moveTo(fromX, fromY);
+        ctx.lineTo(headX, headY);
+        ctx.strokeStyle = '#7afcff';
+        ctx.lineWidth = 8;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(headX, headY, 10, 0, Math.PI*2);
+        ctx.fillStyle = 'white';
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+function fireAttack(attackerId, targetId, damage, killed) {
+    // Find attacker position
+    const top = topPlayers();
+    let fromPos = null, toPos = null;
+
+    // Attacker
+    const attackerTopIndex = top.findIndex(p => p.uniqueId === attackerId);
+    if (attackerTopIndex !== -1) {
+        fromPos = getPosition(attackerTopIndex);
+    } else if (attackerId === '__HORDE__') {
+        fromPos = { x: canvas.width/2, y: canvas.height * 0.75 };
+    } else {
+        // Not in top 5 – skip attack animation for simplicity
+        fromPos = null;
+    }
+
+    // Target
+    const targetTopIndex = top.findIndex(p => p.uniqueId === targetId);
+    if (targetTopIndex !== -1) {
+        toPos = getPosition(targetTopIndex);
+    } else if (targetId === '__HORDE__') {
+        toPos = { x: canvas.width/2, y: canvas.height * 0.75 };
+    } else {
+        toPos = null;
+    }
+
+    if (fromPos && toPos) {
+        attacks.push(new Laser(fromPos, toPos));
+    }
+
+    // Show damage numbers: approximate world position = canvas position
+    const damagePos = toPos || fromPos || { x: canvas.width/2, y: canvas.height/2 };
+    showDamage(damagePos.x, damagePos.y, damage, killed);
+}
+
+// ------------------- SOCKET (same as diagnostic) -------------------
+function initSocket() {
     socket = io({
-      transports: ['websocket', 'polling'],
-      reconnectionAttempts: 5,
-      timeout: 10000
+        transports: ['websocket', 'polling'],
+        reconnectionAttempts: 5,
+        timeout: 10000
     });
 
     socket.on('connect', () => {
-      isConnected = true;
-      statusDiv.textContent = '🟢 LIVE · CONNECTED';
-      statusDiv.className   = 'connected';
-      socket.emit('register', { type: 'overlay' });
+        document.getElementById('status').innerHTML = '🟢 CONNECTED';
+        socket.emit('register', { type: 'overlay' });
     });
 
     socket.on('disconnect', () => {
-      isConnected = false;
-      statusDiv.textContent = '🔴 DISCONNECTED · waiting...';
-      statusDiv.className   = 'disconnected';
+        document.getElementById('status').innerHTML = '🔴 DISCONNECTED';
     });
 
     socket.on('connect_error', (err) => {
-      console.warn('Socket error:', err);
-      statusDiv.textContent = '⚠️ SERVER ERROR · retrying';
-      statusDiv.className   = 'disconnected';
+        document.getElementById('status').innerHTML = `⚠️ ERROR: ${err.message}`;
     });
 
     socket.on('gameState', (state) => {
-      if (state && typeof state === 'object') {
-        players = state;
-      }
+        if (state && typeof state === 'object') {
+            players = state;
+        }
     });
 
-    socket.on('audioConfig', (cfg) => { if (cfg) audioConfig = cfg; });
-
     socket.on('backgroundChanged', ({ filename }) => {
-      if (!filename) { backgroundImg = null; return; }
-      const img = new Image();
-      img.onload = () => { backgroundImg = img; };
-      img.src = `/background/${filename}?v=${Date.now()}`;
+        if (!filename) { backgroundImg = null; return; }
+        const img = new Image();
+        img.onload = () => { backgroundImg = img; };
+        img.src = `/background/${filename}?v=${Date.now()}`;
     });
 
     socket.on('attack', (data) => {
-      fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect);
+        fireAttack(data.attacker, data.target, data.damage, data.killed);
     });
 
     socket.on('giftAttack', ({ attacker, target, damage, killed }) => {
-      fireAttack(attacker, target, damage, killed, true);
+        fireAttack(attacker, target, damage, killed);
     });
-  }
+}
 
-  // --- DRAWING FUNCTIONS (same as before, full featured) ---
-  function drawBackground() {
-    const W = cw(), H = ch();
-    if (backgroundImg) {
-      const scale = Math.max(W / backgroundImg.width, H / backgroundImg.height);
-      ctx.drawImage(backgroundImg,
-        (W - backgroundImg.width  * scale) / 2,
-        (H - backgroundImg.height * scale) / 2,
-        backgroundImg.width * scale, backgroundImg.height * scale);
-    } else {
-      const g = ctx.createLinearGradient(0, 0, 0, H);
-      g.addColorStop(0, '#0d1a2e'); g.addColorStop(1, '#050b12');
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = 'rgba(100,200,255,0.04)'; ctx.lineWidth = 1;
-      for (let x = 0; x < W; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-      for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-      ctx.strokeStyle = 'rgba(140,80,255,0.25)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(0, H * 0.60); ctx.lineTo(W, H * 0.60); ctx.stroke();
-    }
-  }
-
-  function drawPlayerCard(player, pos, rank) {
-    const hp    = player.hp    || 0;
-    const maxHp = player.maxHp || 100;
-    const hpPct = Math.max(0, Math.min(1, hp / maxHp));
-    const H = ch(), cardH = H * 0.60 * 0.84, cardW = cardH * 0.72;
-    const cx = pos.x, cy = pos.y;
-    const avatarR = cardH * 0.26, avatarY = cy - cardH * 0.14;
-    const nameY  = avatarY - avatarR - cardH * 0.06;
-    const barW   = cardW * 0.88, barH = Math.max(6, cardH * 0.09);
-    const barX   = cx - barW / 2, barY = avatarY + avatarR + cardH * 0.05;
-    const hpTextY = barY + barH + cardH * 0.07;
-
-    const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, avatarR * 2.5);
-    glow.addColorStop(0, 'rgba(122,252,255,0.18)');
-    glow.addColorStop(1, 'rgba(122,252,255,0)');
-    ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(cx, cy, avatarR * 2.5, 0, Math.PI * 2); ctx.fill();
-
-    ctx.strokeStyle = rank === 1 ? 'rgba(255,210,80,0.7)' : 'rgba(122,252,255,0.35)';
-    ctx.lineWidth = Math.max(2, avatarR * 0.08);
-    ctx.beginPath(); ctx.arc(cx, avatarY, avatarR, 0, Math.PI * 2); ctx.stroke();
-
-    ctx.fillStyle = 'rgba(8,18,30,0.92)';
-    ctx.beginPath(); ctx.arc(cx, avatarY, avatarR - 2, 0, Math.PI * 2); ctx.fill();
-
-    ctx.font = `${avatarR * 1.3}px Arial`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(player.iconEmoji || '⚔️', cx, avatarY);
-
-    const nameFontSize = Math.max(9, cardH * 0.11);
-    ctx.font = `bold ${nameFontSize}px "Segoe UI"`;
-    ctx.textBaseline = 'middle';
-    const name = (player.nickname || player.uniqueId || 'Player').slice(0, 13);
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.strokeText(name, cx, nameY);
-    ctx.fillStyle = '#fff'; ctx.fillText(name, cx, nameY);
-
-    ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(barX, barY, barW, barH);
-    const hpGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
-    hpGrad.addColorStop(0, hpPct > 0.5 ? '#2ecc71' : hpPct > 0.25 ? '#f39c12' : '#ff4d4d');
-    hpGrad.addColorStop(1, '#ffffff55');
-    ctx.fillStyle = hpGrad;
-    ctx.fillRect(barX + 1, barY + 1, (barW - 2) * hpPct, barH - 2);
-    ctx.strokeStyle = 'rgba(122,252,255,0.35)'; ctx.lineWidth = 1;
-    ctx.strokeRect(barX, barY, barW, barH);
-
-    const hpFontSize = Math.max(8, cardH * 0.085);
-    ctx.font = `${hpFontSize}px "Segoe UI"`;
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
-    ctx.strokeText(`${Math.round(hp)}/${maxHp}`, cx, hpTextY);
-    ctx.fillStyle = '#ccc';
-    ctx.fillText(`${Math.round(hp)}/${maxHp}`, cx, hpTextY);
-  }
-
-  function drawHorde(horde) {
-    if (!horde) return;
-    const pos = getHordePosition(), H = ch(), rowH = H * 0.40;
-    const pulse = 0.5 + Math.sin(Date.now() / 350) * 0.5;
-    const skullR = rowH * 0.28, cx = pos.x, cy = pos.y;
-
-    ctx.beginPath(); ctx.arc(cx, cy, skullR + pulse * 4, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(255,70,70,${0.08 + pulse * 0.05})`; ctx.fill();
-    ctx.strokeStyle = `rgba(255,70,70,${0.5 + pulse * 0.3})`;
-    ctx.lineWidth = Math.max(2, skullR * 0.1);
-    ctx.beginPath(); ctx.arc(cx, cy, skullR * 0.88, 0, Math.PI * 2); ctx.stroke();
-    ctx.font = `${skullR * 1.5}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('💀', cx, cy);
-
-    const titleFont = Math.max(10, rowH * 0.22);
-    ctx.font = `bold ${titleFont}px "Segoe UI"`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
-    ctx.strokeText('⚔ THE HORDE', cx - skullR * 1.35, cy - rowH * 0.1);
-    ctx.fillStyle = '#ff7b7b';
-    ctx.fillText('⚔ THE HORDE', cx - skullR * 1.35, cy - rowH * 0.1);
-    ctx.font = `${Math.max(8, rowH * 0.16)}px "Segoe UI"`; ctx.textAlign = 'right';
-    ctx.fillStyle = '#ffc2c2';
-    ctx.fillText(`${horde.hordeCount} players`, cx - skullR * 1.35, cy + rowH * 0.14);
-
-    const hpPct = Math.min(1, horde.hp / Math.max(1, horde.maxHp));
-    const barW = cw() * 0.28, barH2 = Math.max(8, rowH * 0.16);
-    const barX = cx + skullR * 1.35, barY = cy - barH2 / 2;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(barX, barY, barW, barH2);
-    const rg = ctx.createLinearGradient(barX, 0, barX + barW, 0);
-    rg.addColorStop(0, '#ff2222'); rg.addColorStop(1, '#ff8888');
-    ctx.fillStyle = rg; ctx.fillRect(barX + 2, barY + 2, (barW - 4) * hpPct, barH2 - 4);
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH2);
-
-    ctx.font = `${Math.max(8, rowH * 0.14)}px "Segoe UI"`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
-    const hpStr = `${Math.round(horde.hp)} / ${Math.round(horde.maxHp)}`;
-    ctx.strokeText(hpStr, barX, barY + barH2 + rowH * 0.12);
-    ctx.fillStyle = '#ffaaaa';
-    ctx.fillText(hpStr, barX, barY + barH2 + rowH * 0.12);
-  }
-
-  // --- LASER EFFECTS (simplified but functional) ---
-  class Attack {
-    constructor(from, to, effectType = 'laser') {
-      this.from = from; this.to = to; this.effectType = effectType;
-      this.start = performance.now(); this.progress = 0;
-      this.duration = { laser: 420, projectile: 600, gift: 900, explosion: 750 }[effectType] || 500;
-    }
-    update() {
-      const elapsed = performance.now() - this.start;
-      this.progress = Math.min(1, elapsed / this.duration);
-      return elapsed < this.duration;
-    }
-    draw() {
-      const { from, to, progress } = this;
-      const headX = from.x + (to.x - from.x) * progress;
-      const headY = from.y + (to.y - from.y) * progress;
-      ctx.save(); ctx.globalCompositeOperation = 'screen';
-      ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(headX, headY);
-      ctx.strokeStyle = '#7afcff'; ctx.lineWidth = 8; ctx.stroke();
-      ctx.beginPath(); ctx.arc(headX, headY, 8, 0, Math.PI * 2);
-      ctx.fillStyle = 'white'; ctx.fill();
-      ctx.restore();
-    }
-  }
-
-  function fireAttack(attackerId, targetId, damage, killed, special, effect) {
-    const top   = topPlayers();
-    const horde = hordePlayer();
-
-    let from = null, to = null;
-    const findPos = (id, isTarget) => {
-      if (id === HORDE_ID) return horde ? getHordePosition() : null;
-      const idx = top.findIndex(p => p.uniqueId === id);
-      if (idx !== -1) return getPlayerPosition(idx);
-      return getPositionForPlayer(id);
-    };
-    from = findPos(attackerId, false);
-    to = findPos(targetId, true);
-    if (!from || !to) return;
-
-    attacks.push(new Attack(from, to, special ? 'gift' : 'laser'));
-    showDamage(to.x, to.y, damage, killed);
-    playSound(special ? 'gift' : 'attack');
-  }
-
-  function showDamage(canvasX, canvasY, dmg, kill) {
-    const vp = canvasToViewport(canvasX, canvasY);
-    const el = document.createElement('div');
-    el.className = `damage${kill ? ' kill' : ''}`;
-    el.textContent = kill ? '💀 KILL!' : `-${Math.round(dmg)}`;
-    el.style.left = vp.x + 'px'; el.style.top = vp.y + 'px';
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 900);
-  }
-
-  // --- ANIMATION LOOP ---
-  function draw() {
-    currentScale = Math.min(cw() / 1920, ch() / 200, 1.4) * layoutScale;
-    if (currentScale < 0.05) currentScale = 0.05;
-    ctx.clearRect(0, 0, cw(), ch());
+// ------------------- ANIMATION LOOP -------------------
+function animate() {
     drawBackground();
-    const topList = topPlayers();
-    topList.forEach((p, i) => drawPlayerCard(p, getPlayerPosition(i), i + 1));
-    drawHorde(hordePlayer());
-    attacks = attacks.filter(a => { const alive = a.update(); if (alive) a.draw(); return alive; });
-    requestAnimationFrame(draw);
-  }
+    const top = topPlayers();
+    for (let i = 0; i < top.length; i++) {
+        drawPlayer(top[i], i);
+    }
+    drawHorde();
+    attacks = attacks.filter(laser => {
+        const keep = laser.update();
+        if (keep) laser.draw();
+        return keep;
+    });
+    requestAnimationFrame(animate);
+}
 
-  // --- BOOT ---
-  initSocket();
-  draw();
-})();
+// Start
+initSocket();
+animate();
 </script>
 </body>
 </html>
