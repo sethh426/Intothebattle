@@ -162,13 +162,11 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
   }
 
   function resizeCanvas() {
-    const dpr = window.devicePixelRatio || 1;
     const w = rectEl.offsetWidth, h = rectEl.offsetHeight;
-    canvas.width  = w * dpr;
-    canvas.height = h * dpr;
+    canvas.width  = w;
+    canvas.height = h;
     canvas.style.width  = w + 'px';
     canvas.style.height = h + 'px';
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     clampOverlaySettings();
     syncValues();
   }
