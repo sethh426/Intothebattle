@@ -604,31 +604,7 @@ app.get(’/overlay’,      requireAccess, (_req, res) => res.sendFile(path.joi
 app.get(’/admin-panel’,  requireAccess, (_req, res) => res.redirect(’/admin’));
 
 // ─── SOCKET AUTH MIDDLEWARE ───────────────────────────────────────────────────
-// Uses cookieParser to correctly handle JWT tokens with special characters
-const cookieParserMiddleware = cookieParser();
-
-io.use((socket, next) => {
-  const mockReq = { headers: { cookie: socket.handshake.headers.cookie || '' } };
-  cookieParserMiddleware(mockReq, {}, () => {
-    const token = mockReq.cookies?.session_token;
-    if (!token) return next(new Error('Unauthorized'));
-    try {
-      jwt.verify(token, process.env.JWT_SECRET);
-    } catch (_err) {
-      return next(new Error('Unauthorized'));
-    }
-    const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
-    if (!row || row.is_revoked || new Date(row.expires_at) < new Date()) {
-      return next(new Error('Unauthorized'));
-    }
-    const fp = mockReq.cookies?.fp;
-    if (row.fingerprint && (!fp || row.fingerprint !== fp)) {
-      return next(new Error('Unauthorized'));
-    }
-    socket.accessCode = row;
-    next();
-  });
-});
+io.use(socketAuth);
 
 app.use((req, res, next) => {
 if (req.path === ‘/dashboard.html’ || req.path === ‘/dashboard-login.html’) {
