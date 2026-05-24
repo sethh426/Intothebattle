@@ -1,4 +1,3 @@
-import socketAuth from './socketAuth.js';
 import { TikTokLive } from '@tiktool/live';
 import express from 'express';
 import cookieParser from 'cookie-parser';
@@ -14,23 +13,21 @@ import { createAdapter } from '@socket.io/redis-adapter';
 import promClient from 'prom-client';
 import fs from 'fs';
 import multer from 'multer';
+import jwt from 'jsonwebtoken';
+import db from './tiktokbr/db/db.js';
 import authRoutes from './tiktokbr/routes/auth.js';
 import adminRoutes from './tiktokbr/routes/admin.js';
 import paypalRoutes from './tiktokbr/routes/paypal.js';
 import requireAccess from './tiktokbr/middleware/auth.js';
-import db from './tiktokbr/db/db.js';
-import jwt from 'jsonwebtoken';
 
 dotenv.config();
 
-// ─── Observability & Logging ───────────────────────────────────────────────
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 if (process.env.SENTRY_DSN) {
   Sentry.init({ dsn: process.env.SENTRY_DSN });
   logger.info('Sentry initialized');
 }
 
-// Prometheus metrics
 const collectDefaultMetrics = promClient.collectDefaultMetrics;
 const register = promClient.register;
 collectDefaultMetrics({ prefix: 'tiktokbr_' });
@@ -39,7 +36,6 @@ const playerGauge  = new promClient.Gauge({ name: 'tiktokbr_player_count',  help
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// ─── CONFIG ───────────────────────────────────────────────────────────────────
 const API_KEY = process.env.API_KEY;
 let DEV_TEST_MODE = process.env.DEV_TEST_MODE === 'true';
 const PORT = process.env.PORT || 3000;
@@ -65,17 +61,14 @@ const CFG = {
   SPECIAL_ATTACK_MULTIPLIER:        5,
 };
 
-// ─── GAME STATE ───────────────────────────────────────────────────────────────
 const players = {};
 
-// ─── DIRECTORIES & PATHS ─────────────────────────────────────────────────────
 const PLAYERS_FILE   = path.join(__dirname, 'players.json');
 const BG_DIR         = path.join(__dirname, 'backgrounds');
 const BG_FILE        = path.join(BG_DIR,    'current-bg.json');
 const AUDIO_DIR      = path.join(__dirname, 'audio');
 const AUDIO_CFG_FILE = path.join(AUDIO_DIR, 'audio-config.json');
 
-// ─── AUDIO STATE ─────────────────────────────────────────────────────────────
 const DEFAULT_AUDIO_CONFIG = {
   attack:  null,
   gift:    null,
@@ -93,7 +86,6 @@ let audioConfig      = { ...DEFAULT_AUDIO_CONFIG };
 let audioLibrary     = [];
 let overlaySettings  = { ...DEFAULT_OVERLAY_SETTINGS };
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
@@ -104,7 +96,6 @@ function isSafePath(baseDir, targetPath) {
   return target === base || target.startsWith(base + path.sep);
 }
 
-// ─── AUTH ─────────────────────────────────────────────────────────────────────
 const DASHBOARD_OWNER_EMAIL  = process.env.DASHBOARD_EMAIL    || '';
 const DASHBOARD_PASSWORD     = process.env.DASHBOARD_PASSWORD || '';
 const DASHBOARD_COOKIE_NAME  = 'dashboard_auth';
@@ -123,7 +114,6 @@ function isDashboardAuthed(req) {
   return parseCookies(req)[DASHBOARD_COOKIE_NAME] === DASHBOARD_COOKIE_VALUE;
 }
 
-// ─── PERSISTENCE: PLAYERS ────────────────────────────────────────────────────
 function loadPlayerStats() {
   try {
     if (!fs.existsSync(PLAYERS_FILE)) return;
@@ -176,7 +166,6 @@ function savePlayerStats() {
   }
 }
 
-// ─── PERSISTENCE: BACKGROUND ─────────────────────────────────────────────────
 let currentBackground = null;
 
 function loadCurrentBackground() {
@@ -215,7 +204,6 @@ function deleteCurrentBackgroundFile() {
   }
 }
 
-// ─── PERSISTENCE: AUDIO ──────────────────────────────────────────────────────
 function loadAudioConfig() {
   try {
     ensureDir(AUDIO_DIR);
@@ -307,7 +295,6 @@ function saveAudioConfig() {
   }
 }
 
-// ─── MULTER: BACKGROUND ──────────────────────────────────────────────────────
 const ALLOWED_BACKGROUND_EXTS  = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
 const ALLOWED_BACKGROUND_MIMES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 
@@ -328,7 +315,6 @@ const upload = multer({
   },
 });
 
-// ─── MULTER: AUDIO ───────────────────────────────────────────────────────────
 const ALLOWED_AUDIO_EXTS  = new Set(['.mp3', '.m4a', '.wav', '.ogg', '.webm', '.aac', '.flac']);
 const ALLOWED_AUDIO_MIMES = new Set([
   'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/x-m4a',
@@ -354,7 +340,6 @@ const audioUpload = multer({
   },
 });
 
-// ─── GAME HELPERS ─────────────────────────────────────────────────────────────
 function randomColor() {
   const palette = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF6BB5','#C77DFF','#00C9A7','#FF9F43'];
   return palette[Math.floor(Math.random() * palette.length)];
@@ -545,7 +530,6 @@ function handleMentionAttack(attackerId, attackerNick, comment) {
   return { handled: false, reason: 'No valid attack target found' };
 }
 
-// ─── SERVER ───────────────────────────────────────────────────────────────────
 const app        = express();
 const httpServer = createServer(app);
 const io         = new Server(httpServer, { cors: { origin: '*' } });
@@ -597,7 +581,32 @@ app.get('/overlay.html', requireAccess, (_req, res) => res.sendFile(path.join(__
 app.get('/overlay',      requireAccess, (_req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
 app.get('/admin-panel',  requireAccess, (_req, res) => res.redirect('/admin'));
 
-// ─── SOCKET AUTH MIDDLEWARE ───────────────────────────────────────────────────
+// --- FIXED SOCKET AUTH (no fingerprint required, only session token) ---
+function socketAuth(socket, next) {
+  const cookies = socket.handshake.headers.cookie || '';
+  const parsed = Object.fromEntries(
+    cookies.split(';').map(c => {
+      const [name, ...rest] = c.trim().split('=');
+      return [name, rest.join('=')];
+    }).filter(([name]) => name)
+  );
+  const token = parsed.session_token;
+  if (!token) return next(new Error('Unauthorized: no session token'));
+
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
+    return next(new Error('Unauthorized: invalid token'));
+  }
+
+  const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
+  if (!row || row.is_revoked || new Date(row.expires_at) < new Date()) {
+    return next(new Error('Unauthorized: expired or revoked'));
+  }
+  socket.accessCode = row;
+  next();
+}
+
 io.use(socketAuth);
 
 app.use((req, res, next) => {
@@ -618,7 +627,6 @@ app.get('/metrics', async (_req, res) => {
   }
 });
 
-// ─── AUDIO STATIC SERVE ───────────────────────────────────────────────────────
 app.use('/audio', (req, res, next) => {
   const filename    = path.basename(req.path);
   const runtimePath = path.join(AUDIO_DIR, filename);
@@ -629,7 +637,6 @@ app.use('/audio', (req, res, next) => {
   next();
 }, express.static(AUDIO_DIR));
 
-// ─── SOCKET ───────────────────────────────────────────────────────────────────
 let overlayCount = 0;
 
 io.on('connection', (socket) => {
@@ -660,7 +667,6 @@ io.on('connection', (socket) => {
   });
 });
 
-// ─── ROUTES ───────────────────────────────────────────────────────────────────
 app.get('/dashboard/logout', (_req, res) => {
   res.setHeader('Set-Cookie', `${DASHBOARD_COOKIE_NAME}=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax`);
   res.redirect('/login');
@@ -773,7 +779,6 @@ app.post('/api/players/clear', (_req, res) => {
   res.json({ success: true });
 });
 
-// ─── BACKGROUND ROUTES ────────────────────────────────────────────────────────
 app.post('/api/background/upload', (req, res) => {
   res.type('application/json');
   ensureDir(BG_DIR);
@@ -814,7 +819,6 @@ app.get('/background/:filename', (req, res) => {
   return res.sendFile(filepath);
 });
 
-// ─── AUDIO ROUTES ─────────────────────────────────────────────────────────────
 app.get('/api/audio', (_req, res) => {
   res.json({ success: true, library: audioLibrary, config: audioConfig, settings: overlaySettings });
 });
@@ -878,7 +882,6 @@ app.delete('/api/audio/delete/:filename', (req, res) => {
   res.json({ success: true, filename, configUpdated: changed });
 });
 
-// ─── DEV TEST ROUTES ──────────────────────────────────────────────────────────
 function requireDevTestMode(_req, res, next) {
   if (!DEV_TEST_MODE) return res.status(403).json({ success: false, error: 'Developer test mode is disabled' });
   next();
@@ -1024,7 +1027,6 @@ app.use('/api', (req, res) => {
   res.status(404).json({ success: false, error: `API endpoint not found: ${req.method} ${req.originalUrl}` });
 });
 
-// ─── IDLE CLEANUP ─────────────────────────────────────────────────────────────
 setInterval(() => {
   const cutoff = Date.now() - CFG.IDLE_TIMEOUT_MS;
   for (const id of Object.keys(players)) {
@@ -1036,7 +1038,6 @@ setInterval(() => {
   io.emit('gameState', players);
 }, 60_000);
 
-// ─── MOVEMENT + SAVE LOOP ─────────────────────────────────────────────────────
 let saveCounter = 0;
 
 setInterval(() => {
@@ -1055,7 +1056,6 @@ setInterval(() => {
   if (++saveCounter >= 100) { savePlayerStats(); saveCounter = 0; }
 }, 100);
 
-// ─── START ────────────────────────────────────────────────────────────────────
 httpServer.listen(PORT, () => {
   logger.info('\n🎮 PvP Game Server running!');
   logger.info({ url: `http://localhost:${PORT}/overlay.html` }, 'Overlay URL');
@@ -1071,7 +1071,6 @@ httpServer.listen(PORT, () => {
   if (currentStreamer) connectToStreamer(currentStreamer);
 });
 
-// ─── TIKTOK CLIENT ───────────────────────────────────────────────────────────
 function setupTikTokEvents(tiktokClient) {
   tiktokClient.on('connected', () => {
     console.log(`✅ Connected to @${currentStreamer}'s LIVE stream\n`);
