@@ -139,8 +139,12 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
     return { x: startX + index * (cellW + gap) + cellW / 2, y: ch() * 0.30 + offsetY };
   }
 
+  function isPlayerAlive(player) {
+    return player && player.alive !== false;
+  }
+
   function getPositionForPlayer(playerId) {
-    const allAlive = Object.values(players).filter(p => p.alive && p.uniqueId !== HORDE_ID);
+    const allAlive = Object.values(players).filter(p => isPlayerAlive(p) && p.uniqueId !== HORDE_ID);
     const index = allAlive.findIndex(p => p.uniqueId === playerId || p.id === playerId);
     if (index === -1) return null;
     const total = allAlive.length;
@@ -214,11 +218,11 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
   function getAudio(f) { if (!audioCache[f]) { const a = new Audio(`/audio/${f}`); a.preload = 'auto'; audioCache[f] = a; } return audioCache[f]; }
   function playSound(type) { if (!soundEnabled) return; const f = audioConfig[type]; if (!f) return; try { const a = getAudio(f); a.currentTime = 0; a.play().catch(() => {}); } catch(e) {} }
 
-  function topPlayers() { return Object.values(players).filter(p => p.alive && p.uniqueId !== HORDE_ID).sort((a, b) => (b.hp || 0) - (a.hp || 0)).slice(0, 5); }
+  function topPlayers() { return Object.values(players).filter(p => isPlayerAlive(p) && p.uniqueId !== HORDE_ID).sort((a, b) => (b.hp || 0) - (a.hp || 0)).slice(0, 5); }
 
   function hordePlayer() {
     const topSet = new Set(topPlayers().map(p => p.uniqueId));
-    const rest   = Object.values(players).filter(p => p.alive && !topSet.has(p.uniqueId));
+    const rest   = Object.values(players).filter(p => isPlayerAlive(p) && !topSet.has(p.uniqueId));
     if (!rest.length) return null;
     return { uniqueId: HORDE_ID, nickname: 'THE HORDE', hp: rest.reduce((s, p) => s + (p.hp || 0), 0), maxHp: rest.reduce((s, p) => s + (p.maxHp || 100), 0), hordeCount: rest.length, alive: true };
   }
@@ -247,7 +251,8 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
               normalized[p.uniqueId] = p;
             }
             players = normalized;
-            console.log('gameState received, players=', Object.keys(players).length);
+            const aliveCount = Object.values(players).filter(isPlayerAlive).length;
+            console.log('gameState received, total players=', Object.keys(players).length, 'alive=', aliveCount);
           }
         } catch (e) { console.error('Error applying gameState', e, state); }
 
