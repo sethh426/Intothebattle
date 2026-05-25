@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -75,8 +75,10 @@ body { display: flex; align-items: center; justify-content: center; }
   let socket = null;
   let audioConfig = {};
   let audioCache = {};
-  let overlaySettings = { shotType: 'beam', laserColor: '#7afcff' };
+  let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1 };
   const HORDE_ID = '__HORDE__';
+
+  // ----- Canvas Helpers -----
   function resizeCanvas() {
     const rect = container.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
@@ -85,6 +87,8 @@ body { display: flex; align-items: center; justify-content: center; }
   }
   function cw() { return canvas.width; }
   function ch() { return canvas.height; }
+
+  // ----- UI Controls -----
   function updateControlLabels() {
     document.getElementById('gapValue').textContent = Math.round(layoutGap);
     document.getElementById('offsetXValue').textContent = Math.round(offsetX);
@@ -101,6 +105,8 @@ body { display: flex; align-items: center; justify-content: center; }
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
   updateControlLabels();
+
+  // ----- Player Helpers -----
   function isPlayerAlive(player) { return player && player.alive !== false; }
   function topPlayers() { return Object.values(players).filter(p => isPlayerAlive(p) && p.uniqueId !== HORDE_ID).sort((a,b) => (b.hp||0)-(a.hp||0)).slice(0,5); }
   function hordePlayer() {
@@ -109,9 +115,10 @@ body { display: flex; align-items: center; justify-content: center; }
     if (!rest.length) return null;
     return { uniqueId: HORDE_ID, nickname: 'THE HORDE', hp: rest.reduce((s,p) => s + (p.hp||0), 0), maxHp: rest.reduce((s,p) => s + (p.maxHp||100), 0), hordeCount: rest.length, alive: true };
   }
+
+  // ----- Layout Positions -----
   function getPlayerPosition(index, total) {
-    const W = cw();
-    const H = ch();
+    const W = cw(), H = ch();
     const cardH = H * 0.5 * 0.84 * layoutZoom;
     const cardW = cardH * 0.72;
     const totalWidth = cardW * total + layoutGap * Math.max(0, total - 1);
@@ -122,26 +129,275 @@ body { display: flex; align-items: center; justify-content: center; }
     const alive = Object.values(players).filter(p => isPlayerAlive(p) && p.uniqueId !== HORDE_ID);
     const index = alive.findIndex(p => p.uniqueId === playerId || p.id === playerId);
     if (index === -1) return null;
-    const total = alive.length;
-    const W = cw();
-    const H = ch();
-    const cardH = H * 0.5 * 0.84 * layoutZoom;
-    const cardW = cardH * 0.72;
-    const totalWidth = cardW * total + layoutGap * Math.max(0, total - 1);
-    const startX = (W - totalWidth) / 2 + offsetX;
-    return { x: startX + index * (cardW + layoutGap) + cardW / 2, y: H * 0.28 + offsetY + (H * 0.16 * (1 - layoutZoom)) };
+    return getPlayerPosition(index, alive.length);
   }
   function getHordePosition() {
-    const W = cw();
-    const H = ch();
+    const W = cw(), H = ch();
     return { x: W / 2 + offsetX, y: H * 0.72 + offsetY + (H * 0.20 * (1 - layoutZoom)) };
   }
-  function canvasToViewport(cx, cy) { const rect = canvas.getBoundingClientRect(); const scaleX = rect.width / cw(); const scaleY = rect.height / ch(); return { x: rect.left + cx * scaleX, y: rect.top + cy * scaleY }; }
-  function getAudio(filename) { if (!audioCache[filename]) { const audio = new Audio(`/audio/${filename}`); audio.preload = 'auto'; audioCache[filename] = audio; } return audioCache[filename]; }
-  function playSound(type) { const filename = audioConfig[type]; if (!filename) return; try { const a = getAudio(filename); a.currentTime = 0; a.play().catch(() => {}); } catch (e) {} }
-  function showDamage(canvasX, canvasY, damage, kill) { const vp = canvasToViewport(canvasX, canvasY); const el = document.createElement('div'); el.className = `damage${kill ? ' kill' : ''}`; el.textContent = kill ? '💀 KILL!' : `-${Math.round(damage)}`; el.style.left = vp.x + 'px'; el.style.top = vp.y + 'px'; document.body.appendChild(el); setTimeout(() => el.remove(), 900); }
-  class Particle { constructor(x,y,opts={}) { this.x=x; this.y=y; this.vx=(Math.random()-0.5)*(opts.speed||4); this.vy=(Math.random()-0.5)*(opts.speed||4)-(opts.rise||0); this.life=1; this.decay=opts.decay||(0.02+Math.random()*0.03); this.r=opts.radius||(2+Math.random()*3); this.color=opts.color||'#7afcff'; this.emoji=opts.emoji||null; this.fs=opts.fontSize||18; } update() { this.x += this.vx; this.y += this.vy; this.vy += 0.06; this.life -= this.decay; return this.life > 0; } draw(c) { c.save(); c.globalAlpha = Math.max(0,this.life); if (this.emoji) { c.font = `${this.fs}px Arial`; c.textAlign='center'; c.textBaseline='middle'; c.fillText(this.emoji,this.x,this.y); } else { c.fillStyle=this.color; c.shadowColor=this.color; c.shadowBlur=8; c.beginPath(); c.arc(this.x,this.y,this.r*Math.max(0,this.life),0,Math.PI*2); c.fill(); } c.restore(); } }
-  class Attack { constructor(from,to,type='laser'){ this.from=from; this.to=to; this.type=type; this.start=Date.now(); this.progress=0; this.particles=[]; this.spawned=false; this.duration=500; if(type==='projectile')this.duration=600; if(type==='gift')this.duration=900; if(type==='explosion')this.duration=750; if(type==='fire'){ this.duration=550; for(let i=0;i<40;i++){ this.particles.push(new Particle(this.to.x,this.to.y,{ speed:4+Math.random()*4,color:'#ff8844',radius:2+Math.random()*3,decay:0.03 })); } } } update(){ const elapsed=Date.now()-this.start; this.progress=Math.min(1,elapsed/this.duration); this.particles=this.particles.filter(p=>p.update()); return elapsed<this.duration||this.particles.length>0; } draw(){ switch(this.type){ case'laser':this.drawLaser();break; case'projectile':this.drawProjectile();break; case'gift':this.drawGift();break; case'explosion':this.drawExplosion();break; case'neon':this.drawNeon();break; case'ripple':this.drawRipple();break; case'fire':this.drawFire();break; case'bubble':this.drawBubble();break; case'sphere':this.drawSphere();break; default:this.drawLaser(); } } drawLaser(){ const {from,to,progress}=this; const x=from.x+(to.x-from.x)*progress; const y=from.y+(to.y-from.y)*progress; const alpha=progress<0.6?1:1-(progress-0.6)/0.4; ctx.save(); ctx.globalCompositeOperation='lighter'; const color = overlaySettings.laserColor || '#7afcff'; ctx.globalAlpha = alpha * 0.65; ctx.strokeStyle = color; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(from.x,from.y); ctx.lineTo(x,y); ctx.stroke(); ctx.globalAlpha = alpha; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(from.x,from.y); ctx.lineTo(x,y); ctx.stroke(); ctx.restore(); } drawProjectile(){ const {from,to,progress}=this; const x=from.x+(to.x-from.x)*progress; const y=from.y+(to.y-from.y)*progress; ctx.save(); ctx.globalCompositeOperation='lighter'; const grad=ctx.createRadialGradient(x,y,0,x,y,16); grad.addColorStop(0,'rgba(255,255,255,1)'); grad.addColorStop(0.5,'rgba(122,252,255,0.9)'); grad.addColorStop(1,'rgba(122,252,255,0)'); ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(x,y,16,0,Math.PI*2); ctx.fill(); ctx.restore(); } drawGift(){ if(!this.spawned){ this.spawned=true; const heartEmojis = ['❤️','💖','💘','💝']; for(let i=0;i<18;i++){ this.particles.push(new Particle(this.to.x,this.to.y,{ speed:6+Math.random()*4, emoji: heartEmojis[i % heartEmojis.length], fontSize: 18 + Math.random()*10, decay: 0.02 })); } } ctx.save(); ctx.globalCompositeOperation='lighter'; this.particles.forEach(p=>p.draw(ctx)); ctx.restore(); } drawExplosion(){ if(!this.spawned){ this.spawned=true; for(let i=0;i<28;i++){ this.particles.push(new Particle(this.to.x,this.to.y,{ speed:5+Math.random()*8, color:['#ff6644','#ffcc44','#ff2222'][i%3], radius:3+Math.random()*4, decay:0.015 })); } } ctx.save(); ctx.globalCompositeOperation='lighter'; this.particles.forEach(p=>p.draw(ctx)); ctx.restore(); } drawNeon(){ const {from,to,progress}=this; const x=from.x+(to.x-from.x)*progress; const y=from.y+(to.y-from.y)*progress; ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.lineWidth=10; ctx.strokeStyle='#00ccff'; ctx.beginPath(); ctx.moveTo(from.x,from.y); ctx.lineTo(x,y); ctx.stroke(); ctx.restore(); } drawRipple(){ const {from,to,progress}=this; const x=from.x+(to.x-from.x)*progress; const y=from.y+(to.y-from.y)*progress; ctx.save(); ctx.globalCompositeOperation='lighter'; for(let i=0;i<3;i++){ const t=progress - i*0.08; if(t<=0) continue; ctx.strokeStyle=`rgba(100,220,255,${1-t})`; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x,y,10+t*40,0,Math.PI*2); ctx.stroke(); } ctx.restore(); } drawFire(){ const {from,to,progress}=this; const x=from.x+(to.x-from.x)*progress; const y=from.y+(to.y-from.y)*progress; ctx.save(); ctx.globalCompositeOperation='lighter'; const flame=ctx.createRadialGradient(x,y,0,x,y,24); flame.addColorStop(0,'#fff8e0'); flame.addColorStop(0.3,'#ffaa44'); flame.addColorStop(0.7,'#ff4400'); flame.addColorStop(1,'#992200'); ctx.fillStyle=flame; ctx.beginPath(); ctx.arc(x,y,24,0,Math.PI*2); ctx.fill(); this.particles.forEach(p=>p.draw(ctx)); ctx.restore(); } drawBubble(){ const {from,to,progress}=this; const x=from.x+(to.x-from.x)*progress; const y=from.y+(to.y-from.y)*progress; ctx.save(); ctx.fillStyle='rgba(200,240,255,0.75)'; for(let i=0;i<3;i++){ const angle=Date.now()*0.003+i*1.5; const bx=x+Math.cos(angle)*8; const by=y+Math.sin(angle)*8; ctx.beginPath(); ctx.arc(bx,by,10-i*2,0,Math.PI*2); ctx.fill(); } ctx.restore(); } drawSphere(){ const {from,to,progress}=this; const x=from.x+(to.x-from.x)*progress; const y=from.y+(to.y-from.y)*progress; ctx.save(); ctx.globalCompositeOperation='lighter'; const orb=ctx.createRadialGradient(x,y,0,x,y,24); orb.addColorStop(0,'#bbffff'); orb.addColorStop(0.4,'#2288ff'); orb.addColorStop(1,'#002244'); ctx.fillStyle=orb; ctx.beginPath(); ctx.arc(x,y,24,0,Math.PI*2); ctx.fill(); ctx.restore(); }}
+  function canvasToViewport(cx, cy) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = rect.width / cw(), scaleY = rect.height / ch();
+    return { x: rect.left + cx * scaleX, y: rect.top + cy * scaleY };
+  }
+
+  // ----- Audio -----
+  function getAudio(filename) {
+    if (!audioCache[filename]) {
+      const audio = new Audio(`/audio/${filename}`);
+      audio.preload = 'auto';
+      audioCache[filename] = audio;
+    }
+    return audioCache[filename];
+  }
+  function playSound(type) {
+    const filename = audioConfig[type];
+    if (!filename) return;
+    try {
+      const a = getAudio(filename);
+      a.currentTime = 0;
+      a.play().catch(() => {});
+    } catch (e) {}
+  }
+
+  // ----- Damage Text -----
+  function showDamage(canvasX, canvasY, damage, kill) {
+    const vp = canvasToViewport(canvasX, canvasY);
+    const el = document.createElement('div');
+    el.className = `damage${kill ? ' kill' : ''}`;
+    el.textContent = kill ? '💀 KILL!' : `-${Math.round(damage)}`;
+    el.style.left = vp.x + 'px';
+    el.style.top = vp.y + 'px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 900);
+  }
+
+  // ----- Particles & Effects -----
+  class Particle {
+    constructor(x,y,opts={}) {
+      this.x=x; this.y=y;
+      this.vx=(Math.random()-0.5)*(opts.speed||4);
+      this.vy=(Math.random()-0.5)*(opts.speed||4)-(opts.rise||0);
+      this.life=1;
+      this.decay=opts.decay||(0.02+Math.random()*0.03);
+      this.r=opts.radius||(2+Math.random()*3);
+      this.color=opts.color||'#7afcff';
+      this.emoji=opts.emoji||null;
+      this.fs=opts.fontSize||18;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.vy += 0.06;
+      this.life -= this.decay;
+      return this.life > 0;
+    }
+    draw(c) {
+      c.save();
+      c.globalAlpha = Math.max(0,this.life);
+      if (this.emoji) {
+        c.font = `${this.fs}px Arial`;
+        c.textAlign='center';
+        c.textBaseline='middle';
+        c.fillText(this.emoji,this.x,this.y);
+      } else {
+        c.fillStyle=this.color;
+        c.shadowColor=this.color;
+        c.shadowBlur=8;
+        c.beginPath();
+        c.arc(this.x,this.y,this.r*Math.max(0,this.life),0,Math.PI*2);
+        c.fill();
+      }
+      c.restore();
+    }
+  }
+  class Attack {
+    constructor(from,to,type='laser',speed=1){
+      this.from=from;
+      this.to=to;
+      this.type=type;
+      this.start=Date.now();
+      this.progress=0;
+      this.particles=[];
+      this.spawned=false;
+      const base = { laser:500, projectile:600, gift:900, explosion:750, fire:550, neon:500, ripple:500, bubble:500, sphere:500 };
+      this.duration = (base[type] || 500) / (speed || 1);
+      if(type==='fire'){
+        for(let i=0;i<40;i++){
+          this.particles.push(new Particle(this.to.x,this.to.y,{ speed:4+Math.random()*4, color:'#ff8844', radius:2+Math.random()*3, decay:0.03 }));
+        }
+      }
+    }
+    update(){
+      const elapsed=Date.now()-this.start;
+      this.progress=Math.min(1,elapsed/this.duration);
+      this.particles=this.particles.filter(p=>p.update());
+      return elapsed<this.duration||this.particles.length>0;
+    }
+    draw(){
+      switch(this.type){
+        case'laser':this.drawLaser();break;
+        case'projectile':this.drawProjectile();break;
+        case'gift':this.drawGift();break;
+        case'explosion':this.drawExplosion();break;
+        case'neon':this.drawNeon();break;
+        case'ripple':this.drawRipple();break;
+        case'fire':this.drawFire();break;
+        case'bubble':this.drawBubble();break;
+        case'sphere':this.drawSphere();break;
+        default:this.drawLaser();
+      }
+    }
+    drawLaser(){
+      const {from,to,progress}=this;
+      const x=from.x+(to.x-from.x)*progress;
+      const y=from.y+(to.y-from.y)*progress;
+      const alpha=progress<0.6?1:1-(progress-0.6)/0.4;
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      const color = overlaySettings.laserColor || '#7afcff';
+      ctx.globalAlpha = alpha * 0.65;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 12;
+      ctx.beginPath();
+      ctx.moveTo(from.x,from.y);
+      ctx.lineTo(x,y);
+      ctx.stroke();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(from.x,from.y);
+      ctx.lineTo(x,y);
+      ctx.stroke();
+      ctx.restore();
+    }
+    drawProjectile(){
+      const {from,to,progress}=this;
+      const x=from.x+(to.x-from.x)*progress;
+      const y=from.y+(to.y-from.y)*progress;
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      const grad=ctx.createRadialGradient(x,y,0,x,y,16);
+      grad.addColorStop(0,'rgba(255,255,255,1)');
+      grad.addColorStop(0.5,'rgba(122,252,255,0.9)');
+      grad.addColorStop(1,'rgba(122,252,255,0)');
+      ctx.fillStyle=grad;
+      ctx.beginPath();
+      ctx.arc(x,y,16,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+    drawGift(){
+      // This draw method is kept for explicit "gift" effect types, but normal gift attacks use the standard shot style.
+      if(!this.spawned){
+        this.spawned=true;
+        const heartEmojis = ['❤️','💖','💘','💝'];
+        for(let i=0;i<18;i++){
+          this.particles.push(new Particle(this.to.x,this.to.y,{ speed:6+Math.random()*4, emoji: heartEmojis[i % heartEmojis.length], fontSize: 18+Math.random()*10, decay: 0.02 }));
+        }
+      }
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      this.particles.forEach(p=>p.draw(ctx));
+      ctx.restore();
+    }
+    drawExplosion(){
+      if(!this.spawned){
+        this.spawned=true;
+        for(let i=0;i<28;i++){
+          this.particles.push(new Particle(this.to.x,this.to.y,{ speed:5+Math.random()*8, color:['#ff6644','#ffcc44','#ff2222'][i%3], radius:3+Math.random()*4, decay:0.015 }));
+        }
+      }
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      this.particles.forEach(p=>p.draw(ctx));
+      ctx.restore();
+    }
+    drawNeon(){
+      const {from,to,progress}=this;
+      const x=from.x+(to.x-from.x)*progress;
+      const y=from.y+(to.y-from.y)*progress;
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      ctx.lineWidth=10;
+      ctx.strokeStyle='#00ccff';
+      ctx.beginPath();
+      ctx.moveTo(from.x,from.y);
+      ctx.lineTo(x,y);
+      ctx.stroke();
+      ctx.restore();
+    }
+    drawRipple(){
+      const {from,to,progress}=this;
+      const x=from.x+(to.x-from.x)*progress;
+      const y=from.y+(to.y-from.y)*progress;
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      for(let i=0;i<3;i++){
+        const t=progress - i*0.08;
+        if(t<=0) continue;
+        ctx.strokeStyle=`rgba(100,220,255,${1-t})`;
+        ctx.lineWidth=2;
+        ctx.beginPath();
+        ctx.arc(x,y,10+t*40,0,Math.PI*2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    drawFire(){
+      const {from,to,progress}=this;
+      const x=from.x+(to.x-from.x)*progress;
+      const y=from.y+(to.y-from.y)*progress;
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      const flame=ctx.createRadialGradient(x,y,0,x,y,24);
+      flame.addColorStop(0,'#fff8e0');
+      flame.addColorStop(0.3,'#ffaa44');
+      flame.addColorStop(0.7,'#ff4400');
+      flame.addColorStop(1,'#992200');
+      ctx.fillStyle=flame;
+      ctx.beginPath();
+      ctx.arc(x,y,24,0,Math.PI*2);
+      ctx.fill();
+      this.particles.forEach(p=>p.draw(ctx));
+      ctx.restore();
+    }
+    drawBubble(){
+      const {from,to,progress}=this;
+      const x=from.x+(to.x-from.x)*progress;
+      const y=from.y+(to.y-from.y)*progress;
+      ctx.save();
+      ctx.fillStyle='rgba(200,240,255,0.75)';
+      for(let i=0;i<3;i++){
+        const angle=Date.now()*0.003+i*1.5;
+        const bx=x+Math.cos(angle)*8;
+        const by=y+Math.sin(angle)*8;
+        ctx.beginPath();
+        ctx.arc(bx,by,10-i*2,0,Math.PI*2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    drawSphere(){
+      const {from,to,progress}=this;
+      const x=from.x+(to.x-from.x)*progress;
+      const y=from.y+(to.y-from.y)*progress;
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      const orb=ctx.createRadialGradient(x,y,0,x,y,24);
+      orb.addColorStop(0,'#bbffff');
+      orb.addColorStop(0.4,'#2288ff');
+      orb.addColorStop(1,'#002244');
+      ctx.fillStyle=orb;
+      ctx.beginPath();
+      ctx.arc(x,y,24,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // ----- Drawing Background -----
   function drawBackground() {
     const W=cw(), H=ch();
     if (backgroundImg) {
@@ -161,6 +417,8 @@ body { display: flex; align-items: center; justify-content: center; }
     ctx.strokeStyle = 'rgba(140,80,255,0.25)';
     ctx.beginPath(); ctx.moveTo(0, H * 0.60); ctx.lineTo(W, H * 0.60); ctx.stroke();
   }
+
+  // ----- Player Card & Horde Drawing -----
   function drawPlayerCard(player, pos, rank) {
     const hp = player.hp || 0;
     const maxHp = player.maxHp || 100;
@@ -279,62 +537,45 @@ body { display: flex; align-items: center; justify-content: center; }
     ctx.strokeText(hpText, barX, barY + barH + H * 0.09);
     ctx.fillText(hpText, barX, barY + barH + H * 0.09);
   }
+
+  // ----- Attack Trigger (gifts use standard shot style) -----
   function fireAttack(attackerId, targetId, damage, killed, special, effect) {
     const top = topPlayers();
     const horde = hordePlayer();
-    let from = null;
-    let to = null;
+    let from = null, to = null;
     if (attackerId === HORDE_ID) {
       from = horde ? getHordePosition() : null;
     } else {
       const topIdx = top.findIndex(p => p.uniqueId === attackerId || p.id === attackerId);
-      if (topIdx !== -1) {
-        from = getPlayerPosition(topIdx, top.length);
-      } else {
-        from = getPositionForPlayer(attackerId) || (horde ? getHordePosition() : null);
-      }
+      if (topIdx !== -1) from = getPlayerPosition(topIdx, top.length);
+      else from = getPositionForPlayer(attackerId) || (horde ? getHordePosition() : null);
     }
     if (targetId === HORDE_ID) {
       to = horde ? getHordePosition() : null;
     } else {
       const topIdx = top.findIndex(p => p.uniqueId === targetId || p.id === targetId);
-      if (topIdx !== -1) {
-        to = getPlayerPosition(topIdx, top.length);
-      } else {
-        to = getPositionForPlayer(targetId) || (horde ? getHordePosition() : null);
-      }
+      if (topIdx !== -1) to = getPlayerPosition(topIdx, top.length);
+      else to = getPositionForPlayer(targetId) || (horde ? getHordePosition() : null);
     }
-    if (!from || !to) {
-      console.warn(`Overlay attack skipped: unknown attacker=${attackerId} target=${targetId}`);
-      return;
-    }
+    if (!from || !to) return;
     const map = {
-      fire: 'fire',
-      bubble: 'bubble',
-      bubbles: 'bubble',
-      water: 'bubble',
-      beam: 'laser',
-      laser: 'laser',
-      shot: 'laser',
-      projectile: 'projectile',
-      neon: 'neon',
-      ripple: 'ripple',
-      wave: 'ripple',
-      waterbeam: 'bubble',
-      water_beam: 'bubble',
-      sphere: 'sphere',
-      gift: 'gift',
-      hearts: 'gift',
-      explosion: 'explosion',
-      boom: 'explosion'
+      fire:'fire', bubble:'bubble', bubbles:'bubble', water:'bubble',
+      beam:'laser', laser:'laser', shot:'projectile', projectile:'projectile',
+      neon:'neon', ripple:'ripple', wave:'ripple', waterbeam:'bubble', water_beam:'bubble',
+      sphere:'sphere', gift:'gift', hearts:'gift', explosion:'explosion', boom:'explosion'
     };
     let type;
     if (effect) {
       type = map[String(effect).toLowerCase()] || String(effect).toLowerCase();
-    } else if (special) {
-      type = 'gift';
     } else if (killed) {
       type = 'explosion';
+    } else if (special) {
+      // Gift attacks → use the configured shot style (beam/pulse/wave), not hearts
+      switch (overlaySettings.shotType) {
+        case 'pulse': type = 'fire'; break;
+        case 'wave': type = 'ripple'; break;
+        default: type = 'laser';
+      }
     } else {
       switch (overlaySettings.shotType) {
         case 'pulse': type = 'fire'; break;
@@ -342,10 +583,13 @@ body { display: flex; align-items: center; justify-content: center; }
         default: type = 'laser';
       }
     }
-    attacks.push(new Attack(from, to, type));
+    const speed = overlaySettings.shotSpeed || 1;
+    attacks.push(new Attack(from, to, type, speed));
     showDamage(to.x, to.y, damage || 0, !!killed);
     playSound(special ? 'gift' : 'attack');
   }
+
+  // ----- Main Draw Loop -----
   function draw() {
     resizeCanvas();
     ctx.clearRect(0, 0, cw(), ch());
@@ -365,19 +609,60 @@ body { display: flex; align-items: center; justify-content: center; }
     }
     return normalized;
   }
+
+  // ----- Socket.IO Initialization -----
   function initSocket() {
     try {
       socket = io({ transports: ['websocket', 'polling'], timeout: 5000 });
-      socket.on('connect', () => { statusDiv.textContent = '🟢 LIVE · CONNECTED'; statusDiv.className = 'connected'; socket.emit('register', { type: 'overlay' }); });
-      socket.on('disconnect', () => { statusDiv.textContent = '🔴 DISCONNECTED · waiting...'; statusDiv.className = 'disconnected'; });
-      socket.on('connect_error', () => { statusDiv.textContent = '⚠️ SERVER ERROR · retrying'; statusDiv.className = 'disconnected'; });
-      socket.on('gameState', state => { if (state && typeof state === 'object') { players = normalizePlayers(state); if (!Object.keys(players).length) { fetch('/state').then(r => r.json()).then(s => { players = normalizePlayers(s || {}); }).catch(() => {}); } } });
+      socket.on('connect', () => {
+        statusDiv.textContent = '🟢 LIVE · CONNECTED';
+        statusDiv.className = 'connected';
+        socket.emit('register', { type: 'overlay' });
+      });
+      socket.on('disconnect', () => {
+        statusDiv.textContent = '🔴 DISCONNECTED · waiting...';
+        statusDiv.className = 'disconnected';
+      });
+      socket.on('connect_error', () => {
+        statusDiv.textContent = '⚠️ SERVER ERROR · retrying';
+        statusDiv.className = 'disconnected';
+      });
+      socket.on('gameState', state => {
+        if (state && typeof state === 'object') {
+          players = normalizePlayers(state);
+          if (!Object.keys(players).length) {
+            fetch('/state').then(r => r.json()).then(s => { players = normalizePlayers(s || {}); }).catch(() => {});
+          }
+        }
+      });
       socket.on('audioConfig', cfg => { if (cfg) audioConfig = cfg; });
-      socket.on('overlaySettings', settings => { if (settings && typeof settings === 'object') overlaySettings = { ...overlaySettings, ...settings }; });
+      socket.on('overlaySettings', settings => {
+        if (settings && typeof settings === 'object') {
+          overlaySettings = { ...overlaySettings, ...settings };
+          overlaySettings.shotSpeed = overlaySettings.shotSpeed || 1;
+        }
+      });
       socket.on('laserColor', color => { if (typeof color === 'string') overlaySettings.laserColor = color; });
-      socket.on('backgroundChanged', ({ filename }) => { if (!filename) { backgroundImg = null; return; } const img = new Image(); img.onload = () => { backgroundImg = img; }; img.src = `/background/${filename}?v=${Date.now()}`; });
+      socket.on('backgroundChanged', ({ filename }) => {
+        if (!filename) { backgroundImg = null; return; }
+        const img = new Image();
+        img.onload = () => { backgroundImg = img; };
+        img.src = `/background/${filename}?v=${Date.now()}`;
+      });
       socket.on('attack', data => { fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect); });
       socket.on('giftAttack', ({ attacker, target, damage, killed }) => { fireAttack(attacker, target, damage, killed, true); });
+      // No confetti / hearts for gifts – ignored.
+      socket.on('soundEvent', ({ event }) => { playSound(event); });
+      socket.on('forceReload', () => { location.reload(); });
+      socket.on('layoutUpdate', ({ gapX, gapY }) => {
+        if (typeof gapX === 'number') { layoutGap = gapX; gapControl.value = gapX; }
+        if (typeof gapY === 'number') {
+          const H = ch();
+          offsetY = (gapY - 260) * 0.3;
+          offsetYControl.value = offsetY;
+        }
+        updateControlLabels();
+      });
     } catch (error) {
       statusDiv.textContent = '❌ SOCKET ERROR · no live data';
       statusDiv.className = 'disconnected';
