@@ -6,12 +6,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 <title>Battle Royale Overlay · Professional Lasers</title>
 <style>
+/* ── Base & layout ── */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 html, body { width: 100%; height: 100%; overflow: hidden; background: #02040a; font-family: 'Segoe UI', sans-serif; }
 body { display: flex; align-items: center; justify-content: center; }
 #overlay-container { position: relative; width: min(90vw, 1920px); aspect-ratio: 16 / 9; background: rgba(4, 8, 18, 0.92); border: 1px solid rgba(180, 120, 255, 0.35); border-radius: 18px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06), 0 0 48px rgba(140,80,255,0.18); overflow: hidden; }
 #canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .ui-layer { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
+/* ── Layout panel ── */
 .panel-wrapper { position: fixed; top: 16px; right: 0; display: flex; align-items: flex-start; pointer-events: auto; z-index: 30; }
 .panel-tab { width: 28px; background: rgba(6,10,20,0.88); border: 1px solid rgba(100,200,255,0.2); border-right: none; border-radius: 8px 0 0 8px; padding: 10px 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #8fd8ff; font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; writing-mode: vertical-rl; text-orientation: mixed; user-select: none; transition: background 0.2s; }
 .panel-tab:hover { background: rgba(20,40,70,0.95); }
@@ -25,12 +27,18 @@ body { display: flex; align-items: center; justify-content: center; }
 .control input { width: 100%; appearance: none; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.08); outline: none; }
 .control input::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9); cursor: pointer; }
 .control input::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9); cursor: pointer; border: none; }
+/* ── Status & damage texts ── */
 #status-badge { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); border-radius: 24px; padding: 4px 16px; font-size: 11px; font-weight: bold; letter-spacing: 1px; color: #aaa; pointer-events: none; z-index: 9999; font-family: monospace; transition: 0.2s; }
 #status-badge.connected { color: #7aff87; text-shadow: 0 0 4px #2eff5e; }
 #status-badge.disconnected { color: #ff8866; }
 .damage { position: fixed; font-weight: 900; font-size: clamp(18px,3vw,28px); color: #ff5050; text-shadow: 0 0 16px rgba(255,80,80,0.95), 2px 2px 8px rgba(0,0,0,0.9); animation: floatDamage 0.85s ease-out forwards; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); white-space: nowrap; }
 .damage.kill { color: #ffd84f; font-size: clamp(22px,4vw,34px); text-shadow: 0 0 20px rgba(255,216,79,0.95); }
 @keyframes floatDamage { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -160%) scale(0.65); } }
+/* ── Kill feed ── */
+#kill-feed { position: fixed; bottom: 20px; right: 20px; z-index: 999; display: flex; flex-direction: column-reverse; gap: 6px; max-width: 320px; pointer-events: none; }
+#kill-feed .entry { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); color: #fff; font-weight: 600; padding: 6px 12px; border-radius: 8px; font-size: 13px; opacity: 0; transform: translateX(20px); animation: feedIn 0.3s ease-out forwards, feedFade 4s 1s ease-out forwards; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes feedIn { to { opacity: 1; transform: translateX(0); } }
+@keyframes feedFade { to { opacity: 0; transform: translateX(20px); } }
 </style>
 </head>
 <body>
@@ -51,6 +59,7 @@ body { display: flex; align-items: center; justify-content: center; }
   </div>
 </div>
 <div id="status-badge" class="disconnected">⚡ CONNECTING...</div>
+<div id="kill-feed"></div>
 <script src="/socket.io/socket.io.js"></script>
 <script>
 (function () {
@@ -65,6 +74,7 @@ body { display: flex; align-items: center; justify-content: center; }
   const zoomControl = document.getElementById('zoomControl');
   const togglePanel = document.getElementById('togglePanel');
   const layoutPanel = document.getElementById('layoutPanel');
+  const killFeed = document.getElementById('kill-feed');
   let players = {};
   let attacks = [];
   let layoutGap = 0;
@@ -77,18 +87,25 @@ body { display: flex; align-items: center; justify-content: center; }
   let audioCache = {};
   let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1 };
   const HORDE_ID = '__HORDE__';
+  let screenShake = { intensity: 0, duration: 0 };
+  let prevPlayerPositions = {}; // for smooth transitions
+  let comboStreaks = {}; // userId -> streak count, reset on death? implement simply
 
-  // ----- Canvas Helpers -----
+  // ── Canvas helpers ──
   function resizeCanvas() {
     const rect = container.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     canvas.width = rect.width;
     canvas.height = rect.height;
+    // re-create offscreen canvas for static cache if size changed
+    if (staticCanvas && (staticCanvas.width !== canvas.width || staticCanvas.height !== canvas.height)) {
+      staticCanvas = null;
+    }
   }
   function cw() { return canvas.width; }
   function ch() { return canvas.height; }
 
-  // ----- UI Controls -----
+  // ── UI Controls ──
   function updateControlLabels() {
     document.getElementById('gapValue').textContent = Math.round(layoutGap);
     document.getElementById('offsetXValue').textContent = Math.round(offsetX);
@@ -106,7 +123,7 @@ body { display: flex; align-items: center; justify-content: center; }
   resizeCanvas();
   updateControlLabels();
 
-  // ----- Player Helpers -----
+  // ── Player helpers ──
   function isPlayerAlive(player) { return player && player.alive !== false; }
   function topPlayers() { return Object.values(players).filter(p => isPlayerAlive(p) && p.uniqueId !== HORDE_ID).sort((a,b) => (b.hp||0)-(a.hp||0)).slice(0,5); }
   function hordePlayer() {
@@ -116,7 +133,7 @@ body { display: flex; align-items: center; justify-content: center; }
     return { uniqueId: HORDE_ID, nickname: 'THE HORDE', hp: rest.reduce((s,p) => s + (p.hp||0), 0), maxHp: rest.reduce((s,p) => s + (p.maxHp||100), 0), hordeCount: rest.length, alive: true };
   }
 
-  // ----- Layout Positions -----
+  // ── Layout positions ──
   function getPlayerPosition(index, total) {
     const W = cw(), H = ch();
     const cardH = H * 0.5 * 0.84 * layoutZoom;
@@ -141,7 +158,7 @@ body { display: flex; align-items: center; justify-content: center; }
     return { x: rect.left + cx * scaleX, y: rect.top + cy * scaleY };
   }
 
-  // ----- Audio -----
+  // ── Audio ──
   function getAudio(filename) {
     if (!audioCache[filename]) {
       const audio = new Audio(`/audio/${filename}`);
@@ -150,17 +167,25 @@ body { display: flex; align-items: center; justify-content: center; }
     }
     return audioCache[filename];
   }
-  function playSound(type) {
+  function playSound(type, xPos) {
     const filename = audioConfig[type];
     if (!filename) return;
     try {
       const a = getAudio(filename);
       a.currentTime = 0;
+      // rudimentary spatial: pan based on xPos relative to center
+      if (typeof xPos === 'number') {
+        const pan = Math.min(1, Math.max(-1, (xPos - cw()/2) / (cw()/2) ));
+        if (a.constructor.name === 'Audio') {
+          // simple volume L/R (not true panning)
+          if (pan < 0) { a.volume = 1; a.setSinkId?.('left'); } // not real, skip
+        }
+      }
       a.play().catch(() => {});
     } catch (e) {}
   }
 
-  // ----- Damage Text -----
+  // ── Damage Text ──
   function showDamage(canvasX, canvasY, damage, kill) {
     const vp = canvasToViewport(canvasX, canvasY);
     const el = document.createElement('div');
@@ -172,7 +197,16 @@ body { display: flex; align-items: center; justify-content: center; }
     setTimeout(() => el.remove(), 900);
   }
 
-  // ----- Particles & Effects -----
+  // ── Kill Feed ──
+  function addKillFeed(message) {
+    const entry = document.createElement('div');
+    entry.className = 'entry';
+    entry.textContent = message;
+    killFeed.appendChild(entry);
+    setTimeout(() => entry.remove(), 5000);
+  }
+
+  // ── Particles & Effects (enhanced) ──
   class Particle {
     constructor(x,y,opts={}) {
       this.x=x; this.y=y;
@@ -184,28 +218,33 @@ body { display: flex; align-items: center; justify-content: center; }
       this.color=opts.color||'#7afcff';
       this.emoji=opts.emoji||null;
       this.fs=opts.fontSize||18;
+      this.rot=Math.random()*Math.PI*2;
+      this.rotSpeed=(Math.random()-0.5)*0.2;
     }
     update() {
       this.x += this.vx;
       this.y += this.vy;
       this.vy += 0.06;
       this.life -= this.decay;
+      this.rot += this.rotSpeed;
       return this.life > 0;
     }
     draw(c) {
       c.save();
       c.globalAlpha = Math.max(0,this.life);
+      c.translate(this.x, this.y);
+      c.rotate(this.rot);
       if (this.emoji) {
         c.font = `${this.fs}px Arial`;
         c.textAlign='center';
         c.textBaseline='middle';
-        c.fillText(this.emoji,this.x,this.y);
+        c.fillText(this.emoji, 0, 0);
       } else {
         c.fillStyle=this.color;
         c.shadowColor=this.color;
         c.shadowBlur=8;
         c.beginPath();
-        c.arc(this.x,this.y,this.r*Math.max(0,this.life),0,Math.PI*2);
+        c.arc(0,0,this.r*Math.max(0,this.life),0,Math.PI*2);
         c.fill();
       }
       c.restore();
@@ -220,6 +259,7 @@ body { display: flex; align-items: center; justify-content: center; }
       this.progress=0;
       this.particles=[];
       this.spawned=false;
+      this.trailParticles = []; // for laser trail sparks
       const base = { laser:500, projectile:600, gift:900, explosion:750, fire:550, neon:500, ripple:500, bubble:500, sphere:500 };
       this.duration = (base[type] || 500) / (speed || 1);
       if(type==='fire'){
@@ -232,9 +272,20 @@ body { display: flex; align-items: center; justify-content: center; }
       const elapsed=Date.now()-this.start;
       this.progress=Math.min(1,elapsed/this.duration);
       this.particles=this.particles.filter(p=>p.update());
-      return elapsed<this.duration||this.particles.length>0;
+      // trail for lasers & projectiles
+      if ((this.type === 'laser' || this.type === 'projectile' || this.type === 'neon') && this.progress < 0.9 && Math.random() < 0.6) {
+        const x = this.from.x + (this.to.x - this.from.x) * this.progress;
+        const y = this.from.y + (this.to.y - this.from.y) * this.progress;
+        this.trailParticles.push(new Particle(x, y, { speed: 1, decay: 0.05, radius: 1.5, color: this.type==='neon'?'#00ccff':'#fff', rise: 0 }));
+      }
+      this.trailParticles = this.trailParticles.filter(p => p.update());
+      return elapsed < this.duration || this.particles.length>0 || this.trailParticles.length>0;
     }
     draw(){
+      // draw trail sparks first
+      ctx.save();
+      this.trailParticles.forEach(p => p.draw(ctx));
+      ctx.restore();
       switch(this.type){
         case'laser':this.drawLaser();break;
         case'projectile':this.drawProjectile();break;
@@ -247,6 +298,7 @@ body { display: flex; align-items: center; justify-content: center; }
         case'sphere':this.drawSphere();break;
         default:this.drawLaser();
       }
+      this.particles.forEach(p=>p.draw(ctx));
     }
     drawLaser(){
       const {from,to,progress}=this;
@@ -289,7 +341,7 @@ body { display: flex; align-items: center; justify-content: center; }
       ctx.restore();
     }
     drawGift(){
-      // This draw method is kept for explicit "gift" effect types, but normal gift attacks use the standard shot style.
+      // only if explicit gift effect, not used for triple attack
       if(!this.spawned){
         this.spawned=true;
         const heartEmojis = ['❤️','💖','💘','💝'];
@@ -297,10 +349,6 @@ body { display: flex; align-items: center; justify-content: center; }
           this.particles.push(new Particle(this.to.x,this.to.y,{ speed:6+Math.random()*4, emoji: heartEmojis[i % heartEmojis.length], fontSize: 18+Math.random()*10, decay: 0.02 }));
         }
       }
-      ctx.save();
-      ctx.globalCompositeOperation='lighter';
-      this.particles.forEach(p=>p.draw(ctx));
-      ctx.restore();
     }
     drawExplosion(){
       if(!this.spawned){
@@ -309,10 +357,6 @@ body { display: flex; align-items: center; justify-content: center; }
           this.particles.push(new Particle(this.to.x,this.to.y,{ speed:5+Math.random()*8, color:['#ff6644','#ffcc44','#ff2222'][i%3], radius:3+Math.random()*4, decay:0.015 }));
         }
       }
-      ctx.save();
-      ctx.globalCompositeOperation='lighter';
-      this.particles.forEach(p=>p.draw(ctx));
-      ctx.restore();
     }
     drawNeon(){
       const {from,to,progress}=this;
@@ -360,7 +404,6 @@ body { display: flex; align-items: center; justify-content: center; }
       ctx.beginPath();
       ctx.arc(x,y,24,0,Math.PI*2);
       ctx.fill();
-      this.particles.forEach(p=>p.draw(ctx));
       ctx.restore();
     }
     drawBubble(){
@@ -397,49 +440,86 @@ body { display: flex; align-items: center; justify-content: center; }
     }
   }
 
-  // ----- Drawing Background -----
-  function drawBackground() {
-    const W=cw(), H=ch();
+  // ── Background (static cache) ──
+  let staticCanvas = null;
+  let staticCtx = null;
+  function updateStaticBackground() {
+    if (!staticCanvas || staticCanvas.width !== canvas.width || staticCanvas.height !== canvas.height) {
+      staticCanvas = document.createElement('canvas');
+      staticCanvas.width = canvas.width;
+      staticCanvas.height = canvas.height;
+      staticCtx = staticCanvas.getContext('2d');
+    }
+    staticCtx.clearRect(0, 0, staticCanvas.width, staticCanvas.height);
+    const W = cw(), H = ch();
     if (backgroundImg) {
       const scale = Math.max(W / backgroundImg.width, H / backgroundImg.height);
-      ctx.drawImage(backgroundImg, (W - backgroundImg.width * scale) / 2, (H - backgroundImg.height * scale) / 2, backgroundImg.width * scale, backgroundImg.height * scale);
-      return;
+      staticCtx.drawImage(backgroundImg, (W - backgroundImg.width * scale) / 2, (H - backgroundImg.height * scale) / 2, backgroundImg.width * scale, backgroundImg.height * scale);
+    } else {
+      const grad = staticCtx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0,'#0d1a2e');
+      grad.addColorStop(1,'#050b12');
+      staticCtx.fillStyle = grad;
+      staticCtx.fillRect(0, 0, W, H);
+      staticCtx.strokeStyle = 'rgba(100,200,255,0.04)';
+      staticCtx.lineWidth = 1;
+      for (let x = 0; x < W; x += 60) { staticCtx.beginPath(); staticCtx.moveTo(x, 0); staticCtx.lineTo(x, H); staticCtx.stroke(); }
+      for (let y = 0; y < H; y += 30) { staticCtx.beginPath(); staticCtx.moveTo(0, y); staticCtx.lineTo(W, y); staticCtx.stroke(); }
+      staticCtx.strokeStyle = 'rgba(140,80,255,0.25)';
+      staticCtx.beginPath(); staticCtx.moveTo(0, H * 0.60); staticCtx.lineTo(W, H * 0.60); staticCtx.stroke();
     }
-    const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0,'#0d1a2e');
-    grad.addColorStop(1,'#050b12');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-    ctx.strokeStyle = 'rgba(100,200,255,0.04)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < W; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-    for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-    ctx.strokeStyle = 'rgba(140,80,255,0.25)';
-    ctx.beginPath(); ctx.moveTo(0, H * 0.60); ctx.lineTo(W, H * 0.60); ctx.stroke();
   }
 
-  // ----- Player Card & Horde Drawing -----
+  // ── Player Card & Horde Drawing (with idle bob & HP lerp) ──
+  function lerp(a,b,t){ return a + (b-a) * t; }
   function drawPlayerCard(player, pos, rank) {
     const hp = player.hp || 0;
     const maxHp = player.maxHp || 100;
-    const hpPct = Math.max(0, Math.min(1, hp / maxHp));
     const H = ch();
     const cardH = H * 0.5 * 0.84 * layoutZoom;
     const avatarR = cardH * 0.26;
-    const avatarY = pos.y - cardH * 0.14;
+
+    // idle bob
+    const index = topPlayers().findIndex(p => p.uniqueId === player.uniqueId);
+    const bob = Math.sin(Date.now() / 800 + index) * (H * 0.005);
+    const finalY = pos.y + bob;
+
+    const avatarY = finalY - cardH * 0.14;
     const nameY = avatarY - avatarR - cardH * 0.06;
     const barW = cardH * 0.72 * 0.88;
     const barH = Math.max(6, cardH * 0.09);
     const barX = pos.x - barW / 2;
     const barY = avatarY + avatarR + cardH * 0.05;
     const hpTextY = barY + barH + cardH * 0.07;
-    const glow = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, avatarR * 2.5);
+
+    // HP lerp
+    if (!player._displayHp) player._displayHp = hp;
+    player._displayHp = lerp(player._displayHp, hp, 0.12);
+    const displayHp = player._displayHp;
+    const hpPct = Math.max(0, Math.min(1, displayHp / maxHp));
+
+    const glow = ctx.createRadialGradient(pos.x, finalY, 0, pos.x, finalY, avatarR * 2.5);
     glow.addColorStop(0, 'rgba(122,252,255,0.18)');
     glow.addColorStop(1, 'rgba(122,252,255,0)');
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(pos.x, pos.y, avatarR * 2.5, 0, Math.PI * 2);
+    ctx.arc(pos.x, finalY, avatarR * 2.5, 0, Math.PI * 2);
     ctx.fill();
+
+    // streak aura
+    const streak = comboStreaks[player.uniqueId] || 0;
+    if (streak > 0) {
+      ctx.save();
+      ctx.strokeStyle = streak > 3 ? '#ffd84f' : '#ff8866';
+      ctx.lineWidth = Math.max(2, avatarR * 0.1);
+      ctx.shadowColor = streak > 3 ? '#ffd84f' : '#ff8866';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(pos.x, avatarY, avatarR + 4, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     ctx.strokeStyle = rank === 1 ? 'rgba(255,210,80,0.7)' : 'rgba(122,252,255,0.35)';
     ctx.lineWidth = Math.max(2, avatarR * 0.08);
     ctx.beginPath();
@@ -478,9 +558,9 @@ body { display: flex; align-items: center; justify-content: center; }
     ctx.textBaseline = 'middle';
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2.5;
-    ctx.strokeText(`${Math.round(hp)}/${maxHp}`, pos.x, hpTextY);
+    ctx.strokeText(`${Math.round(displayHp)}/${maxHp}`, pos.x, hpTextY);
     ctx.fillStyle = '#ccc';
-    ctx.fillText(`${Math.round(hp)}/${maxHp}`, pos.x, hpTextY);
+    ctx.fillText(`${Math.round(displayHp)}/${maxHp}`, pos.x, hpTextY);
   }
   function drawHorde(horde) {
     if (!horde) return;
@@ -538,7 +618,7 @@ body { display: flex; align-items: center; justify-content: center; }
     ctx.fillText(hpText, barX, barY + barH + H * 0.09);
   }
 
-  // ----- Attack Trigger (gifts use standard shot style) -----
+  // ── Attack Trigger ──
   function fireAttack(attackerId, targetId, damage, killed, special, effect) {
     const top = topPlayers();
     const horde = hordePlayer();
@@ -570,7 +650,6 @@ body { display: flex; align-items: center; justify-content: center; }
     } else if (killed) {
       type = 'explosion';
     } else if (special) {
-      // Gift attacks → use the configured shot style (beam/pulse/wave), not hearts
       switch (overlaySettings.shotType) {
         case 'pulse': type = 'fire'; break;
         case 'wave': type = 'ripple'; break;
@@ -586,20 +665,84 @@ body { display: flex; align-items: center; justify-content: center; }
     const speed = overlaySettings.shotSpeed || 1;
     attacks.push(new Attack(from, to, type, speed));
     showDamage(to.x, to.y, damage || 0, !!killed);
-    playSound(special ? 'gift' : 'attack');
+    playSound(special ? 'gift' : 'attack', from.x);
+    if (killed) {
+      triggerShake(10, 400);
+      addKillFeed(`${players[attackerId]?.nickname || attackerId} 💀 ${players[targetId]?.nickname || targetId}`);
+      // combo streak (simplified)
+      comboStreaks[attackerId] = (comboStreaks[attackerId] || 0) + 1;
+      comboStreaks[targetId] = 0;
+    }
   }
 
-  // ----- Main Draw Loop -----
+  // ── Screen shake ──
+  let shakeAmount = 0, shakeTimer = 0;
+  function triggerShake(intensity, duration) {
+    shakeAmount = intensity;
+    shakeTimer = duration;
+  }
+
+  // ── Bloom effect ──
+  function applyBloom() {
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = canvas.width;
+    offCanvas.height = canvas.height;
+    const offCtx = offCanvas.getContext('2d');
+    offCtx.filter = 'blur(8px)';
+    offCtx.drawImage(canvas, 0, 0);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = 0.12;
+    ctx.drawImage(offCanvas, 0, 0);
+    ctx.restore();
+  }
+
+  // ── Main Draw Loop ──
   function draw() {
+    const dt = 16; // ms approx
     resizeCanvas();
+
+    // Update shake
+    if (shakeTimer > 0) {
+      shakeTimer -= dt;
+      if (shakeTimer <= 0) shakeAmount = 0;
+    }
+    const sx = shakeAmount ? (Math.random() - 0.5) * shakeAmount : 0;
+    const sy = shakeAmount ? (Math.random() - 0.5) * shakeAmount : 0;
+
     ctx.clearRect(0, 0, cw(), ch());
-    drawBackground();
+
+    // Draw cached static background
+    if (!staticCanvas || backgroundImg !== null && staticCanvas.width !== canvas.width) {
+      updateStaticBackground();
+    }
+    if (staticCanvas) {
+      ctx.save();
+      ctx.translate(sx, sy);
+      ctx.drawImage(staticCanvas, 0, 0);
+      ctx.restore();
+    }
+
+    // Draw players and horde with shake
+    ctx.save();
+    ctx.translate(sx, sy);
     const top = topPlayers();
     top.forEach((player, index) => drawPlayerCard(player, getPlayerPosition(index, top.length), index + 1));
     drawHorde(hordePlayer());
+    ctx.restore();
+
+    // Draw attacks (with shake)
+    ctx.save();
+    ctx.translate(sx, sy);
     attacks = attacks.filter(a => { const alive = a.update(); if (alive) a.draw(); return alive; });
+    ctx.restore();
+
+    // Apply bloom on top of everything
+    applyBloom();
+
     requestAnimationFrame(draw);
   }
+
   function normalizePlayers(state) {
     const normalized = {};
     for (const key in state) {
@@ -610,9 +753,10 @@ body { display: flex; align-items: center; justify-content: center; }
     return normalized;
   }
 
-  // ----- Socket.IO Initialization -----
+  // ── Socket.IO Initialization ──
   function initSocket() {
     try {
+      const isDemo = new URLSearchParams(window.location.search).get('demo') === 'true';
       socket = io({ transports: ['websocket', 'polling'], timeout: 5000 });
       socket.on('connect', () => {
         statusDiv.textContent = '🟢 LIVE · CONNECTED';
@@ -633,6 +777,7 @@ body { display: flex; align-items: center; justify-content: center; }
           if (!Object.keys(players).length) {
             fetch('/state').then(r => r.json()).then(s => { players = normalizePlayers(s || {}); }).catch(() => {});
           }
+          updateStaticBackground(); // re-cache background if image changed? not needed here, but safe
         }
       });
       socket.on('audioConfig', cfg => { if (cfg) audioConfig = cfg; });
@@ -644,14 +789,13 @@ body { display: flex; align-items: center; justify-content: center; }
       });
       socket.on('laserColor', color => { if (typeof color === 'string') overlaySettings.laserColor = color; });
       socket.on('backgroundChanged', ({ filename }) => {
-        if (!filename) { backgroundImg = null; return; }
+        if (!filename) { backgroundImg = null; staticCanvas = null; return; }
         const img = new Image();
-        img.onload = () => { backgroundImg = img; };
+        img.onload = () => { backgroundImg = img; staticCanvas = null; };
         img.src = `/background/${filename}?v=${Date.now()}`;
       });
       socket.on('attack', data => { fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect); });
       socket.on('giftAttack', ({ attacker, target, damage, killed }) => { fireAttack(attacker, target, damage, killed, true); });
-      // No confetti / hearts for gifts – ignored.
       socket.on('soundEvent', ({ event }) => { playSound(event); });
       socket.on('forceReload', () => { location.reload(); });
       socket.on('layoutUpdate', ({ gapX, gapY }) => {
@@ -663,6 +807,30 @@ body { display: flex; align-items: center; justify-content: center; }
         }
         updateControlLabels();
       });
+      // Demo mode: spawn fake players & auto attack
+      if (isDemo) {
+        setTimeout(() => {
+          const demoNames = ['Ace', 'Blaze', 'Viper', 'Ghost', 'Storm'];
+          demoNames.forEach((name, i) => {
+            const id = `demo_${i}`;
+            players[id] = {
+              uniqueId: id, nickname: name,
+              hp: 300, maxHp: 300, strength: 15, alive: true, kills: 0,
+              lastActive: Date.now(),
+              x: 0, y: 0, vx: 0, vy: 0,
+              color: ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF6BB5'][i],
+              iconEmoji: '⚔️', messageBoostExpires: 0, forceSpawn: true
+            };
+          });
+          setInterval(() => {
+            const attacker = `demo_${Math.floor(Math.random()*5)}`;
+            const target = `demo_${Math.floor(Math.random()*5)}`;
+            if (attacker !== target && players[attacker]?.alive && players[target]?.alive) {
+              fireAttack(attacker, target, Math.floor(10+Math.random()*40), Math.random()<0.2, false);
+            }
+          }, 1500);
+        }, 500);
+      }
     } catch (error) {
       statusDiv.textContent = '❌ SOCKET ERROR · no live data';
       statusDiv.className = 'disconnected';
