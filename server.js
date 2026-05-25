@@ -1023,6 +1023,68 @@ app.post('/api/overlay/test/kill', (_req, res) => {
   res.json({ success: true });
 });
 
+app.post('/api/overlay/test/laser', (_req, res) => {
+  ensureTestPlayers();
+  const result = handleMentionAttack('test_alpha', 'Alpha', '@test_bravo');
+  if (result) {
+    result.effect = 'laser';
+    emitAttackAndSync(result);
+    emitSoundAndSync('attack');
+  }
+  res.json({ success: true, result });
+});
+
+app.post('/api/overlay/test/fire', (_req, res) => {
+  ensureTestPlayers();
+  const result = handleMentionAttack('test_bravo', 'Bravo', '@test_delta');
+  if (result) {
+    result.effect = 'fire';
+    emitAttackAndSync(result);
+    emitSoundAndSync('attack');
+  }
+  res.json({ success: true, result });
+});
+
+app.post('/api/overlay/test/water', (_req, res) => {
+  ensureTestPlayers();
+  const result = handleMentionAttack('test_delta', 'Delta', '@test_alpha');
+  if (result) {
+    result.effect = 'bubble';
+    emitAttackAndSync(result);
+    emitSoundAndSync('attack');
+  }
+  res.json({ success: true, result });
+});
+
+app.post('/api/overlay/test/wave', (_req, res) => {
+  ensureTestPlayers();
+  const result = handleMentionAttack('test_charlie', 'Charlie', '@test_bravo');
+  if (result) {
+    result.effect = 'ripple';
+    emitAttackAndSync(result);
+    emitSoundAndSync('attack');
+  }
+  res.json({ success: true, result });
+});
+
+app.post('/api/overlay/test/hearts', (_req, res) => {
+  ensureTestPlayers();
+  const attackerId = 'test_alpha';
+  const diamonds = 15;
+  const target = 'test_bravo';
+  const giftAttack = { attacker: attackerId, target, damage: diamonds, killed: false, diamonds, effect: 'gift' };
+  
+  awardStats(attackerId, players[attackerId]?.nickname || 'Alpha', diamonds * 2, diamonds);
+  if (players[attackerId]) {
+    players[attackerId].messageBoostExpires = Date.now() + 10000;
+  }
+  
+  emitGiftAttackAndSync(giftAttack);
+  emitSoundAndSync('gift');
+  io.emit('gameState', players);
+  res.json({ success: true, giftAttack });
+});
+
 app.use('/api', (req, res) => {
   res.status(404).json({ success: false, error: `API endpoint not found: ${req.method} ${req.originalUrl}` });
 });

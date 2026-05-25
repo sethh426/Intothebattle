@@ -716,6 +716,23 @@ input::placeholder{
       Kill
     </button>
   </div>
+  <div class="btn-row">
+    <button class="btn btn-info" onclick="testEffectCommand('laser')">
+      ⚡ Laser
+    </button>
+    <button class="btn btn-danger" onclick="testEffectCommand('fire')">
+      🔥 Fire
+    </button>
+    <button class="btn btn-primary" onclick="testEffectCommand('water')">
+      💧 Water
+    </button>
+    <button class="btn btn-warning" onclick="testEffectCommand('wave')">
+      〰️ Wave
+    </button>
+    <button class="btn btn-success" onclick="testEffectCommand('hearts')">
+      ❤️ Hearts
+    </button>
+  </div>
 </div>
 <!-- AUDIO -->
 <div class="card col-12">
@@ -996,6 +1013,18 @@ function testOverlayHeal(){
 }
 function testOverlayKill(){
   runOverlayTest('kill');
+}
+function testEffectCommand(effect){
+  fetch(`/api/overlay/test/${effect}`, { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        toast(`${effect.toUpperCase()} effect triggered`);
+      } else {
+        toast(`Error: ${d.error || 'unknown'}`);
+      }
+    })
+    .catch(() => toast('Request failed'));
 }
 /* AUDIO */
 const EVENTS = [
