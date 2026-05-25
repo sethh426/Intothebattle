@@ -1,3 +1,4 @@
+// server.js (corrected)
 import { TikTokLive } from '@tiktool/live';
 import express from 'express';
 import cookieParser from 'cookie-parser';
@@ -741,9 +742,10 @@ app.post('/api/dev/laser-color', (req, res) => {
   res.json({ success: true, color: overlaySettings.laserColor });
 });
 
+// ─── FIX: changed 'waves' to 'wave' ─────────────────────────────
 app.post('/api/dev/overlay-settings', (req, res) => {
   const { shotType, shotSpeed, color } = req.body || {};
-  const validTypes = ['beam', 'pulse', 'waves', 'burst', 'ripple'];
+  const validTypes = ['beam', 'pulse', 'wave', 'burst', 'ripple'];   // ← 'wave' instead of 'waves'
   if (typeof shotType === 'string' && shotType) {
     if (!validTypes.includes(shotType)) return res.status(400).json({ success: false, error: `Invalid shot type. Must be one of: ${validTypes.join(', ')}` });
     overlaySettings.shotType = shotType;
