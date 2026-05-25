@@ -411,36 +411,100 @@ function dealDamage(attackerId, targetId, multiplier = 1) {
     io.emit('soundEvent', { event: 'kill' });
     setTimeout(() => {
       spawnPlayer(targetId, target.nickname);
-      io.emit('respawn', { uniqueId: targetId });
+      io.emit('respawn',    { uniqueId: targetId });
       io.emit('soundEvent', { event: 'respawn' });
-      io.emit('gameState', players);
+      io.emit('gameState',  players);
     }, CFG.RESPAWN_DELAY_MS);
   }
 
-  return { attacker: attackerId, target: targetId, damage: dmg, killed: killed };
+  console.log(`⚡ @${attackerId} → @${targetId} for ${dmg} dmg${killed ? ' (KILL!)' : ''}${multiplier > 1 ? ' (SPECIAL!)' : ''}`);
+
+  return { attacker: attackerId, target: targetId, damage: dmg, killed, special: multiplier > 1 };
+}
+
+function normalizeName(value = '') {
+  return String(value).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function findTarget(mention) {
+  const lower = String(mention || '').toLowerCase();
+  const norm  = normalizeName(mention);
+  return Object.values(players).find(p =>
+    String(p.uniqueId || '').toLowerCase() === lower ||
+    String(p.nickname || '').toLowerCase() === lower ||
+    normalizeName(p.uniqueId || '') === norm ||
+    normalizeName(p.nickname || '') === norm
+  );
+}
+
+function cleanMention(rawMention = '') {
+  return String(rawMention).trim()
+    .replace(/^@+/, '')
+    .replace(/^[^\w.]+/, '')
+    .replace(/[^\w.]+$/g, '');
+}
+
+function extractMentions(comment = '') {
+  return [...String(comment).matchAll(/@([^\s@]+)/g)]
+    .map(match => cleanMention(match[1]))
+    .filter(Boolean);
+}
+
+function getTopPlayers(count = 20) {
+  return Object.values(players)
+    .filter(p => p.alive)
+    .sort((a, b) => {
+      const aF = a.forceSpawn ? 1 : 0;
+      const bF = b.forceSpawn ? 1 : 0;
+      if (aF !== bF) return bF - aF;
+      const aHp = a.hp != null ? a.hp : (a.maxHp || 0);
+      const bHp = b.hp != null ? b.hp : (b.maxHp || 0);
+      const hpDiff = bHp - aHp;
+      if (hpDiff !== 0) return hpDiff;
+      return (b.maxHp || 0) - (a.maxHp || 0);
+    })
+    .slice(0, count);
 }
 
 function handleMentionAttack(attackerId, attackerNick, comment) {
-  const mentionMatch = comment.match(/@([a-zA-Z0-9_.]+)/);
-  if (!mentionMatch) return { handled: false, reason: 'No @mention found' };
+  const mentions = extractMentions(comment);
+  const cmdMatch = String(comment || '').match(/!(fire|bubbles?|bubble|neon|ripple|sphere|laser|shot|projectile|gift|boom|explode|explosion)/i);
+  let requestedEffect = null;
+  if (cmdMatch) {
+    const cmd = String(cmdMatch[1] || '').toLowerCase();
+    const map = {
+      'fire': 'fire', 'bubbles': 'bubble', 'bubble': 'bubble',
+      'neon': 'neon', 'ripple': 'ripple', 'sphere': 'sphere',
+      'laser': 'laser', 'shot': 'projectile', 'projectile': 'projectile',
+      'gift': 'gift', 'boom': 'explosion', 'explode': 'explosion', 'explosion': 'explosion'
+    };
+    requestedEffect = map[cmd] || cmd;
+  }
+  if (!mentions.length) return { handled: false, reason: 'No @mention found' };
 
-  const mention = mentionMatch[1];
-  const target = Object.values(players).find(p => p.nickname?.toLowerCase() === mention.toLowerCase() || p.uniqueId?.toLowerCase() === mention.toLowerCase());
+  if (!players[attackerId]?.alive) {
+    spawnPlayer(attackerId, attackerNick);
+    if (players[attackerId]) players[attackerId].forceSpawn = true;
+  }
+  if (players[attackerId]) {
+    players[attackerId].lastActive = Date.now();
+    players[attackerId].forceSpawn = true;
+  }
 
-  const effectMatch = comment.match(/#(fire|bubble|beam|laser|shot|projectile|neon|ripple|wave|waves|waterbeam|water_beam|sphere|gift|hearts|explosion|boom)/i);
-  const requestedEffect = effectMatch ? effectMatch[1].toLowerCase() : null;
+  const attacker    = players[attackerId];
+  const boostActive = attacker && attacker.messageBoostExpires > Date.now();
+  let   multiplier  = CFG.MESSAGE_LASER_MULTIPLIER;
+  if (boostActive) multiplier *= CFG.GIFT_MESSAGE_BOOST_MULTIPLIER;
 
-  const boostActive = players[attackerId]?.messageBoostExpires > Date.now();
-  const multiplier = boostActive ? CFG.MESSAGE_LASER_MULTIPLIER : 1;
-
-  if (target) {
+  for (const mention of mentions) {
+    const target = findTarget(mention);
     if (!target) {
       console.log(`⚠️ Mention target not found: @${mention} from comment: ${comment}`);
-      return { handled: false, reason: 'Mention target not found' };
+      continue;
     }
     if (target.uniqueId === attackerId) {
       console.log(`⚠️ Ignored self-attack from @${attackerId}`);
-      return { handled: false, reason: 'Self-attack ignored' };
+      continue;
     }
     if (!players[target.uniqueId]?.alive) {
       spawnPlayer(target.uniqueId, target.nickname);
@@ -680,15 +744,9 @@ app.post('/api/dev/laser-color', (req, res) => {
 app.post('/api/dev/overlay-settings', (req, res) => {
   const { shotType, shotSpeed, color } = req.body || {};
   const validTypes = ['beam', 'pulse', 'waves', 'burst', 'ripple'];
-  // Normalize 'wave' to 'ripple' for consistency
-  let normalizedShotType = shotType;
-  if (shotType === 'wave') {
-    normalizedShotType = 'ripple';
-  }
-
-  if (typeof normalizedShotType === 'string' && normalizedShotType) {
-    if (!validTypes.includes(normalizedShotType)) return res.status(400).json({ success: false, error: `Invalid shot type. Must be one of: ${validTypes.join(', ')}` });
-    overlaySettings.shotType = normalizedShotType;
+  if (typeof shotType === 'string' && shotType) {
+    if (!validTypes.includes(shotType)) return res.status(400).json({ success: false, error: `Invalid shot type. Must be one of: ${validTypes.join(', ')}` });
+    overlaySettings.shotType = shotType;
   }
   if (typeof shotSpeed === 'number' && shotSpeed > 0 && shotSpeed <= 3) {
     overlaySettings.shotSpeed = shotSpeed;
@@ -738,6 +796,31 @@ app.post('/api/background/upload', (req, res) => {
       return res.status(500).json({ success: false, error: uploadErr.message || 'Server error during background upload' });
     }
   });
+});
+
+app.post('/api/background/clear', (_req, res) => {
+  try {
+    deleteCurrentBackgroundFile();
+    currentBackground = null;
+    try { if (fs.existsSync(BG_FILE)) fs.unlinkSync(BG_FILE); } catch (_e) {}
+    io.emit('backgroundChanged', { filename: null });
+    console.log('📸 Background cleared');
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Background clear error:', err);
+    res.json({ success: false, error: err.message });
+  }
+});
+
+app.get('/background/:filename', (req, res) => {
+  const filepath = path.join(BG_DIR, req.params.filename);
+  if (!isSafePath(BG_DIR, filepath)) return res.status(403).send('Forbidden');
+  if (!fs.existsSync(filepath))      return res.status(404).send('Background not found');
+  return res.sendFile(filepath);
+});
+
+app.get('/api/audio', (_req, res) => {
+  res.json({ success: true, library: audioLibrary, config: audioConfig, settings: overlaySettings });
 });
 
 app.post('/api/audio/upload', (req, res) => {
@@ -838,10 +921,7 @@ app.post('/api/test/spawn', requireDevTestMode, (_req, res) => {
 app.post('/api/test/attack', requireDevTestMode, (_req, res) => {
   ensureTestPlayers();
   const result = handleMentionAttack('test_alpha', 'Alpha', '@test_bravo');
-  if (result.handled) { // Check if handleMentionAttack actually processed an attack
-    emitAttackAndSync(result.result); // Fix: Pass the actual attack result
-    emitSoundAndSync(result.result.killed ? 'kill' : 'attack');
-  }
+  io.emit('gameState', players);
   res.json({ success: true, result });
 });
 
@@ -890,9 +970,9 @@ app.post('/api/test/gift', requireDevTestMode, (_req, res) => {
 app.post('/api/overlay/test/attack', (_req, res) => {
   ensureTestPlayers();
   const result = handleMentionAttack('test_alpha', 'Alpha', '@test_bravo');
-  if (result.handled) { // Check if handleMentionAttack actually processed an attack
-    emitAttackAndSync(result.result); // Fix: Pass the actual attack result
-    emitSoundAndSync(result.result.killed ? 'kill' : 'attack');
+  if (result) {
+    emitAttackAndSync(result);
+    emitSoundAndSync(result.killed ? 'kill' : 'attack');
   }
   res.json({ success: true, result });
 });
@@ -933,35 +1013,13 @@ app.post('/api/overlay/test/gift', (_req, res) => {
 
 app.post('/api/overlay/test/heal', (_req, res) => {
   ensureTestPlayers();
-  // Simulate a heal event for a test player
-  const targetId = 'test_alpha';
-  const healAmount = 50;
-  if (players[targetId]) {
-    players[targetId].hp = Math.min(players[targetId].maxHp, players[targetId].hp + healAmount);
-    io.emit('heal', { uniqueId: targetId, amount: healAmount });
-    io.emit('gameState', players);
-  }
   io.emit('soundEvent', { event: 'heal' });
   res.json({ success: true });
 });
 
 app.post('/api/overlay/test/kill', (_req, res) => {
   ensureTestPlayers();
-  // Simulate a kill event for a test player
-  const targetId = 'test_bravo';
-  if (players[targetId] && players[targetId].alive) {
-    players[targetId].hp = 0;
-    players[targetId].alive = false;
-    io.emit('attack', { attacker: 'test_alpha', target: targetId, damage: players[targetId].maxHp, killed: true }); // Simulate attack leading to kill
-    io.emit('soundEvent', { event: 'kill' });
-    io.emit('gameState', players);
-    setTimeout(() => {
-      spawnPlayer(targetId, players[targetId].nickname);
-      io.emit('respawn', { uniqueId: targetId });
-      io.emit('soundEvent', { event: 'respawn' });
-      io.emit('gameState', players);
-    }, CFG.RESPAWN_DELAY_MS);
-  }
+  io.emit('soundEvent', { event: 'kill' });
   res.json({ success: true });
 });
 
@@ -1064,10 +1122,7 @@ function setupTikTokEvents(tiktokClient) {
     }
 
     const attackResult = handleMentionAttack(id, nick, comment);
-    if (attackResult.handled) {
-      // emitAttackAndSync is already called inside handleMentionAttack if successful
-      // emitSoundAndSync is also called inside handleMentionAttack
-    } else if (attackResult.reason !== 'No @mention found') {
+    if (!attackResult.handled && attackResult.reason !== 'No @mention found') {
       console.log(`⚠️ Chat attack not handled: ${attackResult.reason}`);
     }
 
@@ -1140,19 +1195,17 @@ function setupTikTokEvents(tiktokClient) {
     if (!id) return;
     if (!players[id]) spawnPlayer(id, nick);
     awardStats(id, nick, CFG.LIKE_HP_BOOST, 0);
-    io.emit('soundEvent', { event: 'heal' }); // Emit heal sound on like
+    io.emit('soundEvent', { event: 'heal' });
     io.emit('like', { uniqueId: id, nickname: nick });
-    io.emit('gameState', players);
+    io.emit('gameState',  players);
   });
 
-  tiktokClient.on('share', (e) => {
+  tiktokClient.on('social', (e) => {
     const id   = e.user?.uniqueId;
     const nick = e.user?.nickname || id;
     if (!id) return;
     if (!players[id]) spawnPlayer(id, nick);
     awardStats(id, nick, 0, CFG.SOCIAL_STRENGTH_BOOST);
-    io.emit('soundEvent', { event: 'attack' }); // Generic sound for social actions
-    io.emit('share', { uniqueId: id, nickname: nick });
     io.emit('gameState', players);
   });
 
@@ -1160,89 +1213,40 @@ function setupTikTokEvents(tiktokClient) {
     const id   = e.user?.uniqueId;
     const nick = e.user?.nickname || id;
     if (!id) return;
-    if (!players[id]) spawnPlayer(id, nick);
-    awardStats(id, nick, 0, CFG.SOCIAL_STRENGTH_BOOST);
-    io.emit('soundEvent', { event: 'follow' }); // Emit follow sound
+    console.log(`❤️  @${nick} followed!`);
+    io.emit('soundEvent', { event: 'follow' });
     io.emit('follow', { uniqueId: id, nickname: nick });
-    io.emit('gameState', players);
-  });
-
-  tiktokClient.on('disconnected', () => {
-    console.log(`❌ Disconnected from @${currentStreamer}'s LIVE stream`);
-    io.emit('tiktokDisconnected');
   });
 
   tiktokClient.on('error', (err) => {
-    console.error('TikTokLive client error:', err);
-    io.emit('tiktokError', { message: err.message });
+    console.error('⚠️  TikTok error:', err?.message || err);
   });
 }
 
-async function connectToStreamer(username) {
-  if (client) {
-    client.disconnect();
-    client = null;
-  }
-  currentStreamer = username;
-  client = new TikTokLive({
-    uniqueId: username,
-    requestOptions: {
-      timeout: 10000,
-      headers: {
-        // 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36'
-      }
-    },
-    processInitialData: false,
-    enableExtendedGiftInfo: true,
-    apiKey: API_KEY,
-  });
-
-  setupTikTokEvents(client);
-
+function safeDisconnectClient() {
+  if (!client) return;
   try {
-    await client.connect();
+    if (client.ws) { client.ws.onerror = () => {}; client.ws.onclose = () => {}; }
+    client.disconnect();
   } catch (err) {
-    console.error(`Failed to connect to @${username}'s LIVE stream:`, err.message);
-    io.emit('tiktokError', { message: `Failed to connect to @${username}'s LIVE stream: ${err.message}` });
+    console.error('⚠️ Error during disconnect:', err?.message || err);
   }
+  client = null;
+}
+
+function connectToStreamer(username) {
+  safeDisconnectClient();
+  currentStreamer = username;
+  client = new TikTokLive({ uniqueId: currentStreamer, apiKey: API_KEY });
+  setupTikTokEvents(client);
+  client.connect().catch(err => {
+    console.error('❌ Could not connect:', err?.message || err);
+    console.error(`   Make sure @${currentStreamer} is currently LIVE on TikTok`);
+    client = null;
+  });
 }
 
 function disconnectStreamer() {
-  if (client) {
-    client.disconnect();
-    client = null;
-  }
+  safeDisconnectClient();
   currentStreamer = '';
-  io.emit('tiktokDisconnected');
 }
-
-function getTopPlayers(count) {
-  return Object.values(players)
-    .filter(p => p.alive)
-    .sort((a, b) => b.kills - a.kills)
-    .slice(0, count);
-}
-
-function getTopHpPlayers(count) {
-  return Object.values(players)
-    .filter(p => p.alive)
-    .sort((a, b) => b.hp - a.hp)
-    .slice(0, count);
-}
-
-function getTopStrengthPlayers(count) {
-  return Object.values(players)
-    .filter(p => p.alive)
-    .sort((a, b) => b.strength - a.strength)
-    .slice(0, count);
-}
-
-// Add a new API endpoint for layout updates from dashboard/stats
-app.post('/api/overlay/layout', (req, res) => {
-  const { gapX, gapY } = req.body;
-  if (typeof gapX !== 'number' || typeof gapY !== 'number') {
-    return res.status(400).json({ success: false, error: 'Invalid layout parameters' });
-  }
-  io.emit('layoutUpdate', { gapX, gapY });
-  res.json({ success: true });
-});

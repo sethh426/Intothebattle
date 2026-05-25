@@ -43,9 +43,7 @@ body{
     radial-gradient(circle at top right, rgba(179,136,255,.10), transparent 25%),
     #090d14;
   color:var(--text);
-  font-family:
-    'DM Sans',
-    sans-serif;
+  font-family:'DM Sans',sans-serif;
   min-height:100vh;
   padding:24px;
 }
@@ -205,9 +203,7 @@ body{
   background:rgba(255,255,255,.05);
   font-size:11px;
   color:var(--text-soft);
-  font-family:
-    'Space Mono',
-    monospace;
+  font-family:'Space Mono',monospace;
 }
 .status-chip{
   display:inline-flex;
@@ -288,9 +284,7 @@ input::placeholder{
   font-weight:700;
   font-size:13px;
   transition:.18s ease;
-  font-family:
-    'DM Sans',
-    sans-serif;
+  font-family:'DM Sans',sans-serif;
 }
 .btn:hover{
   transform:translateY(-2px);
@@ -335,9 +329,7 @@ input::placeholder{
   font-size:13px;
 }
 .stat-value{
-  font-family:
-    'Space Mono',
-    monospace;
+  font-family:'Space Mono',monospace;
   font-weight:700;
 }
 .divider{
@@ -418,9 +410,7 @@ input::placeholder{
 .audio-size{
   font-size:11px;
   color:var(--text-dim);
-  font-family:
-    'Space Mono',
-    monospace;
+  font-family:'Space Mono',monospace;
 }
 .assign-table{
   width:100%;
@@ -508,22 +498,14 @@ input::placeholder{
 }
 @media(max-width:700px){
   body{
-    padding:16px;
+    padding:14px;
   }
   .topbar{
     flex-direction:column;
     align-items:flex-start;
-    padding:16px;
   }
   .brand{
-    margin-bottom:16px;
-  }
-  .topbar-right{
-    width:100%;
-    justify-content:space-between;
-  }
-  .card{
-    padding:18px;
+    align-items:flex-start;
   }
 }
 </style>
@@ -531,203 +513,295 @@ input::placeholder{
 <body>
 <div id="toast"></div>
 <div class="dashboard-shell">
+  <!-- HEADER -->
   <div class="topbar">
-    <div class="brand">
-      <div class="brand-logo">⚡</div>
-      <div class="brand-text">
-        <h1>Battle Royale</h1>
-        <p>Command Center</p>
-      </div>
-    </div>
-    <div class="topbar-right">
-      <div class="live-chip">
-        <div class="live-dot"></div>
-        <span id="tiktok-status">TikTok Disconnected</span>
-      </div>
-      <a href="/dashboard/logout" class="btn btn-secondary">Logout</a>
-    </div>
-  </div>
-
-  <div class="grid">
-    <div class="col-4">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">TikTok Connection</div>
-          <div class="card-badge">STATUS</div>
-        </div>
-        <div class="status-chip offline" id="tiktok-chip">
-          <div class="pulse-dot"></div>
-          <span id="tiktok-label">Disconnected</span>
-        </div>
-        <div class="input-group">
-          <label for="username" class="input-label">TikTok Username</label>
-          <input type="text" id="username" placeholder="@username" />
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-primary" onclick="connect()">Connect</button>
-          <button class="btn btn-secondary" onclick="resetTikTok()">Disconnect</button>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:20px;">
-        <div class="card-header">
-          <div class="card-title">Overlay Status</div>
-          <div class="card-badge">LIVE</div>
-        </div>
-        <div class="status-chip offline" id="overlay-chip">
-          <div class="pulse-dot"></div>
-          <span id="overlay-label">No overlay connected</span>
-        </div>
-        <div class="stat-box">
-          <span class="stat-label">Active Players</span>
-          <span class="stat-value" id="player-count">0</span>
-        </div>
-        <div class="divider"></div>
-        <div class="btn-row">
-          <button class="btn btn-secondary" onclick="reloadOverlay()">Reload Overlay</button>
-          <button class="btn btn-danger" onclick="clearPlayers()">Clear Players</button>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:20px;">
-        <div class="card-header">
-          <div class="card-title">Background Image</div>
-          <div class="card-badge">CUSTOM</div>
-        </div>
-        <div class="input-group">
-          <label for="bgUpload" class="input-label">Upload Image</label>
-          <input type="file" id="bgUpload" accept="image/*" />
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-primary" onclick="uploadBackground()">Set Background</button>
-          <button class="btn btn-secondary" onclick="clearBackground()">Clear Background</button>
-        </div>
-        <div class="divider"></div>
-        <p class="stat-label" id="bgStatus">No background set</p>
-      </div>
-    </div>
-
-    <div class="col-8">
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">Laser & Shot Styles</div>
-          <div class="card-badge">EFFECTS</div>
-        </div>
-        <div class="input-group">
-          <label for="laserColorPicker" class="input-label">Laser Color</label>
-          <input type="color" id="laserColorPicker" value="#7afcff" />
-        </div>
-        <div class="input-group">
-          <label for="laserStyleSelect" class="input-label">Shot Style</label>
-          <select id="laserStyleSelect">
-            <option value="laser">Laser (Default)</option>
-            <option value="pulse">Pulse</option>
-            <option value="ripple">Ripple</option>
-            <option value="fire">Fire</option>
-            <option value="bubble">Bubble</option>
-            <option value="projectile">Projectile</option>
-            <option value="neon">Neon</option>
-            <option value="sphere">Sphere</option>
-            <option value="explosion">Explosion</option>
-            <option value="gift">Gift (Hearts)</option>
-          </select>
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-primary" onclick="saveLaserStyle()">Save Laser Style</button>
-        </div>
-        <div class="divider"></div>
-        <div class="card-header" style="margin-bottom:12px;">
-          <div class="card-title">Test Overlay Effects</div>
-        </div>
-        <div class="btn-row">
-          <button class="btn btn-blue" onclick="testOverlayAttack()">Test Attack</button>
-          <button class="btn btn-warning" onclick="testOverlayGift()">Test Gift</button>
-          <button class="btn btn-danger" onclick="testOverlayKill()">Test Kill</button>
-          <button class="btn btn-success" onclick="testOverlayHeal()">Test Heal</button>
-        </div>
-      </div>
-
-      <div class="card" style="margin-top:20px;">
-        <div class="card-header">
-          <div class="card-title">Audio Configuration</div>
-          <div class="card-badge">SOUNDS</div>
-        </div>
-        <div class="audio-layout">
-          <div>
-            <div class="section-title">Upload Audio</div>
-            <div class="drop-zone" id="audioDropZone">
-              <input type="file" id="audioUpload" accept="audio/*" />
-              <div class="drop-icon">🎵</div>
-              <div class="drop-title">Drag & Drop or Click to Upload</div>
-              <div class="drop-sub">MP3, WAV, OGG, M4A, FLAC, WEBM (Max 20MB)</div>
-            </div>
-            <div class="section-title">Audio Library</div>
-            <div class="audio-files" id="audioLibrary"></div>
-          </div>
-          <div>
-            <div class="section-title">Assign Sounds to Events</div>
-            <table class="assign-table">
-              <tr>
-                <td><span class="event-pill event-attack">ATTACK</span></td>
-                <td>
-                  <select id="audio-attack" onchange="assignAudio('attack', this.value)"></select>
-                </td>
-                <td><button class="btn btn-secondary btn-sm" onclick="playTestSound('attack')">▶</button></td>
-              </tr>
-              <tr>
-                <td><span class="event-pill event-gift">GIFT</span></td>
-                <td>
-                  <select id="audio-gift" onchange="assignAudio('gift', this.value)"></select>
-                </td>
-                <td><button class="btn btn-secondary btn-sm" onclick="playTestSound('gift')">▶</button></td>
-              </tr>
-              <tr>
-                <td><span class="event-pill event-kill">KILL</span></td>
-                <td>
-                  <select id="audio-kill" onchange="assignAudio('kill', this.value)"></select>
-                </td>
-                <td><button class="btn btn-secondary btn-sm" onclick="playTestSound('kill')">▶</button></td>
-              </tr>
-              <tr>
-                <td><span class="event-pill event-respawn">RESPAWN</span></td>
-                <td>
-                  <select id="audio-respawn" onchange="assignAudio('respawn', this.value)"></select>
-                </td>
-                <td><button class="btn btn-secondary btn-sm" onclick="playTestSound('respawn')">▶</button></td>
-              </tr>
-              <tr>
-                <td><span class="event-pill event-heal">HEAL</span></td>
-                <td>
-                  <select id="audio-heal" onchange="assignAudio('heal', this.value)"></select>
-                </td>
-                <td><button class="btn btn-secondary btn-sm" onclick="playTestSound('heal')">▶</button></td>
-              </tr>
-              <tr>
-                <td><span class="event-pill event-follow">FOLLOW</span></td>
-                <td>
-                  <select id="audio-follow" onchange="assignAudio('follow', this.value)"></select>
-                </td>
-                <td><button class="btn btn-secondary btn-sm" onclick="playTestSound('follow')">▶</button></td>
-              </tr>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="footer">
-    <a href="https://professional-lasers.com/" target="_blank" class="footer-btn primary">Get More Info</a>
-    <a href="https://github.com/sethh426/TIKTOKBR" target="_blank" class="footer-btn secondary">GitHub Repo</a>
+<div class="brand">
+  <div class="brand-logo">🎮</div>
+  <div class="brand-text">
+    <h1>Battle Royale Command Center</h1>
+    <p>Interactive TikTok LIVE overlay management system</p>
   </div>
 </div>
-
+<div class="topbar-right">
+  <div class="live-chip">
+    <div class="live-dot"></div>
+    LIVE SYSTEM
+  </div>
+  <button class="btn btn-secondary" onclick="resetTikTok()">
+    Logout
+  </button>
+</div>
+  </div>
+  <!-- GRID -->
+  <div class="grid">
+<!-- TIKTOK -->
+<div class="card col-6">
+  <div class="card-header">
+    <div class="card-title">TikTok Live Connection</div>
+    <div class="card-badge">Realtime WebSocket</div>
+  </div>
+  <div class="status-chip offline" id="tiktok-chip">
+    <div class="pulse-dot"></div>
+    <span id="tiktok-label">Disconnected</span>
+  </div>
+  <div class="input-group">
+    <label class="input-label">TikTok Username</label>
+    <input
+      type="text"
+      id="username"
+      placeholder="@yourusername"
+    />
+  </div>
+  <div class="btn-row">
+    <button
+      class="btn btn-success"
+      style="flex:1"
+      onclick="connect()"
+    >
+      ✓ Connect
+    </button>
+    <button
+      class="btn btn-danger"
+      style="flex:1"
+      onclick="resetTikTok()"
+    >
+      ✕ Disconnect
+    </button>
+  </div>
+</div>
+<!-- OVERLAY -->
+<div class="card col-6">
+  <div class="card-header">
+    <div class="card-title">Overlay Status</div>
+    <div class="card-badge">Browser Source</div>
+  </div>
+  <div class="status-chip offline" id="overlay-chip">
+    <div class="pulse-dot"></div>
+    <span id="overlay-label">No overlay connected</span>
+  </div>
+  <div class="stat-box">
+    <span class="stat-label">Active Players</span>
+    <span class="stat-value" id="player-count">—</span>
+  </div>
+  <div class="stat-box">
+    <span class="stat-label">Events / Second</span>
+    <span class="stat-value">—</span>
+  </div>
+  <div class="divider"></div>
+  <div class="btn-row">
+    <button
+      class="btn btn-primary"
+      style="flex:1"
+      onclick="reloadOverlay()"
+    >
+      ↺ Reload Overlay
+    </button>
+    <button
+      class="btn btn-secondary"
+      onclick="clearPlayers()"
+    >
+      Clear Players
+    </button>
+  </div>
+</div>
+<!-- BACKGROUND -->
+<div class="card col-4">
+  <div class="card-header">
+    <div class="card-title">Background Manager</div>
+  </div>
+  <div class="input-group">
+    <label class="input-label">Overlay Background</label>
+    <input
+      type="file"
+      id="bgUpload"
+      accept="image/jpeg,image/png,image/gif,image/webp"
+    />
+  </div>
+  <div class="btn-row">
+    <button
+      class="btn btn-primary"
+      style="flex:1"
+      onclick="uploadBackground()"
+    >
+      Upload Background
+    </button>
+    <button
+      class="btn btn-warning"
+      onclick="clearBackground()"
+    >
+      Clear
+    </button>
+  </div>
+  <p
+    id="bgStatus"
+    style="
+      margin-top:14px;
+      color:var(--text-soft);
+      font-size:12px;
+    "
+  >
+    No background set
+  </p>
+</div>
+<!-- LASERS -->
+<div class="card col-4">
+  <div class="card-header">
+    <div class="card-title">Laser Controls</div>
+    <div class="card-badge">Animation FX</div>
+  </div>
+  <div class="input-group">
+    <label class="input-label">Shot Style</label>
+    <select
+      id="laserStyleSelect"
+      onchange="setShotStyle(this.value)"
+    >
+      <option value="beam">Beam</option>
+      <option value="pulse">Pulse</option>
+      <option value="wave">Wave</option>
+    </select>
+  </div>
+  <div class="input-group">
+    <label class="input-label">
+      Laser Color
+    </label>
+    <input
+      type="color"
+      id="laserColorPicker"
+      value="#5ab2ff"
+      onchange="setLaserColor(this.value)"
+      style="
+        height:50px;
+        padding:4px;
+        border-radius:14px;
+        background:var(--surface-3);
+        border:1px solid rgba(255,255,255,.08);
+      "
+    />
+  </div>
+  <button
+    class="btn btn-primary"
+    style="width:100%;margin-top:6px"
+    onclick="saveLaserStyle()"
+  >
+    Save Laser Style
+  </button>
+</div>
+<!-- DEV MODE -->
+<div class="card col-4">
+  <div class="card-header">
+    <div class="card-title">Developer Tools</div>
+  </div>
+  <p
+    style="
+      color:var(--text-soft);
+      font-size:13px;
+      line-height:1.6;
+      margin-bottom:18px;
+    "
+  >
+    Trigger overlay attacks, gifts, kills, heals,
+    and animation tests instantly.
+  </p>
+  <div class="btn-row">
+    <button class="btn btn-success" onclick="testOverlayAttack()">
+      Attack
+    </button>
+    <button class="btn btn-warning" onclick="testOverlayGift()">
+      Gift
+    </button>
+    <button class="btn btn-purple" onclick="testOverlayHeal()">
+      Heal
+    </button>
+    <button class="btn btn-danger" onclick="testOverlayKill()">
+      Kill
+    </button>
+  </div>
+</div>
+<!-- AUDIO -->
+<div class="card col-12">
+  <div class="card-header">
+    <div class="card-title">Audio Manager</div>
+    <div class="card-badge" id="audioCountBadge">
+      0 Sounds Loaded
+    </div>
+  </div>
+  <div class="drop-zone" id="dropZone">
+    <input
+      type="file"
+      id="audioFileInput"
+      accept="audio/*"
+    />
+    <div class="drop-icon">🎵</div>
+    <div class="drop-title">
+      Drag & Drop Audio Files
+    </div>
+    <div class="drop-sub">
+      MP3 • WAV • OGG • AAC • FLAC • WEBM
+    </div>
+  </div>
+  <button
+    class="btn btn-primary"
+    style="width:100%;margin-bottom:24px"
+    onclick="document.getElementById('audioFileInput').click()"
+  >
+    📂 Browse Audio Files
+  </button>
+  <div class="audio-layout">
+    <!-- LIBRARY -->
+    <div>
+      <div class="section-title">
+        Uploaded Sounds
+      </div>
+      <div class="audio-files" id="audioLibrary">
+        <p
+          id="audioLibraryEmpty"
+          style="
+            color:var(--text-soft);
+            font-size:13px;
+          "
+        >
+          No audio uploaded yet.
+        </p>
+      </div>
+    </div>
+    <!-- ASSIGN -->
+    <div>
+      <div class="section-title">
+        Event Assignments
+      </div>
+      <table class="assign-table">
+        <tbody id="assignTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+  </div>
+  <!-- FOOTER -->
+  <div class="footer">
+<button
+  class="footer-btn primary"
+  onclick="window.open('/overlay','_blank')"
+>
+  🖥️ Open Overlay
+</button>
+<button
+  class="footer-btn secondary"
+  onclick="window.open('/stats','_blank')"
+>
+  ↗ Stats
+</button>
+<button
+  class="footer-btn secondary"
+  onclick="window.open('/api/status','_blank')"
+>
+  ↗ Raw JSON
+</button>
+  </div>
+</div>
 <script src="/socket.io/socket.io.js"></script>
 <script>
 /* KEEPING YOUR ORIGINAL JS LOGIC */
 const socket = io();
-let currentOverlaySettings = { shotType: 'laser', laserColor: '#7afcff' }; // Default values
-
 socket.on('overlayCount', setOverlayStatus);
 socket.on('gameState', (state) => {
   const alive =
@@ -736,13 +810,6 @@ socket.on('gameState', (state) => {
     .length;
   document.getElementById('player-count').textContent = alive;
 });
-
-socket.on('overlaySettings', (settings) => {
-  currentOverlaySettings = { ...currentOverlaySettings, ...settings };
-  document.getElementById('laserColorPicker').value = currentOverlaySettings.laserColor;
-  document.getElementById('laserStyleSelect').value = currentOverlaySettings.shotType;
-});
-
 function toast(msg){
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -882,35 +949,35 @@ function clearBackground(){
   });
 }
 /* LASERS */
-function saveLaserStyle(){
-  const shotType =
-    document.getElementById('laserStyleSelect').value;
-  const laserColor =
-    document.getElementById('laserColorPicker').value;
-
+function setLaserColor(color){
+  fetch('/api/dev/laser-color',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json'
+    },
+    body:JSON.stringify({ color })
+  });
+}
+function setShotStyle(type){
   fetch('/api/dev/overlay-settings',{
     method:'POST',
     headers:{
       'Content-Type':'application/json'
     },
     body:JSON.stringify({
-      shotType: laserType,
-      color: laserColor
+      shotType:type
     })
-  })
-  .then(r => r.json())
-  .then(d => {
-    if(d.success){
-      toast('Laser style saved');
-    } else {
-      toast(d.error || 'Failed to save laser style');
-    }
-  })
-  .catch(() => {
-    toast('Failed to save laser style');
   });
 }
-
+function saveLaserStyle(){
+  const type =
+    document.getElementById('laserStyleSelect').value;
+  const color =
+    document.getElementById('laserColorPicker').value;
+  setShotStyle(type);
+  setLaserColor(color);
+  toast('Laser style saved');
+}
 /* TESTS */
 function runOverlayTest(action){
   fetch('/api/overlay/test/' + action,{
@@ -931,200 +998,183 @@ function testOverlayKill(){
   runOverlayTest('kill');
 }
 /* AUDIO */
-let audioLibrary = [];
-let audioConfig = {};
-
-function formatBytes(bytes, decimals = 2) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+const EVENTS = [
+  'attack',
+  'gift',
+  'kill',
+  'respawn',
+  'heal',
+  'follow'
+];
+const EVENT_CLASSES = {
+  attack:'event-attack',
+  gift:'event-gift',
+  kill:'event-kill',
+  respawn:'event-respawn',
+  heal:'event-heal',
+  follow:'event-follow'
+};
+let audioLibraryData = [];
+let audioConfigData = {};
+function formatBytes(bytes){
+  if(bytes < 1024)
+    return bytes + ' B';
+  if(bytes < 1024 * 1024)
+    return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
-
-function renderAudioLibrary() {
-  const libraryDiv = document.getElementById('audioLibrary');
-  libraryDiv.innerHTML = '';
-  if (audioLibrary.length === 0) {
-    libraryDiv.innerHTML = '<p style="color:var(--text-dim);font-size:13px;text-align:center;padding:20px;">No audio files uploaded yet.</p>';
+function renderAudioLibrary(){
+  const container =
+    document.getElementById('audioLibrary');
+  container.innerHTML = '';
+  if(!audioLibraryData.length){
+    container.innerHTML =
+      '<p id="audioLibraryEmpty">No audio uploaded yet.</p>';
     return;
   }
-  audioLibrary.forEach(file => {
-    const row = document.createElement('div');
+  audioLibraryData.forEach(file => {
+    const row =
+      document.createElement('div');
     row.className = 'audio-row';
     row.innerHTML = `
-      <span class="audio-name">${file.originalName}</span>
-      <span class="audio-size">${formatBytes(file.size)}</span>
-      <button class="btn btn-danger btn-sm" onclick="deleteAudio('${file.filename}')">✕</button>
+      <div>🎵</div>
+      <div class="audio-name">${file.originalName}</div>
+      <div class="audio-size">${formatBytes(file.size)}</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-secondary" onclick="playPreview('${file.filename}','${file.originalName.replace(/'/g,"\'")}')">▶ Play</button>
+        <a class="btn btn-secondary" href="/audio/${file.filename}" download style="text-decoration:none">⬇</a>
+      </div>
     `;
-    libraryDiv.appendChild(row);
+    container.appendChild(row);
   });
 }
 
-function populateAudioAssignSelects() {
-  const eventTypes = ['attack', 'gift', 'kill', 'respawn', 'heal', 'follow'];
-  eventTypes.forEach(eventType => {
-    const select = document.getElementById(`audio-${eventType}`);
-    if (!select) return;
-    select.innerHTML = '<option value="">-- None --</option>';
-    audioLibrary.forEach(file => {
-      const option = document.createElement('option');
-      option.value = file.filename;
-      option.textContent = file.originalName;
-      select.appendChild(option);
-    });
-    if (audioConfig[eventType]) {
-      select.value = audioConfig[eventType];
-    }
+let _currentPreview = null;
+function playPreview(filename, label){
+  try{
+    if(_currentPreview){ _currentPreview.pause(); _currentPreview = null; }
+    const a = new Audio('/audio/' + filename);
+    a.currentTime = 0;
+    a.play().catch(()=>{});
+    _currentPreview = a;
+    toast('Playing: ' + (label || filename));
+    a.onended = () => { _currentPreview = null; };
+  }catch(e){ console.warn('preview failed', e); }
+}
+function renderAssignTable(){
+  const tbody =
+    document.getElementById('assignTableBody');
+  tbody.innerHTML = '';
+  EVENTS.forEach(event => {
+    const tr =
+      document.createElement('tr');
+    const options =
+      audioLibraryData
+      .map(f => `
+        <option value="${f.filename}">
+          ${f.originalName}
+        </option>
+      `)
+      .join('');
+    tr.innerHTML = `
+      <td>
+        <span class="event-pill ${EVENT_CLASSES[event]}">
+          ${event}
+        </span>
+      </td>
+      <td style="padding-left:14px">
+        <select>
+          <option>— None —</option>
+          ${options}
+        </select>
+      </td>
+    `;
+    tbody.appendChild(tr);
   });
 }
-
-function assignAudio(event, filename) {
-  fetch('/api/audio/assign', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ event, filename })
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.success) {
-      audioConfig[event] = filename;
-      toast(`Assigned ${filename || 'None'} to ${event}`);
-    } else {
-      toast(d.error || 'Failed to assign audio');
-    }
-  })
-  .catch(() => {
-    toast('Failed to assign audio');
-  });
-}
-
-function deleteAudio(filename) {
-  if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
-  fetch(`/api/audio/delete/${filename}`, {
-    method: 'DELETE'
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.success) {
-      audioLibrary = audioLibrary.filter(f => f.filename !== filename);
-      // Also remove from audioConfig if it was assigned
-      for (const event in audioConfig) {
-        if (audioConfig[event] === filename) {
-          audioConfig[event] = null;
-        }
-      }
-      renderAudioLibrary();
-      populateAudioAssignSelects();
-      toast(`Deleted ${filename}`);
-    } else {
-      toast(d.error || 'Failed to delete audio');
-    }
-  })
-  .catch(() => {
-    toast('Failed to delete audio');
-  });
-}
-
-function uploadAudio() {
-  const input = document.getElementById('audioUpload');
-  const file = input.files[0];
-  if (!file) {
-    toast('Choose an audio file first');
-    return;
-  }
+function uploadAudioFile(file){
   const fd = new FormData();
   fd.append('audio', file);
-  fetch('/api/audio/upload', {
-    method: 'POST',
-    body: fd
+  fetch('/api/audio/upload',{
+    method:'POST',
+    body:fd
   })
   .then(r => r.json())
   .then(d => {
-    if (d.success) {
-      audioLibrary.push(d.file);
+    if(d.success){
+      audioLibraryData.push(d.file);
       renderAudioLibrary();
-      populateAudioAssignSelects();
+      renderAssignTable();
       toast('Audio uploaded');
-    } else {
-      toast(d.error || 'Audio upload failed');
     }
-  })
-  .catch(() => {
-    toast('Audio upload failed');
   });
 }
-
-function playTestSound(event) {
-  const filename = audioConfig[event];
-  if (!filename) {
-    toast('No sound assigned to this event');
-    return;
+const dropZone =
+  document.getElementById('dropZone');
+const audioFileInput =
+  document.getElementById('audioFileInput');
+audioFileInput.addEventListener('change', () => {
+  if(audioFileInput.files[0]){
+    uploadAudioFile(
+      audioFileInput.files[0]
+    );
   }
-  // For testing, we can directly play the sound via the browser
-  const audio = new Audio(`/audio/${filename}`);
-  audio.play().catch(e => console.error('Error playing test sound:', e));
-}
-
-// Drag and drop for audio upload
-const audioDropZone = document.getElementById('audioDropZone');
-if (audioDropZone) {
-  audioDropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    audioDropZone.classList.add('dragover');
-  });
-  audioDropZone.addEventListener('dragleave', () => {
-    audioDropZone.classList.remove('dragover');
-  });
-  audioDropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    audioDropZone.classList.remove('dragover');
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      document.getElementById('audioUpload').files = files;
-      uploadAudio();
-    }
-  });
-  document.getElementById('audioUpload').addEventListener('change', uploadAudio);
-}
-
-// Initial fetch for current status and settings
-window.addEventListener('load', () => {
-  fetch('/api/status')
-    .then(r => r.json())
-    .then(d => {
-      setTikTokStatus(d.connected ? 'connected' : 'disconnected', d.username);
-      setOverlayStatus(d.overlayCount);
-      document.getElementById('username').value = d.username;
-      if (d.background && d.background.filename) {
-        document.getElementById('bgStatus').textContent = `Background set: ${d.background.filename}`;
-      }
-      // Initialize laser color and shot type from fetched settings
-      if (d.overlaySettings) {
-        currentOverlaySettings = { ...currentOverlaySettings, ...d.overlaySettings };
-        document.getElementById('laserColorPicker').value = currentOverlaySettings.laserColor;
-        document.getElementById('laserStyleSelect').value = currentOverlaySettings.shotType;
-      }
-    })
-    .catch(e => console.error('Failed to fetch initial status:', e));
-
-  // Fetch audio config and library
-  fetch('/api/audio/config')
-    .then(r => r.json())
-    .then(d => {
-      if (d.success) {
-        audioConfig = d.config;
-        audioLibrary = d.library;
-        renderAudioLibrary();
-        populateAudioAssignSelects();
-      } else {
-        console.error('Failed to load audio config:', d.error);
-      }
-    })
-    .catch(e => console.error('Failed to fetch audio config:', e));
+});
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('dragover');
+});
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('dragover');
+});
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file =
+    e.dataTransfer.files[0];
+  if(file){
+    uploadAudioFile(file);
+  }
+});
+/* INITIAL LOAD */
+fetch('/api/status')
+.then(r => r.json())
+.then(d => {
+  if(d.username){
+    document
+    .getElementById('username')
+    .value = d.username;
+  }
+  if(d.background?.filename){
+    document
+    .getElementById('bgStatus')
+    .textContent =
+    'Background set: ' +
+    d.background.filename;
+  }
+  setTikTokStatus(
+    d.connected
+      ? 'connected'
+      : 'disconnected',
+    d.username
+  );
+  setOverlayStatus(
+    d.overlayCount || 0
+  );
+  document
+  .getElementById('player-count')
+  .textContent =
+    d.playerCount ?? '—';
+});
+fetch('/api/audio')
+.then(r => r.json())
+.then(d => {
+  if(d.success){
+    audioLibraryData =
+      d.library || [];
+    renderAudioLibrary();
+    renderAssignTable();
+  }
 });
 </script>
 </body>
