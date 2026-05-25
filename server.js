@@ -666,6 +666,10 @@ app.use('/audio', (req, res, next) => {
 let overlayCount = 0;
 
 io.on('connection', (socket) => {
+  socket.emit('overlayCount', overlayCount);
+  socket.emit('overlaySettings', overlaySettings);
+  socket.emit('laserColor', overlaySettings.laserColor);
+
   socket.on('register', ({ type } = {}) => {
     if (type === 'overlay') {
       overlayCount++;
@@ -732,6 +736,7 @@ app.get('/api/status', (_req, res) => res.json({
   overlayCount,
   playerCount:      Object.values(players).filter(p => p.alive).length,
   background:       currentBackground,
+  overlaySettings,
   devTestMode:      DEV_TEST_MODE,
 }));
 

@@ -661,6 +661,19 @@ input::placeholder{
     </select>
   </div>
   <div class="input-group">
+    <label class="input-label">Shot Speed <span id="laserSpeedLabel">1.0x</span></label>
+    <input
+      type="range"
+      id="laserSpeedRange"
+      min="0.5"
+      max="3"
+      step="0.1"
+      value="1"
+      oninput="updateLaserSpeedLabel(this.value)"
+      onchange="setShotSpeed(this.value)"
+    />
+  </div>
+  <div class="input-group">
     <label class="input-label">
       Laser Color
     </label>
@@ -820,6 +833,25 @@ input::placeholder{
 /* KEEPING YOUR ORIGINAL JS LOGIC */
 const socket = io();
 socket.on('overlayCount', setOverlayStatus);
+socket.on('overlaySettings', (settings) => {
+  if (!settings || typeof settings !== 'object') return;
+  const shotSelect = document.getElementById('laserStyleSelect');
+  const colorInput = document.getElementById('laserColorPicker');
+  const speedRange = document.getElementById('laserSpeedRange');
+  const speedLabel = document.getElementById('laserSpeedLabel');
+  if (shotSelect && typeof settings.shotType === 'string') {
+    shotSelect.value = settings.shotType;
+  }
+  if (colorInput && typeof settings.laserColor === 'string') {
+    colorInput.value = settings.laserColor;
+  }
+  if (speedRange && typeof settings.shotSpeed === 'number') {
+    speedRange.value = settings.shotSpeed.toFixed(1);
+  }
+  if (speedLabel && typeof settings.shotSpeed === 'number') {
+    speedLabel.textContent = `${settings.shotSpeed.toFixed(1)}x`;
+  }
+});
 socket.on('gameState', (state) => {
   const alive =
     Object.values(state || {})
@@ -967,32 +999,44 @@ function clearBackground(){
 }
 /* LASERS */
 function setLaserColor(color){
-  fetch('/api/dev/laser-color',{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json'
-    },
-    body:JSON.stringify({ color })
-  });
+  updateOverlaySettings({ color });
+}
+function setShotSpeed(speed){
+  const parsed = Number.parseFloat(speed);
+  if (Number.isNaN(parsed) || parsed <= 0) return;
+  updateOverlaySettings({ shotSpeed: parsed });
 }
 function setShotStyle(type){
+  updateOverlaySettings({ shotType: type });
+}
+function updateOverlaySettings(settings){
   fetch('/api/dev/overlay-settings',{
     method:'POST',
     headers:{
       'Content-Type':'application/json'
     },
-    body:JSON.stringify({
-      shotType:type
-    })
+    body:JSON.stringify(settings)
   });
+}
+function updateLaserSpeedLabel(value){
+  const label = document.getElementById('laserSpeedLabel');
+  if (label) {
+    label.textContent = `${Number.parseFloat(value).toFixed(1)}x`;
+  }
 }
 function saveLaserStyle(){
   const type =
     document.getElementById('laserStyleSelect').value;
   const color =
     document.getElementById('laserColorPicker').value;
-  setShotStyle(type);
-  setLaserColor(color);
+  const speed =
+    document.getElementById('laserSpeedRange').value;
+  updateOverlaySettings({
+    shotType: type,
+    shotSpeed: Number.parseFloat(speed),
+    color
+  });
+  updateLaserSpeedLabel(speed);
   toast('Laser style saved');
 }
 /* TESTS */
@@ -1180,6 +1224,19 @@ fetch('/api/status')
     .textContent =
     'Background set: ' +
     d.background.filename;
+  }
+  if (d.overlaySettings && typeof d.overlaySettings === 'object') {
+    const shotType = d.overlaySettings.shotType || 'beam';
+    const laserColor = d.overlaySettings.laserColor || '#7afcff';
+    const shotSpeed = d.overlaySettings.shotSpeed ?? 1;
+    const shotSelect = document.getElementById('laserStyleSelect');
+    const colorInput = document.getElementById('laserColorPicker');
+    const speedRange = document.getElementById('laserSpeedRange');
+    const speedLabel = document.getElementById('laserSpeedLabel');
+    if (shotSelect) shotSelect.value = shotType;
+    if (colorInput) colorInput.value = laserColor;
+    if (speedRange) speedRange.value = Number.parseFloat(shotSpeed).toFixed(1);
+    if (speedLabel) speedLabel.textContent = `${Number.parseFloat(shotSpeed).toFixed(1)}x`;
   }
   setTikTokStatus(
     d.connected

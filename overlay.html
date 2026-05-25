@@ -102,12 +102,32 @@ body { display: flex; align-items: center; justify-content: center; }
   resizeCanvas();
   updateControlLabels();
   function isPlayerAlive(player) { return player && player.alive !== false; }
-  function topPlayers() { return Object.values(players).filter(p => isPlayerAlive(p) && p.uniqueId !== HORDE_ID).sort((a,b) => (b.hp||0)-(a.hp||0)).slice(0,5); }
+  function topPlayers() {
+    return Object.values(players)
+      .filter(p => isPlayerAlive(p) && p.uniqueId !== HORDE_ID)
+      .sort((a,b) => {
+        const hpDiff = (b.hp || 0) - (a.hp || 0);
+        if (hpDiff !== 0) return hpDiff;
+        const killDiff = (b.kills || 0) - (a.kills || 0);
+        if (killDiff !== 0) return killDiff;
+        const activeDiff = (b.lastActive || 0) - (a.lastActive || 0);
+        if (activeDiff !== 0) return activeDiff;
+        return String(a.uniqueId || '').localeCompare(String(b.uniqueId || ''));
+      })
+      .slice(0,5);
+  }
   function hordePlayer() {
     const topSet = new Set(topPlayers().map(p => p.uniqueId));
     const rest = Object.values(players).filter(p => isPlayerAlive(p) && !topSet.has(p.uniqueId));
     if (!rest.length) return null;
-    return { uniqueId: HORDE_ID, nickname: 'THE HORDE', hp: rest.reduce((s,p) => s + (p.hp||0), 0), maxHp: rest.reduce((s,p) => s + (p.maxHp||100), 0), hordeCount: rest.length, alive: true };
+    return {
+      uniqueId: HORDE_ID,
+      nickname: 'THE HORDE',
+      hp: rest.reduce((s,p) => s + (p.hp || 0), 0),
+      maxHp: rest.reduce((s,p) => s + (p.maxHp || 100), 0),
+      hordeCount: rest.length,
+      alive: true
+    };
   }
   function getPlayerPosition(index, total) {
     const W = cw();
@@ -119,17 +139,10 @@ body { display: flex; align-items: center; justify-content: center; }
     return { x: startX + index * (cardW + layoutGap) + cardW / 2, y: H * 0.28 + offsetY + (H * 0.16 * (1 - layoutZoom)) };
   }
   function getPositionForPlayer(playerId) {
-    const alive = Object.values(players).filter(p => isPlayerAlive(p) && p.uniqueId !== HORDE_ID);
-    const index = alive.findIndex(p => p.uniqueId === playerId || p.id === playerId);
-    if (index === -1) return null;
-    const total = alive.length;
-    const W = cw();
-    const H = ch();
-    const cardH = H * 0.5 * 0.84 * layoutZoom;
-    const cardW = cardH * 0.72;
-    const totalWidth = cardW * total + layoutGap * Math.max(0, total - 1);
-    const startX = (W - totalWidth) / 2 + offsetX;
-    return { x: startX + index * (cardW + layoutGap) + cardW / 2, y: H * 0.28 + offsetY + (H * 0.16 * (1 - layoutZoom)) };
+    const top = topPlayers();
+    const index = top.findIndex(p => p.uniqueId === playerId || p.id === playerId);
+    if (index !== -1) return getPlayerPosition(index, top.length);
+    return getHordePosition();
   }
   function getHordePosition() {
     const W = cw();
@@ -184,19 +197,26 @@ body { display: flex; align-items: center; justify-content: center; }
       this.from = from;
       this.to = to;
       this.type = type;
+      this.color = overlaySettings.laserColor || '#7afcff';
       this.start = Date.now();
       this.progress = 0;
       this.particles = [];
       this.spawned = false;
-      
-      // Set duration based on type
-      if (type === 'static') this.duration = 2000; // Particles only
-      else if (type === 'projectile') this.duration = 600;
-      else if (type === 'gift') this.duration = 900;
-      else if (type === 'explosion') this.duration = 750;
-      else if (type === 'beam') this.duration = 350;
-      else this.duration = 500;
-      
+      const speed = Math.max(0.5, overlaySettings.shotSpeed || 1);
+
+      // Set duration based on type and configured shot speed
+      if (type === 'static') this.duration = Math.round(1800 / speed);
+      else if (type === 'projectile') this.duration = Math.round(700 / speed);
+      else if (type === 'gift') this.duration = Math.round(900 / speed);
+      else if (type === 'explosion') this.duration = Math.round(750 / speed);
+      else if (type === 'beam') this.duration = Math.round(360 / speed);
+      else if (type === 'neon') this.duration = Math.round(420 / speed);
+      else if (type === 'ripple') this.duration = Math.round(520 / speed);
+      else if (type === 'fire') this.duration = Math.round(620 / speed);
+      else if (type === 'bubble') this.duration = Math.round(680 / speed);
+      else if (type === 'sphere') this.duration = Math.round(720 / speed);
+      else this.duration = Math.round(500 / speed);
+
       // Pre-spawn fire particles
       if (type === 'fire') {
         for (let i = 0; i < 40; i++) {
@@ -243,7 +263,7 @@ body { display: flex; align-items: center; justify-content: center; }
       const alpha = progress < 0.6 ? 1 : 1 - (progress - 0.6) / 0.4;
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      const color = overlaySettings.laserColor || '#7afcff';
+      const color = this.color || overlaySettings.laserColor || '#7afcff';
       ctx.globalAlpha = alpha * 0.65;
       ctx.strokeStyle = color;
       ctx.lineWidth = 14;
@@ -264,23 +284,34 @@ body { display: flex; align-items: center; justify-content: center; }
 
     drawBeam() {
       const { from, to, progress } = this;
-      const alpha = progress < 0.7 ? 1 : 1 - (progress - 0.7) / 0.3;
+      const alpha = progress < 0.3 ? 1 : 1 - (progress - 0.3) / 0.7;
+      const pulse = 1 + Math.sin(Date.now() / 120) * 0.14;
+      const midX = from.x + (to.x - from.x) * progress;
+      const midY = from.y + (to.y - from.y) * progress;
+      const color = this.color || overlaySettings.laserColor || '#7afcff';
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = alpha * 0.5;
-      ctx.strokeStyle = '#00ff00';
-      ctx.lineWidth = 8;
+      ctx.globalAlpha = alpha * 0.45;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 18 * pulse;
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
-      ctx.lineTo(to.x, to.y);
+      ctx.lineTo(midX, midY);
       ctx.stroke();
-      ctx.globalAlpha = alpha * 0.8;
-      ctx.strokeStyle = '#00ff88';
-      ctx.lineWidth = 2;
+      ctx.globalAlpha = alpha * 0.75;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 6;
       ctx.beginPath();
       ctx.moveTo(from.x, from.y);
-      ctx.lineTo(to.x, to.y);
+      ctx.lineTo(midX, midY);
+      ctx.stroke();
+      ctx.globalAlpha = alpha * 0.85;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(midX, midY);
       ctx.stroke();
       ctx.restore();
     }
@@ -590,7 +621,7 @@ body { display: flex; align-items: center; justify-content: center; }
       bubble: 'bubble',
       bubbles: 'bubble',
       water: 'bubble',
-      beam: 'laser',
+      beam: 'beam',
       laser: 'laser',
       shot: 'laser',
       projectile: 'projectile',
@@ -614,6 +645,7 @@ body { display: flex; align-items: center; justify-content: center; }
       type = 'explosion';
     } else {
       switch (overlaySettings.shotType) {
+        case 'beam': type = 'beam'; break;
         case 'pulse': type = 'fire'; break;
         case 'wave': type = 'ripple'; break;
         default: type = 'laser';
@@ -625,19 +657,22 @@ body { display: flex; align-items: center; justify-content: center; }
     playSound(special ? 'gift' : 'attack');
   }
   function fireHeartEffect(playerId, playerName, heartCount = 1) {
-    const pos = getPositionForPlayer(playerId);
-    if (!pos) return;
+    let pos = getPositionForPlayer(playerId);
+    if (!pos) {
+      const top = topPlayers();
+      pos = top.length ? getPlayerPosition(0, top.length) : getHordePosition();
+    }
     const heartEmojis = ['❤️', '💖', '💘'];
     for (let i = 0; i < heartCount; i++) {
-      const delay = i * 100;
+      const delay = i * 120;
       setTimeout(() => {
         const emoji = heartEmojis[i % heartEmojis.length];
         const particle = new Particle(pos.x, pos.y, {
-          speed: 6 + Math.random() * 3,
+          speed: 6 + Math.random() * 4,
           emoji: emoji,
-          fontSize: 20 + Math.random() * 12,
-          decay: 0.015,
-          rise: 2,
+          fontSize: 16 + i * 4,
+          decay: 0.018,
+          rise: 2.5,
         });
         const tempAttack = new Attack(pos, pos, 'static');
         tempAttack.particles.push(particle);
