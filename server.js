@@ -63,6 +63,7 @@ const CFG = {
 };
 
 const players = {};
+const likeRateTracker = {}; // Track likes per player over 90-second windows
 
 const PLAYERS_FILE   = path.join(__dirname, 'players.json');
 const BG_DIR         = path.join(__dirname, 'backgrounds');
@@ -469,17 +470,37 @@ function getTopPlayers(count = 20) {
 
 function handleMentionAttack(attackerId, attackerNick, comment) {
   const mentions = extractMentions(comment);
-  const cmdMatch = String(comment || '').match(/!(fire|bubbles?|bubble|neon|ripple|sphere|laser|shot|projectile|gift|boom|explode|explosion)/i);
+  
+  // Map special !commands to effects and multipliers
+  const specialCmdMap = {
+    'meteor': { effect: 'fire', multiplier: 8, description: '🌋 METEOR STRIKE' },
+    'tsunami': { effect: 'ripple', multiplier: 7, description: '🌊 TSUNAMI' },
+    'nukes': { effect: 'explosion', multiplier: 6, description: '💣 NUCLEAR BLAST' },
+    'nuke': { effect: 'explosion', multiplier: 6, description: '💣 NUCLEAR BLAST' },
+    'laser': { effect: 'laser', multiplier: 1.5, description: '⚡ LASER' },
+    'beam': { effect: 'laser', multiplier: 1.5, description: '⚡ BEAM' },
+  };
+  
+  const cmdMatch = String(comment || '').match(/!(fire|bubbles?|bubble|neon|ripple|sphere|laser|shot|projectile|gift|boom|explode|explosion|meteor|tsunami|nukes?|beam)/i);
   let requestedEffect = null;
+  let specialMultiplier = 1;
+  let isSpecialCommand = false;
+  
   if (cmdMatch) {
     const cmd = String(cmdMatch[1] || '').toLowerCase();
-    const map = {
-      'fire': 'fire', 'bubbles': 'bubble', 'bubble': 'bubble',
-      'neon': 'neon', 'ripple': 'ripple', 'sphere': 'sphere',
-      'laser': 'laser', 'shot': 'projectile', 'projectile': 'projectile',
-      'gift': 'gift', 'boom': 'explosion', 'explode': 'explosion', 'explosion': 'explosion'
-    };
-    requestedEffect = map[cmd] || cmd;
+    if (specialCmdMap[cmd]) {
+      requestedEffect = specialCmdMap[cmd].effect;
+      specialMultiplier = specialCmdMap[cmd].multiplier;
+      isSpecialCommand = true;
+    } else {
+      const map = {
+        'fire': 'fire', 'bubbles': 'bubble', 'bubble': 'bubble',
+        'neon': 'neon', 'ripple': 'ripple', 'sphere': 'sphere',
+        'laser': 'laser', 'shot': 'projectile', 'projectile': 'projectile',
+        'gift': 'gift', 'boom': 'explosion', 'explode': 'explosion', 'explosion': 'explosion'
+      };
+      requestedEffect = map[cmd] || cmd;
+    }
   }
   if (!mentions.length) return { handled: false, reason: 'No @mention found' };
 
@@ -494,7 +515,7 @@ function handleMentionAttack(attackerId, attackerNick, comment) {
 
   const attacker    = players[attackerId];
   const boostActive = attacker && attacker.messageBoostExpires > Date.now();
-  let   multiplier  = CFG.MESSAGE_LASER_MULTIPLIER;
+  let   multiplier  = isSpecialCommand ? specialMultiplier : CFG.MESSAGE_LASER_MULTIPLIER;
   if (boostActive) multiplier *= CFG.GIFT_MESSAGE_BOOST_MULTIPLIER;
 
   for (const mention of mentions) {
@@ -515,15 +536,19 @@ function handleMentionAttack(attackerId, attackerNick, comment) {
     const result = dealDamage(attackerId, target.uniqueId, multiplier);
     if (result) {
       if (requestedEffect) result.effect = requestedEffect;
+      result.special = isSpecialCommand; // Mark special commands
       emitAttackAndSync(result);
-      emitSoundAndSync('attack');
+      emitSoundAndSync(isSpecialCommand ? 'gift' : 'attack');
       io.emit('commentDamage', {
         attacker: attackerNick,
         target:   target.nickname,
         damage:   result.damage,
         comment,
+        special: isSpecialCommand,
+        effect: requestedEffect,
       });
-      console.log(`💬 ${attackerNick} lasered @${target.uniqueId} for ${result.damage} hp${boostActive ? ' (gift boost)' : ''}`);
+      const cmdLabel = isSpecialCommand ? requestedEffect.toUpperCase() : 'MESSAGE';
+      console.log(`💬 ${attackerNick} ${cmdLabel} → @${target.uniqueId} for ${result.damage} hp${boostActive ? ' (gift boost)' : ''}`)
       return { handled: true, result, target: target.uniqueId };
     }
   }
@@ -1259,8 +1284,23 @@ function setupTikTokEvents(tiktokClient) {
     if (!id) return;
     if (!players[id]) spawnPlayer(id, nick);
     awardStats(id, nick, CFG.LIKE_HP_BOOST, 0);
+    
+    // Track like rates for dynamic heart effects
+    if (!likeRateTracker[id]) {
+      likeRateTracker[id] = { likes: [], window: 90000 }; // 90 second window
+    }
+    const now = Date.now();
+    likeRateTracker[id].likes.push(now);
+    likeRateTracker[id].likes = likeRateTracker[id].likes.filter(t => now - t < likeRateTracker[id].window);
+    
+    // Determine heart effect based on like rate
+    let heartCount = 1; // Default: 1 heart
+    const likeCount = likeRateTracker[id].likes.length;
+    if (likeCount >= 500) heartCount = 3; // Fast rate: 3 hearts (~500 likes/90s)
+    else if (likeCount >= 100) heartCount = 2; // Medium rate: 2 hearts (~100 likes/90s)
+    
     io.emit('soundEvent', { event: 'heal' });
-    io.emit('like', { uniqueId: id, nickname: nick });
+    io.emit('like', { uniqueId: id, nickname: nick, hearts: heartCount, rate: likeCount });
     io.emit('gameState',  players);
   });
 

@@ -140,8 +140,285 @@ body { display: flex; align-items: center; justify-content: center; }
   function getAudio(filename) { if (!audioCache[filename]) { const audio = new Audio(`/audio/${filename}`); audio.preload = 'auto'; audioCache[filename] = audio; } return audioCache[filename]; }
   function playSound(type) { const filename = audioConfig[type]; if (!filename) return; try { const a = getAudio(filename); a.currentTime = 0; a.play().catch(() => {}); } catch (e) {} }
   function showDamage(canvasX, canvasY, damage, kill) { const vp = canvasToViewport(canvasX, canvasY); const el = document.createElement('div'); el.className = `damage${kill ? ' kill' : ''}`; el.textContent = kill ? '💀 KILL!' : `-${Math.round(damage)}`; el.style.left = vp.x + 'px'; el.style.top = vp.y + 'px'; document.body.appendChild(el); setTimeout(() => el.remove(), 900); }
-  class Particle { constructor(x,y,opts={}) { this.x=x; this.y=y; this.vx=(Math.random()-0.5)*(opts.speed||4); this.vy=(Math.random()-0.5)*(opts.speed||4)-(opts.rise||0); this.life=1; this.decay=opts.decay||(0.02+Math.random()*0.03); this.r=opts.radius||(2+Math.random()*3); this.color=opts.color||'#7afcff'; this.emoji=opts.emoji||null; this.fs=opts.fontSize||18; } update() { this.x += this.vx; this.y += this.vy; this.vy += 0.06; this.life -= this.decay; return this.life > 0; } draw(c) { c.save(); c.globalAlpha = Math.max(0,this.life); if (this.emoji) { c.font = `${this.fs}px Arial`; c.textAlign='center'; c.textBaseline='middle'; c.fillText(this.emoji,this.x,this.y); } else { c.fillStyle=this.color; c.shadowColor=this.color; c.shadowBlur=8; c.beginPath(); c.arc(this.x,this.y,this.r*Math.max(0,this.life),0,Math.PI*2); c.fill(); } c.restore(); } }
-  class Attack { constructor(from,to,type='laser'){ this.from=from; this.to=to; this.type=type; this.start=Date.now(); this.progress=0; this.particles=[]; this.spawned=false; this.duration=500; if(type==='projectile')this.duration=600; if(type==='gift')this.duration=900; if(type==='explosion')this.duration=750; if(type==='fire'){ this.duration=550; for(let i=0;i<40;i++){ this.particles.push(new Particle(this.to.x,this.to.y,{ speed:4+Math.random()*4,color:'#ff8844',radius:2+Math.random()*3,decay:0.03 })); } } } update(){ const elapsed=Date.now()-this.start; this.progress=Math.min(1,elapsed/this.duration); this.particles=this.particles.filter(p=>p.update()); return elapsed<this.duration||this.particles.length>0; } draw(){ ctx.save(); switch(this.type){ case'laser':this.drawLaser();break; case'projectile':this.drawProjectile();break; case'gift':this.drawGift();break; case'explosion':this.drawExplosion();break; case'neon':this.drawNeon();break; case'ripple':this.drawRipple();break; case'fire':this.drawFire();break; case'bubble':this.drawBubble();break; case'sphere':this.drawSphere();break; default:this.drawLaser(); } ctx.restore(); } drawLaser(){ const {from,to,progress}=this; const x=from.x+(to.x-from.x)*progress; const y=from.y+(to.y-from.y)*progress; const alpha=progress<0.6?1:1-(progress-0.6)/0.4; ctx.save(); ctx.globalCompositeOperation='lighter'; const color = overlaySettings.laserColor || '#7afcff'; ctx.globalAlpha = alpha * 0.65; ctx.strokeStyle = color; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(from.x,from.y); ctx.lineTo(x,y); ctx.stroke(); ctx.globalAlpha = alpha; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(from.x,from.y); ctx.lineTo(x,y); ctx.stroke(); ctx.restore(); } drawProjectile(){ const {from,to,progress}=this; const x=from.x+(to.x-from.x)*progress; const y=from.y+(to.y-from.y)*progress; ctx.save(); ctx.globalCompositeOperation='lighter'; const grad=ctx.createRadialGradient(x,y,0,x,y,16); grad.addColorStop(0,'rgba(255,255,255,1)'); grad.addColorStop(0.5,'rgba(122,252,255,0.9)'); grad.addColorStop(1,'rgba(122,252,255,0)'); ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(x,y,16,0,Math.PI*2); ctx.fill(); ctx.restore(); } drawGift(){ if(!this.spawned){ this.spawned=true; const heartEmojis = ['❤️','💖','💘','💝']; for(let i=0;i<18;i++){ this.particles.push(new Particle(this.to.x,this.to.y,{ speed:6+Math.random()*4, emoji: heartEmojis[i % heartEmojis.length], fontSize: 18 + Math.random()*10, decay: 0.02 })); } } ctx.globalCompositeOperation='lighter'; this.particles.forEach(p=>p.draw(ctx)); } drawExplosion(){ if(!this.spawned){ this.spawned=true; for(let i=0;i<28;i++){ this.particles.push(new Particle(this.to.x,this.to.y,{ speed:5+Math.random()*8, color:['#ff6644','#ffcc44','#ff2222'][i%3], radius:3+Math.random()*4, decay:0.015 })); } } ctx.globalCompositeOperation='lighter'; this.particles.forEach(p=>p.draw(ctx)); } drawNeon(){ const {from,to,progress}=this; const x=from.x+(to.x-from.x)*progress; const y=from.y+(to.y-from.y)*progress; ctx.globalCompositeOperation='lighter'; ctx.lineWidth=10; ctx.strokeStyle='#00ccff'; ctx.beginPath(); ctx.moveTo(from.x,from.y); ctx.lineTo(x,y); ctx.stroke(); } drawRipple(){ const {from,to,progress}=this; const x=from.x+(to.x-from.x)*progress; const y=from.y+(to.y-from.y)*progress; ctx.globalCompositeOperation='lighter'; for(let i=0;i<3;i++){ const t=progress - i*0.08; if(t<=0) continue; ctx.strokeStyle=`rgba(100,220,255,${1-t})`; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(x,y,10+t*40,0,Math.PI*2); ctx.stroke(); } } drawFire(){ const {from,to,progress}=this; const x=from.x+(to.x-from.x)*progress; const y=from.y+(to.y-from.y)*progress; ctx.globalCompositeOperation='lighter'; const flame=ctx.createRadialGradient(x,y,0,x,y,24); flame.addColorStop(0,'#fff8e0'); flame.addColorStop(0.3,'#ffaa44'); flame.addColorStop(0.7,'#ff4400'); flame.addColorStop(1,'#992200'); ctx.fillStyle=flame; ctx.beginPath(); ctx.arc(x,y,24,0,Math.PI*2); ctx.fill(); this.particles.forEach(p=>p.draw(ctx)); } drawBubble(){ const {from,to,progress}=this; const x=from.x+(to.x-from.x)*progress; const y=from.y+(to.y-from.y)*progress; ctx.fillStyle='rgba(200,240,255,0.75)'; for(let i=0;i<3;i++){ const angle=Date.now()*0.003+i*1.5; const bx=x+Math.cos(angle)*8; const by=y+Math.sin(angle)*8; ctx.beginPath(); ctx.arc(bx,by,10-i*2,0,Math.PI*2); ctx.fill(); } } drawSphere(){ const {from,to,progress}=this; const x=from.x+(to.x-from.x)*progress; const y=from.y+(to.y-from.y)*progress; ctx.globalCompositeOperation='lighter'; const orb=ctx.createRadialGradient(x,y,0,x,y,24); orb.addColorStop(0,'#bbffff'); orb.addColorStop(0.4,'#2288ff'); orb.addColorStop(1,'#002244'); ctx.fillStyle=orb; ctx.beginPath(); ctx.arc(x,y,24,0,Math.PI*2); ctx.fill(); }}}
+  class Particle {
+    constructor(x, y, opts = {}) {
+      this.x = x; this.y = y;
+      this.vx = (Math.random() - 0.5) * (opts.speed || 4);
+      this.vy = (Math.random() - 0.5) * (opts.speed || 4) - (opts.rise || 0);
+      this.life = 1;
+      this.decay = opts.decay || (0.02 + Math.random() * 0.03);
+      this.r = opts.radius || (2 + Math.random() * 3);
+      this.color = opts.color || '#7afcff';
+      this.emoji = opts.emoji || null;
+      this.fs = opts.fontSize || 18;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.vy += 0.06;
+      this.life -= this.decay;
+      return this.life > 0;
+    }
+    draw(c) {
+      c.save();
+      c.globalAlpha = Math.max(0, this.life);
+      if (this.emoji) {
+        c.font = `${this.fs}px Arial`;
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText(this.emoji, this.x, this.y);
+      } else {
+        c.fillStyle = this.color;
+        c.shadowColor = this.color;
+        c.shadowBlur = 8;
+        c.beginPath();
+        c.arc(this.x, this.y, this.r * Math.max(0, this.life), 0, Math.PI * 2);
+        c.fill();
+      }
+      c.restore();
+    }
+  }
+
+  class Attack {
+    constructor(from, to, type = 'laser') {
+      this.from = from;
+      this.to = to;
+      this.type = type;
+      this.start = Date.now();
+      this.progress = 0;
+      this.particles = [];
+      this.spawned = false;
+      
+      // Set duration based on type
+      if (type === 'static') this.duration = 2000; // Particles only
+      else if (type === 'projectile') this.duration = 600;
+      else if (type === 'gift') this.duration = 900;
+      else if (type === 'explosion') this.duration = 750;
+      else if (type === 'beam') this.duration = 350;
+      else this.duration = 500;
+      
+      // Pre-spawn fire particles
+      if (type === 'fire') {
+        for (let i = 0; i < 40; i++) {
+          this.particles.push(new Particle(this.to.x, this.to.y, {
+            speed: 4 + Math.random() * 4,
+            color: '#ff8844',
+            radius: 2 + Math.random() * 3,
+            decay: 0.03
+          }));
+        }
+      }
+    }
+
+    update() {
+      const elapsed = Date.now() - this.start;
+      this.progress = Math.min(1, elapsed / this.duration);
+      this.particles = this.particles.filter(p => p.update());
+      return elapsed < this.duration || this.particles.length > 0;
+    }
+
+    draw() {
+      ctx.save();
+      switch (this.type) {
+        case 'laser': this.drawLaser(); break;
+        case 'beam': this.drawBeam(); break;
+        case 'projectile': this.drawProjectile(); break;
+        case 'gift': this.drawGift(); break;
+        case 'explosion': this.drawExplosion(); break;
+        case 'neon': this.drawNeon(); break;
+        case 'ripple': this.drawRipple(); break;
+        case 'fire': this.drawFire(); break;
+        case 'bubble': this.drawBubble(); break;
+        case 'sphere': this.drawSphere(); break;
+        case 'static': this.drawStatic(); break;
+        default: this.drawLaser();
+      }
+      ctx.restore();
+    }
+
+    drawLaser() {
+      const { from, to, progress } = this;
+      const x = from.x + (to.x - from.x) * progress;
+      const y = from.y + (to.y - from.y) * progress;
+      const alpha = progress < 0.6 ? 1 : 1 - (progress - 0.6) / 0.4;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const color = overlaySettings.laserColor || '#7afcff';
+      ctx.globalAlpha = alpha * 0.65;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 14;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    drawBeam() {
+      const { from, to, progress } = this;
+      const alpha = progress < 0.7 ? 1 : 1 - (progress - 0.7) / 0.3;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = alpha * 0.5;
+      ctx.strokeStyle = '#00ff00';
+      ctx.lineWidth = 8;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(to.x, to.y);
+      ctx.stroke();
+      ctx.globalAlpha = alpha * 0.8;
+      ctx.strokeStyle = '#00ff88';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(to.x, to.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    drawProjectile() {
+      const { from, to, progress } = this;
+      const x = from.x + (to.x - from.x) * progress;
+      const y = from.y + (to.y - from.y) * progress;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, 18);
+      grad.addColorStop(0, 'rgba(255,255,255,1)');
+      grad.addColorStop(0.5, 'rgba(122,252,255,0.9)');
+      grad.addColorStop(1, 'rgba(122,252,255,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, 18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    drawGift() {
+      if (!this.spawned) {
+        this.spawned = true;
+        const heartEmojis = ['❤️', '💖', '💘', '💝'];
+        for (let i = 0; i < 18; i++) {
+          this.particles.push(new Particle(this.to.x, this.to.y, {
+            speed: 6 + Math.random() * 4,
+            emoji: heartEmojis[i % heartEmojis.length],
+            fontSize: 20 + Math.random() * 12,
+            decay: 0.02,
+            rise: 1
+          }));
+        }
+      }
+      ctx.globalCompositeOperation = 'lighter';
+      this.particles.forEach(p => p.draw(ctx));
+    }
+
+    drawExplosion() {
+      if (!this.spawned) {
+        this.spawned = true;
+        for (let i = 0; i < 32; i++) {
+          this.particles.push(new Particle(this.to.x, this.to.y, {
+            speed: 6 + Math.random() * 10,
+            color: ['#ff6644', '#ffcc44', '#ff2222'][i % 3],
+            radius: 3 + Math.random() * 5,
+            decay: 0.015
+          }));
+        }
+      }
+      ctx.globalCompositeOperation = 'lighter';
+      this.particles.forEach(p => p.draw(ctx));
+    }
+
+    drawNeon() {
+      const { from, to, progress } = this;
+      const x = from.x + (to.x - from.x) * progress;
+      const y = from.y + (to.y - from.y) * progress;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineWidth = 12;
+      ctx.strokeStyle = '#00ccff';
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+
+    drawRipple() {
+      const { from, to, progress } = this;
+      const x = from.x + (to.x - from.x) * progress;
+      const y = from.y + (to.y - from.y) * progress;
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 3; i++) {
+        const t = progress - i * 0.08;
+        if (t <= 0) continue;
+        ctx.strokeStyle = `rgba(100,220,255,${1 - t})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 12 + t * 50, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    drawFire() {
+      const { from, to, progress } = this;
+      const x = from.x + (to.x - from.x) * progress;
+      const y = from.y + (to.y - from.y) * progress;
+      ctx.globalCompositeOperation = 'lighter';
+      const flame = ctx.createRadialGradient(x, y, 0, x, y, 28);
+      flame.addColorStop(0, '#fff8e0');
+      flame.addColorStop(0.3, '#ffaa44');
+      flame.addColorStop(0.7, '#ff4400');
+      flame.addColorStop(1, '#992200');
+      ctx.fillStyle = flame;
+      ctx.beginPath();
+      ctx.arc(x, y, 28, 0, Math.PI * 2);
+      ctx.fill();
+      this.particles.forEach(p => p.draw(ctx));
+    }
+
+    drawBubble() {
+      const { from, to, progress } = this;
+      const x = from.x + (to.x - from.x) * progress;
+      const y = from.y + (to.y - from.y) * progress;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(100,220,255,0.6)';
+      for (let i = 0; i < 4; i++) {
+        const angle = Date.now() * 0.003 + i * 1.5;
+        const bx = x + Math.cos(angle) * 10;
+        const by = y + Math.sin(angle) * 10;
+        ctx.beginPath();
+        ctx.arc(bx, by, 12 - i * 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    drawSphere() {
+      const { from, to, progress } = this;
+      const x = from.x + (to.x - from.x) * progress;
+      const y = from.y + (to.y - from.y) * progress;
+      ctx.globalCompositeOperation = 'lighter';
+      const orb = ctx.createRadialGradient(x, y, 0, x, y, 26);
+      orb.addColorStop(0, '#bbffff');
+      orb.addColorStop(0.4, '#2288ff');
+      orb.addColorStop(1, '#002244');
+      ctx.fillStyle = orb;
+      ctx.beginPath();
+      ctx.arc(x, y, 26, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    drawStatic() {
+      // Just draw particles, no animation between points
+      this.particles.forEach(p => p.draw(ctx));
+    }
+  }
   function drawBackground() {
     const W=cw(), H=ch();
     if (backgroundImg) {
@@ -347,6 +624,27 @@ body { display: flex; align-items: center; justify-content: center; }
     showDamage(to.x, to.y, damage || 0, !!killed);
     playSound(special ? 'gift' : 'attack');
   }
+  function fireHeartEffect(playerId, playerName, heartCount = 1) {
+    const pos = getPositionForPlayer(playerId);
+    if (!pos) return;
+    const heartEmojis = ['❤️', '💖', '💘'];
+    for (let i = 0; i < heartCount; i++) {
+      const delay = i * 100;
+      setTimeout(() => {
+        const emoji = heartEmojis[i % heartEmojis.length];
+        const particle = new Particle(pos.x, pos.y, {
+          speed: 6 + Math.random() * 3,
+          emoji: emoji,
+          fontSize: 20 + Math.random() * 12,
+          decay: 0.015,
+          rise: 2,
+        });
+        const tempAttack = new Attack(pos, pos, 'static');
+        tempAttack.particles.push(particle);
+        attacks.push(tempAttack);
+      }, delay);
+    }
+  }
   function draw() {
     resizeCanvas();
     ctx.clearRect(0, 0, cw(), ch());
@@ -385,6 +683,7 @@ body { display: flex; align-items: center; justify-content: center; }
       socket.on('backgroundChanged', ({ filename }) => { if (!filename) { backgroundImg = null; return; } const img = new Image(); img.onload = () => { backgroundImg = img; }; img.src = `/background/${filename}?v=${Date.now()}`; });
       socket.on('attack', data => { fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect); });
       socket.on('giftAttack', ({ attacker, target, damage, killed }) => { fireAttack(attacker, target, damage, killed, true); });
+      socket.on('like', ({ uniqueId, nickname, hearts = 1, rate = 0 }) => { fireHeartEffect(uniqueId, nickname, hearts); });
     } catch (error) {
       statusDiv.textContent = '❌ SOCKET ERROR · no live data';
       statusDiv.className = 'disconnected';
