@@ -87,9 +87,8 @@ body { display: flex; align-items: center; justify-content: center; }
   let audioCache = {};
   let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1 };
   const HORDE_ID = '__HORDE__';
-  let screenShake = { intensity: 0, duration: 0 };
-  let prevPlayerPositions = {}; // for smooth transitions
-  let comboStreaks = {}; // userId -> streak count, reset on death? implement simply
+  let shakeAmount = 0, shakeTimer = 0;
+  let comboStreaks = {};
 
   // ── Canvas helpers ──
   function resizeCanvas() {
@@ -97,10 +96,6 @@ body { display: flex; align-items: center; justify-content: center; }
     if (!rect.width || !rect.height) return;
     canvas.width = rect.width;
     canvas.height = rect.height;
-    // re-create offscreen canvas for static cache if size changed
-    if (staticCanvas && (staticCanvas.width !== canvas.width || staticCanvas.height !== canvas.height)) {
-      staticCanvas = null;
-    }
   }
   function cw() { return canvas.width; }
   function ch() { return canvas.height; }
@@ -167,20 +162,12 @@ body { display: flex; align-items: center; justify-content: center; }
     }
     return audioCache[filename];
   }
-  function playSound(type, xPos) {
+  function playSound(type) {
     const filename = audioConfig[type];
     if (!filename) return;
     try {
       const a = getAudio(filename);
       a.currentTime = 0;
-      // rudimentary spatial: pan based on xPos relative to center
-      if (typeof xPos === 'number') {
-        const pan = Math.min(1, Math.max(-1, (xPos - cw()/2) / (cw()/2) ));
-        if (a.constructor.name === 'Audio') {
-          // simple volume L/R (not true panning)
-          if (pan < 0) { a.volume = 1; a.setSinkId?.('left'); } // not real, skip
-        }
-      }
       a.play().catch(() => {});
     } catch (e) {}
   }
@@ -259,7 +246,7 @@ body { display: flex; align-items: center; justify-content: center; }
       this.progress=0;
       this.particles=[];
       this.spawned=false;
-      this.trailParticles = []; // for laser trail sparks
+      this.trailParticles = [];
       const base = { laser:500, projectile:600, gift:900, explosion:750, fire:550, neon:500, ripple:500, bubble:500, sphere:500 };
       this.duration = (base[type] || 500) / (speed || 1);
       if(type==='fire'){
@@ -272,7 +259,6 @@ body { display: flex; align-items: center; justify-content: center; }
       const elapsed=Date.now()-this.start;
       this.progress=Math.min(1,elapsed/this.duration);
       this.particles=this.particles.filter(p=>p.update());
-      // trail for lasers & projectiles
       if ((this.type === 'laser' || this.type === 'projectile' || this.type === 'neon') && this.progress < 0.9 && Math.random() < 0.6) {
         const x = this.from.x + (this.to.x - this.from.x) * this.progress;
         const y = this.from.y + (this.to.y - this.from.y) * this.progress;
@@ -282,10 +268,7 @@ body { display: flex; align-items: center; justify-content: center; }
       return elapsed < this.duration || this.particles.length>0 || this.trailParticles.length>0;
     }
     draw(){
-      // draw trail sparks first
-      ctx.save();
       this.trailParticles.forEach(p => p.draw(ctx));
-      ctx.restore();
       switch(this.type){
         case'laser':this.drawLaser();break;
         case'projectile':this.drawProjectile();break;
@@ -341,7 +324,6 @@ body { display: flex; align-items: center; justify-content: center; }
       ctx.restore();
     }
     drawGift(){
-      // only if explicit gift effect, not used for triple attack
       if(!this.spawned){
         this.spawned=true;
         const heartEmojis = ['❤️','💖','💘','💝'];
@@ -440,34 +422,26 @@ body { display: flex; align-items: center; justify-content: center; }
     }
   }
 
-  // ── Background (static cache) ──
-  let staticCanvas = null;
-  let staticCtx = null;
-  function updateStaticBackground() {
-    if (!staticCanvas || staticCanvas.width !== canvas.width || staticCanvas.height !== canvas.height) {
-      staticCanvas = document.createElement('canvas');
-      staticCanvas.width = canvas.width;
-      staticCanvas.height = canvas.height;
-      staticCtx = staticCanvas.getContext('2d');
-    }
-    staticCtx.clearRect(0, 0, staticCanvas.width, staticCanvas.height);
+  // ── Background drawing (back to direct, no cache) ──
+  function drawBackground() {
     const W = cw(), H = ch();
+    if (W <= 0 || H <= 0) return;
     if (backgroundImg) {
       const scale = Math.max(W / backgroundImg.width, H / backgroundImg.height);
-      staticCtx.drawImage(backgroundImg, (W - backgroundImg.width * scale) / 2, (H - backgroundImg.height * scale) / 2, backgroundImg.width * scale, backgroundImg.height * scale);
-    } else {
-      const grad = staticCtx.createLinearGradient(0, 0, 0, H);
-      grad.addColorStop(0,'#0d1a2e');
-      grad.addColorStop(1,'#050b12');
-      staticCtx.fillStyle = grad;
-      staticCtx.fillRect(0, 0, W, H);
-      staticCtx.strokeStyle = 'rgba(100,200,255,0.04)';
-      staticCtx.lineWidth = 1;
-      for (let x = 0; x < W; x += 60) { staticCtx.beginPath(); staticCtx.moveTo(x, 0); staticCtx.lineTo(x, H); staticCtx.stroke(); }
-      for (let y = 0; y < H; y += 30) { staticCtx.beginPath(); staticCtx.moveTo(0, y); staticCtx.lineTo(W, y); staticCtx.stroke(); }
-      staticCtx.strokeStyle = 'rgba(140,80,255,0.25)';
-      staticCtx.beginPath(); staticCtx.moveTo(0, H * 0.60); staticCtx.lineTo(W, H * 0.60); staticCtx.stroke();
+      ctx.drawImage(backgroundImg, (W - backgroundImg.width * scale) / 2, (H - backgroundImg.height * scale) / 2, backgroundImg.width * scale, backgroundImg.height * scale);
+      return;
     }
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0,'#0d1a2e');
+    grad.addColorStop(1,'#050b12');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(100,200,255,0.04)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(140,80,255,0.25)';
+    ctx.beginPath(); ctx.moveTo(0, H * 0.60); ctx.lineTo(W, H * 0.60); ctx.stroke();
   }
 
   // ── Player Card & Horde Drawing (with idle bob & HP lerp) ──
@@ -665,18 +639,16 @@ body { display: flex; align-items: center; justify-content: center; }
     const speed = overlaySettings.shotSpeed || 1;
     attacks.push(new Attack(from, to, type, speed));
     showDamage(to.x, to.y, damage || 0, !!killed);
-    playSound(special ? 'gift' : 'attack', from.x);
+    playSound(special ? 'gift' : 'attack');
     if (killed) {
       triggerShake(10, 400);
       addKillFeed(`${players[attackerId]?.nickname || attackerId} 💀 ${players[targetId]?.nickname || targetId}`);
-      // combo streak (simplified)
       comboStreaks[attackerId] = (comboStreaks[attackerId] || 0) + 1;
       comboStreaks[targetId] = 0;
     }
   }
 
   // ── Screen shake ──
-  let shakeAmount = 0, shakeTimer = 0;
   function triggerShake(intensity, duration) {
     shakeAmount = intensity;
     shakeTimer = duration;
@@ -697,10 +669,14 @@ body { display: flex; align-items: center; justify-content: center; }
     ctx.restore();
   }
 
-  // ── Main Draw Loop ──
+  // ── Main Draw Loop (fixed) ──
   function draw() {
-    const dt = 16; // ms approx
+    const dt = 16;
     resizeCanvas();
+    if (cw() <= 0 || ch() <= 0) {
+      requestAnimationFrame(draw);
+      return;
+    }
 
     // Update shake
     if (shakeTimer > 0) {
@@ -712,16 +688,11 @@ body { display: flex; align-items: center; justify-content: center; }
 
     ctx.clearRect(0, 0, cw(), ch());
 
-    // Draw cached static background
-    if (!staticCanvas || backgroundImg !== null && staticCanvas.width !== canvas.width) {
-      updateStaticBackground();
-    }
-    if (staticCanvas) {
-      ctx.save();
-      ctx.translate(sx, sy);
-      ctx.drawImage(staticCanvas, 0, 0);
-      ctx.restore();
-    }
+    // Draw background with shake
+    ctx.save();
+    ctx.translate(sx, sy);
+    drawBackground();
+    ctx.restore();
 
     // Draw players and horde with shake
     ctx.save();
@@ -731,13 +702,13 @@ body { display: flex; align-items: center; justify-content: center; }
     drawHorde(hordePlayer());
     ctx.restore();
 
-    // Draw attacks (with shake)
+    // Draw attacks with shake
     ctx.save();
     ctx.translate(sx, sy);
     attacks = attacks.filter(a => { const alive = a.update(); if (alive) a.draw(); return alive; });
     ctx.restore();
 
-    // Apply bloom on top of everything
+    // Bloom
     applyBloom();
 
     requestAnimationFrame(draw);
@@ -777,7 +748,6 @@ body { display: flex; align-items: center; justify-content: center; }
           if (!Object.keys(players).length) {
             fetch('/state').then(r => r.json()).then(s => { players = normalizePlayers(s || {}); }).catch(() => {});
           }
-          updateStaticBackground(); // re-cache background if image changed? not needed here, but safe
         }
       });
       socket.on('audioConfig', cfg => { if (cfg) audioConfig = cfg; });
@@ -789,9 +759,9 @@ body { display: flex; align-items: center; justify-content: center; }
       });
       socket.on('laserColor', color => { if (typeof color === 'string') overlaySettings.laserColor = color; });
       socket.on('backgroundChanged', ({ filename }) => {
-        if (!filename) { backgroundImg = null; staticCanvas = null; return; }
+        if (!filename) { backgroundImg = null; return; }
         const img = new Image();
-        img.onload = () => { backgroundImg = img; staticCanvas = null; };
+        img.onload = () => { backgroundImg = img; };
         img.src = `/background/${filename}?v=${Date.now()}`;
       });
       socket.on('attack', data => { fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect); });
@@ -807,7 +777,6 @@ body { display: flex; align-items: center; justify-content: center; }
         }
         updateControlLabels();
       });
-      // Demo mode: spawn fake players & auto attack
       if (isDemo) {
         setTimeout(() => {
           const demoNames = ['Ace', 'Blaze', 'Viper', 'Ghost', 'Storm'];
