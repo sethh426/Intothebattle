@@ -347,6 +347,23 @@ function randomColor() {
   return palette[Math.floor(Math.random() * palette.length)];
 }
 
+function normalizeTikTokId(user) {
+  if (!user || typeof user !== 'object') return null;
+  return String(user.uniqueId || user.unique_id || user.userId || user.id || '').trim().toLowerCase() || null;
+}
+
+function normalizeTikTokNick(user) {
+  if (!user || typeof user !== 'object') return null;
+  return String(user.nickname || user.nick || user.displayName || user.name || '').trim() || null;
+}
+
+function resolveTikTokUser(eventPayload) {
+  const user = eventPayload?.user || eventPayload?.sender || eventPayload?.author || {};
+  const id = normalizeTikTokId(user);
+  const nickname = normalizeTikTokNick(user) || id;
+  return { id, nickname };
+}
+
 function spawnPlayer(uniqueId, nickname) {
   if (!uniqueId) return;
   if (players[uniqueId]?.alive) {
@@ -666,12 +683,20 @@ app.use('/audio', (req, res, next) => {
 let overlayCount = 0;
 
 io.on('connection', (socket) => {
-  socket.emit('overlayCount', overlayCount);
-  socket.emit('overlaySettings', overlaySettings);
-  socket.emit('laserColor', overlaySettings.laserColor);
+  socket.emit('serverReady', {
+    socketId: socket.id,
+    overlayCount,
+    overlaySettings,
+    laserColor: overlaySettings.laserColor,
+    gameStateCount: Object.values(players).filter(p => p.alive).length,
+  });
 
   socket.on('register', ({ type } = {}) => {
-    if (type === 'overlay') {
+    const clientType = String(type || 'unknown').toLowerCase();
+    socket.data.clientType = clientType;
+
+    if (clientType === 'overlay') {
+      socket.join('overlays');
       overlayCount++;
       io.emit('overlayCount', overlayCount);
       try { overlayGauge.set(overlayCount); } catch (_) {}
@@ -683,12 +708,20 @@ io.on('connection', (socket) => {
       if (currentBackground) {
         socket.emit('backgroundChanged', { filename: currentBackground.filename });
       }
+    } else if (clientType === 'dashboard' || clientType === 'stats') {
+      socket.join(clientType);
+      socket.emit('overlayCount', overlayCount);
+      socket.emit('overlaySettings', overlaySettings);
+      socket.emit('laserColor', overlaySettings.laserColor);
+      socket.emit('gameState', players);
+    }
+  });
 
-      socket.on('disconnect', () => {
-        overlayCount = Math.max(0, overlayCount - 1);
-        io.emit('overlayCount', overlayCount);
-        try { overlayGauge.set(overlayCount); } catch (_) {}
-      });
+  socket.on('disconnect', () => {
+    if (socket.data.clientType === 'overlay') {
+      overlayCount = Math.max(0, overlayCount - 1);
+      io.emit('overlayCount', overlayCount);
+      try { overlayGauge.set(overlayCount); } catch (_) {}
     }
   });
 
@@ -1182,12 +1215,11 @@ function setupTikTokEvents(tiktokClient) {
 
   tiktokClient.on('chat', (e) => {
     console.log('CHAT EVENT:', JSON.stringify(e, null, 2));
-    const id      = e.user?.uniqueId;
-    const nick    = e.user?.nickname || id;
-    const comment = e.comment || '';
+    const { id, nickname } = resolveTikTokUser(e);
+    const comment = String(e.comment || e.message || '').trim();
     if (!id) return;
 
-    awardStats(id, nick, 0, CFG.CHAT_STRENGTH_BOOST);
+    awardStats(id, nickname, 0, CFG.CHAT_STRENGTH_BOOST);
 
     const iconMatch = comment.match(/^\s*(?:!emoji|\/emoji|emoji)\s+(.+)/i);
     if (iconMatch) {
@@ -1224,9 +1256,8 @@ function setupTikTokEvents(tiktokClient) {
   });
 
   tiktokClient.on('gift', (e) => {
-    const id       = e.user?.uniqueId;
-    const nick     = e.user?.nickname || id;
-    const diamonds = (e.diamondCount || 1) * (e.repeatCount || 1);
+    const { id, nickname } = resolveTikTokUser(e);
+    const diamonds = (e.diamondCount || e.amount || 1) * (e.repeatCount || 1);
     if (!id) return;
 
     const alivePlayers  = Object.values(players).filter(p => p.alive);
@@ -1284,11 +1315,10 @@ function setupTikTokEvents(tiktokClient) {
   });
 
   tiktokClient.on('like', (e) => {
-    const id   = e.user?.uniqueId;
-    const nick = e.user?.nickname || id;
+    const { id, nickname } = resolveTikTokUser(e);
     if (!id) return;
-    if (!players[id]) spawnPlayer(id, nick);
-    awardStats(id, nick, CFG.LIKE_HP_BOOST, 0);
+    if (!players[id]) spawnPlayer(id, nickname);
+    awardStats(id, nickname, CFG.LIKE_HP_BOOST, 0);
     
     // Track like rates for dynamic heart effects
     if (!likeRateTracker[id]) {
@@ -1310,10 +1340,9 @@ function setupTikTokEvents(tiktokClient) {
   });
 
   tiktokClient.on('social', (e) => {
-    const id   = e.user?.uniqueId;
-    const nick = e.user?.nickname || id;
+    const { id, nickname } = resolveTikTokUser(e);
     if (!id) return;
-    if (!players[id]) spawnPlayer(id, nick);
+    if (!players[id]) spawnPlayer(id, nickname);
     awardStats(id, nick, 0, CFG.SOCIAL_STRENGTH_BOOST);
     io.emit('gameState', players);
   });
