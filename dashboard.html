@@ -2,163 +2,953 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Battle Royale — Command Center</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+<title>Battle Royale Overlay · Cinematic</title>
 <style>
-/* ... (all existing styles remain unchanged) ... */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #02040a; font-family: 'Segoe UI', sans-serif; }
+body { display: flex; align-items: center; justify-content: center; }
+#overlay-container { position: relative; width: min(90vw, 1920px); aspect-ratio: 16 / 9; background: rgba(4, 8, 18, 0.92); border: 1px solid rgba(180, 120, 255, 0.35); border-radius: 18px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06), 0 0 48px rgba(140,80,255,0.18); overflow: hidden; }
+#canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.ui-layer { position: fixed; inset: 0; z-index: 20; pointer-events: none; }
+.panel-wrapper { position: fixed; top: 16px; right: 0; display: flex; align-items: flex-start; pointer-events: auto; z-index: 30; }
+.panel-tab { width: 28px; background: rgba(6,10,20,0.88); border: 1px solid rgba(100,200,255,0.2); border-right: none; border-radius: 8px 0 0 8px; padding: 10px 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #8fd8ff; font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; writing-mode: vertical-rl; text-orientation: mixed; user-select: none; transition: background 0.2s; }
+.panel-tab:hover { background: rgba(20,40,70,0.95); }
+.panel-tab-icon { font-size: 13px; writing-mode: horizontal-tb; }
+.layout-panel { width: 240px; padding: 14px 16px; border-radius: 0 0 0 16px; background: rgba(6,10,20,0.92); backdrop-filter: blur(16px); border: 1px solid rgba(100,200,255,0.14); border-right: none; box-shadow: -8px 0 30px rgba(0,0,0,0.5); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease; transform-origin: right top; max-height: 90vh; overflow-y: auto; }
+.layout-panel.hidden { transform: translateX(100%); opacity: 0; pointer-events: none; }
+.layout-title { color: #8fd8ff; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 14px; }
+.control { margin-bottom: 13px; }
+.control-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
+.control-top span { font-size: 11px; color: #cfefff; }
+.control input { width: 100%; appearance: none; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.08); outline: none; }
+.control input::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9); cursor: pointer; }
+.control input::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9); cursor: pointer; border: none; }
+#status-badge { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); backdrop-filter: blur(8px); border-radius: 24px; padding: 4px 16px; font-size: 11px; font-weight: bold; letter-spacing: 1px; color: #aaa; pointer-events: none; z-index: 9999; font-family: monospace; transition: 0.2s; }
+#status-badge.connected { color: #7aff87; text-shadow: 0 0 4px #2eff5e; }
+#status-badge.disconnected { color: #ff8866; }
+.damage { position: fixed; font-weight: 900; font-size: clamp(18px,3vw,28px); color: #ff5050; text-shadow: 0 0 16px rgba(255,80,80,0.95), 2px 2px 8px rgba(0,0,0,0.9); animation: floatDamage 0.85s ease-out forwards; pointer-events: none; z-index: 9999; transform: translate(-50%, -50%); white-space: nowrap; }
+.damage.kill { color: #ffd84f; font-size: clamp(22px,4vw,34px); text-shadow: 0 0 20px rgba(255,216,79,0.95); }
+@keyframes floatDamage { 0% { opacity: 1; transform: translate(-50%, -50%) scale(1.15); } 100% { opacity: 0; transform: translate(-50%, -160%) scale(0.65); } }
+
+/* Banner styles */
+.banner { position: fixed; left: 50%; top: 8%; transform: translate(-50%, 0); z-index: 10000; pointer-events: none; font-family: 'Segoe UI', sans-serif; font-weight: 900; text-align: center; animation: bannerIn 0.4s ease-out, bannerOut 0.6s ease-in 2.5s forwards; white-space: nowrap; }
+.banner.kill { font-size: 2vw; color: #ffcc44; text-shadow: 0 0 30px rgba(255,200,0,0.9), 0 0 80px rgba(255,100,0,0.6); }
+.banner.streak { font-size: 2.2vw; color: #ff44aa; text-shadow: 0 0 40px rgba(255,68,170,0.9); }
+.banner.gift { font-size: 1.8vw; color: #fff; background: rgba(0,0,0,0.5); padding: 12px 36px; border-radius: 40px; backdrop-filter: blur(10px); text-shadow: 0 0 20px rgba(255,255,255,0.8); }
+@keyframes bannerIn { 0% { opacity: 0; transform: translate(-50%, -30px); } 100% { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes bannerOut { to { opacity: 0; transform: translate(-50%, -20px); } }
+.reload-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; }
+.reload-overlay .countdown { font-size: 4vw; color: #fff; font-family: monospace; }
+.reload-overlay .reason { font-size: 1.2vw; color: #aaa; margin-top: 20px; }
 </style>
 </head>
 <body>
-<div id="toast"></div>
-<div class="dashboard-shell">
-  <!-- HEADER -->
-  <div class="topbar">
-    <div class="brand">
-      <div class="brand-logo">🎮</div>
-      <div class="brand-text">
-        <h1>Battle Royale Command Center</h1>
-        <p>Interactive TikTok LIVE overlay management system</p>
-      </div>
+<div id="overlay-container">
+  <canvas id="canvas"></canvas>
+</div>
+<div class="ui-layer">
+  <div class="panel-wrapper">
+    <div class="panel-tab" id="togglePanel"><span class="panel-tab-icon">⚡</span>LAYOUT</div>
+    <div class="layout-panel" id="layoutPanel">
+      <div class="layout-title">Layout Controls</div>
+      <div class="control"><div class="control-top"><span>Column Gap</span><span id="gapValue">0</span></div><input id="gapControl" type="range" min="0" max="200" value="0" /></div>
+      <div class="control"><div class="control-top"><span>Horizontal Offset</span><span id="offsetXValue">0</span></div><input id="offsetXControl" type="range" min="-400" max="400" value="0" /></div>
+      <div class="control"><div class="control-top"><span>Vertical Position</span><span id="offsetYValue">0</span></div><input id="offsetYControl" type="range" min="-200" max="200" value="0" /></div>
+      <div class="control"><div class="control-top"><span>Layout Height</span><span id="heightValue">85%</span></div><input id="heightControl" type="range" min="30" max="100" value="85" /></div>
+      <div class="control"><div class="control-top"><span>Zoom</span><span id="zoomValue">100%</span></div><input id="zoomControl" type="range" min="60" max="140" value="100" /></div>
     </div>
-    <div class="topbar-right">
-      <div class="live-chip">
-        <div class="live-dot"></div>
-        LIVE SYSTEM
-      </div>
-      <button class="btn btn-secondary" onclick="resetTikTok()">Logout</button>
-    </div>
-  </div>
-  <!-- GRID -->
-  <div class="grid">
-    <!-- TIKTOK -->
-    <div class="card col-6">
-      <div class="card-header">
-        <div class="card-title">TikTok Live Connection</div>
-        <div class="card-badge">Realtime WebSocket</div>
-      </div>
-      <div class="status-chip offline" id="tiktok-chip">
-        <div class="pulse-dot"></div>
-        <span id="tiktok-label">Disconnected</span>
-      </div>
-      <div class="input-group">
-        <label class="input-label">TikTok Username</label>
-        <input type="text" id="username" placeholder="@yourusername" />
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-success" style="flex:1" onclick="connect()">✓ Connect</button>
-        <button class="btn btn-danger" style="flex:1" onclick="resetTikTok()">✕ Disconnect</button>
-      </div>
-    </div>
-    <!-- OVERLAY -->
-    <div class="card col-6">
-      <div class="card-header">
-        <div class="card-title">Overlay Status</div>
-        <div class="card-badge">Browser Source</div>
-      </div>
-      <div class="status-chip offline" id="overlay-chip">
-        <div class="pulse-dot"></div>
-        <span id="overlay-label">No overlay connected</span>
-      </div>
-      <div class="stat-box">
-        <span class="stat-label">Active Players</span>
-        <span class="stat-value" id="player-count">—</span>
-      </div>
-      <div class="stat-box">
-        <span class="stat-label">Events / Second</span>
-        <span class="stat-value">—</span>
-      </div>
-      <div class="divider"></div>
-      <div class="btn-row">
-        <button class="btn btn-primary" style="flex:1" onclick="reloadOverlay()">↺ Reload Overlay</button>
-        <button class="btn btn-secondary" onclick="clearPlayers()">Clear Players</button>
-      </div>
-    </div>
-    <!-- BACKGROUND -->
-    <div class="card col-4">
-      <div class="card-header">
-        <div class="card-title">Background Manager</div>
-      </div>
-      <div class="input-group">
-        <label class="input-label">Overlay Background</label>
-        <input type="file" id="bgUpload" accept="image/jpeg,image/png,image/gif,image/webp" />
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" style="flex:1" onclick="uploadBackground()">Upload Background</button>
-        <button class="btn btn-warning" onclick="clearBackground()">Clear</button>
-      </div>
-      <p id="bgStatus" style="margin-top:14px; color:var(--text-soft); font-size:12px;">No background set</p>
-    </div>
-    <!-- LASERS — FIXED: all five shot types -->
-    <div class="card col-4">
-      <div class="card-header">
-        <div class="card-title">Laser Controls</div>
-        <div class="card-badge">Animation FX</div>
-      </div>
-      <div class="input-group">
-        <label class="input-label">Shot Style</label>
-        <select id="laserStyleSelect" onchange="setShotStyle(this.value)">
-          <option value="beam">Beam</option>
-          <option value="pulse">Pulse</option>
-          <option value="wave">Wave</option>
-          <option value="burst">Burst</option>
-          <option value="ripple">Ripple</option>
-        </select>
-      </div>
-      <div class="input-group">
-        <label class="input-label">Shot Speed <span id="laserSpeedLabel">1.0x</span></label>
-        <input type="range" id="laserSpeedRange" min="0.5" max="3" step="0.1" value="1"
-               oninput="updateLaserSpeedLabel(this.value)" onchange="setShotSpeed(this.value)" />
-      </div>
-      <div class="input-group">
-        <label class="input-label">Laser Color</label>
-        <input type="color" id="laserColorPicker" value="#7afcff"
-               onchange="setLaserColor(this.value)"
-               style="height:50px; padding:4px; border-radius:14px; background:var(--surface-3); border:1px solid rgba(255,255,255,0.08);" />
-      </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="saveLaserStyle()">Save Laser Style</button>
-    </div>
-    <!-- DEV MODE -->
-    <div class="card col-4">
-      <div class="card-header">
-        <div class="card-title">Developer Tools</div>
-      </div>
-      <p style="color:var(--text-soft); font-size:13px; line-height:1.6; margin-bottom:18px;">
-        Trigger overlay attacks, gifts, kills, heals, and animation tests instantly.
-      </p>
-      <div class="btn-row">
-        <button class="btn btn-success" onclick="testOverlayAttack()">Attack</button>
-        <button class="btn btn-warning" onclick="testOverlayGift()">Gift</button>
-        <button class="btn btn-purple" onclick="testOverlayHeal()">Heal</button>
-        <button class="btn btn-danger" onclick="testOverlayKill()">Kill</button>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-info" onclick="testEffectCommand('laser')">⚡ Laser</button>
-        <button class="btn btn-danger" onclick="testEffectCommand('fire')">🔥 Fire</button>
-        <button class="btn btn-primary" onclick="testEffectCommand('water')">💧 Water</button>
-        <button class="btn btn-warning" onclick="testEffectCommand('wave')">〰️ Wave</button>
-        <button class="btn btn-success" onclick="testEffectCommand('hearts')">❤️ Hearts</button>
-      </div>
-    </div>
-    <!-- AUDIO -->
-    <div class="card col-12">
-      <!-- (audio section unchanged) -->
-    </div>
-  </div>
-  <!-- FOOTER -->
-  <div class="footer">
-    <button class="footer-btn primary" onclick="window.open('/overlay','_blank')">🖥️ Open Overlay</button>
-    <button class="footer-btn secondary" onclick="window.open('/stats','_blank')">↗ Stats</button>
-    <button class="footer-btn secondary" onclick="window.open('/api/status','_blank')">↗ Raw JSON</button>
   </div>
 </div>
+<div id="status-badge" class="disconnected">⚡ CONNECTING...</div>
 <script src="/socket.io/socket.io.js"></script>
 <script>
-/* ---- KEEPING YOUR EXISTING LOGIC (identical to your previous dashboard) ---- */
-const socket = io();
-/* ... all the socket listeners and functions from your previous dashboard exactly as before ... */
-/* Only the laser style select now includes all five types, and the color picker default is #7afcff. */
+(function () {
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', { alpha: true });
+  const container = document.getElementById('overlay-container');
+  const statusDiv = document.getElementById('status-badge');
+  const gapControl = document.getElementById('gapControl');
+  const offsetXControl = document.getElementById('offsetXControl');
+  const offsetYControl = document.getElementById('offsetYControl');
+  const heightControl = document.getElementById('heightControl');
+  const zoomControl = document.getElementById('zoomControl');
+  const togglePanel = document.getElementById('togglePanel');
+  const layoutPanel = document.getElementById('layoutPanel');
+  let players = {};
+  let attacks = [];
+  let layoutGap = 0;
+  let offsetX = 0;
+  let offsetY = 0;
+  let layoutZoom = 1;
+  let backgroundImg = null;
+  let socket = null;
+  let audioConfig = {};
+  let audioCache = {};
+  let overlaySettings = { shotType: 'beam', laserColor: '#7afcff' };
+  const HORDE_ID = '__HORDE__';
+
+  function resizeCanvas() {
+    const rect = container.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+  }
+  function cw() { return canvas.width; }
+  function ch() { return canvas.height; }
+  function updateControlLabels() {
+    document.getElementById('gapValue').textContent = Math.round(layoutGap);
+    document.getElementById('offsetXValue').textContent = Math.round(offsetX);
+    document.getElementById('offsetYValue').textContent = Math.round(offsetY);
+    document.getElementById('heightValue').textContent = heightControl.value + '%';
+    document.getElementById('zoomValue').textContent = `${Math.round(layoutZoom * 100)}%`;
+  }
+  gapControl.oninput = () => { layoutGap = parseFloat(gapControl.value); updateControlLabels(); };
+  offsetXControl.oninput = () => { offsetX = parseFloat(offsetXControl.value); updateControlLabels(); };
+  offsetYControl.oninput = () => { offsetY = parseFloat(offsetYControl.value); updateControlLabels(); };
+  heightControl.oninput = () => { container.style.height = heightControl.value + 'vh'; resizeCanvas(); updateControlLabels(); };
+  zoomControl.oninput = () => { layoutZoom = parseFloat(zoomControl.value) / 100; updateControlLabels(); };
+  togglePanel.onclick = () => { layoutPanel.classList.toggle('hidden'); togglePanel.querySelector('.panel-tab-icon').textContent = layoutPanel.classList.contains('hidden') ? '⚙' : '⚡'; };
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+  updateControlLabels();
+
+  function isPlayerAlive(player) { return player && player.alive !== false; }
+  function topPlayers() {
+    return Object.values(players)
+      .filter(p => isPlayerAlive(p) && p.uniqueId !== HORDE_ID)
+      .sort((a,b) => {
+        const hpDiff = (b.hp || 0) - (a.hp || 0);
+        if (hpDiff !== 0) return hpDiff;
+        const killDiff = (b.kills || 0) - (a.kills || 0);
+        if (killDiff !== 0) return killDiff;
+        const activeDiff = (b.lastActive || 0) - (a.lastActive || 0);
+        if (activeDiff !== 0) return activeDiff;
+        return String(a.uniqueId || '').localeCompare(String(b.uniqueId || ''));
+      })
+      .slice(0,5);
+  }
+  function hordePlayer() {
+    const topSet = new Set(topPlayers().map(p => p.uniqueId));
+    const rest = Object.values(players).filter(p => isPlayerAlive(p) && !topSet.has(p.uniqueId));
+    if (!rest.length) return null;
+    return {
+      uniqueId: HORDE_ID,
+      nickname: 'THE HORDE',
+      hp: rest.reduce((s,p) => s + (p.hp || 0), 0),
+      maxHp: rest.reduce((s,p) => s + (p.maxHp || 100), 0),
+      hordeCount: rest.length,
+      alive: true
+    };
+  }
+  function getPlayerPosition(index, total) {
+    const W = cw();
+    const H = ch();
+    const cardH = H * 0.5 * 0.84 * layoutZoom;
+    const cardW = cardH * 0.72;
+    const totalWidth = cardW * total + layoutGap * Math.max(0, total - 1);
+    const startX = (W - totalWidth) / 2 + offsetX;
+    return { x: startX + index * (cardW + layoutGap) + cardW / 2, y: H * 0.28 + offsetY + (H * 0.16 * (1 - layoutZoom)) };
+  }
+  function getPositionForPlayer(playerId) {
+    const top = topPlayers();
+    const index = top.findIndex(p => p.uniqueId === playerId || p.id === playerId);
+    if (index !== -1) return getPlayerPosition(index, top.length);
+    return getHordePosition();
+  }
+  function getHordePosition() {
+    const W = cw();
+    const H = ch();
+    return { x: W / 2 + offsetX, y: H * 0.72 + offsetY + (H * 0.20 * (1 - layoutZoom)) };
+  }
+  function canvasToViewport(cx, cy) { const rect = canvas.getBoundingClientRect(); const scaleX = rect.width / cw(); const scaleY = rect.height / ch(); return { x: rect.left + cx * scaleX, y: rect.top + cy * scaleY }; }
+  function getAudio(filename) { if (!audioCache[filename]) { const audio = new Audio(`/audio/${filename}`); audio.preload = 'auto'; audioCache[filename] = audio; } return audioCache[filename]; }
+  function playSound(type) { const filename = audioConfig[type]; if (!filename) return; try { const a = getAudio(filename); a.currentTime = 0; a.play().catch(() => {}); } catch (e) {} }
+
+  // ---------- UI helpers ----------
+  function showBanner(className, text) {
+    const banner = document.createElement('div');
+    banner.className = `banner ${className}`;
+    banner.innerHTML = text;
+    document.body.appendChild(banner);
+    setTimeout(() => banner.remove(), 3200);
+  }
+
+  function showDamage(canvasX, canvasY, damage, kill) {
+    const vp = canvasToViewport(canvasX, canvasY);
+    const el = document.createElement('div');
+    el.className = `damage${kill ? ' kill' : ''}`;
+    el.textContent = kill ? '💀 KILL!' : `-${Math.round(damage)}`;
+    el.style.left = vp.x + 'px';
+    el.style.top = vp.y + 'px';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 900);
+  }
+
+  // ---------- Particle system ----------
+  class Particle {
+    constructor(x, y, opts = {}) {
+      this.x = x; this.y = y;
+      this.vx = (Math.random() - 0.5) * (opts.speed || 4);
+      this.vy = (Math.random() - 0.5) * (opts.speed || 4) - (opts.rise || 0);
+      this.life = 1;
+      this.decay = opts.decay || (0.02 + Math.random() * 0.03);
+      this.r = opts.radius || (2 + Math.random() * 3);
+      this.color = opts.color || '#7afcff';
+      this.emoji = opts.emoji || null;
+      this.fs = opts.fontSize || 18;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.vy += 0.06;
+      this.life -= this.decay;
+      return this.life > 0;
+    }
+    draw(c) {
+      c.save();
+      c.globalAlpha = Math.max(0, this.life);
+      if (this.emoji) {
+        c.font = `${this.fs}px Arial`;
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText(this.emoji, this.x, this.y);
+      } else {
+        c.fillStyle = this.color;
+        c.shadowColor = this.color;
+        c.shadowBlur = 8;
+        c.beginPath();
+        c.arc(this.x, this.y, this.r * Math.max(0, this.life), 0, Math.PI * 2);
+        c.fill();
+      }
+      c.restore();
+    }
+  }
+
+  // ---------- Attack class (enriched) ----------
+  class Attack {
+    constructor(from, to, type = 'laser', options = {}) {
+      this.from = from;
+      this.to = to;
+      this.type = type;
+      this.intensity = options.intensity || 0.5;
+      this.critical = options.critical || false;
+      this.streak = options.streak || 0;
+      this.giftBoosted = options.giftBoosted || false;
+      this.remainingHpPct = options.remainingHpPct ?? 1;
+      this.killingBlow = options.killingBlow || false;
+      this.color = options.color || overlaySettings.laserColor || '#7afcff';
+      this.start = Date.now();
+      this.progress = 0;
+      this.particles = [];
+      this.spawned = false;
+      const speed = Math.max(0.5, overlaySettings.shotSpeed || 1);
+
+      if (type === 'static') this.duration = Math.round(1800 / speed);
+      else if (type === 'projectile') this.duration = Math.round(700 / speed);
+      else if (type === 'gift') this.duration = Math.round(900 / speed);
+      else if (type === 'explosion') this.duration = Math.round(750 / speed);
+      else if (type === 'beam') this.duration = Math.round(360 / speed);
+      else if (type === 'neon') this.duration = Math.round(420 / speed);
+      else if (type === 'ripple') this.duration = Math.round(520 / speed);
+      else if (type === 'fire') this.duration = Math.round(620 / speed);
+      else if (type === 'bubble') this.duration = Math.round(680 / speed);
+      else if (type === 'sphere') this.duration = Math.round(720 / speed);
+      else this.duration = Math.round(500 / speed);
+
+      if (type === 'fire' || this.intensity > 0.8 || this.critical) {
+        const count = type === 'fire' ? 40 + Math.floor(this.intensity * 20) : (this.critical ? 20 : 0);
+        for (let i = 0; i < count; i++) {
+          this.particles.push(new Particle(this.to.x, this.to.y, {
+            speed: 3 + Math.random() * 6,
+            color: type === 'fire' ? '#ff8844' : '#ffffff',
+            radius: 2 + Math.random() * 4,
+            decay: 0.03
+          }));
+        }
+      }
+      if (this.giftBoosted) {
+        for (let i = 0; i < 8; i++) {
+          this.particles.push(new Particle(this.from.x, this.from.y, {
+            speed: 2,
+            color: '#ffd700',
+            radius: 1.5,
+            decay: 0.05,
+            rise: 0.5
+          }));
+        }
+      }
+    }
+
+    update() {
+      const elapsed = Date.now() - this.start;
+      this.progress = Math.min(1, elapsed / this.duration);
+      this.particles = this.particles.filter(p => p.update());
+      return elapsed < this.duration || this.particles.length > 0;
+    }
+
+    draw() {
+      ctx.save();
+      switch (this.type) {
+        case 'laser': this.drawLaser(); break;
+        case 'beam': this.drawBeam(); break;
+        case 'projectile': this.drawProjectile(); break;
+        case 'gift': this.drawGift(); break;
+        case 'explosion': this.drawExplosion(); break;
+        case 'neon': this.drawNeon(); break;
+        case 'ripple': this.drawRipple(); break;
+        case 'fire': this.drawFire(); break;
+        case 'bubble': this.drawBubble(); break;
+        case 'sphere': this.drawSphere(); break;
+        case 'static': this.drawStatic(); break;
+        default: this.drawLaser();
+      }
+      ctx.restore();
+    }
+
+    drawLaser() {
+      const { from, to, progress } = this;
+      const x = from.x + (to.x - from.x) * progress;
+      const y = from.y + (to.y - from.y) * progress;
+      const alpha = progress < 0.6 ? 1 : 1 - (progress - 0.6) / 0.4;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const color = this.color;
+      if (this.giftBoosted) {
+        ctx.globalAlpha = alpha * 0.3;
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 24;
+        ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(x, y); ctx.stroke();
+      }
+      ctx.globalAlpha = alpha * (0.4 + this.intensity * 0.3);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 14 + this.intensity * 8;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(x, y); ctx.stroke();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(x, y); ctx.stroke();
+      if (this.critical) {
+        ctx.globalAlpha = alpha * 0.5;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 10;
+        ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(x, y); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    drawBeam() {
+      const { from, to, progress } = this;
+      const alpha = progress < 0.3 ? 1 : 1 - (progress - 0.3) / 0.7;
+      const pulse = 1 + Math.sin(Date.now() / 120) * 0.14;
+      const midX = from.x + (to.x - from.x) * progress;
+      const midY = from.y + (to.y - from.y) * progress;
+      const color = this.color;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      if (this.giftBoosted) {
+        ctx.globalAlpha = alpha * 0.3;
+        ctx.strokeStyle = '#ffd700';
+        ctx.lineWidth = 30;
+        ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(midX, midY); ctx.stroke();
+      }
+      ctx.globalAlpha = alpha * (0.35 + this.intensity * 0.2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 18 * pulse + this.intensity * 6;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(midX, midY); ctx.stroke();
+      ctx.globalAlpha = alpha * 0.75;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(midX, midY); ctx.stroke();
+      if (this.critical) {
+        ctx.globalAlpha = alpha * 0.6;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 12;
+        ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(midX, midY); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    drawProjectile() {
+      const { from, to, progress } = this;
+      const x = from.x + (to.x - from.x) * progress;
+      const y = from.y + (to.y - from.y) * progress;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const radius = 18 + this.intensity * 8;
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      grad.addColorStop(0, 'rgba(255,255,255,1)');
+      grad.addColorStop(0.5, 'rgba(122,252,255,0.9)');
+      grad.addColorStop(1, 'rgba(122,252,255,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      if (this.critical) {
+        ctx.globalAlpha = 0.6;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x, y, radius * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    drawGift() {
+      if (!this.spawned) {
+        this.spawned = true;
+        const heartEmojis = ['❤️', '💖', '💘', '💝'];
+        const count = 18 + Math.floor(this.intensity * 10);
+        for (let i = 0; i < count; i++) {
+          this.particles.push(new Particle(this.to.x, this.to.y, {
+            speed: 6 + Math.random() * 4,
+            emoji: heartEmojis[i % heartEmojis.length],
+            fontSize: 20 + Math.random() * 12,
+            decay: 0.02,
+            rise: 1
+          }));
+        }
+      }
+      ctx.globalCompositeOperation = 'lighter';
+      this.particles.forEach(p => p.draw(ctx));
+    }
+
+    drawExplosion() {
+      if (!this.spawned) {
+        this.spawned = true;
+        const count = 32 + Math.floor(this.intensity * 20);
+        for (let i = 0; i < count; i++) {
+          this.particles.push(new Particle(this.to.x, this.to.y, {
+            speed: 6 + Math.random() * (10 + this.intensity * 6),
+            color: ['#ff6644', '#ffcc44', '#ff2222'][i % 3],
+            radius: 3 + Math.random() * (5 + this.intensity * 3),
+            decay: 0.015 - this.intensity * 0.005
+          }));
+        }
+      }
+      ctx.globalCompositeOperation = 'lighter';
+      this.particles.forEach(p => p.draw(ctx));
+    }
+
+    drawNeon() {
+      const { from, to, progress } = this;
+      const x = from.x + (to.x - from.x) * progress;
+      const y = from.y + (to.y - from.y) * progress;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineWidth = 12 + this.intensity * 6;
+      ctx.strokeStyle = this.color;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(x, y); ctx.stroke();
+      if (this.critical) {
+        ctx.globalAlpha = 0.7;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+      }
+    }
+
+    drawRipple() {
+      const { from, to, progress } = this;
+      const x = from.x + (to.x - from.x) * progress;
+      const y = from.y + (to.y - from.y) * progress;
+      ctx.globalCompositeOperation = 'lighter';
+      const rings = 3 + Math.floor(this.intensity * 2);
+      for (let i = 0; i < rings; i++) {
+        const t = progress - i * 0.08;
+        if (t <= 0) continue;
+        ctx.strokeStyle = `rgba(100,220,255,${1 - t})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 12 + t * 50 + this.intensity * 10, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    drawFire() {
+      const { from, to, progress } = this;
+      const x = from.x + (to.x - from.x) * progress;
+      const y = from.y + (to.y - from.y) * progress;
+      ctx.globalCompositeOperation = 'lighter';
+      const size = 28 + this.intensity * 15;
+      const flame = ctx.createRadialGradient(x, y, 0, x, y, size);
+      flame.addColorStop(0, '#fff8e0');
+      flame.addColorStop(0.3, '#ffaa44');
+      flame.addColorStop(0.7, '#ff4400');
+      flame.addColorStop(1, '#992200');
+      ctx.fillStyle = flame;
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
+      this.particles.forEach(p => p.draw(ctx));
+    }
+
+    drawBubble() {
+      const { from, to, progress } = this;
+      const x = from.x + (to.x - from.x) * progress;
+      const y = from.y + (to.y - from.y) * progress;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(100,220,255,0.6)';
+      const count = 4 + Math.floor(this.intensity * 2);
+      for (let i = 0; i < count; i++) {
+        const angle = Date.now() * 0.003 + i * 1.5;
+        const bx = x + Math.cos(angle) * 10;
+        const by = y + Math.sin(angle) * 10;
+        ctx.beginPath();
+        ctx.arc(bx, by, 12 - i * 2 + this.intensity * 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    drawSphere() {
+      const { from, to, progress } = this;
+      const x = from.x + (to.x - from.x) * progress;
+      const y = from.y + (to.y - from.y) * progress;
+      ctx.globalCompositeOperation = 'lighter';
+      const radius = 26 + this.intensity * 10;
+      const orb = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      orb.addColorStop(0, '#bbffff');
+      orb.addColorStop(0.4, '#2288ff');
+      orb.addColorStop(1, '#002244');
+      ctx.fillStyle = orb;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      if (this.critical) {
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x, y, radius * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    drawStatic() {
+      this.particles.forEach(p => p.draw(ctx));
+    }
+  }
+
+  // ---------- Background ----------
+  function drawBackground() {
+    const W=cw(), H=ch();
+    if (backgroundImg) {
+      const scale = Math.max(W / backgroundImg.width, H / backgroundImg.height);
+      ctx.drawImage(backgroundImg, (W - backgroundImg.width * scale) / 2, (H - backgroundImg.height * scale) / 2, backgroundImg.width * scale, backgroundImg.height * scale);
+      return;
+    }
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0,'#0d1a2e');
+    grad.addColorStop(1,'#050b12');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(100,200,255,0.04)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    ctx.strokeStyle = 'rgba(140,80,255,0.25)';
+    ctx.beginPath(); ctx.moveTo(0, H * 0.60); ctx.lineTo(W, H * 0.60); ctx.stroke();
+  }
+
+  // ---------- Player Cards ----------
+  function drawPlayerCard(player, pos, rank) {
+    const hp = player.hp || 0;
+    const maxHp = player.maxHp || 100;
+    const hpPct = Math.max(0, Math.min(1, hp / maxHp));
+    const nearDeath = hpPct < 0.2;
+    const H = ch();
+    const cardH = H * 0.5 * 0.84 * layoutZoom;
+    const avatarR = cardH * 0.26;
+    const avatarY = pos.y - cardH * 0.14;
+    const nameY = avatarY - avatarR - cardH * 0.06;
+    const barW = cardH * 0.72 * 0.88;
+    const barH = Math.max(6, cardH * 0.09);
+    const barX = pos.x - barW / 2;
+    const barY = avatarY + avatarR + cardH * 0.05;
+    const hpTextY = barY + barH + cardH * 0.07;
+
+    if (nearDeath) {
+      const redGlow = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, avatarR * 3);
+      redGlow.addColorStop(0, 'rgba(255,30,30,0.25)');
+      redGlow.addColorStop(1, 'rgba(255,30,30,0)');
+      ctx.fillStyle = redGlow;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, avatarR * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const glow = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, avatarR * 2.5);
+    glow.addColorStop(0, 'rgba(122,252,255,0.18)');
+    glow.addColorStop(1, 'rgba(122,252,255,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, avatarR * 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = rank === 1 ? 'rgba(255,210,80,0.7)' : 'rgba(122,252,255,0.35)';
+    ctx.lineWidth = Math.max(2, avatarR * 0.08);
+    ctx.beginPath();
+    ctx.arc(pos.x, avatarY, avatarR, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(8,18,30,0.92)';
+    ctx.beginPath();
+    ctx.arc(pos.x, avatarY, avatarR - 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.font = `${avatarR * 1.3}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(player.iconEmoji || '⚔️', pos.x, avatarY);
+
+    const name = (player.nickname || player.uniqueId || 'Player').slice(0, 13);
+    ctx.font = `bold ${Math.max(9, cardH * 0.11)}px Segoe UI`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#000';
+    ctx.strokeText(name, pos.x, nameY);
+    ctx.fillStyle = '#fff';
+    ctx.fillText(name, pos.x, nameY);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(barX, barY, barW, barH);
+    const barGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    barGrad.addColorStop(0, hpPct > 0.5 ? '#2ecc71' : hpPct > 0.25 ? '#f39c12' : '#ff4d4d');
+    barGrad.addColorStop(1, '#ffffff55');
+    ctx.fillStyle = barGrad;
+    ctx.fillRect(barX + 1, barY + 1, (barW - 2) * hpPct, barH - 2);
+    ctx.strokeStyle = 'rgba(122,252,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barW, barH);
+
+    ctx.font = `${Math.max(8, cardH * 0.085)}px Segoe UI`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2.5;
+    ctx.strokeText(`${Math.round(hp)}/${maxHp}`, pos.x, hpTextY);
+    ctx.fillStyle = '#ccc';
+    ctx.fillText(`${Math.round(hp)}/${maxHp}`, pos.x, hpTextY);
+  }
+
+  function drawHorde(horde) {
+    if (!horde) return;
+    const pos = getHordePosition();
+    const H = ch();
+    const ring = H * 0.28 * layoutZoom;
+    const pulse = 0.5 + Math.sin(Date.now() / 350) * 0.5;
+    ctx.fillStyle = `rgba(255,70,70,${0.08 + pulse * 0.05})`;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, ring + pulse * 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(255,70,70,${0.5 + pulse * 0.3})`;
+    ctx.lineWidth = Math.max(2, ring * 0.1);
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, ring * 0.88, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.font = `${ring * 1.5}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('💀', pos.x, pos.y);
+    ctx.font = `bold ${Math.max(10, H * 0.08)}px Segoe UI`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 4;
+    ctx.strokeText('⚔ THE HORDE', pos.x - ring * 1.35, pos.y - H * 0.05);
+    ctx.fillStyle = '#ff7b7b';
+    ctx.fillText('⚔ THE HORDE', pos.x - ring * 1.35, pos.y - H * 0.05);
+    ctx.font = `${Math.max(8, H * 0.06)}px Segoe UI`;
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffc2c2';
+    ctx.fillText(`${horde.hordeCount} players`, pos.x - ring * 1.35, pos.y + H * 0.08);
+    const hpPct = Math.min(1, horde.hp / Math.max(1, horde.maxHp));
+    const barW = cw() * 0.28;
+    const barH = Math.max(8, H * 0.045);
+    const barX = pos.x + ring * 1.35;
+    const barY = pos.y - barH / 2;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(barX, barY, barW, barH);
+    const hpGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    hpGrad.addColorStop(0, '#ff2222');
+    hpGrad.addColorStop(1, '#ff8888');
+    ctx.fillStyle = hpGrad;
+    ctx.fillRect(barX + 2, barY + 2, (barW - 4) * hpPct, barH - 4);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(barX, barY, barW, barH);
+    ctx.font = `${Math.max(8, H * 0.05)}px Segoe UI`;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffaaaa';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2.5;
+    const hpText = `${Math.round(horde.hp)} / ${Math.round(horde.maxHp)}`;
+    ctx.strokeText(hpText, barX, barY + barH + H * 0.09);
+    ctx.fillText(hpText, barX, barY + barH + H * 0.09);
+  }
+
+  // ---------- Attack dispatch (enriched) ----------
+  const TYPE_MAP = {
+    fire: 'fire', bubble: 'bubble', bubbles: 'bubble', water: 'bubble',
+    beam: 'beam', laser: 'laser', shot: 'laser', projectile: 'projectile',
+    neon: 'neon', ripple: 'ripple', wave: 'ripple', waterbeam: 'bubble',
+    water_beam: 'bubble', sphere: 'sphere', gift: 'gift', hearts: 'gift',
+    explosion: 'explosion', boom: 'explosion', meteor: 'fire',
+    tsunami: 'ripple', nuke: 'explosion', nukes: 'explosion'
+  };
+
+  function fireAttack(attackerId, targetId, damage, killed, special, effect, meta = {}) {
+    const top = topPlayers();
+    const horde = hordePlayer();
+    let from = null, to = null;
+
+    if (attackerId === HORDE_ID) {
+      from = horde ? getHordePosition() : null;
+    } else {
+      const topIdx = top.findIndex(p => p.uniqueId === attackerId || p.id === attackerId);
+      if (topIdx !== -1) from = getPlayerPosition(topIdx, top.length);
+      else from = getPositionForPlayer(attackerId) || (horde ? getHordePosition() : null);
+    }
+    if (targetId === HORDE_ID) {
+      to = horde ? getHordePosition() : null;
+    } else {
+      const topIdx = top.findIndex(p => p.uniqueId === targetId || p.id === targetId);
+      if (topIdx !== -1) to = getPlayerPosition(topIdx, top.length);
+      else to = getPositionForPlayer(targetId) || (horde ? getHordePosition() : null);
+    }
+    if (!from || !to) return;
+
+    let type;
+    if (effect) type = TYPE_MAP[String(effect).toLowerCase()] || String(effect).toLowerCase();
+    else if (special) type = 'gift';
+    else if (killed) type = 'explosion';
+    else {
+      type = overlaySettings.shotType === 'beam' ? 'beam' :
+             overlaySettings.shotType === 'pulse' ? 'fire' :
+             overlaySettings.shotType === 'wave' ? 'ripple' :
+             overlaySettings.shotType === 'burst' ? 'explosion' :
+             overlaySettings.shotType === 'ripple' ? 'ripple' : 'laser';
+    }
+
+    const options = {
+      intensity: meta.intensity || 0.5,
+      critical: meta.critical || false,
+      streak: meta.streak || 0,
+      giftBoosted: meta.giftBoosted || false,
+      remainingHpPct: meta.remainingHpPct ?? 1,
+      killingBlow: !!killed,
+      color: meta.laserColor || overlaySettings.laserColor
+    };
+
+    attacks.push(new Attack(from, to, type, options));
+    showDamage(to.x, to.y, damage || 0, !!killed);
+    playSound(special ? 'gift' : 'attack');
+  }
+
+  function fireHeartEffect(playerId, playerName, heartCount = 1, intensity = 0, color = '#ff4088') {
+    let pos = getPositionForPlayer(playerId);
+    if (!pos) {
+      const top = topPlayers();
+      pos = top.length ? getPlayerPosition(0, top.length) : getHordePosition();
+    }
+    const emojis = ['❤️', '💖', '💘', '💝'];
+    const count = Math.max(1, Math.floor(heartCount * (1 + intensity * 2)));
+    for (let i = 0; i < count; i++) {
+      const delay = i * 100;
+      setTimeout(() => {
+        const emoji = emojis[i % emojis.length];
+        const particle = new Particle(pos.x, pos.y, {
+          speed: 6 + Math.random() * 4,
+          emoji: emoji,
+          fontSize: 16 + i * 3 + intensity * 6,
+          decay: 0.018 - intensity * 0.003,
+          rise: 2.5 + intensity * 1.5,
+          color: color
+        });
+        const tempAttack = new Attack(pos, pos, 'static');
+        tempAttack.particles.push(particle);
+        attacks.push(tempAttack);
+      }, delay);
+    }
+  }
+
+  function spawnRespawnEffect(uniqueId) {
+    const pos = getPositionForPlayer(uniqueId);
+    if (!pos) return;
+    for (let i = 0; i < 25; i++) {
+      const particle = new Particle(pos.x, pos.y, {
+        speed: 3 + Math.random() * 5,
+        color: '#ffaa00',
+        radius: 2 + Math.random() * 3,
+        decay: 0.025,
+        rise: 1.5
+      });
+      const atk = new Attack(pos, pos, 'static');
+      atk.particles.push(particle);
+      attacks.push(atk);
+    }
+    playSound('respawn');
+  }
+
+  // ---------- New event handlers ----------
+  function onKillEvent(data) {
+    fireAttack(data.killer, data.victim, data.damage, true, false, data.effect || 'explosion', {
+      intensity: 0.9,
+      critical: true,
+      streak: data.killerKills,
+      remainingHpPct: 0,
+      killingBlow: true
+    });
+    showBanner('kill', `${data.killerNick} 💀 ${data.victimNick} <span style="font-size:0.7em">(${data.killerKills} kills)</span>`);
+    if (data.isStreak) {
+      showBanner('streak', `🔥 ${data.killerNick} is on a ${data.killerKills}-KILL STREAK!`);
+    }
+    playSound('kill');
+  }
+
+  function onStreakEvent(data) {
+    showBanner('streak', `🔥 ${data.killerNick} – ${data.streakCount} KILL STREAK!`);
+  }
+
+  function onGiftCelebration(data) {
+    showBanner('gift', `🎁 ${data.nickname} sent <strong>${data.giftName}</strong> (${data.diamonds} 💎) – ${data.tier.toUpperCase()}`);
+  }
+
+  function onLikeStorm(data) {
+    fireHeartEffect(data.uniqueId, data.nickname, data.heartCount, data.intensity, data.color);
+    playSound('heal');
+  }
+
+  function onRespawn(data) {
+    spawnRespawnEffect(data.uniqueId);
+  }
+
+  function onSoundEvent(data) {
+    if (data.event) playSound(data.event);
+  }
+
+  function onForceReload(data) {
+    const delayMs = data.delayMs || 3000;
+    const reason = data.reason || 'Operator reload';
+    const overlay = document.createElement('div');
+    overlay.className = 'reload-overlay';
+    overlay.innerHTML = `<div class="countdown" id="reload-countdown">${Math.ceil(delayMs/1000)}</div><div class="reason">${reason}</div>`;
+    document.body.appendChild(overlay);
+    let remaining = Math.ceil(delayMs / 1000);
+    const interval = setInterval(() => {
+      remaining--;
+      if (remaining <= 0) {
+        clearInterval(interval);
+        location.reload();
+      } else {
+        document.getElementById('reload-countdown').textContent = remaining;
+      }
+    }, 1000);
+  }
+
+  // ---------- Render loop ----------
+  function draw() {
+    resizeCanvas();
+    ctx.clearRect(0, 0, cw(), ch());
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    drawBackground();
+    const top = topPlayers();
+    top.forEach((player, index) => drawPlayerCard(player, getPlayerPosition(index, top.length), index + 1));
+    drawHorde(hordePlayer());
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    attacks = attacks.filter(a => { const alive = a.update(); if (alive) a.draw(); return alive; });
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    requestAnimationFrame(draw);
+  }
+
+  function normalizePlayers(state) {
+    const normalized = {};
+    for (const key in state) {
+      const p = state[key] || {};
+      p.uniqueId = p.uniqueId || p.id || key;
+      normalized[p.uniqueId] = p;
+    }
+    return normalized;
+  }
+
+  function initSocket() {
+    try {
+      socket = io({ transports: ['websocket', 'polling'], timeout: 5000 });
+      socket.on('connect', () => {
+        statusDiv.textContent = '🟢 LIVE · CONNECTED';
+        statusDiv.className = 'connected';
+        socket.emit('register', { type: 'overlay' });
+      });
+      socket.on('disconnect', () => {
+        statusDiv.textContent = '🔴 DISCONNECTED · waiting...';
+        statusDiv.className = 'disconnected';
+      });
+      socket.on('connect_error', () => {
+        statusDiv.textContent = '⚠️ SERVER ERROR · retrying';
+        statusDiv.className = 'disconnected';
+      });
+      socket.on('gameState', state => {
+        if (state && typeof state === 'object') {
+          players = normalizePlayers(state);
+          if (!Object.keys(players).length) {
+            fetch('/state').then(r => r.json()).then(s => { players = normalizePlayers(s || {}); }).catch(() => {});
+          }
+        }
+      });
+      socket.on('audioConfig', cfg => { if (cfg) audioConfig = cfg; });
+      socket.on('overlaySettings', settings => { if (settings && typeof settings === 'object') overlaySettings = { ...overlaySettings, ...settings }; });
+      socket.on('laserColor', color => { if (typeof color === 'string') overlaySettings.laserColor = color; });
+      socket.on('backgroundChanged', ({ filename }) => {
+        if (!filename) { backgroundImg = null; return; }
+        const img = new Image();
+        img.onload = () => { backgroundImg = img; };
+        img.src = `/background/${filename}?v=${Date.now()}`;
+      });
+
+      // Enriched event listeners
+      socket.on('attack', data => {
+        fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect, {
+          intensity: data.intensity,
+          critical: data.critical,
+          streak: data.streak,
+          giftBoosted: data.giftBoosted,
+          remainingHpPct: data.remainingHpPct,
+          killingBlow: data.killingBlow,
+          laserColor: data.laserColor
+        });
+      });
+      socket.on('giftAttack', ({ attacker, target, damage, killed, diamonds, giftName, giftTier, effect, intensity }) => {
+        fireAttack(attacker, target, damage, killed, true, effect || 'gift', {
+          intensity: intensity || 0.5,
+          giftBoosted: true,
+          remainingHpPct: killed ? 0 : (players[target]?.hp / players[target]?.maxHp || 1),
+          killingBlow: !!killed
+        });
+      });
+      socket.on('killEvent', onKillEvent);
+      socket.on('streakEvent', onStreakEvent);
+      socket.on('likeStorm', onLikeStorm);
+      socket.on('giftCelebration', onGiftCelebration);
+      socket.on('respawn', onRespawn);
+      socket.on('soundEvent', onSoundEvent);
+      socket.on('forceReload', onForceReload);
+    } catch (error) {
+      statusDiv.textContent = '❌ SOCKET ERROR · no live data';
+      statusDiv.className = 'disconnected';
+    }
+  }
+
+  initSocket();
+  requestAnimationFrame(draw);
+})();
 </script>
 </body>
 </html>
