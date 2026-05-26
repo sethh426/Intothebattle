@@ -1,4 +1,3 @@
-// server.js (rewritten with enriched events, centralized dispatcher, and polished animations data)
 import { TikTokLive } from '@tiktool/live';
 import express from 'express';
 import cookieParser from 'cookie-parser';
