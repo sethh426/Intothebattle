@@ -693,6 +693,15 @@ body { display: flex; align-items: center; justify-content: center; }
   }
 
   // ---------- Attack dispatch (enriched) ----------
+  const TYPE_MAP = {
+    fire: 'fire', bubble: 'bubble', bubbles: 'bubble', water: 'bubble',
+    beam: 'beam', laser: 'laser', shot: 'laser', projectile: 'projectile',
+    neon: 'neon', ripple: 'ripple', wave: 'ripple', waterbeam: 'bubble',
+    water_beam: 'bubble', sphere: 'sphere', gift: 'gift', hearts: 'gift',
+    explosion: 'explosion', boom: 'explosion', meteor: 'fire',
+    tsunami: 'ripple', nuke: 'explosion', nukes: 'explosion'
+  };
+
   function fireAttack(attackerId, targetId, damage, killed, special, effect, meta = {}) {
     const top = topPlayers();
     const horde = hordePlayer();
@@ -714,15 +723,8 @@ body { display: flex; align-items: center; justify-content: center; }
     }
     if (!from || !to) return;
 
-    const typeMap = {
-      fire: 'fire', bubble: 'bubble', bubbles: 'bubble', water: 'bubble',
-      beam: 'beam', laser: 'laser', shot: 'laser', projectile: 'projectile',
-      neon: 'neon', ripple: 'ripple', wave: 'ripple', waterbeam: 'bubble',
-      water_beam: 'bubble', sphere: 'sphere', gift: 'gift', hearts: 'gift',
-      explosion: 'explosion', boom: 'explosion'
-    };
     let type;
-    if (effect) type = typeMap[String(effect).toLowerCase()] || String(effect).toLowerCase();
+    if (effect) type = TYPE_MAP[String(effect).toLowerCase()] || String(effect).toLowerCase();
     else if (special) type = 'gift';
     else if (killed) type = 'explosion';
     else {
