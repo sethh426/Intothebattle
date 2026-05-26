@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -9,9 +8,9 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Exo+2:wght@400;700;900&display=swap');
 
-- { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #02040a; font-family: ‘Exo 2’, ‘Segoe UI’, sans-serif; }
-  body { display: flex; align-items: center; justify-content: center; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #02040a; font-family: 'Exo 2', 'Segoe UI', sans-serif; }
+body { display: flex; align-items: center; justify-content: center; }
 
 #overlay-container {
 position: relative;
@@ -44,7 +43,7 @@ display: flex; flex-direction: column; align-items: center; gap: 6px;
 color: #8fd8ff; font-size: 10px; font-weight: 800; letter-spacing: 1px;
 text-transform: uppercase; writing-mode: vertical-rl; text-orientation: mixed;
 user-select: none; transition: background 0.2s;
-font-family: ‘Rajdhani’, sans-serif;
+font-family: 'Rajdhani', sans-serif;
 }
 .panel-tab:hover { background: rgba(20,40,70,0.95); }
 .panel-tab-icon { font-size: 13px; writing-mode: horizontal-tb; }
@@ -60,11 +59,11 @@ transform-origin: right top; max-height: 90vh; overflow-y: auto;
 .layout-title {
 color: #8fd8ff; font-size: 12px; font-weight: 800;
 letter-spacing: 2px; text-transform: uppercase;
-margin-bottom: 14px; font-family: ‘Rajdhani’, sans-serif;
+margin-bottom: 14px; font-family: 'Rajdhani', sans-serif;
 }
 .control { margin-bottom: 13px; }
 .control-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
-.control-top span { font-size: 11px; color: #cfefff; font-family: ‘Rajdhani’, sans-serif; letter-spacing: 0.5px; }
+.control-top span { font-size: 11px; color: #cfefff; font-family: 'Rajdhani', sans-serif; letter-spacing: 0.5px; }
 .control input[type=range] {
 width: 100%; appearance: none; height: 5px;
 border-radius: 999px; background: rgba(255,255,255,0.08); outline: none;
@@ -86,7 +85,7 @@ background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
 border-radius: 24px; padding: 4px 16px;
 font-size: 11px; font-weight: bold; letter-spacing: 1px;
 color: #aaa; pointer-events: none; z-index: 9999;
-font-family: ‘Rajdhani’, monospace; transition: 0.2s;
+font-family: 'Rajdhani', monospace; transition: 0.2s;
 }
 #status-badge.connected    { color: #7aff87; text-shadow: 0 0 4px #2eff5e; }
 #status-badge.disconnected { color: #ff8866; }
@@ -100,7 +99,7 @@ text-shadow: 0 0 16px rgba(255,80,80,0.95), 2px 2px 8px rgba(0,0,0,0.9);
 animation: floatDamage 0.85s ease-out forwards;
 pointer-events: none; z-index: 9999;
 transform: translate(-50%, -50%); white-space: nowrap;
-font-family: ‘Rajdhani’, sans-serif;
+font-family: 'Rajdhani', sans-serif;
 }
 .damage.kill     { color: #ffd84f; font-size: clamp(22px, 4vw, 34px);   text-shadow: 0 0 20px rgba(255,216,79,0.95); }
 .damage.critical { color: #ff2244; font-size: clamp(24px, 4.5vw, 38px); text-shadow: 0 0 24px rgba(255,34,68,1), 0 0 48px rgba(255,100,0,0.6); }
@@ -113,7 +112,7 @@ font-family: ‘Rajdhani’, sans-serif;
 .banner {
 position: fixed; left: 50%; top: 8%;
 transform: translate(-50%, 0); z-index: 10000; pointer-events: none;
-font-family: ‘Rajdhani’, sans-serif; font-weight: 900; text-align: center;
+font-family: 'Rajdhani', sans-serif; font-weight: 900; text-align: center;
 animation: bannerIn 0.35s cubic-bezier(0.2, 1.4, 0.4, 1), bannerOut 0.5s ease-in 2.6s forwards;
 white-space: nowrap;
 }
@@ -134,8 +133,8 @@ position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 99999;
 display: flex; flex-direction: column; align-items: center; justify-content: center;
 pointer-events: auto;
 }
-.reload-overlay .countdown { font-size: 5vw; color: #fff; font-family: ‘Rajdhani’, monospace; font-weight: 700; text-shadow: 0 0 40px rgba(122,252,255,0.8); letter-spacing: 4px; }
-.reload-overlay .reason    { font-size: 1.2vw; color: #8fd8ff; margin-top: 20px; letter-spacing: 2px; font-family: ‘Rajdhani’, sans-serif; text-transform: uppercase; }
+.reload-overlay .countdown { font-size: 5vw; color: #fff; font-family: 'Rajdhani', monospace; font-weight: 700; text-shadow: 0 0 40px rgba(122,252,255,0.8); letter-spacing: 4px; }
+.reload-overlay .reason    { font-size: 1.2vw; color: #8fd8ff; margin-top: 20px; letter-spacing: 2px; font-family: 'Rajdhani', sans-serif; text-transform: uppercase; }
 </style>
 
 </head>
@@ -181,13 +180,13 @@ pointer-events: auto;
 <script>
 (function () {
 
-  // ── Canvas & context ──────────────────────────────────────────────────────
+  // Canvas & context
   const canvas    = document.getElementById('canvas');
   const ctx       = canvas.getContext('2d', { alpha: true });
   const container = document.getElementById('overlay-container');
   const statusDiv = document.getElementById('status-badge');
 
-  // ── Layout panel controls ─────────────────────────────────────────────────
+  // Layout panel controls
   const gapControl     = document.getElementById('gapControl');
   const offsetXControl = document.getElementById('offsetXControl');
   const offsetYControl = document.getElementById('offsetYControl');
@@ -196,7 +195,7 @@ pointer-events: auto;
   const togglePanel    = document.getElementById('togglePanel');
   const layoutPanel    = document.getElementById('layoutPanel');
 
-  // ── State ─────────────────────────────────────────────────────────────────
+  // State
   let players         = {};
   let attacks         = [];
   let layoutGap       = 0;
@@ -212,7 +211,7 @@ pointer-events: auto;
 
   const HORDE_ID = '__HORDE__';
 
-  // ── Demo players ──────────────────────────────────────────────────────────
+  // Demo players
   const DEMO_PLAYERS = [
     { uniqueId:'p1', nickname:'NebulaX',   hp:180, maxHp:200, alive:true, iconEmoji:'🔥', kills:3 },
     { uniqueId:'p2', nickname:'Vortex',    hp:95,  maxHp:150, alive:true, iconEmoji:'⚡', kills:1 },
@@ -229,7 +228,7 @@ pointer-events: auto;
     return real.length > 0 ? real : DEMO_PLAYERS;
   }
 
-  // ── Canvas resize ─────────────────────────────────────────────────────────
+  // Canvas resize
   function resizeCanvas() {
     const rect = container.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
@@ -242,7 +241,7 @@ pointer-events: auto;
   function cw() { return canvas.width;  }
   function ch() { return canvas.height; }
 
-  // ── Layout panel UI ───────────────────────────────────────────────────────
+  // Layout panel UI
   function updateControlLabels() {
     document.getElementById('gapValue').textContent    = Math.round(layoutGap);
     document.getElementById('offsetXValue').textContent = Math.round(offsetX);
@@ -262,7 +261,7 @@ pointer-events: auto;
   };
   updateControlLabels();
 
-  // ── Player helpers ────────────────────────────────────────────────────────
+  // Player helpers
   function isAlive(p) { return p && p.alive !== false; }
 
   function topPlayers() {
@@ -292,7 +291,7 @@ pointer-events: auto;
     };
   }
 
-  // ── Positioning ───────────────────────────────────────────────────────────
+  // Positioning
   function getPlayerPosition(index, total) {
     const W = cw(), H = ch();
     const cardH      = H * 0.5 * 0.84 * layoutZoom;
@@ -325,7 +324,7 @@ pointer-events: auto;
     return { x: rect.left + cx * scaleX, y: rect.top + cy * scaleY };
   }
 
-  // ── Audio ─────────────────────────────────────────────────────────────────
+  // Audio
   function getAudio(filename) {
     if (!audioCache[filename]) {
       const a  = new Audio(`/audio/${filename}`);
@@ -340,7 +339,7 @@ pointer-events: auto;
     try { const a = getAudio(filename); a.currentTime = 0; a.play().catch(() => {}); } catch (_) {}
   }
 
-  // ── DOM helpers ───────────────────────────────────────────────────────────
+  // DOM helpers
   function showBanner(className, html, duration = 3200) {
     const el = document.createElement('div');
     el.className = `banner ${className}`;
@@ -360,7 +359,7 @@ pointer-events: auto;
     setTimeout(() => el.remove(), 950);
   }
 
-  // ── Particle class ────────────────────────────────────────────────────────
+  // Particle class
   class Particle {
     constructor(x, y, opts = {}) {
       this.x     = x;
@@ -395,9 +394,9 @@ pointer-events: auto;
     }
   }
 
-  // ── Attack class ──────────────────────────────────────────────────────────
+  // Attack class
   class Attack {
-    constructor(from, to, type = 'laser', options = {}) {
+    constructor(from, to, type, options = {}) {
       this.from           = from;
       this.to             = to;
       this.type           = type;
@@ -422,7 +421,7 @@ pointer-events: auto;
       };
       this.duration = Math.round((durations[type] || 500) / speed);
 
-      // Pre-seed fire particles
+      // Pre-seed particles
       if (type === 'fire') {
         const count = 40 + Math.floor(this.intensity * 24);
         for (let i = 0; i < count; i++) {
@@ -474,7 +473,6 @@ pointer-events: auto;
         default:           this.drawLaser();
       }
       ctx.restore();
-      // Always flush particle system on top
       if (this.particles.length) {
         ctx.save();
         ctx.globalCompositeOperation = 'screen';
@@ -483,7 +481,6 @@ pointer-events: auto;
       }
     }
 
-    // ── laser ──
     drawLaser() {
       const { from, to, progress } = this;
       const x     = from.x + (to.x - from.x) * progress;
@@ -510,7 +507,6 @@ pointer-events: auto;
       ctx.restore();
     }
 
-    // ── beam ──
     drawBeam() {
       const { from, to, progress } = this;
       const alpha = progress < 0.3 ? 1 : 1 - (progress - 0.3) / 0.7;
@@ -538,7 +534,6 @@ pointer-events: auto;
       ctx.restore();
     }
 
-    // ── projectile ──
     drawProjectile() {
       const { from, to, progress } = this;
       const px = from.x + (to.x - from.x) * progress;
@@ -572,7 +567,6 @@ pointer-events: auto;
       ctx.restore();
     }
 
-    // ── gift ──
     drawGift() {
       if (!this.spawned) {
         this.spawned = true;
@@ -587,7 +581,6 @@ pointer-events: auto;
       }
     }
 
-    // ── explosion ──
     drawExplosion() {
       if (!this.spawned) {
         this.spawned = true;
@@ -603,9 +596,7 @@ pointer-events: auto;
       }
     }
 
-    // ══ UPGRADED EFFECTS ══════════════════════════════════════════════════
-
-    // ── neon — dual-strand chromatic beam with dashed core and trail dots ──
+    // New cinematic effects
     drawNeon() {
       const { from, to, progress } = this;
       const x    = from.x + (to.x - from.x) * progress;
@@ -620,32 +611,26 @@ pointer-events: auto;
       ctx.globalCompositeOperation = 'lighter';
       ctx.lineCap = 'round';
 
-      // Wide outer glow
       ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(x, y);
       ctx.strokeStyle = glowColor; ctx.lineWidth = 32 * intensity; ctx.globalAlpha = 0.3; ctx.stroke();
 
-      // Chromatic strands
       ctx.beginPath(); ctx.moveTo(from.x + 4, from.y + 2); ctx.lineTo(x + 4, y + 2);
       ctx.strokeStyle = '#ff3366'; ctx.lineWidth = 10; ctx.globalAlpha = 0.55; ctx.stroke();
       ctx.beginPath(); ctx.moveTo(from.x - 4, from.y - 2); ctx.lineTo(x - 4, y - 2);
       ctx.strokeStyle = '#33ffcc'; ctx.lineWidth = 10; ctx.globalAlpha = 0.55; ctx.stroke();
 
-      // Mid core
       ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(x, y);
       ctx.strokeStyle = midColor; ctx.lineWidth = 9 * intensity; ctx.globalAlpha = 0.9; ctx.stroke();
 
-      // Dashed bright core
       ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(x, y);
       ctx.strokeStyle = coreColor; ctx.lineWidth = 3; ctx.globalAlpha = 1;
       ctx.setLineDash([14, 8]); ctx.stroke(); ctx.setLineDash([]);
 
-      // Glowing head
       const headRad = 13 + Math.sin(now * 0.025) * 2.5;
       ctx.shadowBlur = 22; ctx.shadowColor = midColor;
       ctx.beginPath(); ctx.arc(x, y, headRad, 0, Math.PI * 2);
       ctx.fillStyle = coreColor; ctx.fill();
 
-      // Trail sparkles
       ctx.shadowBlur = 0;
       for (let i = 1; i <= 7; i++) {
         const t2 = Math.max(0, progress - i * 0.022); if (t2 <= 0) break;
@@ -658,7 +643,6 @@ pointer-events: auto;
       ctx.restore();
     }
 
-    // ── ripple — expanding concentric rings with a base beam ──
     drawRipple() {
       const { from, to, progress } = this;
       const x   = from.x + (to.x - from.x) * progress;
@@ -668,12 +652,10 @@ pointer-events: auto;
       ctx.globalCompositeOperation = 'lighter';
       ctx.lineCap = 'round';
 
-      // Base beam so something is always visible in transit
       ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(x, y);
       ctx.strokeStyle = `rgba(100,220,255,${0.55 * (1 - progress)})`;
       ctx.lineWidth = 6 + this.intensity * 4; ctx.stroke();
 
-      // Expanding rings at impact head
       for (let i = 0; i < rings; i++) {
         const t     = progress - i * 0.07;
         if (t <= 0) continue;
@@ -682,14 +664,12 @@ pointer-events: auto;
         ctx.lineWidth   = 2.5 + this.intensity * 1.5;
         ctx.beginPath(); ctx.arc(x, y, 12 + t * (55 + this.intensity * 14), 0, Math.PI * 2); ctx.stroke();
       }
-      // Bright centre dot
       ctx.globalAlpha = 1 - progress;
       ctx.fillStyle   = 'rgba(180,240,255,0.9)';
       ctx.beginPath(); ctx.arc(x, y, 5 + this.intensity * 4, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
     }
 
-    // ── fire — travelling flame beam with radial gradient head + ember particles ──
     drawFire() {
       const { from, to, progress } = this;
       const x    = from.x + (to.x - from.x) * progress;
@@ -699,12 +679,10 @@ pointer-events: auto;
       ctx.globalCompositeOperation = 'lighter';
       ctx.lineCap = 'round';
 
-      // Orange travelling beam
       ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(x, y);
       ctx.strokeStyle = `rgba(255,110,20,${0.65 * (1 - progress * 0.6)})`;
       ctx.lineWidth   = 8 + this.intensity * 6; ctx.stroke();
 
-      // Animated flame head
       const flicker = 1 + Math.sin(Date.now() * 0.04) * 0.12;
       const flame   = ctx.createRadialGradient(x - size * 0.2, y - size * 0.2, 1, x, y, size * flicker);
       flame.addColorStop(0,    '#fff8e0');
@@ -714,10 +692,8 @@ pointer-events: auto;
       ctx.fillStyle = flame;
       ctx.beginPath(); ctx.arc(x, y, size * flicker, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
-      // Ember particles drawn in main draw() flush
     }
 
-    // ── bubble — orbiting translucent spheres with specular highlights ──
     drawBubble() {
       const { from, to, progress } = this;
       const x     = from.x + (to.x - from.x) * progress;
@@ -728,7 +704,6 @@ pointer-events: auto;
       ctx.globalCompositeOperation = 'lighter';
       ctx.lineCap = 'round';
 
-      // Base beam
       ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(x, y);
       ctx.strokeStyle = `rgba(160,230,255,${0.4 * (1 - progress)})`;
       ctx.lineWidth = 5 + this.intensity * 3; ctx.globalAlpha = 1; ctx.stroke();
@@ -740,11 +715,9 @@ pointer-events: auto;
         const bx     = x + Math.cos(angle) * orbit;
         const by     = y + Math.sin(angle) * orbit * 0.65;
         const r      = Math.max(2, 14 - i * 1.2 + this.intensity * 4);
-        // Bubble body
         ctx.globalAlpha = 0.55 + this.intensity * 0.2;
         ctx.fillStyle   = `rgba(100,210,255,0.55)`;
         ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2); ctx.fill();
-        // Specular highlight
         ctx.globalAlpha = 0.45;
         ctx.fillStyle   = 'rgba(255,255,255,0.85)';
         ctx.beginPath(); ctx.arc(bx - r * 0.28, by - r * 0.28, r * 0.28, 0, Math.PI * 2); ctx.fill();
@@ -752,7 +725,6 @@ pointer-events: auto;
       ctx.restore();
     }
 
-    // ── sphere — sphere-mapped plasma orb with energy ring ──
     drawSphere() {
       const { from, to, progress } = this;
       const x      = from.x + (to.x - from.x) * progress;
@@ -762,11 +734,9 @@ pointer-events: auto;
       ctx.globalCompositeOperation = 'lighter';
       ctx.lineCap = 'round';
 
-      // Beam
       ctx.beginPath(); ctx.moveTo(from.x, from.y); ctx.lineTo(x, y);
       ctx.strokeStyle = `rgba(34,136,255,${0.5 * (1 - progress)})`; ctx.lineWidth = 6 + this.intensity * 4; ctx.stroke();
 
-      // Sphere-mapped radial gradient
       const orb = ctx.createRadialGradient(x - radius * 0.28, y - radius * 0.28, 1, x, y, radius);
       orb.addColorStop(0,    '#ddfffe');
       orb.addColorStop(0.35, '#2299ff');
@@ -775,12 +745,10 @@ pointer-events: auto;
       ctx.fillStyle = orb;
       ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
 
-      // Energy ring
       ctx.globalAlpha = 0.6;
       ctx.strokeStyle = 'rgba(100,200,255,0.9)'; ctx.lineWidth = 2.5;
       ctx.beginPath(); ctx.arc(x, y, radius * 1.22, 0, Math.PI * 2); ctx.stroke();
 
-      // Second faint ring
       ctx.globalAlpha = 0.3;
       ctx.strokeStyle = 'rgba(180,240,255,0.7)'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(x, y, radius * 1.5, 0, Math.PI * 2); ctx.stroke();
@@ -793,13 +761,9 @@ pointer-events: auto;
       ctx.restore();
     }
 
-    // ── static (particle-only) ──
-    drawStatic() {
-      // particles flushed in main draw()
-    }
+    drawStatic() {}
   }
 
-  // ── Effect type map ───────────────────────────────────────────────────────
   const TYPE_MAP = {
     fire: 'fire',       bubble: 'bubble',     bubbles: 'bubble',  water: 'bubble',
     beam: 'beam',       laser: 'laser',       shot: 'laser',      projectile: 'projectile',
@@ -809,7 +773,7 @@ pointer-events: auto;
     meteor: 'fire',     tsunami: 'ripple',    nuke: 'explosion',  nukes: 'explosion',
   };
 
-  // ── Fire an attack visual ─────────────────────────────────────────────────
+  // Fire an attack visual
   function fireAttack(attackerId, targetId, damage, killed, special, effect, meta = {}) {
     let from = attackerId === HORDE_ID
       ? (hordePlayer() ? getHordePosition() : null)
@@ -851,7 +815,7 @@ pointer-events: auto;
     showDamage(to.x, to.y, damage || 0, !!killed, !!meta.critical);
   }
 
-  // ── Heart storm ───────────────────────────────────────────────────────────
+  // Heart storm (like effect)
   function fireHeartEffect(playerId, hearts = 1, intensity = 0) {
     let pos = getPositionForPlayer(playerId);
     if (!pos) {
@@ -872,7 +836,6 @@ pointer-events: auto;
     }
   }
 
-  // ── Respawn burst ─────────────────────────────────────────────────────────
   function spawnRespawnEffect(uniqueId) {
     const pos = getPositionForPlayer(uniqueId);
     if (!pos) return;
@@ -887,7 +850,7 @@ pointer-events: auto;
     playSound('respawn');
   }
 
-  // ── Background ────────────────────────────────────────────────────────────
+  // Background drawing
   function drawBackground() {
     const W = cw(), H = ch();
     if (backgroundImg) {
@@ -908,7 +871,7 @@ pointer-events: auto;
     ctx.beginPath(); ctx.moveTo(0, H * 0.60); ctx.lineTo(W, H * 0.60); ctx.stroke();
   }
 
-  // ── Player card ───────────────────────────────────────────────────────────
+  // Player card
   function drawPlayerCard(player, pos, rank) {
     const hp      = player.hp    || 0;
     const maxHp   = player.maxHp || 100;
@@ -977,7 +940,7 @@ pointer-events: auto;
     }
   }
 
-  // ── Horde ─────────────────────────────────────────────────────────────────
+  // Horde card
   function drawHorde(horde) {
     if (!horde) return;
     const pos   = getHordePosition();
@@ -1022,7 +985,7 @@ pointer-events: auto;
     ctx.fillText(hpText,   barX, barY + barH + H * 0.09);
   }
 
-  // ── Main render loop ──────────────────────────────────────────────────────
+  // Main render loop
   function draw() {
     ctx.clearRect(0, 0, cw(), ch());
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
@@ -1036,7 +999,7 @@ pointer-events: auto;
     requestAnimationFrame(draw);
   }
 
-  // ── Player state normalizer ───────────────────────────────────────────────
+  // Player state normalizer
   function normalizePlayers(state) {
     const out = {};
     for (const key in state) {
@@ -1047,7 +1010,7 @@ pointer-events: auto;
     return out;
   }
 
-  // ── Demo mode ─────────────────────────────────────────────────────────────
+  // Demo mode
   let _demoTimer = null;
   const ALL_EFFECTS = ['laser','beam','projectile','neon','ripple','fire','bubble','sphere','explosion'];
 
@@ -1095,7 +1058,7 @@ pointer-events: auto;
     }
   }
 
-  // ── Socket event handlers ─────────────────────────────────────────────────
+  // Socket event handlers
   function onKillEvent(data) {
     fireAttack(data.killer, data.victim, data.damage, true, false, data.effect || 'explosion', {
       intensity: 0.95, critical: true, streak: data.killerStreak || 0, remainingHpPct: 0, killingBlow: true,
@@ -1125,7 +1088,7 @@ pointer-events: auto;
   }
 
   function onLike(data) {
-    fireHeartEffect(data.uniqueId, data.hearts || 1, data.intensity || 0, data.color || '#ff4088');
+    fireHeartEffect(data.uniqueId, data.hearts || 1, data.intensity || 0);
     playSound('heal');
   }
 
@@ -1149,7 +1112,7 @@ pointer-events: auto;
     }, 1000);
   }
 
-  // ── Socket init ───────────────────────────────────────────────────────────
+  // Socket init
   function initSocket() {
     if (typeof io === 'undefined') { enterDemoMode(); return; }
     try {
@@ -1201,8 +1164,10 @@ pointer-events: auto;
         });
       });
 
+      // FIX: giftAttack now respects the effect from classifyGift() (laser, beam, etc.)
+      // Removed the fallback 'gift' default — server always sends an effect.
       socket.on('giftAttack', data => {
-        fireAttack(data.attacker, data.target, data.damage, data.killed, true, data.effect || 'gift', {
+        fireAttack(data.attacker, data.target, data.damage, data.killed, true, data.effect, {
           intensity: data.intensity || 0.5, giftBoosted: true,
           remainingHpPct: data.killed ? 0 : (players[data.target]?.hp / players[data.target]?.maxHp || 1),
           killingBlow: !!data.killed, laserColor: data.giftColor,
@@ -1217,7 +1182,6 @@ pointer-events: auto;
       socket.on('soundEvent',      onSoundEvent);
       socket.on('forceReload',     onForceReload);
 
-      // Fall into demo mode if no data in 3 s
       setTimeout(() => { if (Object.keys(players).length === 0) enterDemoMode(); }, 3000);
 
     } catch (err) {
