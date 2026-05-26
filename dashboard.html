@@ -1,443 +1,806 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>TikTok PvP Battle – Dashboard</title>
-    <link rel="icon" type="image/png" href="/favicon.ico">
-    <script src="/socket.io/socket.io.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background: linear-gradient(135deg, #0a0f1e 0%, #0c1222 100%);
-            font-family: 'Segoe UI', 'Poppins', system-ui, sans-serif;
-            color: #e2e8f0;
-            padding: 20px;
-            min-height: 100vh;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            font-size: 2rem;
-            background: linear-gradient(135deg, #ff6b6b, #ffd93d);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
-            margin-bottom: 8px;
-            display: inline-block;
-        }
-
-        .sub {
-            color: #94a3b8;
-            margin-bottom: 24px;
-            border-left: 3px solid #ff6b6b;
-            padding-left: 12px;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 20px;
-            margin-bottom: 24px;
-        }
-
-        .card {
-            background: rgba(15, 23, 42, 0.7);
-            backdrop-filter: blur(10px);
-            border-radius: 24px;
-            border: 1px solid rgba(71, 85, 105, 0.4);
-            padding: 20px;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
-            border-color: #ff6b6b50;
-        }
-
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-bottom: 1px solid #334155;
-            padding-bottom: 12px;
-            margin-bottom: 16px;
-            font-weight: 600;
-            font-size: 1.2rem;
-        }
-
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px dashed #1e293b;
-        }
-
-        .stat-label {
-            color: #94a3b8;
-        }
-
-        .stat-value {
-            font-weight: bold;
-            color: #ffd93d;
-        }
-
-        button, .btn {
-            background: #1e293b;
-            border: none;
-            color: white;
-            padding: 10px 18px;
-            border-radius: 40px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.9rem;
-            margin-top: 8px;
-        }
-
-        button.primary {
-            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-            box-shadow: 0 4px 12px #ff6b6b40;
-        }
-
-        button.primary:hover {
-            transform: scale(1.02);
-            filter: brightness(1.05);
-        }
-
-        button.danger {
-            background: #7f1a1a;
-        }
-
-        button.warning {
-            background: #b45309;
-        }
-
-        input, select {
-            background: #0f172a;
-            border: 1px solid #334155;
-            padding: 10px 14px;
-            border-radius: 40px;
-            color: white;
-            width: 100%;
-            margin-top: 8px;
-        }
-
-        .flex-row {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-
-        .players-list {
-            max-height: 320px;
-            overflow-y: auto;
-        }
-
-        .player-item {
-            background: #0f172a;
-            margin: 6px 0;
-            padding: 8px 12px;
-            border-radius: 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.85rem;
-        }
-
-        .player-name {
-            font-weight: 600;
-        }
-
-        .hp-bar {
-            width: 80px;
-            height: 6px;
-            background: #2d3748;
-            border-radius: 3px;
-            overflow: hidden;
-        }
-
-        .hp-fill {
-            background: #48bb78;
-            height: 100%;
-            width: 0%;
-        }
-
-        .badge {
-            background: #ff6b6b;
-            border-radius: 30px;
-            padding: 2px 8px;
-            font-size: 0.7rem;
-            font-weight: bold;
-        }
-
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: #1e293b;
-            border-left: 4px solid #ff6b6b;
-            padding: 12px 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px black;
-            z-index: 1000;
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(40px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        .status-connected {
-            color: #4ade80;
-        }
-
-        .status-disconnected {
-            color: #f87171;
-        }
-
-        hr {
-            border-color: #334155;
-            margin: 12px 0;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Battle Royale Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+:root {
+  --bg: #090d14;
+  --surface: #121826;
+  --surface-2: #171f31;
+  --surface-3: #1f293d;
+  --border: #2d374d;
+  --text: #f3f6fb;
+  --text-soft: #a7b1c2;
+  --text-dim: #657086;
+  --blue: #5ab2ff;
+  --purple: #b388ff;
+  --green: #41d37d;
+  --yellow: #f2c14e;
+  --red: #ff5f6d;
+  --pink: #ff7fd1;
+  --blue-glow: rgba(90,178,255,.18);
+  --green-glow: rgba(65,211,125,.18);
+  --red-glow: rgba(255,95,109,.18);
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow: 0 10px 40px rgba(0,0,0,.35);
+  --card-border: 1px solid rgba(255,255,255,.06);
+}
+body {
+  background: radial-gradient(circle at top left, rgba(90,178,255,.12), transparent 25%),
+              radial-gradient(circle at top right, rgba(179,136,255,.10), transparent 25%),
+              var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  padding: 24px;
+}
+#toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(30px);
+  background: rgba(16,20,30,.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,.08);
+  color: #fff;
+  padding: 14px 20px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  transition: .25s ease;
+  z-index: 9999;
+  pointer-events: none;
+}
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.dashboard-shell {
+  max-width: 1600px;
+  margin: auto;
+}
+/* HEADER */
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 26px;
+  margin-bottom: 22px;
+  background: rgba(18,24,38,.92);
+  backdrop-filter: blur(12px);
+  border: var(--card-border);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.brand-logo {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  background: linear-gradient(135deg, var(--blue), var(--purple));
+  box-shadow: 0 0 30px rgba(90,178,255,.25);
+}
+.brand-text h1 {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+.brand-text p {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--text-soft);
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.live-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(65,211,125,.12);
+  border: 1px solid rgba(65,211,125,.25);
+  color: var(--green);
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse 1.2s infinite;
+}
+@keyframes pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: .35; transform: scale(.8); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 20px;
+}
+.col-12 { grid-column: span 12; }
+.col-8 { grid-column: span 8; }
+.col-6 { grid-column: span 6; }
+.col-4 { grid-column: span 4; }
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+  border: var(--card-border);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.03), transparent 40%);
+  pointer-events: none;
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 22px;
+}
+.card-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+.card-badge {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.05);
+  font-size: 11px;
+  color: var(--text-soft);
+  font-family: 'Space Mono', monospace;
+}
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+.status-chip.online {
+  background: rgba(65,211,125,.12);
+  border: 1px solid rgba(65,211,125,.22);
+  color: var(--green);
+}
+.status-chip.offline {
+  background: rgba(255,95,109,.12);
+  border: 1px solid rgba(255,95,109,.22);
+  color: var(--red);
+}
+.status-chip.idle {
+  background: rgba(242,193,78,.12);
+  border: 1px solid rgba(242,193,78,.22);
+  color: var(--yellow);
+}
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.input-group {
+  margin-bottom: 16px;
+}
+.input-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+input[type=text], select {
+  width: 100%;
+  background: var(--surface-3);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 14px;
+  color: var(--text);
+  padding: 14px 16px;
+  font-size: 14px;
+  transition: .2s ease;
+}
+input[type=text]:focus, select:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 4px rgba(90,178,255,.14);
+}
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.btn {
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 13px 18px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 13px;
+  transition: .18s ease;
+  font-family: 'DM Sans', sans-serif;
+}
+.btn:hover {
+  transform: translateY(-2px);
+}
+.btn-primary {
+  background: var(--blue);
+  color: #09111b;
+}
+.btn-success {
+  background: var(--green);
+  color: #08110d;
+}
+.btn-danger {
+  background: var(--red);
+  color: #fff;
+}
+.btn-secondary {
+  background: rgba(255,255,255,.05);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.06);
+}
+.btn-purple {
+  background: var(--purple);
+  color: #090d14;
+}
+.btn-warning {
+  background: var(--yellow);
+  color: #111;
+}
+.stat-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.stat-box:last-child {
+  border-bottom: none;
+}
+.stat-label {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+.stat-value {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+}
+.divider {
+  height: 1px;
+  background: rgba(255,255,255,.05);
+  margin: 18px 0;
+}
+/* AUDIO */
+.drop-zone {
+  position: relative;
+  border: 2px dashed rgba(90,178,255,.22);
+  background: rgba(90,178,255,.05);
+  border-radius: 24px;
+  padding: 40px 24px;
+  text-align: center;
+  margin-bottom: 20px;
+  transition: .2s ease;
+}
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--blue);
+  background: rgba(90,178,255,.08);
+}
+.drop-zone input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.drop-icon {
+  font-size: 38px;
+  margin-bottom: 12px;
+}
+.drop-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+.drop-sub {
+  margin-top: 6px;
+  color: var(--text-soft);
+  font-size: 12px;
+}
+.audio-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.section-title {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--text-soft);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.audio-files {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.audio-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255,255,255,.03);
+  border: 1px solid rgba(255,255,255,.05);
+  border-radius: 14px;
+  padding: 12px;
+}
+.audio-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+}
+.audio-size {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-family: 'Space Mono', monospace;
+}
+.assign-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.assign-table td {
+  padding: 10px 0;
+}
+.assign-table tr+tr td {
+  border-top: 1px solid rgba(255,255,255,.05);
+}
+.event-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 90px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+}
+.event-attack { background: rgba(90,178,255,.14); color: var(--blue); }
+.event-gift { background: rgba(242,193,78,.14); color: var(--yellow); }
+.event-kill { background: rgba(255,95,109,.14); color: var(--red); }
+.event-heal { background: rgba(179,136,255,.14); color: var(--purple); }
+.event-follow { background: rgba(255,127,209,.14); color: var(--pink); }
+.event-respawn { background: rgba(65,211,125,.14); color: var(--green); }
+.footer {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.footer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: .18s ease;
+  cursor: pointer;
+}
+.footer-btn.primary {
+  background: var(--green);
+  color: #08110d;
+}
+.footer-btn.secondary {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.06);
+  color: var(--text);
+}
+@media(max-width: 1100px) {
+  .col-8, .col-6, .col-4 { grid-column: span 12; }
+  .audio-layout { grid-template-columns: 1fr; }
+}
+@media(max-width: 700px) {
+  body { padding: 14px; }
+  .topbar { flex-direction: column; align-items: flex-start; }
+  .brand { align-items: flex-start; }
+}
+</style>
 </head>
 <body>
-<div class="container">
-    <h1>⚔️ TIKTOK PvP BATTLE ARENA</h1>
-    <div class="sub">Dashboard — control your live game</div>
-
-    <div class="grid">
-        <!-- Connection Card -->
-        <div class="card">
-            <div class="card-header">🔌 TikTok Connection</div>
-            <div class="stat-row">
-                <span class="stat-label">Streamer:</span>
-                <span class="stat-value" id="streamerName">—</span>
-            </div>
-            <div class="stat-row">
-                <span class="stat-label">Status:</span>
-                <span class="stat-value" id="connectionStatus">Disconnected</span>
-            </div>
-            <div class="flex-row">
-                <input type="text" id="usernameInput" placeholder="@username" style="flex:1">
-                <button id="connectBtn" class="primary">🔗 Connect</button>
-            </div>
-            <button id="disconnectBtn" class="danger">⛔ Disconnect</button>
-            <button id="resetGameBtn" class="warning">🔄 Reset Stream Connection</button>
-        </div>
-
-        <!-- Stats Card -->
-        <div class="card">
-            <div class="card-header">📊 Live Stats</div>
-            <div class="stat-row"><span class="stat-label">Overlay Clients:</span><span id="overlayCount" class="stat-value">0</span></div>
-            <div class="stat-row"><span class="stat-label">Players Alive:</span><span id="playerCount" class="stat-value">0</span></div>
-            <div class="stat-row"><span class="stat-label">Dev Test Mode:</span><span id="devModeStatus" class="stat-value">OFF</span></div>
-            <div class="flex-row" style="margin-top: 12px;">
-                <button id="toggleDevMode">🧪 Toggle Test Mode</button>
-                <button id="spawnTestPlayers">🎲 Spawn Test Players</button>
-            </div>
-            <div class="flex-row">
-                <button id="clearPlayersBtn">🗑️ Clear All Players</button>
-                <button id="reloadOverlayBtn">🔄 Reload Overlay</button>
-            </div>
-        </div>
-
-        <!-- Background & Audio Quick Card -->
-        <div class="card">
-            <div class="card-header">🎨 Background / 🔊 Audio</div>
-            <input type="file" id="bgUpload" accept="image/jpeg,image/png,image/webp,image/gif">
-            <button id="uploadBgBtn" class="primary">Upload Background</button>
-            <button id="clearBgBtn">🗑️ Clear Background</button>
-            <hr>
-            <button id="openAudioManager">🎵 Open Audio Manager</button>
-            <small style="display:block; margin-top:8px; color:#94a3b8;">Audio manager opens in a new tab</small>
-        </div>
-
-        <!-- Overlay Settings -->
-        <div class="card">
-            <div class="card-header">🎨 Overlay Visuals</div>
-            <div class="stat-row"><span>Laser Color:</span><input type="color" id="laserColorPicker" value="#7afcff" style="width:50px; margin:0"></div>
-            <div class="stat-row"><span>Shot Type:</span>
-                <select id="shotTypeSelect">
-                    <option>beam</option><option>pulse</option><option>wave</option><option>burst</option><option>ripple</option>
-                </select>
-            </div>
-            <div class="stat-row"><span>Shot Speed (1-3):</span><input type="number" id="shotSpeedInput" min="1" max="3" step="0.1" value="1"></div>
-            <button id="applyOverlaySettings">Apply Settings</button>
-        </div>
+<div id="toast"></div>
+<div class="dashboard-shell">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-logo">🎮</div>
+      <div class="brand-text">
+        <h1>Battle Royale Command Center</h1>
+        <p>Interactive TikTok LIVE overlay management system</p>
+      </div>
     </div>
-
-    <!-- Players & Actions -->
-    <div class="grid">
-        <div class="card" style="grid-column: span 2;">
-            <div class="card-header">👥 Players Arena (Alive)</div>
-            <div class="players-list" id="playersListContainer">
-                <div style="text-align:center; padding:20px;">Waiting for game data...</div>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">⚡ Test Actions</div>
-            <div class="flex-row"><button id="testAttackBtn">💥 Test Attack (Alpha→Bravo)</button></div>
-            <div class="flex-row"><button id="testGiftBtn">🎁 Test Gift (Charlie→3 targets)</button></div>
-            <div class="flex-row"><button id="testStreakBtn">🔥 Test Streak Event (5x RAMPAGE)</button></div>
-            <div class="flex-row"><button id="testKillSound">🔊 Test Kill Sound</button></div>
-            <div class="flex-row"><button id="testHealSound">💚 Test Heal Sound</button></div>
-        </div>
+    <div class="topbar-right">
+      <div class="live-chip"><div class="live-dot"></div>LIVE SYSTEM</div>
+      <button class="btn btn-secondary" onclick="resetTikTok()">Logout</button>
     </div>
+  </div>
+  <div class="grid">
+    <!-- TikTok Connection -->
+    <div class="card col-6">
+      <div class="card-header">
+        <div class="card-title">TikTok Live Connection</div>
+        <div class="card-badge">Realtime WebSocket</div>
+      </div>
+      <div class="status-chip offline" id="tiktok-chip"><div class="pulse-dot"></div><span id="tiktok-label">Disconnected</span></div>
+      <div class="input-group">
+        <label class="input-label">TikTok Username</label>
+        <input type="text" id="username" placeholder="@yourusername">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-success" style="flex:1" onclick="connect()">✓ Connect</button>
+        <button class="btn btn-danger" style="flex:1" onclick="resetTikTok()">✕ Disconnect</button>
+      </div>
+    </div>
+    <!-- Overlay Status + Players -->
+    <div class="card col-6">
+      <div class="card-header">
+        <div class="card-title">Overlay Status</div>
+        <div class="card-badge">Browser Source</div>
+      </div>
+      <div class="status-chip offline" id="overlay-chip"><div class="pulse-dot"></div><span id="overlay-label">No overlay connected</span></div>
+      <div class="stat-box"><span class="stat-label">Active Players</span><span class="stat-value" id="player-count">—</span></div>
+      <div class="stat-box"><span class="stat-label">Dev Mode</span><span class="stat-value" id="dev-mode-badge">OFF</span></div>
+      <div class="divider"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" style="flex:1" onclick="reloadOverlay()">↺ Reload Overlay</button>
+        <button class="btn btn-secondary" onclick="clearPlayers()">Clear Players</button>
+        <button class="btn btn-secondary" onclick="toggleDevMode()">🧪 Toggle Dev Mode</button>
+      </div>
+    </div>
+    <!-- Background -->
+    <div class="card col-4">
+      <div class="card-header"><div class="card-title">Background Manager</div></div>
+      <div class="input-group">
+        <label class="input-label">Overlay Background</label>
+        <input type="file" id="bgUpload" accept="image/jpeg,image/png,image/gif,image/webp">
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" style="flex:1" onclick="uploadBackground()">Upload Background</button>
+        <button class="btn btn-warning" onclick="clearBackground()">Clear</button>
+      </div>
+      <p id="bgStatus" style="margin-top:14px; color:var(--text-soft); font-size:12px;">No background set</p>
+    </div>
+    <!-- Laser Controls -->
+    <div class="card col-4">
+      <div class="card-header"><div class="card-title">Laser Controls</div><div class="card-badge">Animation FX</div></div>
+      <div class="input-group">
+        <label class="input-label">Shot Style</label>
+        <select id="laserStyleSelect">
+          <option value="beam">Beam</option><option value="pulse">Pulse</option><option value="wave">Wave</option>
+        </select>
+      </div>
+      <div class="input-group">
+        <label class="input-label">Laser Color</label>
+        <input type="color" id="laserColorPicker" value="#5ab2ff" style="height:50px; padding:4px; border-radius:14px; background:var(--surface-3); border:1px solid rgba(255,255,255,.08);">
+      </div>
+      <button class="btn btn-primary" style="width:100%; margin-top:6px" onclick="saveLaserStyle()">Save Laser Style</button>
+    </div>
+    <!-- Dev Tools -->
+    <div class="card col-4">
+      <div class="card-header"><div class="card-title">Developer Tools</div></div>
+      <p style="color:var(--text-soft); font-size:13px; line-height:1.6; margin-bottom:18px;">Trigger overlay attacks, gifts, kills, heals, and animation tests instantly.</p>
+      <div class="btn-row">
+        <button class="btn btn-success" onclick="testOverlayAttack()">Attack</button>
+        <button class="btn btn-warning" onclick="testOverlayGift()">Gift</button>
+        <button class="btn btn-purple" onclick="testOverlayHeal()">Heal</button>
+        <button class="btn btn-danger" onclick="testOverlayKill()">Kill</button>
+        <button class="btn btn-primary" onclick="testStreak()">Streak</button>
+      </div>
+    </div>
+    <!-- Audio Manager -->
+    <div class="card col-12">
+      <div class="card-header"><div class="card-title">Audio Manager</div><div class="card-badge" id="audioCountBadge">0 Sounds Loaded</div></div>
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="audioFileInput" accept="audio/*">
+        <div class="drop-icon">🎵</div>
+        <div class="drop-title">Drag & Drop Audio Files</div>
+        <div class="drop-sub">MP3 • WAV • OGG • AAC • FLAC • WEBM</div>
+      </div>
+      <button class="btn btn-primary" style="width:100%; margin-bottom:24px" onclick="document.getElementById('audioFileInput').click()">📂 Browse Audio Files</button>
+      <div class="audio-layout">
+        <div>
+          <div class="section-title">Uploaded Sounds</div>
+          <div class="audio-files" id="audioLibrary"><p style="color:var(--text-soft);">No audio uploaded yet.</p></div>
+        </div>
+        <div>
+          <div class="section-title">Event Assignments</div>
+          <table class="assign-table"><tbody id="assignTableBody"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- FOOTER with CLEAR OVERLAY BUTTON -->
+  <div class="footer">
+    <button class="footer-btn primary" onclick="window.open('/overlay','_blank')">🖥️ Open Overlay</button>
+    <button class="footer-btn secondary" onclick="window.open('/stats','_blank')">↗ Stats</button>
+    <button class="footer-btn secondary" onclick="window.open('/api/status','_blank')">↗ Raw JSON</button>
+    <button class="footer-btn secondary" onclick="window.open('/dashboard','_self')">🔄 Refresh Dashboard</button>
+  </div>
 </div>
-
+<script src="/socket.io/socket.io.js"></script>
 <script>
-    const socket = io();
-    let gameState = {};
+const socket = io();
+let overlayCount = 0;
+let audioLibraryData = [];
+let audioConfigData = {};
+const EVENTS = ['attack','gift','kill','respawn','heal','follow'];
+const EVENT_CLASSES = { attack:'event-attack', gift:'event-gift', kill:'event-kill', respawn:'event-respawn', heal:'event-heal', follow:'event-follow' };
 
-    function showToast(msg, isError = false) {
-        const toast = document.createElement('div');
-        toast.className = 'toast';
-        toast.style.borderLeftColor = isError ? '#f87171' : '#4ade80';
-        toast.innerText = msg;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
+// Toast
+function toast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderLeftColor = isError ? '#ff5f6d' : '#41d37d';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+// Socket events (matches server.js)
+socket.on('overlayCount', (data) => {
+  overlayCount = data.count || data;
+  const chip = document.getElementById('overlay-chip');
+  const label = document.getElementById('overlay-label');
+  if (overlayCount > 0) {
+    chip.className = 'status-chip online';
+    label.textContent = `Connected (${overlayCount} source${overlayCount > 1 ? 's' : ''})`;
+  } else {
+    chip.className = 'status-chip offline';
+    label.textContent = 'No overlay connected';
+  }
+});
+socket.on('gameState', (state) => {
+  const alive = Object.values(state || {}).filter(p => p.alive).length;
+  document.getElementById('player-count').textContent = alive;
+});
+socket.on('devModeChanged', (data) => {
+  document.getElementById('dev-mode-badge').textContent = data.enabled ? 'ON' : 'OFF';
+});
+socket.on('audioConfig', (cfg) => {
+  if (cfg) audioConfigData = cfg;
+  renderAssignTable();
+});
+
+// Status fetching
+function setTikTokStatus(state, username) {
+  const chip = document.getElementById('tiktok-chip');
+  const label = document.getElementById('tiktok-label');
+  if (state === 'connected') {
+    chip.className = 'status-chip online';
+    label.textContent = `Connected to @${username}`;
+  } else if (state === 'connecting') {
+    chip.className = 'status-chip idle';
+    label.textContent = 'Connecting...';
+  } else {
+    chip.className = 'status-chip offline';
+    label.textContent = 'Disconnected';
+  }
+}
+async function fetchStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+    document.getElementById('username').value = data.username || '';
+    if (data.background?.filename) document.getElementById('bgStatus').textContent = `Background set: ${data.background.filename}`;
+    else document.getElementById('bgStatus').textContent = 'No background set';
+    setTikTokStatus(data.connected ? 'connected' : 'disconnected', data.username);
+    document.getElementById('dev-mode-badge').textContent = data.devTestMode ? 'ON' : 'OFF';
+    if (data.overlayCount !== undefined) {
+      socket.emit('register', { type: 'dashboard' }); // ensure socket registers
     }
+  } catch (e) { console.warn(e); }
+}
+fetchStatus();
+setInterval(fetchStatus, 10000);
 
-    function updatePlayersList(players) {
-        const container = document.getElementById('playersListContainer');
-        if (!players || Object.keys(players).length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:20px;">No players yet.</div>';
-            return;
-        }
-        const alive = Object.values(players).filter(p => p.alive);
-        if (alive.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:20px;">No alive players.</div>';
-            return;
-        }
-        let html = '';
-        alive.forEach(p => {
-            const hpPercent = (p.hp / p.maxHp) * 100;
-            html += `
-                <div class="player-item">
-                    <div><span class="player-name">${escapeHtml(p.nickname || p.uniqueId)}</span> 
-                    <span class="badge">💪 ${p.strength}</span> <span>🗡️ ${p.kills || 0}</span></div>
-                    <div style="width:120px;">
-                        <div class="hp-bar"><div class="hp-fill" style="width:${hpPercent}%; background:${p.hp < p.maxHp*0.3 ? '#ef4444' : '#48bb78'}"></div></div>
-                        <span style="font-size:0.7rem;">${p.hp}/${p.maxHp}</span>
-                    </div>
-                </div>
-            `;
-        });
-        container.innerHTML = html;
-        document.getElementById('playerCount').innerText = alive.length;
-    }
+// API calls
+async function apiCall(endpoint, method = 'POST', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(endpoint, opts);
+  const json = await res.json();
+  if (!res.ok) toast(json.error || 'Request failed', true);
+  return json;
+}
+function connect() {
+  let username = document.getElementById('username').value.trim().replace(/^@/, '');
+  if (!username) { toast('Enter a username', true); return; }
+  setTikTokStatus('connecting', username);
+  fetch('/api/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }) })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) { setTikTokStatus('connected', username); toast(`Connected to @${username}`); }
+      else { setTikTokStatus('disconnected'); toast(d.error || 'Connection failed', true); }
+    })
+    .catch(() => { setTikTokStatus('disconnected'); toast('Connection failed', true); });
+}
+function resetTikTok() { apiCall('/api/reset').then(() => { setTikTokStatus('disconnected'); toast('Disconnected'); }); }
+function reloadOverlay() { apiCall('/api/overlay/reload'); toast('Overlay reload signal sent'); }
+function clearPlayers() { if(confirm('Clear all players?')) apiCall('/api/players/clear').then(() => toast('Players cleared')); }
+function toggleDevMode() { fetchStatus().then(() => { apiCall('/api/dev/test-mode', 'POST', { enabled: document.getElementById('dev-mode-badge').textContent !== 'ON' }); }); }
+function uploadBackground() {
+  const file = document.getElementById('bgUpload').files[0];
+  if (!file) { toast('Choose an image first', true); return; }
+  const fd = new FormData(); fd.append('background', file);
+  fetch('/api/background/upload', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(d => { if(d.success) { document.getElementById('bgStatus').textContent = `Background set: ${file.name}`; toast('Background uploaded'); } });
+}
+function clearBackground() { apiCall('/api/background/clear').then(() => { document.getElementById('bgStatus').textContent = 'No background set'; toast('Background cleared'); }); }
+function setLaserColor(color) { apiCall('/api/dev/laser-color', 'POST', { color }); }
+function setShotStyle(type) { apiCall('/api/dev/overlay-settings', 'POST', { shotType: type }); }
+function saveLaserStyle() {
+  const type = document.getElementById('laserStyleSelect').value;
+  const color = document.getElementById('laserColorPicker').value;
+  setShotStyle(type);
+  setLaserColor(color);
+  toast('Laser style saved');
+}
+// Test actions
+function runOverlayTest(action) { apiCall(`/api/overlay/test/${action}`); toast(`${action} test triggered`); }
+function testOverlayAttack() { runOverlayTest('attack'); }
+function testOverlayGift() { runOverlayTest('gift'); }
+function testOverlayHeal() { runOverlayTest('heal'); }
+function testOverlayKill() { runOverlayTest('kill'); }
+function testStreak() { apiCall('/api/overlay/test/streak'); toast('Streak test triggered'); }
 
-    function escapeHtml(str) { return String(str).replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
-
-    // Socket events (matches server.js)
-    socket.on('serverReady', (data) => {
-        console.log('Server ready', data);
-        document.getElementById('overlayCount').innerText = data.overlayCount;
-        if (data.overlaySettings) {
-            document.getElementById('laserColorPicker').value = data.overlaySettings.laserColor || '#7afcff';
-            document.getElementById('shotTypeSelect').value = data.overlaySettings.shotType || 'beam';
-            document.getElementById('shotSpeedInput').value = data.overlaySettings.shotSpeed || 1;
-        }
+// Audio Manager
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+let previewAudio = null;
+function playPreview(filename, label) {
+  if (previewAudio) { previewAudio.pause(); previewAudio = null; }
+  const a = new Audio('/audio/' + filename);
+  a.currentTime = 0;
+  a.play().catch(() => {});
+  previewAudio = a;
+  a.onended = () => { previewAudio = null; };
+  toast('Playing: ' + label);
+}
+function renderAudioLibrary() {
+  const container = document.getElementById('audioLibrary');
+  container.innerHTML = '';
+  document.getElementById('audioCountBadge').textContent = `${audioLibraryData.length} Sound${audioLibraryData.length !== 1 ? 's' : ''}`;
+  if (!audioLibraryData.length) {
+    container.innerHTML = '<p style="color:var(--text-soft);">No audio uploaded yet.</p>';
+    return;
+  }
+  audioLibraryData.forEach(file => {
+    const row = document.createElement('div');
+    row.className = 'audio-row';
+    row.innerHTML = `
+      <div>🎵</div>
+      <div class="audio-name">${escapeHtml(file.originalName)}</div>
+      <div class="audio-size">${formatBytes(file.size)}</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="playPreview('${file.filename}','${escapeHtml(file.originalName)}')">▶ Play</button>
+        <a class="btn btn-secondary" href="/audio/${file.filename}" download style="text-decoration:none">⬇</a>
+      </div>
+    `;
+    container.appendChild(row);
+  });
+}
+function renderAssignTable() {
+  const tbody = document.getElementById('assignTableBody');
+  tbody.innerHTML = '';
+  EVENTS.forEach(event => {
+    const currentFile = audioConfigData[event] || '';
+    const tr = document.createElement('tr');
+    let options = `<option value="">— None —</option>`;
+    audioLibraryData.forEach(f => {
+      options += `<option value="${f.filename}" ${currentFile === f.filename ? 'selected' : ''}>${escapeHtml(f.originalName)}</option>`;
     });
-    socket.on('gameState', (players) => {
-        gameState = players;
-        updatePlayersList(players);
+    tr.innerHTML = `
+      <td><span class="event-pill ${EVENT_CLASSES[event]}">${event}</span></td>
+      <td style="padding-left:14px">
+        <select data-event="${event}" onchange="assignAudio('${event}', this.value)">
+          ${options}
+        </select>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+function assignAudio(event, filename) {
+  fetch('/api/audio/assign', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ event, filename: filename || null })
+  })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) toast(`Assigned ${event} → ${filename || 'none'}`);
+      else toast('Assignment failed', true);
     });
-    socket.on('overlayCount', (data) => { document.getElementById('overlayCount').innerText = data.count; });
-    socket.on('devModeChanged', (data) => { document.getElementById('devModeStatus').innerText = data.enabled ? 'ON' : 'OFF'; });
-    socket.on('backgroundChanged', (data) => { showToast(`Background changed: ${data.filename || 'cleared'}`); });
-    socket.on('audioConfig', () => { showToast('Audio configuration updated'); });
-
-    // Fetch initial status
-    async function fetchStatus() {
-        try {
-            const res = await fetch('/api/status');
-            const data = await res.json();
-            document.getElementById('streamerName').innerText = data.username || '—';
-            document.getElementById('connectionStatus').innerHTML = data.connected ? '<span class="status-connected">● CONNECTED</span>' : '<span class="status-disconnected">● OFFLINE</span>';
-            document.getElementById('overlayCount').innerText = data.overlayCount;
-            document.getElementById('devModeStatus').innerText = data.devTestMode ? 'ON' : 'OFF';
-            if (data.overlaySettings) {
-                document.getElementById('laserColorPicker').value = data.overlaySettings.laserColor || '#7afcff';
-                document.getElementById('shotTypeSelect').value = data.overlaySettings.shotType || 'beam';
-                document.getElementById('shotSpeedInput').value = data.overlaySettings.shotSpeed || 1;
-            }
-        } catch(e) { console.error(e); }
-    }
-    fetchStatus();
-    setInterval(fetchStatus, 10000);
-
-    async function apiCall(endpoint, method = 'POST', body = null) {
-        const opts = { method, headers: { 'Content-Type': 'application/json' } };
-        if (body) opts.body = JSON.stringify(body);
-        const res = await fetch(endpoint, opts);
-        const json = await res.json();
-        if (!res.ok) showToast(json.error || 'Request failed', true);
-        return json;
-    }
-
-    document.getElementById('connectBtn').onclick = async () => {
-        const username = document.getElementById('usernameInput').value.trim();
-        if (!username) return showToast('Enter a username', true);
-        const res = await apiCall('/api/connect', 'POST', { username });
-        if (res.success) showToast(`Connecting to @${username}...`);
-        else showToast(res.error || 'Connection failed', true);
-        fetchStatus();
-    };
-    document.getElementById('disconnectBtn').onclick = async () => { await apiCall('/api/reset'); showToast('Disconnected'); fetchStatus(); };
-    document.getElementById('resetGameBtn').onclick = async () => { await apiCall('/api/reset'); showToast('Reset and disconnected'); fetchStatus(); };
-    document.getElementById('clearPlayersBtn').onclick = async () => { await apiCall('/api/players/clear'); showToast('Players cleared'); };
-    document.getElementById('reloadOverlayBtn').onclick = async () => { await apiCall('/api/overlay/reload'); showToast('Reloading overlays'); };
-    document.getElementById('toggleDevMode').onclick = async () => {
-        const current = document.getElementById('devModeStatus').innerText === 'ON';
-        await apiCall('/api/dev/test-mode', 'POST', { enabled: !current });
-        fetchStatus();
-    };
-    document.getElementById('spawnTestPlayers').onclick = async () => { await apiCall('/api/test/spawn'); showToast('Test players spawned'); };
-    document.getElementById('uploadBgBtn').onclick = async () => {
-        const file = document.getElementById('bgUpload').files[0];
-        if (!file) return showToast('Select a background image', true);
-        const formData = new FormData();
-        formData.append('background', file);
-        const res = await fetch('/api/background/upload', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (data.success) showToast('Background uploaded');
-        else showToast(data.error, true);
-    };
-    document.getElementById('clearBgBtn').onclick = async () => { await apiCall('/api/background/clear'); showToast('Background cleared'); };
-    document.getElementById('applyOverlaySettings').onclick = async () => {
-        const settings = {
-            shotType: document.getElementById('shotTypeSelect').value,
-            shotSpeed: parseFloat(document.getElementById('shotSpeedInput').value),
-            color: document.getElementById('laserColorPicker').value,
-        };
-        const res = await apiCall('/api/dev/overlay-settings', 'POST', settings);
-        if (res.success) showToast('Overlay settings applied');
-    };
-    document.getElementById('openAudioManager').onclick = () => { window.open('/admin/audio-manager', '_blank'); };
-    // Test buttons
-    document.getElementById('testAttackBtn').onclick = async () => { await apiCall('/api/overlay/test/attack'); showToast('Test attack sent'); };
-    document.getElementById('testGiftBtn').onclick = async () => { await apiCall('/api/overlay/test/gift'); showToast('Test gift sent'); };
-    document.getElementById('testStreakBtn').onclick = async () => { await apiCall('/api/overlay/test/streak'); showToast('Streak test triggered'); };
-    document.getElementById('testKillSound').onclick = async () => { await apiCall('/api/overlay/test/kill'); };
-    document.getElementById('testHealSound').onclick = async () => { await apiCall('/api/overlay/test/heal'); };
+}
+function uploadAudioFile(file) {
+  const fd = new FormData();
+  fd.append('audio', file);
+  fetch('/api/audio/upload', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        audioLibraryData.push(d.file);
+        renderAudioLibrary();
+        renderAssignTable();
+        toast('Audio uploaded');
+      } else toast('Upload failed', true);
+    });
+}
+function escapeHtml(str) {
+  return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m; });
+}
+// Drag & Drop
+const dropZone = document.getElementById('dropZone');
+const audioFileInput = document.getElementById('audioFileInput');
+audioFileInput.addEventListener('change', () => { if(audioFileInput.files[0]) uploadAudioFile(audioFileInput.files[0]); });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); const file = e.dataTransfer.files[0]; if(file) uploadAudioFile(file); });
+// Initial load audio library
+fetch('/api/audio').then(r => r.json()).then(d => {
+  if (d.success) {
+    audioLibraryData = d.library || [];
+    audioConfigData = d.config || {};
+    renderAudioLibrary();
+    renderAssignTable();
+  }
+});
+// Register as dashboard client
+socket.on('connect', () => { socket.emit('register', { type: 'dashboard' }); });
 </script>
 </body>
 </html>
