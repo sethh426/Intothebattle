@@ -1,4 +1,3 @@
-// server.js (corrected)
 import { TikTokLive } from '@tiktool/live';
 import express from 'express';
 import cookieParser from 'cookie-parser';
