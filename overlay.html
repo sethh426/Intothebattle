@@ -421,7 +421,6 @@ pointer-events: auto;
       };
       this.duration = Math.round((durations[type] || 500) / speed);
 
-      // Pre-seed particles
       if (type === 'fire') {
         const count = 40 + Math.floor(this.intensity * 24);
         for (let i = 0; i < count; i++) {
@@ -596,7 +595,6 @@ pointer-events: auto;
       }
     }
 
-    // New cinematic effects
     drawNeon() {
       const { from, to, progress } = this;
       const x    = from.x + (to.x - from.x) * progress;
@@ -1164,10 +1162,16 @@ pointer-events: auto;
         });
       });
 
-      // FIX: giftAttack now respects the effect from classifyGift() (laser, beam, etc.)
-      // Removed the fallback 'gift' default — server always sends an effect.
+      // FIX: Force gift attacks to always use the selected shot type (beam/laser etc.)
+      // instead of any effect that might cause heart particles.
       socket.on('giftAttack', data => {
-        fireAttack(data.attacker, data.target, data.damage, data.killed, true, data.effect, {
+        // Override effect with the currently configured shot type
+        const forcedEffect = overlaySettings.shotType === 'beam' ? 'beam' :
+                             overlaySettings.shotType === 'pulse' ? 'fire' :
+                             overlaySettings.shotType === 'wave' ? 'ripple' :
+                             overlaySettings.shotType === 'burst' ? 'explosion' :
+                             overlaySettings.shotType === 'ripple' ? 'ripple' : 'laser';
+        fireAttack(data.attacker, data.target, data.damage, data.killed, true, forcedEffect, {
           intensity: data.intensity || 0.5, giftBoosted: true,
           remainingHpPct: data.killed ? 0 : (players[data.target]?.hp / players[data.target]?.maxHp || 1),
           killingBlow: !!data.killed, laserColor: data.giftColor,
