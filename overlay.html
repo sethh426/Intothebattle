@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -9,137 +8,136 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Exo+2:wght@400;700;900&display=swap');
 
-- { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: #02040a; font-family: ‘Exo 2’, ‘Segoe UI’, sans-serif; }
-  body { display: flex; align-items: center; justify-content: center; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #02040a; font-family: 'Exo 2', 'Segoe UI', sans-serif; }
+body { display: flex; align-items: center; justify-content: center; }
 
 #overlay-container {
-position: relative;
-width: min(90vw, 1920px);
-aspect-ratio: 16 / 9;
-background: rgba(4, 8, 18, 0.92);
-border: 1px solid rgba(180, 120, 255, 0.35);
-border-radius: 18px;
-box-shadow:
-inset 0 0 0 1px rgba(255,255,255,0.06),
-0 0 48px rgba(140,80,255,0.18),
-0 0 120px rgba(80,40,180,0.08);
-overflow: hidden;
+  position: relative;
+  width: min(90vw, 1920px);
+  aspect-ratio: 16 / 9;
+  background: rgba(4, 8, 18, 0.92);
+  border: 1px solid rgba(180, 120, 255, 0.35);
+  border-radius: 18px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.06),
+    0 0 48px rgba(140,80,255,0.18),
+    0 0 120px rgba(80,40,180,0.08);
+  overflow: hidden;
 }
 #canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 
 .panel-wrapper {
-position: fixed; top: 16px; right: 0;
-display: flex; align-items: flex-start;
-pointer-events: auto; z-index: 30;
+  position: fixed; top: 16px; right: 0;
+  display: flex; align-items: flex-start;
+  pointer-events: auto; z-index: 30;
 }
 .panel-tab {
-width: 28px;
-background: rgba(6,10,20,0.88);
-border: 1px solid rgba(100,200,255,0.2);
-border-right: none; border-radius: 8px 0 0 8px;
-padding: 10px 0; cursor: pointer;
-display: flex; flex-direction: column; align-items: center; gap: 6px;
-color: #8fd8ff; font-size: 10px; font-weight: 800; letter-spacing: 1px;
-text-transform: uppercase; writing-mode: vertical-rl; text-orientation: mixed;
-user-select: none; transition: background 0.2s;
-font-family: ‘Rajdhani’, sans-serif;
+  width: 28px;
+  background: rgba(6,10,20,0.88);
+  border: 1px solid rgba(100,200,255,0.2);
+  border-right: none; border-radius: 8px 0 0 8px;
+  padding: 10px 0; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  color: #8fd8ff; font-size: 10px; font-weight: 800; letter-spacing: 1px;
+  text-transform: uppercase; writing-mode: vertical-rl; text-orientation: mixed;
+  user-select: none; transition: background 0.2s;
+  font-family: 'Rajdhani', sans-serif;
 }
 .panel-tab:hover { background: rgba(20,40,70,0.95); }
 .panel-tab-icon { font-size: 13px; writing-mode: horizontal-tb; }
 .layout-panel {
-width: 260px; padding: 14px 16px; border-radius: 0 0 0 16px;
-background: rgba(6,10,20,0.94); backdrop-filter: blur(16px);
-border: 1px solid rgba(100,200,255,0.14); border-right: none;
-box-shadow: -8px 0 30px rgba(0,0,0,0.5);
-transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
-transform-origin: right top; max-height: 90vh; overflow-y: auto;
+  width: 260px; padding: 14px 16px; border-radius: 0 0 0 16px;
+  background: rgba(6,10,20,0.94); backdrop-filter: blur(16px);
+  border: 1px solid rgba(100,200,255,0.14); border-right: none;
+  box-shadow: -8px 0 30px rgba(0,0,0,0.5);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease;
+  transform-origin: right top; max-height: 90vh; overflow-y: auto;
 }
 .layout-panel.hidden { transform: translateX(100%); opacity: 0; pointer-events: none; }
 .layout-title {
-color: #8fd8ff; font-size: 12px; font-weight: 800;
-letter-spacing: 2px; text-transform: uppercase;
-margin-bottom: 14px; font-family: ‘Rajdhani’, sans-serif;
+  color: #8fd8ff; font-size: 12px; font-weight: 800;
+  letter-spacing: 2px; text-transform: uppercase;
+  margin-bottom: 14px; font-family: 'Rajdhani', sans-serif;
 }
 .control { margin-bottom: 13px; }
 .control-top { display: flex; justify-content: space-between; margin-bottom: 6px; }
-.control-top span { font-size: 11px; color: #cfefff; font-family: ‘Rajdhani’, sans-serif; letter-spacing: 0.5px; }
+.control-top span { font-size: 11px; color: #cfefff; font-family: 'Rajdhani', sans-serif; letter-spacing: 0.5px; }
 .control input[type=range] {
-width: 100%; appearance: none; height: 5px;
-border-radius: 999px; background: rgba(255,255,255,0.08); outline: none;
+  width: 100%; appearance: none; height: 5px;
+  border-radius: 999px; background: rgba(255,255,255,0.08); outline: none;
 }
 .control input[type=range]::-webkit-slider-thumb {
-appearance: none; width: 16px; height: 16px; border-radius: 50%;
-background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9); cursor: pointer;
+  appearance: none; width: 16px; height: 16px; border-radius: 50%;
+  background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9); cursor: pointer;
 }
 .control input[type=range]::-moz-range-thumb {
-width: 16px; height: 16px; border-radius: 50%;
-background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9);
-cursor: pointer; border: none;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #7afcff; box-shadow: 0 0 10px rgba(122,252,255,0.9);
+  cursor: pointer; border: none;
 }
-.control label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #cfefff; font-family: ‘Rajdhani’, sans-serif; cursor: pointer; }
+.control label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #cfefff; font-family: 'Rajdhani', sans-serif; cursor: pointer; }
 .control select, .control button, .control input[type=color] {
-background: rgba(10,20,40,0.8); border: 1px solid rgba(100,200,255,0.3); color: #cfefff;
-padding: 4px 8px; border-radius: 6px; font-family: ‘Rajdhani’, sans-serif;
-font-size: 12px; outline: none; cursor: pointer; width: 100%; margin-top: 4px;
+  background: rgba(10,20,40,0.8); border: 1px solid rgba(100,200,255,0.3); color: #cfefff;
+  padding: 4px 8px; border-radius: 6px; font-family: 'Rajdhani', sans-serif;
+  font-size: 12px; outline: none; cursor: pointer; width: 100%; margin-top: 4px;
 }
 .control button:hover { background: rgba(30,60,100,0.8); }
 
 #status-badge {
-position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
-background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
-border-radius: 24px; padding: 4px 16px;
-font-size: 11px; font-weight: bold; letter-spacing: 1px;
-color: #aaa; pointer-events: none; z-index: 9999;
-font-family: ‘Rajdhani’, monospace; transition: 0.2s;
+  position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
+  border-radius: 24px; padding: 4px 16px;
+  font-size: 11px; font-weight: bold; letter-spacing: 1px;
+  color: #aaa; pointer-events: none; z-index: 9999;
+  font-family: 'Rajdhani', monospace; transition: 0.2s;
 }
 #status-badge.connected    { color: #7aff87; text-shadow: 0 0 4px #2eff5e; }
 #status-badge.disconnected { color: #ff8866; }
 #status-badge.demo         { color: #ffd84f; text-shadow: 0 0 4px #ffaa00; }
 
 .damage {
-position: fixed; font-weight: 900; font-size: clamp(18px, 3vw, 28px);
-color: #ff5050;
-text-shadow: 0 0 16px rgba(255,80,80,0.95), 2px 2px 8px rgba(0,0,0,0.9);
-animation: floatDamage 0.85s ease-out forwards;
-pointer-events: none; z-index: 9999;
-transform: translate(-50%, -50%); white-space: nowrap;
-font-family: ‘Rajdhani’, sans-serif;
+  position: fixed; font-weight: 900; font-size: clamp(18px, 3vw, 28px);
+  color: #ff5050;
+  text-shadow: 0 0 16px rgba(255,80,80,0.95), 2px 2px 8px rgba(0,0,0,0.9);
+  animation: floatDamage 0.85s ease-out forwards;
+  pointer-events: none; z-index: 9999;
+  transform: translate(-50%, -50%); white-space: nowrap;
+  font-family: 'Rajdhani', sans-serif;
 }
 .damage.kill     { color: #ffd84f; font-size: clamp(22px, 4vw, 34px);   text-shadow: 0 0 20px rgba(255,216,79,0.95); }
 .damage.critical { color: #ff2244; font-size: clamp(24px, 4.5vw, 38px); text-shadow: 0 0 24px rgba(255,34,68,1), 0 0 48px rgba(255,100,0,0.6); }
 @keyframes floatDamage {
-0%   { opacity: 1; transform: translate(-50%, -50%)  scale(1.25); }
-100% { opacity: 0; transform: translate(-50%, -190%) scale(0.6);  }
+  0%   { opacity: 1; transform: translate(-50%, -50%)  scale(1.25); }
+  100% { opacity: 0; transform: translate(-50%, -190%) scale(0.6);  }
 }
 
 .banner {
-position: fixed; left: 50%; top: 8%;
-transform: translate(-50%, 0); z-index: 10000; pointer-events: none;
-font-family: ‘Rajdhani’, sans-serif; font-weight: 900; text-align: center;
-animation: bannerIn 0.35s cubic-bezier(0.2, 1.4, 0.4, 1), bannerOut 0.5s ease-in 2.6s forwards;
-white-space: nowrap;
+  position: fixed; left: 50%; top: 8%;
+  transform: translate(-50%, 0); z-index: 10000; pointer-events: none;
+  font-family: 'Rajdhani', sans-serif; font-weight: 900; text-align: center;
+  animation: bannerIn 0.35s cubic-bezier(0.2, 1.4, 0.4, 1), bannerOut 0.5s ease-in 2.6s forwards;
+  white-space: nowrap;
 }
 .banner.kill      { font-size: clamp(18px,2vw,32px);   color: #ffcc44; text-shadow: 0 0 30px rgba(255,200,0,0.9), 0 0 80px rgba(255,100,0,0.6); letter-spacing: 2px; }
 .banner.streak    { font-size: clamp(20px,2.2vw,36px); color: #ff44aa; text-shadow: 0 0 40px rgba(255,68,170,0.9), 0 0 80px rgba(255,0,100,0.4); letter-spacing: 3px; }
 .banner.gift      { font-size: clamp(14px,1.8vw,26px); color: #fff; background: rgba(0,0,0,0.55); padding: 10px 32px; border-radius: 40px; backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.12); text-shadow: 0 0 20px rgba(255,255,255,0.8); }
 .banner.legendary { font-size: clamp(22px,2.5vw,40px); color: #FFD700; text-shadow: 0 0 40px rgba(255,215,0,1), 0 0 100px rgba(255,140,0,0.8); letter-spacing: 4px; animation: bannerIn 0.35s cubic-bezier(0.2,1.4,0.4,1), legendaryPulse 0.5s ease-in-out infinite alternate, bannerOut 0.5s ease-in 3.5s forwards; }
 @keyframes legendaryPulse {
-from { text-shadow: 0 0 40px rgba(255,215,0,1), 0 0 100px rgba(255,140,0,0.8); }
-to   { text-shadow: 0 0 70px rgba(255,215,0,1), 0 0 160px rgba(255,200,0,1);   }
+  from { text-shadow: 0 0 40px rgba(255,215,0,1), 0 0 100px rgba(255,140,0,0.8); }
+  to   { text-shadow: 0 0 70px rgba(255,215,0,1), 0 0 160px rgba(255,200,0,1);   }
 }
 @keyframes bannerIn  { 0%  { opacity:0; transform:translate(-50%,-24px) scale(0.88); } 100% { opacity:1; transform:translate(-50%,0) scale(1); } }
 @keyframes bannerOut { to  { opacity:0; transform:translate(-50%,-16px); } }
 
 .reload-overlay {
-position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 99999;
-display: flex; flex-direction: column; align-items: center; justify-content: center;
-pointer-events: auto;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 99999;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  pointer-events: auto;
 }
-.reload-overlay .countdown { font-size: 5vw; color: #fff; font-family: ‘Rajdhani’, monospace; font-weight: 700; text-shadow: 0 0 40px rgba(122,252,255,0.8); letter-spacing: 4px; }
-.reload-overlay .reason    { font-size: 1.2vw; color: #8fd8ff; margin-top: 20px; letter-spacing: 2px; font-family: ‘Rajdhani’, sans-serif; text-transform: uppercase; }
+.reload-overlay .countdown { font-size: 5vw; color: #fff; font-family: 'Rajdhani', monospace; font-weight: 700; text-shadow: 0 0 40px rgba(122,252,255,0.8); letter-spacing: 4px; }
+.reload-overlay .reason    { font-size: 1.2vw; color: #8fd8ff; margin-top: 20px; letter-spacing: 2px; font-family: 'Rajdhani', sans-serif; text-transform: uppercase; }
 </style>
-
 </head>
 <body>
 <div id="overlay-container">
@@ -206,7 +204,7 @@ pointer-events: auto;
   let audioCache       = {};
   let overlaySettings  = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1 };
   let isDemoMode       = false;
-  let demoLoopTimer    = null;   // FIX: was referenced but never declared
+  let demoLoopTimer    = null;
   let darkMode         = true;
   let flashAlpha       = 0;
   let needsDraw        = true;
@@ -252,11 +250,9 @@ pointer-events: auto;
     { uniqueId:'h3', nickname:'Grunt3',    hp:70,  maxHp:100, alive:true, iconEmoji:'💀', kills:0 },
   ];
 
-  // FIX: normalizePlayers was called but never defined
   function normalizePlayers(state) {
     if (!state || typeof state !== 'object') return {};
     const out = {};
-    // state can be { players: [...] } or { uniqueId: playerObj, ... } or [...]
     const arr = Array.isArray(state)
       ? state
       : Array.isArray(state.players)
@@ -273,7 +269,6 @@ pointer-events: auto;
     return real.length > 0 ? real : DEMO_PLAYERS;
   }
 
-  // FIX: enterDemoMode and stopDemoLoop were called but never defined
   function stopDemoLoop() {
     if (demoLoopTimer) { clearInterval(demoLoopTimer); demoLoopTimer = null; }
   }
@@ -286,7 +281,6 @@ pointer-events: auto;
     statusDiv.className   = 'demo';
     needsDraw = true;
 
-    // Simulate attacks between demo players every ~1.5s
     demoLoopTimer = setInterval(() => {
       const pool = DEMO_PLAYERS.filter(p => p.alive);
       if (pool.length < 2) return;
@@ -297,7 +291,7 @@ pointer-events: auto;
       const dmg = 10 + Math.floor(Math.random() * 30);
       target.hp = Math.max(0, target.hp - dmg);
       if (target.hp === 0) {
-        target.hp = target.maxHp; // respawn in demo
+        target.hp = target.maxHp;
         attacker.kills = (attacker.kills || 0) + 1;
       }
       needsDraw = true;
@@ -585,8 +579,6 @@ pointer-events: auto;
   }
 
   // ── Attack ──
-  // FIX: removed stub methods from the class body; all draw logic lives only on
-  // Attack.prototype below, so there's no shadowing.
   class Attack {
     constructor(from, to, type, options = {}) {
       this.from           = from;
@@ -1306,18 +1298,21 @@ pointer-events: auto;
           killingBlow: data.killingBlow, laserColor: data.laserColor, shotSpeed: data.shotSpeed,
         });
       }));
+      // ──────────────────────────────────────────────────────────────────────
+      // FIX: Respect server‑provided effect for gifts (laser / meteor)
       socket.on('giftAttack', safeHandler(data => {
-        const forcedEffect = overlaySettings.shotType === 'beam' ? 'beam'
-          : overlaySettings.shotType === 'pulse' ? 'fire'
-          : overlaySettings.shotType === 'wave'  ? 'ripple'
-          : overlaySettings.shotType === 'burst' ? 'explosion'
-          : overlaySettings.shotType === 'ripple' ? 'ripple' : 'laser';
+        const forcedEffect = data.effect || (overlaySettings.shotType === 'beam' ? 'beam' :
+          overlaySettings.shotType === 'pulse' ? 'fire' :
+          overlaySettings.shotType === 'wave'  ? 'ripple' :
+          overlaySettings.shotType === 'burst' ? 'explosion' :
+          overlaySettings.shotType === 'ripple' ? 'ripple' : 'laser');
         fireAttack(data.attacker, data.target, data.damage, data.killed, true, forcedEffect, {
           intensity: data.intensity || 0.5, giftBoosted: true,
           remainingHpPct: data.killed ? 0 : (players[data.target]?.hp / players[data.target]?.maxHp || 1),
           killingBlow: !!data.killed, laserColor: data.giftColor,
         });
       }));
+      // ──────────────────────────────────────────────────────────────────────
       socket.on('killEvent',        safeHandler(onKillEvent));
       socket.on('streakEvent',      safeHandler(onStreakEvent));
       socket.on('giftCelebration',  safeHandler(onGiftCelebration));
@@ -1338,6 +1333,5 @@ pointer-events: auto;
   requestAnimationFrame(draw);
 })();
 </script>
-
 </body>
 </html>
