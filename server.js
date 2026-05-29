@@ -19,8 +19,8 @@ import authRoutes from './tiktokbr/routes/auth.js';
 import adminRoutes from './tiktokbr/routes/admin.js';
 import paypalRoutes from './tiktokbr/routes/paypal.js';
 import requireAccess from './tiktokbr/middleware/auth.js';
+import checkTrial from './tiktokbr/middleware/checkTrial.js';
 import {
-  getOrCreateRoom,
   getRoom,
   getAllRooms,
   saveRoomSettings,
@@ -825,8 +825,105 @@ app.use('/', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/', paypalRoutes);
 
-app.get('/', (_req, res) => res.redirect('/login'));
+app.get('/', (req, res) => {
+  // If logged in with active trial/subscription, go to dashboard
+  const token = req.cookies?.session_token;
+  if (token) {
+    const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
+    if (row && !row.is_revoked) {
+      // Check trial/subscription status
+      if (row.trial_started) {
+        const trialStart = new Date(row.trial_started);
+        const trialEnd = new Date(trialStart.getTime() + (row.trial_days || 14) * 24 * 60 * 60 * 1000);
+        const now = new Date();
+        if (now > trialEnd && row.subscription_status !== 'active') {
+          return res.redirect('/paywall');
+        }
+      }
+      return res.redirect('/dashboard');
+    }
+  }
+  // Not logged in, show landing page
+  res.sendFile(path.join(__dirname, 'home.html'));
+});
+app.get('/home', (_req, res) => res.sendFile(path.join(__dirname, 'home.html')));
+app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));
+app.get('/paywall', (_req, res) => res.sendFile(path.join(__dirname, 'paywall.html')));
+app.get('/login', (_req, res) => res.redirect('/home'));
+
+// Auth endpoints for trial signup
+app.post('/auth/generate-code', express.json(), (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email required' });
+
+  try {
+    const code = Math.random().toString(36).slice(2, 10).toUpperCase();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+    
+    db.prepare(`
+      INSERT INTO access_codes (code, email, expires_at, trial_started, trial_days, subscription_status)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP, 14, 'active')
+    `).run(code, email.toLowerCase().trim(), expiresAt);
+    
+    res.json({ success: true, code });
+  } catch (err) {
+    console.error('Code generation error:', err);
+    res.status(500).json({ error: 'Failed to generate code' });
+  }
+});
+
+app.post('/auth/create-account', express.json(), (req, res) => {
+  const { email, code, name, tiktokUsername, roomName } = req.body;
+  if (!email || !code || !name || !tiktokUsername || !roomName) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    const row = db.prepare('SELECT * FROM access_codes WHERE email = ? AND code = ?')
+      .get(email.toLowerCase().trim(), code.toUpperCase());
+    
+    if (!row) return res.status(401).json({ error: 'Invalid code or email' });
+    if (row.session_token) return res.status(400).json({ error: 'Code already used' });
+
+    // Generate session token
+    const sessionToken = jwt.sign(
+      { email, code },
+      process.env.JWT_SECRET,
+      { expiresIn: '90d' }
+    );
+
+    // Create first room
+    const roomId = Math.random().toString(36).slice(2, 10);
+
+    // Update access code with profile and session
+    db.prepare(`
+      UPDATE access_codes
+      SET session_token = ?, streamer_name = ?, tiktok_username = ?, room_id = ?
+      WHERE id = ?
+    `).run(sessionToken, name, tiktokUsername, roomId, row.id);
+
+    // Create room settings
+    db.prepare(`
+      INSERT INTO room_settings (room_id, overlay_settings, audio_config, audio_library)
+      VALUES (?, ?, ?, ?)
+    `).run(
+      roomId,
+      JSON.stringify(DEFAULT_OVERLAY_SETTINGS),
+      JSON.stringify(DEFAULT_AUDIO_CONFIG),
+      JSON.stringify([])
+    );
+
+    // Set session cookie
+    res.setHeader('Set-Cookie', `session_token=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${90 * 24 * 60 * 60}`);
+    res.json({ success: true, roomId });
+  } catch (err) {
+    console.error('Account creation error:', err);
+    res.status(500).json({ error: 'Failed to create account' });
+  }
+});
+
 app.get(['/overlay.html', '/overlay'], (req, res, next) => {
+
   if (req.query.room_id) {
     return res.sendFile(path.join(__dirname, 'overlay.html'));
   }
@@ -992,31 +1089,21 @@ app.get('/dashboard/logout', (_req, res) => {
   res.redirect('/login');
 });
 
-app.get('/dashboard', (req, res) => {
-  if (isDashboardAuthed(req)) return res.sendFile(path.join(__dirname, 'dashboard.html'));
-  const token = req.cookies.session_token;
-  if (token) {
-    const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
-    if (row && !row.is_revoked && new Date(row.expires_at) > new Date()) {
-      return res.sendFile(path.join(__dirname, 'dashboard.html'));
-    }
-  }
-  res.redirect('/login');
+app.get('/logout', (_req, res) => {
+  res.setHeader('Set-Cookie', 'session_token=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax');
+  res.redirect('/');
 });
 
-app.get('/dashboard/welcome', (req, res) => {
-  if (isDashboardAuthed(req)) return res.sendFile(path.join(__dirname, 'dashboard-welcome.html'));
-  const token = req.cookies.session_token;
-  if (token) {
-    const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
-    if (row && !row.is_revoked && new Date(row.expires_at) > new Date()) {
-      return res.sendFile(path.join(__dirname, 'dashboard-welcome.html'));
-    }
-  }
-  res.redirect('/login');
+app.get('/dashboard', checkTrial, (_req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
-app.get('/stats', (_req, res) => res.sendFile(path.join(__dirname, 'stats.html')));
+app.get('/dashboard/welcome', checkTrial, (_req, res) => {
+  res.sendFile(path.join(__dirname, 'dashboard-welcome.html'));
+});
+
+app.get('/stats', checkTrial, (_req, res) => res.sendFile(path.join(__dirname, 'stats.html')));
+
 app.get('/state', (req, res) => {
   if (req.query.room_id) {
     const room = getOrCreateRoom(String(req.query.room_id));

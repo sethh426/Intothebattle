@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Battle Royale LIVE - Turn Your Stream Into a Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary: #4D96FF;
+      --accent: #6BCB77;
+      --dark: #050d1a;
+      --card: #0a1428;
+      --border: rgba(77, 150, 255, 0.15);
+      --text: #e8eef8;
+      --text-muted: #5a7a9e;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--dark);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ─── BACKGROUND EFFECTS ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background-image:
+        linear-gradient(rgba(77, 150, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(77, 150, 255, 0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+      pointer-events: none;
+    }
+
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(90px);
+      pointer-events: none;
+      z-index: 1;
+    }
+    .orb-1 { width: 500px; height: 500px; background: rgba(77, 150, 255, 0.12); top: -150px; right: -100px; animation: float 15s ease-in-out infinite; }
+    .orb-2 { width: 400px; height: 400px; background: rgba(107, 203, 119, 0.08); bottom: -100px; left: -80px; animation: float 18s ease-in-out infinite reverse; }
+
+    @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(40px); } }
+
+    /* ─── NAVIGATION ─── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      background: rgba(5, 13, 26, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .logo {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 1px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      list-style: none;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    .btn-login {
+      padding: 10px 20px;
+      background: transparent;
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-login:hover {
+      background: var(--primary);
+      color: var(--dark);
+    }
+
+    /* ─── MAIN CONTENT ─── */
+    main {
+      position: relative;
+      z-index: 10;
+    }
+
+    /* ─── HERO SECTION ─── */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 40px 40px;
+      text-align: center;
+    }
+
+    .hero-content h1 {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: clamp(36px, 6vw, 72px);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      letter-spacing: -1px;
+    }
+
+    .hero-content h1 .highlight {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-content p {
+      font-size: 18px;
+      color: var(--text-muted);
+      margin-bottom: 40px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.8;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 60px;
+    }
+
+    .btn-primary {
+      padding: 16px 32px;
+      background: linear-gradient(135deg, var(--primary), #6ab0ff);
+      border: none;
+      color: white;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 0 24px rgba(77, 150, 255, 0.3);
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 36px rgba(77, 150, 255, 0.45);
+    }
+
+    .btn-secondary {
+      padding: 16px 32px;
+      background: transparent;
+      border: 2px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--primary);
+      background: rgba(77, 150, 255, 0.1);
+    }
+
+    .hero-demo {
+      margin-top: 60px;
+      aspect-ratio: 16/9;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+      background: linear-gradient(135deg, rgba(77, 150, 255, 0.1), rgba(107, 203, 119, 0.05));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 14px;
+      overflow: hidden;
+    }
+
+    .demo-placeholder {
+      text-align: center;
+    }
+
+    .demo-placeholder-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    /* ─── FEATURES SECTION ─── */
+    .features {
+      padding: 100px 40px;
+      background: rgba(10, 20, 40, 0.5);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 42px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 60px;
+      letter-spacing: -0.5px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 32px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .feature-card {
+      background: rgba(77, 150, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: var(--primary);
+      background: rgba(77, 150, 255, 0.1);
+      transform: translateY(-4px);
+    }
+
+    .feature-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .feature-card h3 {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .feature-card p {
+      color: var(--text-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ─── BENEFITS SECTION ─── */
+    .benefits {
+      padding: 100px 40px;
+    }
+
+    .benefits-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      max-width: 1200px;
+      margin: 0 auto;
+      align-items: center;
+    }
+
+    .benefits-left h2 {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 42px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      line-height: 1.2;
+    }
+
+    .benefits-left p {
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.8;
+    }
+
+    .benefits-list {
+      list-style: none;
+      margin-bottom: 32px;
+    }
+
+    .benefits-list li {
+      padding: 12px 0;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 14px;
+    }
+
+    .benefits-list li::before {
+      content: '✓';
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .benefits-right {
+      background: linear-gradient(135deg, rgba(77, 150, 255, 0.1), rgba(107, 203, 119, 0.05));
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      text-align: center;
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .benefits-right-icon {
+      font-size: 72px;
+      margin-bottom: 20px;
+      display: block;
+    }
+
+    .benefits-right h3 {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .benefits-right p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* ─── PRICING SECTION ─── */
+    .pricing {
+      padding: 100px 40px;
+      background: rgba(10, 20, 40, 0.5);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pricing-card {
+      max-width: 420px;
+      margin: 0 auto;
+      background: rgba(10, 20, 40, 0.92);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 48px 32px;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .pricing-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 0 30px rgba(77, 150, 255, 0.15);
+    }
+
+    .pricing-card h3 {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .pricing-price {
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .pricing-period {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+
+    .pricing-features {
+      list-style: none;
+      margin-bottom: 32px;
+      text-align: left;
+    }
+
+    .pricing-features li {
+      padding: 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .pricing-features li:last-child {
+      border-bottom: none;
+    }
+
+    .pricing-features li::before {
+      content: '✓';
+      color: var(--accent);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .pricing-trial {
+      background: rgba(107, 203, 119, 0.1);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    /* ─── FOOTER ─── */
+    footer {
+      padding: 40px;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 768px) {
+      nav {
+        padding: 16px 20px;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .nav-links {
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+      }
+
+      .hero {
+        padding: 60px 20px 30px;
+      }
+
+      .benefits-content {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+      }
+
+      .hero-cta {
+        flex-direction: column;
+      }
+
+      .btn-primary, .btn-secondary {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <nav>
+    <div class="logo">⚡ BATTLE ROYALE LIVE</div>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#benefits">Creator Benefits</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="/login" class="btn-login">Login</a></li>
+    </ul>
+  </nav>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div>
+        <div class="hero-content">
+          <h1>Turn Your Stream Into a <span class="highlight">Game</span></h1>
+          <p>Engage your TikTok Live viewers with an interactive battle royale overlay. Boost engagement, grow your audience, and build a thriving community.</p>
+          <div class="hero-cta">
+            <a href="/signup" class="btn-primary">🎮 Start 14-Day Trial</a>
+            <a href="#features" class="btn-secondary">Learn More</a>
+          </div>
+        </div>
+        <div class="hero-demo">
+          <div class="demo-placeholder">
+            <span class="demo-placeholder-icon">🎬</span>
+            <div>Live Demo (coming soon)</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="features" id="features">
+      <h2 class="section-title">What You Get</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <span class="feature-icon">⚡</span>
+          <h3>Real-Time Attacks</h3>
+          <p>Viewers spawn as players and battle each other in real-time. Create excitement and unpredictability.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🎨</span>
+          <h3>Custom Overlays</h3>
+          <p>Design your own attack effects, colors, and animations. Match your stream aesthetic perfectly.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🎵</span>
+          <h3>Audio Events</h3>
+          <p>Add custom sound effects for kills, gifts, heals, and more. Immerse your audience.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">📊</span>
+          <h3>Battle Analytics</h3>
+          <p>Track viewer engagement, win rates, and top performers. Measure what matters.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🚀</span>
+          <h3>Multi-Room Support</h3>
+          <p>Run multiple overlays simultaneously. Perfect for tournaments or team battles.</p>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🔌</span>
+          <h3>Easy Integration</h3>
+          <p>Simple setup. Works with any OBS or streaming software. No coding required.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- BENEFITS -->
+    <section class="benefits" id="benefits">
+      <h2 class="section-title">Perfect for TikTok Creators</h2>
+      <div class="benefits-content">
+        <div class="benefits-left">
+          <h2>Engage & Grow</h2>
+          <p>Battle Royale LIVE transforms passive viewers into active participants. Keep audiences engaged longer and boost your metrics.</p>
+          <ul class="benefits-list">
+            <li>🚀 Increase time-on-stream by 300%+</li>
+            <li>💬 Drive real-time chat engagement</li>
+            <li>👥 Build loyal, invested communities</li>
+            <li>📈 Attract brand sponsors</li>
+            <li>💰 Premium subscriber appeal</li>
+            <li>🎯 Stand out from competitors</li>
+          </ul>
+        </div>
+        <div class="benefits-right">
+          <span class="benefits-right-icon">📱</span>
+          <h3>Ready for Your Stream</h3>
+          <p>Get started in minutes. No technical knowledge required. Works seamlessly with OBS, StreamLabs, or any broadcast software.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PRICING -->
+    <section class="pricing" id="pricing">
+      <h2 class="section-title">Simple, Transparent Pricing</h2>
+      <div class="pricing-card">
+        <h3>Creator Pro</h3>
+        <div class="pricing-price">$29<span style="font-size: 20px">/mo</span></div>
+        <div class="pricing-period">Cancel anytime. No contracts.</div>
+        <div class="pricing-trial">✨ 14-day free trial included</div>
+        <ul class="pricing-features">
+          <li>Unlimited battle rooms</li>
+          <li>Custom audio & effects</li>
+          <li>Real-time analytics</li>
+          <li>Multi-stream support</li>
+          <li>Priority support</li>
+          <li>Monthly updates & features</li>
+        </ul>
+        <a href="/signup" class="btn-primary" style="width: 100%;">Start Your Trial</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Battle Royale LIVE. All rights reserved. Transform your stream today.</p>
+  </footer>
+</body>
+</html>

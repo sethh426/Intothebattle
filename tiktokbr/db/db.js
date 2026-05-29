@@ -49,10 +49,48 @@ try {
   migrateRooms();
 } catch (_) {}
 
+// ─── TRIAL & MONETIZATION COLUMNS ──────────────────────────────────────────
+try {
+  db.exec('ALTER TABLE access_codes ADD COLUMN trial_started DATETIME');
+} catch (_) {}
+
+try {
+  db.exec('ALTER TABLE access_codes ADD COLUMN trial_days INTEGER DEFAULT 14');
+} catch (_) {}
+
+try {
+  db.exec("ALTER TABLE access_codes ADD COLUMN subscription_status TEXT DEFAULT 'active'");
+} catch (_) {}
+
+try {
+  db.exec('ALTER TABLE access_codes ADD COLUMN streamer_name TEXT');
+} catch (_) {}
+
+try {
+  db.exec('ALTER TABLE access_codes ADD COLUMN tiktok_username TEXT');
+} catch (_) {}
+
+// ─── BATTLE STATS TABLE ────────────────────────────────────────────────────
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS battle_stats (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code_id INTEGER NOT NULL,
+      room_id TEXT,
+      total_battles INTEGER DEFAULT 0,
+      total_wins INTEGER DEFAULT 0,
+      total_kills INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(code_id) REFERENCES access_codes(id)
+    )
+  `);
+} catch (_) {}
+
 // ─── SEED: BETA ACCESS CODES (betatester1–betatester25) ──────────────────────
 const insertCode = db.prepare(`
-  INSERT OR IGNORE INTO access_codes (code, email, expires_at)
-  VALUES (?, ?, '2099-12-31 23:59:59')
+  INSERT OR IGNORE INTO access_codes (code, email, expires_at, trial_started, subscription_status)
+  VALUES (?, ?, '2099-12-31 23:59:59', CURRENT_TIMESTAMP, 'active')
 `);
 
 const seedBetaCodes = db.transaction(() => {
