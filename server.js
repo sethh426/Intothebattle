@@ -866,6 +866,15 @@ app.get('/overlay',      requireAccess, (_req, res) => res.sendFile(path.join(__
 app.get('/admin-panel',  requireAccess, (_req, res) => res.redirect('/admin'));
 
 function socketAuth(socket, next) {
+  // Allow unauthenticated overlays to supply a room id via the socket auth payload
+  // (client: io({ auth: { roomId } })) or query param (legacy).
+  const authRoom = socket.handshake?.auth?.roomId || socket.handshake?.query?.room_id;
+  if (authRoom) {
+    socket.roomId = String(authRoom);
+    return next();
+  }
+
+  // Otherwise require a valid session_token cookie and DB-backed access code
   const cookies = socket.handshake.headers.cookie || '';
   const parsed = Object.fromEntries(
     cookies.split(';').map(c => {
@@ -1151,11 +1160,33 @@ app.post('/api/background/clear', requireRoom, (req, res) => {
   }
 });
 
-app.get('/background/:filename', requireRoom, (req, res) => {
-  const filepath = path.join(getRoomBackgroundDir(req.room.roomId), req.params.filename);
-  if (!isSafePath(getRoomBackgroundDir(req.room.roomId), filepath)) return res.status(403).send('Forbidden');
-  if (!fs.existsSync(filepath))      return res.status(404).send('Background not found');
-  return res.sendFile(filepath);
+app.get('/background/:filename', (req, res) => {
+  try {
+    // Support public background fetches by room_id query param (for unauthenticated overlays)
+    let room = null;
+    if (req.query && req.query.room_id) {
+      room = getOrCreateRoom(String(req.query.room_id));
+    } else {
+      // Fallback to existing requireRoom behavior using session_token cookie
+      const token = req.cookies?.session_token;
+      if (!token) return res.status(401).send('Unauthorized');
+      const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
+      if (!row || row.is_revoked || new Date(row.expires_at) < new Date()) return res.status(401).send('Unauthorized');
+      if (!row.room_id) return res.status(400).send('No room assigned');
+      room = getOrCreateRoom(row.room_id);
+      loadRoomPlayerStats(room);
+      loadRoomBackground(room);
+      loadRoomAudioConfig(room);
+    }
+
+    const filepath = path.join(getRoomBackgroundDir(room.roomId), req.params.filename);
+    if (!isSafePath(getRoomBackgroundDir(room.roomId), filepath)) return res.status(403).send('Forbidden');
+    if (!fs.existsSync(filepath)) return res.status(404).send('Background not found');
+    return res.sendFile(filepath);
+  } catch (err) {
+    console.error('Background fetch error:', err);
+    return res.status(500).send('Server error');
+  }
 });
 
 app.get('/api/audio', requireRoom, (req, res) => {

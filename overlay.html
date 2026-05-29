@@ -183,6 +183,8 @@ body { display: flex; align-items: center; justify-content: center; }
   const ctx       = canvas.getContext('2d', { alpha: true });
   const container = document.getElementById('overlay-container');
   const statusDiv = document.getElementById('status-badge');
+  const params = new URLSearchParams(window.location.search);
+  const ROOM_ID = params.get('room_id') || null;
 
   const gapControl     = document.getElementById('gapControl');
   const offsetXControl = document.getElementById('offsetXControl');
@@ -1255,7 +1257,7 @@ body { display: flex; align-items: center; justify-content: center; }
   function initSocket() {
     if (typeof io === 'undefined') { enterDemoMode(); return; }
     try {
-      socket = io({ transports: ['websocket', 'polling'], timeout: 5000 });
+      socket = io({ auth: { roomId: ROOM_ID }, transports: ['websocket', 'polling'], timeout: 5000 });
       socket.on('connect', safeHandler(() => {
         isDemoMode = false; stopDemoLoop();
         statusDiv.textContent = '🟢 LIVE · CONNECTED';
@@ -1277,7 +1279,7 @@ body { display: flex; align-items: center; justify-content: center; }
           isDemoMode = false; stopDemoLoop();
           needsDraw = true;
           if (!Object.keys(players).length) {
-            fetch('/state').then(r => r.json()).then(s => { players = normalizePlayers(s || {}); }).catch(() => {});
+            fetch(`/state${ROOM_ID ? '?room_id=' + encodeURIComponent(ROOM_ID) : ''}`).then(r => r.json()).then(s => { players = normalizePlayers(s || {}); }).catch(() => {});
           }
         }
       }));
@@ -1289,7 +1291,7 @@ body { display: flex; align-items: center; justify-content: center; }
         if (!filename) { backgroundImg = null; return; }
         const img = new Image();
         img.onload = () => { backgroundImg = img; };
-        img.src = `/background/${filename}?v=${Date.now()}`;
+        img.src = `/background/${filename}?v=${Date.now()}${ROOM_ID ? '&room_id=' + encodeURIComponent(ROOM_ID) : ''}`;
       }));
       socket.on('attack', safeHandler(data => {
         fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect, {
