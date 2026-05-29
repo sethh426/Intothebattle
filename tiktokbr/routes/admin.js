@@ -242,7 +242,8 @@ router.post('/issue-code', requireAdminAuth, (req, res) => {
     : new Date(Date.now() + Math.max(1, days || 30) * 24 * 60 * 60 * 1000)
       .toISOString().slice(0, 19).replace('T', ' ');
 
-  db.prepare('INSERT INTO access_codes (code, owner_name, expires_at) VALUES (?, ?, ?)').run(code, ownerName, expiresAt);
+  const roomId = Math.random().toString(36).slice(2, 10);
+  db.prepare('INSERT INTO access_codes (code, owner_name, expires_at, room_id) VALUES (?, ?, ?, ?)').run(code, ownerName, expiresAt, roomId);
   res.redirect(`/admin?message=${encodeURIComponent('Issued new access code')}&createdCode=${encodeURIComponent(code)}`);
 });
 

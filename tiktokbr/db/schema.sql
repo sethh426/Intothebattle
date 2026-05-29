@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS access_codes (
   code TEXT UNIQUE NOT NULL,
   email TEXT,
   owner_name TEXT,
+  room_id TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   expires_at DATETIME NOT NULL,
   is_promo INTEGER DEFAULT 0,
@@ -11,6 +12,16 @@ CREATE TABLE IF NOT EXISTS access_codes (
   session_token TEXT,
   last_seen DATETIME,
   paypal_subscription_id TEXT
+);
+
+CREATE TABLE IF NOT EXISTS room_settings (
+  room_id TEXT PRIMARY KEY,
+  overlay_settings TEXT DEFAULT '{}',
+  audio_config TEXT DEFAULT '{}',
+  audio_library TEXT DEFAULT '[]',
+  background_filename TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS promo_codes (

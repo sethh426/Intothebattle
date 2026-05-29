@@ -19,6 +19,18 @@ import authRoutes from './tiktokbr/routes/auth.js';
 import adminRoutes from './tiktokbr/routes/admin.js';
 import paypalRoutes from './tiktokbr/routes/paypal.js';
 import requireAccess from './tiktokbr/middleware/auth.js';
+import {
+  getOrCreateRoom,
+  getRoom,
+  getAllRooms,
+  saveRoomSettings,
+  getRoomPaths,
+} from './roomManager.js';
+
+const DEFAULT_ROOM_ID = 'default';
+function getDefaultRoom() {
+  return getOrCreateRoom(DEFAULT_ROOM_ID);
+}
 
 dotenv.config();
 
@@ -41,7 +53,6 @@ let DEV_TEST_MODE = process.env.DEV_TEST_MODE === 'true';
 const PORT = process.env.PORT || 3000;
 
 let currentStreamer = process.argv[2] || '';
-let client = null;
 
 const CFG = {
   BASE_HP:                        300,
@@ -71,14 +82,10 @@ const CFG = {
   CRITICAL_HIT_THRESHOLD: 0.6,
 };
 
-const players = {};
 const likeRateTracker = {};
 
-const PLAYERS_FILE   = path.join(__dirname, 'players.json');
-const BG_DIR         = path.join(__dirname, 'backgrounds');
-const BG_FILE        = path.join(BG_DIR,    'current-bg.json');
-const AUDIO_DIR      = path.join(__dirname, 'audio');
-const AUDIO_CFG_FILE = path.join(AUDIO_DIR, 'audio-config.json');
+const ROOM_BG_ROOT     = path.join(__dirname, 'backgrounds');
+const ROOM_AUDIO_ROOT  = path.join(__dirname, 'audio');
 
 const DEFAULT_AUDIO_CONFIG = {
   attack:  null,
@@ -93,9 +100,6 @@ const DEFAULT_OVERLAY_SETTINGS = {
   shotType:   'beam',
   shotSpeed:  1,
 };
-let audioConfig      = { ...DEFAULT_AUDIO_CONFIG };
-let audioLibrary     = [];
-let overlaySettings  = { ...DEFAULT_OVERLAY_SETTINGS };
 
 // ────────────────────────────────
 // CENTRAL EVENT DISPATCHER
@@ -106,6 +110,32 @@ function emitEvent(type, payload = {}) {
   } catch (err) {
     logger.error({ err, type }, 'emitEvent failed');
   }
+}
+
+function emitRoomEvent(room, type, payload = {}) {
+  try {
+    io.to(room.roomId).emit(type, { ...payload, _ts: Date.now() });
+  } catch (err) {
+    logger.error({ err, type, room: room.roomId }, 'emitRoomEvent failed');
+  }
+}
+
+function getTotalOverlayCount() {
+  return Array.from(getAllRooms().values()).reduce((sum, room) => sum + (room.overlayCount || 0), 0);
+}
+
+function getTotalPlayerCount() {
+  return Array.from(getAllRooms().values()).reduce((sum, room) => {
+    return sum + Object.values(room.players).filter(p => p.alive).length;
+  }, 0);
+}
+
+function updateOverlayGauge() {
+  try { overlayGauge.set(getTotalOverlayCount()); } catch (_) {}
+}
+
+function updatePlayerGauge() {
+  try { playerGauge.set(getTotalPlayerCount()); } catch (_) {}
 }
 
 // ────────────────────────────────
@@ -127,7 +157,7 @@ function classifyGift(diamonds) {
 // ────────────────────────────────
 // ATTACK PAYLOAD BUILDER
 // ────────────────────────────────
-function buildAttackPayload(base, targetPlayer) {
+function buildAttackPayload(room, base, targetPlayer) {
   const remainingHpPct = targetPlayer
     ? Math.max(0, targetPlayer.hp) / Math.max(1, targetPlayer.maxHp)
     : null;
@@ -142,17 +172,27 @@ function buildAttackPayload(base, targetPlayer) {
     intensity,
     critical,
     remainingHpPct,
-    shotSpeed:  overlaySettings.shotSpeed  || 1,
-    shotType:   overlaySettings.shotType   || 'beam',
-    laserColor: overlaySettings.laserColor || '#7afcff',
+    shotSpeed:  room.overlaySettings?.shotSpeed  || DEFAULT_OVERLAY_SETTINGS.shotSpeed,
+    shotType:   room.overlaySettings?.shotType   || DEFAULT_OVERLAY_SETTINGS.shotType,
+    laserColor: room.overlaySettings?.laserColor || DEFAULT_OVERLAY_SETTINGS.laserColor,
   };
 }
 
 // ────────────────────────────────
 // SOUND ENRICHMENT
 // ────────────────────────────────
-function emitSoundAndSync(event, { intensity = 0.5, tier = 'common' } = {}) {
-  emitEvent('soundEvent', { event, intensity, tier });
+function emitSoundAndSync(roomOrEvent, eventOrOptions = {}, options = {}) {
+  if (typeof roomOrEvent === 'string') {
+    const event = roomOrEvent;
+    const { intensity = 0.5, tier = 'common' } = eventOrOptions;
+    emitEvent('soundEvent', { event, intensity, tier });
+    return;
+  }
+
+  const room = roomOrEvent;
+  const event = eventOrOptions;
+  const { intensity = 0.5, tier = 'common' } = options;
+  emitRoomEvent(room, 'soundEvent', { event, intensity, tier });
 }
 
 // ────────────────────────────────
@@ -206,6 +246,26 @@ function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
+function getRoomBackgroundDir(roomId) {
+  return path.join(ROOM_BG_ROOT, roomId);
+}
+
+function getRoomAudioDir(roomId) {
+  return path.join(ROOM_AUDIO_ROOT, roomId);
+}
+
+function getRoomPlayersFile(roomId) {
+  return path.join(__dirname, `players_${roomId}.json`);
+}
+
+function getRoomAudioConfigFile(roomId) {
+  return path.join(getRoomAudioDir(roomId), 'audio-config.json');
+}
+
+function getRoomBackgroundMetaFile(roomId) {
+  return path.join(getRoomBackgroundDir(roomId), 'current-bg.json');
+}
+
 function isSafePath(baseDir, targetPath) {
   const base   = path.resolve(baseDir);
   const target = path.resolve(targetPath);
@@ -230,14 +290,15 @@ function isDashboardAuthed(req) {
   return parseCookies(req)[DASHBOARD_COOKIE_NAME] === DASHBOARD_COOKIE_VALUE;
 }
 
-function loadPlayerStats() {
+function loadRoomPlayerStats(room) {
   try {
-    if (!fs.existsSync(PLAYERS_FILE)) return;
-    const saved = JSON.parse(fs.readFileSync(PLAYERS_FILE, 'utf8'));
+    const filePath = getRoomPlayersFile(room.roomId);
+    if (!fs.existsSync(filePath)) return;
+    const saved = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     for (const id in saved) {
       const s = saved[id] || {};
-      if (!players[id]) {
-        players[id] = {
+      if (!room.players[id]) {
+        room.players[id] = {
           uniqueId: id,
           nickname: s.nickname || id,
           hp:       s.maxHp   || CFG.BASE_HP,
@@ -254,164 +315,183 @@ function loadPlayerStats() {
           forceSpawn: false,
         };
       } else {
-        players[id].uniqueId   = players[id].uniqueId || id;
-        players[id].nickname   = players[id].nickname || s.nickname || id;
-        players[id].maxHp      = Math.max(players[id].maxHp    || CFG.BASE_HP,       s.maxHp    || CFG.BASE_HP);
-        players[id].strength   = Math.max(players[id].strength || CFG.BASE_STRENGTH, s.strength || CFG.BASE_STRENGTH);
-        players[id].kills      = s.kills || players[id].kills || 0;
-        players[id].killStreak = players[id].killStreak || 0;
-        players[id].lastKillTime = players[id].lastKillTime || 0;
+        const target = room.players[id];
+        target.uniqueId   = target.uniqueId || id;
+        target.nickname   = target.nickname || s.nickname || id;
+        target.maxHp      = Math.max(target.maxHp    || CFG.BASE_HP,       s.maxHp    || CFG.BASE_HP);
+        target.strength   = Math.max(target.strength || CFG.BASE_STRENGTH, s.strength || CFG.BASE_STRENGTH);
+        target.kills      = s.kills || target.kills || 0;
+        target.killStreak = target.killStreak || 0;
+        target.lastKillTime = target.lastKillTime || 0;
       }
     }
-    console.log(`📂 Loaded ${Object.keys(saved).length} saved player stats`);
+    console.log(`📂 Loaded ${Object.keys(saved).length} saved player stats for room ${room.roomId}`);
   } catch (err) {
-    console.error('Error loading player stats:', err);
+    console.error('Error loading player stats for room', room.roomId, err);
   }
 }
 
-function savePlayerStats() {
+function saveRoomPlayerStats(room) {
   try {
     const toSave = {};
-    for (const id in players) {
+    for (const id in room.players) {
       toSave[id] = {
-        nickname:  players[id].nickname,
-        maxHp:     players[id].maxHp,
-        strength:  players[id].strength,
-        kills:     players[id].kills,
+        nickname: room.players[id].nickname,
+        maxHp:    room.players[id].maxHp,
+        strength: room.players[id].strength,
+        kills:    room.players[id].kills,
       };
     }
-    fs.writeFileSync(PLAYERS_FILE, JSON.stringify(toSave, null, 2));
+    fs.writeFileSync(getRoomPlayersFile(room.roomId), JSON.stringify(toSave, null, 2));
   } catch (err) {
-    console.error('Error saving player stats:', err);
+    console.error('Error saving player stats for room', room.roomId, err);
   }
 }
 
-let currentBackground = null;
-
-function loadCurrentBackground() {
+function loadRoomBackground(room) {
   try {
-    ensureDir(BG_DIR);
-    if (fs.existsSync(BG_FILE)) {
-      currentBackground = JSON.parse(fs.readFileSync(BG_FILE, 'utf8'));
-      console.log(`📸 Loaded background: ${currentBackground.filename}`);
+    const bgDir = getRoomBackgroundDir(room.roomId);
+    ensureDir(bgDir);
+    const metaFile = getRoomBackgroundMetaFile(room.roomId);
+    if (fs.existsSync(metaFile)) {
+      room.currentBackground = JSON.parse(fs.readFileSync(metaFile, 'utf8'));
+      console.log(`📸 Loaded background for room ${room.roomId}: ${room.currentBackground.filename}`);
     }
   } catch (err) {
-    console.error('Error loading background:', err);
+    console.error('Error loading background for room', room.roomId, err);
   }
 }
 
-function saveBackgroundMeta(filename) {
+function saveRoomBackgroundMeta(room, filename) {
   try {
-    ensureDir(BG_DIR);
-    currentBackground = { filename };
-    fs.writeFileSync(BG_FILE, JSON.stringify(currentBackground, null, 2));
+    const bgDir = getRoomBackgroundDir(room.roomId);
+    ensureDir(bgDir);
+    room.currentBackground = { filename };
+    fs.writeFileSync(getRoomBackgroundMetaFile(room.roomId), JSON.stringify(room.currentBackground, null, 2));
   } catch (err) {
-    console.error('Error saving background meta:', err);
+    console.error('Error saving background meta for room', room.roomId, err);
   }
 }
 
-function deleteCurrentBackgroundFile() {
-  if (!currentBackground?.filename) return;
-  const oldPath = path.join(BG_DIR, currentBackground.filename);
-  if (!isSafePath(BG_DIR, oldPath)) return;
+function deleteRoomBackgroundFile(room) {
+  if (!room.currentBackground?.filename) return;
+  const bgDir = getRoomBackgroundDir(room.roomId);
+  const oldPath = path.join(bgDir, room.currentBackground.filename);
+  if (!isSafePath(bgDir, oldPath)) return;
   try {
     if (fs.existsSync(oldPath)) {
       fs.unlinkSync(oldPath);
-      console.log('📸 Deleted old background:', currentBackground.filename);
+      console.log('📸 Deleted old background for room', room.roomId, room.currentBackground.filename);
     }
   } catch (err) {
-    console.warn('Could not delete old background:', err.message);
+    console.warn('Could not delete old background for room', room.roomId, err.message);
   }
 }
 
-function loadAudioConfig() {
+function loadRoomAudioConfig(room) {
   try {
-    ensureDir(AUDIO_DIR);
+    const audioDir = getRoomAudioDir(room.roomId);
+    ensureDir(audioDir);
+    const cfgFile = getRoomAudioConfigFile(room.roomId);
 
-    if (!fs.existsSync(AUDIO_CFG_FILE)) {
-      const repoConfigCandidates = [
-        path.join(__dirname, 'audio', 'audio-config.json'),
-        path.join(__dirname, 'audio', 'audio', 'audio-config.json')
-      ];
-      const repoConfig = repoConfigCandidates.find(p => fs.existsSync(p));
-      if (repoConfig) {
-        fs.copyFileSync(repoConfig, AUDIO_CFG_FILE);
-        console.log('🔊 Seeded audio-config.json from repo');
-      }
+    const repoCandidates = [
+      path.join(__dirname, 'audio', 'audio-config.json'),
+      path.join(__dirname, 'audio', 'audio', 'audio-config.json'),
+    ];
+    const repoConfig = repoCandidates.find(p => fs.existsSync(p));
+    if (!fs.existsSync(cfgFile) && repoConfig) {
+      fs.copyFileSync(repoConfig, cfgFile);
+      console.log('🔊 Seeded room audio-config.json from repo for room', room.roomId);
     }
 
-    if (fs.existsSync(AUDIO_CFG_FILE)) {
-      const saved  = JSON.parse(fs.readFileSync(AUDIO_CFG_FILE, 'utf8'));
-      audioConfig  = { ...DEFAULT_AUDIO_CONFIG, ...(saved.config  || {}) };
-      audioLibrary = Array.isArray(saved.library) ? saved.library : [];
-      overlaySettings = { ...DEFAULT_OVERLAY_SETTINGS, ...(saved.settings || {}) };
+    if (fs.existsSync(cfgFile)) {
+      const saved = JSON.parse(fs.readFileSync(cfgFile, 'utf8'));
+      room.audioConfig = { ...DEFAULT_AUDIO_CONFIG, ...(saved.config || {}) };
+      room.audioLibrary = Array.isArray(saved.library) ? saved.library : [];
+      room.overlaySettings = { ...DEFAULT_OVERLAY_SETTINGS, ...(saved.settings || {}) };
+    }
 
-      const repoFiles = fs.existsSync(AUDIO_DIR)
-        ? fs.readdirSync(AUDIO_DIR).filter(file => {
-            const ext = path.extname(file).toLowerCase();
-            return ['.mp3', '.m4a', '.wav', '.ogg', '.aac', '.flac', '.webm'].includes(ext);
-          })
-        : [];
+    const repoFiles = fs.existsSync(audioDir)
+      ? fs.readdirSync(audioDir).filter(file => {
+          const ext = path.extname(file).toLowerCase();
+          return ['.mp3', '.m4a', '.wav', '.ogg', '.aac', '.flac', '.webm'].includes(ext);
+        })
+      : [];
 
-      if (!audioLibrary.length) {
-        audioLibrary = repoFiles.map(filename => {
-          const filePath = path.join(AUDIO_DIR, filename);
-          return {
+    if (!room.audioLibrary.length) {
+      room.audioLibrary = repoFiles.map(filename => ({
+        filename,
+        originalName: filename,
+        size: fs.existsSync(path.join(audioDir, filename)) ? fs.statSync(path.join(audioDir, filename)).size : 0,
+        uploadedAt: new Date().toISOString(),
+      }));
+    } else {
+      const known = new Set(room.audioLibrary.map(entry => entry.filename));
+      repoFiles.forEach(filename => {
+        if (!known.has(filename)) {
+          const filePath = path.join(audioDir, filename);
+          room.audioLibrary.push({
             filename,
             originalName: filename,
             size: fs.existsSync(filePath) ? fs.statSync(filePath).size : 0,
             uploadedAt: new Date().toISOString(),
-          };
-        });
-      } else {
-        const knownFilenames = new Set(audioLibrary.map(entry => entry.filename));
-        repoFiles.forEach(filename => {
-          if (filename === path.basename(AUDIO_CFG_FILE)) return;
-          if (!knownFilenames.has(filename)) {
-            const filePath = path.join(AUDIO_DIR, filename);
-            const size = fs.existsSync(filePath) ? fs.statSync(filePath).size : 0;
-            audioLibrary.push({
-              filename,
-              originalName: filename,
-              size,
-              uploadedAt: new Date().toISOString(),
-            });
-          }
-        });
-      }
-
-      audioLibrary = audioLibrary.filter(entry => {
-        const runtimePath = path.join(AUDIO_DIR, entry.filename);
-        const repoPath    = path.join(__dirname, 'audio', entry.filename);
-        return isSafePath(AUDIO_DIR, runtimePath) &&
-          (fs.existsSync(runtimePath) || fs.existsSync(repoPath));
+          });
+        }
       });
-
-      audioLibrary.sort((a, b) => a.originalName.localeCompare(b.originalName, undefined, { numeric: true, sensitivity: 'base' }));
-
-      const allUnassigned = Object.values(audioConfig).every(val => !val);
-      if (allUnassigned && audioLibrary.length) {
-        const eventOrder = ['attack', 'gift', 'kill', 'respawn', 'heal', 'follow'];
-        eventOrder.forEach((event, idx) => {
-          if (idx < audioLibrary.length) audioConfig[event] = audioLibrary[idx].filename;
-        });
-      }
-
-      console.log(`🔊 Loaded audio config (${audioLibrary.length} files)`);
     }
+
+    room.audioLibrary = room.audioLibrary.filter(entry => {
+      const runtimePath = path.join(audioDir, entry.filename);
+      return isSafePath(audioDir, runtimePath) && fs.existsSync(runtimePath);
+    });
+
+    room.audioLibrary.sort((a, b) => a.originalName.localeCompare(b.originalName, undefined, { numeric: true, sensitivity: 'base' }));
+
+    const allUnassigned = Object.values(room.audioConfig).every(val => !val);
+    if (allUnassigned && room.audioLibrary.length) {
+      const eventOrder = ['attack', 'gift', 'kill', 'respawn', 'heal', 'follow'];
+      eventOrder.forEach((event, idx) => {
+        if (idx < room.audioLibrary.length) room.audioConfig[event] = room.audioLibrary[idx].filename;
+      });
+    }
+
+    console.log(`🔊 Loaded audio settings for room ${room.roomId} (${room.audioLibrary.length} files)`);
   } catch (err) {
-    console.error('Error loading audio config:', err);
+    console.error('Error loading audio config for room', room.roomId, err);
   }
 }
 
-function saveAudioConfig() {
+function saveRoomAudioConfig(room) {
   try {
-    ensureDir(AUDIO_DIR);
-    fs.writeFileSync(AUDIO_CFG_FILE, JSON.stringify(
-      { config: audioConfig, library: audioLibrary, settings: overlaySettings }, null, 2
-    ));
+    const audioDir = getRoomAudioDir(room.roomId);
+    ensureDir(audioDir);
+    fs.writeFileSync(getRoomAudioConfigFile(room.roomId), JSON.stringify({ config: room.audioConfig, library: room.audioLibrary, settings: room.overlaySettings }, null, 2));
   } catch (err) {
-    console.error('Error saving audio config:', err);
+    console.error('Error saving audio config for room', room.roomId, err);
+  }
+}
+
+function savePlayerStats() {
+  for (const room of getAllRooms().values()) {
+    saveRoomPlayerStats(room);
+  }
+}
+
+function loadPlayerStats() {
+  for (const room of getAllRooms().values()) {
+    loadRoomPlayerStats(room);
+  }
+}
+
+function loadCurrentBackground() {
+  for (const room of getAllRooms().values()) {
+    loadRoomBackground(room);
+  }
+}
+
+function loadAudioConfig() {
+  for (const room of getAllRooms().values()) {
+    loadRoomAudioConfig(room);
   }
 }
 
@@ -420,7 +500,11 @@ const ALLOWED_BACKGROUND_MIMES = new Set(['image/jpeg', 'image/png', 'image/gif'
 
 const upload = multer({
   storage: multer.diskStorage({
-    destination: (_req, _file, cb) => { ensureDir(BG_DIR); cb(null, BG_DIR); },
+    destination: (req, _file, cb) => {
+      const bgDir = req?.room ? getRoomBackgroundDir(req.room.roomId) : ROOM_BG_ROOT;
+      ensureDir(bgDir);
+      cb(null, bgDir);
+    },
     filename:    (_req, file, cb) => {
       const ext     = path.extname(file.originalname || '').toLowerCase();
       const safeExt = ALLOWED_BACKGROUND_EXTS.has(ext) ? ext : '.png';
@@ -445,7 +529,11 @@ const ALLOWED_AUDIO_MIMES = new Set([
 
 const audioUpload = multer({
   storage: multer.diskStorage({
-    destination: (_req, _file, cb) => { ensureDir(AUDIO_DIR); cb(null, AUDIO_DIR); },
+    destination: (req, _file, cb) => {
+      const audioDir = req?.room ? getRoomAudioDir(req.room.roomId) : ROOM_AUDIO_ROOT;
+      ensureDir(audioDir);
+      cb(null, audioDir);
+    },
     filename:    (_req, file, cb) => {
       const ext     = path.extname(file.originalname || '').toLowerCase();
       const safeExt = ALLOWED_AUDIO_EXTS.has(ext) ? ext : '.mp3';
@@ -482,15 +570,15 @@ function resolveTikTokUser(eventPayload) {
   return { id, nickname };
 }
 
-function spawnPlayer(uniqueId, nickname) {
-  if (!uniqueId) return;
-  if (players[uniqueId]?.alive) {
-    players[uniqueId].lastActive = Date.now();
-    if (nickname) players[uniqueId].nickname = nickname;
+function spawnPlayer(room, uniqueId, nickname) {
+  if (!room || !uniqueId) return;
+  if (room.players[uniqueId]?.alive) {
+    room.players[uniqueId].lastActive = Date.now();
+    if (nickname) room.players[uniqueId].nickname = nickname;
     return;
   }
-  const ex = players[uniqueId];
-  players[uniqueId] = {
+  const ex = room.players[uniqueId];
+  room.players[uniqueId] = {
     uniqueId,
     nickname:            nickname || uniqueId,
     hp:                  ex?.maxHp    || CFG.BASE_HP,
@@ -510,18 +598,18 @@ function spawnPlayer(uniqueId, nickname) {
     messageBoostExpires: ex?.messageBoostExpires || 0,
     forceSpawn:          ex?.forceSpawn          || false,
   };
-  console.log(`⚔️  Spawned: @${uniqueId} (HP: ${players[uniqueId].hp}, STR: ${players[uniqueId].strength}, Kills: ${players[uniqueId].kills})`);
+  console.log(`⚔️  Spawned: @${uniqueId} (HP: ${room.players[uniqueId].hp}, STR: ${room.players[uniqueId].strength}, Kills: ${room.players[uniqueId].kills})`);
 }
 
-function awardStats(uniqueId, nickname, hpBoost = 0, strBoost = 0) {
-  if (!uniqueId) return;
-  if (!players[uniqueId]?.alive) spawnPlayer(uniqueId, nickname);
-  const p = players[uniqueId];
+function awardStats(room, uniqueId, nickname, hpBoost = 0, strBoost = 0) {
+  if (!room || !uniqueId) return;
+  if (!room.players[uniqueId]?.alive) spawnPlayer(room, uniqueId, nickname);
+  const p = room.players[uniqueId];
   if (!p?.alive) return;
   if (hpBoost > 0) {
     p.maxHp += Math.floor(hpBoost * 0.5);
     p.hp     = Math.min(p.maxHp, p.hp + hpBoost);
-    emitEvent('heal', { uniqueId, amount: hpBoost });
+    emitRoomEvent(room, 'heal', { uniqueId, amount: hpBoost });
   }
   p.strength  += strBoost;
   p.lastActive = Date.now();
@@ -530,9 +618,9 @@ function awardStats(uniqueId, nickname, hpBoost = 0, strBoost = 0) {
 // ────────────────────────────────
 // DEAL DAMAGE (enriched)
 // ────────────────────────────────
-function dealDamage(attackerId, targetId, multiplier = 1) {
-  const attacker = players[attackerId];
-  const target   = players[targetId];
+function dealDamage(room, attackerId, targetId, multiplier = 1) {
+  const attacker = room.players[attackerId];
+  const target   = room.players[targetId];
 
   if (!attacker?.alive || !target?.alive || attackerId === targetId) return null;
 
@@ -559,7 +647,7 @@ function dealDamage(attackerId, targetId, multiplier = 1) {
     killed = true;
     console.log(`💀 @${targetId} defeated by @${attackerId}! (streak: ${attacker.killStreak})`);
 
-    emitEvent('killEvent', {
+    emitRoomEvent(room, 'killEvent', {
       killer:        attackerId,
       killerNick:    attacker.nickname,
       killerKills:   attacker.kills,
@@ -574,7 +662,7 @@ function dealDamage(attackerId, targetId, multiplier = 1) {
 
     const streakMeta = CFG.STREAK_LABELS[attacker.killStreak];
     if (streakMeta) {
-      emitEvent('streakEvent', {
+      emitRoomEvent(room, 'streakEvent', {
         uniqueId:  attackerId,
         nickname:  attacker.nickname,
         streak:    attacker.killStreak,
@@ -586,38 +674,38 @@ function dealDamage(attackerId, targetId, multiplier = 1) {
       console.log(`🔥 @${attackerId} streak: ${streakMeta.label}`);
     }
 
-    emitEvent('soundEvent', { event: 'kill', intensity: Math.min(multiplier / 8, 1), tier: multiplier >= 5 ? 'rare' : 'common' });
+    emitRoomEvent(room, 'soundEvent', { event: 'kill', intensity: Math.min(multiplier / 8, 1), tier: multiplier >= 5 ? 'rare' : 'common' });
 
     setTimeout(() => {
-      spawnPlayer(targetId, target.nickname);
-      emitEvent('respawn', {
+      spawnPlayer(room, targetId, target.nickname);
+      emitRoomEvent(room, 'respawn', {
         uniqueId:      targetId,
         nickname:      target.nickname,
-        hp:            players[targetId]?.hp,
-        maxHp:         players[targetId]?.maxHp,
-        color:         players[targetId]?.color,
+        hp:            room.players[targetId]?.hp,
+        maxHp:         room.players[targetId]?.maxHp,
+        color:         room.players[targetId]?.color,
         respawnEffect: 'beam_down',
         delayMs:       CFG.RESPAWN_DELAY_MS,
       });
-      emitEvent('soundEvent', { event: 'respawn', intensity: 0.5, tier: 'common' });
-      emitEvent('gameState', players);
+      emitRoomEvent(room, 'soundEvent', { event: 'respawn', intensity: 0.5, tier: 'common' });
+      emitRoomEvent(room, 'gameState', room.players);
     }, CFG.RESPAWN_DELAY_MS);
   }
 
   console.log(`⚡ @${attackerId} → @${targetId} for ${dmg} dmg${killed ? ' (KILL!)' : ''}${multiplier > 1 ? ' (SPECIAL!)' : ''}`);
 
   const baseResult = { attacker: attackerId, target: targetId, damage: dmg, killed, special: multiplier > 1 };
-  return buildAttackPayload(baseResult, { ...target, hp: preDamageHp });
+  return buildAttackPayload(room, baseResult, { ...target, hp: preDamageHp });
 }
 
 function normalizeName(value = '') {
   return String(value).toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 
-function findTarget(mention) {
+function findTarget(room, mention) {
   const lower = String(mention || '').toLowerCase();
   const norm  = normalizeName(mention);
-  return Object.values(players).find(p =>
+  return Object.values(room.players).find(p =>
     String(p.uniqueId || '').toLowerCase() === lower ||
     String(p.nickname || '').toLowerCase() === lower ||
     normalizeName(p.uniqueId || '') === norm ||
@@ -641,7 +729,7 @@ function extractMentions(comment = '') {
 // ────────────────────────────────
 // REWRITTEN handleMentionAttack
 // ────────────────────────────────
-function handleMentionAttack(attackerId, attackerNick, comment) {
+function handleMentionAttack(room, attackerId, attackerNick, comment) {
   const mentions = extractMentions(comment);
   if (!mentions.length) return { handled: false, reason: 'No @mention found' };
 
@@ -668,23 +756,23 @@ function handleMentionAttack(attackerId, attackerNick, comment) {
   }
 
   // Ensure attacker exists
-  if (!players[attackerId]?.alive) {
-    spawnPlayer(attackerId, attackerNick);
-    if (players[attackerId]) players[attackerId].forceSpawn = true;
+  if (!room.players[attackerId]?.alive) {
+    spawnPlayer(room, attackerId, attackerNick);
+    if (room.players[attackerId]) room.players[attackerId].forceSpawn = true;
   }
-  if (players[attackerId]) {
-    players[attackerId].lastActive = Date.now();
-    players[attackerId].forceSpawn = true;
+  if (room.players[attackerId]) {
+    room.players[attackerId].lastActive = Date.now();
+    room.players[attackerId].forceSpawn = true;
   }
 
-  const attacker    = players[attackerId];
+  const attacker    = room.players[attackerId];
   const boostActive = attacker && attacker.messageBoostExpires > Date.now();
 
   let multiplier = commandMultiplier;
   if (boostActive) multiplier *= CFG.GIFT_MESSAGE_BOOST_MULTIPLIER;
 
   for (const mention of mentions) {
-    const target = findTarget(mention);
+    const target = findTarget(room, mention);
     if (!target) {
       console.log(`⚠️ Mention target not found: @${mention} from comment: ${comment}`);
       continue;
@@ -693,24 +781,21 @@ function handleMentionAttack(attackerId, attackerNick, comment) {
       console.log(`⚠️ Ignored self-attack from @${attackerId}`);
       continue;
     }
-    if (!players[target.uniqueId]?.alive) {
-      spawnPlayer(target.uniqueId, target.nickname);
-      if (players[target.uniqueId]) players[target.uniqueId].forceSpawn = true;
+    if (!room.players[target.uniqueId]?.alive) {
+      spawnPlayer(room, target.uniqueId, target.nickname);
+      if (room.players[target.uniqueId]) room.players[target.uniqueId].forceSpawn = true;
     }
 
-    const result = dealDamage(attackerId, target.uniqueId, multiplier);
+    const result = dealDamage(room, attackerId, target.uniqueId, multiplier);
     if (result) {
       result.effect = requestedEffect;                // force the chosen effect
       result.special            = isSpecialCommand;
       result.commandDescription = commandDescription || requestedEffect;
       result.giftBoosted        = boostActive;
 
-      emitAttackAndSync(result);
-      emitSoundAndSync(
-        isSpecialCommand ? 'gift' : 'attack',
-        { intensity: result.intensity, tier: isSpecialCommand ? 'rare' : 'common' }
-      );
-      emitEvent('commentDamage', {
+      emitAttackAndSync(room, result);
+      emitSoundAndSync(room, isSpecialCommand ? 'gift' : 'attack');
+      emitRoomEvent(room, 'commentDamage', {
         attacker: attackerNick,
         target:   target.nickname,
         damage:   result.damage,
@@ -737,18 +822,18 @@ const app        = express();
 const httpServer = createServer(app);
 const io         = new Server(httpServer, { cors: { origin: '*' } });
 
-function emitAttackAndSync(result) {
+function emitAttackAndSync(room, result) {
   if (!result) return;
-  if (!players[result.attacker] || !players[result.target]) {
-    logger.warn({ attacker: result.attacker, target: result.target }, 'Emitting attack for player(s) not present in state');
+  if (!room.players[result.attacker] || !room.players[result.target]) {
+    logger.warn({ attacker: result.attacker, target: result.target, room: room.roomId }, 'Emitting attack for player(s) not present in room state');
   }
-  emitEvent('attack', result);
-  setTimeout(() => emitEvent('gameState', players), 40);
+  emitRoomEvent(room, 'attack', result);
+  setTimeout(() => emitRoomEvent(room, 'gameState', room.players), 40);
 }
 
-function emitGiftAttackAndSync(result) {
-  emitEvent('giftAttack', result);
-  setTimeout(() => emitEvent('gameState', players), 40);
+function emitGiftAttackAndSync(room, result) {
+  emitRoomEvent(room, 'giftAttack', result);
+  setTimeout(() => emitRoomEvent(room, 'gameState', room.players), 40);
 }
 
 if (process.env.REDIS_URL) {
@@ -801,7 +886,31 @@ function socketAuth(socket, next) {
   if (!row || row.is_revoked || new Date(row.expires_at) < new Date()) {
     return next(new Error('Unauthorized: expired or revoked'));
   }
+  if (!row.room_id) {
+    return next(new Error('Unauthorized: room assignment missing'));
+  }
   socket.accessCode = row;
+  socket.roomId = row.room_id;
+  next();
+}
+
+function requireRoom(req, res, next) {
+  const token = req.cookies?.session_token;
+  if (!token) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+  const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
+  if (!row || row.is_revoked || new Date(row.expires_at) < new Date()) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+  if (!row.room_id) {
+    return res.status(400).json({ success: false, error: 'No room assigned' });
+  }
+
+  req.roomId = row.room_id;
+  req.room = getOrCreateRoom(row.room_id);
+  loadRoomPlayerStats(req.room);
+  loadRoomBackground(req.room);
+  loadRoomAudioConfig(req.room);
   next();
 }
 
@@ -825,63 +934,73 @@ app.get('/metrics', async (_req, res) => {
   }
 });
 
-app.use('/audio', (req, res, next) => {
-  const filename    = path.basename(req.path);
-  const runtimePath = path.join(AUDIO_DIR, filename);
-  const repoPath    = path.join(__dirname, 'audio', filename);
-  if (!isSafePath(AUDIO_DIR, runtimePath)) return res.status(403).send('Forbidden');
+app.get('/audio/:filename', requireRoom, (req, res) => {
+  const filename = path.basename(req.params.filename);
+  const audioDir = getRoomAudioDir(req.room.roomId);
+  const runtimePath = path.join(audioDir, filename);
+  if (!isSafePath(audioDir, runtimePath)) return res.status(403).send('Forbidden');
   if (fs.existsSync(runtimePath)) return res.sendFile(runtimePath);
-  if (fs.existsSync(repoPath))    return res.sendFile(repoPath);
-  next();
-}, express.static(AUDIO_DIR));
-
-let overlayCount = 0;
+  return res.status(404).send('Audio file not found');
+});
 
 io.on('connection', (socket) => {
+  const room = getOrCreateRoom(socket.roomId);
+  if (!room) {
+    socket.disconnect();
+    return;
+  }
+
+  if (!room.initialized) {
+    loadRoomPlayerStats(room);
+    loadRoomBackground(room);
+    loadRoomAudioConfig(room);
+    room.initialized = true;
+  }
+
   socket.emit('serverReady', {
     socketId: socket.id,
-    overlayCount,
-    overlaySettings,
-    laserColor: overlaySettings.laserColor,
-    gameStateCount: Object.values(players).filter(p => p.alive).length,
+    roomId: room.roomId,
+    overlayCount: room.overlayCount,
+    overlaySettings: room.overlaySettings,
+    laserColor: room.overlaySettings.laserColor,
+    gameStateCount: Object.values(room.players).filter(p => p.alive).length,
   });
 
   socket.on('register', ({ type } = {}) => {
     const clientType = String(type || 'unknown').toLowerCase();
     socket.data.clientType = clientType;
+    socket.join(room.roomId);
 
     if (clientType === 'overlay') {
-      socket.join('overlays');
-      overlayCount++;
-      emitEvent('overlayCount', { count: overlayCount });
-      try { overlayGauge.set(overlayCount); } catch (_) {}
+      room.overlayCount++;
+      emitRoomEvent(room, 'overlayCount', { count: room.overlayCount });
+      updateOverlayGauge();
 
-      socket.emit('gameState',        players);
-      socket.emit('audioConfig',      audioConfig);
-      socket.emit('overlaySettings',  overlaySettings);
-      socket.emit('laserColor',       overlaySettings.laserColor);
-      if (currentBackground) {
-        socket.emit('backgroundChanged', { filename: currentBackground.filename });
+      socket.emit('gameState',        room.players);
+      socket.emit('audioConfig',      room.audioConfig);
+      socket.emit('overlaySettings',  room.overlaySettings);
+      socket.emit('laserColor',       room.overlaySettings.laserColor);
+      if (room.currentBackground) {
+        socket.emit('backgroundChanged', { filename: room.currentBackground.filename });
       }
     } else if (clientType === 'dashboard' || clientType === 'stats') {
-      socket.join(clientType);
-      socket.emit('overlayCount',    { count: overlayCount });
-      socket.emit('overlaySettings', overlaySettings);
-      socket.emit('laserColor',      overlaySettings.laserColor);
-      socket.emit('gameState',       players);
+      socket.emit('overlayCount',    { count: room.overlayCount });
+      socket.emit('overlaySettings', room.overlaySettings);
+      socket.emit('laserColor',      room.overlaySettings.laserColor);
+      socket.emit('gameState',       room.players);
     }
   });
 
   socket.on('disconnect', () => {
     if (socket.data.clientType === 'overlay') {
-      overlayCount = Math.max(0, overlayCount - 1);
-      emitEvent('overlayCount', { count: overlayCount });
-      try { overlayGauge.set(overlayCount); } catch (_) {}
+      room.overlayCount = Math.max(0, room.overlayCount - 1);
+      emitRoomEvent(room, 'overlayCount', { count: room.overlayCount });
+      updateOverlayGauge();
     }
   });
 
   socket.on('layoutUpdate', (settings) => {
-    emitEvent('layoutUpdate', settings);
+    emitRoomEvent(room, 'layoutUpdate', settings);
   });
 });
 
@@ -918,16 +1037,16 @@ app.get('/dashboard/welcome', (req, res) => {
 });
 
 app.get('/stats', (_req, res) => res.sendFile(path.join(__dirname, 'stats.html')));
-app.get('/state', (_req, res) => res.json(players));
+app.get('/state', requireRoom, (req, res) => res.json(req.room.players));
 
-app.get('/api/status', (_req, res) => res.json({
-  username:         currentStreamer,
+app.get('/api/status', requireRoom, (req, res) => res.json({
+  username:         req.room.streamerUsername || currentStreamer,
   connected:        !!(client && client.connected),
-  overlayConnected: overlayCount > 0,
-  overlayCount,
-  playerCount:      Object.values(players).filter(p => p.alive).length,
-  background:       currentBackground,
-  overlaySettings,
+  overlayConnected: req.room.overlayCount > 0,
+  overlayCount:     req.room.overlayCount,
+  playerCount:      Object.values(req.room.players).filter(p => p.alive).length,
+  background:       req.room.currentBackground,
+  overlaySettings:  req.room.overlaySettings,
   devTestMode:      DEV_TEST_MODE,
 }));
 
@@ -953,65 +1072,64 @@ app.post('/api/dev/sound-settings', (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/dev/laser-color', (req, res) => {
+app.post('/api/dev/laser-color', requireRoom, (req, res) => {
   const { color } = req.body || {};
   if (typeof color !== 'string' || !color.trim()) return res.status(400).json({ success: false, error: 'Invalid color' });
-  overlaySettings.laserColor = color.trim();
-  saveAudioConfig();
-  emitEvent('overlaySettings', overlaySettings);
-  emitEvent('laserColor', { color: overlaySettings.laserColor });
-  res.json({ success: true, color: overlaySettings.laserColor });
+  req.room.overlaySettings.laserColor = color.trim();
+  saveRoomAudioConfig(req.room);
+  emitRoomEvent(req.room, 'overlaySettings', req.room.overlaySettings);
+  emitRoomEvent(req.room, 'laserColor', { color: req.room.overlaySettings.laserColor });
+  res.json({ success: true, color: req.room.overlaySettings.laserColor });
 });
 
-app.post('/api/dev/overlay-settings', (req, res) => {
+app.post('/api/dev/overlay-settings', requireRoom, (req, res) => {
   const { shotType, shotSpeed, color } = req.body || {};
   const validTypes = ['beam', 'pulse', 'wave', 'burst', 'ripple'];
   if (typeof shotType === 'string' && shotType) {
     if (!validTypes.includes(shotType)) return res.status(400).json({ success: false, error: `Invalid shot type. Must be one of: ${validTypes.join(', ')}` });
-    overlaySettings.shotType = shotType;
+    req.room.overlaySettings.shotType = shotType;
   }
   if (typeof shotSpeed === 'number' && shotSpeed > 0 && shotSpeed <= 3) {
-    overlaySettings.shotSpeed = shotSpeed;
+    req.room.overlaySettings.shotSpeed = shotSpeed;
   }
   if (typeof color === 'string' && color.trim()) {
-    overlaySettings.laserColor = color.trim();
+    req.room.overlaySettings.laserColor = color.trim();
   }
-  saveAudioConfig();
-  emitEvent('overlaySettings', overlaySettings);
-  res.json({ success: true, settings: overlaySettings });
+  saveRoomAudioConfig(req.room);
+  emitRoomEvent(req.room, 'overlaySettings', req.room.overlaySettings);
+  res.json({ success: true, settings: req.room.overlaySettings });
 });
 
-app.post('/api/connect', (req, res) => {
+app.post('/api/connect', requireRoom, (req, res) => {
   const { username } = req.body;
   if (!username) return res.json({ success: false, error: 'Username required' });
   if (!API_KEY)  return res.status(500).json({ success: false, error: 'Missing TikTok API_KEY in .env' });
-  connectToStreamer(username);
+  connectToStreamer(username, req.room);
   res.json({ success: true });
 });
 
-app.post('/api/reset',          (_req, res) => { disconnectStreamer(); res.json({ success: true }); });
-app.post('/api/overlay/reload', (_req, res) => {
-  emitEvent('forceReload', { v: Date.now(), delayMs: 3000, reason: 'Operator reload' });
+app.post('/api/reset', (_req, res) => { disconnectStreamer(); res.json({ success: true }); });
+app.post('/api/overlay/reload', requireRoom, (req, res) => {
+  emitRoomEvent(req.room, 'forceReload', { v: Date.now(), delayMs: 3000, reason: 'Operator reload' });
   res.json({ success: true });
 });
 
-app.post('/api/players/clear', (_req, res) => {
-  for (const id in players) { players[id].alive = false; players[id].forceSpawn = false; }
-  emitEvent('gameState', players);
+app.post('/api/players/clear', requireRoom, (req, res) => {
+  for (const id in req.room.players) { req.room.players[id].alive = false; req.room.players[id].forceSpawn = false; }
+  emitRoomEvent(req.room, 'gameState', req.room.players);
   res.json({ success: true });
 });
 
-app.post('/api/background/upload', (req, res) => {
+app.post('/api/background/upload', requireRoom, (req, res) => {
   res.type('application/json');
-  ensureDir(BG_DIR);
   upload.single('background')(req, res, (err) => {
     try {
       if (err)       return res.status(400).json({ success: false, error: err.message || 'Background upload failed' });
       if (!req.file) return res.status(400).json({ success: false, error: 'No background image was uploaded.' });
-      deleteCurrentBackgroundFile();
-      saveBackgroundMeta(req.file.filename);
-      emitEvent('backgroundChanged', { filename: req.file.filename });
-      console.log(`📸 Background uploaded: ${req.file.filename}`);
+      deleteRoomBackgroundFile(req.room);
+      saveRoomBackgroundMeta(req.room, req.file.filename);
+      emitRoomEvent(req.room, 'backgroundChanged', { filename: req.file.filename });
+      console.log(`📸 Background uploaded for room ${req.room.roomId}: ${req.file.filename}`);
       return res.json({ success: true, filename: req.file.filename, url: `/background/${req.file.filename}` });
     } catch (uploadErr) {
       console.error('Background upload error:', uploadErr);
@@ -1020,13 +1138,12 @@ app.post('/api/background/upload', (req, res) => {
   });
 });
 
-app.post('/api/background/clear', (_req, res) => {
+app.post('/api/background/clear', requireRoom, (req, res) => {
   try {
-    deleteCurrentBackgroundFile();
-    currentBackground = null;
-    try { if (fs.existsSync(BG_FILE)) fs.unlinkSync(BG_FILE); } catch (_e) {}
-    emitEvent('backgroundChanged', { filename: null });
-    console.log('📸 Background cleared');
+    deleteRoomBackgroundFile(req.room);
+    req.room.currentBackground = null;
+    emitRoomEvent(req.room, 'backgroundChanged', { filename: null });
+    console.log(`📸 Background cleared for room ${req.room.roomId}`);
     res.json({ success: true });
   } catch (err) {
     console.error('Background clear error:', err);
@@ -1034,20 +1151,19 @@ app.post('/api/background/clear', (_req, res) => {
   }
 });
 
-app.get('/background/:filename', (req, res) => {
-  const filepath = path.join(BG_DIR, req.params.filename);
-  if (!isSafePath(BG_DIR, filepath)) return res.status(403).send('Forbidden');
+app.get('/background/:filename', requireRoom, (req, res) => {
+  const filepath = path.join(getRoomBackgroundDir(req.room.roomId), req.params.filename);
+  if (!isSafePath(getRoomBackgroundDir(req.room.roomId), filepath)) return res.status(403).send('Forbidden');
   if (!fs.existsSync(filepath))      return res.status(404).send('Background not found');
   return res.sendFile(filepath);
 });
 
-app.get('/api/audio', (_req, res) => {
-  res.json({ success: true, library: audioLibrary, config: audioConfig, settings: overlaySettings });
+app.get('/api/audio', requireRoom, (req, res) => {
+  res.json({ success: true, library: req.room.audioLibrary, config: req.room.audioConfig, settings: req.room.overlaySettings });
 });
 
-app.post('/api/audio/upload', (req, res) => {
+app.post('/api/audio/upload', requireRoom, (req, res) => {
   res.type('application/json');
-  ensureDir(AUDIO_DIR);
   audioUpload.single('audio')(req, res, (err) => {
     if (err)       return res.status(400).json({ success: false, error: err.message });
     if (!req.file) return res.status(400).json({ success: false, error: 'No audio file uploaded.' });
@@ -1057,50 +1173,50 @@ app.post('/api/audio/upload', (req, res) => {
       size:         req.file.size,
       uploadedAt:   new Date().toISOString(),
     };
-    audioLibrary.push(entry);
-    saveAudioConfig();
-    console.log(`🔊 Audio uploaded: ${req.file.originalname} → ${req.file.filename}`);
+    req.room.audioLibrary.push(entry);
+    saveRoomAudioConfig(req.room);
+    console.log(`🔊 Audio uploaded for room ${req.room.roomId}: ${req.file.originalname} → ${req.file.filename}`);
     res.json({ success: true, file: entry });
   });
 });
 
-app.post('/api/audio/assign', (req, res) => {
+app.post('/api/audio/assign', requireRoom, (req, res) => {
   const { event, filename } = req.body;
   const validEvents = Object.keys(DEFAULT_AUDIO_CONFIG);
   if (!validEvents.includes(event)) {
     return res.status(400).json({ success: false, error: `Invalid event. Must be one of: ${validEvents.join(', ')}` });
   }
   if (filename === null || filename === '') {
-    audioConfig[event] = null;
-    saveAudioConfig();
-    emitEvent('audioConfig', audioConfig);
+    req.room.audioConfig[event] = null;
+    saveRoomAudioConfig(req.room);
+    emitRoomEvent(req.room, 'audioConfig', req.room.audioConfig);
     return res.json({ success: true, event, filename: null });
   }
-  if (!audioLibrary.some(f => f.filename === filename)) {
+  if (!req.room.audioLibrary.some(f => f.filename === filename)) {
     return res.status(404).json({ success: false, error: 'File not found in audio library.' });
   }
-  audioConfig[event] = filename;
-  saveAudioConfig();
-  emitEvent('audioConfig', audioConfig);
-  console.log(`🔊 Assigned "${filename}" to event "${event}"`);
+  req.room.audioConfig[event] = filename;
+  saveRoomAudioConfig(req.room);
+  emitRoomEvent(req.room, 'audioConfig', req.room.audioConfig);
+  console.log(`🔊 Assigned "${filename}" to event "${event}" for room ${req.room.roomId}`);
   res.json({ success: true, event, filename });
 });
 
-app.delete('/api/audio/delete/:filename', (req, res) => {
+app.delete('/api/audio/delete/:filename', requireRoom, (req, res) => {
   const { filename } = req.params;
-  const filepath     = path.join(AUDIO_DIR, filename);
-  if (!isSafePath(AUDIO_DIR, filepath)) return res.status(403).json({ success: false, error: 'Forbidden' });
-  const before = audioLibrary.length;
-  audioLibrary = audioLibrary.filter(f => f.filename !== filename);
-  if (audioLibrary.length === before) return res.status(404).json({ success: false, error: 'File not found in library.' });
+  const filepath     = path.join(getRoomAudioDir(req.room.roomId), filename);
+  if (!isSafePath(getRoomAudioDir(req.room.roomId), filepath)) return res.status(403).json({ success: false, error: 'Forbidden' });
+  const before = req.room.audioLibrary.length;
+  req.room.audioLibrary = req.room.audioLibrary.filter(f => f.filename !== filename);
+  if (req.room.audioLibrary.length === before) return res.status(404).json({ success: false, error: 'File not found in library.' });
   let changed = false;
-  for (const ev of Object.keys(audioConfig)) {
-    if (audioConfig[ev] === filename) { audioConfig[ev] = null; changed = true; }
+  for (const ev of Object.keys(req.room.audioConfig)) {
+    if (req.room.audioConfig[ev] === filename) { req.room.audioConfig[ev] = null; changed = true; }
   }
   try { if (fs.existsSync(filepath)) fs.unlinkSync(filepath); } catch (_e) {}
-  saveAudioConfig();
-  if (changed) emitEvent('audioConfig', audioConfig);
-  console.log(`🗑️ Deleted audio: ${filename}`);
+  saveRoomAudioConfig(req.room);
+  if (changed) emitRoomEvent(req.room, 'audioConfig', req.room.audioConfig);
+  console.log(`🗑️ Deleted audio for room ${req.room.roomId}: ${filename}`);
   res.json({ success: true, filename, configUpdated: changed });
 });
 
@@ -1110,6 +1226,7 @@ function requireDevTestMode(_req, res, next) {
 }
 
 function ensureTestPlayers() {
+  const room = getDefaultRoom();
   const testPlayers = [
     { id: 'test_alpha',   nick: 'Alpha'   },
     { id: 'test_bravo',   nick: 'Bravo'   },
@@ -1118,7 +1235,7 @@ function ensureTestPlayers() {
     { id: 'test_echo',    nick: 'Echo'    },
   ];
   testPlayers.forEach((item, index) => {
-    players[item.id] = {
+    room.players[item.id] = {
       uniqueId: item.id, nickname: item.nick,
       hp: CFG.BASE_HP, maxHp: CFG.BASE_HP,
       strength: CFG.BASE_STRENGTH, alive: true, kills: 0,
@@ -1130,7 +1247,7 @@ function ensureTestPlayers() {
       color: randomColor(), messageBoostExpires: 0, forceSpawn: true,
     };
   });
-  emitEvent('gameState', players);
+  emitRoomEvent(room, 'gameState', room.players);
 }
 
 app.get('/api/test/status', (_req, res) => res.json({ enabled: DEV_TEST_MODE }));
@@ -1143,66 +1260,67 @@ app.post('/api/test/spawn', requireDevTestMode, (_req, res) => {
 
 app.post('/api/test/attack', requireDevTestMode, (_req, res) => {
   ensureTestPlayers();
-  const result = handleMentionAttack('test_alpha', 'Alpha', '@test_bravo');
-  emitEvent('gameState', players);
+  const room = getDefaultRoom();
+  const result = handleMentionAttack(room, 'test_alpha', 'Alpha', '@test_bravo');
+  emitRoomEvent(room, 'gameState', room.players);
   res.json({ success: true, result });
 });
 
 app.post('/api/test/gift', requireDevTestMode, (_req, res) => {
   ensureTestPlayers();
+  const room = getDefaultRoom();
   const attackerId  = 'test_charlie';
   const diamonds    = 25;
   const targets     = ['test_alpha', 'test_bravo', 'test_delta'];
   const attacksMade = [];
 
-  awardStats(attackerId, players[attackerId].nickname,
+  awardStats(room, attackerId, room.players[attackerId].nickname,
     diamonds * CFG.GIFT_HP_PER_DIAMOND,
     diamonds * CFG.GIFT_STR_PER_DIAMOND
   );
-  if (players[attackerId]) {
-    players[attackerId].messageBoostExpires = Date.now() + CFG.GIFT_MESSAGE_BOOST_DURATION_MS;
+  if (room.players[attackerId]) {
+    room.players[attackerId].messageBoostExpires = Date.now() + CFG.GIFT_MESSAGE_BOOST_DURATION_MS;
   }
-  emitEvent('gameState', players);
+  emitRoomEvent(room, 'gameState', room.players);
 
   // Determine gift effect based on diamond amount (new rule)
   const giftEffect = diamonds > 100 ? 'fire' : 'laser';  // meteor or laser
 
   targets.forEach(targetId => {
-    const target = players[targetId];
+    const target = room.players[targetId];
     if (!target?.alive) return;
     const damage = diamonds;
     target.hp    = Math.max(0, target.hp - damage);
     let killed   = false;
     if (target.hp === 0) {
-      killed = true; target.alive = false; players[attackerId].kills++;
+      killed = true; target.alive = false; room.players[attackerId].kills++;
       setTimeout(() => {
-        spawnPlayer(target.uniqueId, target.nickname);
-        emitEvent('respawn', { uniqueId: target.uniqueId, respawnEffect: 'beam_down' });
-        emitEvent('gameState', players);
+        spawnPlayer(room, target.uniqueId, target.nickname);
+        emitRoomEvent(room, 'respawn', { uniqueId: target.uniqueId, respawnEffect: 'beam_down' });
+        emitRoomEvent(room, 'gameState', room.players);
       }, CFG.RESPAWN_DELAY_MS);
     }
     const giftAttack = {
       attacker: attackerId, target: targetId, damage, killed, diamonds,
-      effect: giftEffect,              // server-controlled effect (laser/meteor)
+      effect: giftEffect,
       intensity: diamonds > 100 ? 1.0 : 0.7,
       giftColor: diamonds > 100 ? '#FF4500' : '#7afcff',
     };
     attacksMade.push(giftAttack);
-    emitGiftAttackAndSync(giftAttack);
-    emitSoundAndSync(killed ? 'kill' : 'gift', { intensity: giftAttack.intensity, tier: diamonds > 100 ? 'legendary' : 'common' });
+    emitGiftAttackAndSync(room, giftAttack);
+    emitSoundAndSync(room, killed ? 'kill' : 'gift', { intensity: giftAttack.intensity, tier: diamonds > 100 ? 'legendary' : 'common' });
   });
 
-  // Celebration banner still uses original tier classification
   const giftMeta = classifyGift(diamonds);
-  emitEvent('giftEffect', { attacker: attackerId, giftName: 'Test Gift', diamonds, ...giftMeta });
+  emitRoomEvent(room, 'giftEffect', { attacker: attackerId, giftName: 'Test Gift', diamonds, ...giftMeta });
   setTimeout(() => {
-    emitEvent('giftCelebration', {
-      attacker: attackerId, nickname: players[attackerId]?.nickname || 'Charlie',
+    emitRoomEvent(room, 'giftCelebration', {
+      attacker: attackerId, nickname: room.players[attackerId]?.nickname || 'Charlie',
       giftName: 'Test Gift', diamonds, ...giftMeta,
     });
   }, 800);
 
-  emitEvent('gameState', players);
+  emitRoomEvent(room, 'gameState', room.players);
   console.log('🧪 Test gift attack sent');
   res.json({ success: true, attacks: attacksMade });
 });
@@ -1212,19 +1330,19 @@ app.post('/api/test/gift', requireDevTestMode, (_req, res) => {
 // ────────────────────────────────
 // TIKTOK EVENT HANDLING
 // ────────────────────────────────
-function setupTikTokEvents(tiktokClient) {
+function setupTikTokEvents(tiktokClient, room) {
   tiktokClient.on('connected', () => {
-    console.log(`✅ Connected to @${currentStreamer}'s LIVE stream\n`);
+    console.log(`✅ Connected to @${room.streamerUsername || currentStreamer || 'unknown'}'s LIVE stream for room ${room.roomId}\n`);
   });
 
   tiktokClient.on('member', (e) => {
     const id   = e.user?.uniqueId;
     const nick = e.user?.nickname || id;
     if (!id) return;
-    spawnPlayer(id, nick);
-    if (players[id]) players[id].alive = true;
-    emitEvent('gameState', players);
-    emitEvent('spawn', { uniqueId: id });
+    spawnPlayer(room, id, nick);
+    if (room.players[id]) room.players[id].alive = true;
+    emitRoomEvent(room, 'gameState', room.players);
+    emitRoomEvent(room, 'spawn', { uniqueId: id });
   });
 
   tiktokClient.on('chat', (e) => {
@@ -1232,19 +1350,19 @@ function setupTikTokEvents(tiktokClient) {
     const comment = String(e.comment || e.message || '').trim();
     if (!id) return;
 
-    awardStats(id, nickname, 0, CFG.CHAT_STRENGTH_BOOST);
+    awardStats(room, id, nickname, 0, CFG.CHAT_STRENGTH_BOOST);
 
     const iconMatch = comment.match(/^\s*(?:!emoji|\/emoji|emoji)\s+(.+)/i);
     if (iconMatch) {
       const requestedIcon = String(iconMatch[1]).trim().split(/\s+/)[0];
-      const topPlayers = getTopPlayers(5).map(p => p.uniqueId);
+      const topPlayers = getTopPlayers(room, 5).map(p => p.uniqueId);
       if (topPlayers.includes(id)) {
-        if (!players[id]) spawnPlayer(id, nickname);
-        if (players[id]) {
-          players[id].iconEmoji  = requestedIcon || players[id].iconEmoji || '💎';
-          players[id].lastActive = Date.now();
-          emitEvent('gameState', players);
-          console.log(`🎭 @${nickname} updated icon emoji to ${players[id].iconEmoji}`);
+        if (!room.players[id]) spawnPlayer(room, id, nickname);
+        if (room.players[id]) {
+          room.players[id].iconEmoji  = requestedIcon || room.players[id].iconEmoji || '💎';
+          room.players[id].lastActive = Date.now();
+          emitRoomEvent(room, 'gameState', room.players);
+          console.log(`🎭 @${nickname} updated icon emoji to ${room.players[id].iconEmoji}`);
         }
       } else {
         console.log(`⚠️ @${nickname} is not in the top 5 and cannot change icon emoji`);
@@ -1253,19 +1371,19 @@ function setupTikTokEvents(tiktokClient) {
     }
 
     if (/\bspawn\b/i.test(comment)) {
-      if (!players[id]?.alive) {
-        spawnPlayer(id, nickname);
+      if (!room.players[id]?.alive) {
+        spawnPlayer(room, id, nickname);
         console.log(`🟢 @${nickname} spawned via chat command`);
       }
-      if (players[id]) players[id].forceSpawn = true;
+      if (room.players[id]) room.players[id].forceSpawn = true;
     }
 
-    const attackResult = handleMentionAttack(id, nickname, comment);
+    const attackResult = handleMentionAttack(room, id, nickname, comment);
     if (!attackResult.handled && attackResult.reason !== 'No @mention found') {
       console.log(`⚠️ Chat attack not handled: ${attackResult.reason}`);
     }
 
-    emitEvent('gameState', players);
+    emitRoomEvent(room, 'gameState', room.players);
   });
 
   tiktokClient.on('gift', (e) => {
@@ -1273,28 +1391,28 @@ function setupTikTokEvents(tiktokClient) {
     const diamonds = (e.diamondCount || e.amount || 1) * (e.repeatCount || 1);
     if (!id) return;
 
-    const alivePlayers  = Object.values(players).filter(p => p.alive);
+    const alivePlayers  = Object.values(room.players).filter(p => p.alive);
     const boardHasSpace = alivePlayers.length < 20;
 
-    if (!players[id]) spawnPlayer(id, nickname);
-    else if (!players[id].alive && boardHasSpace) spawnPlayer(id, nickname);
+    if (!room.players[id]) spawnPlayer(room, id, nickname);
+    else if (!room.players[id].alive && boardHasSpace) spawnPlayer(room, id, nickname);
 
-    if (players[id]) {
-      players[id].forceSpawn = true;
-      players[id].lastActive = Date.now();
+    if (room.players[id]) {
+      room.players[id].forceSpawn = true;
+      room.players[id].lastActive = Date.now();
     }
 
-    awardStats(id, nickname, diamonds * CFG.GIFT_HP_PER_DIAMOND, diamonds * CFG.GIFT_STR_PER_DIAMOND);
-    if (players[id]) players[id].messageBoostExpires = Date.now() + CFG.GIFT_MESSAGE_BOOST_DURATION_MS;
+    awardStats(room, id, nickname, diamonds * CFG.GIFT_HP_PER_DIAMOND, diamonds * CFG.GIFT_STR_PER_DIAMOND);
+    if (room.players[id]) room.players[id].messageBoostExpires = Date.now() + CFG.GIFT_MESSAGE_BOOST_DURATION_MS;
 
-    emitEvent('gameState', players);
+    emitRoomEvent(room, 'gameState', room.players);
 
     // --- Gift attack effect rules ---
     // Big gifts (>100 diamonds) → meteor (fire), otherwise → laser
     const giftEffect = diamonds > 100 ? 'fire' : 'laser';
     const giftIntensity = diamonds > 100 ? 1.0 : Math.min(diamonds / 100, 0.8);
 
-    const aliveTargets = Object.values(players).filter(p => p.alive && p.uniqueId !== id);
+    const aliveTargets = Object.values(room.players).filter(p => p.alive && p.uniqueId !== id);
 
     if (aliveTargets.length > 0) {
       const targetsToAttack = [];
@@ -1311,37 +1429,36 @@ function setupTikTokEvents(tiktokClient) {
         if (target.hp === 0) {
           killed = true;
           target.alive = false;
-          players[id].kills++;
+          room.players[id].kills++;
           console.log(`💀 @${target.uniqueId} defeated by gift attack from @${id}!`);
           setTimeout(() => {
-            spawnPlayer(target.uniqueId, target.nickname);
-            emitEvent('respawn', {
+            spawnPlayer(room, target.uniqueId, target.nickname);
+            emitRoomEvent(room, 'respawn', {
               uniqueId: target.uniqueId,
               nickname: target.nickname,
               respawnEffect: 'beam_down',
             });
-            emitSoundAndSync('respawn', { intensity: 0.5, tier: 'common' });
-            emitEvent('gameState', players);
+            emitSoundAndSync(room, 'respawn', { intensity: 0.5, tier: 'common' });
+            emitRoomEvent(room, 'gameState', room.players);
           }, CFG.RESPAWN_DELAY_MS);
         }
 
-        emitGiftAttackAndSync({
+        emitGiftAttackAndSync(room, {
           attacker: id, target: target.uniqueId, damage, killed, diamonds,
-          effect:    giftEffect,      // laser or meteor (fire)
+          effect:    giftEffect,
           intensity: giftIntensity,
           giftColor: diamonds > 100 ? '#FF4500' : '#7afcff',
         });
-        emitSoundAndSync(killed ? 'kill' : 'gift', { intensity: giftIntensity, tier: diamonds > 100 ? 'legendary' : 'common' });
+        emitSoundAndSync(room, killed ? 'kill' : 'gift', { intensity: giftIntensity, tier: diamonds > 100 ? 'legendary' : 'common' });
         console.log(`🎁 @${id} → @${target.uniqueId} via gift for ${damage} dmg${killed ? ' (KILL!)' : ''}`);
       });
     }
 
-    // Celebration still uses original tier classification for banners
     const giftMeta = classifyGift(diamonds);
-    emitEvent('giftEffect', { attacker: id, giftName: e.giftName, diamonds, ...giftMeta });
+    emitRoomEvent(room, 'giftEffect', { attacker: id, giftName: e.giftName, diamonds, ...giftMeta });
 
     setTimeout(() => {
-      emitEvent('giftCelebration', {
+      emitRoomEvent(room, 'giftCelebration', {
         attacker: id,
         nickname,
         giftName:  e.giftName,
@@ -1350,46 +1467,47 @@ function setupTikTokEvents(tiktokClient) {
       });
     }, 800);
 
-    emitEvent('gameState', players);
+    emitRoomEvent(room, 'gameState', room.players);
     console.log(`🎁 @${id} sent ${e.giftName} (${diamonds} 💎) [${giftMeta.tier}]`);
   });
 
   tiktokClient.on('like', (e) => {
     const { id, nickname } = resolveTikTokUser(e);
     if (!id) return;
-    if (!players[id]) spawnPlayer(id, nickname);
-    awardStats(id, nickname, CFG.LIKE_HP_BOOST, 0);
+    if (!room.players[id]) spawnPlayer(room, id, nickname);
+    awardStats(room, id, nickname, CFG.LIKE_HP_BOOST, 0);
 
-    if (!likeRateTracker[id]) {
-      likeRateTracker[id] = { likes: [], window: 90000 };
+    const likeKey = `${room.roomId}:${id}`;
+    if (!likeRateTracker[likeKey]) {
+      likeRateTracker[likeKey] = { likes: [], window: 90000 };
     }
     const now = Date.now();
-    likeRateTracker[id].likes.push(now);
-    likeRateTracker[id].likes = likeRateTracker[id].likes.filter(t => now - t < likeRateTracker[id].window);
+    likeRateTracker[likeKey].likes.push(now);
+    likeRateTracker[likeKey].likes = likeRateTracker[likeKey].likes.filter(t => now - t < likeRateTracker[likeKey].window);
 
-    const likeCount  = likeRateTracker[id].likes.length;
+    const likeCount  = likeRateTracker[likeKey].likes.length;
     let heartCount   = 1;
     if (likeCount >= 500) heartCount = 3;
     else if (likeCount >= 100) heartCount = 2;
 
-    emitSoundAndSync('heal', { intensity: Math.min(likeCount / 500, 1), tier: 'common' });
-    emitEvent('like', {
+    emitSoundAndSync(room, 'heal', { intensity: Math.min(likeCount / 500, 1), tier: 'common' });
+    emitRoomEvent(room, 'like', {
       uniqueId: id,
       nickname,
       hearts:    heartCount,
       rate:      likeCount,
       intensity: Math.min(likeCount / 500, 1),
-      color:     players[id]?.color || '#FF6B6B',
+      color:     room.players[id]?.color || '#FF6B6B',
     });
-    emitEvent('gameState', players);
+    emitRoomEvent(room, 'gameState', room.players);
   });
 
   tiktokClient.on('social', (e) => {
     const { id, nickname } = resolveTikTokUser(e);
     if (!id) return;
-    if (!players[id]) spawnPlayer(id, nickname);
-    awardStats(id, nickname, 0, CFG.SOCIAL_STRENGTH_BOOST);
-    emitEvent('gameState', players);
+    if (!room.players[id]) spawnPlayer(room, id, nickname);
+    awardStats(room, id, nickname, 0, CFG.SOCIAL_STRENGTH_BOOST);
+    emitRoomEvent(room, 'gameState', room.players);
   });
 
   tiktokClient.on('follow', (e) => {
@@ -1397,8 +1515,8 @@ function setupTikTokEvents(tiktokClient) {
     const nick = e.user?.nickname || id;
     if (!id) return;
     console.log(`❤️  @${nick} followed!`);
-    emitSoundAndSync('follow', { intensity: 0.6, tier: 'common' });
-    emitEvent('follow', { uniqueId: id, nickname: nick, color: players[id]?.color });
+    emitSoundAndSync(room, 'follow', { intensity: 0.6, tier: 'common' });
+    emitRoomEvent(room, 'follow', { uniqueId: id, nickname: nick, color: room.players[id]?.color });
   });
 
   tiktokClient.on('error', (err) => {
@@ -1417,11 +1535,12 @@ function safeDisconnectClient() {
   client = null;
 }
 
-function connectToStreamer(username) {
+function connectToStreamer(username, room = getDefaultRoom()) {
   safeDisconnectClient();
   currentStreamer = username;
+  room.streamerUsername = username;
   client = new TikTokLive({ uniqueId: currentStreamer, apiKey: API_KEY });
-  setupTikTokEvents(client);
+  setupTikTokEvents(client, room);
   client.connect().catch(err => {
     console.error('❌ Could not connect:', err?.message || err);
     console.error(`   Make sure @${currentStreamer} is currently LIVE on TikTok`);
@@ -1434,8 +1553,21 @@ function disconnectStreamer() {
   currentStreamer = '';
 }
 
-function getTopPlayers(count = 20) {
-  return Object.values(players)
+function getTopPlayers(roomOrCount = 20, count = 20) {
+  let room = null;
+  if (typeof roomOrCount === 'object' && roomOrCount?.roomId) {
+    room = roomOrCount;
+  } else if (typeof roomOrCount === 'number') {
+    count = roomOrCount;
+  } else if (typeof roomOrCount === 'string') {
+    room = getRoom(roomOrCount) || getDefaultRoom();
+  }
+
+  const players = room
+    ? Object.values(room.players)
+    : Array.from(getAllRooms().values()).flatMap(r => Object.values(r.players));
+
+  return players
     .filter(p => p.alive)
     .sort((a, b) => {
       const aF = a.forceSpawn ? 1 : 0;
@@ -1452,30 +1584,35 @@ function getTopPlayers(count = 20) {
 
 setInterval(() => {
   const cutoff = Date.now() - CFG.IDLE_TIMEOUT_MS;
-  for (const id of Object.keys(players)) {
-    if (players[id].lastActive < cutoff) {
-      delete players[id];
-      logger.info({ player: id }, 'Removed idle player due to inactivity');
+  for (const room of getAllRooms().values()) {
+    for (const id of Object.keys(room.players)) {
+      if (room.players[id].lastActive < cutoff) {
+        delete room.players[id];
+        logger.info({ player: id, room: room.roomId }, 'Removed idle player due to inactivity');
+      }
     }
+    emitRoomEvent(room, 'gameState', room.players);
   }
-  emitEvent('gameState', players);
+  updatePlayerGauge();
 }, 60_000);
 
 let saveCounter = 0;
 
 function tick() {
-  for (const id in players) {
-    const p = players[id];
-    if (!p.alive) continue;
-    p.x += p.vx;
-    p.y += p.vy;
-    if (p.x < 20 || p.x > 980)  p.vx *= -1;
-    if (p.y < 20 || p.y > 1800) p.vy *= -1;
-    p.x = Math.max(20, Math.min(980,  p.x));
-    p.y = Math.max(20, Math.min(1800, p.y));
+  for (const room of getAllRooms().values()) {
+    for (const id in room.players) {
+      const p = room.players[id];
+      if (!p.alive) continue;
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 20 || p.x > 980)  p.vx *= -1;
+      if (p.y < 20 || p.y > 1800) p.vy *= -1;
+      p.x = Math.max(20, Math.min(980,  p.x));
+      p.y = Math.max(20, Math.min(1800, p.y));
+    }
+    emitRoomEvent(room, 'gameState', room.players);
   }
-  emitEvent('gameState', players);
-  try { playerGauge.set(Object.values(players).filter(p => p.alive).length); } catch (_) {}
+  try { playerGauge.set(getTotalPlayerCount()); } catch (_) {}
   if (++saveCounter >= 100) { savePlayerStats(); saveCounter = 0; }
 }
 
