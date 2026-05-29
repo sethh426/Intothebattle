@@ -562,7 +562,7 @@ input[type=text]:focus, select:focus {
   </div>
   <!-- FOOTER with CLEAR OVERLAY BUTTON -->
   <div class="footer">
-    <button class="footer-btn primary" onclick="window.open('/overlay','_blank')">🖥️ Open Overlay</button>
+    <button class="footer-btn primary" onclick="window.open(currentRoomId ? '/overlay?room_id=' + encodeURIComponent(currentRoomId) : '/overlay','_blank')">🖥️ Open Overlay</button>
     <button class="footer-btn secondary" onclick="window.open('/stats','_blank')">↗ Stats</button>
     <button class="footer-btn secondary" onclick="window.open('/api/status','_blank')">↗ Raw JSON</button>
     <button class="footer-btn secondary" onclick="window.open('/dashboard','_self')">🔄 Refresh Dashboard</button>
@@ -572,6 +572,7 @@ input[type=text]:focus, select:focus {
 <script>
 const socket = io();
 let overlayCount = 0;
+let currentRoomId = null;
 let audioLibraryData = [];
 let audioConfigData = {};
 const EVENTS = ['attack','gift','kill','respawn','heal','follow'];
@@ -630,6 +631,7 @@ async function fetchStatus() {
   try {
     const res = await fetch('/api/status');
     const data = await res.json();
+    currentRoomId = data.roomId || null;
     document.getElementById('username').value = data.username || '';
     if (data.background?.filename) document.getElementById('bgStatus').textContent = `Background set: ${data.background.filename}`;
     else document.getElementById('bgStatus').textContent = 'No background set';

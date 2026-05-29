@@ -40,8 +40,10 @@ function getRoomAudioConfigFile(roomId) {
 }
 
 export function getRoomPaths(roomId) {
+  const backgroundDir = getRoomBackgroundDir(roomId);
   return {
-    backgroundDir: getRoomBackgroundDir(roomId),
+    backgroundDir,
+    backgroundMetaFile: path.join(backgroundDir, 'current-bg.json'),
     audioDir: getRoomAudioDir(roomId),
     audioConfigFile: getRoomAudioConfigFile(roomId),
     playerStatsFile: path.join(ROOT_DIR, `players_${roomId}.json`),

@@ -516,7 +516,8 @@ body { display: flex; align-items: center; justify-content: center; }
   // ── Audio ──
   function getAudio(filename) {
     if (!audioCache[filename]) {
-      const a = new Audio(`/audio/${filename}`);
+      const audioUrl = `/audio/${filename}${ROOM_ID ? '?room_id=' + encodeURIComponent(ROOM_ID) : ''}`;
+      const a = new Audio(audioUrl);
       a.preload = 'auto';
       audioCache[filename] = a;
     }

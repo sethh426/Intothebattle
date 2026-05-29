@@ -25,6 +25,8 @@ import {
   getAllRooms,
   saveRoomSettings,
   getRoomPaths,
+  DEFAULT_AUDIO_CONFIG,
+  DEFAULT_OVERLAY_SETTINGS,
 } from './roomManager.js';
 
 const DEFAULT_ROOM_ID = 'default';
@@ -83,23 +85,6 @@ const CFG = {
 };
 
 const likeRateTracker = {};
-
-const ROOM_BG_ROOT     = path.join(__dirname, 'backgrounds');
-const ROOM_AUDIO_ROOT  = path.join(__dirname, 'audio');
-
-const DEFAULT_AUDIO_CONFIG = {
-  attack:  null,
-  gift:    null,
-  kill:    null,
-  respawn: null,
-  heal:    null,
-  follow:  null,
-};
-const DEFAULT_OVERLAY_SETTINGS = {
-  laserColor: '#7afcff',
-  shotType:   'beam',
-  shotSpeed:  1,
-};
 
 // ────────────────────────────────
 // CENTRAL EVENT DISPATCHER
@@ -246,26 +231,6 @@ function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
-function getRoomBackgroundDir(roomId) {
-  return path.join(ROOM_BG_ROOT, roomId);
-}
-
-function getRoomAudioDir(roomId) {
-  return path.join(ROOM_AUDIO_ROOT, roomId);
-}
-
-function getRoomPlayersFile(roomId) {
-  return path.join(__dirname, `players_${roomId}.json`);
-}
-
-function getRoomAudioConfigFile(roomId) {
-  return path.join(getRoomAudioDir(roomId), 'audio-config.json');
-}
-
-function getRoomBackgroundMetaFile(roomId) {
-  return path.join(getRoomBackgroundDir(roomId), 'current-bg.json');
-}
-
 function isSafePath(baseDir, targetPath) {
   const base   = path.resolve(baseDir);
   const target = path.resolve(targetPath);
@@ -292,9 +257,9 @@ function isDashboardAuthed(req) {
 
 function loadRoomPlayerStats(room) {
   try {
-    const filePath = getRoomPlayersFile(room.roomId);
-    if (!fs.existsSync(filePath)) return;
-    const saved = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    const { playerStatsFile } = getRoomPaths(room.roomId);
+    if (!fs.existsSync(playerStatsFile)) return;
+    const saved = JSON.parse(fs.readFileSync(playerStatsFile, 'utf8'));
     for (const id in saved) {
       const s = saved[id] || {};
       if (!room.players[id]) {
@@ -342,7 +307,8 @@ function saveRoomPlayerStats(room) {
         kills:    room.players[id].kills,
       };
     }
-    fs.writeFileSync(getRoomPlayersFile(room.roomId), JSON.stringify(toSave, null, 2));
+    const { playerStatsFile } = getRoomPaths(room.roomId);
+    fs.writeFileSync(playerStatsFile, JSON.stringify(toSave, null, 2));
   } catch (err) {
     console.error('Error saving player stats for room', room.roomId, err);
   }
@@ -350,11 +316,10 @@ function saveRoomPlayerStats(room) {
 
 function loadRoomBackground(room) {
   try {
-    const bgDir = getRoomBackgroundDir(room.roomId);
-    ensureDir(bgDir);
-    const metaFile = getRoomBackgroundMetaFile(room.roomId);
-    if (fs.existsSync(metaFile)) {
-      room.currentBackground = JSON.parse(fs.readFileSync(metaFile, 'utf8'));
+    const { backgroundDir, backgroundMetaFile } = getRoomPaths(room.roomId);
+    ensureDir(backgroundDir);
+    if (fs.existsSync(backgroundMetaFile)) {
+      room.currentBackground = JSON.parse(fs.readFileSync(backgroundMetaFile, 'utf8'));
       console.log(`📸 Loaded background for room ${room.roomId}: ${room.currentBackground.filename}`);
     }
   } catch (err) {
@@ -364,10 +329,10 @@ function loadRoomBackground(room) {
 
 function saveRoomBackgroundMeta(room, filename) {
   try {
-    const bgDir = getRoomBackgroundDir(room.roomId);
-    ensureDir(bgDir);
+    const { backgroundDir, backgroundMetaFile } = getRoomPaths(room.roomId);
+    ensureDir(backgroundDir);
     room.currentBackground = { filename };
-    fs.writeFileSync(getRoomBackgroundMetaFile(room.roomId), JSON.stringify(room.currentBackground, null, 2));
+    fs.writeFileSync(backgroundMetaFile, JSON.stringify(room.currentBackground, null, 2));
   } catch (err) {
     console.error('Error saving background meta for room', room.roomId, err);
   }
@@ -375,9 +340,9 @@ function saveRoomBackgroundMeta(room, filename) {
 
 function deleteRoomBackgroundFile(room) {
   if (!room.currentBackground?.filename) return;
-  const bgDir = getRoomBackgroundDir(room.roomId);
-  const oldPath = path.join(bgDir, room.currentBackground.filename);
-  if (!isSafePath(bgDir, oldPath)) return;
+  const { backgroundDir } = getRoomPaths(room.roomId);
+  const oldPath = path.join(backgroundDir, room.currentBackground.filename);
+  if (!isSafePath(backgroundDir, oldPath)) return;
   try {
     if (fs.existsSync(oldPath)) {
       fs.unlinkSync(oldPath);
@@ -390,9 +355,9 @@ function deleteRoomBackgroundFile(room) {
 
 function loadRoomAudioConfig(room) {
   try {
-    const audioDir = getRoomAudioDir(room.roomId);
+    const { audioDir, audioConfigFile } = getRoomPaths(room.roomId);
     ensureDir(audioDir);
-    const cfgFile = getRoomAudioConfigFile(room.roomId);
+    const cfgFile = audioConfigFile;
 
     const repoCandidates = [
       path.join(__dirname, 'audio', 'audio-config.json'),
@@ -463,9 +428,9 @@ function loadRoomAudioConfig(room) {
 
 function saveRoomAudioConfig(room) {
   try {
-    const audioDir = getRoomAudioDir(room.roomId);
+    const { audioDir, audioConfigFile } = getRoomPaths(room.roomId);
     ensureDir(audioDir);
-    fs.writeFileSync(getRoomAudioConfigFile(room.roomId), JSON.stringify({ config: room.audioConfig, library: room.audioLibrary, settings: room.overlaySettings }, null, 2));
+    fs.writeFileSync(audioConfigFile, JSON.stringify({ config: room.audioConfig, library: room.audioLibrary, settings: room.overlaySettings }, null, 2));
   } catch (err) {
     console.error('Error saving audio config for room', room.roomId, err);
   }
@@ -501,7 +466,7 @@ const ALLOWED_BACKGROUND_MIMES = new Set(['image/jpeg', 'image/png', 'image/gif'
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, _file, cb) => {
-      const bgDir = req?.room ? getRoomBackgroundDir(req.room.roomId) : ROOM_BG_ROOT;
+      const bgDir = req?.room ? getRoomPaths(req.room.roomId).backgroundDir : path.join(__dirname, 'backgrounds');
       ensureDir(bgDir);
       cb(null, bgDir);
     },
@@ -530,7 +495,7 @@ const ALLOWED_AUDIO_MIMES = new Set([
 const audioUpload = multer({
   storage: multer.diskStorage({
     destination: (req, _file, cb) => {
-      const audioDir = req?.room ? getRoomAudioDir(req.room.roomId) : ROOM_AUDIO_ROOT;
+      const audioDir = req?.room ? getRoomPaths(req.room.roomId).audioDir : path.join(__dirname, 'audio');
       ensureDir(audioDir);
       cb(null, audioDir);
     },
@@ -861,8 +826,12 @@ app.use('/admin', adminRoutes);
 app.use('/', paypalRoutes);
 
 app.get('/', (_req, res) => res.redirect('/login'));
-app.get('/overlay.html', requireAccess, (_req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
-app.get('/overlay',      requireAccess, (_req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
+app.get(['/overlay.html', '/overlay'], (req, res, next) => {
+  if (req.query.room_id) {
+    return res.sendFile(path.join(__dirname, 'overlay.html'));
+  }
+  return requireAccess(req, res, () => res.sendFile(path.join(__dirname, 'overlay.html')));
+});
 app.get('/admin-panel',  requireAccess, (_req, res) => res.redirect('/admin'));
 
 function socketAuth(socket, next) {
@@ -943,9 +912,11 @@ app.get('/metrics', async (_req, res) => {
   }
 });
 
-app.get('/audio/:filename', requireRoom, (req, res) => {
+app.get('/audio/:filename', (req, res) => {
   const filename = path.basename(req.params.filename);
-  const audioDir = getRoomAudioDir(req.room.roomId);
+  const room = req.room || (req.query.room_id ? getOrCreateRoom(String(req.query.room_id)) : null);
+  if (!room) return res.status(401).send('Unauthorized');
+  const { audioDir } = getRoomPaths(room.roomId);
   const runtimePath = path.join(audioDir, filename);
   if (!isSafePath(audioDir, runtimePath)) return res.status(403).send('Forbidden');
   if (fs.existsSync(runtimePath)) return res.sendFile(runtimePath);
@@ -1046,9 +1017,22 @@ app.get('/dashboard/welcome', (req, res) => {
 });
 
 app.get('/stats', (_req, res) => res.sendFile(path.join(__dirname, 'stats.html')));
-app.get('/state', requireRoom, (req, res) => res.json(req.room.players));
+app.get('/state', (req, res) => {
+  if (req.query.room_id) {
+    const room = getOrCreateRoom(String(req.query.room_id));
+    loadRoomPlayerStats(room);
+    loadRoomBackground(room);
+    loadRoomAudioConfig(room);
+    return res.json(room.players);
+  }
+  if (!req.room) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+  return res.json(req.room.players);
+});
 
 app.get('/api/status', requireRoom, (req, res) => res.json({
+  roomId:           req.room.roomId,
   username:         req.room.streamerUsername || currentStreamer,
   connected:        !!(client && client.connected),
   overlayConnected: req.room.overlayCount > 0,
@@ -1179,8 +1163,9 @@ app.get('/background/:filename', (req, res) => {
       loadRoomAudioConfig(room);
     }
 
-    const filepath = path.join(getRoomBackgroundDir(room.roomId), req.params.filename);
-    if (!isSafePath(getRoomBackgroundDir(room.roomId), filepath)) return res.status(403).send('Forbidden');
+    const { backgroundDir } = getRoomPaths(room.roomId);
+    const filepath = path.join(backgroundDir, req.params.filename);
+    if (!isSafePath(backgroundDir, filepath)) return res.status(403).send('Forbidden');
     if (!fs.existsSync(filepath)) return res.status(404).send('Background not found');
     return res.sendFile(filepath);
   } catch (err) {
@@ -1235,8 +1220,9 @@ app.post('/api/audio/assign', requireRoom, (req, res) => {
 
 app.delete('/api/audio/delete/:filename', requireRoom, (req, res) => {
   const { filename } = req.params;
-  const filepath     = path.join(getRoomAudioDir(req.room.roomId), filename);
-  if (!isSafePath(getRoomAudioDir(req.room.roomId), filepath)) return res.status(403).json({ success: false, error: 'Forbidden' });
+  const { audioDir } = getRoomPaths(req.room.roomId);
+  const filepath     = path.join(audioDir, filename);
+  if (!isSafePath(audioDir, filepath)) return res.status(403).json({ success: false, error: 'Forbidden' });
   const before = req.room.audioLibrary.length;
   req.room.audioLibrary = req.room.audioLibrary.filter(f => f.filename !== filename);
   if (req.room.audioLibrary.length === before) return res.status(404).json({ success: false, error: 'File not found in library.' });
