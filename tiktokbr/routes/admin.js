@@ -51,6 +51,7 @@ function requireAdminAuth(req, res, next) {
 function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [] } = {}) {
   const codeRows = codes.map((code) => {
     const status = code.is_revoked ? 'Revoked' : new Date(code.expires_at) < new Date() ? 'Expired' : 'Active';
+    const actionLabel = code.is_revoked ? 'Enable' : 'Disable';
     return `<tr>
       <td>${escapeHtml(code.code)}</td>
       <td>${escapeHtml(code.owner_name || code.email || '')}</td>
@@ -59,6 +60,12 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       <td>${status}</td>
       <td>${code.is_promo ? 'Promo' : 'Paid'}</td>
       <td>${escapeHtml(code.last_seen || '')}</td>
+      <td>
+        <form method="POST" action="/admin/toggle-code" style="display:inline">
+          <input type="hidden" name="code" value="${escapeHtml(code.code)}" />
+          <button type="submit">${actionLabel}</button>
+        </form>
+      </td>
     </tr>`;
   }).join('');
 
@@ -95,6 +102,8 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     th { background: rgba(75,144,255,0.12); text-align: left; }
     .button-row { display: flex; gap: 12px; flex-wrap: wrap; }
     .button-row button { width: auto; flex: 1; }
+    table button { padding: 8px 12px; border-radius: 8px; background: #4b90ff; color: #fff; border: none; cursor: pointer; }
+    table button:hover { background: #3672d9; }
     a { color: #8fb8ff; text-decoration: none; }
   </style>
 </head>
@@ -157,7 +166,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     <div class="card" style="margin-top: 24px;">
       <h2>Access codes</h2>
       <table>
-        <thead><tr><th>Code</th><th>Name / Email</th><th>Created</th><th>Expires</th><th>Status</th><th>Type</th><th>Last Seen</th></tr></thead>
+        <thead><tr><th>Code</th><th>Name / Email</th><th>Created</th><th>Expires</th><th>Status</th><th>Type</th><th>Last Seen</th><th>Action</th></tr></thead>
         <tbody>${codeRows}</tbody>
       </table>
     </div>
@@ -269,6 +278,16 @@ router.post('/revoke-code', requireAdminAuth, (req, res) => {
   if (!row) return res.redirect(`/admin?error=${encodeURIComponent('Code not found')}`);
   db.prepare('UPDATE access_codes SET is_revoked = 1 WHERE id = ?').run(row.id);
   res.redirect(`/admin?message=${encodeURIComponent(`Revoked ${code}`)}`);
+});
+
+router.post('/toggle-code', requireAdminAuth, (req, res) => {
+  const code = String(req.body.code || '').trim().toUpperCase();
+  const row = db.prepare('SELECT * FROM access_codes WHERE code = ?').get(code);
+  if (!row) return res.redirect(`/admin?error=${encodeURIComponent('Code not found')}`);
+  const newValue = row.is_revoked ? 0 : 1;
+  db.prepare('UPDATE access_codes SET is_revoked = ? WHERE id = ?').run(newValue, row.id);
+  const action = newValue ? 'Disabled' : 'Enabled';
+  res.redirect(`/admin?message=${encodeURIComponent(`${action} ${code}`)}`);
 });
 
 router.post('/reset-device', requireAdminAuth, (req, res) => {
