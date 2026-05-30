@@ -1,235 +1,219 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-<title>Battle Royale Overlay · Polished</title>
+<title>Battle Royale Overlay</title>
 <style>
-/* ── Fonts (swap for faster render) ── */
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Exo+2:wght@400;700;900&display=swap');
 
-/* ── Design tokens ── */
 :root {
-  --accent:      #7afcff;
-  --accent-glow: rgba(122,252,255,0.55);
-  --accent-dim:  rgba(122,252,255,0.18);
-  --bg-deep:     #02040a;
-  --bg-panel:    rgba(5,9,20,0.97);
-  --bg-item:     rgba(255,255,255,0.035);
-  --border:      rgba(100,200,255,0.12);
-  --border-hi:   rgba(100,200,255,0.28);
-  --text:        #d4eeff;
-  --text-dim:    rgba(212,238,255,0.45);
-  --danger:      #ff5566;
-  --warn:        #ffcc44;
+–accent:      #7afcff;
+–accent-glow: rgba(122,252,255,0.55);
+–accent-dim:  rgba(122,252,255,0.18);
+–bg-deep:     #02040a;
+–bg-panel:    rgba(5,9,20,0.97);
+–bg-item:     rgba(255,255,255,0.035);
+–border:      rgba(100,200,255,0.12);
+–border-hi:   rgba(100,200,255,0.28);
+–text:        #d4eeff;
+–text-dim:    rgba(212,238,255,0.45);
+–danger:      #ff5566;
+–warn:        #ffcc44;
 }
 
-*{margin:0;padding:0;box-sizing:border-box}
-html,body{width:100%;height:100%;overflow:hidden;background:var(--bg-deep);font-family:'Exo 2','Segoe UI',sans-serif}
-body{display:flex;align-items:center;justify-content:center}
+- { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; overflow:hidden; background:var(–bg-deep); font-family:‘Exo 2’,‘Segoe UI’,sans-serif; }
+  body { display:flex; align-items:center; justify-content:center; }
 
-/* ── Overlay canvas ── */
-#overlay-container{
-  position:relative;width:min(90vw,1920px);aspect-ratio:16/9;
-  background:rgba(4,8,18,0.92);
-  border:1px solid rgba(180,120,255,0.35);border-radius:18px;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06),0 0 48px rgba(140,80,255,0.18),0 0 120px rgba(80,40,180,0.08);
-  overflow:hidden;
+#overlay-container {
+position:relative; width:min(90vw,1920px); aspect-ratio:16/9;
+background:rgba(4,8,18,0.92);
+border:1px solid rgba(180,120,255,0.35); border-radius:18px;
+box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06),0 0 48px rgba(140,80,255,0.18),0 0 120px rgba(80,40,180,0.08);
+overflow:hidden;
 }
-#canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
 
-/* ═══════════════════════════════════════
-   CONTROL PANEL
-══════════════════════════════════════════ */
-.panel-wrapper{
-  position:fixed;top:16px;right:0;display:flex;align-items:flex-start;
-  pointer-events:auto;z-index:30;
+/* ── Panel ── */
+.panel-wrapper { position:fixed; top:16px; right:0; display:flex; align-items:flex-start; pointer-events:auto; z-index:30; }
+.panel-tab {
+width:28px; min-height:80px; background:var(–bg-panel);
+border:1px solid var(–border); border-right:none; border-radius:8px 0 0 8px;
+padding:10px 0; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px;
+color:var(–accent); font-size:9px; font-weight:800; letter-spacing:1.5px;
+text-transform:uppercase; writing-mode:vertical-rl; user-select:none;
+font-family:‘Rajdhani’,sans-serif; transition:background .2s,border-color .2s;
 }
-.panel-tab{
-  width:28px;min-height:80px;background:var(--bg-panel);
-  border:1px solid var(--border);border-right:none;border-radius:8px 0 0 8px;
-  padding:10px 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;
-  color:var(--accent);font-size:9px;font-weight:800;letter-spacing:1.5px;
-  text-transform:uppercase;writing-mode:vertical-rl;user-select:none;
-  font-family:'Rajdhani',sans-serif;transition:background .2s,border-color .2s;
-}
-.panel-tab:hover{background:rgba(20,44,70,0.98);border-color:var(--border-hi)}
-.panel-tab-icon{font-size:13px;writing-mode:horizontal-tb}
+.panel-tab:hover { background:rgba(20,44,70,0.98); border-color:var(–border-hi); }
+.panel-tab-icon { font-size:13px; writing-mode:horizontal-tb; }
 
-.layout-panel{
-  width:272px;background:var(--bg-panel);backdrop-filter:blur(22px);
-  border:1px solid var(--border);border-right:none;border-radius:0 0 0 14px;
-  box-shadow:-10px 0 40px rgba(0,0,0,0.75),inset 1px 0 0 rgba(255,255,255,0.03);
-  transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .25s ease;
-  transform-origin:right top;max-height:calc(100vh - 32px);
-  overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border) transparent;
+.layout-panel {
+width:272px; background:var(–bg-panel); backdrop-filter:blur(22px);
+border:1px solid var(–border); border-right:none; border-radius:0 0 0 14px;
+box-shadow:-10px 0 40px rgba(0,0,0,0.75),inset 1px 0 0 rgba(255,255,255,0.03);
+transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .25s ease;
+transform-origin:right top; max-height:calc(100vh - 32px);
+overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:var(–border) transparent;
 }
-.layout-panel::-webkit-scrollbar{width:3px}
-.layout-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-.layout-panel.hidden{transform:translateX(100%);opacity:0;pointer-events:none}
+.layout-panel::-webkit-scrollbar { width:3px; }
+.layout-panel::-webkit-scrollbar-thumb { background:var(–border); border-radius:3px; }
+.layout-panel.hidden { transform:translateX(100%); opacity:0; pointer-events:none; }
 
-.panel-header{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:11px 13px 9px;border-bottom:1px solid var(--border);
-  position:sticky;top:0;z-index:5;background:rgba(5,9,20,0.99);backdrop-filter:blur(22px);
+.panel-header {
+display:flex; align-items:center; justify-content:space-between;
+padding:11px 13px 9px; border-bottom:1px solid var(–border);
+position:sticky; top:0; z-index:5; background:rgba(5,9,20,0.99); backdrop-filter:blur(22px);
 }
-.panel-title{color:var(--accent);font-size:10.5px;font-weight:800;letter-spacing:2.5px;text-transform:uppercase;font-family:'Rajdhani',sans-serif}
-.panel-close{
-  width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,0.05);
-  border:1px solid var(--border);color:var(--text-dim);font-size:9px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:monospace;line-height:1;
+.panel-title { color:var(–accent); font-size:10.5px; font-weight:800; letter-spacing:2.5px; text-transform:uppercase; font-family:‘Rajdhani’,sans-serif; }
+.panel-close {
+width:20px; height:20px; border-radius:50%; background:rgba(255,255,255,0.05);
+border:1px solid var(–border); color:var(–text-dim); font-size:9px; cursor:pointer;
+display:flex; align-items:center; justify-content:center; transition:all .15s; font-family:monospace; line-height:1;
 }
-.panel-close:hover{background:rgba(255,70,80,0.2);border-color:rgba(255,80,80,0.4);color:#ff9999}
+.panel-close:hover { background:rgba(255,70,80,0.2); border-color:rgba(255,80,80,0.4); color:#ff9999; }
 
-/* Collapsible sections */
-.section{border-bottom:1px solid var(--border)}
-.section-hd{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:8px 13px;cursor:pointer;user-select:none;
-  font-family:'Rajdhani',sans-serif;font-size:9.5px;font-weight:700;
-  letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);
-  transition:color .15s,background .15s;
+.section { border-bottom:1px solid var(–border); }
+.section-hd {
+display:flex; align-items:center; justify-content:space-between;
+padding:8px 13px; cursor:pointer; user-select:none;
+font-family:‘Rajdhani’,sans-serif; font-size:9.5px; font-weight:700;
+letter-spacing:2px; text-transform:uppercase; color:var(–text-dim);
+transition:color .15s,background .15s;
 }
-.section-hd:hover{color:var(--accent);background:rgba(122,252,255,0.025)}
-.section-hd .chev{font-size:9px;transition:transform .22s}
-.section-hd.open .chev{transform:rotate(180deg)}
+.section-hd:hover { color:var(–accent); background:rgba(122,252,255,0.025); }
+.section-hd .chev { font-size:9px; transition:transform .22s; }
+.section-hd.open .chev { transform:rotate(180deg); }
+.section-bd { display:grid; grid-template-rows:1fr; transition:grid-template-rows .22s ease; }
+.section-bd.shut { grid-template-rows:0fr; }
+.section-in { min-height:0; overflow:hidden; padding:0 13px 11px; }
 
-.section-bd{display:grid;grid-template-rows:1fr;transition:grid-template-rows .22s ease}
-.section-bd.shut{grid-template-rows:0fr}
-.section-in{min-height:0;overflow:hidden;padding:0 13px 11px}
+.ctrl { margin-bottom:10px; }
+.ctrl:last-child { margin-bottom:0; }
+.ctrl-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
+.ctrl-lbl { font-family:‘Rajdhani’,sans-serif; font-size:11px; font-weight:600; color:var(–text); }
+.ctrl-val { font-family:‘Rajdhani’,monospace; font-size:11px; font-weight:700; color:var(–accent); min-width:36px; text-align:right; }
+.ctrl-desc { font-family:‘Rajdhani’,sans-serif; font-size:9px; color:var(–text-dim); margin-top:2px; letter-spacing:.4px; }
 
-/* ── Controls ── */
-.ctrl{margin-bottom:10px}
-.ctrl:last-child{margin-bottom:0}
-.ctrl-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
-.ctrl-lbl{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;color:var(--text)}
-.ctrl-val{font-family:'Rajdhani',monospace;font-size:11px;font-weight:700;color:var(--accent);min-width:36px;text-align:right}
-.ctrl-desc{font-family:'Rajdhani',sans-serif;font-size:9px;color:var(--text-dim);margin-top:2px;letter-spacing:.4px}
-
-input[type=range]{
-  width:100%;appearance:none;-webkit-appearance:none;
-  height:4px;border-radius:999px;outline:none;cursor:pointer;
-  background:rgba(255,255,255,0.07);
+input[type=range] {
+width:100%; appearance:none; -webkit-appearance:none;
+height:4px; border-radius:999px; outline:none; cursor:pointer;
+background:rgba(255,255,255,0.07);
 }
-input[type=range]::-webkit-slider-thumb{
-  appearance:none;-webkit-appearance:none;
-  width:14px;height:14px;border-radius:50%;background:var(--accent);
-  box-shadow:0 0 8px var(--accent-glow),0 0 0 2px rgba(122,252,255,0.18);
-  cursor:pointer;transition:transform .1s,box-shadow .1s;
+input[type=range]::-webkit-slider-thumb {
+appearance:none; -webkit-appearance:none;
+width:14px; height:14px; border-radius:50%; background:var(–accent);
+box-shadow:0 0 8px var(–accent-glow),0 0 0 2px rgba(122,252,255,0.18);
+cursor:pointer; transition:transform .1s,box-shadow .1s;
 }
 input[type=range]:active::-webkit-slider-thumb,
-input[type=range]:hover::-webkit-slider-thumb{
-  transform:scale(1.18);box-shadow:0 0 14px var(--accent-glow),0 0 0 3px rgba(122,252,255,0.28);
+input[type=range]:hover::-webkit-slider-thumb {
+transform:scale(1.18); box-shadow:0 0 14px var(–accent-glow),0 0 0 3px rgba(122,252,255,0.28);
 }
-input[type=range]::-moz-range-thumb{
-  width:14px;height:14px;border-radius:50%;background:var(--accent);
-  border:none;box-shadow:0 0 8px var(--accent-glow);cursor:pointer;
-}
-
-/* Toggle */
-.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.toggle-lbl{font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600;color:var(--text)}
-.tog{position:relative;width:34px;height:18px;cursor:pointer}
-.tog input{opacity:0;width:0;height:0;position:absolute}
-.tog-track{position:absolute;inset:0;border-radius:999px;background:rgba(255,255,255,0.08);border:1px solid var(--border);transition:background .2s,border-color .2s}
-.tog input:checked~.tog-track{background:rgba(122,252,255,0.22);border-color:rgba(122,252,255,0.45)}
-.tog-knob{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:rgba(190,220,255,0.55);transition:transform .18s cubic-bezier(.4,0,.2,1),background .18s}
-.tog input:checked~.tog-track .tog-knob{transform:translateX(16px);background:var(--accent)}
-
-/* Shot type grid */
-.shot-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-top:6px}
-.shot-btn{
-  background:var(--bg-item);border:1px solid var(--border);
-  border-radius:5px;padding:5px 2px;font-family:'Rajdhani',sans-serif;
-  font-size:9.5px;font-weight:600;color:var(--text-dim);cursor:pointer;
-  text-align:center;transition:all .14s;letter-spacing:.3px;
-}
-.shot-btn:hover{background:rgba(122,252,255,0.07);color:var(--accent);border-color:var(--accent-dim)}
-.shot-btn.active{background:rgba(122,252,255,0.14);color:var(--accent);border-color:rgba(122,252,255,0.5);box-shadow:0 0 8px rgba(122,252,255,0.18)}
-
-/* Laser color */
-.color-row{display:flex;align-items:center;gap:7px;margin-top:5px}
-.color-swatch{
-  width:26px;height:26px;border-radius:5px;flex-shrink:0;
-  border:1px solid rgba(255,255,255,0.18);cursor:pointer;transition:transform .14s,box-shadow .14s;
-}
-.color-swatch:hover{transform:scale(1.1);box-shadow:0 0 10px rgba(255,255,255,0.2)}
-input[type=color]{opacity:0;position:absolute;width:0;height:0;pointer-events:none}
-.color-dots{display:flex;gap:4px;flex-wrap:wrap}
-.color-dot{
-  width:17px;height:17px;border-radius:50%;cursor:pointer;flex-shrink:0;
-  border:2px solid transparent;transition:transform .14s,border-color .14s;
-}
-.color-dot:hover{transform:scale(1.18)}
-.color-dot.active{border-color:rgba(255,255,255,0.75)}
-
-/* Actions */
-.actions{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:10px 13px 13px}
-.act-btn{
-  background:var(--bg-item);border:1px solid var(--border);
-  border-radius:6px;padding:7px 6px;font-family:'Rajdhani',sans-serif;
-  font-size:10.5px;font-weight:700;color:var(--text-dim);cursor:pointer;
-  text-align:center;letter-spacing:.9px;text-transform:uppercase;transition:all .14s;
-}
-.act-btn:hover{background:rgba(122,252,255,0.07);color:var(--accent);border-color:var(--accent-dim)}
-.act-btn.wide{grid-column:1/-1;color:var(--accent);border-color:var(--accent-dim)}
-.act-btn.wide:hover{background:rgba(122,252,255,0.12);box-shadow:0 0 12px rgba(122,252,255,0.15)}
-.act-btn.danger{color:var(--danger);border-color:rgba(255,85,102,0.18)}
-.act-btn.danger:hover{background:rgba(255,85,102,0.1);border-color:rgba(255,85,102,0.38)}
-
-/* ═══════════════════════════════════════
-   STATUS / DAMAGE / BANNERS / RELOAD
-══════════════════════════════════════════ */
-#status-badge{
-  position:fixed;bottom:12px;left:50%;transform:translateX(-50%);
-  background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);
-  border-radius:24px;padding:4px 16px;font-size:11px;font-weight:bold;
-  letter-spacing:1px;color:#aaa;pointer-events:none;z-index:9999;
-  font-family:'Rajdhani',monospace;border:1px solid rgba(255,255,255,0.07);
-  transition:color .2s,border-color .2s;
-}
-#status-badge.connected{color:#7aff87;text-shadow:0 0 4px #2eff5e;border-color:rgba(122,255,135,0.2)}
-#status-badge.disconnected{color:#ff8866;border-color:rgba(255,136,102,0.2)}
-#status-badge.demo{color:#ffd84f;text-shadow:0 0 4px #ffaa00;border-color:rgba(255,216,79,0.2)}
-
-.damage{
-  position:fixed;font-weight:900;font-size:clamp(18px,3vw,28px);
-  color:#ff5050;text-shadow:0 0 16px rgba(255,80,80,0.95),2px 2px 8px rgba(0,0,0,0.9);
-  animation:floatDmg .85s ease-out forwards;pointer-events:none;z-index:9999;
-  transform:translate(-50%,-50%);white-space:nowrap;font-family:'Rajdhani',sans-serif;
-}
-.damage.kill{color:#ffd84f;font-size:clamp(22px,4vw,34px);text-shadow:0 0 20px rgba(255,216,79,0.95)}
-.damage.critical{color:#ff2244;font-size:clamp(24px,4.5vw,38px);text-shadow:0 0 24px rgba(255,34,68,1),0 0 48px rgba(255,100,0,0.6)}
-@keyframes floatDmg{
-  0%{opacity:1;transform:translate(-50%,-50%) scale(1.25)}
-  100%{opacity:0;transform:translate(-50%,-190%) scale(0.6)}
+input[type=range]::-moz-range-thumb {
+width:14px; height:14px; border-radius:50%; background:var(–accent);
+border:none; box-shadow:0 0 8px var(–accent-glow); cursor:pointer;
 }
 
-.banner{
-  position:fixed;left:50%;top:8%;transform:translate(-50%,0);
-  z-index:10000;pointer-events:none;text-align:center;
-  font-family:'Rajdhani',sans-serif;font-weight:900;white-space:nowrap;
-  animation:bannerIn .35s cubic-bezier(.2,1.4,.4,1),bannerOut .5s ease-in 2.6s forwards;
-}
-.banner.kill{font-size:clamp(18px,2vw,32px);color:#ffcc44;text-shadow:0 0 30px rgba(255,200,0,.9),0 0 80px rgba(255,100,0,.6);letter-spacing:2px}
-.banner.streak{font-size:clamp(20px,2.2vw,36px);color:#ff44aa;text-shadow:0 0 40px rgba(255,68,170,.9),0 0 80px rgba(255,0,100,.4);letter-spacing:3px}
-.banner.gift{font-size:clamp(14px,1.8vw,26px);color:#fff;background:rgba(0,0,0,.55);padding:10px 32px;border-radius:40px;backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);text-shadow:0 0 20px rgba(255,255,255,.8)}
-.banner.legendary{font-size:clamp(22px,2.5vw,40px);color:#FFD700;text-shadow:0 0 40px rgba(255,215,0,1),0 0 100px rgba(255,140,0,.8);letter-spacing:4px;animation:bannerIn .35s cubic-bezier(.2,1.4,.4,1),legendPulse .5s ease-in-out infinite alternate,bannerOut .5s ease-in 3.5s forwards}
-@keyframes legendPulse{
-  from{text-shadow:0 0 40px rgba(255,215,0,1),0 0 100px rgba(255,140,0,.8)}
-  to{text-shadow:0 0 70px rgba(255,215,0,1),0 0 160px rgba(255,200,0,1)}
-}
-@keyframes bannerIn{0%{opacity:0;transform:translate(-50%,-24px) scale(.88)}100%{opacity:1;transform:translate(-50%,0) scale(1)}}
-@keyframes bannerOut{to{opacity:0;transform:translate(-50%,-16px)}}
+.toggle-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.toggle-lbl { font-family:‘Rajdhani’,sans-serif; font-size:11px; font-weight:600; color:var(–text); }
+.tog { position:relative; width:34px; height:18px; cursor:pointer; }
+.tog input { opacity:0; width:0; height:0; position:absolute; }
+.tog-track { position:absolute; inset:0; border-radius:999px; background:rgba(255,255,255,0.08); border:1px solid var(–border); transition:background .2s,border-color .2s; }
+.tog input:checked~.tog-track { background:rgba(122,252,255,0.22); border-color:rgba(122,252,255,0.45); }
+.tog-knob { position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:rgba(190,220,255,0.55); transition:transform .18s cubic-bezier(.4,0,.2,1),background .18s; }
+.tog input:checked~.tog-track .tog-knob { transform:translateX(16px); background:var(–accent); }
 
-.reload-overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:99999;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:auto;
+.shot-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:3px; margin-top:6px; }
+.shot-btn {
+background:var(–bg-item); border:1px solid var(–border);
+border-radius:5px; padding:5px 2px; font-family:‘Rajdhani’,sans-serif;
+font-size:9.5px; font-weight:600; color:var(–text-dim); cursor:pointer;
+text-align:center; transition:all .14s; letter-spacing:.3px;
 }
-.reload-overlay .countdown{font-size:5vw;color:#fff;font-family:'Rajdhani',monospace;font-weight:700;text-shadow:0 0 40px rgba(122,252,255,.8);letter-spacing:4px}
-.reload-overlay .reason{font-size:1.2vw;color:#8fd8ff;margin-top:20px;letter-spacing:2px;font-family:'Rajdhani',sans-serif;text-transform:uppercase}
+.shot-btn:hover { background:rgba(122,252,255,0.07); color:var(–accent); border-color:var(–accent-dim); }
+.shot-btn.active { background:rgba(122,252,255,0.14); color:var(–accent); border-color:rgba(122,252,255,0.5); box-shadow:0 0 8px rgba(122,252,255,0.18); }
+
+.color-row { display:flex; align-items:center; gap:7px; margin-top:5px; }
+.color-swatch {
+width:26px; height:26px; border-radius:5px; flex-shrink:0;
+border:1px solid rgba(255,255,255,0.18); cursor:pointer; transition:transform .14s,box-shadow .14s;
+}
+.color-swatch:hover { transform:scale(1.1); box-shadow:0 0 10px rgba(255,255,255,0.2); }
+input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-events:none; }
+.color-dots { display:flex; gap:4px; flex-wrap:wrap; }
+.color-dot {
+width:17px; height:17px; border-radius:50%; cursor:pointer; flex-shrink:0;
+border:2px solid transparent; transition:transform .14s,border-color .14s;
+}
+.color-dot:hover { transform:scale(1.18); }
+.color-dot.active { border-color:rgba(255,255,255,0.75); }
+
+.actions { display:grid; grid-template-columns:1fr 1fr; gap:5px; padding:10px 13px 13px; }
+.act-btn {
+background:var(–bg-item); border:1px solid var(–border);
+border-radius:6px; padding:7px 6px; font-family:‘Rajdhani’,sans-serif;
+font-size:10.5px; font-weight:700; color:var(–text-dim); cursor:pointer;
+text-align:center; letter-spacing:.9px; text-transform:uppercase; transition:all .14s;
+}
+.act-btn:hover { background:rgba(122,252,255,0.07); color:var(–accent); border-color:var(–accent-dim); }
+.act-btn.wide { grid-column:1/-1; color:var(–accent); border-color:var(–accent-dim); }
+.act-btn.wide:hover { background:rgba(122,252,255,0.12); box-shadow:0 0 12px rgba(122,252,255,0.15); }
+.act-btn.danger { color:var(–danger); border-color:rgba(255,85,102,0.18); }
+.act-btn.danger:hover { background:rgba(255,85,102,0.1); border-color:rgba(255,85,102,0.38); }
+
+/* ── Status / damage / banners ── */
+#status-badge {
+position:fixed; bottom:12px; left:50%; transform:translateX(-50%);
+background:rgba(0,0,0,0.75); backdrop-filter:blur(8px);
+border-radius:24px; padding:4px 16px; font-size:11px; font-weight:bold;
+letter-spacing:1px; color:#aaa; pointer-events:none; z-index:9999;
+font-family:‘Rajdhani’,monospace; border:1px solid rgba(255,255,255,0.07);
+transition:color .2s,border-color .2s;
+}
+#status-badge.connected    { color:#7aff87; text-shadow:0 0 4px #2eff5e; border-color:rgba(122,255,135,0.2); }
+#status-badge.disconnected { color:#ff8866; border-color:rgba(255,136,102,0.2); }
+#status-badge.demo         { color:#ffd84f; text-shadow:0 0 4px #ffaa00; border-color:rgba(255,216,79,0.2); }
+
+.damage {
+position:fixed; font-weight:900; font-size:clamp(18px,3vw,28px);
+color:#ff5050; text-shadow:0 0 16px rgba(255,80,80,0.95),2px 2px 8px rgba(0,0,0,0.9);
+animation:floatDamage 0.85s ease-out forwards; pointer-events:none; z-index:9999;
+transform:translate(-50%,-50%); white-space:nowrap; font-family:‘Rajdhani’,sans-serif;
+}
+.damage.kill     { color:#ffd84f; font-size:clamp(22px,4vw,34px);   text-shadow:0 0 20px rgba(255,216,79,0.95); }
+.damage.critical { color:#ff2244; font-size:clamp(24px,4.5vw,38px); text-shadow:0 0 24px rgba(255,34,68,1),0 0 48px rgba(255,100,0,0.6); }
+@keyframes floatDamage {
+0%   { opacity:1; transform:translate(-50%,-50%)  scale(1.25); }
+100% { opacity:0; transform:translate(-50%,-190%) scale(0.6);  }
+}
+
+.banner {
+position:fixed; left:50%; top:8%; transform:translate(-50%,0); z-index:10000; pointer-events:none;
+font-family:‘Rajdhani’,sans-serif; font-weight:900; text-align:center;
+animation:bannerIn 0.35s cubic-bezier(0.2,1.4,0.4,1),bannerOut 0.5s ease-in 2.6s forwards; white-space:nowrap;
+}
+.banner.kill      { font-size:clamp(18px,2vw,32px);   color:#ffcc44; text-shadow:0 0 30px rgba(255,200,0,0.9),0 0 80px rgba(255,100,0,0.6); letter-spacing:2px; }
+.banner.streak    { font-size:clamp(20px,2.2vw,36px); color:#ff44aa; text-shadow:0 0 40px rgba(255,68,170,0.9),0 0 80px rgba(255,0,100,0.4); letter-spacing:3px; }
+.banner.gift      { font-size:clamp(14px,1.8vw,26px); color:#fff; background:rgba(0,0,0,0.55); padding:10px 32px; border-radius:40px; backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.12); text-shadow:0 0 20px rgba(255,255,255,0.8); }
+.banner.legendary { font-size:clamp(22px,2.5vw,40px); color:#FFD700; text-shadow:0 0 40px rgba(255,215,0,1),0 0 100px rgba(255,140,0,0.8); letter-spacing:4px; animation:bannerIn 0.35s cubic-bezier(0.2,1.4,0.4,1),legendaryPulse 0.5s ease-in-out infinite alternate,bannerOut 0.5s ease-in 3.5s forwards; }
+@keyframes legendaryPulse {
+from { text-shadow:0 0 40px rgba(255,215,0,1),0 0 100px rgba(255,140,0,0.8); }
+to   { text-shadow:0 0 70px rgba(255,215,0,1),0 0 160px rgba(255,200,0,1);   }
+}
+@keyframes bannerIn  { 0%  { opacity:0; transform:translate(-50%,-24px) scale(0.88); } 100% { opacity:1; transform:translate(-50%,0) scale(1); } }
+@keyframes bannerOut { to  { opacity:0; transform:translate(-50%,-16px); } }
+
+.reload-overlay {
+position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:99999;
+display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:auto;
+}
+.reload-overlay .countdown { font-size:5vw; color:#fff; font-family:‘Rajdhani’,monospace; font-weight:700; text-shadow:0 0 40px rgba(122,252,255,0.8); letter-spacing:4px; }
+.reload-overlay .reason    { font-size:1.2vw; color:#8fd8ff; margin-top:20px; letter-spacing:2px; font-family:‘Rajdhani’,sans-serif; text-transform:uppercase; }
 </style>
+
 </head>
 <body>
 
@@ -237,123 +221,117 @@ input[type=color]{opacity:0;position:absolute;width:0;height:0;pointer-events:no
   <canvas id="canvas"></canvas>
 </div>
 
-<!-- ══ CONTROL PANEL ══ -->
+<!-- CONTROL PANEL -->
+
 <div class="panel-wrapper">
   <button class="panel-tab" id="togglePanel" aria-label="Toggle controls">
     <span class="panel-tab-icon">⚡</span>CTRL
   </button>
-
   <div class="layout-panel hidden" id="layoutPanel">
-
     <div class="panel-header">
       <span class="panel-title">⚡ Overlay Controls</span>
       <button class="panel-close" id="closePanel" title="Close">✕</button>
     </div>
 
-    <!-- ── Section: Layout ── -->
-    <div class="section">
-      <div class="section-hd open" data-bd="bd-layout">
-        <span>▦ LAYOUT</span><span class="chev">▾</span>
+```
+<!-- Layout section -->
+<div class="section">
+  <div class="section-hd open" data-bd="bd-layout"><span>▦ LAYOUT</span><span class="chev">▾</span></div>
+  <div class="section-bd" id="bd-layout">
+    <div class="section-in" style="padding-top:10px">
+      <div class="ctrl">
+        <div class="ctrl-row"><span class="ctrl-lbl">Column Gap</span><span class="ctrl-val" id="gapValue">0</span></div>
+        <input id="gapControl" type="range" min="0" max="200" value="0" />
       </div>
-      <div class="section-bd" id="bd-layout">
-        <div class="section-in" style="padding-top:10px">
-          <div class="ctrl">
-            <div class="ctrl-row"><span class="ctrl-lbl">Column Gap</span><span class="ctrl-val" id="gapValue">0</span></div>
-            <input id="gapControl" type="range" min="0" max="200" value="0" />
-          </div>
-          <div class="ctrl">
-            <div class="ctrl-row"><span class="ctrl-lbl">Horizontal Offset</span><span class="ctrl-val" id="offsetXValue">0</span></div>
-            <input id="offsetXControl" type="range" min="-400" max="400" value="0" />
-          </div>
-          <div class="ctrl">
-            <div class="ctrl-row"><span class="ctrl-lbl">Vertical Position</span><span class="ctrl-val" id="offsetYValue">0</span></div>
-            <input id="offsetYControl" type="range" min="-200" max="200" value="0" />
-          </div>
-          <div class="ctrl">
-            <div class="ctrl-row"><span class="ctrl-lbl">Layout Height</span><span class="ctrl-val" id="heightValue">85%</span></div>
-            <input id="heightControl" type="range" min="30" max="100" value="85" />
-          </div>
-          <!-- ★ Horde threshold slider -->
-          <div class="ctrl">
-            <div class="ctrl-row"><span class="ctrl-lbl">Top Player Count</span><span class="ctrl-val" id="hordeThresholdValue">5</span></div>
-            <input id="hordeThresholdControl" type="range" min="1" max="10" value="5" step="1" />
-            <div class="ctrl-desc">Players beyond this count are grouped into "THE HORDE"</div>
-          </div>
-          <div class="ctrl">
-            <div class="ctrl-row"><span class="ctrl-lbl">Zoom</span><span class="ctrl-val" id="zoomValue">100%</span></div>
-            <input id="zoomControl" type="range" min="60" max="140" value="100" />
+      <div class="ctrl">
+        <div class="ctrl-row"><span class="ctrl-lbl">Horizontal Offset</span><span class="ctrl-val" id="offsetXValue">0</span></div>
+        <input id="offsetXControl" type="range" min="-400" max="400" value="0" />
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-row"><span class="ctrl-lbl">Vertical Position</span><span class="ctrl-val" id="offsetYValue">0</span></div>
+        <input id="offsetYControl" type="range" min="-200" max="200" value="0" />
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-row"><span class="ctrl-lbl">Layout Height</span><span class="ctrl-val" id="heightValue">85%</span></div>
+        <input id="heightControl" type="range" min="30" max="100" value="85" />
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-row"><span class="ctrl-lbl">Top Player Count</span><span class="ctrl-val" id="hordeThresholdValue">5</span></div>
+        <input id="hordeThresholdControl" type="range" min="1" max="10" value="5" step="1" />
+        <div class="ctrl-desc">Players beyond this count join THE HORDE</div>
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-row"><span class="ctrl-lbl">Zoom</span><span class="ctrl-val" id="zoomValue">100%</span></div>
+        <input id="zoomControl" type="range" min="60" max="140" value="100" />
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Visual section -->
+<div class="section">
+  <div class="section-hd open" data-bd="bd-visual"><span>◈ VISUAL</span><span class="chev">▾</span></div>
+  <div class="section-bd" id="bd-visual">
+    <div class="section-in" style="padding-top:10px">
+      <div class="toggle-row">
+        <span class="toggle-lbl">Dark Grid</span>
+        <label class="tog">
+          <input type="checkbox" id="themeToggle" checked>
+          <span class="tog-track"><span class="tog-knob"></span></span>
+        </label>
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-row"><span class="ctrl-lbl">Laser Color</span></div>
+        <div class="color-row">
+          <div class="color-swatch" id="colorSwatch" style="background:#7afcff" title="Click to open picker"></div>
+          <input type="color" id="laserColorPicker" value="#7afcff">
+          <div class="color-dots">
+            <div class="color-dot active" data-color="#7afcff" style="background:#7afcff" title="Cyan"></div>
+            <div class="color-dot" data-color="#ff4499" style="background:#ff4499" title="Pink"></div>
+            <div class="color-dot" data-color="#ffcc00" style="background:#ffcc00" title="Gold"></div>
+            <div class="color-dot" data-color="#44ff88" style="background:#44ff88" title="Green"></div>
+            <div class="color-dot" data-color="#ff6600" style="background:#ff6600" title="Orange"></div>
+            <div class="color-dot" data-color="#aa44ff" style="background:#aa44ff" title="Purple"></div>
+            <div class="color-dot" data-color="#ffffff" style="background:#ffffff" title="White"></div>
           </div>
         </div>
       </div>
     </div>
+  </div>
+</div>
 
-    <!-- ── Section: Visual ── -->
-    <div class="section">
-      <div class="section-hd open" data-bd="bd-visual">
-        <span>◈ VISUAL</span><span class="chev">▾</span>
-      </div>
-      <div class="section-bd" id="bd-visual">
-        <div class="section-in" style="padding-top:10px">
-          <div class="toggle-row">
-            <span class="toggle-lbl">Dark Grid</span>
-            <label class="tog">
-              <input type="checkbox" id="themeToggle" checked>
-              <span class="tog-track"><span class="tog-knob"></span></span>
-            </label>
-          </div>
-          <div class="ctrl">
-            <div class="ctrl-row"><span class="ctrl-lbl">Laser Color</span></div>
-            <div class="color-row">
-              <div class="color-swatch" id="colorSwatch" style="background:#7afcff" title="Click to open picker"></div>
-              <input type="color" id="laserColorPicker" value="#7afcff">
-              <div class="color-dots">
-                <div class="color-dot active" data-color="#7afcff" style="background:#7afcff" title="Cyan"></div>
-                <div class="color-dot" data-color="#ff4499" style="background:#ff4499" title="Pink"></div>
-                <div class="color-dot" data-color="#ffcc00" style="background:#ffcc00" title="Gold"></div>
-                <div class="color-dot" data-color="#44ff88" style="background:#44ff88" title="Green"></div>
-                <div class="color-dot" data-color="#ff6600" style="background:#ff6600" title="Orange"></div>
-                <div class="color-dot" data-color="#aa44ff" style="background:#aa44ff" title="Purple"></div>
-                <div class="color-dot" data-color="#ffffff" style="background:#ffffff" title="White"></div>
-              </div>
-            </div>
-          </div>
+<!-- Effects section -->
+<div class="section">
+  <div class="section-hd open" data-bd="bd-effects"><span>⚡ EFFECTS</span><span class="chev">▾</span></div>
+  <div class="section-bd" id="bd-effects">
+    <div class="section-in" style="padding-top:10px">
+      <div class="ctrl">
+        <div class="ctrl-row"><span class="ctrl-lbl">Shot Type</span></div>
+        <div class="shot-grid">
+          <button class="shot-btn active" data-shot="beam">Beam</button>
+          <button class="shot-btn" data-shot="laser">Laser</button>
+          <button class="shot-btn" data-shot="neon">Neon</button>
+          <button class="shot-btn" data-shot="ripple">Ripple</button>
+          <button class="shot-btn" data-shot="fire">Fire</button>
+          <button class="shot-btn" data-shot="bubble">Bubble</button>
+          <button class="shot-btn" data-shot="sphere">Sphere</button>
+          <button class="shot-btn" data-shot="projectile">Proj.</button>
         </div>
       </div>
-    </div>
-
-    <!-- ── Section: Effects ── -->
-    <div class="section">
-      <div class="section-hd open" data-bd="bd-effects">
-        <span>⚡ EFFECTS</span><span class="chev">▾</span>
-      </div>
-      <div class="section-bd" id="bd-effects">
-        <div class="section-in" style="padding-top:10px">
-          <div class="ctrl">
-            <div class="ctrl-row"><span class="ctrl-lbl">Shot Type</span></div>
-            <div class="shot-grid">
-              <button class="shot-btn active" data-shot="beam">Beam</button>
-              <button class="shot-btn" data-shot="laser">Laser</button>
-              <button class="shot-btn" data-shot="neon">Neon</button>
-              <button class="shot-btn" data-shot="ripple">Ripple</button>
-              <button class="shot-btn" data-shot="fire">Fire</button>
-              <button class="shot-btn" data-shot="bubble">Bubble</button>
-              <button class="shot-btn" data-shot="sphere">Sphere</button>
-              <button class="shot-btn" data-shot="projectile">Proj.</button>
-            </div>
-          </div>
-          <div class="ctrl" style="margin-top:10px">
-            <div class="ctrl-row"><span class="ctrl-lbl">Shot Speed</span><span class="ctrl-val" id="shotSpeedValue">1.0×</span></div>
-            <input id="shotSpeedControl" type="range" min="40" max="300" value="100" step="10" />
-          </div>
-        </div>
+      <div class="ctrl" style="margin-top:10px">
+        <div class="ctrl-row"><span class="ctrl-lbl">Shot Speed</span><span class="ctrl-val" id="shotSpeedValue">1.0×</span></div>
+        <input id="shotSpeedControl" type="range" min="40" max="300" value="100" step="10" />
       </div>
     </div>
+  </div>
+</div>
 
-    <div class="actions">
-      <button class="act-btn wide" id="testEffectBtn">▶ TEST EFFECT</button>
-      <button class="act-btn" id="resetLayoutBtn">↺ Reset Layout</button>
-      <button class="act-btn danger" id="resetAllBtn">⚠ Reset All</button>
-    </div>
+<div class="actions">
+  <button class="act-btn wide" id="testEffectBtn">▶ TEST EFFECT</button>
+  <button class="act-btn" id="resetLayoutBtn">↺ Reset Layout</button>
+  <button class="act-btn danger" id="resetAllBtn">⚠ Reset All</button>
+</div>
+```
 
   </div>
 </div>
@@ -361,17 +339,18 @@ input[type=color]{opacity:0;position:absolute;width:0;height:0;pointer-events:no
 <div id="status-badge" class="disconnected">⚡ CONNECTING...</div>
 
 <script src="/socket.io/socket.io.js"></script>
+
 <script>
-(function(){
+(function () {
   'use strict';
+
+  // ── Core refs ──
   const canvas    = document.getElementById('canvas');
-  const ctx       = canvas.getContext('2d',{alpha:true});
+  const ctx       = canvas.getContext('2d', { alpha: true });
   const container = document.getElementById('overlay-container');
   const statusDiv = document.getElementById('status-badge');
-  const params    = new URLSearchParams(window.location.search);
-  const ROOM_ID   = params.get('room_id')||null;
 
-  // ── DOM refs ──
+  // ── Panel DOM refs ──
   const gapControl         = document.getElementById('gapControl');
   const offsetXControl     = document.getElementById('offsetXControl');
   const offsetYControl     = document.getElementById('offsetYControl');
@@ -381,274 +360,181 @@ input[type=color]{opacity:0;position:absolute;width:0;height:0;pointer-events:no
   const shotSpeedControl   = document.getElementById('shotSpeedControl');
   const hordeThresholdCtrl = document.getElementById('hordeThresholdControl');
   const layoutPanel        = document.getElementById('layoutPanel');
+  const colorSwatch        = document.getElementById('colorSwatch');
+  const colorPicker        = document.getElementById('laserColorPicker');
+  const colorDots          = document.querySelectorAll('.color-dot');
+  const shotBtns           = document.querySelectorAll('.shot-btn');
 
   // ── State ──
-  let players           = {};
-  let attacks           = [];
-  let layoutGap         = 0;
-  let offsetX           = 0;
-  let offsetY           = 0;
-  let layoutZoom        = 1;
-  let hordeThreshold    = 5;   // how many top players get individual cards
-  let backgroundImg     = null;
-  let socket            = null;
-  let audioConfig       = {};
-  let audioCache        = {};
-  let overlaySettings   = {shotType:'beam',laserColor:'#7afcff',shotSpeed:1};
-  let isDemoMode        = false;
-  let demoLoopTimer     = null;
-  let darkMode          = true;
-  let flashAlpha        = 0;
-  let needsDraw         = true;
-
-  // ── Background cache (PERF) ──
-  let bgCache      = null;
-  let bgCacheDirty = true;
-
-  // ── Frame-level caches ──
-  let _frameTopPlayers   = null;
-  let _frameTopPlayerMap = null;
-  let _frameHorde        = null;
-  let _frameTs           = 0;
-  let _cardMetrics       = null;
+  let players         = {};
+  let attacks         = [];
+  let layoutGap       = 0;
+  let offsetX         = 0;
+  let offsetY         = 0;
+  let layoutZoom      = 1;
+  let hordeThreshold  = 5;
+  let backgroundImg   = null;
+  let socket          = null;
+  let audioConfig     = {};
+  let audioCache      = {};
+  let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1 };
+  let isDemoMode      = false;
+  let darkMode        = true;
+  let _demoTimer      = null;
 
   const HORDE_ID = '__HORDE__';
 
-  // ═══════════════════════════════════════
-  // PARTICLE POOL
-  // ═══════════════════════════════════════
-  const particlePool = [];
-  const MAX_POOLED   = 300;
-
-  function acquireParticle(x,y,opts){
-    opts=opts||{};
-    let p;
-    if(particlePool.length>0){p=particlePool.pop();}
-    else{p=new Particle();}
-    p.reset(x,y,opts);
-    return p;
-  }
-  function releaseParticle(p){if(particlePool.length<MAX_POOLED)particlePool.push(p);}
-
-  // ═══════════════════════════════════════
-  // DEMO MODE
-  // ═══════════════════════════════════════
+  // ── Demo players ──
   const DEMO_PLAYERS = [
-    {uniqueId:'p1',nickname:'NebulaX',hp:180,maxHp:200,alive:true,iconEmoji:'🔥',kills:3},
-    {uniqueId:'p2',nickname:'Vortex',hp:95,maxHp:150,alive:true,iconEmoji:'⚡',kills:1},
-    {uniqueId:'p3',nickname:'GhostByte',hp:210,maxHp:250,alive:true,iconEmoji:'👾',kills:5},
-    {uniqueId:'p4',nickname:'IronRift',hp:60,maxHp:180,alive:true,iconEmoji:'🛡️',kills:0},
-    {uniqueId:'p5',nickname:'PsyBlaze',hp:130,maxHp:160,alive:true,iconEmoji:'🌀',kills:2},
-    {uniqueId:'h1',nickname:'Grunt1',hp:50,maxHp:80,alive:true,iconEmoji:'💀',kills:0},
-    {uniqueId:'h2',nickname:'Grunt2',hp:40,maxHp:80,alive:true,iconEmoji:'💀',kills:0},
-    {uniqueId:'h3',nickname:'Grunt3',hp:70,maxHp:100,alive:true,iconEmoji:'💀',kills:0},
+    { uniqueId:'p1', nickname:'NebulaX',   hp:180, maxHp:200, alive:true, iconEmoji:'🔥', kills:3 },
+    { uniqueId:'p2', nickname:'Vortex',    hp:95,  maxHp:150, alive:true, iconEmoji:'⚡', kills:1 },
+    { uniqueId:'p3', nickname:'GhostByte', hp:210, maxHp:250, alive:true, iconEmoji:'👾', kills:5 },
+    { uniqueId:'p4', nickname:'IronRift',  hp:60,  maxHp:180, alive:true, iconEmoji:'🛡️', kills:0 },
+    { uniqueId:'p5', nickname:'PsyBlaze',  hp:130, maxHp:160, alive:true, iconEmoji:'🌀', kills:2 },
+    { uniqueId:'h1', nickname:'Grunt1',    hp:50,  maxHp:80,  alive:true, iconEmoji:'💀', kills:0 },
+    { uniqueId:'h2', nickname:'Grunt2',    hp:40,  maxHp:80,  alive:true, iconEmoji:'💀', kills:0 },
+    { uniqueId:'h3', nickname:'Grunt3',    hp:70,  maxHp:100, alive:true, iconEmoji:'💀', kills:0 },
   ];
 
-  function normalizePlayers(state){
-    if(!state||typeof state!=='object')return{};
-    const out={};
-    const arr=Array.isArray(state)?state:Array.isArray(state.players)?state.players:Object.values(state);
-    arr.forEach(p=>{if(p&&p.uniqueId)out[p.uniqueId]=p;});
-    return out;
-  }
-  const activePlayers=()=>{const r=Object.values(players);return r.length>0?r:DEMO_PLAYERS;};
-  const stopDemoLoop=()=>{if(demoLoopTimer){clearInterval(demoLoopTimer);demoLoopTimer=null;}};
-
-  function enterDemoMode(){
-    if(isDemoMode)return;
-    isDemoMode=true;players={};
-    statusDiv.textContent='🟡 DEMO MODE · no server';
-    statusDiv.className='demo';needsDraw=true;
-    const TYPES=['beam','laser','neon','ripple','fire','bubble','sphere','projectile'];
-    demoLoopTimer=setInterval(()=>{
-      const pool=DEMO_PLAYERS.filter(p=>p.alive);
-      if(pool.length<2)return;
-      const atk=pool[Math.floor(Math.random()*pool.length)];
-      let tgt;do{tgt=pool[Math.floor(Math.random()*pool.length)];}while(tgt===atk);
-      const dmg=10+Math.floor(Math.random()*30);
-      tgt.hp=Math.max(0,tgt.hp-dmg);
-      if(tgt.hp===0){tgt.hp=tgt.maxHp;atk.kills=(atk.kills||0)+1;}
-      needsDraw=true;
-      fireAttack(atk.uniqueId,tgt.uniqueId,dmg,false,false,TYPES[Math.floor(Math.random()*TYPES.length)],{intensity:0.5+Math.random()*0.5});
-    },1500);
+  function activePlayers() {
+    const real = Object.values(players);
+    return real.length > 0 ? real : DEMO_PLAYERS;
   }
 
-  // ═══════════════════════════════════════
-  // CANVAS / RESIZE
-  // ═══════════════════════════════════════
-  function resizeCanvas(){
-    const rect=container.getBoundingClientRect();
-    if(!rect.width||!rect.height)return;
-    canvas.width=rect.width;canvas.height=rect.height;
-    bgCacheDirty=true;_cardMetrics=null;
+  // ── Canvas ──
+  function resizeCanvas() {
+    const rect = container.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    canvas.width  = rect.width;
+    canvas.height = rect.height;
   }
-  window.addEventListener('resize',resizeCanvas);
+  window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
+  function cw() { return canvas.width;  }
+  function ch() { return canvas.height; }
 
-  const cw=()=>canvas.width;
-  const ch=()=>canvas.height;
-
-  // ═══════════════════════════════════════
-  // PRE-COMPUTE CARD METRICS
-  // ═══════════════════════════════════════
-  function getCardMetrics(){
-    if(_cardMetrics)return _cardMetrics;
-    const H=ch();
-    const cardH=H*0.5*0.84*layoutZoom;
-    _cardMetrics={
-      cardH,
-      cardW:cardH*0.72,
-      avR:cardH*0.26,
-      barH:Math.max(6,cardH*0.09),
-      fontSizeName:Math.max(9,cardH*0.11),
-      fontSizeHp:Math.max(8,cardH*0.085),
-      fontSizeKill:Math.max(7,cardH*0.26*0.32),
-      hordeRing:H*0.28*layoutZoom,
-      hordeFont:Math.max(10,H*0.08),
-      hordeFontSm:Math.max(8,H*0.06),
-      hordeBarH:Math.max(8,H*0.045),
-      hordeFontHp:Math.max(8,H*0.05),
-    };
-    return _cardMetrics;
+  // ── Panel: collapsible sections ──
+  function setPanelOpen(open) {
+    layoutPanel.classList.toggle('hidden', !open);
+    document.querySelector('.panel-tab-icon').textContent = open ? '⚡' : '⚙';
   }
-
-  // ═══════════════════════════════════════
-  // PANEL UI
-  // ═══════════════════════════════════════
-  function setPanelOpen(open){
-    layoutPanel.classList.toggle('hidden',!open);
-    document.querySelector('.panel-tab-icon').textContent=open?'⚡':'⚙';
-  }
-  document.getElementById('togglePanel').addEventListener('click',()=>setPanelOpen(layoutPanel.classList.contains('hidden')));
-  document.getElementById('closePanel').addEventListener('click',()=>setPanelOpen(false));
-
-  document.querySelectorAll('.section-hd').forEach(hd=>{
-    const bd=document.getElementById(hd.dataset.bd);
-    if(!bd)return;
-    hd.addEventListener('click',()=>{const open=hd.classList.toggle('open');bd.classList.toggle('shut',!open);});
+  document.getElementById('togglePanel').addEventListener('click', () => setPanelOpen(layoutPanel.classList.contains('hidden')));
+  document.getElementById('closePanel').addEventListener('click',  () => setPanelOpen(false));
+  document.querySelectorAll('.section-hd').forEach(hd => {
+    const bd = document.getElementById(hd.dataset.bd);
+    if (!bd) return;
+    hd.addEventListener('click', () => {
+      const open = hd.classList.toggle('open');
+      bd.classList.toggle('shut', !open);
+    });
   });
 
-  // Shot type buttons
-  const shotBtns=document.querySelectorAll('.shot-btn');
-  function setActiveShotType(type){
-    overlaySettings.shotType=type;
-    shotBtns.forEach(b=>b.classList.toggle('active',b.dataset.shot===type));
+  // ── Shot type buttons ──
+  function setActiveShotType(type) {
+    overlaySettings.shotType = type;
+    shotBtns.forEach(b => b.classList.toggle('active', b.dataset.shot === type));
     saveLayout();
   }
-  shotBtns.forEach(b=>b.addEventListener('click',()=>setActiveShotType(b.dataset.shot)));
+  shotBtns.forEach(b => b.addEventListener('click', () => setActiveShotType(b.dataset.shot)));
 
-  // Laser color
-  const colorSwatch=document.getElementById('colorSwatch');
-  const colorPicker=document.getElementById('laserColorPicker');
-  const colorDots=document.querySelectorAll('.color-dot');
-  function setLaserColor(c){
-    overlaySettings.laserColor=c;
-    colorSwatch.style.background=c;
-    colorPicker.value=c;
-    colorDots.forEach(d=>d.classList.toggle('active',d.dataset.color===c));
+  // ── Laser color ──
+  function setLaserColor(c) {
+    overlaySettings.laserColor = c;
+    colorSwatch.style.background = c;
+    colorPicker.value = c;
+    colorDots.forEach(d => d.classList.toggle('active', d.dataset.color === c));
     saveLayout();
   }
-  colorSwatch.addEventListener('click',()=>colorPicker.click());
-  colorPicker.addEventListener('input',e=>setLaserColor(e.target.value));
-  colorDots.forEach(d=>d.addEventListener('click',()=>setLaserColor(d.dataset.color)));
+  colorSwatch.addEventListener('click', () => colorPicker.click());
+  colorPicker.addEventListener('input',  e => setLaserColor(e.target.value));
+  colorDots.forEach(d => d.addEventListener('click', () => setLaserColor(d.dataset.color)));
 
-  // Slider fill-track sync
-  function syncFill(input){
-    const min=+input.min||0,max=+input.max||100,val=+input.value;
-    const pct=((val-min)/(max-min)*100).toFixed(1)+'%';
-    input.style.background=`linear-gradient(to right,var(--accent) ${pct},rgba(255,255,255,0.07) ${pct})`;
+  // ── Slider fill sync ──
+  function syncFill(input) {
+    const min = +input.min || 0, max = +input.max || 100, val = +input.value;
+    const pct = ((val - min) / (max - min) * 100).toFixed(1) + '%';
+    input.style.background = `linear-gradient(to right,var(--accent) ${pct},rgba(255,255,255,0.07) ${pct})`;
   }
-  const allSliders=[gapControl,offsetXControl,offsetYControl,heightControl,zoomControl,shotSpeedControl,hordeThresholdCtrl];
-  allSliders.forEach(s=>{syncFill(s);s.addEventListener('input',()=>syncFill(s));});
+  const allSliders = [gapControl, offsetXControl, offsetYControl, heightControl, zoomControl, shotSpeedControl, hordeThresholdCtrl];
+  allSliders.forEach(s => { syncFill(s); s.addEventListener('input', () => syncFill(s)); });
 
-  // ═══════════════════════════════════════
-  // LABELS
-  // ═══════════════════════════════════════
-  function updateLabels(){
-    document.getElementById('gapValue').textContent=Math.round(layoutGap);
-    document.getElementById('offsetXValue').textContent=Math.round(offsetX);
-    document.getElementById('offsetYValue').textContent=Math.round(offsetY);
-    document.getElementById('heightValue').textContent=heightControl.value+'%';
-    document.getElementById('zoomValue').textContent=Math.round(layoutZoom*100)+'%';
-    document.getElementById('shotSpeedValue').textContent=(+shotSpeedControl.value/100).toFixed(1)+'×';
-    document.getElementById('hordeThresholdValue').textContent=hordeThreshold;
+  // ── Labels ──
+  function updateLabels() {
+    document.getElementById('gapValue').textContent           = Math.round(layoutGap);
+    document.getElementById('offsetXValue').textContent       = Math.round(offsetX);
+    document.getElementById('offsetYValue').textContent       = Math.round(offsetY);
+    document.getElementById('heightValue').textContent        = heightControl.value + '%';
+    document.getElementById('zoomValue').textContent          = Math.round(layoutZoom * 100) + '%';
+    document.getElementById('shotSpeedValue').textContent     = (+shotSpeedControl.value / 100).toFixed(1) + '×';
+    document.getElementById('hordeThresholdValue').textContent = hordeThreshold;
   }
 
-  // ═══════════════════════════════════════
-  // SAVE / LOAD
-  // ═══════════════════════════════════════
-  function saveLayout(){
-    try{
-      localStorage.setItem('battleOverlayLayout',JSON.stringify({
-        gap:layoutGap,offsetX,offsetY,
-        height:+heightControl.value,zoom:+zoomControl.value,
-        laserColor:overlaySettings.laserColor,
-        darkMode,shotType:overlaySettings.shotType,
-        shotSpeed:+shotSpeedControl.value,
-        hordeThreshold:hordeThreshold,
+  // ── Save / Load ──
+  function saveLayout() {
+    try {
+      localStorage.setItem('battleOverlayLayout', JSON.stringify({
+        gap: layoutGap, offsetX, offsetY,
+        height: +heightControl.value, zoom: +zoomControl.value,
+        laserColor: overlaySettings.laserColor, darkMode,
+        shotType: overlaySettings.shotType, shotSpeed: +shotSpeedControl.value,
+        hordeThreshold,
       }));
-    }catch(_){}
+    } catch (_) {}
   }
-
-  function loadLayout(){
+  function loadLayout() {
     let s;
-    try{s=JSON.parse(localStorage.getItem('battleOverlayLayout')||'null');}catch(_){}
-    if(!s)return;
-    layoutGap=s.gap??0;
-    offsetX=s.offsetX??0;
-    offsetY=s.offsetY??0;
-    hordeThreshold=s.hordeThreshold??5;
-    heightControl.value=s.height??85;
-    zoomControl.value=s.zoom??100;
-    shotSpeedControl.value=s.shotSpeed??100;
-    hordeThresholdCtrl.value=hordeThreshold;
-    layoutZoom=s.zoom?s.zoom/100:1;
-    overlaySettings.shotSpeed=(s.shotSpeed??100)/100;
-    overlaySettings.laserColor=s.laserColor||'#7afcff';
-    darkMode=s.darkMode!==undefined?s.darkMode:true;
-    overlaySettings.shotType=s.shotType||'beam';
-    gapControl.value=layoutGap;
-    offsetXControl.value=offsetX;
-    offsetYControl.value=offsetY;
-    container.style.height=heightControl.value+'vh';
-    themeToggle.checked=darkMode;
+    try { s = JSON.parse(localStorage.getItem('battleOverlayLayout') || 'null'); } catch (_) {}
+    if (!s) return;
+    layoutGap      = s.gap           ?? 0;
+    offsetX        = s.offsetX       ?? 0;
+    offsetY        = s.offsetY       ?? 0;
+    hordeThreshold = s.hordeThreshold ?? 5;
+    darkMode       = s.darkMode !== undefined ? s.darkMode : true;
+    heightControl.value      = s.height    ?? 85;
+    zoomControl.value        = s.zoom      ?? 100;
+    shotSpeedControl.value   = s.shotSpeed ?? 100;
+    hordeThresholdCtrl.value = hordeThreshold;
+    gapControl.value         = layoutGap;
+    offsetXControl.value     = offsetX;
+    offsetYControl.value     = offsetY;
+    layoutZoom                    = (s.zoom ?? 100) / 100;
+    overlaySettings.shotSpeed     = (s.shotSpeed ?? 100) / 100;
+    overlaySettings.laserColor    = s.laserColor || '#7afcff';
+    overlaySettings.shotType      = s.shotType   || 'beam';
+    container.style.height = heightControl.value + 'vh';
+    themeToggle.checked    = darkMode;
     setActiveShotType(overlaySettings.shotType);
     setLaserColor(overlaySettings.laserColor);
     allSliders.forEach(syncFill);
     updateLabels();
-    bgCacheDirty=true;_cardMetrics=null;
   }
 
-  // ═══════════════════════════════════════
-  // SLIDER EVENT HANDLERS
-  // ═══════════════════════════════════════
-  gapControl.addEventListener('input',()=>{layoutGap=+gapControl.value;updateLabels();saveLayout();needsDraw=true;});
-  offsetXControl.addEventListener('input',()=>{offsetX=+offsetXControl.value;updateLabels();saveLayout();needsDraw=true;});
-  offsetYControl.addEventListener('input',()=>{offsetY=+offsetYControl.value;updateLabels();saveLayout();needsDraw=true;});
-  heightControl.addEventListener('input',()=>{container.style.height=heightControl.value+'vh';resizeCanvas();updateLabels();saveLayout();});
-  zoomControl.addEventListener('input',()=>{layoutZoom=+zoomControl.value/100;_cardMetrics=null;updateLabels();saveLayout();needsDraw=true;});
-  themeToggle.addEventListener('change',()=>{darkMode=themeToggle.checked;bgCacheDirty=true;saveLayout();needsDraw=true;});
-  shotSpeedControl.addEventListener('input',()=>{overlaySettings.shotSpeed=+shotSpeedControl.value/100;updateLabels();saveLayout();});
-  hordeThresholdCtrl.addEventListener('input',()=>{hordeThreshold=+hordeThresholdCtrl.value;updateLabels();saveLayout();needsDraw=true;});
+  // ── Slider handlers ──
+  gapControl.addEventListener('input',         () => { layoutGap      = +gapControl.value;           updateLabels(); saveLayout(); });
+  offsetXControl.addEventListener('input',     () => { offsetX        = +offsetXControl.value;       updateLabels(); saveLayout(); });
+  offsetYControl.addEventListener('input',     () => { offsetY        = +offsetYControl.value;       updateLabels(); saveLayout(); });
+  heightControl.addEventListener('input',      () => { container.style.height = heightControl.value + 'vh'; resizeCanvas(); updateLabels(); saveLayout(); });
+  zoomControl.addEventListener('input',        () => { layoutZoom     = +zoomControl.value / 100;    updateLabels(); saveLayout(); });
+  themeToggle.addEventListener('change',       () => { darkMode       = themeToggle.checked;         saveLayout(); });
+  shotSpeedControl.addEventListener('input',   () => { overlaySettings.shotSpeed = +shotSpeedControl.value / 100; updateLabels(); saveLayout(); });
+  hordeThresholdCtrl.addEventListener('input', () => { hordeThreshold = +hordeThresholdCtrl.value;   updateLabels(); saveLayout(); });
 
-  // ═══════════════════════════════════════
-  // ACTION BUTTONS
-  // ═══════════════════════════════════════
-  document.getElementById('testEffectBtn').addEventListener('click',()=>{
-    const top=topPlayers();
-    if(top.length>=2)fireAttack(top[0].uniqueId,top[1].uniqueId,15,false,false,overlaySettings.shotType,{intensity:0.8});
-    else if(top.length===1)fireAttack(top[0].uniqueId,top[0].uniqueId,5,false,false,overlaySettings.shotType,{intensity:0.5});
+  // ── Action buttons ──
+  document.getElementById('testEffectBtn').addEventListener('click', () => {
+    const top = topPlayers();
+    if (top.length >= 2) fireAttack(top[0].uniqueId, top[1].uniqueId, 15, false, false, overlaySettings.shotType, { intensity: 0.8 });
+    else if (top.length === 1) fireAttack(top[0].uniqueId, top[0].uniqueId, 5, false, false, overlaySettings.shotType, { intensity: 0.5 });
   });
-  document.getElementById('resetLayoutBtn').addEventListener('click',()=>{
-    layoutGap=0;offsetX=0;offsetY=0;layoutZoom=1;hordeThreshold=5;
-    gapControl.value=0;offsetXControl.value=0;offsetYControl.value=0;
-    zoomControl.value=100;heightControl.value=85;hordeThresholdCtrl.value=5;
-    container.style.height='85vh';resizeCanvas();_cardMetrics=null;
-    allSliders.forEach(syncFill);updateLabels();saveLayout();needsDraw=true;
+  document.getElementById('resetLayoutBtn').addEventListener('click', () => {
+    layoutGap = 0; offsetX = 0; offsetY = 0; layoutZoom = 1; hordeThreshold = 5;
+    gapControl.value = 0; offsetXControl.value = 0; offsetYControl.value = 0;
+    zoomControl.value = 100; heightControl.value = 85; hordeThresholdCtrl.value = 5;
+    container.style.height = '85vh'; resizeCanvas();
+    allSliders.forEach(syncFill); updateLabels(); saveLayout();
   });
-  document.getElementById('resetAllBtn').addEventListener('click',()=>{
-    if(!confirm('Reset ALL overlay settings to defaults?'))return;
-    try{localStorage.removeItem('battleOverlayLayout');}catch(_){}
+  document.getElementById('resetAllBtn').addEventListener('click', () => {
+    if (!confirm('Reset ALL overlay settings to defaults?')) return;
+    try { localStorage.removeItem('battleOverlayLayout'); } catch (_) {}
     location.reload();
   });
 
@@ -658,357 +544,783 @@ input[type=color]{opacity:0;position:absolute;width:0;height:0;pointer-events:no
   // ═══════════════════════════════════════
   // GAME HELPERS
   // ═══════════════════════════════════════
-  const isAlive=p=>p&&p.alive!==false;
+  const isAlive = p => p && p.alive !== false;
 
-  function topPlayers(){
-    if(_frameTopPlayers)return _frameTopPlayers;
-    const result=activePlayers()
-      .filter(p=>isAlive(p)&&p.uniqueId!==HORDE_ID)
-      .sort((a,b)=>{const hd=(b.hp||0)-(a.hp||0);if(hd!==0)return hd;const kd=(b.kills||0)-(a.kills||0);if(kd!==0)return kd;return(b.lastActive||0)-(a.lastActive||0);})
-      .slice(0,hordeThreshold);
-    return result;
+  function topPlayers() {
+    return activePlayers()
+      .filter(p => isAlive(p) && p.uniqueId !== HORDE_ID)
+      .sort((a, b) => {
+        const hd = (b.hp || 0) - (a.hp || 0); if (hd !== 0) return hd;
+        const kd = (b.kills || 0) - (a.kills || 0); if (kd !== 0) return kd;
+        return (b.lastActive || 0) - (a.lastActive || 0);
+      })
+      .slice(0, hordeThreshold);
   }
 
-  function hordePlayer(topArr){
-    const top=topArr||topPlayers();
-    const topSet=new Set(top.map(p=>p.uniqueId));
-    const rest=activePlayers().filter(p=>isAlive(p)&&!topSet.has(p.uniqueId));
-    if(!rest.length)return null;
-    return{
-      uniqueId:'__HORDE__',nickname:'THE HORDE',alive:true,
-      hp:rest.reduce((s,p)=>s+(p.hp||0),0),
-      maxHp:rest.reduce((s,p)=>s+(p.maxHp||100),0),
-      hordeCount:rest.length,
+  function hordePlayer() {
+    const topSet = new Set(topPlayers().map(p => p.uniqueId));
+    const rest   = activePlayers().filter(p => isAlive(p) && !topSet.has(p.uniqueId));
+    if (!rest.length) return null;
+    return {
+      uniqueId: HORDE_ID, nickname: 'THE HORDE', alive: true,
+      hp:       rest.reduce((s, p) => s + (p.hp    || 0),   0),
+      maxHp:    rest.reduce((s, p) => s + (p.maxHp || 100), 0),
+      hordeCount: rest.length,
     };
   }
 
-  function getPlayerPosition(index,total){
-    const W=cw(),H=ch();
-    const m=getCardMetrics();
-    const totalW=m.cardW*total+layoutGap*Math.max(0,total-1);
-    return{
-      x:(W-totalW)/2+offsetX+index*(m.cardW+layoutGap)+m.cardW/2,
-      y:H*0.28+offsetY+H*0.16*(1-layoutZoom),
+  function getPlayerPosition(index, total) {
+    const W = cw(), H = ch();
+    const cardH      = H * 0.5 * 0.84 * layoutZoom;
+    const cardW      = cardH * 0.72;
+    const totalWidth = cardW * total + layoutGap * Math.max(0, total - 1);
+    return {
+      x: (W - totalWidth) / 2 + offsetX + index * (cardW + layoutGap) + cardW / 2,
+      y: H * 0.28 + offsetY + H * 0.16 * (1 - layoutZoom),
     };
   }
 
-  function getHordePosition(){
-    return{x:cw()/2+offsetX,y:ch()*0.72+offsetY+ch()*0.20*(1-layoutZoom)};
+  function getHordePosition() {
+    return { x: cw() / 2 + offsetX, y: ch() * 0.72 + offsetY + ch() * 0.20 * (1 - layoutZoom) };
   }
 
-  function getPositionForPlayer(id){
-    if(_frameTopPlayerMap&&_frameTopPlayerMap.has(id)){
-      const idx=_frameTopPlayerMap.get(id);
-      return getPlayerPosition(idx,_frameTopPlayers.length);
-    }
-    const top=topPlayers();
-    const idx=top.findIndex(p=>p.uniqueId===id||p.id===id);
-    if(idx!==-1)return getPlayerPosition(idx,top.length);
-    const h=hordePlayer(top);
-    return h?getHordePosition():null;
+  function getPositionForPlayer(id) {
+    const top = topPlayers();
+    const idx = top.findIndex(p => p.uniqueId === id || p.id === id);
+    if (idx !== -1) return getPlayerPosition(idx, top.length);
+    return hordePlayer() ? getHordePosition() : null;
   }
 
-  // ═══════════════════════════════════════
-  // CARD ANIMATIONS
-  // ═══════════════════════════════════════
-  const cardAnimations={};
-  const ANIM_SPEED=0.12;
-
-  function updateCardAnim(id,tx,ty){
-    let a=cardAnimations[id];
-    if(!a)cardAnimations[id]={currentX:tx,currentY:ty,targetX:tx,targetY:ty,active:true};
-    else{a.targetX=tx;a.targetY=ty;a.active=true;}
-  }
-  function removeCardAnim(id){
-    if(cardAnimations[id]){cardAnimations[id].targetX=cw()+200;cardAnimations[id].active=false;}
-  }
-
-  // ═══════════════════════════════════════
-  // SMOOTH HP
-  // ═══════════════════════════════════════
-  const hpDisplay={};
-  const HP_LERP=0.12;
-
-  // ═══════════════════════════════════════
-  // HIGHLIGHT
-  // ═══════════════════════════════════════
-  let lastAttackerId=null,lastTargetId=null,highlightTimer=0;
-  function setHighlight(a,t){lastAttackerId=a;lastTargetId=t;highlightTimer=1200;}
-
-  function canvasToViewport(cx2,cy2){
-    const r=canvas.getBoundingClientRect();
-    return{x:r.left+cx2*(r.width/cw()),y:r.top+cy2*(r.height/ch())};
+  function canvasToViewport(cx, cy) {
+    const r = canvas.getBoundingClientRect();
+    return { x: r.left + cx * (r.width / cw()), y: r.top + cy * (r.height / ch()) };
   }
 
   // ═══════════════════════════════════════
   // AUDIO
   // ═══════════════════════════════════════
-  function getAudio(fn){
-    if(!audioCache[fn]){
-      const a=new Audio(`/audio/${fn}${ROOM_ID?'?room_id='+encodeURIComponent(ROOM_ID):''}`);
-      a.preload='auto';audioCache[fn]=a;
+  function getAudio(filename) {
+    if (!audioCache[filename]) {
+      const a = new Audio(`/audio/${filename}`);
+      a.preload = 'auto';
+      audioCache[filename] = a;
     }
-    return audioCache[fn];
+    return audioCache[filename];
   }
-  function playSound(type,pan){
-    pan=pan||0;const fn=audioConfig[type];if(!fn)return;
-    try{const a=getAudio(fn);try{a.pan=pan;}catch(_){}a.currentTime=0;a.play().catch(()=>{});}catch(_){}
+  function playSound(type) {
+    const fn = audioConfig[type];
+    if (!fn) return;
+    try { const a = getAudio(fn); a.currentTime = 0; a.play().catch(() => {}); } catch (_) {}
   }
 
   // ═══════════════════════════════════════
   // DOM HELPERS
   // ═══════════════════════════════════════
-  function showBanner(cls,html,dur){
-    dur=dur||3200;const el=document.createElement('div');
-    el.className='banner '+cls;el.innerHTML=html;
+  function showBanner(cls, html, dur) {
+    dur = dur || 3200;
+    const el = document.createElement('div');
+    el.className = 'banner ' + cls;
+    el.innerHTML = html;
     document.body.appendChild(el);
-    setTimeout(()=>el.remove(),dur);
+    setTimeout(() => el.remove(), dur);
   }
-  function showDamage(cx2,cy2,damage,kill,crit){
-    const vp=canvasToViewport(cx2,cy2);
-    const el=document.createElement('div');
-    el.className='damage'+(kill?' kill':crit?' critical':'');
-    el.textContent=kill?'💀 KILL!':crit?`⚡ ${Math.round(damage)}`:`-${Math.round(damage)}`;
-    el.style.left=vp.x+'px';el.style.top=vp.y+'px';
+
+  function showDamage(cx, cy, damage, kill, critical) {
+    const vp = canvasToViewport(cx, cy);
+    const el = document.createElement('div');
+    el.className  = 'damage' + (kill ? ' kill' : critical ? ' critical' : '');
+    el.textContent = kill ? '💀 KILL!' : critical ? `⚡ ${Math.round(damage)}` : `-${Math.round(damage)}`;
+    el.style.left = vp.x + 'px';
+    el.style.top  = vp.y + 'px';
     document.body.appendChild(el);
-    setTimeout(()=>el.remove(),950);
+    setTimeout(() => el.remove(), 950);
   }
 
   // ═══════════════════════════════════════
-  // PARTICLE (pooled)
+  // PARTICLE
   // ═══════════════════════════════════════
-  class Particle{
-    constructor(){this.x=0;this.y=0;this.vx=0;this.vy=0;this.life=0;this.decay=0;this.r=0;this.color='#fff';this.emoji=null;this.fs=18;}
-    reset(x,y,opts){
-      opts=opts||{};
-      this.x=x;this.y=y;
-      this.vx=(Math.random()-0.5)*(opts.speed||4);
-      this.vy=(Math.random()-0.5)*(opts.speed||4)-(opts.rise||0);
-      this.life=1;this.decay=opts.decay||(0.02+Math.random()*0.03);
-      this.r=opts.radius||(2+Math.random()*3);
-      this.color=opts.color||'#7afcff';
-      this.emoji=opts.emoji||null;this.fs=opts.fontSize||18;
+  class Particle {
+    constructor(x, y, opts) {
+      opts = opts || {};
+      this.x     = x; this.y = y;
+      this.vx    = (Math.random() - 0.5) * (opts.speed  || 4);
+      this.vy    = (Math.random() - 0.5) * (opts.speed  || 4) - (opts.rise || 0);
+      this.life  = 1;
+      this.decay = opts.decay  || (0.02 + Math.random() * 0.03);
+      this.r     = opts.radius || (2 + Math.random() * 3);
+      this.color = opts.color  || '#7afcff';
+      this.emoji = opts.emoji  || null;
+      this.fs    = opts.fontSize || 18;
     }
-    update(){this.x+=this.vx;this.y+=this.vy;this.vy+=0.06;this.life-=this.decay;return this.life>0;}
-    draw(c){
-      c.save();c.globalAlpha=Math.max(0,this.life);
-      if(this.emoji){
-        c.font=`${this.fs}px Arial`;c.textAlign='center';c.textBaseline='middle';
-        c.fillText(this.emoji,this.x,this.y);
-      }else{
-        c.fillStyle=this.color;c.shadowColor=this.color;c.shadowBlur=10;
-        c.beginPath();c.arc(this.x,this.y,this.r*Math.max(0,this.life),0,Math.PI*2);c.fill();
+    update() { this.x += this.vx; this.y += this.vy; this.vy += 0.06; this.life -= this.decay; return this.life > 0; }
+    draw(c) {
+      c.save(); c.globalAlpha = Math.max(0, this.life);
+      if (this.emoji) {
+        c.font = `${this.fs}px Arial`; c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(this.emoji, this.x, this.y);
+      } else {
+        c.fillStyle = this.color; c.shadowColor = this.color; c.shadowBlur = 10;
+        c.beginPath(); c.arc(this.x, this.y, this.r * Math.max(0, this.life), 0, Math.PI * 2); c.fill();
       }
       c.restore();
     }
   }
 
   // ═══════════════════════════════════════
-  // ATTACK — removed gift hearts, kept laser etc.
+  // ATTACK
   // ═══════════════════════════════════════
-  const DURATIONS={static:1800,projectile:700,gift:900,explosion:750,beam:360,laser:420,neon:520,ripple:580,fire:700,bubble:680,sphere:720};
+  class Attack {
+    constructor(from, to, type, options) {
+      options = options || {};
+      this.from           = from;
+      this.to             = to;
+      this.type           = type;
+      this.intensity      = options.intensity      != null ? options.intensity      : 0.5;
+      this.critical       = options.critical       != null ? options.critical       : false;
+      this.streak         = options.streak         != null ? options.streak         : 0;
+      this.giftBoosted    = options.giftBoosted    != null ? options.giftBoosted    : false;
+      this.remainingHpPct = options.remainingHpPct != null ? options.remainingHpPct : 1;
+      this.killingBlow    = options.killingBlow    != null ? options.killingBlow    : false;
+      this.color          = options.color || overlaySettings.laserColor || '#7afcff';
+      this.start          = Date.now();
+      this.progress       = 0;
+      this.particles      = [];
+      this.spawned        = false;
+      this.trail          = [];
+      this._impacted      = false;
 
-  class Attack{
-    constructor(from,to,type,opts){
-      opts=opts||{};
-      this.from=from;this.to=to;this.type=type;
-      this.intensity=opts.intensity??0.5;
-      this.critical=opts.critical??false;
-      this.streak=opts.streak??0;
-      this.giftBoosted=opts.giftBoosted??false;
-      this.remainingHpPct=opts.remainingHpPct??1;
-      this.killingBlow=opts.killingBlow??false;
-      this.color=opts.color||overlaySettings.laserColor||'#7afcff';
-      this.start=Date.now();
-      this.progress=0;
-      this.particles=[];
-      this.spawned=false;
-      this.trail=[];
-      this._impacted=false;
-      const speed=Math.max(0.5,opts.shotSpeed||overlaySettings.shotSpeed||1);
-      this.duration=Math.round((DURATIONS[type]||500)/speed);
-      if(type==='fire'){
-        const cnt=40+Math.floor(this.intensity*24);
-        for(let i=0;i<cnt;i++)this.particles.push(acquireParticle(to.x,to.y,{speed:3+Math.random()*6,color:i%3===0?'#ffdd44':'#ff8844',radius:2+Math.random()*4,decay:0.025}));
+      const speed = Math.max(0.5, options.shotSpeed || overlaySettings.shotSpeed || 1);
+      const durations = { static:1800, projectile:700, gift:900, explosion:750, beam:360, laser:420, neon:520, ripple:580, fire:700, bubble:680, sphere:720 };
+      this.duration = Math.round((durations[type] || 500) / speed);
+
+      if (type === 'fire') {
+        const cnt = 40 + Math.floor(this.intensity * 24);
+        for (let i = 0; i < cnt; i++) {
+          this.particles.push(new Particle(this.to.x, this.to.y, { speed: 3 + Math.random() * 6, color: i % 3 === 0 ? '#ffdd44' : '#ff8844', radius: 2 + Math.random() * 4, decay: 0.025 }));
+        }
       }
-      if(this.critical)for(let i=0;i<14;i++)this.particles.push(acquireParticle(to.x,to.y,{speed:5+Math.random()*5,color:'#ffffff',radius:1.5+Math.random()*2,decay:0.04}));
-      // giftBoosted golden particles removed (no hearts), just a visual glow is kept
-    }
-    update(){
-      const el=Date.now()-this.start;
-      this.progress=Math.min(1,el/this.duration);
-      for(let i=this.particles.length-1;i>=0;i--){
-        if(!this.particles[i].update()){releaseParticle(this.particles[i]);this.particles.splice(i,1);}
+      if (this.critical) {
+        for (let i = 0; i < 14; i++) {
+          this.particles.push(new Particle(this.to.x, this.to.y, { speed: 5 + Math.random() * 5, color: '#ffffff', radius: 1.5 + Math.random() * 2, decay: 0.04 }));
+        }
       }
-      return el<this.duration||this.particles.length>0;
+      if (this.giftBoosted) {
+        for (let i = 0; i < 10; i++) {
+          this.particles.push(new Particle(this.from.x, this.from.y, { speed: 2, color: '#ffd700', radius: 1.5, decay: 0.045, rise: 0.6 }));
+        }
+      }
     }
-    draw(frameTs){
+
+    update() {
+      const elapsed = Date.now() - this.start;
+      this.progress = Math.min(1, elapsed / this.duration);
+      this.particles = this.particles.filter(p => p.update());
+      return elapsed < this.duration || this.particles.length > 0;
+    }
+
+    draw() {
       ctx.save();
-      switch(this.type){
-        case 'laser':this._laser();break;
-        case 'beam':this._beam(frameTs);break;
-        case 'projectile':this._projectile();break;
-        // gift type removed – now treated as laser (fallback to default)
-        case 'explosion':this._explosion();break;
-        case 'neon':this._neon(frameTs);break;
-        case 'ripple':this._ripple();break;
-        case 'fire':this._fire(frameTs);break;
-        case 'bubble':this._bubble(frameTs);break;
-        case 'sphere':this._sphere(frameTs);break;
-        default: this._laser(); // any unknown (like old 'gift') becomes laser
+      switch (this.type) {
+        case 'laser':      this.drawLaser();      break;
+        case 'beam':       this.drawBeam();       break;
+        case 'projectile': this.drawProjectile(); break;
+        case 'gift':       this.drawGift();       break;
+        case 'explosion':  this.drawExplosion();  break;
+        case 'neon':       this.drawNeon();       break;
+        case 'ripple':     this.drawRipple();     break;
+        case 'fire':       this.drawFire();       break;
+        case 'bubble':     this.drawBubble();     break;
+        case 'sphere':     this.drawSphere();     break;
+        case 'static':     break;
+        default:           this.drawLaser();
       }
       ctx.restore();
-      if(this.particles.length){
-        ctx.save();ctx.globalCompositeOperation='screen';
-        for(let i=0;i<this.particles.length;i++)this.particles[i].draw(ctx);
+      if (this.particles.length) {
+        ctx.save(); ctx.globalCompositeOperation = 'screen';
+        this.particles.forEach(p => p.draw(ctx));
         ctx.restore();
       }
     }
 
-    // ── Draw methods (gift golden glow kept in _laser and _beam via giftBoosted flag) ──
-    _laser(){
-      const f=this.from,t=this.to,pg=this.progress;
-      const x=f.x+(t.x-f.x)*pg,y=f.y+(t.y-f.y)*pg;
-      const a=pg<0.6?1:1-(pg-0.6)/0.4;
-      ctx.globalCompositeOperation='lighter';
-      if(this.giftBoosted){ctx.globalAlpha=a*0.28;ctx.strokeStyle='#ffd700';ctx.lineWidth=28;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(x,y);ctx.stroke();}
-      ctx.globalAlpha=a*(0.4+this.intensity*0.35);ctx.strokeStyle=this.color;ctx.lineWidth=14+this.intensity*10;ctx.lineCap='round';
-      ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(x,y);ctx.stroke();
-      ctx.globalAlpha=a;ctx.strokeStyle='#fff';ctx.lineWidth=3;
-      ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(x,y);ctx.stroke();
-      if(this.critical){ctx.globalAlpha=a*0.55;ctx.strokeStyle='#fff';ctx.lineWidth=12;ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(x,y);ctx.stroke();}
-    }
-    _beam(frameTs){
-      const f=this.from,t=this.to,pg=this.progress;
-      const a=pg<0.3?1:1-(pg-0.3)/0.7;
-      const pulse=1+Math.sin(frameTs/110)*0.16;
-      const mx=f.x+(t.x-f.x)*pg,my=f.y+(t.y-f.y)*pg;
-      ctx.globalCompositeOperation='lighter';
-      if(this.giftBoosted){ctx.globalAlpha=a*0.28;ctx.strokeStyle='#ffd700';ctx.lineWidth=32;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(mx,my);ctx.stroke();}
-      ctx.globalAlpha=a*(0.3+this.intensity*0.25);ctx.strokeStyle=this.color;ctx.lineWidth=(20+this.intensity*8)*pulse;ctx.lineCap='round';
-      ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(mx,my);ctx.stroke();
-      ctx.globalAlpha=a*0.8;ctx.strokeStyle='#fff';ctx.lineWidth=5;
-      ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(mx,my);ctx.stroke();
-      if(this.critical){ctx.globalAlpha=a*0.65;ctx.strokeStyle='#fff';ctx.lineWidth=14;ctx.beginPath();ctx.moveTo(f.x,f.y);ctx.lineTo(mx,my);ctx.stroke();}
-    }
-    _projectile(){
-      const f=this.from,t=this.to,pg=this.progress;
-      const px=f.x+(t.x-f.x)*pg,py=f.y+(t.y-f.y)*pg;
-      this.trail.push({x:px,y:py,a:pg<0.6?1:1-(pg-0.6)/0.4});
-      if(this.trail.length>18)this.trail.shift();
-      ctx.globalCompositeOperation='screen';
-      const R=18+this.intensity*10;
-      for(let i=0;i<this.trail.length;i++){
-        const tr=this.trail[i],al=(i/this.trail.length)*tr.a*0.55;
-        ctx.beginPath();ctx.arc(tr.x,tr.y,Math.max(0.6,(i/this.trail.length)*R*0.55),0,Math.PI*2);
-        ctx.fillStyle=`rgba(122,252,255,${al})`;ctx.fill();
+    drawLaser() {
+      const { from: f, to: t, progress: pg } = this;
+      const x = f.x + (t.x - f.x) * pg, y = f.y + (t.y - f.y) * pg;
+      const a = pg < 0.6 ? 1 : 1 - (pg - 0.6) / 0.4;
+      ctx.globalCompositeOperation = 'lighter';
+      if (this.giftBoosted) {
+        ctx.globalAlpha = a * 0.28; ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 28; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y); ctx.stroke();
       }
-      const g=ctx.createRadialGradient(px,py,0,px,py,R);
-      g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(0.45,'rgba(122,252,255,0.9)');g.addColorStop(1,'rgba(122,252,255,0)');
-      ctx.fillStyle=g;ctx.beginPath();ctx.arc(px,py,R,0,Math.PI*2);ctx.fill();
-      if(pg>0.9&&!this._impacted){this._impacted=true;for(let i=0;i<14;i++)this.particles.push(acquireParticle(t.x,t.y,{speed:4+Math.random()*5,color:'#7afcff',radius:2+Math.random()*3,decay:0.03}));}
+      ctx.globalAlpha = a * (0.4 + this.intensity * 0.35); ctx.strokeStyle = this.color; ctx.lineWidth = 14 + this.intensity * 10; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y); ctx.stroke();
+      ctx.globalAlpha = a; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y); ctx.stroke();
+      if (this.critical) {
+        ctx.globalAlpha = a * 0.55; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 12;
+        ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y); ctx.stroke();
+      }
     }
-    _explosion(){
-      if(this.spawned)return;this.spawned=true;
-      const colors=['#ff6644','#ffcc44','#ff2222','#ff8800'],count=34+Math.floor(this.intensity*24);
-      for(let i=0;i<count;i++)this.particles.push(acquireParticle(this.to.x,this.to.y,{speed:7+Math.random()*(10+this.intensity*8),color:colors[i%4],radius:3+Math.random()*(5+this.intensity*4),decay:0.014-this.intensity*0.004}));
+
+    drawBeam() {
+      const { from: f, to: t, progress: pg } = this;
+      const a = pg < 0.3 ? 1 : 1 - (pg - 0.3) / 0.7;
+      const pulse = 1 + Math.sin(Date.now() / 110) * 0.16;
+      const mx = f.x + (t.x - f.x) * pg, my = f.y + (t.y - f.y) * pg;
+      ctx.globalCompositeOperation = 'lighter';
+      if (this.giftBoosted) {
+        ctx.globalAlpha = a * 0.28; ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 32; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(mx, my); ctx.stroke();
+      }
+      ctx.globalAlpha = a * (0.3 + this.intensity * 0.25); ctx.strokeStyle = this.color; ctx.lineWidth = (20 + this.intensity * 8) * pulse; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(mx, my); ctx.stroke();
+      ctx.globalAlpha = a * 0.8; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(mx, my); ctx.stroke();
+      if (this.critical) {
+        ctx.globalAlpha = a * 0.65; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 14;
+        ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(mx, my); ctx.stroke();
+      }
     }
-    _neon(frameTs){ /* … same as before … */ }
-    _ripple(){ /* … */ }
-    _fire(frameTs){ /* … */ }
-    _bubble(frameTs){ /* … */ }
-    _sphere(frameTs){ /* … */ }
+
+    drawProjectile() {
+      const { from: f, to: t, progress: pg } = this;
+      const px = f.x + (t.x - f.x) * pg, py = f.y + (t.y - f.y) * pg;
+      this.trail.push({ x: px, y: py, a: pg < 0.6 ? 1 : 1 - (pg - 0.6) / 0.4 });
+      if (this.trail.length > 18) this.trail.shift();
+      ctx.globalCompositeOperation = 'screen';
+      const R = 18 + this.intensity * 10;
+      for (let i = 0; i < this.trail.length; i++) {
+        const tr = this.trail[i], al = (i / this.trail.length) * tr.a * 0.55;
+        ctx.beginPath(); ctx.arc(tr.x, tr.y, Math.max(0.6, (i / this.trail.length) * R * 0.55), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(122,252,255,${al})`; ctx.fill();
+      }
+      const g = ctx.createRadialGradient(px, py, 0, px, py, R);
+      g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.45, 'rgba(122,252,255,0.9)'); g.addColorStop(1, 'rgba(122,252,255,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, R, 0, Math.PI * 2); ctx.fill();
+      if (pg > 0.9 && !this._impacted) {
+        this._impacted = true;
+        for (let i = 0; i < 14; i++) this.particles.push(new Particle(t.x, t.y, { speed: 4 + Math.random() * 5, color: '#7afcff', radius: 2 + Math.random() * 3, decay: 0.03 }));
+      }
+    }
+
+    drawGift() {
+      if (!this.spawned) {
+        this.spawned = true;
+        const emojis = ['❤️','💖','💘','💝','💫'];
+        const count  = 18 + Math.floor(this.intensity * 14);
+        for (let i = 0; i < count; i++) {
+          this.particles.push(new Particle(this.to.x, this.to.y, { speed: 6 + Math.random() * 5, emoji: emojis[i % emojis.length], fontSize: 18 + Math.random() * 14, decay: 0.018, rise: 1.2 }));
+        }
+      }
+    }
+
+    drawExplosion() {
+      if (!this.spawned) {
+        this.spawned = true;
+        const count = 34 + Math.floor(this.intensity * 24);
+        for (let i = 0; i < count; i++) {
+          this.particles.push(new Particle(this.to.x, this.to.y, { speed: 7 + Math.random() * (10 + this.intensity * 8), color: ['#ff6644','#ffcc44','#ff2222','#ff8800'][i % 4], radius: 3 + Math.random() * (5 + this.intensity * 4), decay: 0.014 - this.intensity * 0.004 }));
+        }
+      }
+    }
+
+    drawNeon() {
+      const { from: f, to: t, progress: pg } = this;
+      const x = f.x + (t.x - f.x) * pg, y = f.y + (t.y - f.y) * pg;
+      const now = Date.now();
+      const intensity  = 0.7 + Math.sin(now * 0.018) * 0.3;
+      const coreColor  = this.critical ? '#fff2b0' : '#ffffff';
+      const midColor   = this.critical ? '#ff6640' : (this.color || '#00ccff');
+      const glowColor  = this.critical ? '#ff2200' : '#0044cc';
+      ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y);
+      ctx.strokeStyle = glowColor; ctx.lineWidth = 32 * intensity; ctx.globalAlpha = 0.3; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(f.x + 4, f.y + 2); ctx.lineTo(x + 4, y + 2);
+      ctx.strokeStyle = '#ff3366'; ctx.lineWidth = 10; ctx.globalAlpha = 0.55; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(f.x - 4, f.y - 2); ctx.lineTo(x - 4, y - 2);
+      ctx.strokeStyle = '#33ffcc'; ctx.lineWidth = 10; ctx.globalAlpha = 0.55; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y);
+      ctx.strokeStyle = midColor; ctx.lineWidth = 9 * intensity; ctx.globalAlpha = 0.9; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y);
+      ctx.strokeStyle = coreColor; ctx.lineWidth = 3; ctx.globalAlpha = 1;
+      ctx.setLineDash([14, 8]); ctx.stroke(); ctx.setLineDash([]);
+      const headRad = 13 + Math.sin(now * 0.025) * 2.5;
+      ctx.shadowBlur = 22; ctx.shadowColor = midColor;
+      ctx.beginPath(); ctx.arc(x, y, headRad, 0, Math.PI * 2); ctx.fillStyle = coreColor; ctx.fill();
+      ctx.shadowBlur = 0;
+      for (let i = 1; i <= 7; i++) {
+        const t2 = Math.max(0, pg - i * 0.022); if (t2 <= 0) break;
+        const tx = f.x + (t.x - f.x) * t2, ty = f.y + (t.y - f.y) * t2;
+        const age = pg - t2, sz = 3 * (1 - age * 2.8); if (sz <= 0) continue;
+        ctx.beginPath(); ctx.arc(tx, ty, sz, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,200,${Math.max(0, 1 - age * 2.2)})`; ctx.fill();
+      }
+    }
+
+    drawRipple() {
+      const { from: f, to: t, progress: pg } = this;
+      const x = f.x + (t.x - f.x) * pg, y = f.y + (t.y - f.y) * pg;
+      const rings = 3 + Math.floor(this.intensity * 3);
+      ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y);
+      ctx.strokeStyle = `rgba(100,220,255,${0.55 * (1 - pg)})`; ctx.lineWidth = 6 + this.intensity * 4; ctx.stroke();
+      for (let i = 0; i < rings; i++) {
+        const t2 = pg - i * 0.07; if (t2 <= 0) continue;
+        const alpha = (1 - t2) * (0.55 + this.intensity * 0.3);
+        ctx.strokeStyle = `rgba(100,220,255,${alpha})`; ctx.lineWidth = 2.5 + this.intensity * 1.5;
+        ctx.beginPath(); ctx.arc(x, y, 12 + t2 * (55 + this.intensity * 14), 0, Math.PI * 2); ctx.stroke();
+      }
+      ctx.globalAlpha = 1 - pg; ctx.fillStyle = 'rgba(180,240,255,0.9)';
+      ctx.beginPath(); ctx.arc(x, y, 5 + this.intensity * 4, 0, Math.PI * 2); ctx.fill();
+    }
+
+    drawFire() {
+      const { from: f, to: t, progress: pg } = this;
+      const x = f.x + (t.x - f.x) * pg, y = f.y + (t.y - f.y) * pg;
+      const size = 26 + this.intensity * 18;
+      ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y);
+      ctx.strokeStyle = `rgba(255,110,20,${0.65 * (1 - pg * 0.6)})`; ctx.lineWidth = 8 + this.intensity * 6; ctx.stroke();
+      const flicker = 1 + Math.sin(Date.now() * 0.04) * 0.12;
+      const flame = ctx.createRadialGradient(x - size * 0.2, y - size * 0.2, 1, x, y, size * flicker);
+      flame.addColorStop(0, '#fff8e0'); flame.addColorStop(0.22, '#ffcc44');
+      flame.addColorStop(0.55, '#ff5500'); flame.addColorStop(1, '#880000');
+      ctx.fillStyle = flame; ctx.beginPath(); ctx.arc(x, y, size * flicker, 0, Math.PI * 2); ctx.fill();
+    }
+
+    drawBubble() {
+      const { from: f, to: t, progress: pg } = this;
+      const x = f.x + (t.x - f.x) * pg, y = f.y + (t.y - f.y) * pg;
+      const count = 4 + Math.floor(this.intensity * 3), now = Date.now();
+      ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y);
+      ctx.strokeStyle = `rgba(160,230,255,${0.4 * (1 - pg)})`; ctx.lineWidth = 5 + this.intensity * 3; ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
+      for (let i = 0; i < count; i++) {
+        const angle = now * 0.003 + i * (Math.PI * 2 / count);
+        const orbit = 10 + this.intensity * 4;
+        const bx = x + Math.cos(angle) * orbit, by = y + Math.sin(angle) * orbit * 0.65;
+        const r = Math.max(2, 14 - i * 1.2 + this.intensity * 4);
+        ctx.globalAlpha = 0.55 + this.intensity * 0.2; ctx.fillStyle = 'rgba(100,210,255,0.55)';
+        ctx.beginPath(); ctx.arc(bx, by, r, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 0.45; ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.beginPath(); ctx.arc(bx - r * 0.28, by - r * 0.28, r * 0.28, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    drawSphere() {
+      const { from: f, to: t, progress: pg } = this;
+      const x = f.x + (t.x - f.x) * pg, y = f.y + (t.y - f.y) * pg;
+      const radius = 24 + this.intensity * 14 + Math.sin(Date.now() * 0.015) * 2;
+      ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y);
+      ctx.strokeStyle = `rgba(34,136,255,${0.5 * (1 - pg)})`; ctx.lineWidth = 6 + this.intensity * 4; ctx.stroke();
+      const orb = ctx.createRadialGradient(x - radius * 0.28, y - radius * 0.28, 1, x, y, radius);
+      orb.addColorStop(0, '#ddfffe'); orb.addColorStop(0.35, '#2299ff');
+      orb.addColorStop(0.75, '#0033aa'); orb.addColorStop(1, '#001133');
+      ctx.fillStyle = orb; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.6; ctx.strokeStyle = 'rgba(100,200,255,0.9)'; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(x, y, radius * 1.22, 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.3; ctx.strokeStyle = 'rgba(180,240,255,0.7)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(x, y, radius * 1.5, 0, Math.PI * 2); ctx.stroke();
+      if (this.critical) { ctx.globalAlpha = 0.5; ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, radius * 0.7, 0, Math.PI * 2); ctx.fill(); }
+    }
   }
 
-  // (Neon, ripple, fire, bubble, sphere methods unchanged – omitted for brevity but present in full code)
-
   // ═══════════════════════════════════════
-  // FIRE ATTACK (modified to remove gift special override)
+  // FIRE ATTACK
   // ═══════════════════════════════════════
-  const TYPE_MAP={
-    fire:'fire',bubble:'bubble',bubbles:'bubble',water:'bubble',
-    beam:'beam',laser:'laser',shot:'laser',projectile:'projectile',
-    neon:'neon',ripple:'ripple',wave:'ripple',
-    sphere:'sphere', // removed 'gift'
-    explosion:'explosion',boom:'explosion',
-    meteor:'fire',tsunami:'ripple',nuke:'explosion',nukes:'explosion',
+  const TYPE_MAP = {
+    fire:'fire', bubble:'bubble', bubbles:'bubble', water:'bubble',
+    beam:'beam', laser:'laser', shot:'laser', projectile:'projectile',
+    neon:'neon', ripple:'ripple', wave:'ripple',
+    sphere:'sphere', gift:'gift', hearts:'gift',
+    explosion:'explosion', boom:'explosion',
+    meteor:'fire', tsunami:'ripple', nuke:'explosion', nukes:'explosion',
   };
 
-  function fireAttack(atker,tgter,damage,killed,special,effect,meta){
-    meta=meta||{};
-    const fromPos=atker===HORDE_ID?(hordePlayer()?getHordePosition():null):getPositionForPlayer(atker)||(hordePlayer()?getHordePosition():null);
-    const toPos=tgter===HORDE_ID?(hordePlayer()?getHordePosition():null):getPositionForPlayer(tgter)||(hordePlayer()?getHordePosition():null);
-    if(!fromPos||!toPos)return;
+  function fireAttack(attackerId, targetId, damage, killed, special, effect, meta) {
+    meta = meta || {};
+    const from = attackerId === HORDE_ID
+      ? (hordePlayer() ? getHordePosition() : null)
+      : getPositionForPlayer(attackerId) || (hordePlayer() ? getHordePosition() : null);
+    const to = targetId === HORDE_ID
+      ? (hordePlayer() ? getHordePosition() : null)
+      : getPositionForPlayer(targetId) || (hordePlayer() ? getHordePosition() : null);
+    if (!from || !to) return;
+
     let type;
-    if(effect){type=TYPE_MAP[String(effect).toLowerCase()]||String(effect).toLowerCase();}
-    else if(killed){type='explosion';}
-    else{const s=overlaySettings.shotType;type=s==='beam'?'beam':s==='pulse'?'fire':s==='wave'?'ripple':s==='burst'?'explosion':s==='ripple'?'ripple':'laser';}
-    // special no longer forces 'gift', giftBoosted flag is passed via meta
-    attacks.push(new Attack(fromPos,toPos,type,{
-      intensity:meta.intensity??0.5,critical:meta.critical??false,
-      streak:meta.streak??0,giftBoosted:meta.giftBoosted??false,
-      remainingHpPct:meta.remainingHpPct??1,killingBlow:!!killed,
-      color:meta.laserColor||overlaySettings.laserColor,
-      shotSpeed:meta.shotSpeed||overlaySettings.shotSpeed,
+    if (effect)      { type = TYPE_MAP[String(effect).toLowerCase()] || String(effect).toLowerCase(); }
+    else if (special){ type = 'gift'; }
+    else if (killed) { type = 'explosion'; }
+    else {
+      const s = overlaySettings.shotType;
+      type = s === 'beam' ? 'beam' : s === 'pulse' ? 'fire' : s === 'wave' ? 'ripple' : s === 'burst' ? 'explosion' : s === 'ripple' ? 'ripple' : 'laser';
+    }
+
+    attacks.push(new Attack(from, to, type, {
+      intensity:      meta.intensity      != null ? meta.intensity      : 0.5,
+      critical:       meta.critical       != null ? meta.critical       : false,
+      streak:         meta.streak         != null ? meta.streak         : 0,
+      giftBoosted:    meta.giftBoosted    != null ? meta.giftBoosted    : false,
+      remainingHpPct: meta.remainingHpPct != null ? meta.remainingHpPct : 1,
+      killingBlow:    !!killed,
+      color:          meta.laserColor || overlaySettings.laserColor,
+      shotSpeed:      meta.shotSpeed  || overlaySettings.shotSpeed,
     }));
-    showDamage(toPos.x,toPos.y,damage||0,!!killed,!!meta.critical);
-    setHighlight(atker,tgter);
-    playSound(killed?'kill':'shoot',(fromPos.x/cw())*2-1);
-    if(killed)flashAlpha=0.35;
+    showDamage(to.x, to.y, damage || 0, !!killed, !!meta.critical);
+    playSound(killed ? 'kill' : 'attack');
   }
 
   // ═══════════════════════════════════════
-  // SOCKET HANDLERS (giftAttack now does triple laser)
+  // HEART / RESPAWN EFFECTS
   // ═══════════════════════════════════════
-  function onGiftAttack(d){
-    if(!d)return;
-    const attackerId = d.attacker;
-    const damage = d.damage || 0;
-    const giftColor = d.giftColor || '#ffd700';
-    // collect alive opponents excluding attacker
-    const aliveOpponents = activePlayers().filter(p => isAlive(p) && p.uniqueId !== attackerId);
-    // pick up to 3 distinct random targets
-    const targets = [];
-    const pool = [...aliveOpponents];
-    while(targets.length < 3 && pool.length > 0){
-      const idx = Math.floor(Math.random() * pool.length);
-      targets.push(pool.splice(idx, 1)[0].uniqueId);
-    }
-    if(targets.length === 0) return; // no one to hit
-    // show banner once
-    const gifterName = (players[attackerId]?.nickname || attackerId || 'Someone');
-    showBanner('gift', `🎁 ${gifterName} sends a gift! Triple laser strike!`);
-    // fire three laser attacks
-    targets.forEach((targetId, i) => {
+  function fireHeartEffect(playerId, hearts, intensity) {
+    hearts = hearts || 1; intensity = intensity || 0;
+    let pos = getPositionForPlayer(playerId);
+    if (!pos) { const top = topPlayers(); pos = top.length ? getPlayerPosition(0, top.length) : getHordePosition(); }
+    const emojis = ['❤️','💖','💘','💝'];
+    const count  = Math.max(1, Math.floor(hearts * (1 + intensity * 2)));
+    for (let i = 0; i < count; i++) {
       setTimeout(() => {
-        fireAttack(attackerId, targetId, damage, false, false, 'laser', {
-          intensity: 0.7,
-          giftBoosted: true,
-          laserColor: giftColor,
-        });
-      }, i * 100); // slight stagger for visual effect
-    });
+        const atk = new Attack(pos, pos, 'static');
+        atk.particles.push(new Particle(pos.x, pos.y, { speed: 5 + Math.random() * 5, emoji: emojis[i % emojis.length], fontSize: 16 + i * 3 + intensity * 8, decay: 0.016 - intensity * 0.003, rise: 2.5 + intensity * 2 }));
+        attacks.push(atk);
+      }, i * 90);
+    }
   }
 
-  // keep heart effect for likes/celebrations (unchanged)
-  function fireHeartEffect(playerId,hearts,intensity){
-    hearts=hearts||1;intensity=intensity||0;
-    let pos=getPositionForPlayer(playerId);
-    if(!pos){const t=topPlayers();pos=t.length?getPlayerPosition(0,t.length):getHordePosition();}
-    const emojis=['❤️','💖','💘','💝'],count=Math.max(1,Math.floor(hearts*(1+intensity*2)));
-    for(let i=0;i<count;i++){
-      setTimeout(()=>{
-        const a=new Attack(pos,pos,'static');
-        a.particles.push(acquireParticle(pos.x,pos.y,{speed:5+Math.random()*5,emoji:emojis[i%emojis.length],fontSize:16+i*3+intensity*8,decay:0.016-intensity*0.003,rise:2.5+intensity*2}));
-        attacks.push(a);
-      },i*90);
+  function spawnRespawnEffect(uniqueId) {
+    const pos = getPositionForPlayer(uniqueId);
+    if (!pos) return;
+    const atk = new Attack(pos, pos, 'static');
+    for (let i = 0; i < 28; i++) {
+      atk.particles.push(new Particle(pos.x, pos.y, { speed: 3 + Math.random() * 6, color: '#ffaa00', radius: 2 + Math.random() * 3, decay: 0.022, rise: 1.5 }));
+    }
+    attacks.push(atk);
+    playSound('respawn');
+  }
+
+  // ═══════════════════════════════════════
+  // BACKGROUND
+  // ═══════════════════════════════════════
+  function drawBackground() {
+    const W = cw(), H = ch();
+    if (backgroundImg) {
+      const scale = Math.max(W / backgroundImg.width, H / backgroundImg.height);
+      ctx.drawImage(backgroundImg, (W - backgroundImg.width * scale) / 2, (H - backgroundImg.height * scale) / 2, backgroundImg.width * scale, backgroundImg.height * scale);
+      return;
+    }
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, darkMode ? '#0d1a2e' : '#1a2a1a');
+    grad.addColorStop(1, darkMode ? '#050b12' : '#0a120a');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, W, H);
+    if (darkMode) {
+      ctx.strokeStyle = 'rgba(100,200,255,0.04)'; ctx.lineWidth = 1;
+      for (let x = 0; x < W; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+      for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+      ctx.strokeStyle = 'rgba(140,80,255,0.22)';
+      ctx.beginPath(); ctx.moveTo(0, H * 0.60); ctx.lineTo(W, H * 0.60); ctx.stroke();
     }
   }
 
   // ═══════════════════════════════════════
-  // RENDER LOOP + SOCKET INIT (rest unchanged)
+  // PLAYER CARD
   // ═══════════════════════════════════════
-  // ... (includes drawBackground, drawPlayerCard, drawHorde, draw loop, socket init with updated listeners)
+  function drawPlayerCard(player, pos, rank) {
+    const hp = player.hp || 0, maxHp = player.maxHp || 100;
+    const hpPct = Math.max(0, Math.min(1, hp / maxHp));
+    const nearDeath = hpPct < 0.2;
+    const H = ch();
+    const cardH = H * 0.5 * 0.84 * layoutZoom;
+    const avatarR = cardH * 0.26;
+    const avatarY = pos.y - cardH * 0.14;
+    const nameY   = avatarY - avatarR - cardH * 0.06;
+    const barW    = cardH * 0.72 * 0.88;
+    const barH    = Math.max(6, cardH * 0.09);
+    const barX    = pos.x - barW / 2;
+    const barY    = avatarY + avatarR + cardH * 0.05;
+    const hpTextY = barY + barH + cardH * 0.07;
+
+    if (nearDeath) {
+      const pulse = 0.5 + Math.sin(Date.now() / 280) * 0.5;
+      const redGlow = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, avatarR * 3.2);
+      redGlow.addColorStop(0, `rgba(255,30,30,${0.2 + pulse * 0.12})`);
+      redGlow.addColorStop(1, 'rgba(255,30,30,0)');
+      ctx.fillStyle = redGlow; ctx.beginPath(); ctx.arc(pos.x, pos.y, avatarR * 3.2, 0, Math.PI * 2); ctx.fill();
+    }
+
+    const glow = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, avatarR * 2.6);
+    glow.addColorStop(0, 'rgba(122,252,255,0.14)'); glow.addColorStop(1, 'rgba(122,252,255,0)');
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(pos.x, pos.y, avatarR * 2.6, 0, Math.PI * 2); ctx.fill();
+
+    ctx.strokeStyle = rank === 1 ? 'rgba(255,210,80,0.75)' : 'rgba(122,252,255,0.4)';
+    ctx.lineWidth   = Math.max(2, avatarR * 0.08);
+    ctx.beginPath(); ctx.arc(pos.x, avatarY, avatarR, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(8,18,30,0.92)';
+    ctx.beginPath(); ctx.arc(pos.x, avatarY, avatarR - 2, 0, Math.PI * 2); ctx.fill();
+
+    ctx.font = `${avatarR * 1.3}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
+    ctx.fillText(player.iconEmoji || '⚔️', pos.x, avatarY);
+
+    const name = (player.nickname || player.uniqueId || 'Player').slice(0, 13);
+    ctx.font = `bold ${Math.max(9, cardH * 0.11)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = 3; ctx.strokeStyle = '#000'; ctx.strokeText(name, pos.x, nameY);
+    ctx.fillStyle = '#fff'; ctx.fillText(name, pos.x, nameY);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(barX, barY, barW, barH);
+    const barGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    barGrad.addColorStop(0, hpPct > 0.5 ? '#2ecc71' : hpPct > 0.25 ? '#f39c12' : '#ff4d4d');
+    barGrad.addColorStop(1, 'rgba(255,255,255,0.35)');
+    ctx.fillStyle = barGrad; ctx.fillRect(barX + 1, barY + 1, (barW - 2) * hpPct, barH - 2);
+    ctx.strokeStyle = 'rgba(122,252,255,0.3)'; ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH);
+
+    ctx.font = `${Math.max(8, cardH * 0.085)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
+    ctx.strokeText(`${Math.round(hp)}/${maxHp}`, pos.x, hpTextY);
+    ctx.fillStyle = '#ccc'; ctx.fillText(`${Math.round(hp)}/${maxHp}`, pos.x, hpTextY);
+
+    if (player.kills > 0) {
+      const kx = pos.x + avatarR * 0.75, ky = avatarY + avatarR * 0.75;
+      ctx.fillStyle = 'rgba(255,80,80,0.85)';
+      ctx.beginPath(); ctx.arc(kx, ky, avatarR * 0.32, 0, Math.PI * 2); ctx.fill();
+      ctx.font = `bold ${Math.max(7, avatarR * 0.32)}px 'Rajdhani',sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
+      ctx.fillText(player.kills, kx, ky);
+    }
+  }
+
+  // ═══════════════════════════════════════
+  // HORDE
+  // ═══════════════════════════════════════
+  function drawHorde(horde) {
+    if (!horde) return;
+    const pos = getHordePosition();
+    const H = ch(), W = cw();
+    const ring  = H * 0.28 * layoutZoom;
+    const pulse = 0.5 + Math.sin(Date.now() / 350) * 0.5;
+
+    ctx.fillStyle = `rgba(255,70,70,${0.07 + pulse * 0.05})`;
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, ring + pulse * 5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = `rgba(255,70,70,${0.45 + pulse * 0.3})`; ctx.lineWidth = Math.max(2, ring * 0.1);
+    ctx.beginPath(); ctx.arc(pos.x, pos.y, ring * 0.88, 0, Math.PI * 2); ctx.stroke();
+
+    ctx.font = `${ring * 1.5}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('💀', pos.x, pos.y);
+
+    const labelX = Math.max(ring * 2.4, pos.x - ring * 1.35);
+    ctx.font = `bold ${Math.max(10, H * 0.08)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
+    ctx.strokeText('⚔ THE HORDE', labelX, pos.y - H * 0.05);
+    ctx.fillStyle = '#ff7b7b'; ctx.fillText('⚔ THE HORDE', labelX, pos.y - H * 0.05);
+    ctx.font = `${Math.max(8, H * 0.06)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.fillStyle = '#ffc2c2'; ctx.fillText(`${horde.hordeCount} players`, labelX, pos.y + H * 0.08);
+
+    const hpPct = Math.min(1, horde.hp / Math.max(1, horde.maxHp));
+    const barW  = Math.min(W * 0.28, W - (pos.x + ring * 1.35) - 16);
+    const barH  = Math.max(8, H * 0.045);
+    const barX  = pos.x + ring * 1.1, barY = pos.y - barH / 2;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(barX, barY, barW, barH);
+    const hpGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    hpGrad.addColorStop(0, '#ff2222'); hpGrad.addColorStop(1, '#ff8888');
+    ctx.fillStyle = hpGrad; ctx.fillRect(barX + 2, barY + 2, (barW - 4) * hpPct, barH - 4);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH);
+
+    ctx.font = `${Math.max(8, H * 0.05)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.textAlign = 'left'; ctx.fillStyle = '#ffaaaa';
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
+    const hpText = `${Math.round(horde.hp)} / ${Math.round(horde.maxHp)}`;
+    ctx.strokeText(hpText, barX, barY + barH + H * 0.09);
+    ctx.fillText(hpText,   barX, barY + barH + H * 0.09);
+  }
+
+  // ═══════════════════════════════════════
+  // RENDER LOOP
+  // ═══════════════════════════════════════
+  function draw() {
+    ctx.clearRect(0, 0, cw(), ch());
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    drawBackground();
+    const top = topPlayers();
+    top.forEach((p, i) => drawPlayerCard(p, getPlayerPosition(i, top.length), i + 1));
+    drawHorde(hordePlayer());
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    attacks = attacks.filter(a => { const alive = a.update(); if (alive) a.draw(); return alive; });
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    requestAnimationFrame(draw);
+  }
+
+  // ═══════════════════════════════════════
+  // DEMO MODE
+  // ═══════════════════════════════════════
+  const ALL_EFFECTS = ['laser','beam','projectile','neon','ripple','fire','bubble','sphere','explosion'];
+
+  function stopDemoLoop() { if (_demoTimer) { clearInterval(_demoTimer); _demoTimer = null; } }
+
+  function fireDemoAttack() {
+    const top = topPlayers(), horde = hordePlayer();
+    if (!top.length) return;
+    const effect   = ALL_EFFECTS[Math.floor(Math.random() * ALL_EFFECTS.length)];
+    const damage   = Math.floor(Math.random() * 70 + 10);
+    const killed   = Math.random() < 0.1;
+    const critical = Math.random() < 0.2;
+    const intensity = 0.3 + Math.random() * 0.7;
+    const useHorde  = horde && Math.random() < 0.3;
+    if (useHorde) {
+      const ti = Math.floor(Math.random() * top.length);
+      fireAttack(HORDE_ID, top[ti].uniqueId, damage, killed, false, effect, { intensity, critical });
+    } else {
+      const ai = Math.floor(Math.random() * top.length);
+      if (horde && Math.random() < 0.35) {
+        fireAttack(top[ai].uniqueId, HORDE_ID, damage, killed, false, effect, { intensity, critical });
+      } else {
+        let ti = Math.floor(Math.random() * top.length);
+        if (ti === ai) ti = (ti + 1) % top.length;
+        fireAttack(top[ai].uniqueId, top[ti].uniqueId, damage, killed, false, effect, { intensity, critical });
+      }
+    }
+  }
+
+  function enterDemoMode() {
+    if (isDemoMode) return;
+    isDemoMode = true;
+    statusDiv.textContent = '🟡 DEMO MODE · no server';
+    statusDiv.className   = 'demo';
+    fireDemoAttack();
+    _demoTimer = setInterval(fireDemoAttack, 1500);
+  }
+
+  // ═══════════════════════════════════════
+  // SOCKET
+  // ═══════════════════════════════════════
+  function normalizePlayers(state) {
+    const out = {};
+    for (const key in state) {
+      const p = state[key] || {};
+      p.uniqueId = p.uniqueId || p.id || key;
+      out[p.uniqueId] = p;
+    }
+    return out;
+  }
+
+  function initSocket() {
+    if (typeof io === 'undefined') { enterDemoMode(); return; }
+    try {
+      socket = io({ transports: ['websocket', 'polling'], timeout: 5000 });
+
+      socket.on('connect', () => {
+        isDemoMode = false; stopDemoLoop();
+        statusDiv.textContent = '🟢 LIVE · CONNECTED';
+        statusDiv.className   = 'connected';
+        socket.emit('register', { type: 'overlay' });
+      });
+
+      socket.on('disconnect', () => {
+        statusDiv.textContent = '🔴 DISCONNECTED · waiting...';
+        statusDiv.className   = 'disconnected';
+      });
+
+      socket.on('connect_error', () => {
+        statusDiv.textContent = '⚠️ SERVER ERROR · retrying';
+        statusDiv.className   = 'disconnected';
+        if (Object.keys(players).length === 0) enterDemoMode();
+      });
+
+      socket.on('gameState', state => {
+        if (state && typeof state === 'object') {
+          players    = normalizePlayers(state);
+          isDemoMode = false; stopDemoLoop();
+          if (!Object.keys(players).length) {
+            fetch('/state').then(r => r.json()).then(s => { players = normalizePlayers(s || {}); }).catch(() => {});
+          }
+        }
+      });
+
+      socket.on('audioConfig',     cfg      => { if (cfg) audioConfig = cfg; });
+      socket.on('overlaySettings', settings => { if (settings && typeof settings === 'object') overlaySettings = Object.assign({}, overlaySettings, settings); });
+      socket.on('laserColor',      data     => { const c = typeof data === 'string' ? data : (data && data.color); if (c) { overlaySettings.laserColor = c; setLaserColor(c); } });
+
+      socket.on('backgroundChanged', data => {
+        const filename = data && data.filename;
+        if (!filename) { backgroundImg = null; return; }
+        const img = new Image();
+        img.onload = () => { backgroundImg = img; };
+        img.src    = `/background/${filename}?v=${Date.now()}`;
+      });
+
+      socket.on('attack', data => {
+        fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect, {
+          intensity: data.intensity, critical: data.critical, streak: data.streak,
+          giftBoosted: data.giftBoosted, remainingHpPct: data.remainingHpPct,
+          killingBlow: data.killingBlow, laserColor: data.laserColor, shotSpeed: data.shotSpeed,
+        });
+      });
+
+      socket.on('giftAttack', data => {
+        const s = overlaySettings.shotType;
+        const forcedEffect = s === 'beam' ? 'beam' : s === 'pulse' ? 'fire' : s === 'wave' ? 'ripple' : s === 'burst' ? 'explosion' : s === 'ripple' ? 'ripple' : 'laser';
+        fireAttack(data.attacker, data.target, data.damage, data.killed, true, forcedEffect, {
+          intensity: data.intensity || 0.5, giftBoosted: true,
+          remainingHpPct: data.killed ? 0 : 1,
+          killingBlow: !!data.killed, laserColor: data.giftColor,
+        });
+      });
+
+      socket.on('like',        data => { fireHeartEffect(data.uniqueId, data.hearts || 1, data.intensity || 0); playSound('heal'); });
+      socket.on('respawn',     data => { spawnRespawnEffect(data.uniqueId); });
+      socket.on('soundEvent',  data => { if (data && data.event) playSound(data.event); });
+
+      socket.on('killEvent', data => {
+        fireAttack(data.killer, data.victim, data.damage, true, false, data.effect || 'explosion', { intensity: 0.95, critical: true, streak: data.killerStreak || 0, remainingHpPct: 0 });
+        showBanner('kill', `${data.killerNick || data.killer} 💀 ${data.victimNick || data.victim}<span style="font-size:0.68em;opacity:0.8"> (${data.killerKills} kills)</span>`);
+        playSound('kill');
+      });
+
+      socket.on('streakEvent', data => {
+        const name = data.nickname || data.killerNick || '???';
+        const streak = data.streak || data.streakCount || 0;
+        showBanner('streak', `🔥 ${name} – ${data.label || streak + ' KILL STREAK'}!`);
+      });
+
+      socket.on('giftCelebration', data => {
+        const isLegend = data.tier === 'legendary';
+        showBanner(isLegend ? 'legendary' : 'gift', `${data.giftLabel || '🎁'} <strong>${data.nickname}</strong> sent <strong>${data.giftName || 'a gift'}</strong> · ${data.diamonds} 💎 · ${(data.tier || 'common').toUpperCase()}`, isLegend ? 4500 : 3200);
+      });
+
+      socket.on('layoutUpdate', ({ gapX, gapY }) => {
+        if (typeof gapX === 'number') { layoutGap = gapX; gapControl.value = gapX; syncFill(gapControl); }
+        if (typeof gapY === 'number') { offsetY = (gapY - 260) * 0.3; offsetYControl.value = offsetY; syncFill(offsetYControl); }
+        updateLabels();
+      });
+
+      socket.on('forceReload', data => {
+        const delayMs = (data && data.delayMs) || 3000;
+        const reason  = (data && data.reason)  || 'Operator reload';
+        const el = document.createElement('div');
+        el.className = 'reload-overlay';
+        el.innerHTML = `<div class="countdown" id="rc">${Math.ceil(delayMs / 1000)}</div><div class="reason">${reason}</div>`;
+        document.body.appendChild(el);
+        let rem = Math.ceil(delayMs / 1000);
+        const iv = setInterval(() => { rem--; const rc = document.getElementById('rc'); if (rem <= 0) { clearInterval(iv); location.reload(); } else if (rc) rc.textContent = rem; }, 1000);
+      });
+
+      setTimeout(() => { if (Object.keys(players).length === 0) enterDemoMode(); }, 3000);
+
+    } catch (err) {
+      statusDiv.textContent = '❌ SOCKET ERROR · no live data';
+      statusDiv.className   = 'disconnected';
+      enterDemoMode();
+    }
+  }
+
+  initSocket();
+  requestAnimationFrame(draw);
+
+})();
 </script>
+
 </body>
 </html>
