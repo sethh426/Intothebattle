@@ -39,6 +39,17 @@ function requiresRoomId() {
   return row ? row.value !== '0' : true;
 }
 
+function logAuthInfo(req, extras = {}) {
+  logger.info({
+    path: req?.path,
+    method: req?.method,
+    tokenPresent: !!req?.cookies?.session_token,
+    tokenLength: req?.cookies?.session_token ? String(req.cookies.session_token).length : 0,
+    requiresRoomId: requiresRoomId(),
+    ...extras,
+  }, 'Auth info');
+}
+
 dotenv.config();
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
@@ -958,20 +969,26 @@ function socketAuth(socket, next) {
     }).filter(([name]) => name)
   );
   const token = parsed.session_token;
-  if (!token) return next(new Error('Unauthorized: no session token'));
+  if (!token) {
+    logger.warn({ authRoom: authRoom || null, tokenPresent: false }, 'Socket auth failed: no session token');
+    return next(new Error('Unauthorized: no session token'));
+  }
 
   try {
     jwt.verify(token, process.env.JWT_SECRET);
   } catch {
+    logger.warn({ tokenLength: String(token).length }, 'Socket auth failed: invalid token');
     return next(new Error('Unauthorized: invalid token'));
   }
 
   const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
   if (!row || row.is_revoked || new Date(row.expires_at) < new Date()) {
+    logger.warn({ rowId: row?.id, code: row?.code, isRevoked: row?.is_revoked, expiresAt: row?.expires_at }, 'Socket auth failed: expired or revoked');
     return next(new Error('Unauthorized: expired or revoked'));
   }
   if (!row.room_id) {
     if (requiresRoomId()) {
+      logger.warn({ rowId: row.id, code: row.code, requiresRoomId: true }, 'Socket auth failed: room assignment missing');
       return next(new Error('Unauthorized: room assignment missing'));
     }
     socket.roomId = DEFAULT_ROOM_ID;
@@ -984,14 +1001,20 @@ function socketAuth(socket, next) {
 
 function requireRoom(req, res, next) {
   const token = req.cookies?.session_token;
-  if (!token) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  if (!token) {
+    logger.warn({ path: req.path, method: req.method, tokenPresent: false }, 'API auth failed: no session token');
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
 
   const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
   if (!row || row.is_revoked || new Date(row.expires_at) < new Date()) {
+    logger.warn({ path: req.path, method: req.method, tokenPresent: true, rowId: row?.id, code: row?.code, isRevoked: row?.is_revoked, expiresAt: row?.expires_at }, 'API auth failed: expired or revoked or no row');
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
   if (!row.room_id) {
-    if (requiresRoomId()) {
+    const roomNeeded = requiresRoomId();
+    if (roomNeeded) {
+      logger.warn({ path: req.path, method: req.method, rowId: row.id, code: row.code, requiresRoomId: roomNeeded }, 'API auth failed: no room assigned');
       return res.status(400).json({ success: false, error: 'No room assigned' });
     }
     req.roomId = DEFAULT_ROOM_ID;
@@ -999,6 +1022,7 @@ function requireRoom(req, res, next) {
     req.roomId = row.room_id;
   }
 
+  logger.info({ path: req.path, method: req.method, rowId: row.id, code: row.code, roomId: req.roomId, requiresRoomId: requiresRoomId() }, '/api/connect auth success');
   req.room = getOrCreateRoom(req.roomId);
   loadRoomPlayerStats(req.room);
   loadRoomBackground(req.room);
