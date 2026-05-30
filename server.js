@@ -849,6 +849,10 @@ app.get('/', (req, res) => {
 app.get('/home', (_req, res) => res.sendFile(path.join(__dirname, 'home.html')));
 app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));
 app.get('/paywall', (_req, res) => res.sendFile(path.join(__dirname, 'paywall.html')));
+app.get('/paywall-link', (_req, res) => {
+  const url = process.env.PAYPAL_PAYMENT_LINK || 'https://www.paypal.com';
+  res.redirect(302, url);
+});
 app.get('/login', (_req, res) => res.redirect('/home'));
 
 // Auth endpoints for trial signup

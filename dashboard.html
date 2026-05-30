@@ -629,7 +629,7 @@ function setTikTokStatus(state, username) {
 }
 async function fetchStatus() {
   try {
-    const res = await fetch('/api/status');
+    const res = await fetch('/api/status', { credentials: 'same-origin' });
     const data = await res.json();
     currentRoomId = data.roomId || null;
     document.getElementById('username').value = data.username || '';
@@ -647,7 +647,7 @@ setInterval(fetchStatus, 10000);
 
 // API calls
 async function apiCall(endpoint, method = 'POST', body = null) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(endpoint, opts);
   const json = await res.json();
@@ -658,7 +658,7 @@ function connect() {
   let username = document.getElementById('username').value.trim().replace(/^@/, '');
   if (!username) { toast('Enter a username', true); return; }
   setTikTokStatus('connecting', username);
-  fetch('/api/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }) })
+  fetch('/api/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ username }) })
     .then(r => r.json())
     .then(d => {
       if (d.success) { setTikTokStatus('connected', username); toast(`Connected to @${username}`); }
@@ -674,7 +674,7 @@ function uploadBackground() {
   const file = document.getElementById('bgUpload').files[0];
   if (!file) { toast('Choose an image first', true); return; }
   const fd = new FormData(); fd.append('background', file);
-  fetch('/api/background/upload', { method: 'POST', body: fd })
+  fetch('/api/background/upload', { method: 'POST', credentials: 'same-origin', body: fd })
     .then(r => r.json())
     .then(d => { if(d.success) { document.getElementById('bgStatus').textContent = `Background set: ${file.name}`; toast('Background uploaded'); } });
 }

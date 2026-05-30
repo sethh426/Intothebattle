@@ -291,8 +291,8 @@
 
   <script>
     function upgradeToPaid() {
-      // Redirect to PayPal subscription URL
-      window.location.href = process.env.PAYPAL_PAYMENT_LINK || 'https://www.paypal.com';
+      // Redirect to the server-managed PayPal subscription link.
+      window.location.href = '/paywall-link';
     }
   </script>
 </body>
