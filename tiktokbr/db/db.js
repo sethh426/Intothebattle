@@ -49,7 +49,7 @@ try {
 } catch (_) {}
 
 try {
-  const codesWithoutRoom = db.prepare('SELECT id FROM access_codes WHERE room_id IS NULL').all();
+  const codesWithoutRoom = db.prepare("SELECT id FROM access_codes WHERE room_id IS NULL OR room_id = ''").all();
   const updateRoom = db.prepare('UPDATE access_codes SET room_id = ? WHERE id = ?');
   const migrateRooms = db.transaction(() => {
     codesWithoutRoom.forEach(row => {

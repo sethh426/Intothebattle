@@ -951,6 +951,20 @@ app.get(['/overlay.html', '/overlay'], (req, res, next) => {
 });
 app.get('/admin-panel',  requireAccess, (_req, res) => res.redirect('/admin'));
 
+function assignDefaultRoomIfMissing(row) {
+  if (row.room_id) return row.room_id;
+
+  const assignedRoom = DEFAULT_ROOM_ID;
+  try {
+    db.prepare('UPDATE access_codes SET room_id = ? WHERE id = ?').run(assignedRoom, row.id);
+    row.room_id = assignedRoom;
+    logger.info({ rowId: row.id, code: row.code, assignedRoom, requiresRoomId: requiresRoomId() }, 'Assigned default room to access code missing room_id');
+  } catch (err) {
+    logger.error({ err, rowId: row.id, code: row.code }, 'Failed to assign default room to access code');
+  }
+  return assignedRoom;
+}
+
 function socketAuth(socket, next) {
   // Allow unauthenticated overlays to supply a room id via the socket auth payload
   // (client: io({ auth: { roomId } })) or query param (legacy).
@@ -986,15 +1000,7 @@ function socketAuth(socket, next) {
     logger.warn({ rowId: row?.id, code: row?.code, isRevoked: row?.is_revoked, expiresAt: row?.expires_at }, 'Socket auth failed: expired or revoked');
     return next(new Error('Unauthorized: expired or revoked'));
   }
-  if (!row.room_id) {
-    if (requiresRoomId()) {
-      logger.warn({ rowId: row.id, code: row.code, requiresRoomId: true }, 'Socket auth failed: room assignment missing');
-      return next(new Error('Unauthorized: room assignment missing'));
-    }
-    socket.roomId = DEFAULT_ROOM_ID;
-  } else {
-    socket.roomId = row.room_id;
-  }
+  socket.roomId = assignDefaultRoomIfMissing(row);
   socket.accessCode = row;
   next();
 }
@@ -1011,17 +1017,8 @@ function requireRoom(req, res, next) {
     logger.warn({ path: req.path, method: req.method, tokenPresent: true, rowId: row?.id, code: row?.code, isRevoked: row?.is_revoked, expiresAt: row?.expires_at }, 'API auth failed: expired or revoked or no row');
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
-  if (!row.room_id) {
-    const roomNeeded = requiresRoomId();
-    if (roomNeeded) {
-      logger.warn({ path: req.path, method: req.method, rowId: row.id, code: row.code, requiresRoomId: roomNeeded }, 'API auth failed: no room assigned');
-      return res.status(400).json({ success: false, error: 'No room assigned' });
-    }
-    req.roomId = DEFAULT_ROOM_ID;
-  } else {
-    req.roomId = row.room_id;
-  }
 
+  req.roomId = assignDefaultRoomIfMissing(row);
   logger.info({ path: req.path, method: req.method, rowId: row.id, code: row.code, roomId: req.roomId, requiresRoomId: requiresRoomId() }, '/api/connect auth success');
   req.room = getOrCreateRoom(req.roomId);
   loadRoomPlayerStats(req.room);
