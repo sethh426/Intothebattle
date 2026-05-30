@@ -612,7 +612,9 @@ socket.on('audioConfig', (cfg) => {
   renderAssignTable();
 });
 
-// Status fetching
+// Status fetching – FIX: only set username on first load
+let initialLoad = true;
+
 function setTikTokStatus(state, username) {
   const chip = document.getElementById('tiktok-chip');
   const label = document.getElementById('tiktok-label');
@@ -627,21 +629,36 @@ function setTikTokStatus(state, username) {
     label.textContent = 'Disconnected';
   }
 }
+
 async function fetchStatus() {
   try {
     const res = await fetch('/api/status', { credentials: 'same-origin' });
     const data = await res.json();
     currentRoomId = data.roomId || null;
-    document.getElementById('username').value = data.username || '';
-    if (data.background?.filename) document.getElementById('bgStatus').textContent = `Background set: ${data.background.filename}`;
-    else document.getElementById('bgStatus').textContent = 'No background set';
+
+    // Only update the username input field once, on first page load
+    if (initialLoad) {
+      document.getElementById('username').value = data.username || '';
+      initialLoad = false;
+    }
+
+    if (data.background?.filename) {
+      document.getElementById('bgStatus').textContent = `Background set: ${data.background.filename}`;
+    } else {
+      document.getElementById('bgStatus').textContent = 'No background set';
+    }
+
     setTikTokStatus(data.connected ? 'connected' : 'disconnected', data.username);
     document.getElementById('dev-mode-badge').textContent = data.devTestMode ? 'ON' : 'OFF';
+
     if (data.overlayCount !== undefined) {
-      socket.emit('register', { type: 'dashboard' }); // ensure socket registers
+      socket.emit('register', { type: 'dashboard' });
     }
-  } catch (e) { console.warn(e); }
+  } catch (e) {
+    console.warn(e);
+  }
 }
+
 fetchStatus();
 setInterval(fetchStatus, 10000);
 
