@@ -39,6 +39,16 @@ try {
 } catch (_) {}
 
 try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    )
+  `);
+  db.prepare('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)').run('require_room_id', '1');
+} catch (_) {}
+
+try {
   const codesWithoutRoom = db.prepare('SELECT id FROM access_codes WHERE room_id IS NULL').all();
   const updateRoom = db.prepare('UPDATE access_codes SET room_id = ? WHERE id = ?');
   const migrateRooms = db.transaction(() => {

@@ -48,7 +48,7 @@ function requireAdminAuth(req, res, next) {
   next();
 }
 
-function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [] } = {}) {
+function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [], roomRequirementEnabled = true } = {}) {
   const codeRows = codes.map((code) => {
     const status = code.is_revoked ? 'Revoked' : new Date(code.expires_at) < new Date() ? 'Expired' : 'Active';
     const actionLabel = code.is_revoked ? 'Enable' : 'Disable';
@@ -149,6 +149,13 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         </form>
       </div>
       <div class="card">
+        <h2>Room ID requirement</h2>
+        <p>Current behavior: <strong>${roomRequirementEnabled ? 'Room ID required' : 'Room ID not required'}</strong></p>
+        <form method="POST" action="/admin/toggle-room-requirement">
+          <button type="submit">${roomRequirementEnabled ? 'Disable room ID requirement' : 'Enable room ID requirement'}</button>
+        </form>
+      </div>
+      <div class="card">
         <h2>Create promo code</h2>
         <form method="POST" action="/admin/create-promo">
           <label>Promo code</label>
@@ -238,7 +245,25 @@ router.get('/logout', (req, res) => {
 router.get('/', requireAdminAuth, (req, res) => {
   const codes = db.prepare('SELECT * FROM access_codes ORDER BY expires_at DESC').all();
   const promos = db.prepare('SELECT * FROM promo_codes ORDER BY created_at DESC').all();
-  res.send(renderAdminPage({ createdCode: String(req.query.createdCode || '').trim(), message: String(req.query.message || ''), error: String(req.query.error || ''), codes, promos }));
+  const setting = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('require_room_id');
+  const roomRequirementEnabled = setting ? setting.value !== '0' : true;
+  res.send(renderAdminPage({
+    createdCode: String(req.query.createdCode || '').trim(),
+    message: String(req.query.message || ''),
+    error: String(req.query.error || ''),
+    codes,
+    promos,
+    roomRequirementEnabled,
+  }));
+});
+
+router.post('/toggle-room-requirement', requireAdminAuth, (req, res) => {
+  const setting = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('require_room_id');
+  const currentValue = setting ? setting.value !== '0' : true;
+  const newValue = currentValue ? '0' : '1';
+  db.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run('require_room_id', newValue);
+  const action = newValue === '1' ? 'enabled' : 'disabled';
+  res.redirect(`/admin?message=${encodeURIComponent(`Room ID requirement ${action}`)}`);
 });
 
 router.post('/issue-code', requireAdminAuth, (req, res) => {

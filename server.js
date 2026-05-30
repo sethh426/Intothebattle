@@ -34,6 +34,11 @@ function getDefaultRoom() {
   return getOrCreateRoom(DEFAULT_ROOM_ID);
 }
 
+function requiresRoomId() {
+  const row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('require_room_id');
+  return row ? row.value !== '0' : true;
+}
+
 dotenv.config();
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
@@ -966,10 +971,14 @@ function socketAuth(socket, next) {
     return next(new Error('Unauthorized: expired or revoked'));
   }
   if (!row.room_id) {
-    return next(new Error('Unauthorized: room assignment missing'));
+    if (requiresRoomId()) {
+      return next(new Error('Unauthorized: room assignment missing'));
+    }
+    socket.roomId = DEFAULT_ROOM_ID;
+  } else {
+    socket.roomId = row.room_id;
   }
   socket.accessCode = row;
-  socket.roomId = row.room_id;
   next();
 }
 
@@ -982,11 +991,15 @@ function requireRoom(req, res, next) {
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
   if (!row.room_id) {
-    return res.status(400).json({ success: false, error: 'No room assigned' });
+    if (requiresRoomId()) {
+      return res.status(400).json({ success: false, error: 'No room assigned' });
+    }
+    req.roomId = DEFAULT_ROOM_ID;
+  } else {
+    req.roomId = row.room_id;
   }
 
-  req.roomId = row.room_id;
-  req.room = getOrCreateRoom(row.room_id);
+  req.room = getOrCreateRoom(req.roomId);
   loadRoomPlayerStats(req.room);
   loadRoomBackground(req.room);
   loadRoomAudioConfig(req.room);
