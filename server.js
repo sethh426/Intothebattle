@@ -21,6 +21,7 @@ import paypalRoutes from './tiktokbr/routes/paypal.js';
 import requireAccess from './tiktokbr/middleware/auth.js';
 import checkTrial from './tiktokbr/middleware/checkTrial.js';
 import {
+  getOrCreateRoom,
   getRoom,
   getAllRooms,
   saveRoomSettings,
@@ -71,6 +72,7 @@ let DEV_TEST_MODE = process.env.DEV_TEST_MODE === 'true';
 const PORT = process.env.PORT || 3000;
 
 let currentStreamer = process.argv[2] || '';
+let client = null;
 
 const CFG = {
   BASE_HP:                        300,
