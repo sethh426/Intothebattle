@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
@@ -10,80 +9,80 @@
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Exo+2:wght@400;700;900&display=swap');
 
 :root {
-–accent:      #7afcff;
-–accent-glow: rgba(122,252,255,0.55);
-–accent-dim:  rgba(122,252,255,0.18);
-–bg-deep:     #02040a;
-–bg-panel:    rgba(5,9,20,0.97);
-–bg-item:     rgba(255,255,255,0.035);
-–border:      rgba(100,200,255,0.12);
-–border-hi:   rgba(100,200,255,0.28);
-–text:        #d4eeff;
-–text-dim:    rgba(212,238,255,0.45);
-–danger:      #ff5566;
-–warn:        #ffcc44;
+  --accent:      #7afcff;
+  --accent-glow: rgba(122,252,255,0.55);
+  --accent-dim:  rgba(122,252,255,0.18);
+  --bg-deep:     #02040a;
+  --bg-panel:    rgba(2,8,18,0.98);   /* darker, more opaque */
+  --bg-item:     rgba(255,255,255,0.08);
+  --border:      rgba(100,200,255,0.22);
+  --border-hi:   rgba(100,200,255,0.45);
+  --text:        #eef5ff;              /* brighter */
+  --text-dim:    #8899bb;              /* more contrast */
+  --danger:      #ff5566;
+  --warn:        #ffcc44;
 }
 
-- { margin:0; padding:0; box-sizing:border-box; }
-  html,body { width:100%; height:100%; overflow:hidden; background:var(–bg-deep); font-family:‘Exo 2’,‘Segoe UI’,sans-serif; }
-  body { display:flex; align-items:center; justify-content:center; }
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:100%; height:100%; overflow:hidden; background:var(--bg-deep); font-family:'Exo 2','Segoe UI',sans-serif; }
+body { display:flex; align-items:center; justify-content:center; }
 
 #overlay-container {
-position:relative; width:min(90vw,1920px); aspect-ratio:16/9;
-background:rgba(4,8,18,0.92);
-border:1px solid rgba(180,120,255,0.35); border-radius:18px;
-box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06),0 0 48px rgba(140,80,255,0.18),0 0 120px rgba(80,40,180,0.08);
-overflow:hidden;
+  position:relative; width:min(90vw,1920px); aspect-ratio:16/9;
+  background:rgba(4,8,18,0.92);
+  border:1px solid rgba(180,120,255,0.35); border-radius:18px;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06),0 0 48px rgba(140,80,255,0.18),0 0 120px rgba(80,40,180,0.08);
+  overflow:hidden;
 }
 #canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
 
 /* ── Panel ── */
 .panel-wrapper { position:fixed; top:16px; right:0; display:flex; align-items:flex-start; pointer-events:auto; z-index:30; }
 .panel-tab {
-width:28px; min-height:80px; background:var(–bg-panel);
-border:1px solid var(–border); border-right:none; border-radius:8px 0 0 8px;
-padding:10px 0; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px;
-color:var(–accent); font-size:9px; font-weight:800; letter-spacing:1.5px;
-text-transform:uppercase; writing-mode:vertical-rl; user-select:none;
-font-family:‘Rajdhani’,sans-serif; transition:background .2s,border-color .2s;
+  width:28px; min-height:80px; background:var(--bg-panel);
+  border:1px solid var(--border); border-right:none; border-radius:8px 0 0 8px;
+  padding:10px 0; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:5px;
+  color:var(--accent); font-size:9px; font-weight:800; letter-spacing:1.5px;
+  text-transform:uppercase; writing-mode:vertical-rl; user-select:none;
+  font-family:'Rajdhani',sans-serif; transition:background .2s,border-color .2s;
 }
-.panel-tab:hover { background:rgba(20,44,70,0.98); border-color:var(–border-hi); }
+.panel-tab:hover { background:rgba(20,44,70,0.98); border-color:var(--border-hi); }
 .panel-tab-icon { font-size:13px; writing-mode:horizontal-tb; }
 
 .layout-panel {
-width:272px; background:var(–bg-panel); backdrop-filter:blur(22px);
-border:1px solid var(–border); border-right:none; border-radius:0 0 0 14px;
-box-shadow:-10px 0 40px rgba(0,0,0,0.75),inset 1px 0 0 rgba(255,255,255,0.03);
-transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .25s ease;
-transform-origin:right top; max-height:calc(100vh - 32px);
-overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:var(–border) transparent;
+  width:272px; background:var(--bg-panel); backdrop-filter:blur(24px);
+  border:1px solid var(--border); border-right:none; border-radius:0 0 0 14px;
+  box-shadow:-10px 0 40px rgba(0,0,0,0.75),inset 1px 0 0 rgba(255,255,255,0.03);
+  transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .25s ease;
+  transform-origin:right top; max-height:calc(100vh - 32px);
+  overflow-y:auto; overflow-x:hidden; scrollbar-width:thin; scrollbar-color:var(--border) transparent;
 }
 .layout-panel::-webkit-scrollbar { width:3px; }
-.layout-panel::-webkit-scrollbar-thumb { background:var(–border); border-radius:3px; }
+.layout-panel::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
 .layout-panel.hidden { transform:translateX(100%); opacity:0; pointer-events:none; }
 
 .panel-header {
-display:flex; align-items:center; justify-content:space-between;
-padding:11px 13px 9px; border-bottom:1px solid var(–border);
-position:sticky; top:0; z-index:5; background:rgba(5,9,20,0.99); backdrop-filter:blur(22px);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:11px 13px 9px; border-bottom:1px solid var(--border);
+  position:sticky; top:0; z-index:5; background:rgba(2,8,18,0.99); backdrop-filter:blur(24px);
 }
-.panel-title { color:var(–accent); font-size:10.5px; font-weight:800; letter-spacing:2.5px; text-transform:uppercase; font-family:‘Rajdhani’,sans-serif; }
+.panel-title { color:var(--accent); font-size:10.5px; font-weight:800; letter-spacing:2.5px; text-transform:uppercase; font-family:'Rajdhani',sans-serif; }
 .panel-close {
-width:20px; height:20px; border-radius:50%; background:rgba(255,255,255,0.05);
-border:1px solid var(–border); color:var(–text-dim); font-size:9px; cursor:pointer;
-display:flex; align-items:center; justify-content:center; transition:all .15s; font-family:monospace; line-height:1;
+  width:20px; height:20px; border-radius:50%; background:rgba(255,255,255,0.08);
+  border:1px solid var(--border); color:var(--text-dim); font-size:9px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; transition:all .15s; font-family:monospace; line-height:1;
 }
-.panel-close:hover { background:rgba(255,70,80,0.2); border-color:rgba(255,80,80,0.4); color:#ff9999; }
+.panel-close:hover { background:rgba(255,70,80,0.3); border-color:rgba(255,80,80,0.5); color:#ff9999; }
 
-.section { border-bottom:1px solid var(–border); }
+.section { border-bottom:1px solid var(--border); }
 .section-hd {
-display:flex; align-items:center; justify-content:space-between;
-padding:8px 13px; cursor:pointer; user-select:none;
-font-family:‘Rajdhani’,sans-serif; font-size:9.5px; font-weight:700;
-letter-spacing:2px; text-transform:uppercase; color:var(–text-dim);
-transition:color .15s,background .15s;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 13px; cursor:pointer; user-select:none;
+  font-family:'Rajdhani',sans-serif; font-size:9.5px; font-weight:700;
+  letter-spacing:2px; text-transform:uppercase; color:var(--text-dim);
+  transition:color .15s,background .15s;
 }
-.section-hd:hover { color:var(–accent); background:rgba(122,252,255,0.025); }
+.section-hd:hover { color:var(--accent); background:rgba(122,252,255,0.05); }
 .section-hd .chev { font-size:9px; transition:transform .22s; }
 .section-hd.open .chev { transform:rotate(180deg); }
 .section-bd { display:grid; grid-template-rows:1fr; transition:grid-template-rows .22s ease; }
@@ -93,125 +92,125 @@ transition:color .15s,background .15s;
 .ctrl { margin-bottom:10px; }
 .ctrl:last-child { margin-bottom:0; }
 .ctrl-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px; }
-.ctrl-lbl { font-family:‘Rajdhani’,sans-serif; font-size:11px; font-weight:600; color:var(–text); }
-.ctrl-val { font-family:‘Rajdhani’,monospace; font-size:11px; font-weight:700; color:var(–accent); min-width:36px; text-align:right; }
-.ctrl-desc { font-family:‘Rajdhani’,sans-serif; font-size:9px; color:var(–text-dim); margin-top:2px; letter-spacing:.4px; }
+.ctrl-lbl { font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:600; color:var(--text); }
+.ctrl-val { font-family:'Rajdhani',monospace; font-size:11px; font-weight:700; color:var(--accent); min-width:36px; text-align:right; }
+.ctrl-desc { font-family:'Rajdhani',sans-serif; font-size:9px; color:var(--text-dim); margin-top:2px; letter-spacing:.4px; }
 
 input[type=range] {
-width:100%; appearance:none; -webkit-appearance:none;
-height:4px; border-radius:999px; outline:none; cursor:pointer;
-background:rgba(255,255,255,0.07);
+  width:100%; appearance:none; -webkit-appearance:none;
+  height:5px; border-radius:999px; outline:none; cursor:pointer;
+  background:rgba(255,255,255,0.12);
 }
 input[type=range]::-webkit-slider-thumb {
-appearance:none; -webkit-appearance:none;
-width:14px; height:14px; border-radius:50%; background:var(–accent);
-box-shadow:0 0 8px var(–accent-glow),0 0 0 2px rgba(122,252,255,0.18);
-cursor:pointer; transition:transform .1s,box-shadow .1s;
+  appearance:none; -webkit-appearance:none;
+  width:14px; height:14px; border-radius:50%; background:var(--accent);
+  box-shadow:0 0 8px var(--accent-glow),0 0 0 2px rgba(122,252,255,0.18);
+  cursor:pointer; transition:transform .1s,box-shadow .1s;
 }
 input[type=range]:active::-webkit-slider-thumb,
 input[type=range]:hover::-webkit-slider-thumb {
-transform:scale(1.18); box-shadow:0 0 14px var(–accent-glow),0 0 0 3px rgba(122,252,255,0.28);
+  transform:scale(1.18); box-shadow:0 0 14px var(--accent-glow),0 0 0 3px rgba(122,252,255,0.28);
 }
 input[type=range]::-moz-range-thumb {
-width:14px; height:14px; border-radius:50%; background:var(–accent);
-border:none; box-shadow:0 0 8px var(–accent-glow); cursor:pointer;
+  width:14px; height:14px; border-radius:50%; background:var(--accent);
+  border:none; box-shadow:0 0 8px var(--accent-glow); cursor:pointer;
 }
 
 .toggle-row { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-.toggle-lbl { font-family:‘Rajdhani’,sans-serif; font-size:11px; font-weight:600; color:var(–text); }
+.toggle-lbl { font-family:'Rajdhani',sans-serif; font-size:11px; font-weight:600; color:var(--text); }
 .tog { position:relative; width:34px; height:18px; cursor:pointer; }
 .tog input { opacity:0; width:0; height:0; position:absolute; }
-.tog-track { position:absolute; inset:0; border-radius:999px; background:rgba(255,255,255,0.08); border:1px solid var(–border); transition:background .2s,border-color .2s; }
+.tog-track { position:absolute; inset:0; border-radius:999px; background:rgba(255,255,255,0.12); border:1px solid var(--border); transition:background .2s,border-color .2s; }
 .tog input:checked~.tog-track { background:rgba(122,252,255,0.22); border-color:rgba(122,252,255,0.45); }
-.tog-knob { position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:rgba(190,220,255,0.55); transition:transform .18s cubic-bezier(.4,0,.2,1),background .18s; }
-.tog input:checked~.tog-track .tog-knob { transform:translateX(16px); background:var(–accent); }
+.tog-knob { position:absolute; top:2px; left:2px; width:12px; height:12px; border-radius:50%; background:rgba(220,240,255,0.65); transition:transform .18s cubic-bezier(.4,0,.2,1),background .18s; }
+.tog input:checked~.tog-track .tog-knob { transform:translateX(16px); background:var(--accent); }
 
 .shot-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:3px; margin-top:6px; }
 .shot-btn {
-background:var(–bg-item); border:1px solid var(–border);
-border-radius:5px; padding:5px 2px; font-family:‘Rajdhani’,sans-serif;
-font-size:9.5px; font-weight:600; color:var(–text-dim); cursor:pointer;
-text-align:center; transition:all .14s; letter-spacing:.3px;
+  background:var(--bg-item); border:1px solid var(--border);
+  border-radius:5px; padding:5px 2px; font-family:'Rajdhani',sans-serif;
+  font-size:9.5px; font-weight:600; color:var(--text-dim); cursor:pointer;
+  text-align:center; transition:all .14s; letter-spacing:.3px;
 }
-.shot-btn:hover { background:rgba(122,252,255,0.07); color:var(–accent); border-color:var(–accent-dim); }
-.shot-btn.active { background:rgba(122,252,255,0.14); color:var(–accent); border-color:rgba(122,252,255,0.5); box-shadow:0 0 8px rgba(122,252,255,0.18); }
+.shot-btn:hover { background:rgba(122,252,255,0.07); color:var(--accent); border-color:var(--accent-dim); }
+.shot-btn.active { background:rgba(122,252,255,0.14); color:var(--accent); border-color:rgba(122,252,255,0.5); box-shadow:0 0 8px rgba(122,252,255,0.18); }
 
 .color-row { display:flex; align-items:center; gap:7px; margin-top:5px; }
 .color-swatch {
-width:26px; height:26px; border-radius:5px; flex-shrink:0;
-border:1px solid rgba(255,255,255,0.18); cursor:pointer; transition:transform .14s,box-shadow .14s;
+  width:26px; height:26px; border-radius:5px; flex-shrink:0;
+  border:1px solid rgba(255,255,255,0.25); cursor:pointer; transition:transform .14s,box-shadow .14s;
 }
-.color-swatch:hover { transform:scale(1.1); box-shadow:0 0 10px rgba(255,255,255,0.2); }
+.color-swatch:hover { transform:scale(1.1); box-shadow:0 0 10px rgba(255,255,255,0.3); }
 input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-events:none; }
 .color-dots { display:flex; gap:4px; flex-wrap:wrap; }
 .color-dot {
-width:17px; height:17px; border-radius:50%; cursor:pointer; flex-shrink:0;
-border:2px solid transparent; transition:transform .14s,border-color .14s;
+  width:17px; height:17px; border-radius:50%; cursor:pointer; flex-shrink:0;
+  border:2px solid transparent; transition:transform .14s,border-color .14s;
 }
 .color-dot:hover { transform:scale(1.18); }
-.color-dot.active { border-color:rgba(255,255,255,0.75); }
+.color-dot.active { border-color:rgba(255,255,255,0.9); }
 
 .actions { display:grid; grid-template-columns:1fr 1fr; gap:5px; padding:10px 13px 13px; }
 .act-btn {
-background:var(–bg-item); border:1px solid var(–border);
-border-radius:6px; padding:7px 6px; font-family:‘Rajdhani’,sans-serif;
-font-size:10.5px; font-weight:700; color:var(–text-dim); cursor:pointer;
-text-align:center; letter-spacing:.9px; text-transform:uppercase; transition:all .14s;
+  background:var(--bg-item); border:1px solid var(--border);
+  border-radius:6px; padding:7px 6px; font-family:'Rajdhani',sans-serif;
+  font-size:10.5px; font-weight:700; color:var(--text-dim); cursor:pointer;
+  text-align:center; letter-spacing:.9px; text-transform:uppercase; transition:all .14s;
 }
-.act-btn:hover { background:rgba(122,252,255,0.07); color:var(–accent); border-color:var(–accent-dim); }
-.act-btn.wide { grid-column:1/-1; color:var(–accent); border-color:var(–accent-dim); }
+.act-btn:hover { background:rgba(122,252,255,0.07); color:var(--accent); border-color:var(--accent-dim); }
+.act-btn.wide { grid-column:1/-1; color:var(--accent); border-color:var(--accent-dim); }
 .act-btn.wide:hover { background:rgba(122,252,255,0.12); box-shadow:0 0 12px rgba(122,252,255,0.15); }
-.act-btn.danger { color:var(–danger); border-color:rgba(255,85,102,0.18); }
+.act-btn.danger { color:var(--danger); border-color:rgba(255,85,102,0.18); }
 .act-btn.danger:hover { background:rgba(255,85,102,0.1); border-color:rgba(255,85,102,0.38); }
 
 /* ── Status / damage / banners ── */
 #status-badge {
-position:fixed; bottom:12px; left:50%; transform:translateX(-50%);
-background:rgba(0,0,0,0.75); backdrop-filter:blur(8px);
-border-radius:24px; padding:4px 16px; font-size:11px; font-weight:bold;
-letter-spacing:1px; color:#aaa; pointer-events:none; z-index:9999;
-font-family:‘Rajdhani’,monospace; border:1px solid rgba(255,255,255,0.07);
-transition:color .2s,border-color .2s;
+  position:fixed; bottom:12px; left:50%; transform:translateX(-50%);
+  background:rgba(0,0,0,0.75); backdrop-filter:blur(8px);
+  border-radius:24px; padding:4px 16px; font-size:11px; font-weight:bold;
+  letter-spacing:1px; color:#aaa; pointer-events:none; z-index:9999;
+  font-family:'Rajdhani',monospace; border:1px solid rgba(255,255,255,0.07);
+  transition:color .2s,border-color .2s;
 }
 #status-badge.connected    { color:#7aff87; text-shadow:0 0 4px #2eff5e; border-color:rgba(122,255,135,0.2); }
 #status-badge.disconnected { color:#ff8866; border-color:rgba(255,136,102,0.2); }
 #status-badge.demo         { color:#ffd84f; text-shadow:0 0 4px #ffaa00; border-color:rgba(255,216,79,0.2); }
 
 .damage {
-position:fixed; font-weight:900; font-size:clamp(18px,3vw,28px);
-color:#ff5050; text-shadow:0 0 16px rgba(255,80,80,0.95),2px 2px 8px rgba(0,0,0,0.9);
-animation:floatDamage 0.85s ease-out forwards; pointer-events:none; z-index:9999;
-transform:translate(-50%,-50%); white-space:nowrap; font-family:‘Rajdhani’,sans-serif;
+  position:fixed; font-weight:900; font-size:clamp(18px,3vw,28px);
+  color:#ff5050; text-shadow:0 0 16px rgba(255,80,80,0.95),2px 2px 8px rgba(0,0,0,0.9);
+  animation:floatDamage 0.85s ease-out forwards; pointer-events:none; z-index:9999;
+  transform:translate(-50%,-50%); white-space:nowrap; font-family:'Rajdhani',sans-serif;
 }
 .damage.kill     { color:#ffd84f; font-size:clamp(22px,4vw,34px);   text-shadow:0 0 20px rgba(255,216,79,0.95); }
 .damage.critical { color:#ff2244; font-size:clamp(24px,4.5vw,38px); text-shadow:0 0 24px rgba(255,34,68,1),0 0 48px rgba(255,100,0,0.6); }
 @keyframes floatDamage {
-0%   { opacity:1; transform:translate(-50%,-50%)  scale(1.25); }
-100% { opacity:0; transform:translate(-50%,-190%) scale(0.6);  }
+  0%   { opacity:1; transform:translate(-50%,-50%)  scale(1.25); }
+  100% { opacity:0; transform:translate(-50%,-190%) scale(0.6);  }
 }
 
 .banner {
-position:fixed; left:50%; top:8%; transform:translate(-50%,0); z-index:10000; pointer-events:none;
-font-family:‘Rajdhani’,sans-serif; font-weight:900; text-align:center;
-animation:bannerIn 0.35s cubic-bezier(0.2,1.4,0.4,1),bannerOut 0.5s ease-in 2.6s forwards; white-space:nowrap;
+  position:fixed; left:50%; top:8%; transform:translate(-50%,0); z-index:10000; pointer-events:none;
+  font-family:'Rajdhani',sans-serif; font-weight:900; text-align:center;
+  animation:bannerIn 0.35s cubic-bezier(0.2,1.4,0.4,1),bannerOut 0.5s ease-in 2.6s forwards; white-space:nowrap;
 }
 .banner.kill      { font-size:clamp(18px,2vw,32px);   color:#ffcc44; text-shadow:0 0 30px rgba(255,200,0,0.9),0 0 80px rgba(255,100,0,0.6); letter-spacing:2px; }
 .banner.streak    { font-size:clamp(20px,2.2vw,36px); color:#ff44aa; text-shadow:0 0 40px rgba(255,68,170,0.9),0 0 80px rgba(255,0,100,0.4); letter-spacing:3px; }
 .banner.gift      { font-size:clamp(14px,1.8vw,26px); color:#fff; background:rgba(0,0,0,0.55); padding:10px 32px; border-radius:40px; backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.12); text-shadow:0 0 20px rgba(255,255,255,0.8); }
 .banner.legendary { font-size:clamp(22px,2.5vw,40px); color:#FFD700; text-shadow:0 0 40px rgba(255,215,0,1),0 0 100px rgba(255,140,0,0.8); letter-spacing:4px; animation:bannerIn 0.35s cubic-bezier(0.2,1.4,0.4,1),legendaryPulse 0.5s ease-in-out infinite alternate,bannerOut 0.5s ease-in 3.5s forwards; }
 @keyframes legendaryPulse {
-from { text-shadow:0 0 40px rgba(255,215,0,1),0 0 100px rgba(255,140,0,0.8); }
-to   { text-shadow:0 0 70px rgba(255,215,0,1),0 0 160px rgba(255,200,0,1);   }
+  from { text-shadow:0 0 40px rgba(255,215,0,1),0 0 100px rgba(255,140,0,0.8); }
+  to   { text-shadow:0 0 70px rgba(255,215,0,1),0 0 160px rgba(255,200,0,1);   }
 }
 @keyframes bannerIn  { 0%  { opacity:0; transform:translate(-50%,-24px) scale(0.88); } 100% { opacity:1; transform:translate(-50%,0) scale(1); } }
 @keyframes bannerOut { to  { opacity:0; transform:translate(-50%,-16px); } }
 
 .reload-overlay {
-position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:99999;
-display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:auto;
+  position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:99999;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:auto;
 }
-.reload-overlay .countdown { font-size:5vw; color:#fff; font-family:‘Rajdhani’,monospace; font-weight:700; text-shadow:0 0 40px rgba(122,252,255,0.8); letter-spacing:4px; }
-.reload-overlay .reason    { font-size:1.2vw; color:#8fd8ff; margin-top:20px; letter-spacing:2px; font-family:‘Rajdhani’,sans-serif; text-transform:uppercase; }
+.reload-overlay .countdown { font-size:5vw; color:#fff; font-family:'Rajdhani',monospace; font-weight:700; text-shadow:0 0 40px rgba(122,252,255,0.8); letter-spacing:4px; }
+.reload-overlay .reason    { font-size:1.2vw; color:#8fd8ff; margin-top:20px; letter-spacing:2px; font-family:'Rajdhani',sans-serif; text-transform:uppercase; }
 </style>
 
 </head>
@@ -222,7 +221,6 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
 </div>
 
 <!-- CONTROL PANEL -->
-
 <div class="panel-wrapper">
   <button class="panel-tab" id="togglePanel" aria-label="Toggle controls">
     <span class="panel-tab-icon">⚡</span>CTRL
@@ -233,106 +231,98 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
       <button class="panel-close" id="closePanel" title="Close">✕</button>
     </div>
 
-```
-<!-- Layout section -->
-<div class="section">
-  <div class="section-hd open" data-bd="bd-layout"><span>▦ LAYOUT</span><span class="chev">▾</span></div>
-  <div class="section-bd" id="bd-layout">
-    <div class="section-in" style="padding-top:10px">
-      <div class="ctrl">
-        <div class="ctrl-row"><span class="ctrl-lbl">Column Gap</span><span class="ctrl-val" id="gapValue">0</span></div>
-        <input id="gapControl" type="range" min="0" max="200" value="0" />
-      </div>
-      <div class="ctrl">
-        <div class="ctrl-row"><span class="ctrl-lbl">Horizontal Offset</span><span class="ctrl-val" id="offsetXValue">0</span></div>
-        <input id="offsetXControl" type="range" min="-400" max="400" value="0" />
-      </div>
-      <div class="ctrl">
-        <div class="ctrl-row"><span class="ctrl-lbl">Vertical Position</span><span class="ctrl-val" id="offsetYValue">0</span></div>
-        <input id="offsetYControl" type="range" min="-200" max="200" value="0" />
-      </div>
-      <div class="ctrl">
-        <div class="ctrl-row"><span class="ctrl-lbl">Layout Height</span><span class="ctrl-val" id="heightValue">85%</span></div>
-        <input id="heightControl" type="range" min="30" max="100" value="85" />
-      </div>
-      <div class="ctrl">
-        <div class="ctrl-row"><span class="ctrl-lbl">Top Player Count</span><span class="ctrl-val" id="hordeThresholdValue">5</span></div>
-        <input id="hordeThresholdControl" type="range" min="1" max="10" value="5" step="1" />
-        <div class="ctrl-desc">Players beyond this count join THE HORDE</div>
-      </div>
-      <div class="ctrl">
-        <div class="ctrl-row"><span class="ctrl-lbl">Zoom</span><span class="ctrl-val" id="zoomValue">100%</span></div>
-        <input id="zoomControl" type="range" min="60" max="140" value="100" />
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Visual section -->
-<div class="section">
-  <div class="section-hd open" data-bd="bd-visual"><span>◈ VISUAL</span><span class="chev">▾</span></div>
-  <div class="section-bd" id="bd-visual">
-    <div class="section-in" style="padding-top:10px">
-      <div class="toggle-row">
-        <span class="toggle-lbl">Dark Grid</span>
-        <label class="tog">
-          <input type="checkbox" id="themeToggle" checked>
-          <span class="tog-track"><span class="tog-knob"></span></span>
-        </label>
-      </div>
-      <div class="ctrl">
-        <div class="ctrl-row"><span class="ctrl-lbl">Laser Color</span></div>
-        <div class="color-row">
-          <div class="color-swatch" id="colorSwatch" style="background:#7afcff" title="Click to open picker"></div>
-          <input type="color" id="laserColorPicker" value="#7afcff">
-          <div class="color-dots">
-            <div class="color-dot active" data-color="#7afcff" style="background:#7afcff" title="Cyan"></div>
-            <div class="color-dot" data-color="#ff4499" style="background:#ff4499" title="Pink"></div>
-            <div class="color-dot" data-color="#ffcc00" style="background:#ffcc00" title="Gold"></div>
-            <div class="color-dot" data-color="#44ff88" style="background:#44ff88" title="Green"></div>
-            <div class="color-dot" data-color="#ff6600" style="background:#ff6600" title="Orange"></div>
-            <div class="color-dot" data-color="#aa44ff" style="background:#aa44ff" title="Purple"></div>
-            <div class="color-dot" data-color="#ffffff" style="background:#ffffff" title="White"></div>
+    <!-- Layout section (no Top Player Count) -->
+    <div class="section">
+      <div class="section-hd open" data-bd="bd-layout"><span>▦ LAYOUT</span><span class="chev">▾</span></div>
+      <div class="section-bd" id="bd-layout">
+        <div class="section-in" style="padding-top:10px">
+          <div class="ctrl">
+            <div class="ctrl-row"><span class="ctrl-lbl">Column Gap</span><span class="ctrl-val" id="gapValue">0</span></div>
+            <input id="gapControl" type="range" min="0" max="200" value="0" />
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-row"><span class="ctrl-lbl">Horizontal Offset</span><span class="ctrl-val" id="offsetXValue">0</span></div>
+            <input id="offsetXControl" type="range" min="-400" max="400" value="0" />
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-row"><span class="ctrl-lbl">Vertical Position</span><span class="ctrl-val" id="offsetYValue">0</span></div>
+            <input id="offsetYControl" type="range" min="-200" max="200" value="0" />
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-row"><span class="ctrl-lbl">Layout Height</span><span class="ctrl-val" id="heightValue">85%</span></div>
+            <input id="heightControl" type="range" min="30" max="100" value="85" />
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-row"><span class="ctrl-lbl">Zoom</span><span class="ctrl-val" id="zoomValue">100%</span></div>
+            <input id="zoomControl" type="range" min="60" max="140" value="100" />
           </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
 
-<!-- Effects section -->
-<div class="section">
-  <div class="section-hd open" data-bd="bd-effects"><span>⚡ EFFECTS</span><span class="chev">▾</span></div>
-  <div class="section-bd" id="bd-effects">
-    <div class="section-in" style="padding-top:10px">
-      <div class="ctrl">
-        <div class="ctrl-row"><span class="ctrl-lbl">Shot Type</span></div>
-        <div class="shot-grid">
-          <button class="shot-btn active" data-shot="beam">Beam</button>
-          <button class="shot-btn" data-shot="laser">Laser</button>
-          <button class="shot-btn" data-shot="neon">Neon</button>
-          <button class="shot-btn" data-shot="ripple">Ripple</button>
-          <button class="shot-btn" data-shot="fire">Fire</button>
-          <button class="shot-btn" data-shot="bubble">Bubble</button>
-          <button class="shot-btn" data-shot="sphere">Sphere</button>
-          <button class="shot-btn" data-shot="projectile">Proj.</button>
+    <!-- Visual section -->
+    <div class="section">
+      <div class="section-hd open" data-bd="bd-visual"><span>◈ VISUAL</span><span class="chev">▾</span></div>
+      <div class="section-bd" id="bd-visual">
+        <div class="section-in" style="padding-top:10px">
+          <div class="toggle-row">
+            <span class="toggle-lbl">Dark Grid</span>
+            <label class="tog">
+              <input type="checkbox" id="themeToggle" checked>
+              <span class="tog-track"><span class="tog-knob"></span></span>
+            </label>
+          </div>
+          <div class="ctrl">
+            <div class="ctrl-row"><span class="ctrl-lbl">Laser Color</span></div>
+            <div class="color-row">
+              <div class="color-swatch" id="colorSwatch" style="background:#7afcff" title="Click to open picker"></div>
+              <input type="color" id="laserColorPicker" value="#7afcff">
+              <div class="color-dots">
+                <div class="color-dot active" data-color="#7afcff" style="background:#7afcff" title="Cyan"></div>
+                <div class="color-dot" data-color="#ff4499" style="background:#ff4499" title="Pink"></div>
+                <div class="color-dot" data-color="#ffcc00" style="background:#ffcc00" title="Gold"></div>
+                <div class="color-dot" data-color="#44ff88" style="background:#44ff88" title="Green"></div>
+                <div class="color-dot" data-color="#ff6600" style="background:#ff6600" title="Orange"></div>
+                <div class="color-dot" data-color="#aa44ff" style="background:#aa44ff" title="Purple"></div>
+                <div class="color-dot" data-color="#ffffff" style="background:#ffffff" title="White"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="ctrl" style="margin-top:10px">
-        <div class="ctrl-row"><span class="ctrl-lbl">Shot Speed</span><span class="ctrl-val" id="shotSpeedValue">1.0×</span></div>
-        <input id="shotSpeedControl" type="range" min="40" max="300" value="100" step="10" />
+    </div>
+
+    <!-- Effects section -->
+    <div class="section">
+      <div class="section-hd open" data-bd="bd-effects"><span>⚡ EFFECTS</span><span class="chev">▾</span></div>
+      <div class="section-bd" id="bd-effects">
+        <div class="section-in" style="padding-top:10px">
+          <div class="ctrl">
+            <div class="ctrl-row"><span class="ctrl-lbl">Shot Type</span></div>
+            <div class="shot-grid">
+              <button class="shot-btn active" data-shot="beam">Beam</button>
+              <button class="shot-btn" data-shot="laser">Laser</button>
+              <button class="shot-btn" data-shot="neon">Neon</button>
+              <button class="shot-btn" data-shot="ripple">Ripple</button>
+              <button class="shot-btn" data-shot="fire">Fire</button>
+              <button class="shot-btn" data-shot="bubble">Bubble</button>
+              <button class="shot-btn" data-shot="sphere">Sphere</button>
+              <button class="shot-btn" data-shot="projectile">Proj.</button>
+            </div>
+          </div>
+          <div class="ctrl" style="margin-top:10px">
+            <div class="ctrl-row"><span class="ctrl-lbl">Shot Speed</span><span class="ctrl-val" id="shotSpeedValue">1.0×</span></div>
+            <input id="shotSpeedControl" type="range" min="40" max="300" value="100" step="10" />
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
 
-<div class="actions">
-  <button class="act-btn wide" id="testEffectBtn">▶ TEST EFFECT</button>
-  <button class="act-btn" id="resetLayoutBtn">↺ Reset Layout</button>
-  <button class="act-btn danger" id="resetAllBtn">⚠ Reset All</button>
-</div>
-```
-
+    <div class="actions">
+      <button class="act-btn wide" id="testEffectBtn">▶ TEST EFFECT</button>
+      <button class="act-btn" id="resetLayoutBtn">↺ Reset Layout</button>
+      <button class="act-btn danger" id="resetAllBtn">⚠ Reset All</button>
+    </div>
   </div>
 </div>
 
@@ -351,19 +341,19 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
   const statusDiv = document.getElementById('status-badge');
 
   // ── Panel DOM refs ──
-  const gapControl         = document.getElementById('gapControl');
-  const offsetXControl     = document.getElementById('offsetXControl');
-  const offsetYControl     = document.getElementById('offsetYControl');
-  const heightControl      = document.getElementById('heightControl');
-  const zoomControl        = document.getElementById('zoomControl');
-  const themeToggle        = document.getElementById('themeToggle');
-  const shotSpeedControl   = document.getElementById('shotSpeedControl');
-  const hordeThresholdCtrl = document.getElementById('hordeThresholdControl');
-  const layoutPanel        = document.getElementById('layoutPanel');
-  const colorSwatch        = document.getElementById('colorSwatch');
-  const colorPicker        = document.getElementById('laserColorPicker');
-  const colorDots          = document.querySelectorAll('.color-dot');
-  const shotBtns           = document.querySelectorAll('.shot-btn');
+  const gapControl     = document.getElementById('gapControl');
+  const offsetXControl = document.getElementById('offsetXControl');
+  const offsetYControl = document.getElementById('offsetYControl');
+  const heightControl  = document.getElementById('heightControl');
+  const zoomControl    = document.getElementById('zoomControl');
+  const themeToggle    = document.getElementById('themeToggle');
+  const shotSpeedControl = document.getElementById('shotSpeedControl');
+  // hordeThreshold control removed – fixed at 5
+  const layoutPanel     = document.getElementById('layoutPanel');
+  const colorSwatch     = document.getElementById('colorSwatch');
+  const colorPicker     = document.getElementById('laserColorPicker');
+  const colorDots       = document.querySelectorAll('.color-dot');
+  const shotBtns        = document.querySelectorAll('.shot-btn');
 
   // ── State ──
   let players         = {};
@@ -372,7 +362,7 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
   let offsetX         = 0;
   let offsetY         = 0;
   let layoutZoom      = 1;
-  let hordeThreshold  = 5;
+  const hordeThreshold = 5;      // now fixed
   let backgroundImg   = null;
   let socket          = null;
   let audioConfig     = {};
@@ -453,23 +443,23 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
   function syncFill(input) {
     const min = +input.min || 0, max = +input.max || 100, val = +input.value;
     const pct = ((val - min) / (max - min) * 100).toFixed(1) + '%';
-    input.style.background = `linear-gradient(to right,var(--accent) ${pct},rgba(255,255,255,0.07) ${pct})`;
+    input.style.background = `linear-gradient(to right,var(--accent) ${pct},rgba(255,255,255,0.12) ${pct})`;
   }
-  const allSliders = [gapControl, offsetXControl, offsetYControl, heightControl, zoomControl, shotSpeedControl, hordeThresholdCtrl];
+  const allSliders = [gapControl, offsetXControl, offsetYControl, heightControl, zoomControl, shotSpeedControl];
   allSliders.forEach(s => { syncFill(s); s.addEventListener('input', () => syncFill(s)); });
 
   // ── Labels ──
   function updateLabels() {
-    document.getElementById('gapValue').textContent           = Math.round(layoutGap);
-    document.getElementById('offsetXValue').textContent       = Math.round(offsetX);
-    document.getElementById('offsetYValue').textContent       = Math.round(offsetY);
-    document.getElementById('heightValue').textContent        = heightControl.value + '%';
-    document.getElementById('zoomValue').textContent          = Math.round(layoutZoom * 100) + '%';
-    document.getElementById('shotSpeedValue').textContent     = (+shotSpeedControl.value / 100).toFixed(1) + '×';
-    document.getElementById('hordeThresholdValue').textContent = hordeThreshold;
+    document.getElementById('gapValue').textContent       = Math.round(layoutGap);
+    document.getElementById('offsetXValue').textContent   = Math.round(offsetX);
+    document.getElementById('offsetYValue').textContent   = Math.round(offsetY);
+    document.getElementById('heightValue').textContent    = heightControl.value + '%';
+    document.getElementById('zoomValue').textContent      = Math.round(layoutZoom * 100) + '%';
+    document.getElementById('shotSpeedValue').textContent = (+shotSpeedControl.value / 100).toFixed(1) + '×';
+    // horde threshold label removed
   }
 
-  // ── Save / Load ──
+  // ── Save / Load (no hordeThreshold) ──
   function saveLayout() {
     try {
       localStorage.setItem('battleOverlayLayout', JSON.stringify({
@@ -477,7 +467,6 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
         height: +heightControl.value, zoom: +zoomControl.value,
         laserColor: overlaySettings.laserColor, darkMode,
         shotType: overlaySettings.shotType, shotSpeed: +shotSpeedControl.value,
-        hordeThreshold,
       }));
     } catch (_) {}
   }
@@ -485,22 +474,20 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
     let s;
     try { s = JSON.parse(localStorage.getItem('battleOverlayLayout') || 'null'); } catch (_) {}
     if (!s) return;
-    layoutGap      = s.gap           ?? 0;
-    offsetX        = s.offsetX       ?? 0;
-    offsetY        = s.offsetY       ?? 0;
-    hordeThreshold = s.hordeThreshold ?? 5;
+    layoutGap      = s.gap       ?? 0;
+    offsetX        = s.offsetX   ?? 0;
+    offsetY        = s.offsetY   ?? 0;
     darkMode       = s.darkMode !== undefined ? s.darkMode : true;
-    heightControl.value      = s.height    ?? 85;
-    zoomControl.value        = s.zoom      ?? 100;
-    shotSpeedControl.value   = s.shotSpeed ?? 100;
-    hordeThresholdCtrl.value = hordeThreshold;
-    gapControl.value         = layoutGap;
-    offsetXControl.value     = offsetX;
-    offsetYControl.value     = offsetY;
-    layoutZoom                    = (s.zoom ?? 100) / 100;
-    overlaySettings.shotSpeed     = (s.shotSpeed ?? 100) / 100;
-    overlaySettings.laserColor    = s.laserColor || '#7afcff';
-    overlaySettings.shotType      = s.shotType   || 'beam';
+    heightControl.value  = s.height    ?? 85;
+    zoomControl.value    = s.zoom      ?? 100;
+    shotSpeedControl.value = s.shotSpeed ?? 100;
+    gapControl.value     = layoutGap;
+    offsetXControl.value = offsetX;
+    offsetYControl.value = offsetY;
+    layoutZoom                = (s.zoom ?? 100) / 100;
+    overlaySettings.shotSpeed = (s.shotSpeed ?? 100) / 100;
+    overlaySettings.laserColor = s.laserColor || '#7afcff';
+    overlaySettings.shotType  = s.shotType   || 'beam';
     container.style.height = heightControl.value + 'vh';
     themeToggle.checked    = darkMode;
     setActiveShotType(overlaySettings.shotType);
@@ -510,14 +497,13 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
   }
 
   // ── Slider handlers ──
-  gapControl.addEventListener('input',         () => { layoutGap      = +gapControl.value;           updateLabels(); saveLayout(); });
-  offsetXControl.addEventListener('input',     () => { offsetX        = +offsetXControl.value;       updateLabels(); saveLayout(); });
-  offsetYControl.addEventListener('input',     () => { offsetY        = +offsetYControl.value;       updateLabels(); saveLayout(); });
-  heightControl.addEventListener('input',      () => { container.style.height = heightControl.value + 'vh'; resizeCanvas(); updateLabels(); saveLayout(); });
-  zoomControl.addEventListener('input',        () => { layoutZoom     = +zoomControl.value / 100;    updateLabels(); saveLayout(); });
-  themeToggle.addEventListener('change',       () => { darkMode       = themeToggle.checked;         saveLayout(); });
-  shotSpeedControl.addEventListener('input',   () => { overlaySettings.shotSpeed = +shotSpeedControl.value / 100; updateLabels(); saveLayout(); });
-  hordeThresholdCtrl.addEventListener('input', () => { hordeThreshold = +hordeThresholdCtrl.value;   updateLabels(); saveLayout(); });
+  gapControl.addEventListener('input',     () => { layoutGap = +gapControl.value;       updateLabels(); saveLayout(); });
+  offsetXControl.addEventListener('input', () => { offsetX   = +offsetXControl.value;   updateLabels(); saveLayout(); });
+  offsetYControl.addEventListener('input', () => { offsetY   = +offsetYControl.value;   updateLabels(); saveLayout(); });
+  heightControl.addEventListener('input',  () => { container.style.height = heightControl.value + 'vh'; resizeCanvas(); updateLabels(); saveLayout(); });
+  zoomControl.addEventListener('input',    () => { layoutZoom = +zoomControl.value / 100; updateLabels(); saveLayout(); });
+  themeToggle.addEventListener('change',   () => { darkMode = themeToggle.checked;       saveLayout(); });
+  shotSpeedControl.addEventListener('input', () => { overlaySettings.shotSpeed = +shotSpeedControl.value / 100; updateLabels(); saveLayout(); });
 
   // ── Action buttons ──
   document.getElementById('testEffectBtn').addEventListener('click', () => {
@@ -526,9 +512,9 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
     else if (top.length === 1) fireAttack(top[0].uniqueId, top[0].uniqueId, 5, false, false, overlaySettings.shotType, { intensity: 0.5 });
   });
   document.getElementById('resetLayoutBtn').addEventListener('click', () => {
-    layoutGap = 0; offsetX = 0; offsetY = 0; layoutZoom = 1; hordeThreshold = 5;
+    layoutGap = 0; offsetX = 0; offsetY = 0; layoutZoom = 1;
     gapControl.value = 0; offsetXControl.value = 0; offsetYControl.value = 0;
-    zoomControl.value = 100; heightControl.value = 85; hordeThresholdCtrl.value = 5;
+    zoomControl.value = 100; heightControl.value = 85;
     container.style.height = '85vh'; resizeCanvas();
     allSliders.forEach(syncFill); updateLabels(); saveLayout();
   });
@@ -634,6 +620,25 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
     el.style.top  = vp.y + 'px';
     document.body.appendChild(el);
     setTimeout(() => el.remove(), 950);
+  }
+
+  // ═══════════════════════════════════════
+  // HP HELPERS (for likes / healing)
+  // ═══════════════════════════════════════
+  function applyHeal(uniqueId, amount) {
+    if (!amount || amount <= 0) return;
+    const all = activePlayers();
+    const target = all.find(p => p.uniqueId === uniqueId || p.id === uniqueId);
+    if (target && isAlive(target)) {
+      const maxHp = target.maxHp || 100;
+      const newHp = Math.min(maxHp, (target.hp || 0) + amount);
+      target.hp = newHp;
+      // if this is a demo player we also update the DEMO_PLAYERS reference
+      const demo = DEMO_PLAYERS.find(p => p.uniqueId === uniqueId);
+      if (demo) demo.hp = newHp;
+      // if we're connected to server, a state update will soon overwrite this,
+      // but it gives immediate feedback.
+    }
   }
 
   // ═══════════════════════════════════════
@@ -987,6 +992,8 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
         attacks.push(atk);
       }, i * 90);
     }
+    // Apply actual healing to the player
+    applyHeal(playerId, hearts * 5);
   }
 
   function spawnRespawnEffect(uniqueId) {
@@ -1092,7 +1099,7 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
   }
 
   // ═══════════════════════════════════════
-  // HORDE
+  // HORDE (improved visibility)
   // ═══════════════════════════════════════
   function drawHorde(horde) {
     if (!horde) return;
@@ -1101,40 +1108,48 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
     const ring  = H * 0.28 * layoutZoom;
     const pulse = 0.5 + Math.sin(Date.now() / 350) * 0.5;
 
-    ctx.fillStyle = `rgba(255,70,70,${0.07 + pulse * 0.05})`;
+    // background glow
+    ctx.fillStyle = `rgba(255,70,70,${0.15 + pulse * 0.08})`;
     ctx.beginPath(); ctx.arc(pos.x, pos.y, ring + pulse * 5, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = `rgba(255,70,70,${0.45 + pulse * 0.3})`; ctx.lineWidth = Math.max(2, ring * 0.1);
+    // outer ring
+    ctx.strokeStyle = `rgba(255,70,70,${0.75 + pulse * 0.2})`; ctx.lineWidth = Math.max(2, ring * 0.12);
     ctx.beginPath(); ctx.arc(pos.x, pos.y, ring * 0.88, 0, Math.PI * 2); ctx.stroke();
 
+    // skull emoji
     ctx.font = `${ring * 1.5}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText('💀', pos.x, pos.y);
 
-    const labelX = Math.max(ring * 2.4, pos.x - ring * 1.35);
-    ctx.font = `bold ${Math.max(10, H * 0.08)}px 'Rajdhani','Segoe UI',sans-serif`;
-    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    // name & count above the ring
+    const nameY = pos.y - ring * 1.2;
+    ctx.font = `bold ${Math.max(11, H * 0.08)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
-    ctx.strokeText('⚔ THE HORDE', labelX, pos.y - H * 0.05);
-    ctx.fillStyle = '#ff7b7b'; ctx.fillText('⚔ THE HORDE', labelX, pos.y - H * 0.05);
-    ctx.font = `${Math.max(8, H * 0.06)}px 'Rajdhani','Segoe UI',sans-serif`;
-    ctx.fillStyle = '#ffc2c2'; ctx.fillText(`${horde.hordeCount} players`, labelX, pos.y + H * 0.08);
+    ctx.strokeText('⚔ THE HORDE', pos.x, nameY);
+    ctx.fillStyle = '#ff7b7b'; ctx.fillText('⚔ THE HORDE', pos.x, nameY);
+    ctx.font = `${Math.max(9, H * 0.06)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.fillStyle = '#ffc2c2'; ctx.fillText(`${horde.hordeCount} players`, pos.x, nameY + H * 0.08);
 
-    const hpPct = Math.min(1, horde.hp / Math.max(1, horde.maxHp));
-    const barW  = Math.min(W * 0.28, W - (pos.x + ring * 1.35) - 16);
-    const barH  = Math.max(8, H * 0.045);
-    const barX  = pos.x + ring * 1.1, barY = pos.y - barH / 2;
+    // HP bar below the ring
+    const barY = pos.y + ring * 0.95;
+    const barW = Math.min(W * 0.28, W - 40);   // keep some margin
+    const barH = Math.max(10, H * 0.05);
+    const barX = pos.x - barW / 2;
 
     ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(barX, barY, barW, barH);
+    const hpPct = Math.min(1, horde.hp / Math.max(1, horde.maxHp));
     const hpGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
     hpGrad.addColorStop(0, '#ff2222'); hpGrad.addColorStop(1, '#ff8888');
     ctx.fillStyle = hpGrad; ctx.fillRect(barX + 2, barY + 2, (barW - 4) * hpPct, barH - 4);
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1; ctx.strokeRect(barX, barY, barW, barH);
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5; ctx.strokeRect(barX, barY, barW, barH);
 
-    ctx.font = `${Math.max(8, H * 0.05)}px 'Rajdhani','Segoe UI',sans-serif`;
-    ctx.textAlign = 'left'; ctx.fillStyle = '#ffaaaa';
+    // HP text below the bar
+    const hpTextY = barY + barH + H * 0.08;
+    ctx.font = `${Math.max(9, H * 0.05)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.textAlign = 'center'; ctx.fillStyle = '#ffaaaa';
     ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
     const hpText = `${Math.round(horde.hp)} / ${Math.round(horde.maxHp)}`;
-    ctx.strokeText(hpText, barX, barY + barH + H * 0.09);
-    ctx.fillText(hpText,   barX, barY + barH + H * 0.09);
+    ctx.strokeText(hpText, pos.x, hpTextY);
+    ctx.fillText(hpText, pos.x, hpTextY);
   }
 
   // ═══════════════════════════════════════
@@ -1269,7 +1284,13 @@ display:flex; flex-direction:column; align-items:center; justify-content:center;
         });
       });
 
-      socket.on('like',        data => { fireHeartEffect(data.uniqueId, data.hearts || 1, data.intensity || 0); playSound('heal'); });
+      socket.on('like', data => {
+        fireHeartEffect(data.uniqueId, data.hearts || 1, data.intensity || 0);
+        playSound('heal');
+        // Apply heal to live state as well (in case server hasn't sent update yet)
+        applyHeal(data.uniqueId, (data.hearts || 1) * 5);
+      });
+
       socket.on('respawn',     data => { spawnRespawnEffect(data.uniqueId); });
       socket.on('soundEvent',  data => { if (data && data.event) playSound(data.event); });
 
