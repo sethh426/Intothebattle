@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Theme Samples — Battle Royale LIVE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #070b16;
+      --surface: #0f1727;
+      --surface-2: #111827;
+      --surface-3: #1f2937;
+      --text: #f3f6fb;
+      --muted: #9aa5bf;
+      --shadow: 0 24px 50px rgba(0, 0, 0, 0.35);
+      --radius: 24px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at top left, rgba(90,178,255,.12), transparent 20%),
+                  radial-gradient(circle at bottom right, rgba(179,136,255,.10), transparent 18%),
+                  var(--bg);
+      padding: 32px;
+    }
+    header {
+      max-width: 1040px;
+      margin: 0 auto 32px;
+      padding: 0 12px;
+    }
+    header h1 {
+      font-size: clamp(2.1rem, 2.8vw, 3rem);
+      letter-spacing: -1px;
+      line-height: 1.05;
+      margin-bottom: 12px;
+    }
+    header p {
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.8;
+    }
+    .grid {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .theme-card {
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(18px);
+    }
+    .theme-card:nth-child(odd) {
+      border-color: rgba(90,178,255,.12);
+    }
+    .theme-head {
+      padding: 22px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      background: rgba(255,255,255,.02);
+    }
+    .theme-head h2 {
+      margin: 0;
+      font-size: 1.15rem;
+    }
+    .theme-head small {
+      color: var(--muted);
+    }
+    .theme-preview {
+      display: grid;
+      gap: 16px;
+      padding: 24px;
+    }
+    .preview-panel {
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.08);
+      overflow: hidden;
+      background: #050816;
+    }
+    .preview-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: rgba(255,255,255,.05);
+      color: rgba(255,255,255,.75);
+      font-size: 0.85rem;
+      letter-spacing: .5px;
+    }
+    .preview-bar span { display: inline-flex; align-items: center; gap: 8px; }
+    .preview-content {
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+    }
+    .preview-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #fff;
+    }
+    .preview-copy {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .button-row button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 20px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+    }
+    .button-row button:hover { transform: translateY(-2px); }
+    .swatches {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .swatch {
+      min-height: 72px;
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      color: #fff;
+      font-size: 0.85rem;
+      line-height: 1.35;
+    }
+    .swatch span { display: block; margin-top: 8px; opacity: .88; }
+    .theme-text { color: var(--muted); font-size: 0.95rem; }
+    .badge { display: inline-flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,.06); color: var(--muted); font-size: 0.82rem; }
+    .footer-note { text-align: center; margin: 30px auto 0; color: var(--muted); max-width: 800px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Theme Samples for Battle Royale LIVE</h1>
+    <p>Pick the visual direction for your app UI. These samples show polished page treatment, button styles, and supporting accent palettes for a consistent dark SaaS experience.</p>
+  </header>
+  <section class="grid">
+    <article class="theme-card">
+      <div class="theme-head">
+        <div>
+          <h2>Modern Broadcast</h2>
+          <small>Popular: polished dark panel + blue glow</small>
+        </div>
+        <span class="badge">Safe, professional, familiar</span>
+      </div>
+      <div class="theme-preview" style="background: linear-gradient(180deg, rgba(13, 28, 58, 0.9), rgba(6, 11, 24, 0.96));">
+        <div class="preview-panel" style="background: rgba(6,11,24,.95); border-color: rgba(54,110,255,.24);">
+          <div class="preview-bar"><span>Dashboard panel</span></div>
+          <div class="preview-content">
+            <div class="preview-title">Live Control Center</div>
+            <p class="preview-copy">Deep navy surfaces, crisp white typography, and bright blue action buttons give a premium streaming tool feel.</p>
+            <div class="button-row">
+              <button style="background:#4d96ff;color:#fff;box-shadow:0 16px 30px rgba(77,150,255,.25);">Primary action</button>
+              <button style="background:rgba(255,255,255,.08);color:#e9f3ff;">Secondary</button>
+            </div>
+          </div>
+        </div>
+        <div class="swatches">
+          <div class="swatch" style="background:#071020;"><strong>Background</strong><span>#071020</span></div>
+          <div class="swatch" style="background:#131f39;"><strong>Surface</strong><span>#131f39</span></div>
+          <div class="swatch" style="background:#4d96ff;color:#09111b;"><strong>Primary</strong><span>#4d96ff</span></div>
+          <div class="swatch" style="background:#6bcf91;"><strong>Accent</strong><span>#6bcf91</span></div>
+        </div>
+      </div>
+    </article>
+    <article class="theme-card">
+      <div class="theme-head">
+        <div>
+          <h2>Dark Stream Tech</h2>
+          <small>Popular: high-contrast dark mode with neon cyan and green</small>
+        </div>
+        <span class="badge">Modern, energetic, clear</span>
+      </div>
+      <div class="theme-preview" style="background: linear-gradient(180deg, rgba(3, 17, 30, 0.9), rgba(10, 16, 31, 0.96));">
+        <div class="preview-panel" style="background: rgba(7,18,30,.96); border-color: rgba(45,220,190,.17);">
+          <div class="preview-bar"><span>Streamer controls</span></div>
+          <div class="preview-content">
+            <div class="preview-title">Connected overlays</div>
+            <p class="preview-copy">Crisp cyan accents, green status chips, and glass-like panels help content feel responsive and technical.</p>
+            <div class="button-row">
+              <button style="background:#3fd6ff;color:#081017; box-shadow:0 16px 36px rgba(63,214,255,.22);">Connect</button>
+              <button style="background:#2b3a52;color:#d7eefc;">Manage</button>
+            </div>
+          </div>
+        </div>
+        <div class="swatches">
+          <div class="swatch" style="background:#040b16;"><strong>Background</strong><span>#040b16</span></div>
+          <div class="swatch" style="background:#0b2131;"><strong>Surface</strong><span>#0b2131</span></div>
+          <div class="swatch" style="background:#3fd6ff;color:#061017;"><strong>Primary</strong><span>#3fd6ff</span></div>
+          <div class="swatch" style="background:#43d783;color:#07110c;"><strong>Accent</strong><span>#43d783</span></div>
+        </div>
+      </div>
+    </article>
+    <article class="theme-card">
+      <div class="theme-head">
+        <div>
+          <h2>Warm Pulse</h2>
+          <small>Not so popular: dark charcoal with orange glow and soft cream</small>
+        </div>
+        <span class="badge">Bold, energetic, alternative</span>
+      </div>
+      <div class="theme-preview" style="background: linear-gradient(180deg, rgba(25, 18, 18, 0.9), rgba(12, 9, 11, 0.96));">
+        <div class="preview-panel" style="background: rgba(14,12,16,.94); border-color: rgba(245,150,74,.16);">
+          <div class="preview-bar"><span>Paywall CTA</span></div>
+          <div class="preview-content">
+            <div class="preview-title">Bold payment flow</div>
+            <p class="preview-copy">A warm, premium palette with amber highlights that stands out from typical blue-based dashboards.</p>
+            <div class="button-row">
+              <button style="background:#f2973a;color:#121212; box-shadow:0 18px 36px rgba(242,151,58,.24);">Upgrade</button>
+              <button style="background:rgba(255,255,255,.08);color:#f5e7d9;">More info</button>
+            </div>
+          </div>
+        </div>
+        <div class="swatches">
+          <div class="swatch" style="background:#09070f;"><strong>Background</strong><span>#09070f</span></div>
+          <div class="swatch" style="background:#17141d;"><strong>Surface</strong><span>#17141d</span></div>
+          <div class="swatch" style="background:#f2973a;color:#111;"><strong>Primary</strong><span>#f2973a</span></div>
+          <div class="swatch" style="background:#d1c5b8;color:#111;"><strong>Accent</strong><span>#d1c5b8</span></div>
+        </div>
+      </div>
+    </article>
+    <article class="theme-card">
+      <div class="theme-head">
+        <div>
+          <h2>Retro Vapor</h2>
+          <small>Not so popular: neon pink and teal with dark chrome surfaces</small>
+        </div>
+        <span class="badge">Edgy, experimental, memorable</span>
+      </div>
+      <div class="theme-preview" style="background: linear-gradient(180deg, rgba(18, 8, 36, 0.92), rgba(7, 4, 16, 0.98));">
+        <div class="preview-panel" style="background: rgba(10,7,22,.96); border-color: rgba(208,84,255,.14);">
+          <div class="preview-bar"><span>Overlay preview</span></div>
+          <div class="preview-content">
+            <div class="preview-title">Stylized broadcast</div>
+            <p class="preview-copy">A strong vaporwave palette for a distinctive brand direction, best on splash pages or special events.</p>
+            <div class="button-row">
+              <button style="background:#d150ff;color:#110a24; box-shadow:0 18px 36px rgba(209,80,255,.22);">Launch</button>
+              <button style="background:#2fd4f4;color:#081018;">Preview</button>
+            </div>
+          </div>
+        </div>
+        <div class="swatches">
+          <div class="swatch" style="background:#05040f;"><strong>Background</strong><span>#05040f</span></div>
+          <div class="swatch" style="background:#12102b;"><strong>Surface</strong><span>#12102b</span></div>
+          <div class="swatch" style="background:#d150ff;color:#110a24;"><strong>Primary</strong><span>#d150ff</span></div>
+          <div class="swatch" style="background:#2fd4f4;color:#081018;"><strong>Accent</strong><span>#2fd4f4</span></div>
+        </div>
+      </div>
+    </article>
+  </section>
+  <p class="footer-note">Use these samples as the foundation for consistent page theming across your app — button states, panel surfaces, and accent colors should all follow the same palette.</p>
+</body>
+</html>

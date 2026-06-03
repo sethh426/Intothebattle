@@ -1,225 +1,177 @@
 # TIKTOKBR
 
-A developer-focused live PvP battle overlay for TikTok LIVE. This project connects TikTok chat and gift events to a real-time battle arena rendered in the browser.
+A TikTok LIVE battle overlay platform with real-time dashboard controls, subscription/paywall support, and Render-friendly persistence.
+
+## Why update the README?
+
+Yes — it should be rewritten now. The project has evolved beyond the original static overlay demo:
+
+- Render deployment support was added
+- Disk persistence via `DISK_PATH=/var/data` is now required
+- PayPal/subscription and trial flows are in place
+- New dashboard, signup, and stats pages exist
+- Theme and UI polish are now part of the app
+
+This README now reflects the current system, developer setup, and deployment requirements.
 
 ## Project Overview
 
-The system consists of:
+This project includes:
 
-- `server.js` — Node.js/Express application that handles TikTok LIVE event ingestion, game state, persistence, and Socket.IO broadcasting.
-- `overlay.html` — browser-based overlay that renders the live game state onto a canvas and displays UI panels for status, leaderboard, events, and layout controls.
-- `players.json` — optional persistence store for player stats between server restarts.
-- `backgrounds/` — directory for uploaded overlay background images.
+- `server.js` — Node.js + Express backend for TikTok LIVE ingestion, game state, persistence, and Socket.IO broadcasting.
+- `overlay.html` — live game overlay rendered in the browser via Canvas and real-time socket events.
+- `dashboard.html` — admin panel for room setup, audio/background uploads, and live system control.
+- `signup.html`, `paywall.html`, `home.html` — onboarding and subscription flow pages.
+- `tiktokbr/db/db.js` — SQLite database for access codes, room settings, and subscription metadata.
+- `roomManager.js` — persistent room storage and file path management for Render disk support.
+- `theme-samples.html` — theme preview page for UI direction and button/palette selection.
 
-## Architecture
+## Core Features
 
-1. **TikTok LIVE connection**
-   - Uses `@tiktool/live` to connect to a TikTok streamer’s LIVE chat.
-   - Listens for `member`, `chat`, `gift`, `like`, and `social` events.
+- Real-time TikTok chat/gift/like/social event processing
+- PvP battle arena with HP, strength, kills, and respawn logic
+- Overlay rendering for live battle visuals and attack animations
+- Dashboard controls for room management and uploads
+- Subscription/paywall flow with PayPal integration
+- Disk-backed persistence for uploads and SQLite on Render
+- Custom theme samples for consistent UI styling
 
-2. **Game engine**
-   - Maintains `players` state in memory, including HP, strength, kills, position, and alive status.
-   - Applies damage, respawns, and buffs from events.
-   - Periodically emits game state and movement updates to all connected overlays.
-   - Saves persistent player stats to `players.json` every 10 seconds of state updates.
+## Deployment (Render)
 
-3. **Overlay rendering**
-   - Uses Socket.IO to receive `gameState`, `attack`, `giftAttack`, `backgroundChanged`, and other events.
-   - Renders a top-20 player grid with HP bars, names, and animated attack visuals.
-   - Includes live controls for adjusting horizontal/vertical grid gap and hiding the control panel.
+### Required service settings
 
-4. **Static UI and API**
-   - Serves static files from the project root.
-   - Exposes API routes for dashboard control, state access, background uploads, and resets.
+- Build command: `npm install`
+- Start command: `node server.js`
+- Environment variables:
+  - `DISK_PATH=/var/data`
+  - `API_KEY=<your_tiktok_api_key>`
+  - `PAYPAL_CLIENT_ID`
+  - `PAYPAL_CLIENT_SECRET`
+  - `PAYPAL_WEBHOOK_ID`
+  - `NODE_ENV=production`
+  - Optional: `SENTRY_DSN`, `LOG_LEVEL`, `API_KEY`, `DEV_TEST_MODE=true`
 
-## Languages & Systems Used
+### Disk persistence
 
-- JavaScript (Node.js) for backend server logic.
-- Express for HTTP routing and static file serving.
-- Socket.IO for real-time client-server communication.
-- HTML/CSS/Canvas for the overlay frontend.
-- `@tiktool/live` for TikTok LIVE integration.
-- `multer` for background image uploads.
-- `dotenv` for environment variable management.
-- File-system persistence with Node `fs`.
+- Render should mount a disk at `/var/data`
+- The app uses `DISK_PATH` to store:
+  - `tiktokbr.db` (SQLite database)
+  - audio uploads
+  - background image uploads
+  - `players_<roomId>.json`
+- If `DISK_PATH` is not set, the app falls back to local file-system paths for development only.
 
-## How the Program Connects
+### Custom domain
 
-- `server.js` starts an Express app and Socket.IO server on port `3000`.
-- The overlay page connects to the Socket.IO server and registers as `overlay`.
-- When the TikTok LIVE client receives an event, the server updates player state and emits changes.
-- The overlay listens for events to update the visual state and draw animations.
-- Static pages available:
-  - `http://localhost:3000/overlay.html`
-  - `http://localhost:3000/dashboard`
-  - `http://localhost:3000/stats`
-  - `http://localhost:3000/state`
+- Add your domain in Render dashboard
+- Configure DNS records as Render instructs
+- Render provides automatic SSL
 
-## Game Mechanics
-
-### Player Spawn & State
-
-- Players are spawned when they appear in TikTok chat, gifts, likes, or socials.
-- Spawned players receive default values if they are new or re-enter the board when alive.
-- The overlay displays only the top 20 alive players sorted by HP, with forced-spawned players prioritized.
-
-### Player Attributes
-
-- `hp` — current hit points.
-- `maxHp` — maximum hit points.
-- `strength` — damage base for attacks.
-- `kills` — number of kills earned.
-- `alive` — whether the player is active on the board.
-- `messageBoostExpires` — timestamp for gift chat damage boost expiration.
-- `forceSpawn` — forced visibility flag for chat-spawned players.
-
-### Event Effects & Damage Rules
-
-The game uses these configured values in `server.js`:
-
-- `BASE_HP`: 100
-- `BASE_STRENGTH`: 10
-- `CHAT_STRENGTH_BOOST`: +1 strength per chat message received
-- `LIKE_HP_BOOST`: +2 HP per like event
-- `SOCIAL_STRENGTH_BOOST`: +5 strength per social event
-- `GIFT_HP_PER_DIAMOND`: +3 HP per diamond gifted
-- `GIFT_STR_PER_DIAMOND`: +1 strength per diamond gifted
-- `MESSAGE_LASER_MULTIPLIER`: 2x damage multiplier for mention laser attacks
-- `GIFT_MESSAGE_BOOST_MULTIPLIER`: 1.5x additional multiplier for boosted messages
-- `GIFT_MESSAGE_BOOST_DURATION_MS`: 45,000ms (45 seconds) of boosted message damage
-- `ATTACK_VARIANCE`: 0.4 random variance applied to every attack
-- `RESPAWN_DELAY_MS`: 30,000ms (30 seconds) until a killed player respawns
-- `IDLE_TIMEOUT_MS`: 600,000ms (10 minutes) to remove idle players
-- `RESET_TIMEOUT_MS`: 300,000ms (5 minutes) to reset streamer state
-
-### Chat Damage Flow
-
-- When a chat message contains `@username`, the sender is treated as attacking the mentioned target.
-- If the sender is not currently alive, they are auto-spawned first.
-- Damage is calculated as:
-  - `damage = floor(attacker.strength * multiplier * variance)`
-  - `multiplier` is `2` for normal mention lasers
-  - if a gift message boost is active, multiplier becomes `2 * 1.5 = 3`
-- The attack is emitted via Socket.IO as `attack` with `attacker`, `target`, `damage`, `killed`, and `special`.
-
-### Chat Commands & Message Options
-
-- Special visual commands may be included in chat messages alongside `@username` mentions to request a specific attack animation. Commands are prefixed with `!` (case-insensitive). Examples:
-  - `!FIRE` — plays the fire beam effect
-  - `!BUBBLES` or `!BUBBLE` — plays the bubble torrent effect
-  - `!NEON` — plays the neon hyper-laser
-  - `!RIPPLE` — plays the ripple shockwave
-  - `!SPHERE` — plays the sphere-mapped plasma
-  - `!LASER` — forces the regular laser beam
-  - `!SHOT` or `!PROJECTILE` — fires a projectile attack
-  - `!GIFT` — renders the gift effect
-  - `!BOOM` or `!EXPLOSION` — renders an explosion on hit
-
-- Usage: include the command anywhere in the message together with one or more `@username` mentions. The server will apply the command to the first valid mention found and emit an `attack` event which includes an `effect` field indicating the requested visual. Overlays will honor the `effect` when present and fall back to default animations otherwise.
-
-Examples:
-
-- `@victim !FIRE` — attack `victim` with the fire beam effect
-- `!BUBBLES @victim` — attack `victim` with bubble torrent
-- `@a @b !NEON` — attacks the first valid mentioned player with neon laser
-
-Note: Effects are cosmetic and do not change damage calculation. Only players present on the top-5 board (or the virtual horde) will produce visible effects on overlays.
-
-### Gift Effects
-
-- Gifts grant the sender:
-  - `diamonds * 3` HP (added to current HP and maximum HP)
-  - `diamonds * 1` strength
-  - a 45-second message damage boost for later chat attacks
-- Gift events also trigger instant area damage:
-  - the gifter attacks up to 3 random alive players
-  - each target takes `diamonds` damage
-  - if a target reaches `0` HP, it is marked killed and respawns after 30 seconds
-- The server emits `giftAttack` and `giftEffect` events with attack details.
-
-### Like / Social / Member Events
-
-- `like` events:
-  - spawn the user if needed
-  - apply `+2 HP`
-- `social` events:
-  - spawn the user if needed
-  - apply `+5 strength`
-- `member` events:
-  - spawn the member and mark them alive immediately
-
-### Respawns & Cleanup
-
-- When HP reaches `0`, the target is killed and removed from alive status.
-- The target auto-respawns after 30 seconds with full HP and alive status.
-- Idle players are removed from state after 10 minutes of inactivity.
-
-## Developer Setup
+## Local Development
 
 ### Prerequisites
 
 - Node.js 18+ recommended
 - npm installed
-- A TikTok API key stored in `.env` as `API_KEY`
 
-### Install
+### Install dependencies
 
 ```bash
 npm install
 ```
 
-### Run
+### Local environment
+
+Create a `.env` file:
+
+```text
+API_KEY=your_tiktok_api_key
+DISK_PATH=./data
+```
+
+> For local development, `DISK_PATH` can point to a directory like `./data`.
+
+### Run locally
 
 ```bash
 npm start
 ```
 
-To connect to a TikTok streamer by username, pass the unique ID as an argument:
+Or if you want to specify a streamer username directly:
 
 ```bash
 node server.js <streamerUsername>
 ```
 
-### Environment
+## Important URLs
 
-Create a `.env` file with:
-
-```text
-API_KEY=your_tiktok_api_key
-```
-
-### Key Endpoints
-
-- `GET /overlay.html` — main overlay view
-- `GET /dashboard` — dashboard page
+- `GET /overlay.html` — overlay view
+- `GET /dashboard` — admin dashboard
 - `GET /stats` — stats page
+- `GET /signup` — trial/signup page
+- `GET /paywall` — paywall/upgrade page
+- `GET /home` — landing page
 - `GET /state` — raw JSON game state
-- `POST /api/connect` — connect to TikTok streamer
-- `POST /api/reset` — disconnect current streamer
-- `POST /api/overlay/reload` — force reload overlay pages
-- `POST /api/players/clear` — set all players to `alive=false`
-- `POST /api/background/upload` — upload overlay background image
-- `POST /api/background/clear` — clear current background
 
-## File Summary
+## Environment Variables
 
-- `server.js` — backend logic, event handling, game rules, API routes, persistence
-- `overlay.html` — client overlay UI, player rendering, canvas animations, Socket.IO listeners
-- `package.json` — project dependencies and startup script
-- `players.json` — persisted player stat cache
-- `backgrounds/` — uploaded background image storage
-- `dashboard.html`, `stats.html` — auxiliary monitoring pages
+Required:
 
-## Notes for Developers
+- `API_KEY` — TikTok API key or streamer integration token
+- `DISK_PATH` — persistent storage root (`/var/data` on Render)
+- `PAYPAL_CLIENT_ID`
+- `PAYPAL_CLIENT_SECRET`
+- `PAYPAL_WEBHOOK_ID`
 
-- The overlay logic uses `forceSpawn` to keep chat-spawned users visible on the top-20 board.
-- Positioning is calculated via a 5x4 grid with configurable horizontal/vertical gap sliders.
-- Attack events are rendered with animated beams and damage popups.
-- Persistent state is intentionally lightweight and only saves nickname, max HP, strength, and kill count.
+Optional:
 
-## Future Improvements
+- `NODE_ENV=production`
+- `LOG_LEVEL=info`
+- `SENTRY_DSN`
+- `DEV_TEST_MODE=true`
 
-- Add explicit target selection for mentions when multiple similar names exist.
-- Store streamer sessions or replay logs for post-stream analysis.
-- Improve leaderboard sorting and UI responsiveness for mobile or smaller screens.
-- Add tests for damage calculations, spawn logic, and mention parsing.
+## File Structure
+
+- `server.js` — backend server, API routes, game logic, uploads, sockets
+- `roomManager.js` — room persistence, file paths, `DISK_PATH` handling
+- `tiktokbr/db/db.js` — SQLite initialization and schema
+- `overlay.html` — live overlay client
+- `dashboard.html` — admin interface
+- `signup.html` / `paywall.html` / `home.html` — user flows
+- `stats.html` — runtime stats view
+- `backgrounds/` — background images
+- `audio/` — audio upload files
+- `theme-samples.html` — UI theme preview page
+
+## Persistence and storage
+
+The app persists the following data:
+
+- `tiktokbr.db` — subscription, room, and access-code data
+- `audio/<roomId>` — uploaded audio files
+- `backgrounds/<roomId>` — uploaded background images
+- `players_<roomId>.json` — optional player stats files
+- room audio config files and metadata in each room folder
+
+## What changed recently
+
+- `DISK_PATH` support was added for Render deployment
+- Persistent uploads now use folder paths under the disk mount
+- SQLite database is saved to `tiktokbr.db` on the disk
+- New UI flow pages exist for signup and paywall
+- Theme preview page added for UI selection
+
+## Development Notes
+
+- `getRoomPaths()` now derives file storage from `DISK_PATH`
+- `server.js` checks room storage first and falls back to disk-local directories
+- PayPal webhook handling is enabled in `tiktokbr/routes/paypal.js`
+- Auth and trial enforcement is handled in `tiktokbr/middleware/auth.js` and `checkTrial.js`
+
+## Next work items
+
+- Validate Render deployment and disk persistence
+- Add automated tests for audio upload and room persistence
+- Polish UI theme across all pages
+- Harden PayPal webhook and subscription edge cases
+- Add monitoring/logging for runtime production issues
