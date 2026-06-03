@@ -4,7 +4,8 @@ import { fileURLToPath } from 'url';
 import db from './tiktokbr/db/db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT_DIR = path.join(__dirname);
+// Use DISK_PATH env var (Render: /var/data), fallback to local directory for development
+const ROOT_DIR = process.env.DISK_PATH || path.join(__dirname);
 
 export const DEFAULT_OVERLAY_SETTINGS = {
   laserColor: '#7afcff',
