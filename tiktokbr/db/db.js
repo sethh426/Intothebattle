@@ -4,7 +4,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = path.join(__dirname, '..', 'tiktokbr.db');
+const DB_ROOT = process.env.DISK_PATH || path.join(__dirname, '..');
+if (!fs.existsSync(DB_ROOT)) fs.mkdirSync(DB_ROOT, { recursive: true });
+const dbPath = path.join(DB_ROOT, 'tiktokbr.db');
 
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');

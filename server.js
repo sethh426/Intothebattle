@@ -484,7 +484,8 @@ const ALLOWED_BACKGROUND_MIMES = new Set(['image/jpeg', 'image/png', 'image/gif'
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, _file, cb) => {
-      const bgDir = req?.room ? getRoomPaths(req.room.roomId).backgroundDir : path.join(__dirname, 'backgrounds');
+      const fallbackDir = path.join(process.env.DISK_PATH || __dirname, 'backgrounds');
+      const bgDir = req?.room ? getRoomPaths(req.room.roomId).backgroundDir : fallbackDir;
       ensureDir(bgDir);
       cb(null, bgDir);
     },
@@ -513,7 +514,8 @@ const ALLOWED_AUDIO_MIMES = new Set([
 const audioUpload = multer({
   storage: multer.diskStorage({
     destination: (req, _file, cb) => {
-      const audioDir = req?.room ? getRoomPaths(req.room.roomId).audioDir : path.join(__dirname, 'audio');
+      const fallbackDir = path.join(process.env.DISK_PATH || __dirname, 'audio');
+      const audioDir = req?.room ? getRoomPaths(req.room.roomId).audioDir : fallbackDir;
       ensureDir(audioDir);
       cb(null, audioDir);
     },
