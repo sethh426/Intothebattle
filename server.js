@@ -860,7 +860,6 @@ app.use('/admin', adminRoutes);
 app.use('/', paypalRoutes);
 
 app.get('/', (req, res) => {
-  // If logged in with active trial/subscription, go to dashboard
   const token = req.cookies?.session_token;
   if (token) {
     const auth = getAuthRecord(token);
@@ -885,17 +884,39 @@ app.get('/', (req, res) => {
       }
     }
   }
-  // Not logged in, show landing page
-  res.sendFile(path.join(__dirname, 'home.html'));
+  return res.redirect('/login');
 });
+
 app.get('/home', (_req, res) => res.sendFile(path.join(__dirname, 'home.html')));
 app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));
+app.get('/register', (req, res) => {
+  const token = req.cookies?.session_token;
+  const auth = getAuthRecord(token);
+  if (auth?.type === 'user' && auth.record?.is_active) return res.redirect('/dashboard');
+  res.sendFile(path.join(__dirname, 'register.html'));
+});
+app.get('/login', (req, res) => {
+  const token = req.cookies?.session_token;
+  const auth = getAuthRecord(token);
+  if (auth?.type === 'code') {
+    const row = auth.record;
+    if (row && !row.is_revoked) {
+      return res.redirect('/dashboard');
+    }
+  }
+  if (auth?.type === 'user' && auth.record?.is_active) {
+    return res.redirect('/dashboard');
+  }
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+app.get('/profile', (_req, res) => res.sendFile(path.join(__dirname, 'profile.html')));
+app.get('/request-password-reset', (_req, res) => res.sendFile(path.join(__dirname, 'request-password-reset.html')));
+app.get('/reset-password', (_req, res) => res.sendFile(path.join(__dirname, 'reset-password.html')));
 app.get('/paywall', (_req, res) => res.sendFile(path.join(__dirname, 'paywall.html')));
 app.get('/paywall-link', (_req, res) => {
   const url = process.env.PAYPAL_PAYMENT_LINK || 'https://www.paypal.com';
   res.redirect(302, url);
 });
-app.get('/login', (_req, res) => res.redirect('/home'));
 
 // Auth endpoints for trial signup
 app.post('/auth/generate-code', express.json(), (req, res) => {
@@ -1166,13 +1187,25 @@ io.on('connection', (socket) => {
 // ────────────────────────────────
 // DASHBOARD & ASSET ROUTES (unchanged)
 // ────────────────────────────────
-app.get('/dashboard/logout', (_req, res) => {
-  res.setHeader('Set-Cookie', `${DASHBOARD_COOKIE_NAME}=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax`);
+app.get('/dashboard/logout', (req, res) => {
+  const token = req.cookies?.session_token;
+  if (token) {
+    db.prepare('UPDATE access_codes SET session_token = NULL WHERE session_token = ?').run(token);
+    db.prepare('UPDATE users SET session_token = NULL WHERE session_token = ?').run(token);
+  }
+  res.clearCookie(DASHBOARD_COOKIE_NAME, { path: '/', httpOnly: true, sameSite: 'lax' });
+  res.clearCookie('session_token', { path: '/', httpOnly: true, sameSite: 'lax' });
   res.redirect('/login');
 });
 
-app.get('/logout', (_req, res) => {
-  res.setHeader('Set-Cookie', 'session_token=; Path=/; HttpOnly; Max-Age=0; SameSite=Lax');
+app.get('/logout', (req, res) => {
+  const token = req.cookies?.session_token;
+  if (token) {
+    db.prepare('UPDATE access_codes SET session_token = NULL WHERE session_token = ?').run(token);
+    db.prepare('UPDATE users SET session_token = NULL WHERE session_token = ?').run(token);
+  }
+  res.clearCookie('session_token', { path: '/', httpOnly: true, sameSite: 'lax' });
+  res.clearCookie('fp', { path: '/', sameSite: 'lax' });
   res.redirect('/');
 });
 

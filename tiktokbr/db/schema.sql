@@ -46,6 +46,11 @@ CREATE TABLE IF NOT EXISTS users (
   tiktok_username TEXT,
   session_token TEXT,
   is_active INTEGER DEFAULT 1,
+  email_verified INTEGER DEFAULT 0,
+  email_verification_token TEXT,
+  email_verification_expires DATETIME,
+  password_reset_token TEXT,
+  password_reset_expires DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   last_login DATETIME

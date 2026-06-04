@@ -2,6 +2,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import nodemailer from 'nodemailer';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db/db.js';
 
@@ -383,6 +384,166 @@ function clearSessionCookie(res) {
   res.clearCookie('session_token', getCookieOptions(true));
 }
 
+function getUserFromToken(token) {
+  if (!token) return null;
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
+  } catch (_err) {
+    return null;
+  }
+  return db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
+}
+
+async function sendPasswordResetEmail(user, token) {
+  const host = process.env.EMAIL_HOST;
+  if (!host) return null;
+  const transporter = nodemailer.createTransport({
+    host,
+    port: Number(process.env.EMAIL_PORT || 587),
+    secure: process.env.EMAIL_SECURE === 'true',
+    auth: process.env.EMAIL_USERNAME && process.env.EMAIL_PASSWORD ? {
+      user: process.env.EMAIL_USERNAME,
+      pass: process.env.EMAIL_PASSWORD,
+    } : undefined,
+  });
+
+  const baseUrl = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
+  const mailOptions = {
+    from: process.env.EMAIL_FROM || `Battle Royale <no-reply@${new URL(baseUrl).hostname}>`,
+    to: user.email,
+    subject: 'Reset your Battle Royale Live password',
+    html: `<p>Hello ${escapeHtml(user.name || user.email)},</p>
+           <p>Click the link below to reset your password:</p>
+           <p><a href="${escapeHtml(resetUrl)}">Reset Password</a></p>
+           <p>This link expires in 1 hour.</p>`,
+  };
+
+  await transporter.sendMail(mailOptions);
+  return resetUrl;
+}
+
+router.post('/auth/user/update-profile', express.json(), async (req, res) => {
+  const token = req.cookies?.session_token;
+  const user = getUserFromToken(token);
+  if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+  const name = String(req.body.name || '').trim();
+  const tiktokUsername = String(req.body.tiktokUsername || '').trim();
+  const email = String(req.body.email || '').trim().toLowerCase();
+
+  if (!name || !tiktokUsername || !email) {
+    return res.status(400).json({ success: false, error: 'Name, TikTok username, and email are required.' });
+  }
+
+  if (email !== user.email) {
+    const existing = db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, user.id);
+    if (existing) {
+      return res.status(409).json({ success: false, error: 'This email is already in use.' });
+    }
+  }
+
+  db.prepare(
+    'UPDATE users SET name = ?, tiktok_username = ?, email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+  ).run(name, tiktokUsername, email, user.id);
+
+  return res.json({ success: true, message: 'Profile updated successfully.' });
+});
+
+router.post('/auth/user/change-password', express.json(), async (req, res) => {
+  const token = req.cookies?.session_token;
+  const user = getUserFromToken(token);
+  if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+  const currentPassword = String(req.body.currentPassword || '');
+  const newPassword = String(req.body.newPassword || '');
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ success: false, error: 'Current and new passwords are required.' });
+  }
+
+  const validPassword = await bcrypt.compare(currentPassword, user.password_hash || '');
+  if (!validPassword) {
+    return res.status(401).json({ success: false, error: 'Current password is incorrect.' });
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  db.prepare('UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(passwordHash, user.id);
+  return res.json({ success: true, message: 'Password changed successfully.' });
+});
+
+router.post('/auth/user/rooms', express.json(), (req, res) => {
+  const token = req.cookies?.session_token;
+  const user = getUserFromToken(token);
+  if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+  const roomName = String(req.body.roomName || '').trim();
+  if (!roomName) return res.status(400).json({ success: false, error: 'Room name is required.' });
+
+  const roomId = uuidv4().replace(/-/g, '').slice(0, 10);
+  db.prepare(
+    'INSERT INTO user_rooms (user_id, room_id, room_name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+  ).run(user.id, roomId, roomName);
+  db.prepare('INSERT OR IGNORE INTO room_settings (room_id) VALUES (?)').run(roomId);
+
+  return res.json({ success: true, room: { room_id: roomId, room_name: roomName } });
+});
+
+router.post('/auth/user/request-password-reset', express.json(), async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  if (!email) return res.status(400).json({ success: false, error: 'Email is required.' });
+
+  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  if (!user) {
+    return res.json({ success: true, message: 'If an account exists, a reset email will be sent.' });
+  }
+
+  const token = uuidv4();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+  db.prepare('UPDATE users SET password_reset_token = ?, password_reset_expires = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+    .run(token, expiresAt, user.id);
+
+  const resetLink = `${process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
+  let returnedLink = null;
+  try {
+    const sentUrl = await sendPasswordResetEmail(user, token);
+    if (sentUrl) returnedLink = sentUrl;
+  } catch (err) {
+    console.warn('Password reset email failed', err);
+  }
+
+  const response = { success: true, message: 'If an account exists, reset instructions have been sent.' };
+  if (!returnedLink && process.env.NODE_ENV !== 'production') {
+    response.devResetLink = resetLink;
+  }
+  return res.json(response);
+});
+
+router.post('/auth/user/reset-password', express.json(), async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const token = String(req.body.token || '').trim();
+  const newPassword = String(req.body.newPassword || '');
+
+  if (!email || !token || !newPassword) {
+    return res.status(400).json({ success: false, error: 'Email, token, and new password are required.' });
+  }
+
+  const user = db.prepare(
+    'SELECT * FROM users WHERE email = ? AND password_reset_token = ? AND password_reset_expires > CURRENT_TIMESTAMP'
+  ).get(email, token);
+  if (!user) {
+    return res.status(400).json({ success: false, error: 'Invalid or expired password reset token.' });
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  const sessionToken = createSessionToken({ userId: user.id, email: user.email });
+  db.prepare(
+    'UPDATE users SET password_hash = ?, password_reset_token = NULL, password_reset_expires = NULL, session_token = ?, last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+  ).run(passwordHash, sessionToken, user.id);
+
+  setSessionCookie(res, sessionToken);
+  return res.json({ success: true, message: 'Password reset successfully.' });
+});
+
 router.post('/auth/user/register', express.json(), async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
@@ -463,21 +624,25 @@ router.get('/auth/user/me', (req, res) => {
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
 
-  try {
-    jwt.verify(token, process.env.JWT_SECRET);
-  } catch (_err) {
-    return res.status(401).json({ success: false, error: 'Unauthorized' });
-  }
-
-  const user = db.prepare('SELECT id, email, name, tiktok_username, is_active, created_at, last_login FROM users WHERE session_token = ?').get(token);
+  const user = getUserFromToken(token);
   if (!user) {
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
-  const room = db.prepare('SELECT room_id, room_name FROM user_rooms WHERE user_id = ? ORDER BY id LIMIT 1').get(user.id);
-  return res.json({ success: true, user, room });
+
+  const rooms = db.prepare('SELECT room_id, room_name, created_at FROM user_rooms WHERE user_id = ? ORDER BY created_at DESC').all(user.id);
+  const subscription = db.prepare('SELECT paypal_subscription_id, plan_type, status, started_at, next_billing_date, expires_at FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1').get(user.id);
+  return res.json({ success: true, user: {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    tiktok_username: user.tiktok_username,
+    is_active: user.is_active,
+    created_at: user.created_at,
+    last_login: user.last_login,
+  }, rooms, subscription });
 });
 
-router.get('/login', (req, res) => {
+router.get('/legacy-login', (req, res) => {
   const token = req.cookies.session_token;
   const fp = req.cookies.fp;
   if (token) {

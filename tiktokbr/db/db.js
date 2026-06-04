@@ -60,11 +60,36 @@ try {
       tiktok_username TEXT,
       session_token TEXT,
       is_active INTEGER DEFAULT 1,
+      email_verified INTEGER DEFAULT 0,
+      email_verification_token TEXT,
+      email_verification_expires DATETIME,
+      password_reset_token TEXT,
+      password_reset_expires DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       last_login DATETIME
     )
   `);
+} catch (_) {}
+
+try {
+  db.exec('ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0');
+} catch (_) {}
+
+try {
+  db.exec('ALTER TABLE users ADD COLUMN email_verification_token TEXT');
+} catch (_) {}
+
+try {
+  db.exec('ALTER TABLE users ADD COLUMN email_verification_expires DATETIME');
+} catch (_) {}
+
+try {
+  db.exec('ALTER TABLE users ADD COLUMN password_reset_token TEXT');
+} catch (_) {}
+
+try {
+  db.exec('ALTER TABLE users ADD COLUMN password_reset_expires DATETIME');
 } catch (_) {}
 
 try {

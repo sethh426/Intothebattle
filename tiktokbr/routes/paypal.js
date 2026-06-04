@@ -18,6 +18,32 @@ function issueCode(email, days = 30) {
   return { code, expiresAt };
 }
 
+function findUserByEmail(email) {
+  if (!email) return null;
+  return db.prepare('SELECT * FROM users WHERE email = ?').get(email.toLowerCase().trim());
+}
+
+function formatDateForSql(dateString) {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function createOrUpdateSubscription(userId, paypalId, planType, status, startedAt, nextBillingDate, expiresAt = null) {
+  const insert = db.prepare(`
+    INSERT INTO subscriptions (
+      user_id, paypal_subscription_id, plan_type, status, started_at, next_billing_date, expires_at, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT(paypal_subscription_id) DO UPDATE SET
+      status = excluded.status,
+      next_billing_date = excluded.next_billing_date,
+      expires_at = excluded.expires_at,
+      updated_at = CURRENT_TIMESTAMP
+  `);
+  insert.run(userId, paypalId, planType, status, startedAt, nextBillingDate, expiresAt);
+}
+
 // (Previously had email-sending helpers here; removed — codes will be shown on a claim page)
 
 async function getPayPalAccessToken() {
@@ -91,16 +117,34 @@ router.post('/api/paypal/webhook', express.json(), async (req, res) => {
         return res.status(400).json({ error: 'No email found' });
       }
 
-      const existing = db.prepare('SELECT * FROM access_codes WHERE paypal_subscription_id = ?').get(subId);
-      if (existing) {
+      const existingCode = db.prepare('SELECT * FROM access_codes WHERE paypal_subscription_id = ?').get(subId);
+      if (existingCode) {
         console.log(`ℹ️ Code already issued for subscription ${subId}`);
         return res.json({ success: true, message: 'Already issued' });
+      }
+
+      const user = findUserByEmail(email);
+      const startedAt = formatDateForSql(subscription?.create_time);
+      const nextBilling = formatDateForSql(subscription?.billing_info?.next_billing_time || subscription?.billing_info?.next_billing_time);
+      const planType = subscription?.billing_info?.last_payment?.amount?.currency_code || 'paypal';
+
+      if (user) {
+        createOrUpdateSubscription(user.id, subId, planType, 'active', startedAt, nextBilling, null);
+        const existingRoom = db.prepare('SELECT room_id FROM user_rooms WHERE user_id = ? ORDER BY id LIMIT 1').get(user.id);
+        if (!existingRoom) {
+          const roomId = uuidv4().replace(/-/g, '').slice(0, 10);
+          db.prepare(
+            'INSERT INTO user_rooms (user_id, room_id, room_name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+          ).run(user.id, roomId, `${user.name || 'Creator'}'s room`);
+          db.prepare('INSERT OR IGNORE INTO room_settings (room_id) VALUES (?)').run(roomId);
+        }
+        console.log(`✅ Linked PayPal subscription ${subId} to existing user ${email}`);
+        return res.json({ success: true });
       }
 
       const { code, expiresAt } = issueCode(email, 30);
       db.prepare('UPDATE access_codes SET paypal_subscription_id = ? WHERE code = ?').run(subId, code);
       console.log(`✅ Issued code ${code} to ${email} (sub: ${subId})`);
-      // Note: not emailing codes. Buyers can view their code at /claim?sub=<subscription-id> or via /my-code
       return res.json({ success: true });
     }
 
@@ -111,6 +155,11 @@ router.post('/api/paypal/webhook', express.json(), async (req, res) => {
     ) {
       const subId = req.body.resource?.id;
       if (subId) {
+        const subscription = db.prepare('SELECT * FROM subscriptions WHERE paypal_subscription_id = ?').get(subId);
+        if (subscription) {
+          db.prepare('UPDATE subscriptions SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run('cancelled', subscription.id);
+          console.log(`🚫 Suspended/Cancelled user subscription ${subId}`);
+        }
         db.prepare('UPDATE access_codes SET is_revoked = 1 WHERE paypal_subscription_id = ?').run(subId);
         console.log(`🚫 Revoked code for subscription ${subId}`);
       }
@@ -120,6 +169,14 @@ router.post('/api/paypal/webhook', express.json(), async (req, res) => {
     if (eventType === 'PAYMENT.SALE.COMPLETED') {
       const subId = req.body.resource?.billing_agreement_id;
       if (subId) {
+        const userSub = db.prepare('SELECT * FROM subscriptions WHERE paypal_subscription_id = ?').get(subId);
+        if (userSub) {
+          const nextBilling = formatDateForSql(req.body.resource?.billing_agreement?.next_billing_time || req.body.resource?.billing_agreement?.next_billing_date || userSub.next_billing_date);
+          db.prepare('UPDATE subscriptions SET status = ?, next_billing_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+            .run('active', nextBilling || userSub.next_billing_date, userSub.id);
+          console.log(`🔄 Renewed user subscription ${subId}`);
+        }
+
         const row = db.prepare('SELECT * FROM access_codes WHERE paypal_subscription_id = ?').get(subId);
         if (row) {
           const now        = new Date();

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile - Battle Royale LIVE</title>
+  <style>
+    :root { --bg:#050d1a; --surface:#0f1726; --border:#3751ff22; --text:#e8eef8; --muted:#8ca2d1; --accent:#4d96ff; --success:#6bcb77; }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:sans-serif;}
+    body{min-height:100vh;background:linear-gradient(180deg,#020611 0%,#070d22 100%);color:var(--text);padding:24px;}
+    .page{max-width:980px;margin:0 auto;display:grid;gap:24px;}
+    header{display:flex;align-items:center;justify-content:space-between;gap:16px;}
+    h1{font-size:2rem;}
+    .subtext{color:var(--muted);}
+    .card{background:rgba(10,18,36,.96);border:1px solid rgba(255,255,255,.05);border-radius:24px;padding:28px;box-shadow:0 24px 80px rgba(0,0,0,.35);}
+    .section-title{font-size:.9rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:18px;}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+    .form-group{margin-bottom:18px;}
+    label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:8px;}
+    input{width:100%;padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#fff;}
+    button{padding:14px 16px;border:none;border-radius:14px;font-size:1rem;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--accent),#6ab0ff);cursor:pointer;}
+    .note{color:var(--muted);font-size:.95rem;line-height:1.6;}
+    .notice{border-radius:14px;padding:14px 16px;margin-bottom:18px;font-size:.95rem;}
+    .error{background:rgba(255,85,95,.12);border:1px solid rgba(255,85,95,.18);color:#ffb1b1;}
+    .success{background:rgba(107,203,119,.12);border:1px solid rgba(107,203,119,.18);color:#c6ffcf;}
+    .card-list{display:grid;gap:14px;}
+    .pill{display:inline-flex;padding:8px 12px;border-radius:999px;background:rgba(77,150,255,.08);color:var(--muted);font-size:.92rem;}
+    .links{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px;}
+    .links a{color:var(--accent);text-decoration:none;}
+    @media(max-width:880px){.grid{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div>
+        <h1>Account profile</h1>
+        <p class="subtext">Manage your account, rooms, and subscription.</p>
+      </div>
+      <div class="links"><a href="/dashboard">Back to dashboard</a><a href="#" id="logoutLink">Logout</a></div>
+    </header>
+
+    <div id="status"></div>
+
+    <div class="card">
+      <div class="section-title">Active subscription</div>
+      <div id="subscriptionDetails"><p class="note">Loading subscription details...</p></div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="section-title">Profile details</div>
+        <div class="form-group"><label for="name">Name</label><input id="name" type="text" /></div>
+        <div class="form-group"><label for="tiktokUsername">TikTok username</label><input id="tiktokUsername" type="text" /></div>
+        <div class="form-group"><label for="email">Email</label><input id="email" type="email" /></div>
+        <button id="saveProfile">Save profile</button>
+      </div>
+
+      <div class="card">
+        <div class="section-title">Change password</div>
+        <div class="form-group"><label for="currentPassword">Current password</label><input id="currentPassword" type="password" autocomplete="current-password" /></div>
+        <div class="form-group"><label for="newPassword">New password</label><input id="newPassword" type="password" autocomplete="new-password" /></div>
+        <button id="changePassword">Update password</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Rooms</div>
+      <div id="roomList" class="card-list"></div>
+      <div class="form-group" style="margin-top:16px;"><label for="roomName">Create a new room</label><input id="roomName" type="text" placeholder="My second room" /></div>
+      <button id="createRoom">Add room</button>
+    </div>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const subscriptionEl = document.getElementById('subscriptionDetails');
+    const roomListEl = document.getElementById('roomList');
+    const logoutLink = document.getElementById('logoutLink');
+
+    function showStatus(message, isError = false) {
+      statusEl.innerHTML = `<div class="notice ${isError ? 'error' : 'success'}">${message}</div>`;
+    }
+
+    async function loadProfile() {
+      try {
+        const res = await fetch('/auth/user/me', { credentials: 'same-origin' });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Unauthorized');
+        document.getElementById('name').value = json.user.name || '';
+        document.getElementById('tiktokUsername').value = json.user.tiktok_username || '';
+        document.getElementById('email').value = json.user.email || '';
+        const subscription = json.subscription;
+        if (subscription && subscription.status) {
+          subscriptionEl.innerHTML = `
+            <p class="note">Status: <strong>${subscription.status}</strong></p>
+            <p class="note">Plan: ${subscription.plan_type || 'PayPal'}</p>
+            <p class="note">Next billing: ${subscription.next_billing_date || 'Pending'}</p>
+          `;
+        } else {
+          subscriptionEl.innerHTML = '<p class="note">No active subscription found. Purchase via PayPal or use a legacy access code.</p>';
+        }
+        roomListEl.innerHTML = json.rooms.length ? json.rooms.map(room => `<div class="pill">${room.room_name || room.room_id}</div>`).join('') : '<p class="note">No rooms yet. Create one below.</p>';
+      } catch (err) {
+        window.location.href = '/login';
+      }
+    }
+
+    document.getElementById('saveProfile').addEventListener('click', async () => {
+      try {
+        const res = await fetch('/auth/user/update-profile', {
+          method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
+          body: JSON.stringify({
+            name: document.getElementById('name').value.trim(),
+            tiktokUsername: document.getElementById('tiktokUsername').value.trim(),
+            email: document.getElementById('email').value.trim(),
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Unable to save profile');
+        showStatus(json.message || 'Profile updated.');
+      } catch (err) {
+        showStatus(err.message, true);
+      }
+    });
+
+    document.getElementById('changePassword').addEventListener('click', async () => {
+      try {
+        const res = await fetch('/auth/user/change-password', {
+          method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
+          body: JSON.stringify({
+            currentPassword: document.getElementById('currentPassword').value,
+            newPassword: document.getElementById('newPassword').value,
+          }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Unable to change password');
+        showStatus(json.message || 'Password updated.');
+        document.getElementById('currentPassword').value = '';
+        document.getElementById('newPassword').value = '';
+      } catch (err) {
+        showStatus(err.message, true);
+      }
+    });
+
+    document.getElementById('createRoom').addEventListener('click', async () => {
+      const roomName = document.getElementById('roomName').value.trim();
+      if (!roomName) return showStatus('Room name is required.', true);
+      try {
+        const res = await fetch('/auth/user/rooms', {
+          method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
+          body: JSON.stringify({ roomName }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Unable to create room');
+        showStatus('Room created. Refreshing list...');
+        document.getElementById('roomName').value = '';
+        await loadProfile();
+      } catch (err) {
+        showStatus(err.message, true);
+      }
+    });
+
+    logoutLink.addEventListener('click', async (event) => {
+      event.preventDefault();
+      await fetch('/auth/user/logout', { method: 'POST', credentials:'same-origin' });
+      window.location.href = '/';
+    });
+
+    loadProfile();
+  </script>
+</body>
+</html>

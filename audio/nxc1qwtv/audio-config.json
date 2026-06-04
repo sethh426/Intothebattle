@@ -1,0 +1,21 @@
+{
+  "config": {
+    "attack": null,
+    "gift": null,
+    "kill": null,
+    "respawn": null,
+    "heal": null,
+    "follow": null
+  },
+  "library": [
+    { "filename": "sound1.mp3", "originalName": "sound1.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound2.mp3", "originalName": "sound2.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound3.mp3", "originalName": "sound3.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound4.mp3", "originalName": "sound4.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound5.mp3", "originalName": "sound5.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound6.mp3", "originalName": "sound6.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound7.mp3", "originalName": "sound7.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound8.m4a", "originalName": "sound8.m4a", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" },
+    { "filename": "sound9.mp3", "originalName": "sound9.mp3", "size": 0, "uploadedAt": "2026-01-01T00:00:00.000Z" }
+  ]
+}
