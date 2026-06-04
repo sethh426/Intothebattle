@@ -475,7 +475,7 @@ input[type=text]:focus, select:focus {
       <div class="status-chip offline" id="tiktok-chip"><div class="pulse-dot"></div><span id="tiktok-label">Disconnected</span></div>
       <div class="input-group">
         <label class="input-label">TikTok Username</label>
-        <input type="text" id="username" placeholder="@yourusername">
+        <input type="text" id="username" placeholder="@yourusername" autocapitalize="none" autocorrect="off" spellcheck="false">
       </div>
       <div class="btn-row">
         <button class="btn btn-success" style="flex:1" onclick="connect()">✓ Connect</button>
@@ -662,6 +662,22 @@ async function fetchStatus() {
 fetchStatus();
 setInterval(fetchStatus, 10000);
 
+const usernameInput = document.getElementById('username');
+if (usernameInput) {
+  usernameInput.addEventListener('input', (event) => {
+    const input = event.target;
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    const normalized = input.value.toLowerCase();
+    if (normalized !== input.value) {
+      input.value = normalized;
+      if (typeof start === 'number' && typeof end === 'number') {
+        input.setSelectionRange(start, end);
+      }
+    }
+  });
+}
+
 // API calls
 async function apiCall(endpoint, method = 'POST', body = null) {
   const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
@@ -672,7 +688,7 @@ async function apiCall(endpoint, method = 'POST', body = null) {
   return json;
 }
 function connect() {
-  let username = document.getElementById('username').value.trim().replace(/^@/, '');
+  let username = document.getElementById('username').value.trim().replace(/^@/, '').toLowerCase();
   if (!username) { toast('Enter a username', true); return; }
   setTikTokStatus('connecting', username);
   fetch('/api/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ username }) })
