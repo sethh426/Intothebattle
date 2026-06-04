@@ -51,6 +51,63 @@ try {
 } catch (_) {}
 
 try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT,
+      name TEXT,
+      tiktok_username TEXT,
+      session_token TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_login DATETIME
+    )
+  `);
+} catch (_) {}
+
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_rooms (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      room_id TEXT UNIQUE NOT NULL,
+      room_name TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+  `);
+} catch (_) {}
+
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      paypal_subscription_id TEXT UNIQUE,
+      plan_type TEXT,
+      status TEXT DEFAULT 'active',
+      started_at DATETIME,
+      next_billing_date DATETIME,
+      expires_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    )
+  `);
+} catch (_) {}
+
+try {
+  db.exec('ALTER TABLE access_codes ADD COLUMN user_id INTEGER');
+} catch (_) {}
+
+try {
+  db.exec("ALTER TABLE access_codes ADD COLUMN code_type TEXT DEFAULT 'trial'");
+} catch (_) {}
+
+try {
   const codesWithoutRoom = db.prepare("SELECT id FROM access_codes WHERE room_id IS NULL OR room_id = ''").all();
   const updateRoom = db.prepare('UPDATE access_codes SET room_id = ? WHERE id = ?');
   const migrateRooms = db.transaction(() => {

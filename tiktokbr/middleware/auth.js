@@ -1,6 +1,15 @@
 import db from '../db/db.js';
 import jwt from 'jsonwebtoken';
 
+function getAuthRecord(token) {
+  if (!token) return null;
+  const accessCode = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
+  if (accessCode) return { type: 'code', record: accessCode };
+  const user = db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
+  if (user) return { type: 'user', record: user };
+  return null;
+}
+
 export default function requireAccess(req, res, next) {
   const token = req.cookies.session_token;
   if (!token) return res.redirect('/login');
@@ -11,17 +20,28 @@ export default function requireAccess(req, res, next) {
     return res.redirect('/login?reason=invalid');
   }
 
-  const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
-  if (!row) return res.redirect('/login');
-  if (row.is_revoked) return res.redirect('/login?reason=revoked');
-  if (new Date(row.expires_at) < new Date()) return res.redirect('/login?reason=expired');
+  const auth = getAuthRecord(token);
+  if (!auth) return res.redirect('/login');
 
-  const fp = req.cookies.fp;
-  if (row.fingerprint && (!fp || row.fingerprint !== fp)) {
-    return res.redirect('/login?reason=device');
+  if (auth.type === 'code') {
+    const row = auth.record;
+    if (row.is_revoked) return res.redirect('/login?reason=revoked');
+    if (new Date(row.expires_at) < new Date()) return res.redirect('/login?reason=expired');
+
+    const fp = req.cookies.fp;
+    if (row.fingerprint && (!fp || row.fingerprint !== fp)) {
+      return res.redirect('/login?reason=device');
+    }
+
+    db.prepare('UPDATE access_codes SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run(row.id);
+    req.accessCode = row;
+  } else {
+    const user = auth.record;
+    if (!user.is_active) return res.redirect('/login?reason=revoked');
+
+    db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
+    req.user = user;
   }
 
-  db.prepare('UPDATE access_codes SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run(row.id);
-  req.accessCode = row;
   next();
 }

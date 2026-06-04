@@ -40,6 +40,20 @@ function requiresRoomId() {
   return row ? row.value !== '0' : true;
 }
 
+function getAuthRecord(token) {
+  if (!token) return null;
+  const accessCode = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
+  if (accessCode) return { type: 'code', record: accessCode };
+  const user = db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
+  if (user) return { type: 'user', record: user };
+  return null;
+}
+
+function getUserRoomId(userId) {
+  const row = db.prepare('SELECT room_id FROM user_rooms WHERE user_id = ? ORDER BY id LIMIT 1').get(userId);
+  return row ? row.room_id : null;
+}
+
 function logAuthInfo(req, extras = {}) {
   logger.info({
     path: req?.path,
@@ -849,18 +863,26 @@ app.get('/', (req, res) => {
   // If logged in with active trial/subscription, go to dashboard
   const token = req.cookies?.session_token;
   if (token) {
-    const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
-    if (row && !row.is_revoked) {
-      // Check trial/subscription status
-      if (row.trial_started) {
-        const trialStart = new Date(row.trial_started);
-        const trialEnd = new Date(trialStart.getTime() + (row.trial_days || 14) * 24 * 60 * 60 * 1000);
-        const now = new Date();
-        if (now > trialEnd && row.subscription_status !== 'active') {
-          return res.redirect('/paywall');
+    const auth = getAuthRecord(token);
+    if (auth?.type === 'code') {
+      const row = auth.record;
+      if (row && !row.is_revoked) {
+        if (row.trial_started) {
+          const trialStart = new Date(row.trial_started);
+          const trialEnd = new Date(trialStart.getTime() + (row.trial_days || 14) * 24 * 60 * 60 * 1000);
+          const now = new Date();
+          if (now > trialEnd && row.subscription_status !== 'active') {
+            return res.redirect('/paywall');
+          }
         }
+        return res.redirect('/dashboard');
       }
-      return res.redirect('/dashboard');
+    }
+    if (auth?.type === 'user') {
+      const user = auth.record;
+      if (user && user.is_active) {
+        return res.redirect('/dashboard');
+      }
     }
   }
   // Not logged in, show landing page
@@ -1016,14 +1038,32 @@ function requireRoom(req, res, next) {
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
 
-  const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
-  if (!row || row.is_revoked || new Date(row.expires_at) < new Date()) {
-    logger.warn({ path: req.path, method: req.method, tokenPresent: true, rowId: row?.id, code: row?.code, isRevoked: row?.is_revoked, expiresAt: row?.expires_at }, 'API auth failed: expired or revoked or no row');
+  const auth = getAuthRecord(token);
+  if (!auth) {
+    logger.warn({ path: req.path, method: req.method, tokenPresent: true }, 'API auth failed: invalid token');
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
 
-  req.roomId = assignDefaultRoomIfMissing(row);
-  logger.info({ path: req.path, method: req.method, rowId: row.id, code: row.code, roomId: req.roomId, requiresRoomId: requiresRoomId() }, '/api/connect auth success');
+  if (auth.type === 'code') {
+    const row = auth.record;
+    if (row.is_revoked || new Date(row.expires_at) < new Date()) {
+      logger.warn({ path: req.path, method: req.method, rowId: row?.id, code: row?.code, isRevoked: row?.is_revoked, expiresAt: row?.expires_at }, 'API auth failed: expired or revoked');
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+    req.roomId = assignDefaultRoomIfMissing(row);
+    logger.info({ path: req.path, method: req.method, rowId: row.id, code: row.code, roomId: req.roomId, requiresRoomId: requiresRoomId() }, '/api/connect auth success');
+  } else {
+    const user = auth.record;
+    if (!user.is_active) {
+      logger.warn({ path: req.path, method: req.method, userId: user.id }, 'API auth failed: user disabled');
+      return res.status(401).json({ success: false, error: 'Unauthorized' });
+    }
+    const roomId = getUserRoomId(user.id) || DEFAULT_ROOM_ID;
+    req.roomId = roomId;
+    req.user = user;
+    logger.info({ path: req.path, method: req.method, userId: user.id, roomId, requiresRoomId: requiresRoomId() }, '/api/connect auth success');
+  }
+
   req.room = getOrCreateRoom(req.roomId);
   loadRoomPlayerStats(req.room);
   loadRoomBackground(req.room);

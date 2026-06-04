@@ -1,6 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db/db.js';
 
@@ -362,13 +363,119 @@ function renderPromoPage({ error = '', message = '', code = '' } = {}) {
 </html>`;
 }
 
+function sanitizeCode(value) {
+  return String(value || '').trim().toUpperCase();
+}
+
 function getCookieOptions(httpOnly = true) {
   return { ...COOKIE_OPTIONS, httpOnly };
 }
 
-function sanitizeCode(value) {
-  return String(value || '').trim().toUpperCase();
+function createSessionToken(payload) {
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '90d' });
 }
+
+function setSessionCookie(res, token) {
+  res.cookie('session_token', token, getCookieOptions(true));
+}
+
+function clearSessionCookie(res) {
+  res.clearCookie('session_token', getCookieOptions(true));
+}
+
+router.post('/auth/user/register', express.json(), async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const password = String(req.body.password || '');
+  const name = String(req.body.name || '').trim();
+  const tiktokUsername = String(req.body.tiktokUsername || '').trim();
+
+  if (!email || !password || !name || !tiktokUsername) {
+    return res.status(400).json({ success: false, error: 'Email, password, name, and TikTok username are required.' });
+  }
+
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  if (existing) {
+    return res.status(409).json({ success: false, error: 'An account with this email already exists.' });
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const result = db.prepare(
+    'INSERT INTO users (email, password_hash, name, tiktok_username, created_at, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+  ).run(email, passwordHash, name, tiktokUsername);
+
+  const userId = result.lastInsertRowid;
+  const sessionToken = createSessionToken({ userId, email });
+  db.prepare('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?').run(sessionToken, userId);
+  setSessionCookie(res, sessionToken);
+
+  const roomId = uuidv4().replace(/-/g, '').slice(0, 10);
+  db.prepare('INSERT INTO user_rooms (user_id, room_id, room_name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)').run(
+    userId,
+    roomId,
+    `${name}'s room`
+  );
+  db.prepare('INSERT OR IGNORE INTO room_settings (room_id) VALUES (?)').run(roomId);
+
+  return res.json({ success: true, message: 'Account created.', roomId });
+});
+
+router.post('/auth/user/login', express.json(), async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const password = String(req.body.password || '');
+
+  if (!email || !password) {
+    return res.status(400).json({ success: false, error: 'Email and password are required.' });
+  }
+
+  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  if (!user || !user.password_hash) {
+    return res.status(401).json({ success: false, error: 'Invalid email or password.' });
+  }
+
+  const validPassword = await bcrypt.compare(password, user.password_hash);
+  if (!validPassword) {
+    return res.status(401).json({ success: false, error: 'Invalid email or password.' });
+  }
+
+  if (!user.is_active) {
+    return res.status(403).json({ success: false, error: 'This account is disabled.' });
+  }
+
+  const sessionToken = createSessionToken({ userId: user.id, email });
+  db.prepare('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?').run(sessionToken, user.id);
+  setSessionCookie(res, sessionToken);
+
+  return res.json({ success: true, message: 'Logged in successfully.' });
+});
+
+router.post('/auth/user/logout', (req, res) => {
+  const token = req.cookies?.session_token;
+  if (token) {
+    db.prepare('UPDATE users SET session_token = NULL WHERE session_token = ?').run(token);
+  }
+  clearSessionCookie(res);
+  return res.json({ success: true, message: 'Logged out.' });
+});
+
+router.get('/auth/user/me', (req, res) => {
+  const token = req.cookies?.session_token;
+  if (!token) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  try {
+    jwt.verify(token, process.env.JWT_SECRET);
+  } catch (_err) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  const user = db.prepare('SELECT id, email, name, tiktok_username, is_active, created_at, last_login FROM users WHERE session_token = ?').get(token);
+  if (!user) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+  const room = db.prepare('SELECT room_id, room_name FROM user_rooms WHERE user_id = ? ORDER BY id LIMIT 1').get(user.id);
+  return res.json({ success: true, user, room });
+});
 
 router.get('/login', (req, res) => {
   const token = req.cookies.session_token;
@@ -379,6 +486,10 @@ router.get('/login', (req, res) => {
       if (!row.fingerprint || (fp && row.fingerprint === fp)) {
         return res.redirect('/dashboard');
       }
+    }
+    const user = db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
+    if (user && user.is_active) {
+      return res.redirect('/dashboard');
     }
   }
   res.send(renderLoginPage());
