@@ -320,6 +320,70 @@
       .panel-data { grid-template-columns: 1fr; }
     }
   </style>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "WebSite",
+          "@id": "https://intothebattle.com/#website",
+          "url": "https://intothebattle.com/",
+          "name": "IntoTheBattle",
+          "publisher": { "@id": "https://intothebattle.com/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://intothebattle.com/search?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+          }
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://intothebattle.com/#software",
+          "name": "IntoTheBattle",
+          "url": "https://intothebattle.com/",
+          "description": "An interactive live overlay and dashboard for TikTok LIVE streamers — access codes and creator accounts supported.",
+          "applicationCategory": "WebApplication",
+          "operatingSystem": "Web",
+          "browserRequirements": "Modern browser with WebSocket support",
+          "offers": {
+            "@type": "Offer",
+            "price": "8.50",
+            "priceCurrency": "USD",
+            "url": "https://intothebattle.com/signup"
+          },
+          "publisher": { "@id": "https://intothebattle.com/#organization" }
+        },
+        {
+          "@type": "Organization",
+          "@id": "https://intothebattle.com/#organization",
+          "name": "IntoTheBattle",
+          "url": "https://intothebattle.com/",
+          "logo": "https://intothebattle.com/logo.svg",
+          "sameAs": ["https://twitter.com/IntoTheBattle","https://github.com/sethh426/TIKTOKBR"]
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "How long is the free trial?",
+              "acceptedAnswer": { "@type": "Answer", "text": "New signups receive a 14-day free trial with full access to all overlay features." }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I use legacy access codes?",
+              "acceptedAnswer": { "@type": "Answer", "text": "Yes — legacy access codes are supported alongside modern creator accounts and subscriptions." }
+            },
+            {
+              "@type": "Question",
+              "name": "Do I need a Twitch/TikTok key to run overlays?",
+              "acceptedAnswer": { "@type": "Answer", "text": "No special key is required — overlays are browser-based and connect to your stream via the overlay URL and Socket.IO." }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
 </head>
 <body>
   <nav>
