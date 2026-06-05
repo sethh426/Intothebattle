@@ -2,9 +2,15 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import nodemailer from 'nodemailer';
+import postmark from 'postmark';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db/db.js';
+
+function getPostmarkClient() {
+  const token = process.env.POSTMARK_API_TOKEN;
+  if (!token) return null;
+  return new postmark.ServerClient(token);
+}
 
 const router = express.Router();
 
@@ -394,34 +400,103 @@ function getUserFromToken(token) {
   return db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
 }
 
-async function sendPasswordResetEmail(user, token) {
-  const host = process.env.EMAIL_HOST;
-  if (!host) return null;
-  const transporter = nodemailer.createTransport({
-    host,
-    port: Number(process.env.EMAIL_PORT || 587),
-    secure: process.env.EMAIL_SECURE === 'true',
-    auth: process.env.EMAIL_USERNAME && process.env.EMAIL_PASSWORD ? {
-      user: process.env.EMAIL_USERNAME,
-      pass: process.env.EMAIL_PASSWORD,
-    } : undefined,
+async function sendVerificationEmail(user, token) {
+  const client = getPostmarkClient();
+  if (!client) {
+    console.warn('POSTMARK_API_TOKEN not configured; verification email will not be sent.');
+    return null;
+  }
+
+  const baseUrl = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+  const verifyUrl = `${baseUrl.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
+  const emailFrom = process.env.EMAIL_FROM || `Battle Royale <no-reply@${new URL(baseUrl).hostname}>`;
+
+  await client.sendEmail({
+    From: emailFrom,
+    To: user.email,
+    Subject: 'Verify your Battle Royale Live email',
+    HtmlBody: `<p>Hello ${escapeHtml(user.name || user.email)},</p>
+               <p>Click the link below to verify your email address for Battle Royale Live:</p>
+               <p><a href="${escapeHtml(verifyUrl)}">Verify your email</a></p>
+               <p>If you did not create an account, you can ignore this message.</p>
+               <p>This link expires in 24 hours.</p>`,
+    MessageStream: 'outbound',
   });
+  return verifyUrl;
+}
+
+async function sendPasswordResetEmail(user, token) {
+  const client = getPostmarkClient();
+  if (!client) {
+    console.warn('POSTMARK_API_TOKEN not configured; password reset email will not be sent.');
+    return null;
+  }
 
   const baseUrl = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
   const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
-  const mailOptions = {
-    from: process.env.EMAIL_FROM || `Battle Royale <no-reply@${new URL(baseUrl).hostname}>`,
-    to: user.email,
-    subject: 'Reset your Battle Royale Live password',
-    html: `<p>Hello ${escapeHtml(user.name || user.email)},</p>
-           <p>Click the link below to reset your password:</p>
-           <p><a href="${escapeHtml(resetUrl)}">Reset Password</a></p>
-           <p>This link expires in 1 hour.</p>`,
-  };
+  const emailFrom = process.env.EMAIL_FROM || `Battle Royale <no-reply@${new URL(baseUrl).hostname}>`;
 
-  await transporter.sendMail(mailOptions);
+  await client.sendEmail({
+    From: emailFrom,
+    To: user.email,
+    Subject: 'Reset your Battle Royale Live password',
+    HtmlBody: `<p>Hello ${escapeHtml(user.name || user.email)},</p>
+               <p>Click the link below to reset your password:</p>
+               <p><a href="${escapeHtml(resetUrl)}">Reset Password</a></p>
+               <p>This link expires in 1 hour.</p>`,
+    MessageStream: 'outbound',
+  });
   return resetUrl;
 }
+
+router.post('/auth/user/verify-email', express.json(), async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const token = String(req.body.token || '').trim();
+  if (!email || !token) {
+    return res.status(400).json({ success: false, error: 'Email and verification token are required.' });
+  }
+
+  const user = db.prepare(
+    'SELECT * FROM users WHERE email = ? AND email_verification_token = ? AND email_verification_expires > CURRENT_TIMESTAMP'
+  ).get(email, token);
+  if (!user) {
+    return res.status(400).json({ success: false, error: 'Invalid or expired verification link.' });
+  }
+
+  db.prepare(
+    'UPDATE users SET email_verified = 1, email_verification_token = NULL, email_verification_expires = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+  ).run(user.id);
+
+  return res.json({ success: true, message: 'Email verified successfully.' });
+});
+
+router.post('/auth/user/resend-verification', express.json(), async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  if (!email) {
+    return res.status(400).json({ success: false, error: 'Email is required.' });
+  }
+
+  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  if (!user) {
+    return res.json({ success: true, message: 'If that email exists, a verification message has been sent.' });
+  }
+
+  if (user.email_verified) {
+    return res.json({ success: true, message: 'Email is already verified.' });
+  }
+
+  const verificationToken = uuidv4();
+  const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+  db.prepare(
+    'UPDATE users SET email_verification_token = ?, email_verification_expires = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+  ).run(verificationToken, verificationExpiresAt, user.id);
+
+  await sendVerificationEmail(user, verificationToken).catch((err) => {
+    console.error('Resend verification email failed:', err);
+  });
+
+  return res.json({ success: true, message: 'Verification email resent.' });
+});
 
 router.post('/auth/user/update-profile', express.json(), async (req, res) => {
   const token = req.cookies?.session_token;
@@ -441,6 +516,18 @@ router.post('/auth/user/update-profile', express.json(), async (req, res) => {
     if (existing) {
       return res.status(409).json({ success: false, error: 'This email is already in use.' });
     }
+
+    const verificationToken = uuidv4();
+    const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+    db.prepare(
+      'UPDATE users SET name = ?, tiktok_username = ?, email = ?, email_verified = 0, email_verification_token = ?, email_verification_expires = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).run(name, tiktokUsername, email, verificationToken, verificationExpiresAt, user.id);
+
+    sendVerificationEmail({ id: user.id, email, name }, verificationToken).catch((err) => {
+      console.error('Verification email failed after profile update:', err);
+    });
+
+    return res.json({ success: true, message: 'Profile updated. Please verify your new email address.' });
   }
 
   db.prepare(
@@ -560,13 +647,16 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
+  const verificationToken = uuidv4();
+  const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
   const result = db.prepare(
-    'INSERT INTO users (email, password_hash, name, tiktok_username, created_at, updated_at) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
-  ).run(email, passwordHash, name, tiktokUsername);
+    'INSERT INTO users (email, password_hash, name, tiktok_username, is_active, session_token, email_verified, email_verification_token, email_verification_expires, created_at, updated_at) VALUES (?, ?, ?, ?, 1, NULL, 0, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+  ).run(email, passwordHash, name, tiktokUsername, verificationToken, verificationExpiresAt);
 
   const userId = result.lastInsertRowid;
   const sessionToken = createSessionToken({ userId, email });
   db.prepare('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?').run(sessionToken, userId);
+  const user = { id: userId, email, name };
   setSessionCookie(res, sessionToken);
 
   const roomId = uuidv4().replace(/-/g, '').slice(0, 10);
@@ -577,7 +667,11 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
   );
   db.prepare('INSERT OR IGNORE INTO room_settings (room_id) VALUES (?)').run(roomId);
 
-  return res.json({ success: true, message: 'Account created.', roomId });
+  sendVerificationEmail(user, verificationToken).catch((err) => {
+    console.error('Verification email failed:', err);
+  });
+
+  return res.json({ success: true, message: 'Account created. Check your inbox to verify your email.', roomId });
 });
 
 router.post('/auth/user/login', express.json(), async (req, res) => {
@@ -637,6 +731,7 @@ router.get('/auth/user/me', (req, res) => {
     name: user.name,
     tiktok_username: user.tiktok_username,
     is_active: user.is_active,
+    email_verified: !!user.email_verified,
     created_at: user.created_at,
     last_login: user.last_login,
   }, rooms, subscription });

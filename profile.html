@@ -23,6 +23,7 @@
     .notice{border-radius:14px;padding:14px 16px;margin-bottom:18px;font-size:.95rem;}
     .error{background:rgba(255,85,95,.12);border:1px solid rgba(255,85,95,.18);color:#ffb1b1;}
     .success{background:rgba(107,203,119,.12);border:1px solid rgba(107,203,119,.18);color:#c6ffcf;}
+    .small-button{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;font-size:.9rem;cursor:pointer;}
     .card-list{display:grid;gap:14px;}
     .pill{display:inline-flex;padding:8px 12px;border-radius:999px;background:rgba(77,150,255,.08);color:var(--muted);font-size:.92rem;}
     .links{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px;}
@@ -41,6 +42,7 @@
     </header>
 
     <div id="status"></div>
+    <div id="emailVerificationStatus"></div>
 
     <div class="card">
       <div class="section-title">Active subscription</div>
@@ -74,6 +76,7 @@
 
   <script>
     const statusEl = document.getElementById('status');
+    const emailVerificationStatusEl = document.getElementById('emailVerificationStatus');
     const subscriptionEl = document.getElementById('subscriptionDetails');
     const roomListEl = document.getElementById('roomList');
     const logoutLink = document.getElementById('logoutLink');
@@ -90,6 +93,7 @@
         document.getElementById('name').value = json.user.name || '';
         document.getElementById('tiktokUsername').value = json.user.tiktok_username || '';
         document.getElementById('email').value = json.user.email || '';
+        updateEmailVerificationStatus(json.user);
         const subscription = json.subscription;
         if (subscription && subscription.status) {
           subscriptionEl.innerHTML = `
@@ -104,6 +108,30 @@
       } catch (err) {
         window.location.href = '/login';
       }
+    }
+
+    function updateEmailVerificationStatus(user) {
+      if (user.email_verified) {
+        emailVerificationStatusEl.innerHTML = '<div class="notice success">Email verified. Thank you for confirming your address.</div>';
+        return;
+      }
+
+      emailVerificationStatusEl.innerHTML = `<div class="notice error">Your email is not verified. <button id="resendVerification" type="button" class="small-button">Resend verification email</button></div>`;
+      document.getElementById('resendVerification')?.addEventListener('click', async () => {
+        try {
+          const res = await fetch('/auth/user/resend-verification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ email: document.getElementById('email').value.trim() }),
+          });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error || 'Unable to resend verification email');
+          showStatus(json.message || 'Verification email resent.');
+        } catch (err) {
+          showStatus(err.message, true);
+        }
+      });
     }
 
     document.getElementById('saveProfile').addEventListener('click', async () => {

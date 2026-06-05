@@ -50,6 +50,10 @@ This project includes:
   - `PAYPAL_WEBHOOK_ID`
   - `NODE_ENV=production`
   - Optional: `SENTRY_DSN`, `LOG_LEVEL`, `API_KEY`, `DEV_TEST_MODE=true`
+    - `POSTMARK_API_TOKEN`
+    - `APP_BASE_URL=https://intothebattle.com`
+    - `EMAIL_FROM=Battle Royale <no-reply@intothebattle.com>`
+    - `POSTMARK_TEST_EMAIL=<your_test_email>`
 
 ### Disk persistence
 
@@ -66,6 +70,17 @@ This project includes:
 - Add your domain in Render dashboard
 - Configure DNS records as Render instructs
 - Render provides automatic SSL
+
+### Postmark email testing
+
+- Add `POSTMARK_API_TOKEN` as your Postmark server API token.
+- Add `APP_BASE_URL` and `EMAIL_FROM` so verification/reset links generate correctly.
+- Add `POSTMARK_TEST_EMAIL` to receive a connectivity test message.
+- Run:
+  ```bash
+  npm run test:postmark
+  ```
+  This will send a real test email through Postmark.
 
 ## Local Development
 
@@ -118,13 +133,21 @@ node server.js <streamerUsername>
 Required:
 
 - `API_KEY` — TikTok API key or streamer integration token
+- `JWT_SECRET` — secret used to sign session tokens
 - `DISK_PATH` — persistent storage root (`/var/data` on Render)
 - `PAYPAL_CLIENT_ID`
 - `PAYPAL_CLIENT_SECRET`
 - `PAYPAL_WEBHOOK_ID`
 
+Recommended for email flows:
+
+- `POSTMARK_API_TOKEN` — Postmark Server API token for sending verification and password reset emails
+- `APP_BASE_URL` — public app URL, e.g. `https://your-app.onrender.com`
+- `EMAIL_FROM` — optional sender address, e.g. `Battle Royale <no-reply@yourdomain.com>`
+
 Optional:
 
+- `PAYPAL_PAYMENT_LINK` — custom PayPal purchase link
 - `NODE_ENV=production`
 - `LOG_LEVEL=info`
 - `SENTRY_DSN`
