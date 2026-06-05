@@ -8,18 +8,26 @@
     :root { --bg:#050d1a; --surface:#0f1726; --border:#3751ff22; --text:#e8eef8; --muted:#8ca2d1; --accent:#4d96ff; }
     *{box-sizing:border-box;margin:0;padding:0;font-family:sans-serif;}
     body{min-height:100vh;background:linear-gradient(180deg,#020611 0%,#070d22 100%);color:var(--text);display:flex;align-items:center;justify-content:center;padding:24px;}
-    .card{width:min(520px,100%);background:rgba(10,18,36,.96);border:1px solid rgba(255,255,255,.05);border-radius:24px;padding:32px;box-shadow:0 24px 80px rgba(0,0,0,.35);}
+    .card{width:min(600px,100%);background:rgba(10,18,36,.96);border:1px solid rgba(255,255,255,.05);border-radius:24px;padding:32px;box-shadow:0 24px 80px rgba(0,0,0,.35);}
     h1{font-size:2rem;margin-bottom:12px;}
     p{color:var(--muted);margin-bottom:24px;}
     .form-group{margin-bottom:18px;}
     label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:8px;}
     input{width:100%;padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#fff;}
     button{width:100%;padding:14px 16px;border:none;border-radius:14px;font-size:1rem;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--accent),#6ab0ff);cursor:pointer;}
+    button:disabled{opacity:.55;cursor:not-allowed;}
     .notice{border-radius:14px;padding:14px 16px;margin-bottom:18px;font-size:.95rem;}
     .error{background:rgba(255,85,95,.12);border:1px solid rgba(255,85,95,.18);color:#ffb1b1;}
     .success{background:rgba(107,203,119,.12);border:1px solid rgba(107,203,119,.18);color:#c6ffcf;}
     .helper{margin-top:18px;color:var(--muted);font-size:.95rem;}
     .helper a{color:var(--accent);text-decoration:none;}
+    .challenge-instruction{color:var(--muted);margin-bottom:12px;font-size:.95rem;}
+    .challenge-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}
+    .challenge-card{cursor:pointer;border:1px solid rgba(255,255,255,.08);border-radius:18px;background:rgba(255,255,255,.03);padding:12px;display:flex;flex-direction:column;align-items:center;gap:10px;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;}
+    .challenge-card:hover{transform:translateY(-2px);border-color:rgba(77,150,255,.18);}
+    .challenge-card.selected{border-color:rgba(77,150,255,.65);box-shadow:0 0 0 3px rgba(77,150,255,.14);}
+    .challenge-card img{display:block;width:100%;height:auto;border-radius:14px;}
+    .challenge-label{font-size:.95rem;color:#fff;text-align:center;}
   </style>
   <script type="application/ld+json">
   {
@@ -40,38 +48,120 @@
     <div class="form-group"><label for="tiktokUsername">TikTok Username</label><input id="tiktokUsername" type="text" autocomplete="off" placeholder="yourusername" /></div>
     <div class="form-group"><label for="email">Email</label><input id="email" type="email" autocomplete="email" /></div>
     <div class="form-group"><label for="password">Password</label><input id="password" type="password" autocomplete="new-password" /></div>
-    <button id="registerBtn" type="button">Register</button>
+    <div class="form-group">
+      <label>Security check</label>
+      <div id="challengeInstruction" class="challenge-instruction">Loading security check…</div>
+      <div id="challengeGrid" class="challenge-grid"></div>
+    </div>
+    <input id="captchaToken" type="hidden" />
+    <input id="captchaAnswer" type="hidden" />
+    <button id="registerBtn" type="button" disabled>Register</button>
     <p class="helper">Already have an account? <a href="/login">Login here</a>.</p>
   </div>
   <script>
     const statusEl = document.getElementById('status');
-    document.getElementById('registerBtn').addEventListener('click', async () => {
-      statusEl.innerHTML = '';
-      const name = document.getElementById('name').value.trim();
-      const tiktokUsername = document.getElementById('tiktokUsername').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
-      if (!name || !tiktokUsername || !email || !password) {
-        statusEl.innerHTML = '<div class="notice error">All fields are required.</div>';
-        return;
+    const registerBtn = document.getElementById('registerBtn');
+    const nameInput = document.getElementById('name');
+    const tiktokInput = document.getElementById('tiktokUsername');
+    const emailInput = document.getElementById('email');
+    const passwordInput = document.getElementById('password');
+    const challengeInstruction = document.getElementById('challengeInstruction');
+    const challengeGrid = document.getElementById('challengeGrid');
+    const captchaTokenInput = document.getElementById('captchaToken');
+    const captchaAnswerInput = document.getElementById('captchaAnswer');
+    let selectedChallenge = '';
+
+    function showStatus(message, isError = false) {
+      statusEl.innerHTML = `<div class="notice ${isError ? 'error' : 'success'}">${message}</div>`;
+    }
+
+    function renderChallenge(challenge) {
+      challengeInstruction.textContent = challenge.prompt;
+      challengeGrid.innerHTML = '';
+      selectedChallenge = '';
+      captchaAnswerInput.value = '';
+      captchaTokenInput.value = challenge.token;
+      challenge.options.forEach((option) => {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'challenge-card';
+        card.innerHTML = `<img src="${option.image}" alt="${option.label}" /><div class="challenge-label">${option.label}</div>`;
+        card.addEventListener('click', () => {
+          selectedChallenge = option.id;
+          captchaAnswerInput.value = option.id;
+          challengeGrid.querySelectorAll('.challenge-card').forEach((item) => item.classList.remove('selected'));
+          card.classList.add('selected');
+        });
+        challengeGrid.appendChild(card);
+      });
+      registerBtn.disabled = false;
+    }
+
+    async function loadSecurityChallenge() {
+      try {
+        const res = await fetch('/auth/user/register-challenge', { credentials: 'same-origin' });
+        const json = await res.json();
+        if (!res.ok || !json.success) {
+          throw new Error(json.error || 'Unable to load security check.');
+        }
+        renderChallenge({ ...json.challenge, token: json.token });
+      } catch (err) {
+        challengeInstruction.textContent = 'Unable to load security check. Refresh the page to try again.';
+        registerBtn.disabled = true;
+        console.error(err);
       }
+    }
+
+    async function registerAccount() {
+      statusEl.innerHTML = '';
+      const name = nameInput.value.trim();
+      const tiktokUsername = tiktokInput.value.trim();
+      const email = emailInput.value.trim();
+      const password = passwordInput.value;
+      const captchaToken = captchaTokenInput.value;
+      const captchaAnswer = captchaAnswerInput.value;
+
+      if (!name || !tiktokUsername || !email || !password) {
+        return showStatus('All fields are required.', true);
+      }
+      if (!captchaToken || !captchaAnswer) {
+        return showStatus('Please complete the security check by selecting the correct image.', true);
+      }
+
+      registerBtn.disabled = true;
       try {
         const res = await fetch('/auth/user/register', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          credentials:'same-origin',
-          body: JSON.stringify({ name, tiktokUsername, email, password }),
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            name,
+            tiktokUsername,
+            email,
+            password,
+            captchaToken,
+            captchaAnswer,
+          }),
         });
         const json = await res.json();
         if (!res.ok) {
-          statusEl.innerHTML = `<div class="notice error">${json.error || 'Registration failed.'}</div>`;
+          showStatus(json.error || 'Registration failed.', true);
+          await loadSecurityChallenge();
           return;
         }
-        window.location.href = '/dashboard';
+
+        showStatus(`Account created successfully. Account ID: ${json.accountId}. Redirecting to dashboard...`);
+        setTimeout(() => { window.location.href = '/dashboard'; }, 2400);
       } catch (err) {
-        statusEl.innerHTML = '<div class="notice error">Registration failed. Try again.</div>';
+        showStatus('Registration failed. Try again.', true);
+        await loadSecurityChallenge();
+      } finally {
+        registerBtn.disabled = false;
       }
-    });
+    }
+
+    registerBtn.addEventListener('click', registerAccount);
+    window.addEventListener('DOMContentLoaded', loadSecurityChallenge);
   </script>
 </body>
 </html>

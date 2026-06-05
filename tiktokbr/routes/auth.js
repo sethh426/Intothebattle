@@ -374,6 +374,65 @@ function sanitizeCode(value) {
   return String(value || '').trim().toUpperCase();
 }
 
+const registrationChallengeOptions = [
+  { id: 'shield', label: 'Shield', fill: '#4D96FF', icon: '🔰' },
+  { id: 'lock', label: 'Lock', fill: '#6BCB77', icon: '🔒' },
+  { id: 'key', label: 'Key', fill: '#FFD166', icon: '🔑' },
+  { id: 'star', label: 'Star', fill: '#FF9F43', icon: '⭐' },
+  { id: 'diamond', label: 'Diamond', fill: '#8D4DFF', icon: '💎' },
+];
+
+function shuffleArray(array) {
+  const copy = array.slice();
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function createSvgDataUri(option) {
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22" />
+      <stop offset="100%" stop-color="${option.fill}" stop-opacity="0.82" />
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="160" height="120" rx="18" fill="${option.fill}" />
+  <rect x="0" y="0" width="160" height="120" rx="18" fill="url(#grad)" />
+  <circle cx="80" cy="60" r="36" fill="rgba(255,255,255,0.12)" />
+  <text x="80" y="72" text-anchor="middle" dominant-baseline="middle" font-family="Arial, Helvetica, sans-serif" font-size="44" fill="#ffffff">${option.icon}</text>
+  <text x="80" y="108" text-anchor="middle" dominant-baseline="middle" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#ffffff">${option.label}</text>
+</svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function buildRegistrationChallenge() {
+  const options = shuffleArray(registrationChallengeOptions).slice(0, 3).map((option) => ({
+    id: option.id,
+    label: option.label,
+    image: createSvgDataUri(option),
+  }));
+  const selected = options[Math.floor(Math.random() * options.length)];
+  return {
+    options,
+    prompt: `Select the photo of the ${selected.label.toLowerCase()}`,
+    correct: selected.id,
+  };
+}
+
+function verifyRegistrationChallenge(token, answer) {
+  if (!token || !answer) return false;
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    return payload?.purpose === 'registration_challenge' && payload.correct === answer;
+  } catch (_err) {
+    return false;
+  }
+}
+
 function getCookieOptions(httpOnly = true) {
   return { ...COOKIE_OPTIONS, httpOnly };
 }
@@ -631,7 +690,27 @@ router.post('/auth/user/reset-password', express.json(), async (req, res) => {
   return res.json({ success: true, message: 'Password reset successfully.' });
 });
 
+router.get('/auth/user/register-challenge', (req, res) => {
+  const challenge = buildRegistrationChallenge();
+  const token = jwt.sign(
+    { purpose: 'registration_challenge', correct: challenge.correct },
+    process.env.JWT_SECRET,
+    { expiresIn: '10m' }
+  );
+  res.json({ success: true, challenge: { prompt: challenge.prompt, options: challenge.options }, token });
+});
+
 router.post('/auth/user/register', express.json(), async (req, res) => {
+  const captchaToken = String(req.body.captchaToken || '').trim();
+  const captchaAnswer = String(req.body.captchaAnswer || '').trim();
+  if (!verifyRegistrationChallenge(captchaToken, captchaAnswer)) {
+    return res.status(400).json({ success: false, error: 'Please complete the registration security check correctly.' });
+  }
+
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const password = String(req.body.password || '');
+  const name = String(req.body.name || '').trim();
+  const tiktokUsername = String(req.body.tiktokUsername || '').trim();
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
   const name = String(req.body.name || '').trim();
@@ -671,7 +750,13 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
     console.error('Verification email failed:', err);
   });
 
-  return res.json({ success: true, message: 'Account created. Check your inbox to verify your email.', roomId });
+  const accountId = `ACC-${String(userId).padStart(6, '0')}`;
+  return res.json({
+    success: true,
+    message: 'Account created. Check your inbox to verify your email.',
+    roomId,
+    accountId,
+  });
 });
 
 router.post('/auth/user/login', express.json(), async (req, res) => {
