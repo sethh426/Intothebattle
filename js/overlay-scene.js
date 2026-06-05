@@ -257,9 +257,140 @@ class OverlayScene extends Phaser.Scene {
    * @param {object} playerData - Player info (id, name, avatar, etc)
    */
   addPlayerCard(playerData) {
-    // Create player card sprite/container
-    // This is a placeholder for future implementation
-    console.log('addPlayerCard:', playerData);
+    const playerId = playerData.id || playerData.userId;
+    
+    // Check if player already exists
+    if (this.playerGroups.find(p => p.playerId === playerId)) {
+      console.warn('Player already exists:', playerId);
+      return;
+    }
+
+    // Create player card container
+    const cardWidth = 140;
+    const cardHeight = 180;
+    const padding = 8;
+
+    const cardContainer = this.add.container(0, 0);
+    cardContainer.playerId = playerId;
+
+    // Card background
+    const bgGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+    bgGraphics.fillStyle(0x02040a, 0.9);
+    bgGraphics.fillRoundedRect(0, 0, cardWidth, cardHeight, 8);
+    bgGraphics.lineStyle(2, 0x7afcff, 0.4);
+    bgGraphics.strokeRoundedRect(0, 0, cardWidth, cardHeight, 8);
+    bgGraphics.generateTexture('playerCardBg' + playerId, cardWidth, cardHeight);
+    bgGraphics.destroy();
+
+    const bgImage = this.add.image(0, 0, 'playerCardBg' + playerId);
+    bgImage.setOrigin(0, 0);
+    cardContainer.add(bgImage);
+
+    // Avatar placeholder (circle)
+    const avatarGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+    avatarGraphics.fillStyle(0x7afcff, 0.15);
+    avatarGraphics.fillCircle(32, 32, 28);
+    avatarGraphics.lineStyle(2, 0x7afcff, 0.6);
+    avatarGraphics.strokeCircle(32, 32, 28);
+    avatarGraphics.generateTexture('avatar' + playerId, 64, 64);
+    avatarGraphics.destroy();
+
+    const avatarImage = this.add.image(padding + 32, padding + 32, 'avatar' + playerId);
+    avatarImage.setScale(0.7);
+    cardContainer.add(avatarImage);
+
+    // Player name
+    const nameText = this.add.text(padding, padding + 65, playerData.name || 'Player', {
+      font: 'bold 11px Rajdhani',
+      fill: '#7afcff',
+      align: 'left',
+      wordWrap: { width: cardWidth - padding * 2 }
+    });
+    nameText.setOrigin(0, 0);
+    cardContainer.add(nameText);
+
+    // Health bar background
+    const healthBarBg = this.add.rectangle(
+      padding,
+      padding + 85,
+      cardWidth - padding * 2,
+      8,
+      0x1a1a2e,
+      1
+    );
+    healthBarBg.setOrigin(0, 0);
+    cardContainer.add(healthBarBg);
+
+    // Health bar
+    const healthBar = this.add.rectangle(
+      padding,
+      padding + 85,
+      (cardWidth - padding * 2) * (playerData.health || 100) / 100,
+      8,
+      0x00ff88,
+      1
+    );
+    healthBar.setOrigin(0, 0);
+    healthBar.playerId = playerId;
+    cardContainer.add(healthBar);
+
+    // Health text
+    const healthText = this.add.text(
+      cardWidth / 2,
+      padding + 85,
+      Math.round(playerData.health || 100) + ' HP',
+      {
+        font: 'bold 9px Rajdhani',
+        fill: '#7afcff',
+        align: 'center'
+      }
+    );
+    healthText.setOrigin(0.5, 0.5);
+    cardContainer.add(healthText);
+
+    // Stats display
+    const kills = playerData.kills || 0;
+    const deaths = playerData.deaths || 0;
+    const statsText = this.add.text(
+      padding,
+      padding + 105,
+      `K: ${kills} | D: ${deaths}`,
+      {
+        font: 'bold 10px Rajdhani',
+        fill: '#8899bb',
+        align: 'left'
+      }
+    );
+    statsText.setOrigin(0, 0);
+    cardContainer.add(statsText);
+
+    // Killstreak indicator
+    if (kills >= 3) {
+      const streakGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+      streakGraphics.fillStyle(0xffcc44, 0.2);
+      streakGraphics.fillRect(0, 0, cardWidth, 3);
+      streakGraphics.generateTexture('streak' + playerId, cardWidth, 3);
+      streakGraphics.destroy();
+
+      const streakBar = this.add.image(0, 0, 'streak' + playerId);
+      streakBar.setOrigin(0, 0);
+      cardContainer.add(streakBar);
+    }
+
+    this.playerContainer.add(cardContainer);
+
+    // Store player data for updates
+    this.playerGroups.push({
+      playerId: playerId,
+      container: cardContainer,
+      healthBar: healthBar,
+      healthText: healthText,
+      statsText: statsText,
+      nameText: nameText,
+      data: playerData
+    });
+
+    console.log('addPlayerCard:', playerId, playerData.name);
   }
 
   /**
@@ -267,17 +398,54 @@ class OverlayScene extends Phaser.Scene {
    * @param {string} playerId - Player ID
    */
   removePlayerCard(playerId) {
-    // Remove player card
-    console.log('removePlayerCard:', playerId);
+    const index = this.playerGroups.findIndex(p => p.playerId === playerId);
+    if (index !== -1) {
+      const player = this.playerGroups[index];
+      player.container.destroy();
+      this.playerGroups.splice(index, 1);
+      console.log('removePlayerCard:', playerId);
+    }
   }
 
   /**
    * Update player card stats
    * @param {string} playerId - Player ID
-   * @param {object} stats - Player stats (health, kills, etc)
+   * @param {object} stats - Player stats (health, kills, deaths, etc)
    */
   updatePlayerStats(playerId, stats) {
-    // Update player card visuals
+    const player = this.playerGroups.find(p => p.playerId === playerId);
+    if (!player) return;
+
+    // Update health bar
+    if (stats.health !== undefined) {
+      const newWidth = (player.container.width - 16) * (stats.health / 100);
+      this.tweens.add({
+        targets: player.healthBar,
+        width: newWidth,
+        duration: 150,
+        ease: 'Power2.easeOut'
+      });
+      player.healthText.setText(Math.round(stats.health) + ' HP');
+
+      // Change color based on health
+      if (stats.health > 60) {
+        player.healthBar.setFillStyle(0x00ff88, 1);
+      } else if (stats.health > 30) {
+        player.healthBar.setFillStyle(0xffcc44, 1);
+      } else {
+        player.healthBar.setFillStyle(0xff5566, 1);
+      }
+    }
+
+    // Update stats text
+    if (stats.kills !== undefined || stats.deaths !== undefined) {
+      const kills = stats.kills !== undefined ? stats.kills : player.data.kills || 0;
+      const deaths = stats.deaths !== undefined ? stats.deaths : player.data.deaths || 0;
+      player.statsText.setText(`K: ${kills} | D: ${deaths}`);
+      player.data.kills = kills;
+      player.data.deaths = deaths;
+    }
+
     console.log('updatePlayerStats:', playerId, stats);
   }
 

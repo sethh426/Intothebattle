@@ -39,18 +39,24 @@ function initSocketOverlay(game) {
   });
 
   socket.on('playerJoined', (data) => {
-    // data: { id, name, avatar, ... }
-    scene.addPlayerCard(data);
+    // data: { id, name, avatar, health, kills, deaths, ... }
+    scene.addPlayerCard({
+      id: data.id || data.userId,
+      name: data.name || 'Player',
+      health: data.health || 100,
+      kills: data.kills || 0,
+      deaths: data.deaths || 0
+    });
   });
 
   socket.on('playerLeft', (data) => {
     // data: { id }
-    scene.removePlayerCard(data.id);
+    scene.removePlayerCard(data.id || data.userId);
   });
 
   socket.on('playerUpdate', (data) => {
-    // data: { id, stats: { health, kills, ... } }
-    scene.updatePlayerStats(data.id, data.stats);
+    // data: { id, stats: { health, kills, deaths, ... } }
+    scene.updatePlayerStats(data.id || data.userId, data.stats || data);
   });
 
   socket.on('effect:flash', (data) => {
@@ -82,6 +88,26 @@ function initSocketOverlay(game) {
     },
     testShake: () => {
       socket.emit('effect:shake', { intensity: 8 });
+    },
+    testAddPlayer: (name = 'Player ' + Math.floor(Math.random() * 1000)) => {
+      const playerId = 'player_' + Date.now();
+      socket.emit('playerJoined', {
+        id: playerId,
+        name: name,
+        health: 100,
+        kills: Math.floor(Math.random() * 5),
+        deaths: Math.floor(Math.random() * 3)
+      });
+      return playerId;
+    },
+    testUpdatePlayer: (playerId, health = 75, kills = 2) => {
+      socket.emit('playerUpdate', {
+        id: playerId,
+        stats: { health, kills }
+      });
+    },
+    testRemovePlayer: (playerId) => {
+      socket.emit('playerLeft', { id: playerId });
     }
   };
 
