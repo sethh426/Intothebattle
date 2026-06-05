@@ -544,6 +544,7 @@
       try {
         const res = await fetch('/auth/create-account', {
           method: 'POST',
+          credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email: userEmail,

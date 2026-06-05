@@ -1,3 +1,4 @@
+import './loadEnv.js';
 import { TikTokLive } from '@tiktool/live';
 import express from 'express';
 import cookieParser from 'cookie-parser';
@@ -5,7 +6,6 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import dotenv from 'dotenv';
 import pino from 'pino';
 import * as Sentry from '@sentry/node';
 import { createClient as createRedisClient } from 'redis';
@@ -64,8 +64,6 @@ function logAuthInfo(req, extras = {}) {
     ...extras,
   }, 'Auth info');
 }
-
-dotenv.config();
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 if (process.env.SENTRY_DSN) {
@@ -884,10 +882,12 @@ app.get('/', (req, res) => {
       }
     }
   }
-  return res.redirect('/login');
+  // If not authenticated, serve the public homepage instead of forcing login
+  return res.sendFile(path.join(__dirname, 'home.html'));
 });
 
 app.get('/home', (_req, res) => res.sendFile(path.join(__dirname, 'home.html')));
+app.get('/verify-email', (_req, res) => res.sendFile(path.join(__dirname, 'verify-email.html')));
 app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));
 app.get('/register', (req, res) => {
   const token = req.cookies?.session_token;
@@ -925,11 +925,11 @@ app.post('/auth/generate-code', express.json(), (req, res) => {
 
   try {
     const code = Math.random().toString(36).slice(2, 10).toUpperCase();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+    const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
     
     db.prepare(`
       INSERT INTO access_codes (code, email, expires_at, trial_started, trial_days, subscription_status)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP, 14, 'active')
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP, 14, 'trial')
     `).run(code, email.toLowerCase().trim(), expiresAt);
     
     res.json({ success: true, code });
@@ -963,11 +963,18 @@ app.post('/auth/create-account', express.json(), (req, res) => {
     const roomId = Math.random().toString(36).slice(2, 10);
 
     // Update access code with profile and session
+    // Ensure trial metadata is initialized and set session token
+    const trialDaysDefault = 14;
+    const expiresAt = new Date(Date.now() + trialDaysDefault * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
     db.prepare(`
       UPDATE access_codes
-      SET session_token = ?, streamer_name = ?, tiktok_username = ?, room_id = ?
+      SET session_token = ?, streamer_name = ?, tiktok_username = ?, room_id = ?,
+          trial_started = COALESCE(trial_started, CURRENT_TIMESTAMP),
+          trial_days = COALESCE(trial_days, ?),
+          subscription_status = COALESCE(subscription_status, 'trial'),
+          expires_at = COALESCE(expires_at, ?)
       WHERE id = ?
-    `).run(sessionToken, name, tiktokUsername, roomId, row.id);
+    `).run(sessionToken, name, tiktokUsername, roomId, trialDaysDefault, expiresAt, row.id);
 
     // Create room settings
     db.prepare(`
@@ -980,9 +987,9 @@ app.post('/auth/create-account', express.json(), (req, res) => {
       JSON.stringify([])
     );
 
-    // Set session cookie
-    res.setHeader('Set-Cookie', `session_token=${sessionToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${90 * 24 * 60 * 60}`);
-    res.json({ success: true, roomId });
+    // Set session cookie using Express helper so browsers accept it with fetch credentials
+    res.cookie('session_token', sessionToken, { httpOnly: true, sameSite: 'lax', maxAge: 90 * 24 * 60 * 60 * 1000 });
+    res.json({ success: true, roomId, sessionToken });
   } catch (err) {
     console.error('Account creation error:', err);
     res.status(500).json({ error: 'Failed to create account' });
@@ -1215,6 +1222,27 @@ app.get('/dashboard', checkTrial, (_req, res) => {
 
 app.get('/dashboard/welcome', checkTrial, (_req, res) => {
   res.sendFile(path.join(__dirname, 'dashboard-welcome.html'));
+});
+
+// Debug endpoint: return session-backed auth record for troubleshooting (non-production only)
+app.get('/debug/session-info', (req, res) => {
+  if (process.env.NODE_ENV === 'production') return res.status(404).send('Not found');
+  const token = req.cookies?.session_token;
+  if (!token) return res.json({ success: true, token: null });
+  try {
+    const auth = getAuthRecord(token);
+    if (!auth) return res.json({ success: true, token, auth: null });
+    if (auth.type === 'code') {
+      const row = auth.record;
+      return res.json({ success: true, type: 'code', row });
+    }
+    const user = auth.record;
+    const subscription = db.prepare('SELECT * FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1').get(user.id);
+    return res.json({ success: true, type: 'user', user, subscription });
+  } catch (err) {
+    console.error('debug/session-info error:', err);
+    return res.status(500).json({ success: false, error: 'Server error' });
+  }
 });
 
 app.get('/stats', checkTrial, (_req, res) => res.sendFile(path.join(__dirname, 'stats.html')));
