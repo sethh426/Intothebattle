@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Start Your Trial - Battle Royale LIVE</title>
+  <title>IntoTheBattle Signup</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
@@ -62,7 +62,7 @@
       position: relative;
       z-index: 10;
       width: 100%;
-      max-width: 480px;
+      max-width: 520px;
     }
 
     .card {
@@ -258,10 +258,6 @@
       font-weight: 600;
     }
 
-    .code-copied.show {
-      display: block;
-    }
-
     .alert {
       padding: 12px 16px;
       border-radius: 10px;
@@ -313,6 +309,24 @@
       width: 100%;
     }
 
+    .info-block {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 18px;
+      padding: 18px 20px;
+      margin-bottom: 24px;
+      color: var(--text-muted);
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    .info-block strong {
+      color: #fff;
+      display: block;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
     @media (max-width: 480px) {
       .card {
         padding: 32px 24px;
@@ -359,8 +373,13 @@
     <div class="card">
       <div class="card-header">
         <span class="card-icon">🎮</span>
-        <div class="card-title">Start Your Trial</div>
-        <div class="card-sub">14 days of full access, no credit card required</div>
+        <div class="card-title">Create your Battle Account</div>
+        <div class="card-sub">14-day trial, TikTok LIVE overlay access, no credit card required</div>
+      </div>
+
+      <div class="info-block">
+        <strong>Sign up for a battle-ready room</strong>
+        Enter your email, generate a secure access code, and configure your first room. Players will join with health, damage, and powerup effects that actually matter on stream.
       </div>
 
       <div class="step-indicator">
@@ -369,7 +388,6 @@
       </div>
 
       <form id="signupForm">
-        <!-- STEP 1: EMAIL & CODE -->
         <div class="form-section active" id="step1">
           <div class="form-group">
             <label for="email">Email Address</label>
@@ -417,7 +435,6 @@
           </button>
         </div>
 
-        <!-- STEP 2: PROFILE -->
         <div class="form-section" id="step2">
           <div class="form-group">
             <label for="name">Full Name</label>
@@ -581,7 +598,6 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to create account');
 
-        // Redirect to dashboard
         window.location.href = '/dashboard';
       } catch (err) {
         showAlert('profileAlert', `❌ ${err.message}`, 'error');

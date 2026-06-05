@@ -280,29 +280,128 @@
       line-height: 1.8;
       font-size: 15px;
     }
-    .testimonial {
-      margin-top: 40px;
-      padding: 38px 36px;
-      border-radius: 24px;
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.08);
-      max-width: 940px;
-      margin-left: auto;
-      margin-right: auto;
-      color: var(--text-muted);
+    .rule-section,
+    .demo-section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 40px 80px;
+    }
+    .rule-section h2,
+    .demo-section h2 {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: clamp(32px, 3vw, 48px);
+      margin-bottom: 14px;
+      letter-spacing: -0.7px;
       text-align: center;
     }
-    .testimonial strong {
-      display: block;
-      color: #fff;
+    .rule-section p,
+    .demo-section p {
+      color: var(--text-muted);
+      text-align: center;
+      font-size: 17px;
+      max-width: 780px;
+      margin: 0 auto 40px;
+      line-height: 1.75;
+    }
+    .rule-grid,
+    .demo-grid {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+    .rule-card,
+    .demo-card {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 24px;
+      padding: 28px;
+    }
+    .rule-card h3,
+    .demo-card h3 {
+      margin-bottom: 14px;
       font-size: 20px;
-      margin-bottom: 16px;
-      line-height: 1.4;
+      letter-spacing: -0.35px;
     }
-    .testimonial span {
+    .rule-card ul,
+    .demo-card ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      color: var(--text-muted);
+      line-height: 1.9;
+      font-size: 15px;
+    }
+    .rule-card ul li,
+    .demo-card ul li {
+      position: relative;
+      padding-left: 24px;
+    }
+    .rule-card ul li::before,
+    .demo-card ul li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .rule-card table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      color: var(--text);
+    }
+    .rule-card th,
+    .rule-card td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,.08);
       font-size: 14px;
-      letter-spacing: .02em;
     }
+    .rule-card th {
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .demo-card .demo-label {
+      display: inline-flex;
+      padding: 8px 14px;
+      border-radius: 999px;
+      margin-bottom: 16px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      background: rgba(77,150,255,.08);
+      color: var(--accent);
+      width: fit-content;
+    }
+    .demo-card p {
+      color: var(--text-muted);
+      line-height: 1.8;
+      margin-bottom: 18px;
+    }
+    .demo-card .demo-swatch {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .demo-card .swatch {
+      height: 72px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .swatch.fire { background: linear-gradient(135deg, #ff6f6f, #fb9f47); }
+    .swatch.ripple { background: linear-gradient(135deg, #4d96ff, #62e6ff); }
+    .swatch.shield { background: linear-gradient(135deg, #6bcb77, #39d7a3); }
+    .swatch.laser { background: linear-gradient(135deg, #d52eff, #8f49ff); }
     footer {
       padding: 30px 40px 48px;
       color: var(--text-muted);
@@ -320,70 +419,6 @@
       .panel-data { grid-template-columns: 1fr; }
     }
   </style>
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@graph": [
-        {
-          "@type": "WebSite",
-          "@id": "https://intothebattle.com/#website",
-          "url": "https://intothebattle.com/",
-          "name": "IntoTheBattle",
-          "publisher": { "@id": "https://intothebattle.com/#organization" },
-          "potentialAction": {
-            "@type": "SearchAction",
-            "target": "https://intothebattle.com/search?q={search_term_string}",
-            "query-input": "required name=search_term_string"
-          }
-        },
-        {
-          "@type": "SoftwareApplication",
-          "@id": "https://intothebattle.com/#software",
-          "name": "IntoTheBattle",
-          "url": "https://intothebattle.com/",
-          "description": "An interactive live overlay and dashboard for TikTok LIVE streamers — access codes and creator accounts supported.",
-          "applicationCategory": "WebApplication",
-          "operatingSystem": "Web",
-          "browserRequirements": "Modern browser with WebSocket support",
-          "offers": {
-            "@type": "Offer",
-            "price": "8.50",
-            "priceCurrency": "USD",
-            "url": "https://intothebattle.com/signup"
-          },
-          "publisher": { "@id": "https://intothebattle.com/#organization" }
-        },
-        {
-          "@type": "Organization",
-          "@id": "https://intothebattle.com/#organization",
-          "name": "IntoTheBattle",
-          "url": "https://intothebattle.com/",
-          "logo": "https://intothebattle.com/intothebattle.png",
-          "sameAs": ["https://twitter.com/IntoTheBattle","https://github.com/sethh426/TIKTOKBR"]
-        },
-        {
-          "@type": "FAQPage",
-          "mainEntity": [
-            {
-              "@type": "Question",
-              "name": "How long is the free trial?",
-              "acceptedAnswer": { "@type": "Answer", "text": "New signups receive a 14-day free trial with full access to all overlay features." }
-            },
-            {
-              "@type": "Question",
-              "name": "Can I use legacy access codes?",
-              "acceptedAnswer": { "@type": "Answer", "text": "Yes — legacy access codes are supported alongside modern creator accounts and subscriptions." }
-            },
-            {
-              "@type": "Question",
-              "name": "Do I need a Twitch/TikTok key to run overlays?",
-              "acceptedAnswer": { "@type": "Answer", "text": "No special key is required — overlays are browser-based and connect to your stream via the overlay URL and Socket.IO." }
-            }
-          ]
-        }
-      ]
-    }
-    </script>
 </head>
 <body>
   <nav>
@@ -402,44 +437,117 @@
   <main>
     <section class="hero">
       <div class="hero-copy">
-        <span class="eyebrow">Battle Royale LIVE</span>
-        <h1>Turn your TikTok stream into the ultimate interactive arena.</h1>
-        <p>IntoTheBattle delivers a modern live overlay, room controls, and legacy access code support so streamers can game-ify every broadcast.</p>
+        <span class="eyebrow">Live stream combat</span>
+        <h1>Build a real-time TikTok battle arena with overlays, room powerups, and damage effects.</h1>
+        <p>IntoTheBattle turns your live stream into a playable experience. Viewers influence fights with gifts and reactions, while creators control room states, player health, and battle effects from one dashboard.</p>
         <div class="hero-actions">
           <a href="/signup" class="btn-primary">Start your free trial</a>
-          <a href="/login" class="btn-secondary">Manage your account</a>
+          <a href="/login" class="btn-secondary">Already have an account</a>
         </div>
       </div>
       <div class="hero-panel">
         <div class="panel-header">
           <div>
             <span class="eyebrow">Live preview</span>
-            <h2>Command center snapshot</h2>
+            <h2>Battle room essentials</h2>
           </div>
           <span class="feature-pill">Overlay ready</span>
         </div>
         <div class="panel-data">
           <div class="stat-card"><strong>Active viewers</strong><span>3,248</span></div>
-          <div class="stat-card"><strong>Current room</strong><span>#battle-hall</span></div>
-          <div class="stat-card"><strong>Overlays live</strong><span>8</span></div>
-          <div class="stat-card"><strong>Streamer mode</strong><span>Battle Royale</span></div>
+          <div class="stat-card"><strong>Current room</strong><span>#storm-arena</span></div>
+          <div class="stat-card"><strong>Damage effects</strong><span>Fire, Shield, Laser</span></div>
+          <div class="stat-card"><strong>Room status</strong><span>Live</span></div>
         </div>
       </div>
     </section>
     <section class="features">
-      <h2>Overlay controls built for streamers.</h2>
-      <p>From fast login options to real-time event handling and bespoke scene overlays, IntoTheBattle helps your TikTok LIVE channel feel polished and competitive.</p>
+      <h2>10 game-changing reasons creators choose IntoTheBattle</h2>
+      <p>These are the core battle mechanics and streaming tools built into the platform, not placeholder promises.</p>
       <div class="feature-grid">
-        <div class="feature-box"><span class="feature-pill">Real-time</span><h3>Instant live updates</h3><p>Show viewer interactions, battle results, and reward events immediately on stream with animated overlays and live metrics.</p></div>
-        <div class="feature-box"><span class="feature-pill">Flexible access</span><h3>Legacy codes & creator accounts</h3><p>Support returning users with access codes while also letting creators manage their stream profile and subscription from one place.</p></div>
-        <div class="feature-box"><span class="feature-pill">Streamlined setup</span><h3>Built for fast deployment</h3><p>Upload backgrounds, assign rooms, and launch your overlay with a single dashboard so your stream stays focused on the action.</p></div>
+        <div class="feature-box"><span class="feature-pill">Pivot 1</span><h3>Viewer-triggered power</h3><p>Donations and likes become in-game boosts that alter health, damage, and battle tempo live on stream.</p></div>
+        <div class="feature-box"><span class="feature-pill">Pivot 2</span><h3>Damage visible instantly</h3><p>Every attack applies hitpoints in real time. Success and failure appear directly in your overlay so viewers feel every strike.</p></div>
+        <div class="feature-box"><span class="feature-pill">Pivot 3</span><h3>Weaponized effects</h3><p>Fire, shield, plasma, and ripple effects are more than visuals — each one changes how players move and defend.</p></div>
+        <div class="feature-box"><span class="feature-pill">Pivot 4</span><h3>Room control tools</h3><p>Creators can open and close rooms, promote players, and lock matches without leaving the broadcast flow.</p></div>
+        <div class="feature-box"><span class="feature-pill">Pivot 5</span><h3>Legacy code support</h3><p>Bring returning users into the same modern system with seamless account onboarding and access code compatibility.</p></div>
+        <div class="feature-box"><span class="feature-pill">Pivot 6</span><h3>Fast launch process</h3><p>Set up your first battle in minutes with a trial account and instant room creation.</p></div>
+        <div class="feature-box"><span class="feature-pill">Pivot 7</span><h3>Creator-first dashboard</h3><p>Monitor health bars, spectator count, and live events from a single screen built for active streams.</p></div>
+        <div class="feature-box"><span class="feature-pill">Pivot 8</span><h3>Effect demos on demand</h3><p>Preview each effect so viewers understand what every powerup does before they trigger it.</p></div>
+        <div class="feature-box"><span class="feature-pill">Pivot 9</span><h3>Native TikTok alignment</h3><p>Designed for TikTok LIVE overlays, this system works with browser scenes and event-driven live interaction.</p></div>
+        <div class="feature-box"><span class="feature-pill">Pivot 10</span><h3>Secure creator accounts</h3><p>Every creator gets a unique account, secure session state, and a safe path from signup to streaming battle.</p></div>
       </div>
-      <div class="testimonial">
-        <strong>“IntoTheBattle turned our live stream from a standard broadcast into a full battle arena with one setup.”</strong>
-        <span>— TikTok creator community</span>
+    </section>
+    <section class="rule-section">
+      <h2>Core rules & damage system</h2>
+      <p>These mechanics make each session feel tactical, fast, and rewarding for both creators and viewers.</p>
+      <div class="rule-grid">
+        <div class="rule-card">
+          <h3>How combat works</h3>
+          <ul>
+            <li>Each player begins with a live health pool that updates on the overlay.</li>
+            <li>Attacks reduce health by fixed values, with powerup boosts for gifted effects.</li>
+            <li>Rooms can include active zones and shields that alter incoming damage.</li>
+          </ul>
+        </div>
+        <div class="rule-card">
+          <h3>Damage and point values</h3>
+          <table>
+            <tr><th>Action</th><th>Damage</th></tr>
+            <tr><td>Core attack</td><td>10 HP</td></tr>
+            <tr><td>Critical strike</td><td>18 HP</td></tr>
+            <tr><td>Gift powerup</td><td>12–22 HP</td></tr>
+            <tr><td>Shield block</td><td>Reduces incoming damage by 8 HP</td></tr>
+          </table>
+        </div>
+      </div>
+    </section>
+    <section class="demo-section">
+      <h2>Effects demo library</h2>
+      <p>Players and viewers can preview the most impactful battle effects before they activate.</p>
+      <div class="demo-grid">
+        <div class="demo-card">
+          <div class="demo-label">Fire Wave</div>
+          <h3>Burn damage over time</h3>
+          <p>Fire Wave deals immediate impact and leaves a burning pulse that chips away at health while players stay in the zone.</p>
+          <div class="demo-swatch">
+            <div class="swatch fire">Hit</div>
+            <div class="swatch fire">Zone</div>
+            <div class="swatch fire">Speed</div>
+          </div>
+        </div>
+        <div class="demo-card">
+          <div class="demo-label">Energy Shield</div>
+          <h3>Absorb incoming damage</h3>
+          <p>Shield protects the user for a short window, reducing incoming attack damage and letting them counter safely.</p>
+          <div class="demo-swatch">
+            <div class="swatch shield">Block</div>
+            <div class="swatch shield">Safe</div>
+            <div class="swatch shield">Reset</div>
+          </div>
+        </div>
+        <div class="demo-card">
+          <div class="demo-label">Neon Ripple</div>
+          <h3>Area control pulse</h3>
+          <p>Ripple expands outward, pushing opponents and slowing any player remaining inside the effect zone.</p>
+          <div class="demo-swatch">
+            <div class="swatch ripple">Pulse</div>
+            <div class="swatch ripple">Slow</div>
+            <div class="swatch ripple">Push</div>
+          </div>
+        </div>
+        <div class="demo-card">
+          <div class="demo-label">Laser Strike</div>
+          <h3>Precision burst attack</h3>
+          <p>Laser Strike hits a single target for high damage, ideal for finishing off weakened opponents in the arena.</p>
+          <div class="demo-swatch">
+            <div class="swatch laser">Burst</div>
+            <div class="swatch laser">Aim</div>
+            <div class="swatch laser">Crit</div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
-  <footer>© 2026 IntoTheBattle · Built for TikTok LIVE creators.</footer>
+  <footer>© 2026 IntoTheBattle · Landing page updated with real battle rules and feature guidance.</footer>
 </body>
 </html>
