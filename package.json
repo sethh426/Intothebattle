@@ -7,7 +7,10 @@
   "scripts": {
     "start": "node server.js",
     "start:dev": "NODE_ENV=development node server.js",
-    "test:postmark": "node scripts/test_postmark.js"
+    "test:postmark": "node scripts/test_postmark.js",
+    "validate:schema": "python tools/validate_schema.py",
+    "validate:schema-expand": "python tools/validate_schema_expand.py",
+    "validate:schemas": "npm run validate:schema && npm run validate:schema-expand"
   },
   "dependencies": {
     "@sentry/node": "^8.15.0",
