@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 120" role="img" aria-labelledby="logoTitle logoDesc">
+  <title id="logoTitle">IntoTheBattle logo</title>
+  <desc id="logoDesc">Shield badge with a crossed sword and axe icon and the IntoTheBattle wordmark.</desc>
+  <defs>
+    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4D96FF" />
+      <stop offset="100%" stop-color="#6BCB77" />
+    </linearGradient>
+  </defs>
+  <rect width="360" height="120" rx="28" fill="transparent" />
+  <g transform="translate(24 18)">
+    <path d="M42 0l42 24v36c0 22.091-24 38-42 38s-42-15.909-42-38V24L42 0Z" fill="url(#brandGradient)" opacity="0.95" />
+    <path d="M41.5 10.5l0 70" stroke="#fff" stroke-width="8" stroke-linecap="round" />
+    <path d="M22 30l40 24" stroke="#fff" stroke-width="8" stroke-linecap="round" />
+    <path d="M62 30L22 54" stroke="#fff" stroke-width="8" stroke-linecap="round" />
+    <circle cx="42" cy="42" r="8" fill="#fff" />
+  </g>
+  <text x="104" y="74" font-family="Rajdhani, sans-serif" font-size="52" font-weight="700" fill="url(#brandGradient)">Into</text>
+  <text x="104" y="112" font-family="Rajdhani, sans-serif" font-size="28" font-weight="700" fill="#fff">TheBattle</text>
+</svg>

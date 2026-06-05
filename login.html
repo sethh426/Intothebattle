@@ -3,52 +3,59 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login - Battle Royale LIVE</title>
+  <title>Login — IntoTheBattle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    :root { --bg:#050d1a; --surface:#0f1726; --border:#3751ff22; --text:#e8eef8; --muted:#8ca2d1; --accent:#4d96ff; --success:#6bcb77; }
-    *{box-sizing:border-box;margin:0;padding:0;font-family:sans-serif;}
-    body{min-height:100vh;background:#020611;color:var(--text);display:flex;align-items:center;justify-content:center;padding:24px;}
-    .page{width:min(980px,100%);display:grid;grid-template-columns:1.3fr 1fr;gap:24px;}
-    .hero, .form-card{background:rgba(10,18,36,.96);border:1px solid rgba(255,255,255,.05);border-radius:22px;padding:32px;box-shadow:0 24px 80px rgba(0,0,0,.35);}
-    .hero h1{font-size:2.5rem;line-height:1.05;margin-bottom:18px;color:#fff;}
-    .hero p{color:var(--muted);margin-bottom:24px;max-width:36rem;}
-    .hero-links{display:flex;flex-wrap:wrap;gap:12px;}
-    .hero-links a{display:inline-flex;align-items:center;justify-content:center;padding:12px 20px;border-radius:14px;text-decoration:none;font-weight:700;}
-    .hero-links .primary{background:linear-gradient(135deg,var(--accent),#6ab0ff);color:#fff;}
-    .hero-links .secondary{border:1px solid rgba(255,255,255,.12);color:var(--text);}
-    .section-title{font-size:1rem;text-transform:uppercase;color:var(--muted);letter-spacing:1px;margin-bottom:16px;}
-    .form-group{margin-bottom:18px;}
-    label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:8px;}
-    input{width:100%;padding:14px 16px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:#fff;}
-    button{width:100%;padding:14px 16px;border:none;border-radius:14px;font-size:1rem;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--accent),#6ab0ff);cursor:pointer;}
-    .inline-link{display:inline-flex;gap:6px;color:var(--accent);text-decoration:none;margin-top:12px;font-size:.95rem;}
-    .notice{border-radius:14px;padding:14px 16px;margin-bottom:18px;font-size:.95rem;}
+    :root { --bg:#050d1a; --surface:#0f1726; --border:rgba(255,255,255,.08); --text:#e8eef8; --muted:#8ca2d1; --accent:#4d96ff; --success:#6bcb77; }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'DM Sans',sans-serif;}
+    body{min-height:100vh;background:radial-gradient(circle at top, rgba(77,150,255,.16), transparent 30%), var(--bg);color:var(--text);display:flex;align-items:center;justify-content:center;padding:30px;}
+    .page{width:min(1080px,100%);display:grid;grid-template-columns:1.1fr 0.9fr;gap:28px;}
+    .hero, .form-card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:28px;padding:36px;box-shadow:0 30px 80px rgba(0,0,0,.25);}
+    .hero .brand-logo{width:56px;height:56px;border-radius:18px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;margin-bottom:24px;}
+    .hero h1{font-size:2.9rem;line-height:1.02;margin-bottom:18px;letter-spacing:-1px;}
+    .hero p{color:var(--muted);margin-bottom:28px;max-width:36rem;line-height:1.8;}
+    .hero-links{display:flex;flex-wrap:wrap;gap:14px;}
+    .hero-links a{display:inline-flex;align-items:center;justify-content:center;padding:14px 24px;border-radius:16px;text-decoration:none;font-weight:700;transition:transform .2s ease;}
+    .hero-links a.primary{background:linear-gradient(135deg,var(--accent),#6ab0ff);color:#fff;}
+    .hero-links a.secondary{border:1px solid rgba(255,255,255,.12);color:var(--text);background:rgba(255,255,255,.04);}
+    .hero-links a:hover{transform:translateY(-1px);}
+    .section-title{font-size:.85rem;text-transform:uppercase;color:var(--muted);letter-spacing:1px;margin-bottom:16px;}
+    .form-group{margin-bottom:20px;}
+    label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:8px;}
+    input{width:100%;padding:14px 16px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--text);font-size:1rem;}
+    button{width:100%;padding:14px 16px;border:none;border-radius:16px;font-size:1rem;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--accent),#6ab0ff);cursor:pointer;transition:transform .2s ease;}
+    button:hover{transform:translateY(-1px);}
+    .inline-link{display:inline-flex;gap:8px;color:var(--accent);text-decoration:none;margin-top:14px;font-size:.95rem;}
+    .notice{border-radius:16px;padding:16px;margin-bottom:20px;font-size:.96rem;}
     .error{background:rgba(255,85,95,.12);border:1px solid rgba(255,85,95,.18);color:#ffb1b1;}
     .success{background:rgba(107,203,119,.12);border:1px solid rgba(107,203,119,.18);color:#c6ffcf;}
-    @media(max-width:900px){.page{grid-template-columns:1fr;} }
+    .form-card h2{margin-bottom:20px;font-size:1.35rem;}
+    .form-divider{height:1px;background:rgba(255,255,255,.08);margin:28px 0;}
+    @media(max-width:1024px){.page{grid-template-columns:1fr;}}
+    @media(max-width:720px){body{padding:20px;} .page{gap:20px;} .hero{padding:28px;} .form-card{padding:28px;}}
   </style>
 </head>
 <body>
   <div class="page">
     <div class="hero">
-      <div class="section-title">Battle Royale LIVE</div>
-      <h1>Secure creator accounts + legacy access codes.</h1>
-      <p>Login with your email and password, or use an existing access code to continue. Manage your rooms, profile, and subscriptions from one place.</p>
+      <div class="brand-logo"><img src="logo.svg" alt="IntoTheBattle logo" style="width:100%;height:auto;"/></div>
+      <div class="section-title">IntoTheBattle</div>
+      <h1>Access your battle overlay and creator command center.</h1>
+      <p>Login with your account, start a free trial, or continue using a legacy access code. Everything you need for TikTok LIVE stream management is here.</p>
       <div class="hero-links">
-        <a href="/register" class="primary">Create an account</a>
-        <a href="/signup" class="secondary">Start free trial</a>
-        <a href="/request-password-reset" class="secondary">Reset password</a>
+        <a href="/signup" class="primary">Start free trial</a>
+        <a href="/register" class="secondary">Create account</a>
       </div>
     </div>
-
     <div class="form-card">
       <div class="section-title">Account login</div>
       <div id="accountStatus"></div>
       <div class="form-group"><label for="email">Email</label><input id="email" type="email" autocomplete="username" /></div>
       <div class="form-group"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" /></div>
       <button id="loginBtn" type="button">Login</button>
-      <p style="margin-top:16px;color:var(--muted);font-size:.95rem;">Use your account credentials to manage your TikTok LIVE room and subscription.</p>
-      <hr style="margin:24px 0;border-color:rgba(255,255,255,.08);" />
+      <a href="/request-password-reset" class="inline-link">Forgot password?</a>
+      <div class="form-divider"></div>
       <div class="section-title">Legacy access code</div>
       <form method="POST" action="/login" id="accessCodeForm">
         <div class="form-group"><label for="code">Access code</label><input id="code" name="code" type="text" autocomplete="off" required placeholder="XXXX-XXXX-XXXX" /></div>
@@ -63,11 +70,9 @@
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
     const accessFingerprintInput = document.getElementById('fp');
-
     function showStatus(message, isError = false) {
       statusEl.innerHTML = `<div class="notice ${isError ? 'error' : 'success'}">${message}</div>`;
     }
-
     loginBtn.addEventListener('click', async () => {
       statusEl.innerHTML = '';
       const email = emailInput.value.trim();
@@ -87,7 +92,6 @@
         showStatus('Login failed. Please try again.', true);
       }
     });
-
     function setFingerprint(fp) {
       const input = document.getElementById('fp');
       if (input) input.value = fp;
