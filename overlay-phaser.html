@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Battle Royale Overlay (Phaser 4)</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.js"></script>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Exo+2:wght@400;700;900&display=swap');
+
+    :root {
+      --accent: #7afcff;
+      --accent-glow: rgba(122, 252, 255, 0.55);
+      --accent-dim: rgba(122, 252, 255, 0.18);
+      --bg-deep: #02040a;
+      --bg-panel: rgba(2, 8, 18, 0.98);
+      --bg-item: rgba(255, 255, 255, 0.08);
+      --border: rgba(100, 200, 255, 0.22);
+      --border-hi: rgba(100, 200, 255, 0.45);
+      --text: #eef5ff;
+      --text-dim: #8899bb;
+      --danger: #ff5566;
+      --warn: #ffcc44;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-deep);
+      font-family: 'Exo 2', 'Segoe UI', sans-serif;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #game-container {
+      position: relative;
+      width: min(90vw, 1920px);
+      aspect-ratio: 16 / 9;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+                  0 0 48px rgba(140, 80, 255, 0.18),
+                  0 0 120px rgba(80, 40, 180, 0.08);
+    }
+
+    /* ── Control Panel ── */
+    .panel-wrapper {
+      position: fixed;
+      top: 16px;
+      right: 0;
+      display: flex;
+      align-items: flex-start;
+      pointer-events: auto;
+      z-index: 30;
+    }
+
+    .panel-tab {
+      width: 28px;
+      min-height: 80px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-right: none;
+      border-radius: 8px 0 0 8px;
+      padding: 10px 0;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      color: var(--accent);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      writing-mode: vertical-rl;
+      user-select: none;
+      font-family: 'Rajdhani', sans-serif;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .panel-tab:hover {
+      background: rgba(20, 44, 70, 0.98);
+      border-color: var(--border-hi);
+    }
+
+    .panel-tab-icon {
+      font-size: 13px;
+      writing-mode: horizontal-tb;
+    }
+
+    .layout-panel {
+      width: 272px;
+      background: var(--bg-panel);
+      backdrop-filter: blur(24px);
+      border: 1px solid var(--border);
+      border-right: none;
+      border-radius: 0 0 0 14px;
+      box-shadow: -10px 0 40px rgba(0, 0, 0, 0.75),
+                  inset 1px 0 0 rgba(255, 255, 255, 0.03);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                  opacity 0.25s ease;
+      transform-origin: right top;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .layout-panel::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    .layout-panel::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    .layout-panel.hidden {
+      transform: translateX(100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 13px 9px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      background: rgba(2, 8, 18, 0.99);
+      backdrop-filter: blur(24px);
+    }
+
+    .panel-title {
+      color: var(--accent);
+      font-size: 10.5px;
+      font-weight: 800;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      font-family: 'Rajdhani', sans-serif;
+    }
+
+    .panel-close {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 9px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      font-family: monospace;
+      line-height: 1;
+    }
+
+    .panel-close:hover {
+      background: rgba(255, 70, 80, 0.3);
+      border-color: rgba(255, 80, 80, 0.5);
+      color: #ff9999;
+    }
+
+    .section {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 13px;
+      cursor: pointer;
+      user-select: none;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      transition: color 0.15s, background 0.15s;
+    }
+
+    .section-hd:hover {
+      color: var(--accent);
+      background: rgba(122, 252, 255, 0.05);
+    }
+
+    .section-hd .chev {
+      font-size: 9px;
+      transition: transform 0.22s;
+    }
+
+    .section-hd.open .chev {
+      transform: rotate(180deg);
+    }
+
+    .section-bd {
+      display: grid;
+      grid-template-rows: 1fr;
+      transition: grid-template-rows 0.22s ease;
+    }
+
+    .section-bd.shut {
+      grid-template-rows: 0fr;
+    }
+
+    .section-in {
+      min-height: 0;
+      overflow: hidden;
+      padding: 0 13px 11px;
+    }
+
+    .ctrl {
+      margin-bottom: 10px;
+    }
+
+    .ctrl:last-child {
+      margin-bottom: 0;
+    }
+
+    .ctrl-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 5px;
+    }
+
+    .ctrl-lbl {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .ctrl-val {
+      font-family: 'Rajdhani', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 36px;
+      text-align: right;
+    }
+
+    input[type=range] {
+      width: 100%;
+      appearance: none;
+      -webkit-appearance: none;
+      height: 5px;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent-glow),
+                  0 0 0 2px rgba(122, 252, 255, 0.18);
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.18);
+      box-shadow: 0 0 14px var(--accent-glow),
+                  0 0 0 3px rgba(122, 252, 255, 0.28);
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .toggle-lbl {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .tog {
+      position: relative;
+      width: 34px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .tog input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+
+    .tog-track {
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid var(--border);
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .tog input:checked ~ .tog-track {
+      background: rgba(122, 252, 255, 0.22);
+      border-color: rgba(122, 252, 255, 0.45);
+    }
+
+    .tog-knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(220, 240, 255, 0.65);
+      transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1),
+                  background 0.18s;
+    }
+
+    .tog input:checked ~ .tog-track .tog-knob {
+      transform: translateX(16px);
+      background: var(--accent);
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 5px;
+    }
+
+    .color-swatch {
+      width: 26px;
+      height: 26px;
+      border-radius: 5px;
+      flex-shrink: 0;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      cursor: pointer;
+      transition: transform 0.14s, box-shadow 0.14s;
+    }
+
+    .color-swatch:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    }
+
+    input[type=color] {
+      opacity: 0;
+      position: absolute;
+      width: 0;
+      height: 0;
+      pointer-events: none;
+    }
+
+    .color-dots {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .color-dot {
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      cursor: pointer;
+      flex-shrink: 0;
+      border: 2px solid transparent;
+      transition: transform 0.14s, border-color 0.14s;
+    }
+
+    .color-dot:hover {
+      transform: scale(1.18);
+    }
+
+    .color-dot.active {
+      border-color: rgba(255, 255, 255, 0.9);
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5px;
+      padding: 10px 13px 13px;
+    }
+
+    .act-btn {
+      background: var(--bg-item);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 6px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--text-dim);
+      cursor: pointer;
+      text-align: center;
+      letter-spacing: 0.9px;
+      text-transform: uppercase;
+      transition: all 0.14s;
+    }
+
+    .act-btn:hover {
+      background: rgba(122, 252, 255, 0.07);
+      color: var(--accent);
+      border-color: var(--accent-dim);
+    }
+
+    .act-btn.wide {
+      grid-column: 1 / -1;
+      color: var(--accent);
+      border-color: var(--accent-dim);
+    }
+
+    .act-btn.wide:hover {
+      background: rgba(122, 252, 255, 0.12);
+      box-shadow: 0 0 12px rgba(122, 252, 255, 0.15);
+    }
+
+    #status-badge {
+      position: fixed;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      border-radius: 24px;
+      padding: 4px 16px;
+      font-size: 11px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      color: #aaa;
+      pointer-events: none;
+      z-index: 9999;
+      font-family: 'Rajdhani', monospace;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    #status-badge.connected {
+      color: #7aff87;
+      text-shadow: 0 0 4px #2eff5e;
+      border-color: rgba(122, 255, 135, 0.2);
+    }
+
+    #status-badge.disconnected {
+      color: #ff8866;
+      border-color: rgba(255, 136, 102, 0.2);
+    }
+
+    #status-badge.demo {
+      color: #ffd84f;
+      text-shadow: 0 0 4px #ffaa00;
+      border-color: rgba(255, 216, 79, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container"></div>
+
+  <!-- CONTROL PANEL -->
+  <div class="panel-wrapper">
+    <button class="panel-tab" id="togglePanel" aria-label="Toggle controls">
+      <span class="panel-tab-icon">⚡</span>CTRL
+    </button>
+    <div class="layout-panel hidden" id="layoutPanel">
+      <div class="panel-header">
+        <span class="panel-title">⚡ Overlay Controls</span>
+        <button class="panel-close" id="closePanel" title="Close">✕</button>
+      </div>
+
+      <!-- Layout section -->
+      <div class="section">
+        <div class="section-hd open" data-bd="bd-layout"><span>▦ LAYOUT</span><span class="chev">▾</span></div>
+        <div class="section-bd" id="bd-layout">
+          <div class="section-in" style="padding-top: 10px">
+            <div class="ctrl">
+              <div class="ctrl-row"><span class="ctrl-lbl">Column Gap</span><span class="ctrl-val" id="gapValue">0</span></div>
+              <input id="gapControl" type="range" min="0" max="200" value="0" />
+            </div>
+            <div class="ctrl">
+              <div class="ctrl-row"><span class="ctrl-lbl">Horizontal Offset</span><span class="ctrl-val" id="offsetXValue">0</span></div>
+              <input id="offsetXControl" type="range" min="-400" max="400" value="0" />
+            </div>
+            <div class="ctrl">
+              <div class="ctrl-row"><span class="ctrl-lbl">Vertical Position</span><span class="ctrl-val" id="offsetYValue">0</span></div>
+              <input id="offsetYControl" type="range" min="-200" max="200" value="0" />
+            </div>
+            <div class="ctrl">
+              <div class="ctrl-row"><span class="ctrl-lbl">Layout Height</span><span class="ctrl-val" id="heightValue">85%</span></div>
+              <input id="heightControl" type="range" min="30" max="100" value="85" />
+            </div>
+            <div class="ctrl">
+              <div class="ctrl-row"><span class="ctrl-lbl">Zoom</span><span class="ctrl-val" id="zoomValue">100%</span></div>
+              <input id="zoomControl" type="range" min="60" max="140" value="100" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Visual section -->
+      <div class="section">
+        <div class="section-hd open" data-bd="bd-visual"><span>◈ VISUAL</span><span class="chev">▾</span></div>
+        <div class="section-bd" id="bd-visual">
+          <div class="section-in" style="padding-top: 10px">
+            <div class="toggle-row">
+              <span class="toggle-lbl">Dark Grid</span>
+              <label class="tog">
+                <input type="checkbox" id="themeToggle" checked>
+                <span class="tog-track"><span class="tog-knob"></span></span>
+              </label>
+            </div>
+            <div class="ctrl">
+              <div class="ctrl-row"><span class="ctrl-lbl">Laser Color</span></div>
+              <div class="color-row">
+                <div class="color-swatch" id="colorSwatch" style="background: #7afcff" title="Click to open picker"></div>
+                <input type="color" id="laserColorPicker" value="#7afcff">
+                <div class="color-dots">
+                  <div class="color-dot active" data-color="#7afcff" style="background: #7afcff" title="Cyan"></div>
+                  <div class="color-dot" data-color="#ff4499" style="background: #ff4499" title="Pink"></div>
+                  <div class="color-dot" data-color="#ffcc00" style="background: #ffcc00" title="Gold"></div>
+                  <div class="color-dot" data-color="#44ff88" style="background: #44ff88" title="Green"></div>
+                  <div class="color-dot" data-color="#ff6600" style="background: #ff6600" title="Orange"></div>
+                  <div class="color-dot" data-color="#aa44ff" style="background: #aa44ff" title="Purple"></div>
+                  <div class="color-dot" data-color="#ffffff" style="background: #ffffff" title="White"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="act-btn wide" id="resetBtn">Reset Layout</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="status-badge" class="demo">DEMO MODE</div>
+
+  <script src="js/overlay-scene.js"></script>
+  <script src="js/socket-overlay-handler.js"></script>
+  <script>
+    // Initialize Phaser game
+    const config = {
+      type: Phaser.AUTO,
+      parent: 'game-container',
+      width: window.innerWidth < 1920 ? window.innerWidth * 0.9 : 1920,
+      height: window.innerHeight < 1080 ? window.innerHeight * 0.9 : 1080,
+      aspectRatio: 16 / 9,
+      backgroundColor: '#02040a',
+      scene: OverlayScene,
+      physics: {
+        default: 'arcade',
+        arcade: { debug: false }
+      },
+      render: {
+        pixelArt: false,
+        antialias: true
+      }
+    };
+
+    const game = new Phaser.Game(config);
+
+    // Initialize Socket.IO overlay handler
+    window.overlayGame = game;
+    initSocketOverlay(game);
+
+    // Panel controls
+    const togglePanel = document.getElementById('togglePanel');
+    const layoutPanel = document.getElementById('layoutPanel');
+    const closePanel = document.getElementById('closePanel');
+
+    togglePanel.addEventListener('click', () => {
+      layoutPanel.classList.toggle('hidden');
+    });
+
+    closePanel.addEventListener('click', () => {
+      layoutPanel.classList.add('hidden');
+    });
+
+    // Section collapsible headers
+    document.querySelectorAll('.section-hd').forEach(header => {
+      header.addEventListener('click', () => {
+        const bd = document.getElementById(header.dataset.bd);
+        header.classList.toggle('open');
+        bd.classList.toggle('shut');
+      });
+    });
+
+    // Range controls
+    const controls = [
+      { id: 'gapControl', key: 'gap', valueId: 'gapValue', suffix: '' },
+      { id: 'offsetXControl', key: 'offsetX', valueId: 'offsetXValue', suffix: '' },
+      { id: 'offsetYControl', key: 'offsetY', valueId: 'offsetYValue', suffix: '' },
+      { id: 'heightControl', key: 'height', valueId: 'heightValue', suffix: '%' },
+      { id: 'zoomControl', key: 'zoom', valueId: 'zoomValue', suffix: '%' }
+    ];
+
+    controls.forEach(ctrl => {
+      const input = document.getElementById(ctrl.id);
+      const valueSpan = document.getElementById(ctrl.valueId);
+      input.addEventListener('input', (e) => {
+        valueSpan.textContent = e.target.value + ctrl.suffix;
+        if (window.overlayGame && window.overlayGame.scene.scenes[0]) {
+          const scene = window.overlayGame.scene.scenes[0];
+          scene.updateLayoutConfig(ctrl.key, parseFloat(e.target.value));
+        }
+      });
+    });
+
+    // Color controls
+    const colorSwatch = document.getElementById('colorSwatch');
+    const colorPicker = document.getElementById('laserColorPicker');
+    const colorDots = document.querySelectorAll('.color-dot');
+
+    colorSwatch.addEventListener('click', () => colorPicker.click());
+
+    colorPicker.addEventListener('change', (e) => {
+      const color = e.target.value;
+      colorSwatch.style.background = color;
+      if (window.overlayGame && window.overlayGame.scene.scenes[0]) {
+        window.overlayGame.scene.scenes[0].updateLaserColor(color);
+      }
+    });
+
+    colorDots.forEach(dot => {
+      dot.addEventListener('click', () => {
+        const color = dot.dataset.color;
+        colorPicker.value = color;
+        colorSwatch.style.background = color;
+        colorDots.forEach(d => d.classList.remove('active'));
+        dot.classList.add('active');
+        if (window.overlayGame && window.overlayGame.scene.scenes[0]) {
+          window.overlayGame.scene.scenes[0].updateLaserColor(color);
+        }
+      });
+    });
+
+    // Reset button
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      document.getElementById('gapControl').value = 0;
+      document.getElementById('offsetXControl').value = 0;
+      document.getElementById('offsetYControl').value = 0;
+      document.getElementById('heightControl').value = 85;
+      document.getElementById('zoomControl').value = 100;
+
+      document.getElementById('gapValue').textContent = '0';
+      document.getElementById('offsetXValue').textContent = '0';
+      document.getElementById('offsetYValue').textContent = '0';
+      document.getElementById('heightValue').textContent = '85%';
+      document.getElementById('zoomValue').textContent = '100%';
+
+      if (window.overlayGame && window.overlayGame.scene.scenes[0]) {
+        const scene = window.overlayGame.scene.scenes[0];
+        scene.resetLayout();
+      }
+    });
+  </script>
+</body>
+</html>
