@@ -711,10 +711,6 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
   const password = String(req.body.password || '');
   const name = String(req.body.name || '').trim();
   const tiktokUsername = String(req.body.tiktokUsername || '').trim();
-  const email = String(req.body.email || '').trim().toLowerCase();
-  const password = String(req.body.password || '');
-  const name = String(req.body.name || '').trim();
-  const tiktokUsername = String(req.body.tiktokUsername || '').trim();
 
   if (!email || !password || !name || !tiktokUsername) {
     return res.status(400).json({ success: false, error: 'Email, password, name, and TikTok username are required.' });
