@@ -868,17 +868,22 @@ app.get('/', (req, res) => {
           const trialStart = new Date(row.trial_started);
           const trialEnd = new Date(trialStart.getTime() + (row.trial_days || 14) * 24 * 60 * 60 * 1000);
           const now = new Date();
-          if (now > trialEnd && row.subscription_status !== 'active') {
-            return res.redirect('/paywall');
+          if (now <= trialEnd || row.subscription_status === 'active') {
+            return res.redirect('/dashboard');
           }
+          res.clearCookie('session_token', { path: '/', httpOnly: true, sameSite: 'lax' });
+        } else {
+          return res.redirect('/dashboard');
         }
-        return res.redirect('/dashboard');
       }
     }
     if (auth?.type === 'user') {
       const user = auth.record;
       if (user && user.is_active) {
-        return res.redirect('/dashboard');
+        const subscription = db.prepare('SELECT * FROM subscriptions WHERE user_id = ? AND status = ? ORDER BY updated_at DESC LIMIT 1').get(user.id, 'active');
+        if (subscription) {
+          return res.redirect('/dashboard');
+        }
       }
     }
   }
@@ -892,7 +897,15 @@ app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html
 app.get('/register', (req, res) => {
   const token = req.cookies?.session_token;
   const auth = getAuthRecord(token);
-  if (auth?.type === 'user' && auth.record?.is_active) return res.redirect('/dashboard');
+  if (auth?.type === 'user') {
+    const user = auth.record;
+    if (user && user.is_active) {
+      const subscription = db.prepare('SELECT * FROM subscriptions WHERE user_id = ? AND status = ? ORDER BY updated_at DESC LIMIT 1').get(user.id, 'active');
+      if (subscription) {
+        return res.redirect('/dashboard');
+      }
+    }
+  }
   res.sendFile(path.join(__dirname, 'register.html'));
 });
 app.get('/login', (req, res) => {
@@ -901,11 +914,25 @@ app.get('/login', (req, res) => {
   if (auth?.type === 'code') {
     const row = auth.record;
     if (row && !row.is_revoked) {
-      return res.redirect('/dashboard');
+      if (!row.trial_started) {
+        return res.redirect('/dashboard');
+      }
+      const trialStart = new Date(row.trial_started);
+      const trialEnd = new Date(trialStart.getTime() + (row.trial_days || 14) * 24 * 60 * 60 * 1000);
+      const now = new Date();
+      if (now <= trialEnd || row.subscription_status === 'active') {
+        return res.redirect('/dashboard');
+      }
     }
   }
-  if (auth?.type === 'user' && auth.record?.is_active) {
-    return res.redirect('/dashboard');
+  if (auth?.type === 'user') {
+    const user = auth.record;
+    if (user && user.is_active) {
+      const subscription = db.prepare('SELECT * FROM subscriptions WHERE user_id = ? AND status = ? ORDER BY updated_at DESC LIMIT 1').get(user.id, 'active');
+      if (subscription) {
+        return res.redirect('/dashboard');
+      }
+    }
   }
   res.sendFile(path.join(__dirname, 'login.html'));
 });
