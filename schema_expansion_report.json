@@ -1,0 +1,89 @@
+{
+  "files": [
+    {
+      "path": "dashboard-welcome.html",
+      "blocks": []
+    },
+    {
+      "path": "dashboard.html",
+      "blocks": []
+    },
+    {
+      "path": "home.html",
+      "blocks": [
+        {
+          "index": 1,
+          "ok": false,
+          "error": "Expansion error: ('Dereferencing a URL did not result in a valid JSON-LD object. Possible causes are an inaccessible URL perhaps due to a same-origin policy (ensure the server uses CORS if you are using client-side JavaScript), too many redirects, a non-JSON response, or more than one HTTP Link Header was provided for a remote context.',)\nType: jsonld.InvalidUrl\nCode: loading remote context failed\nDetails: {'url': 'https://schema.org'}"
+        }
+      ]
+    },
+    {
+      "path": "login.html",
+      "blocks": [
+        {
+          "index": 1,
+          "ok": false,
+          "error": "Expansion error: ('Dereferencing a URL did not result in a valid JSON-LD object. Possible causes are an inaccessible URL perhaps due to a same-origin policy (ensure the server uses CORS if you are using client-side JavaScript), too many redirects, a non-JSON response, or more than one HTTP Link Header was provided for a remote context.',)\nType: jsonld.InvalidUrl\nCode: loading remote context failed\nDetails: {'url': 'https://schema.org'}"
+        }
+      ]
+    },
+    {
+      "path": "overlay.html",
+      "blocks": []
+    },
+    {
+      "path": "paywall.html",
+      "blocks": []
+    },
+    {
+      "path": "profile.html",
+      "blocks": []
+    },
+    {
+      "path": "register.html",
+      "blocks": [
+        {
+          "index": 1,
+          "ok": false,
+          "error": "Expansion error: ('Dereferencing a URL did not result in a valid JSON-LD object. Possible causes are an inaccessible URL perhaps due to a same-origin policy (ensure the server uses CORS if you are using client-side JavaScript), too many redirects, a non-JSON response, or more than one HTTP Link Header was provided for a remote context.',)\nType: jsonld.InvalidUrl\nCode: loading remote context failed\nDetails: {'url': 'https://schema.org'}"
+        }
+      ]
+    },
+    {
+      "path": "request-password-reset.html",
+      "blocks": []
+    },
+    {
+      "path": "reset-password.html",
+      "blocks": []
+    },
+    {
+      "path": "signup.html",
+      "blocks": [
+        {
+          "index": 1,
+          "ok": false,
+          "error": "Expansion error: ('Dereferencing a URL did not result in a valid JSON-LD object. Possible causes are an inaccessible URL perhaps due to a same-origin policy (ensure the server uses CORS if you are using client-side JavaScript), too many redirects, a non-JSON response, or more than one HTTP Link Header was provided for a remote context.',)\nType: jsonld.InvalidUrl\nCode: loading remote context failed\nDetails: {'url': 'https://schema.org'}"
+        }
+      ]
+    },
+    {
+      "path": "stats.html",
+      "blocks": []
+    },
+    {
+      "path": "theme-samples.html",
+      "blocks": []
+    },
+    {
+      "path": "verify-email.html",
+      "blocks": []
+    }
+  ],
+  "summary": {
+    "total_files": 14,
+    "expanded": 0,
+    "errors": 4
+  }
+}

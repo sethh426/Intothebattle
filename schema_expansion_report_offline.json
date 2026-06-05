@@ -1,0 +1,311 @@
+{
+  "files": [
+    {
+      "path": "dashboard-welcome.html",
+      "blocks": []
+    },
+    {
+      "path": "dashboard.html",
+      "blocks": []
+    },
+    {
+      "path": "home.html",
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "expanded_sample": [
+            {
+              "@id": "https://intothebattle.com/#website",
+              "@type": [
+                "https://schema.org/WebSite"
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle"
+                }
+              ],
+              "https://schema.org/potentialAction": [
+                {
+                  "@type": [
+                    "https://schema.org/SearchAction"
+                  ],
+                  "https://schema.org/query-input": [
+                    {
+                      "@value": "required name=search_term_string"
+                    }
+                  ],
+                  "https://schema.org/target": [
+                    {
+                      "@value": "https://intothebattle.com/search?q={search_term_string}"
+                    }
+                  ]
+                }
+              ],
+              "https://schema.org/publisher": [
+                {
+                  "@id": "https://intothebattle.com/#organization"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/"
+                }
+              ]
+            },
+            {
+              "@id": "https://intothebattle.com/#software",
+              "@type": [
+                "https://schema.org/SoftwareApplication"
+              ],
+              "https://schema.org/applicationCategory": [
+                {
+                  "@value": "WebApplication"
+                }
+              ],
+              "https://schema.org/browserRequirements": [
+                {
+                  "@value": "Modern browser with WebSocket support"
+                }
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "An interactive live overlay and dashboard for TikTok LIVE streamers — access codes and creator accounts supported."
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle"
+                }
+              ],
+              "https://schema.org/offers": [
+                {
+                  "@type": [
+                    "https://schema.org/Offer"
+                  ],
+                  "https://schema.org/price": [
+                    {
+                      "@value": "8.50"
+                    }
+                  ],
+                  "https://schema.org/priceCurrency": [
+                    {
+                      "@value": "USD"
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/signup"
+                    }
+                  ]
+                }
+              ],
+              "https://schema.org/operatingSystem": [
+                {
+                  "@value": "Web"
+                }
+              ],
+              "https://schema.org/publisher": [
+                {
+                  "@id": "https://intothebattle.com/#organization"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "login.html",
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "expanded_sample": [
+            {
+              "@type": [
+                "https://schema.org/WebPage"
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "Log in to your IntoTheBattle account or use a legacy access code to enter your overlay room."
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "Login - IntoTheBattle"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/login"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "overlay.html",
+      "blocks": []
+    },
+    {
+      "path": "paywall.html",
+      "blocks": []
+    },
+    {
+      "path": "profile.html",
+      "blocks": []
+    },
+    {
+      "path": "register.html",
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "expanded_sample": [
+            {
+              "@type": [
+                "https://schema.org/WebPage"
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "Create a creator account to manage your overlay, rooms, and subscription."
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "Register - IntoTheBattle"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/register"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "request-password-reset.html",
+      "blocks": []
+    },
+    {
+      "path": "reset-password.html",
+      "blocks": []
+    },
+    {
+      "path": "signup.html",
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "expanded_sample": [
+            {
+              "@type": [
+                "https://schema.org/FAQPage"
+              ],
+              "https://schema.org/mainEntity": [
+                {
+                  "@type": [
+                    "https://schema.org/Question"
+                  ],
+                  "https://schema.org/acceptedAnswer": [
+                    {
+                      "@type": [
+                        "https://schema.org/Answer"
+                      ],
+                      "https://schema.org/text": [
+                        {
+                          "@value": "A 14-day trial including overlay access, dashboard controls, and room configuration."
+                        }
+                      ]
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "What does the free trial include?"
+                    }
+                  ]
+                },
+                {
+                  "@type": [
+                    "https://schema.org/Question"
+                  ],
+                  "https://schema.org/acceptedAnswer": [
+                    {
+                      "@type": [
+                        "https://schema.org/Answer"
+                      ],
+                      "https://schema.org/text": [
+                        {
+                          "@value": "No — the trial does not require a credit card to start."
+                        }
+                      ]
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "Is a credit card required?"
+                    }
+                  ]
+                },
+                {
+                  "@type": [
+                    "https://schema.org/Question"
+                  ],
+                  "https://schema.org/acceptedAnswer": [
+                    {
+                      "@type": [
+                        "https://schema.org/Answer"
+                      ],
+                      "https://schema.org/text": [
+                        {
+                          "@value": "Enter your email on this signup page and click 'Generate Access Code' to receive a trial code instantly."
+                        }
+                      ]
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "How do I get my access code?"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "stats.html",
+      "blocks": []
+    },
+    {
+      "path": "theme-samples.html",
+      "blocks": []
+    },
+    {
+      "path": "verify-email.html",
+      "blocks": []
+    }
+  ],
+  "summary": {
+    "total_files": 14,
+    "expanded": 4,
+    "errors": 0
+  }
+}

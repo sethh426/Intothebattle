@@ -1,0 +1,19 @@
+Schema validation summary: files scanned: 14, files with JSON-LD: 4, blocks: 4, errors: 0, warnings: 0
+- dashboard-welcome.html: no JSON-LD blocks found
+- dashboard.html: no JSON-LD blocks found
+- home.html: 1 JSON-LD block(s)
+  - block #1: OK
+- login.html: 1 JSON-LD block(s)
+  - block #1: OK
+- overlay.html: no JSON-LD blocks found
+- paywall.html: no JSON-LD blocks found
+- profile.html: no JSON-LD blocks found
+- register.html: 1 JSON-LD block(s)
+  - block #1: OK
+- request-password-reset.html: no JSON-LD blocks found
+- reset-password.html: no JSON-LD blocks found
+- signup.html: 1 JSON-LD block(s)
+  - block #1: OK
+- stats.html: no JSON-LD blocks found
+- theme-samples.html: no JSON-LD blocks found
+- verify-email.html: no JSON-LD blocks found

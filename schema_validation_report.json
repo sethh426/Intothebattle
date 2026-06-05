@@ -1,0 +1,99 @@
+{
+  "files": [
+    {
+      "path": "dashboard-welcome.html",
+      "blocks": []
+    },
+    {
+      "path": "dashboard.html",
+      "blocks": []
+    },
+    {
+      "path": "home.html",
+      "blocks": [
+        {
+          "index": 1,
+          "raw": "{\n      \"@context\": \"https://schema.org\",\n      \"@graph\": [\n        {\n          \"@type\": \"WebSite\",\n          \"@id\": \"https://intothebattle.com/#website\",\n          \"url\": \"https://intothebattle.com/\",\n          \"name\": \"IntoTheBattle\",\n          \"publisher\": { \"@id\": \"https://intothebattle.com/#organization\" },\n          \"potentialAction\": {\n            \"@type\": \"SearchAction\",\n            \"target\": \"https://intothebattle.com/search?q={search_term_string}\",\n            \"query-input\": \"required ",
+          "ok": true,
+          "errors": [],
+          "warnings": []
+        }
+      ]
+    },
+    {
+      "path": "login.html",
+      "blocks": [
+        {
+          "index": 1,
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\",\n    \"name\": \"Login - IntoTheBattle\",\n    \"url\": \"https://intothebattle.com/login\",\n    \"description\": \"Log in to your IntoTheBattle account or use a legacy access code to enter your overlay room.\"\n  }",
+          "ok": true,
+          "errors": [],
+          "warnings": []
+        }
+      ]
+    },
+    {
+      "path": "overlay.html",
+      "blocks": []
+    },
+    {
+      "path": "paywall.html",
+      "blocks": []
+    },
+    {
+      "path": "profile.html",
+      "blocks": []
+    },
+    {
+      "path": "register.html",
+      "blocks": [
+        {
+          "index": 1,
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\",\n    \"name\": \"Register - IntoTheBattle\",\n    \"url\": \"https://intothebattle.com/register\",\n    \"description\": \"Create a creator account to manage your overlay, rooms, and subscription.\"\n  }",
+          "ok": true,
+          "errors": [],
+          "warnings": []
+        }
+      ]
+    },
+    {
+      "path": "request-password-reset.html",
+      "blocks": []
+    },
+    {
+      "path": "reset-password.html",
+      "blocks": []
+    },
+    {
+      "path": "signup.html",
+      "blocks": [
+        {
+          "index": 1,
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"FAQPage\",\n    \"mainEntity\": [\n      {\n        \"@type\": \"Question\",\n        \"name\": \"What does the free trial include?\",\n        \"acceptedAnswer\": { \"@type\": \"Answer\", \"text\": \"A 14-day trial including overlay access, dashboard controls, and room configuration.\" }\n      },\n      {\n        \"@type\": \"Question\",\n        \"name\": \"Is a credit card required?\",\n        \"acceptedAnswer\": { \"@type\": \"Answer\", \"text\": \"No — the trial does not require a ",
+          "ok": true,
+          "errors": [],
+          "warnings": []
+        }
+      ]
+    },
+    {
+      "path": "stats.html",
+      "blocks": []
+    },
+    {
+      "path": "theme-samples.html",
+      "blocks": []
+    },
+    {
+      "path": "verify-email.html",
+      "blocks": []
+    }
+  ],
+  "summary": {
+    "total_files": 14,
+    "files_with_jsonld": 4,
+    "total_blocks": 4,
+    "errors": 0,
+    "warnings": 0
+  }
+}

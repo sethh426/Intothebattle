@@ -1,0 +1,19 @@
+JSON-LD expansion summary: files scanned: 14, expanded blocks: 4, errors: 0
+- dashboard-welcome.html: no JSON-LD blocks
+- dashboard.html: no JSON-LD blocks
+- home.html: 1 block(s)
+  - block #1: expanded OK
+- login.html: 1 block(s)
+  - block #1: expanded OK
+- overlay.html: no JSON-LD blocks
+- paywall.html: no JSON-LD blocks
+- profile.html: no JSON-LD blocks
+- register.html: 1 block(s)
+  - block #1: expanded OK
+- request-password-reset.html: no JSON-LD blocks
+- reset-password.html: no JSON-LD blocks
+- signup.html: 1 block(s)
+  - block #1: expanded OK
+- stats.html: no JSON-LD blocks
+- theme-samples.html: no JSON-LD blocks
+- verify-email.html: no JSON-LD blocks
