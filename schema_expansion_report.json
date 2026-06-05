@@ -10,23 +10,43 @@
     },
     {
       "path": "home.html",
-      "blocks": [
-        {
-          "index": 1,
-          "ok": false,
-          "error": "Expansion error: ('Dereferencing a URL did not result in a valid JSON-LD object. Possible causes are an inaccessible URL perhaps due to a same-origin policy (ensure the server uses CORS if you are using client-side JavaScript), too many redirects, a non-JSON response, or more than one HTTP Link Header was provided for a remote context.',)\nType: jsonld.InvalidUrl\nCode: loading remote context failed\nDetails: {'url': 'https://schema.org'}"
-        }
-      ]
+      "blocks": []
     },
     {
       "path": "login.html",
       "blocks": [
         {
           "index": 1,
-          "ok": false,
-          "error": "Expansion error: ('Dereferencing a URL did not result in a valid JSON-LD object. Possible causes are an inaccessible URL perhaps due to a same-origin policy (ensure the server uses CORS if you are using client-side JavaScript), too many redirects, a non-JSON response, or more than one HTTP Link Header was provided for a remote context.',)\nType: jsonld.InvalidUrl\nCode: loading remote context failed\nDetails: {'url': 'https://schema.org'}"
+          "ok": true,
+          "error": null,
+          "expanded_sample": [
+            {
+              "@type": [
+                "https://schema.org/WebPage"
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "Log in to your IntoTheBattle account or use a legacy access code to enter your overlay room."
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "Login - IntoTheBattle"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/login"
+                }
+              ]
+            }
+          ]
         }
       ]
+    },
+    {
+      "path": "overlay-phaser.html",
+      "blocks": []
     },
     {
       "path": "overlay.html",
@@ -45,8 +65,30 @@
       "blocks": [
         {
           "index": 1,
-          "ok": false,
-          "error": "Expansion error: ('Dereferencing a URL did not result in a valid JSON-LD object. Possible causes are an inaccessible URL perhaps due to a same-origin policy (ensure the server uses CORS if you are using client-side JavaScript), too many redirects, a non-JSON response, or more than one HTTP Link Header was provided for a remote context.',)\nType: jsonld.InvalidUrl\nCode: loading remote context failed\nDetails: {'url': 'https://schema.org'}"
+          "ok": true,
+          "error": null,
+          "expanded_sample": [
+            {
+              "@type": [
+                "https://schema.org/WebPage"
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "Register for IntoTheBattle and control your TikTok LIVE battle room, overlay effects, and subscription access."
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "Register - IntoTheBattle"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/register"
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -63,8 +105,83 @@
       "blocks": [
         {
           "index": 1,
-          "ok": false,
-          "error": "Expansion error: ('Dereferencing a URL did not result in a valid JSON-LD object. Possible causes are an inaccessible URL perhaps due to a same-origin policy (ensure the server uses CORS if you are using client-side JavaScript), too many redirects, a non-JSON response, or more than one HTTP Link Header was provided for a remote context.',)\nType: jsonld.InvalidUrl\nCode: loading remote context failed\nDetails: {'url': 'https://schema.org'}"
+          "ok": true,
+          "error": null,
+          "expanded_sample": [
+            {
+              "@type": [
+                "https://schema.org/FAQPage"
+              ],
+              "https://schema.org/mainEntity": [
+                {
+                  "@type": [
+                    "https://schema.org/Question"
+                  ],
+                  "https://schema.org/acceptedAnswer": [
+                    {
+                      "@type": [
+                        "https://schema.org/Answer"
+                      ],
+                      "https://schema.org/text": [
+                        {
+                          "@value": "A 14-day trial including overlay access, dashboard controls, and room configuration."
+                        }
+                      ]
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "What does the free trial include?"
+                    }
+                  ]
+                },
+                {
+                  "@type": [
+                    "https://schema.org/Question"
+                  ],
+                  "https://schema.org/acceptedAnswer": [
+                    {
+                      "@type": [
+                        "https://schema.org/Answer"
+                      ],
+                      "https://schema.org/text": [
+                        {
+                          "@value": "No — the trial does not require a credit card to start."
+                        }
+                      ]
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "Is a credit card required?"
+                    }
+                  ]
+                },
+                {
+                  "@type": [
+                    "https://schema.org/Question"
+                  ],
+                  "https://schema.org/acceptedAnswer": [
+                    {
+                      "@type": [
+                        "https://schema.org/Answer"
+                      ],
+                      "https://schema.org/text": [
+                        {
+                          "@value": "Enter your email on this signup page and click 'Generate Access Code' to receive a trial code instantly."
+                        }
+                      ]
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "How do I get my access code?"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -82,8 +199,8 @@
     }
   ],
   "summary": {
-    "total_files": 14,
-    "expanded": 0,
-    "errors": 4
+    "total_files": 15,
+    "expanded": 3,
+    "errors": 0
   }
 }

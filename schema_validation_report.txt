@@ -1,10 +1,10 @@
-Schema validation summary: files scanned: 14, files with JSON-LD: 4, blocks: 4, errors: 0, warnings: 0
+Schema validation summary: files scanned: 15, files with JSON-LD: 3, blocks: 3, errors: 0, warnings: 0
 - dashboard-welcome.html: no JSON-LD blocks found
 - dashboard.html: no JSON-LD blocks found
-- home.html: 1 JSON-LD block(s)
-  - block #1: OK
+- home.html: no JSON-LD blocks found
 - login.html: 1 JSON-LD block(s)
   - block #1: OK
+- overlay-phaser.html: no JSON-LD blocks found
 - overlay.html: no JSON-LD blocks found
 - paywall.html: no JSON-LD blocks found
 - profile.html: no JSON-LD blocks found
