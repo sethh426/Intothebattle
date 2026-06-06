@@ -69,7 +69,7 @@ export default function checkTrial(req, res, next) {
       if (!user.is_active) return res.redirect('/paywall?reason=revoked');
 
       const subscription = db.prepare(
-        'SELECT * FROM subscriptions WHERE user_id = ? AND status IN ("active","trial") ORDER BY updated_at DESC LIMIT 1'
+        'SELECT * FROM subscriptions WHERE user_id = ? AND status IN (\'active\',\'trial\') ORDER BY updated_at DESC LIMIT 1'
       ).get(user.id);
 
       if (!subscription) {

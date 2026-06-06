@@ -880,7 +880,7 @@ app.get('/', (req, res) => {
     if (auth?.type === 'user') {
       const user = auth.record;
       if (user && user.is_active) {
-        const subscription = db.prepare('SELECT * FROM subscriptions WHERE user_id = ? AND status IN ("active","trial") ORDER BY updated_at DESC LIMIT 1').get(user.id);
+        const subscription = db.prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1").get(user.id);
         if (subscription) {
           return res.redirect('/dashboard');
         }
@@ -900,7 +900,7 @@ app.get('/register', (req, res) => {
   if (auth?.type === 'user') {
     const user = auth.record;
     if (user && user.is_active) {
-      const subscription = db.prepare('SELECT * FROM subscriptions WHERE user_id = ? AND status IN ("active","trial") ORDER BY updated_at DESC LIMIT 1').get(user.id);
+      const subscription = db.prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1").get(user.id);
       if (subscription) {
         return res.redirect('/dashboard');
       }
@@ -928,7 +928,7 @@ app.get('/login', (req, res) => {
   if (auth?.type === 'user') {
     const user = auth.record;
     if (user && user.is_active) {
-      const subscription = db.prepare('SELECT * FROM subscriptions WHERE user_id = ? AND status IN ("active","trial") ORDER BY updated_at DESC LIMIT 1').get(user.id);
+      const subscription = db.prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1").get(user.id);
       if (subscription) {
         return res.redirect('/dashboard');
       }

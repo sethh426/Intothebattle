@@ -69,7 +69,7 @@ function normalizeGoogleUsername(email) {
 }
 
 function ensureTrialSubscription(userId) {
-  const existing = db.prepare('SELECT * FROM subscriptions WHERE user_id = ? AND status IN ("active","trial") ORDER BY updated_at DESC LIMIT 1').get(userId);
+  const existing = db.prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1").get(userId);
   if (existing) return existing;
 
   const trialDays = 14;
@@ -80,7 +80,7 @@ function ensureTrialSubscription(userId) {
   db.prepare(
     'INSERT INTO subscriptions (user_id, status, started_at, next_billing_date, expires_at, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
   ).run(userId, 'trial', trialExpiresAt, trialExpiresAt);
-  return db.prepare('SELECT * FROM subscriptions WHERE user_id = ? AND status IN ("active","trial") ORDER BY updated_at DESC LIMIT 1').get(userId);
+  return db.prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1").get(userId);
 }
 
 const router = express.Router();
