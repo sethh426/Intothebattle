@@ -69,12 +69,21 @@ export default function checkTrial(req, res, next) {
       if (!user.is_active) return res.redirect('/paywall?reason=revoked');
 
       const subscription = db.prepare(
-        'SELECT * FROM subscriptions WHERE user_id = ? AND status = ? ORDER BY updated_at DESC LIMIT 1'
-      ).get(user.id, 'active');
+        'SELECT * FROM subscriptions WHERE user_id = ? AND status IN ("active","trial") ORDER BY updated_at DESC LIMIT 1'
+      ).get(user.id);
 
       if (!subscription) {
-        console.info('checkTrial -> user has no active subscription; redirecting to paywall', { userId: user.id, email: user.email || null });
+        console.info('checkTrial -> user has no subscription; redirecting to paywall', { userId: user.id, email: user.email || null });
         return res.redirect('/paywall?reason=no_subscription');
+      }
+
+      if (subscription.status === 'trial') {
+        const trialExpiresAt = subscription.expires_at ? new Date(subscription.expires_at) : null;
+        const now = new Date();
+        if (!trialExpiresAt || now > trialExpiresAt) {
+          console.info('checkTrial -> user trial expired; redirecting to paywall', { userId: user.id, email: user.email || null, expires_at: subscription.expires_at });
+          return res.redirect('/paywall?reason=trial_expired');
+        }
       }
 
       db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);

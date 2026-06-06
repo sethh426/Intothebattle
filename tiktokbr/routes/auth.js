@@ -2,6 +2,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import postmark from 'postmark';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db/db.js';
@@ -10,6 +11,76 @@ function getPostmarkClient() {
   const token = process.env.POSTMARK_API_TOKEN;
   if (!token) return null;
   return new postmark.ServerClient(token);
+}
+
+function getGoogleClientId() {
+  return process.env.GOOGLE_CLIENT_ID;
+}
+
+function getGoogleClientSecret() {
+  return process.env.GOOGLE_CLIENT_SECRET;
+}
+
+function getGoogleRedirectUri() {
+  if (process.env.GOOGLE_OAUTH_REDIRECT_URI) return process.env.GOOGLE_OAUTH_REDIRECT_URI;
+  const base = process.env.APP_BASE_URL || 'http://localhost:3000';
+  return `${base.replace(/\/$/, '')}/auth/google/callback`;
+}
+
+function createOAuthState() {
+  return jwt.sign(
+    { purpose: 'google_oauth', nonce: crypto.randomBytes(16).toString('hex') },
+    process.env.JWT_SECRET,
+    { expiresIn: '10m' }
+  );
+}
+
+function verifyOAuthState(state) {
+  if (!state) return false;
+  try {
+    const payload = jwt.verify(state, process.env.JWT_SECRET);
+    return payload?.purpose === 'google_oauth';
+  } catch (_err) {
+    return false;
+  }
+}
+
+function getVerifiedStateFromCookie(req) {
+  const state = req.cookies?.google_oauth_state;
+  if (!state || !verifyOAuthState(state)) return null;
+  return state;
+}
+
+async function fetchGoogleProfile(accessToken) {
+  const profileResponse = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+  if (!profileResponse.ok) {
+    throw new Error('Failed to fetch Google profile');
+  }
+  return profileResponse.json();
+}
+
+function normalizeGoogleUsername(email) {
+  if (!email) return 'google-user';
+  return email.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 24) || 'google-user';
+}
+
+function ensureTrialSubscription(userId) {
+  const existing = db.prepare('SELECT * FROM subscriptions WHERE user_id = ? AND status IN ("active","trial") ORDER BY updated_at DESC LIMIT 1').get(userId);
+  if (existing) return existing;
+
+  const trialDays = 14;
+  const trialExpiresAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 19)
+    .replace('T', ' ');
+  db.prepare(
+    'INSERT INTO subscriptions (user_id, status, started_at, next_billing_date, expires_at, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+  ).run(userId, 'trial', trialExpiresAt, trialExpiresAt);
+  return db.prepare('SELECT * FROM subscriptions WHERE user_id = ? AND status IN ("active","trial") ORDER BY updated_at DESC LIMIT 1').get(userId);
 }
 
 const router = express.Router();
@@ -746,6 +817,15 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
     console.error('Verification email failed:', err);
   });
 
+  const trialDays = 14;
+  const trialExpiresAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 19)
+    .replace('T', ' ');
+  db.prepare(
+    'INSERT INTO subscriptions (user_id, status, started_at, next_billing_date, expires_at, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+  ).run(userId, 'trial', trialExpiresAt, trialExpiresAt);
+
   const accountId = `ACC-${String(userId).padStart(6, '0')}`;
   return res.json({
     success: true,
@@ -753,6 +833,106 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
     roomId,
     accountId,
   });
+});
+
+router.get('/auth/google', (req, res) => {
+  const clientId = getGoogleClientId();
+  const clientSecret = getGoogleClientSecret();
+  if (!clientId || !clientSecret) {
+    return res.status(501).send('Google OAuth is not configured.');
+  }
+
+  const state = createOAuthState();
+  res.cookie('google_oauth_state', state, { ...COOKIE_OPTIONS, httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: getGoogleRedirectUri(),
+    response_type: 'code',
+    scope: 'openid email profile',
+    access_type: 'offline',
+    prompt: 'select_account',
+    state,
+  });
+
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+});
+
+router.get('/auth/google/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query;
+    const cookieState = getVerifiedStateFromCookie(req);
+    if (!code || !state || !cookieState || state !== cookieState) {
+      return res.status(400).send('Invalid Google OAuth state.');
+    }
+
+    const clientId = getGoogleClientId();
+    const clientSecret = getGoogleClientSecret();
+    if (!clientId || !clientSecret) {
+      return res.status(501).send('Google OAuth is not configured.');
+    }
+
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code: String(code),
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: getGoogleRedirectUri(),
+        grant_type: 'authorization_code',
+      }),
+    });
+
+    const tokenJson = await tokenResponse.json();
+    if (!tokenResponse.ok || !tokenJson.access_token) {
+      console.error('Google token exchange failed', tokenJson);
+      return res.status(400).send('Google authentication failed.');
+    }
+
+    const profile = await fetchGoogleProfile(tokenJson.access_token);
+    if (!profile || !profile.email) {
+      return res.status(400).send('Google profile did not return an email.');
+    }
+
+    const email = String(profile.email).toLowerCase();
+    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+
+    if (!user) {
+      const name = profile.name || profile.given_name || email.split('@')[0];
+      const tiktokUsername = normalizeGoogleUsername(email);
+      const result = db.prepare(
+        'INSERT INTO users (email, password_hash, name, tiktok_username, is_active, session_token, email_verified, email_verification_token, email_verification_expires, created_at, updated_at) VALUES (?, NULL, ?, ?, 1, NULL, 1, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+      ).run(email, name, tiktokUsername);
+      const userId = result.lastInsertRowid;
+      const roomId = uuidv4().replace(/-/g, '').slice(0, 10);
+      db.prepare('INSERT INTO user_rooms (user_id, room_id, room_name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)').run(
+        userId,
+        roomId,
+        `${name}'s room`
+      );
+      db.prepare('INSERT OR IGNORE INTO room_settings (room_id) VALUES (?)').run(roomId);
+      ensureTrialSubscription(userId);
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    } else {
+      if (!user.is_active) {
+        return res.status(403).send('Your account is disabled.');
+      }
+      if (!user.email_verified) {
+        db.prepare('UPDATE users SET email_verified = 1 WHERE id = ?').run(user.id);
+      }
+      ensureTrialSubscription(user.id);
+    }
+
+    const sessionToken = createSessionToken({ userId: user.id, email });
+    db.prepare('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?').run(sessionToken, user.id);
+    setSessionCookie(res, sessionToken);
+    res.clearCookie('google_oauth_state', { ...COOKIE_OPTIONS, httpOnly: true, sameSite: 'lax' });
+    return res.redirect('/dashboard');
+  } catch (err) {
+    console.error('Google OAuth callback error:', err);
+    return res.status(500).send('Google login failed.');
+  }
 });
 
 router.post('/auth/user/login', express.json(), async (req, res) => {
