@@ -287,40 +287,90 @@ function isDashboardAuthed(req) {
 
 function loadRoomPlayerStats(room) {
   try {
-    const { playerStatsFile } = getRoomPaths(room.roomId);
-    if (!fs.existsSync(playerStatsFile)) return;
-    const saved = JSON.parse(fs.readFileSync(playerStatsFile, 'utf8'));
-    for (const id in saved) {
-      const s = saved[id] || {};
+    let rows = db.prepare('SELECT * FROM room_player_stats WHERE room_id = ?').all(room.roomId);
+    if (!rows.length) {
+      const { playerStatsFile } = getRoomPaths(room.roomId);
+      if (fs.existsSync(playerStatsFile)) {
+        const saved = JSON.parse(fs.readFileSync(playerStatsFile, 'utf8'));
+        const insert = db.prepare(`
+          INSERT INTO room_player_stats (
+            room_id, unique_id, nickname, hp, max_hp, strength, kills,
+            kill_streak, last_kill_time, alive, last_active, color,
+            message_boost_expires, force_spawn
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(room_id, unique_id) DO UPDATE SET
+            nickname = excluded.nickname,
+            hp = excluded.hp,
+            max_hp = excluded.max_hp,
+            strength = excluded.strength,
+            kills = excluded.kills,
+            kill_streak = excluded.kill_streak,
+            last_kill_time = excluded.last_kill_time,
+            alive = excluded.alive,
+            last_active = excluded.last_active,
+            color = excluded.color,
+            message_boost_expires = excluded.message_boost_expires,
+            force_spawn = excluded.force_spawn
+        `);
+        const tx = db.transaction(() => {
+          for (const id in saved) {
+            const s = saved[id] || {};
+            insert.run(
+              room.roomId,
+              id,
+              s.nickname || id,
+              s.hp || s.maxHp || CFG.BASE_HP,
+              s.maxHp || CFG.BASE_HP,
+              s.strength || CFG.BASE_STRENGTH,
+              s.kills || 0,
+              s.killStreak || 0,
+              s.lastKillTime || 0,
+              s.alive ? 1 : 0,
+              s.lastActive || Date.now(),
+              s.color || randomColor(),
+              s.messageBoostExpires || 0,
+              s.forceSpawn ? 1 : 0
+            );
+          }
+        });
+        tx();
+        rows = db.prepare('SELECT * FROM room_player_stats WHERE room_id = ?').all(room.roomId);
+        console.log(`📂 Migrated ${rows.length} legacy saved player stats for room ${room.roomId}`);
+      }
+    }
+
+    for (const row of rows) {
+      const id = row.unique_id;
       if (!room.players[id]) {
         room.players[id] = {
           uniqueId: id,
-          nickname: s.nickname || id,
-          hp:       s.maxHp   || CFG.BASE_HP,
-          maxHp:    s.maxHp   || CFG.BASE_HP,
-          strength: s.strength || CFG.BASE_STRENGTH,
-          kills:    s.kills   || 0,
-          killStreak: 0,
-          lastKillTime: 0,
-          alive:    false,
-          lastActive: Date.now(),
+          nickname: row.nickname || id,
+          hp:       row.hp || CFG.BASE_HP,
+          maxHp:    row.max_hp || CFG.BASE_HP,
+          strength: row.strength || CFG.BASE_STRENGTH,
+          kills:    row.kills || 0,
+          killStreak: row.kill_streak || 0,
+          lastKillTime: row.last_kill_time || 0,
+          alive:    Boolean(row.alive),
+          lastActive: row.last_active || Date.now(),
           x: 0, y: 0, vx: 0, vy: 0,
-          color: randomColor(),
-          messageBoostExpires: 0,
-          forceSpawn: false,
+          color: row.color || randomColor(),
+          messageBoostExpires: row.message_boost_expires || 0,
+          forceSpawn: Boolean(row.force_spawn),
         };
       } else {
         const target = room.players[id];
-        target.uniqueId   = target.uniqueId || id;
-        target.nickname   = target.nickname || s.nickname || id;
-        target.maxHp      = Math.max(target.maxHp    || CFG.BASE_HP,       s.maxHp    || CFG.BASE_HP);
-        target.strength   = Math.max(target.strength || CFG.BASE_STRENGTH, s.strength || CFG.BASE_STRENGTH);
-        target.kills      = s.kills || target.kills || 0;
-        target.killStreak = target.killStreak || 0;
-        target.lastKillTime = target.lastKillTime || 0;
+        target.uniqueId = target.uniqueId || id;
+        target.nickname = target.nickname || row.nickname || id;
+        target.maxHp = Math.max(target.maxHp || CFG.BASE_HP, row.max_hp || CFG.BASE_HP);
+        target.strength = Math.max(target.strength || CFG.BASE_STRENGTH, row.strength || CFG.BASE_STRENGTH);
+        target.kills = row.kills || target.kills || 0;
+        target.killStreak = target.killStreak || row.kill_streak || 0;
+        target.lastKillTime = target.lastKillTime || row.last_kill_time || 0;
       }
     }
-    console.log(`📂 Loaded ${Object.keys(saved).length} saved player stats for room ${room.roomId}`);
+
+    console.log(`📂 Loaded ${rows.length} saved player stats for room ${room.roomId}`);
   } catch (err) {
     console.error('Error loading player stats for room', room.roomId, err);
   }
@@ -328,17 +378,48 @@ function loadRoomPlayerStats(room) {
 
 function saveRoomPlayerStats(room) {
   try {
-    const toSave = {};
-    for (const id in room.players) {
-      toSave[id] = {
-        nickname: room.players[id].nickname,
-        maxHp:    room.players[id].maxHp,
-        strength: room.players[id].strength,
-        kills:    room.players[id].kills,
-      };
-    }
-    const { playerStatsFile } = getRoomPaths(room.roomId);
-    fs.writeFileSync(playerStatsFile, JSON.stringify(toSave, null, 2));
+    const stmt = db.prepare(`
+      INSERT INTO room_player_stats (
+        room_id, unique_id, nickname, hp, max_hp, strength, kills,
+        kill_streak, last_kill_time, alive, last_active, color,
+        message_boost_expires, force_spawn
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(room_id, unique_id) DO UPDATE SET
+        nickname = excluded.nickname,
+        hp = excluded.hp,
+        max_hp = excluded.max_hp,
+        strength = excluded.strength,
+        kills = excluded.kills,
+        kill_streak = excluded.kill_streak,
+        last_kill_time = excluded.last_kill_time,
+        alive = excluded.alive,
+        last_active = excluded.last_active,
+        color = excluded.color,
+        message_boost_expires = excluded.message_boost_expires,
+        force_spawn = excluded.force_spawn
+    `);
+    const tx = db.transaction(() => {
+      for (const id in room.players) {
+        const player = room.players[id];
+        stmt.run(
+          room.roomId,
+          id,
+          player.nickname,
+          player.hp,
+          player.maxHp,
+          player.strength,
+          player.kills,
+          player.killStreak || 0,
+          player.lastKillTime || 0,
+          player.alive ? 1 : 0,
+          player.lastActive || Date.now(),
+          player.color || randomColor(),
+          player.messageBoostExpires || 0,
+          player.forceSpawn ? 1 : 0
+        );
+      }
+    });
+    tx();
   } catch (err) {
     console.error('Error saving player stats for room', room.roomId, err);
   }
@@ -346,11 +427,13 @@ function saveRoomPlayerStats(room) {
 
 function loadRoomBackground(room) {
   try {
+    if (room.currentBackground) return;
     const { backgroundDir, backgroundMetaFile } = getRoomPaths(room.roomId);
     ensureDir(backgroundDir);
     if (fs.existsSync(backgroundMetaFile)) {
       room.currentBackground = JSON.parse(fs.readFileSync(backgroundMetaFile, 'utf8'));
-      console.log(`📸 Loaded background for room ${room.roomId}: ${room.currentBackground.filename}`);
+      saveRoomSettings(room.roomId);
+      console.log(`📸 Migrated background metadata to DB for room ${room.roomId}: ${room.currentBackground.filename}`);
     }
   } catch (err) {
     console.error('Error loading background for room', room.roomId, err);
@@ -359,27 +442,10 @@ function loadRoomBackground(room) {
 
 function saveRoomBackgroundMeta(room, filename) {
   try {
-    const { backgroundDir, backgroundMetaFile } = getRoomPaths(room.roomId);
-    ensureDir(backgroundDir);
     room.currentBackground = { filename };
-    fs.writeFileSync(backgroundMetaFile, JSON.stringify(room.currentBackground, null, 2));
+    saveRoomSettings(room.roomId);
   } catch (err) {
     console.error('Error saving background meta for room', room.roomId, err);
-  }
-}
-
-function deleteRoomBackgroundFile(room) {
-  if (!room.currentBackground?.filename) return;
-  const { backgroundDir } = getRoomPaths(room.roomId);
-  const oldPath = path.join(backgroundDir, room.currentBackground.filename);
-  if (!isSafePath(backgroundDir, oldPath)) return;
-  try {
-    if (fs.existsSync(oldPath)) {
-      fs.unlinkSync(oldPath);
-      console.log('📸 Deleted old background for room', room.roomId, room.currentBackground.filename);
-    }
-  } catch (err) {
-    console.warn('Could not delete old background for room', room.roomId, err.message);
   }
 }
 
@@ -387,23 +453,27 @@ function loadRoomAudioConfig(room) {
   try {
     const { audioDir, audioConfigFile } = getRoomPaths(room.roomId);
     ensureDir(audioDir);
-    const cfgFile = audioConfigFile;
 
     const repoCandidates = [
       path.join(__dirname, 'audio', 'audio-config.json'),
       path.join(__dirname, 'audio', 'audio', 'audio-config.json'),
     ];
     const repoConfig = repoCandidates.find(p => fs.existsSync(p));
-    if (!fs.existsSync(cfgFile) && repoConfig) {
-      fs.copyFileSync(repoConfig, cfgFile);
-      console.log('🔊 Seeded room audio-config.json from repo for room', room.roomId);
-    }
 
-    if (fs.existsSync(cfgFile)) {
-      const saved = JSON.parse(fs.readFileSync(cfgFile, 'utf8'));
+    if (!room.audioLibrary.length && fs.existsSync(audioConfigFile)) {
+      const saved = JSON.parse(fs.readFileSync(audioConfigFile, 'utf8'));
       room.audioConfig = { ...DEFAULT_AUDIO_CONFIG, ...(saved.config || {}) };
       room.audioLibrary = Array.isArray(saved.library) ? saved.library : [];
       room.overlaySettings = { ...DEFAULT_OVERLAY_SETTINGS, ...(saved.settings || {}) };
+      saveRoomSettings(room.roomId);
+      console.log(`🔊 Migrated legacy room audio settings into DB for room ${room.roomId}`);
+    } else if (!room.audioLibrary.length && repoConfig) {
+      const saved = JSON.parse(fs.readFileSync(repoConfig, 'utf8'));
+      room.audioConfig = { ...DEFAULT_AUDIO_CONFIG, ...(saved.config || {}) };
+      room.audioLibrary = Array.isArray(saved.library) ? saved.library : [];
+      room.overlaySettings = { ...DEFAULT_OVERLAY_SETTINGS, ...(saved.settings || {}) };
+      saveRoomSettings(room.roomId);
+      console.log(`🔊 Seeded room audio settings from repo into DB for room ${room.roomId}`);
     }
 
     const repoFiles = fs.existsSync(audioDir)
@@ -448,6 +518,7 @@ function loadRoomAudioConfig(room) {
       eventOrder.forEach((event, idx) => {
         if (idx < room.audioLibrary.length) room.audioConfig[event] = room.audioLibrary[idx].filename;
       });
+      saveRoomSettings(room.roomId);
     }
 
     console.log(`🔊 Loaded audio settings for room ${room.roomId} (${room.audioLibrary.length} files)`);
@@ -458,9 +529,7 @@ function loadRoomAudioConfig(room) {
 
 function saveRoomAudioConfig(room) {
   try {
-    const { audioDir, audioConfigFile } = getRoomPaths(room.roomId);
-    ensureDir(audioDir);
-    fs.writeFileSync(audioConfigFile, JSON.stringify({ config: room.audioConfig, library: room.audioLibrary, settings: room.overlaySettings }, null, 2));
+    saveRoomSettings(room.roomId);
   } catch (err) {
     console.error('Error saving audio config for room', room.roomId, err);
   }

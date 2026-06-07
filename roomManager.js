@@ -42,12 +42,19 @@ function getRoomAudioConfigFile(roomId) {
 
 export function getRoomPaths(roomId) {
   const backgroundDir = getRoomBackgroundDir(roomId);
+  const legacyPaths = {
+    playerStatsFile: path.join(ROOT_DIR, `players_${roomId}.json`),
+    backgroundMetaFile: path.join(backgroundDir, 'current-bg.json'),
+    audioConfigFile: getRoomAudioConfigFile(roomId),
+  };
+
   return {
     backgroundDir,
-    backgroundMetaFile: path.join(backgroundDir, 'current-bg.json'),
     audioDir: getRoomAudioDir(roomId),
-    audioConfigFile: getRoomAudioConfigFile(roomId),
-    playerStatsFile: path.join(ROOT_DIR, `players_${roomId}.json`),
+    // Legacy disk storage paths are migration-only. New data should use
+    // room_settings / room_player_stats in the database.
+    ...legacyPaths,
+    legacy: legacyPaths,
   };
 }
 

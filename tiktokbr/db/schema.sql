@@ -86,3 +86,33 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   expires_at DATETIME NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS room_player_stats (
+  room_id TEXT NOT NULL,
+  unique_id TEXT NOT NULL,
+  nickname TEXT,
+  hp INTEGER DEFAULT 300,
+  max_hp INTEGER DEFAULT 300,
+  strength INTEGER DEFAULT 15,
+  kills INTEGER DEFAULT 0,
+  kill_streak INTEGER DEFAULT 0,
+  last_kill_time INTEGER DEFAULT 0,
+  alive INTEGER DEFAULT 0,
+  last_active INTEGER,
+  color TEXT,
+  message_boost_expires INTEGER DEFAULT 0,
+  force_spawn INTEGER DEFAULT 0,
+  PRIMARY KEY(room_id, unique_id)
+);
+
+CREATE TABLE IF NOT EXISTS global_player_stats (
+  unique_id TEXT PRIMARY KEY,
+  nickname TEXT,
+  hp INTEGER DEFAULT 300,
+  max_hp INTEGER DEFAULT 300,
+  strength INTEGER DEFAULT 15,
+  kills INTEGER DEFAULT 0,
+  last_active INTEGER,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
