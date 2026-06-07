@@ -228,7 +228,7 @@ router.post('/login', (req, res) => {
   }
 
   const token = uuidv4();
-  db.prepare("INSERT INTO admin_sessions (session_token, expires_at) VALUES (?, datetime('now', '+24 hours'))").run(token);
+  db.prepare("INSERT INTO admin_sessions (session_token, expires_at) VALUES (?, now() + interval '24 hours')").run(token);
   res.cookie(COOKIE_NAME, token, getCookieOptions());
   res.redirect('/admin');
 });

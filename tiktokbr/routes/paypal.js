@@ -136,7 +136,7 @@ router.post('/api/paypal/webhook', express.json(), async (req, res) => {
           db.prepare(
             'INSERT INTO user_rooms (user_id, room_id, room_name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
           ).run(user.id, roomId, `${user.name || 'Creator'}'s room`);
-          db.prepare('INSERT OR IGNORE INTO room_settings (room_id) VALUES (?)').run(roomId);
+          db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
         }
         console.log(`✅ Linked PayPal subscription ${subId} to existing user ${email}`);
         return res.json({ success: true });

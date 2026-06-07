@@ -700,7 +700,7 @@ router.post('/auth/user/rooms', express.json(), (req, res) => {
   db.prepare(
     'INSERT INTO user_rooms (user_id, room_id, room_name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
   ).run(user.id, roomId, roomName);
-  db.prepare('INSERT OR IGNORE INTO room_settings (room_id) VALUES (?)').run(roomId);
+  db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
 
   return res.json({ success: true, room: { room_id: roomId, room_name: roomName } });
 });
@@ -796,10 +796,10 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
   const verificationToken = uuidv4();
   const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
   const result = db.prepare(
-    'INSERT INTO users (email, password_hash, name, tiktok_username, is_active, session_token, email_verified, email_verification_token, email_verification_expires, created_at, updated_at) VALUES (?, ?, ?, ?, 1, NULL, 0, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+    'INSERT INTO users (email, password_hash, name, tiktok_username, is_active, session_token, email_verified, email_verification_token, email_verification_expires, created_at, updated_at) VALUES (?, ?, ?, ?, 1, NULL, 0, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id'
   ).run(email, passwordHash, name, tiktokUsername, verificationToken, verificationExpiresAt);
 
-  const userId = result.lastInsertRowid;
+  const userId = Array.isArray(result) && result.length ? result[0].id : null;
   const sessionToken = createSessionToken({ userId, email });
   db.prepare('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?').run(sessionToken, userId);
   const user = { id: userId, email, name };
@@ -811,7 +811,7 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
     roomId,
     `${name}'s room`
   );
-  db.prepare('INSERT OR IGNORE INTO room_settings (room_id) VALUES (?)').run(roomId);
+  db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
 
   sendVerificationEmail(user, verificationToken).catch((err) => {
     console.error('Verification email failed:', err);
@@ -902,16 +902,16 @@ router.get('/auth/google/callback', async (req, res) => {
       const name = profile.name || profile.given_name || email.split('@')[0];
       const tiktokUsername = normalizeGoogleUsername(email);
       const result = db.prepare(
-        'INSERT INTO users (email, password_hash, name, tiktok_username, is_active, session_token, email_verified, email_verification_token, email_verification_expires, created_at, updated_at) VALUES (?, NULL, ?, ?, 1, NULL, 1, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+        'INSERT INTO users (email, password_hash, name, tiktok_username, is_active, session_token, email_verified, email_verification_token, email_verification_expires, created_at, updated_at) VALUES (?, NULL, ?, ?, 1, NULL, 1, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id'
       ).run(email, name, tiktokUsername);
-      const userId = result.lastInsertRowid;
+      const userId = Array.isArray(result) && result.length ? result[0].id : null;
       const roomId = uuidv4().replace(/-/g, '').slice(0, 10);
       db.prepare('INSERT INTO user_rooms (user_id, room_id, room_name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)').run(
         userId,
         roomId,
         `${name}'s room`
       );
-      db.prepare('INSERT OR IGNORE INTO room_settings (room_id) VALUES (?)').run(roomId);
+      db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
       ensureTrialSubscription(userId);
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
     } else {

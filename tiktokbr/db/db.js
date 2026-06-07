@@ -1,15 +1,98 @@
-import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Client } from 'pg';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_ROOT = process.env.DISK_PATH || path.join(__dirname, '..');
 if (!fs.existsSync(DB_ROOT)) fs.mkdirSync(DB_ROOT, { recursive: true });
-const dbPath = path.join(DB_ROOT, 'tiktokbr.db');
 
-const db = new Database(dbPath);
-db.pragma('journal_mode = WAL');
+const connectionString = process.env.DATABASE_URL || process.env.PG_CONNECTION_STRING || process.env.PG_CONN_STRING;
+if (!connectionString) {
+  throw new Error('PostgreSQL connection string is required. Set DATABASE_URL or PG_CONNECTION_STRING.');
+}
+
+const client = new Client({ connectionString });
+
+function waitFor(promise) {
+  const buffer = new SharedArrayBuffer(4);
+  const state = new Int32Array(buffer);
+  let result;
+  let error;
+
+  promise.then((value) => {
+    result = value;
+    Atomics.store(state, 0, 1);
+    Atomics.notify(state, 0, 1);
+  }).catch((err) => {
+    error = err;
+    Atomics.store(state, 0, 1);
+    Atomics.notify(state, 0, 1);
+  });
+
+  while (Atomics.load(state, 0) === 0) {
+    Atomics.wait(state, 0, 0, 1000);
+  }
+
+  if (error) throw error;
+  return result;
+}
+
+waitFor(client.connect());
+
+function convertPlaceholders(sql) {
+  let index = 0;
+  return sql.replace(/\?/g, () => `$${++index}`);
+}
+
+function normalizeParams(params) {
+  if (params == null) return [];
+  if (Array.isArray(params)) return params;
+  return [params];
+}
+
+function prepareStatement() {
+  const queryText = arguments.length === 2 ? arguments[1] : arguments[0];
+  const sql = convertPlaceholders(queryText);
+  const name = `stmt_${Math.random().toString(36).slice(2, 10)}`;
+
+  return {
+    get(params) {
+      const result = waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
+      return result.rows?.[0];
+    },
+    all(params) {
+      const result = waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
+      return result.rows || [];
+    },
+    run(params) {
+      return waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
+    }
+  };
+}
+
+const db = {
+  prepare: prepareStatement,
+  exec(sql) {
+    return waitFor(client.query(sql));
+  },
+  pragma() {
+    return null;
+  },
+  transaction(fn) {
+    return (...args) => {
+      waitFor(client.query('BEGIN'));
+      try {
+        const result = fn(...args);
+        waitFor(client.query('COMMIT'));
+        return result;
+      } catch (error) {
+        waitFor(client.query('ROLLBACK'));
+        throw error;
+      }
+    };
+  }
+};
 
 const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
 db.exec(schema);
@@ -34,8 +117,8 @@ try {
       audio_config TEXT DEFAULT '{}',
       audio_library TEXT DEFAULT '[]',
       background_filename TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 } catch (_) {}
@@ -47,13 +130,13 @@ try {
       value TEXT NOT NULL
     )
   `);
-  db.prepare('INSERT OR IGNORE INTO app_settings (key, value) VALUES (?, ?)').run('require_room_id', '1');
+  db.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO NOTHING').run('require_room_id', '1');
 } catch (_) {}
 
 try {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       email TEXT UNIQUE NOT NULL,
       password_hash TEXT,
       name TEXT,
@@ -62,12 +145,12 @@ try {
       is_active INTEGER DEFAULT 1,
       email_verified INTEGER DEFAULT 0,
       email_verification_token TEXT,
-      email_verification_expires DATETIME,
+      email_verification_expires TIMESTAMP,
       password_reset_token TEXT,
-      password_reset_expires DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      last_login DATETIME
+      password_reset_expires TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      last_login TIMESTAMP
     )
   `);
 } catch (_) {}
@@ -81,7 +164,7 @@ try {
 } catch (_) {}
 
 try {
-  db.exec('ALTER TABLE users ADD COLUMN email_verification_expires DATETIME');
+  db.exec('ALTER TABLE users ADD COLUMN email_verification_expires TIMESTAMP');
 } catch (_) {}
 
 try {
@@ -89,18 +172,18 @@ try {
 } catch (_) {}
 
 try {
-  db.exec('ALTER TABLE users ADD COLUMN password_reset_expires DATETIME');
+  db.exec('ALTER TABLE users ADD COLUMN password_reset_expires TIMESTAMP');
 } catch (_) {}
 
 try {
   db.exec(`
     CREATE TABLE IF NOT EXISTS user_rooms (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL,
       room_id TEXT UNIQUE NOT NULL,
       room_name TEXT,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(user_id) REFERENCES users(id)
     )
   `);
@@ -109,16 +192,16 @@ try {
 try {
   db.exec(`
     CREATE TABLE IF NOT EXISTS subscriptions (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       user_id INTEGER NOT NULL,
       paypal_subscription_id TEXT UNIQUE,
       plan_type TEXT,
       status TEXT DEFAULT 'active',
-      started_at DATETIME,
-      next_billing_date DATETIME,
-      expires_at DATETIME,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      started_at TIMESTAMP,
+      next_billing_date TIMESTAMP,
+      expires_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(user_id) REFERENCES users(id)
     )
   `);
@@ -145,7 +228,7 @@ try {
 
 // ─── TRIAL & MONETIZATION COLUMNS ──────────────────────────────────────────
 try {
-  db.exec('ALTER TABLE access_codes ADD COLUMN trial_started DATETIME');
+  db.exec('ALTER TABLE access_codes ADD COLUMN trial_started TIMESTAMP');
 } catch (_) {}
 
 try {
@@ -168,14 +251,14 @@ try {
 try {
   db.exec(`
     CREATE TABLE IF NOT EXISTS battle_stats (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      id SERIAL PRIMARY KEY,
       code_id INTEGER NOT NULL,
       room_id TEXT,
       total_battles INTEGER DEFAULT 0,
       total_wins INTEGER DEFAULT 0,
       total_kills INTEGER DEFAULT 0,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY(code_id) REFERENCES access_codes(id)
     )
   `);
@@ -213,15 +296,15 @@ try {
       strength INTEGER DEFAULT 15,
       kills INTEGER DEFAULT 0,
       last_active INTEGER,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
 } catch (_) {}
 
 // ─── SEED: BETA ACCESS CODES (betatester1–betatester25) ──────────────────────
 const insertCode = db.prepare(`
-  INSERT OR IGNORE INTO access_codes (code, email, expires_at, trial_started, subscription_status)
+  INSERT INTO access_codes (code, email, expires_at, trial_started, subscription_status) ON CONFLICT (code) DO NOTHING
   VALUES (?, ?, '2099-12-31 23:59:59', CURRENT_TIMESTAMP, 'active')
 `);
 
