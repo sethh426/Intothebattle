@@ -1,0 +1,7 @@
+version: '3.8'
+services:
+  app:
+    environment:
+      - DISK_PATH=./data
+    volumes:
+      - ./data:./data

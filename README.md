@@ -118,6 +118,23 @@ Or if you want to specify a streamer username directly:
 node server.js <streamerUsername>
 ```
 
+### Run with Docker Compose
+
+The repository includes a `docker-compose.yml` service definition for local development.
+
+```bash
+docker-compose up --build
+```
+
+This starts:
+
+- `app` on `http://localhost:3000`
+- `prometheus` on `http://localhost:9090`
+
+Prometheus is configured from `devops/prometheus/prometheus.yml` and scrapes the app's `/metrics` endpoint.
+
+A local override file `docker-compose.override.yml` also mounts `./data` and sets `DISK_PATH=./data` so uploads and SQLite persist across restarts.
+
 ## Important URLs
 
 - `GET /overlay.html` — overlay view
