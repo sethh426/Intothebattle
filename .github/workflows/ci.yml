@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: example
+          POSTGRES_DB: tiktokbr
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d tiktokbr"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:6-alpine
+        ports:
+          - 6379:6379
+
+    env:
+      NODE_ENV: test
+      API_KEY: test
+      JWT_SECRET: test_jwt_secret_for_ci_only
+      DATABASE_URL: postgres://postgres:example@localhost:5432/tiktokbr
+      REDIS_URL: redis://localhost:6379
+      DEV_TEST_MODE: "false"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate schemas
+        run: npm run validate:schemas
+
+      - name: Audit production dependencies
+        run: npm audit --audit-level=high

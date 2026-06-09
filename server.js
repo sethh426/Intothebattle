@@ -81,7 +81,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const API_KEY = process.env.API_KEY;
 let DEV_TEST_MODE = process.env.DEV_TEST_MODE === 'true';
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 
 let currentStreamer = process.argv[2] || '';
 let client = null;
@@ -1369,7 +1370,7 @@ app.get('/api/status', requireRoom, (req, res) => res.json({
   devTestMode:      DEV_TEST_MODE,
 }));
 
-app.post('/api/dev/test-mode', (req, res) => {
+app.post('/api/dev/test-mode', blockInProduction, (req, res) => {
   const { enabled } = req.body || {};
   if (typeof enabled !== 'boolean') return res.status(400).json({ success: false, error: 'Invalid enabled value' });
   DEV_TEST_MODE = enabled;
@@ -1377,14 +1378,14 @@ app.post('/api/dev/test-mode', (req, res) => {
   res.json({ success: true, enabled: DEV_TEST_MODE });
 });
 
-app.post('/api/dev/sound', (req, res) => {
+app.post('/api/dev/sound', blockInProduction, (req, res) => {
   const { type } = req.body || {};
   if (!['laser', 'heal', 'special'].includes(type)) return res.status(400).json({ success: false, error: 'Invalid sound type' });
   emitEvent('devSound', { type });
   res.json({ success: true });
 });
 
-app.post('/api/dev/sound-settings', (req, res) => {
+app.post('/api/dev/sound-settings', blockInProduction, (req, res) => {
   const { enabled } = req.body || {};
   if (typeof enabled !== 'boolean') return res.status(400).json({ success: false, error: 'Invalid enabled value' });
   emitEvent('soundSettings', { enabled });
@@ -1427,7 +1428,7 @@ app.post('/api/connect', requireRoom, (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/reset', (_req, res) => { disconnectStreamer(); res.json({ success: true }); });
+app.post('/api/reset', requireRoom, (_req, res) => { disconnectStreamer(); res.json({ success: true }); });
 app.post('/api/overlay/reload', requireRoom, (req, res) => {
   emitRoomEvent(req.room, 'forceReload', { v: Date.now(), delayMs: 3000, reason: 'Operator reload' });
   res.json({ success: true });
@@ -1563,6 +1564,13 @@ app.delete('/api/audio/delete/:filename', requireRoom, (req, res) => {
   res.json({ success: true, filename, configUpdated: changed });
 });
 
+function blockInProduction(_req, res, next) {
+  if (process.env.NODE_ENV === 'production') {
+    return res.status(404).json({ success: false, error: 'Not found' });
+  }
+  next();
+}
+
 function requireDevTestMode(_req, res, next) {
   if (!DEV_TEST_MODE) return res.status(403).json({ success: false, error: 'Developer test mode is disabled' });
   next();
@@ -1593,15 +1601,15 @@ function ensureTestPlayers() {
   emitRoomEvent(room, 'gameState', room.players);
 }
 
-app.get('/api/test/status', (_req, res) => res.json({ enabled: DEV_TEST_MODE }));
+app.get('/api/test/status', blockInProduction, (_req, res) => res.json({ enabled: DEV_TEST_MODE }));
 
-app.post('/api/test/spawn', requireDevTestMode, (_req, res) => {
+app.post('/api/test/spawn', blockInProduction, requireDevTestMode, (_req, res) => {
   ensureTestPlayers();
   console.log('🧪 Test players spawned');
   res.json({ success: true });
 });
 
-app.post('/api/test/attack', requireDevTestMode, (_req, res) => {
+app.post('/api/test/attack', blockInProduction, requireDevTestMode, (_req, res) => {
   ensureTestPlayers();
   const room = getDefaultRoom();
   const result = handleMentionAttack(room, 'test_alpha', 'Alpha', '@test_bravo');
@@ -1609,7 +1617,7 @@ app.post('/api/test/attack', requireDevTestMode, (_req, res) => {
   res.json({ success: true, result });
 });
 
-app.post('/api/test/gift', requireDevTestMode, (_req, res) => {
+app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) => {
   ensureTestPlayers();
   const room = getDefaultRoom();
   const attackerId  = 'test_charlie';
@@ -1961,8 +1969,9 @@ function tick() {
 
 setInterval(tick, 100);
 
-httpServer.listen(PORT, () => {
+httpServer.listen(PORT, HOST, () => {
   logger.info('\n🎮 PvP Game Server running!');
+  logger.info({ host: HOST, port: PORT, envPort: process.env.PORT }, 'Server bind info');
   logger.info({ url: `http://localhost:${PORT}/overlay.html` }, 'Overlay URL');
   logger.info({ url: `http://localhost:${PORT}/dashboard` }, 'Dashboard URL');
   logger.info({ url: `http://localhost:${PORT}/stats` }, 'Stats URL');
