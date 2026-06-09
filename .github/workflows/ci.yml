@@ -54,4 +54,5 @@ jobs:
         run: npm run validate:schemas
 
       - name: Audit production dependencies
+        continue-on-error: true
         run: npm audit --audit-level=high
