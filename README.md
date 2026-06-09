@@ -1,126 +1,156 @@
-# TIKTOKBR
+# Intothebattle / TIKTOKBR
 
-A TikTok LIVE battle overlay platform with real-time dashboard controls, subscription/paywall support, and Render-friendly persistence.
+A TikTok LIVE interactive battle overlay platform. Intothebattle turns TikTok LIVE chat activity into a real-time PvP battle experience with overlay visuals, streamer dashboard controls, room-based configuration, subscriptions, and live game state updates.
 
-## Why update the README?
+## Current Project Status
 
-Yes — it should be rewritten now. The project has evolved beyond the original static overlay demo:
+This project is in beta-stability development.
 
-- Render deployment support was added
-- Disk persistence via `DISK_PATH=/var/data` is now required
-- PayPal/subscription and trial flows are in place
-- New dashboard, signup, and stats pages exist
-- Theme and UI polish are now part of the app
+Current focus:
 
-This README now reflects the current system, developer setup, and deployment requirements.
+- Stabilize the Node.js/Express backend.
+- Keep PostgreSQL as the primary application database.
+- Protect dashboard, room, upload, and streamer-control routes.
+- Improve onboarding and beta setup reliability.
+- Prepare the game/overlay rewrite for the Phaser 4 JavaScript framework.
 
-## Project Overview
+Important persistence note:
 
-This project includes:
+> Legacy JSON/file-based player persistence is intentionally on hold. The active game-layer rewrite is planned around Phaser 4, so JSON cleanup should not be treated as the main sprint blocker right now. PostgreSQL remains the source of truth for users, rooms, settings, subscriptions, access codes, and database-backed player records where currently implemented.
 
-- `server.js` — Node.js + Express backend for TikTok LIVE ingestion, game state, persistence, and Socket.IO broadcasting.
-- `overlay.html` — live game overlay rendered in the browser via Canvas and real-time socket events.
-- `dashboard.html` — admin panel for room setup, audio/background uploads, and live system control.
-- `signup.html`, `paywall.html`, `home.html` — onboarding and subscription flow pages.
-- `tiktokbr/db/db.js` — SQLite database for access codes, room settings, and subscription metadata.
-- `roomManager.js` — persistent room storage and file path management for Render disk support.
-- `theme-samples.html` — theme preview page for UI direction and button/palette selection.
+## What This App Does
 
-## Core Features
+Intothebattle lets a streamer connect a TikTok LIVE session and display a browser-based battle overlay where viewers can appear as players, gain stats, attack, receive gift-based boosts, trigger effects, and show up on dashboards or live overlays.
 
-- Real-time TikTok chat/gift/like/social event processing
-- PvP battle arena with HP, strength, kills, and respawn logic
-- Overlay rendering for live battle visuals and attack animations
-- Dashboard controls for room management and uploads
-- Subscription/paywall flow with PayPal integration
-- Disk-backed persistence for uploads and SQLite on Render
-- Custom theme samples for consistent UI styling
+Core product areas:
 
-## Deployment (Render)
+- TikTok LIVE event ingestion.
+- Real-time Socket.IO broadcasting.
+- Canvas/overlay battle display.
+- Streamer dashboard controls.
+- Room-based overlay configuration.
+- Background and audio uploads.
+- Trial, access-code, paywall, and PayPal subscription flows.
+- Admin access-code and promo-code management.
+- Monitoring hooks through Prometheus metrics and optional Sentry logging.
 
-### Required service settings
+## Tech Stack
 
-- Build command: `npm install`
-- Start command: `node server.js`
-- Environment variables:
-  - `DISK_PATH=/var/data`
-  - `API_KEY=<your_tiktok_api_key>`
-  - `PAYPAL_CLIENT_ID`
-  - `PAYPAL_CLIENT_SECRET`
-  - `PAYPAL_WEBHOOK_ID`
-  - `NODE_ENV=production`
-  - Optional: `SENTRY_DSN`, `LOG_LEVEL`, `API_KEY`, `DEV_TEST_MODE=true`
-    - `POSTMARK_API_TOKEN`
-    - `APP_BASE_URL=https://intothebattle.com`
-    - `EMAIL_FROM=Battle Royale <no-reply@intothebattle.com>`
-    - `POSTMARK_TEST_EMAIL=<your_test_email>`
+Backend:
 
-### Disk persistence
+- Node.js
+- Express
+- Socket.IO
+- `@tiktool/live`
+- PostgreSQL through `pg`
+- Redis support for future Socket.IO scaling
+- JWT-based sessions
+- PayPal webhook integration
+- Postmark email support
+- Prometheus metrics
+- Optional Sentry error reporting
 
-- Render should mount a disk at `/var/data`
-- The app uses `DISK_PATH` to store:
-  - `tiktokbr.db` (SQLite database)
-  - audio uploads
-  - background image uploads
-  - `players_<roomId>.json`
-- If `DISK_PATH` is not set, the app falls back to local file-system paths for development only.
+Frontend/runtime pages:
 
-### Custom domain
+- `overlay.html` for the live overlay
+- `dashboard.html` for streamer controls
+- `home.html` for landing/onboarding
+- `signup.html` and `paywall.html` for trial/subscription flows
+- `stats.html` for runtime stats
+- `theme-samples.html` for visual direction
 
-- Add your domain in Render dashboard
-- Configure DNS records as Render instructs
-- Render provides automatic SSL
+Game-layer direction:
 
-### Postmark email testing
+- Current overlay/game logic still exists in the Node/HTML/Canvas flow.
+- A Phaser 4 JavaScript framework rewrite is planned for the next major game-layer iteration.
+- JSON persistence work is paused until the Phaser direction is settled.
 
-- Add `POSTMARK_API_TOKEN` as your Postmark server API token.
-- Add `APP_BASE_URL` and `EMAIL_FROM` so verification/reset links generate correctly.
-- Add `POSTMARK_TEST_EMAIL` to receive a connectivity test message.
-- Run:
-  ```bash
-  npm run test:postmark
-  ```
-  This will send a real test email through Postmark.
+## Main Files and Folders
+
+```text
+server.js                         Main Express server, API routes, sockets, TikTok connection, uploads, game logic
+roomManager.js                    Room lifecycle, room settings, upload paths, in-memory room registry
+tiktokbr/db/db.js                 PostgreSQL connection wrapper and schema bootstrapping
+tiktokbr/db/schema.sql            Database schema for access codes, users, rooms, subscriptions, player stats, admin sessions
+tiktokbr/routes/auth.js           Auth, login/signup, Google OAuth, email/password, promo/trial flows
+tiktokbr/routes/admin.js          Admin panel routes for codes, promos, room requirement toggle, admin sessions
+tiktokbr/routes/paypal.js         PayPal webhook and subscription/code handling
+tiktokbr/middleware/auth.js       Access-code/user session gate for protected pages
+tiktokbr/middleware/checkTrial.js Trial/subscription gate for dashboard and stats
+overlay.html                      Live battle overlay
+dashboard.html                    Streamer dashboard
+home.html                         Landing page
+signup.html                       Signup/trial page
+paywall.html                      Paywall/upgrade page
+stats.html                        Stats view
+Dockerfile                        Production container definition
+docker-compose.yml                Local app + Postgres + Redis + Prometheus stack
+devops/prometheus/                Prometheus configuration
+```
 
 ## Local Development
 
 ### Prerequisites
 
-- Node.js 18+ recommended
-- npm installed
+- Node.js 18+
+- npm
+- PostgreSQL connection string, or Docker Compose
+- TikTok API key/integration token
 
-### Install dependencies
+### Install
 
 ```bash
 npm install
 ```
 
-### Local environment
+### Environment
 
-Create a `.env` file:
+Create a `.env` file for local development:
 
 ```text
+NODE_ENV=development
+PORT=3000
 API_KEY=your_tiktok_api_key
-DISK_PATH=./data
+JWT_SECRET=replace_with_a_long_random_secret
+DATABASE_URL=postgres://postgres:example@localhost:5432/tiktokbr
+REDIS_URL=redis://localhost:6379
+APP_BASE_URL=http://localhost:3000
 ```
 
-> For local development, `DISK_PATH` can point to a directory like `./data`.
+Payment/email variables are only needed when testing those flows:
 
-### Run locally
+```text
+PAYPAL_CLIENT_ID=
+PAYPAL_CLIENT_SECRET=
+PAYPAL_WEBHOOK_ID=
+PAYPAL_PAYMENT_LINK=
+POSTMARK_API_TOKEN=
+EMAIL_FROM=Battle Royale <no-reply@example.com>
+POSTMARK_TEST_EMAIL=
+```
+
+Optional production/diagnostic variables:
+
+```text
+SENTRY_DSN=
+LOG_LEVEL=info
+DEV_TEST_MODE=false
+DISK_PATH=/var/data
+```
+
+### Run locally with Node
 
 ```bash
 npm start
 ```
 
-Or if you want to specify a streamer username directly:
+Or pass a streamer username directly:
 
 ```bash
 node server.js <streamerUsername>
 ```
 
-### Run with Docker Compose
-
-The repository includes a `docker-compose.yml` service definition for local development.
+### Run locally with Docker Compose
 
 ```bash
 docker-compose up --build
@@ -128,90 +158,174 @@ docker-compose up --build
 
 This starts:
 
-- `app` on `http://localhost:3000`
-- `prometheus` on `http://localhost:9090`
+- app: `http://localhost:3000`
+- PostgreSQL: `postgres://postgres:example@postgres:5432/tiktokbr`
+- Redis: `redis://redis:6379`
+- Prometheus: `http://localhost:9090`
 
-Prometheus is configured from `devops/prometheus/prometheus.yml` and scrapes the app's `/metrics` endpoint.
+The Docker Compose stack is currently the easiest way to run the full local service because it brings up Postgres, Redis, and Prometheus together.
 
-A local override file `docker-compose.override.yml` also mounts `./data` and sets `DISK_PATH=./data` so uploads and SQLite persist across restarts.
+## Database
+
+The app currently uses PostgreSQL. `tiktokbr/db/db.js` requires one of these connection variables:
+
+```text
+DATABASE_URL
+PG_CONNECTION_STRING
+PG_CONN_STRING
+```
+
+The schema includes:
+
+- `access_codes`
+- `promo_codes`
+- `app_settings`
+- `users`
+- `user_rooms`
+- `subscriptions`
+- `admin_sessions`
+- `room_settings`
+- `room_player_stats`
+- `global_player_stats`
+
+Current technical debt:
+
+- Schema bootstrapping and `ALTER TABLE` patches are still handled in `db.js`.
+- Future work should move this into versioned migrations.
+- Some legacy JSON/disk references remain for migration compatibility and upload metadata.
+- Full JSON cleanup is paused until the Phaser 4 rewrite direction is ready.
+
+## Runtime Storage
+
+`DISK_PATH` is still useful for uploaded files, especially on Render or another persistent-disk host.
+
+Expected persistent file storage:
+
+```text
+backgrounds/<roomId>/             Uploaded background images
+audio/<roomId>/                   Uploaded audio files
+```
+
+Do not treat `players_<roomId>.json` as the desired long-term storage path. It is legacy/migration-only while the game layer is being rewritten.
 
 ## Important URLs
 
-- `GET /overlay.html` — overlay view
-- `GET /dashboard` — admin dashboard
-- `GET /stats` — stats page
-- `GET /signup` — trial/signup page
-- `GET /paywall` — paywall/upgrade page
-- `GET /home` — landing page
-- `GET /state` — raw JSON game state
+Public/user-facing pages:
 
-## Environment Variables
+```text
+GET /home
+GET /
+GET /login
+GET /signup
+GET /paywall
+GET /my-code
+GET /overlay or /overlay.html
+```
 
-Required:
+Protected creator pages:
 
-- `API_KEY` — TikTok API key or streamer integration token
-- `JWT_SECRET` — secret used to sign session tokens
-- `DISK_PATH` — persistent storage root (`/var/data` on Render)
-- `PAYPAL_CLIENT_ID`
-- `PAYPAL_CLIENT_SECRET`
-- `PAYPAL_WEBHOOK_ID`
+```text
+GET /dashboard
+GET /dashboard/welcome
+GET /stats
+GET /profile
+```
 
-Recommended for email flows:
+Admin pages:
 
-- `POSTMARK_API_TOKEN` — Postmark Server API token for sending verification and password reset emails
-- `APP_BASE_URL` — public app URL, e.g. `https://your-app.onrender.com`
-- `EMAIL_FROM` — optional sender address, e.g. `Battle Royale <no-reply@yourdomain.com>`
+```text
+GET /admin/login
+GET /admin
+```
 
-Optional:
+Health/monitoring:
 
-- `PAYPAL_PAYMENT_LINK` — custom PayPal purchase link
-- `NODE_ENV=production`
-- `LOG_LEVEL=info`
-- `SENTRY_DSN`
-- `DEV_TEST_MODE=true`
+```text
+GET /api/status
+GET /metrics
+```
 
-## File Structure
+## Route Security Direction
 
-- `server.js` — backend server, API routes, game logic, uploads, sockets
-- `roomManager.js` — room persistence, file paths, `DISK_PATH` handling
-- `tiktokbr/db/db.js` — SQLite initialization and schema
-- `overlay.html` — live overlay client
-- `dashboard.html` — admin interface
-- `signup.html` / `paywall.html` / `home.html` — user flows
-- `stats.html` — runtime stats view
-- `backgrounds/` — background images
-- `audio/` — audio upload files
-- `theme-samples.html` — UI theme preview page
+Routes should be grouped into clear categories:
 
-## Persistence and storage
+1. Public marketing/onboarding pages.
+2. Auth and signup endpoints.
+3. Creator/session-protected dashboard routes.
+4. Room-protected API routes.
+5. Admin-only routes.
+6. Webhook routes verified by provider signature.
+7. Development/test routes disabled or locked down in production.
 
-The app persists the following data:
+Current audit priority:
 
-- `tiktokbr.db` — subscription, room, and access-code data
-- `audio/<roomId>` — uploaded audio files
-- `backgrounds/<roomId>` — uploaded background images
-- `players_<roomId>.json` — optional player stats files
-- room audio config files and metadata in each room folder
+- Confirm every mutation route has the right middleware.
+- Lock down `/api/reset` and dev/test endpoints.
+- Decide whether `/metrics` should be public, IP-restricted, or token-protected in production.
+- Confirm unauthenticated `room_id` overlay access is intentional.
+- Confirm public asset routes cannot expose files outside their room folders.
 
-## What changed recently
+## Deployment Notes
 
-- `DISK_PATH` support was added for Render deployment
-- Persistent uploads now use folder paths under the disk mount
-- SQLite database is saved to `tiktokbr.db` on the disk
-- New UI flow pages exist for signup and paywall
-- Theme preview page added for UI selection
+### Render-style deployment
 
-## Development Notes
+Minimum production settings:
 
-- `getRoomPaths()` now derives file storage from `DISK_PATH`
-- `server.js` checks room storage first and falls back to disk-local directories
-- PayPal webhook handling is enabled in `tiktokbr/routes/paypal.js`
-- Auth and trial enforcement is handled in `tiktokbr/middleware/auth.js` and `checkTrial.js`
+```text
+Build command: npm install
+Start command: node server.js
+NODE_ENV=production
+API_KEY=<TikTok API key/integration token>
+JWT_SECRET=<long random secret>
+DATABASE_URL=<managed PostgreSQL connection string>
+APP_BASE_URL=https://intothebattle.com
+```
 
-## Next work items
+Recommended production settings:
 
-- Validate Render deployment and disk persistence
-- Add automated tests for audio upload and room persistence
-- Polish UI theme across all pages
-- Harden PayPal webhook and subscription edge cases
-- Add monitoring/logging for runtime production issues
+```text
+REDIS_URL=<managed Redis connection string>
+SENTRY_DSN=<optional Sentry DSN>
+LOG_LEVEL=info
+DISK_PATH=/var/data
+PAYPAL_CLIENT_ID=<PayPal client id>
+PAYPAL_CLIENT_SECRET=<PayPal client secret>
+PAYPAL_WEBHOOK_ID=<PayPal webhook id>
+POSTMARK_API_TOKEN=<Postmark token>
+EMAIL_FROM=Battle Royale <no-reply@intothebattle.com>
+```
+
+Use a managed PostgreSQL service for production. Do not rely on local JSON files or ephemeral app storage for production state.
+
+## Available Scripts
+
+```bash
+npm start
+npm run start:dev
+npm run test:postmark
+npm run validate:schema
+npm run validate:schema-expand
+npm run validate:schemas
+```
+
+The project does not yet have a complete automated test suite. CI should start with dependency install and schema validation, then expand into route tests, auth tests, upload tests, and persistence tests.
+
+## Immediate Sprint Priorities
+
+1. Route audit and protection cleanup.
+2. README and architecture documentation cleanup.
+3. CI workflow for install/schema validation.
+4. PostgreSQL migration discipline.
+5. Onboarding flow audit.
+6. Phaser 4 rewrite planning for the game/overlay layer.
+7. PayPal webhook edge-case hardening.
+8. Production monitoring and metrics access control.
+
+## Development Rules Going Forward
+
+- New application state should go into PostgreSQL unless it is a user-uploaded file.
+- Uploaded audio/background files belong in persistent disk/object storage.
+- JSON game-state cleanup is paused until Phaser 4 rewrite planning is complete.
+- Admin, streamer-control, upload, and destructive API routes must be protected.
+- Dev/test endpoints must not be available in production unless explicitly protected.
+- Database schema changes should move toward versioned migrations instead of ad-hoc startup patches.
