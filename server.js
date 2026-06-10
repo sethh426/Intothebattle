@@ -2037,9 +2037,11 @@ httpServer.listen(PORT, HOST, () => {
   logger.info({ url: `http://localhost:${PORT}/state` }, 'State JSON URL');
   logger.info({ devTestMode: DEV_TEST_MODE }, 'Dev test mode');
 
-  loadPlayerStats();
-  loadCurrentBackground();
-  loadAudioConfig();
+  try { loadPlayerStats(); } catch (err) { logger.error({ err }, 'Failed to load player stats'); }
+  try { loadCurrentBackground(); } catch (err) { logger.error({ err }, 'Failed to load current background'); }
+  try { loadAudioConfig(); } catch (err) { logger.error({ err }, 'Failed to load audio config'); }
 
-  if (currentStreamer) connectToStreamer(currentStreamer);
+  if (currentStreamer) {
+    try { connectToStreamer(currentStreamer); } catch (err) { logger.error({ err, streamer: currentStreamer }, 'Failed to connect to streamer on startup'); }
+  }
 });
