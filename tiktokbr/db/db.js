@@ -49,12 +49,18 @@ function waitFor(promise, timeoutMs = 0) {
 // Initiate connection asynchronously without blocking the event loop
 // Only attempt once to avoid "Client has already been connected" error
 let connectionAttempted = false;
-if (!connectionAttempted) {
-  connectionAttempted = true;
-  client.connect().catch((err) => {
-    console.error('DB background connection error (non-blocking):', err?.message || err);
-  });
+let connectionPromise = null;
+function connectClient() {
+  if (!connectionAttempted) {
+    connectionAttempted = true;
+    connectionPromise = client.connect().catch((err) => {
+      console.error('DB background connection error (non-blocking):', err?.message || err);
+      throw err;
+    });
+  }
+  return connectionPromise;
 }
+connectClient();
 
 function convertPlaceholders(sql) {
   let index = 0;
@@ -127,7 +133,7 @@ const db = {
 
 async function initDb() {
   try {
-    await client.connect();
+    await connectClient();
     console.info('Postgres connected — running schema and migrations');
 
     const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');

@@ -36,22 +36,36 @@ function getDefaultRoom() {
 }
 
 function requiresRoomId() {
-  const row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('require_room_id');
-  return row ? row.value !== '0' : true;
+  try {
+    const row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('require_room_id');
+    return row ? row.value !== '0' : true;
+  } catch (err) {
+    logger.error({ err }, 'Failed to read require_room_id; using default room requirement');
+    return true;
+  }
 }
 
 function getAuthRecord(token) {
   if (!token) return null;
-  const accessCode = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
-  if (accessCode) return { type: 'code', record: accessCode };
-  const user = db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
-  if (user) return { type: 'user', record: user };
+  try {
+    const accessCode = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
+    if (accessCode) return { type: 'code', record: accessCode };
+    const user = db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
+    if (user) return { type: 'user', record: user };
+  } catch (err) {
+    logger.error({ err, token }, 'Auth lookup failed');
+  }
   return null;
 }
 
 function getUserRoomId(userId) {
-  const row = db.prepare('SELECT room_id FROM user_rooms WHERE user_id = ? ORDER BY id LIMIT 1').get(userId);
-  return row ? row.room_id : null;
+  try {
+    const row = db.prepare('SELECT room_id FROM user_rooms WHERE user_id = ? ORDER BY id LIMIT 1').get(userId);
+    return row ? row.room_id : null;
+  } catch (err) {
+    logger.error({ err, userId }, 'Failed to read user room assignment');
+    return null;
+  }
 }
 
 function logAuthInfo(req, extras = {}) {
@@ -70,6 +84,14 @@ if (process.env.SENTRY_DSN) {
   Sentry.init({ dsn: process.env.SENTRY_DSN });
   logger.info('Sentry initialized');
 }
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error({ reason }, 'Unhandled Promise Rejection');
+});
+process.on('uncaughtException', (err) => {
+  logger.fatal({ err }, 'Uncaught Exception');
+  process.exit(1);
+});
 
 const collectDefaultMetrics = promClient.collectDefaultMetrics;
 const register = promClient.register;
@@ -930,31 +952,36 @@ app.use('/', paypalRoutes);
 app.get('/', (req, res) => {
   const token = req.cookies?.session_token;
   if (token) {
-    const auth = getAuthRecord(token);
-    if (auth?.type === 'code') {
-      const row = auth.record;
-      if (row && !row.is_revoked) {
-        if (row.trial_started) {
-          const trialStart = new Date(row.trial_started);
-          const trialEnd = new Date(trialStart.getTime() + (row.trial_days || 14) * 24 * 60 * 60 * 1000);
-          const now = new Date();
-          if (now <= trialEnd || row.subscription_status === 'active') {
+    try {
+      const auth = getAuthRecord(token);
+      if (auth?.type === 'code') {
+        const row = auth.record;
+        if (row && !row.is_revoked) {
+          if (row.trial_started) {
+            const trialStart = new Date(row.trial_started);
+            const trialEnd = new Date(trialStart.getTime() + (row.trial_days || 14) * 24 * 60 * 60 * 1000);
+            const now = new Date();
+            if (now <= trialEnd || row.subscription_status === 'active') {
+              return res.redirect('/dashboard');
+            }
+            res.clearCookie('session_token', { path: '/', httpOnly: true, sameSite: 'lax' });
+          } else {
             return res.redirect('/dashboard');
           }
-          res.clearCookie('session_token', { path: '/', httpOnly: true, sameSite: 'lax' });
-        } else {
-          return res.redirect('/dashboard');
         }
       }
-    }
-    if (auth?.type === 'user') {
-      const user = auth.record;
-      if (user && user.is_active) {
-        const subscription = db.prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1").get(user.id);
-        if (subscription) {
-          return res.redirect('/dashboard');
+      if (auth?.type === 'user') {
+        const user = auth.record;
+        if (user && user.is_active) {
+          const subscription = db.prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1").get(user.id);
+          if (subscription) {
+            return res.redirect('/dashboard');
+          }
         }
       }
+    } catch (err) {
+      logger.error({ err, path: req.path }, 'Homepage auth check failed; clearing auth cookie');
+      res.clearCookie('session_token', { path: '/', httpOnly: true, sameSite: 'lax' });
     }
   }
   // If not authenticated, serve the public homepage instead of forcing login
