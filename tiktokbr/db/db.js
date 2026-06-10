@@ -47,10 +47,14 @@ function waitFor(promise, timeoutMs = 0) {
 }
 
 // Initiate connection asynchronously without blocking the event loop
-// The client will connect in the background; queries will retry if needed
-client.connect().catch((err) => {
-  console.error('DB background connection error (non-blocking):', err?.message || err);
-});
+// Only attempt once to avoid "Client has already been connected" error
+let connectionAttempted = false;
+if (!connectionAttempted) {
+  connectionAttempted = true;
+  client.connect().catch((err) => {
+    console.error('DB background connection error (non-blocking):', err?.message || err);
+  });
+}
 
 function convertPlaceholders(sql) {
   let index = 0;
