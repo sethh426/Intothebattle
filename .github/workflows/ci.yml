@@ -47,6 +47,9 @@ jobs:
           tail -n 200 server.log
           exit 1
 
+      - name: Install Python schema validator dependency
+        run: python -m pip install pyld
+
       - name: Validate schemas
         run: npm run validate:schemas
 
