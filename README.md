@@ -297,6 +297,42 @@ EMAIL_FROM=Battle Royale <no-reply@intothebattle.com>
 
 Use a managed PostgreSQL service for production. Do not rely on local JSON files or ephemeral app storage for production state.
 
+## CI & Deployment Guidance
+
+This project uses GitHub Actions (`.github/workflows/ci.yml`) as the canonical CI gate and Render as the primary backend deployment target. Vercel may be connected for frontend previews — if Vercel statuses are noisy or not part of your production flow consider disabling its GitHub commit status integration.
+
+- CI behavior:
+	- The `CI` workflow runs on pushes to `main` and PRs and performs:
+		- `npm ci` (install dependencies)
+		- `node --check server.js` (syntax check)
+		- a short startup smoke test that launches the server and probes `GET /healthz`
+		- `npm run validate:schemas` (JSON-LD schema validation)
+		- `npm audit --audit-level=high` (non-blocking)
+
+- Local reproduction steps (recommended):
+
+```bash
+npm ci
+node --check server.js
+npm run validate:schemas
+# start the server and verify health endpoint
+PORT=3000 npm start &
+curl -fsS http://localhost:3000/healthz
+```
+
+- Render notes:
+	- Render (or other PaaS) expects your process to bind the port in `process.env.PORT`.
+	- The `Dockerfile` and healthchecks should probe the runtime `PORT` (not a hard-coded `3000`) to avoid false container health failures.
+
+- Vercel notes:
+	- Vercel status checks are useful for frontend previews but can add noise on backend-focused repositories.
+	- If Vercel is not part of your production flow, disable its GitHub integration or restrict which branches it reports on.
+
+- CI improvements added:
+	- A `node --check server.js` syntax step and a `/healthz` smoke test were added to `.github/workflows/ci.yml` to catch early runtime/syntax issues and provide server logs on failure.
+
+If you want, I can also add a small GitHub Actions job that posts the failing job's tail logs to a GitHub issue automatically when a run fails.
+
 ## Available Scripts
 
 ```bash
