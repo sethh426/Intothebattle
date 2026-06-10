@@ -1,0 +1,47 @@
+name: Render Production Health
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: render-production-health
+  cancel-in-progress: false
+
+jobs:
+  render-health:
+    name: Check Render production health
+    runs-on: ubuntu-latest
+    env:
+      RENDER_HEALTH_URL: https://intothebattle.com/healthz
+      RENDER_APP_URL: https://intothebattle.com/
+
+    steps:
+      - name: Wait briefly after push deploys
+        if: github.event_name == 'push'
+        run: sleep 90
+
+      - name: Check Render /healthz
+        run: |
+          echo "Checking $RENDER_HEALTH_URL"
+          for i in $(seq 1 30); do
+            if curl -fsS --max-time 10 "$RENDER_HEALTH_URL"; then
+              echo "Render health check passed"
+              exit 0
+            fi
+            echo "Attempt $i failed; retrying in 10 seconds..."
+            sleep 10
+          done
+          echo "Render health check failed after retries"
+          exit 1
+
+      - name: Check public homepage responds
+        run: |
+          echo "Checking $RENDER_APP_URL"
+          curl -fsS --max-time 15 "$RENDER_APP_URL" >/tmp/home.html
+          test -s /tmp/home.html
+          echo "Homepage responded with $(wc -c </tmp/home.html) bytes"
