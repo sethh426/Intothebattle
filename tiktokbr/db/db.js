@@ -8,11 +8,20 @@ const DB_ROOT = process.env.DISK_PATH || path.join(__dirname, '..');
 if (!fs.existsSync(DB_ROOT)) fs.mkdirSync(DB_ROOT, { recursive: true });
 
 const connectionString = process.env.DATABASE_URL || process.env.PG_CONNECTION_STRING || process.env.PG_CONN_STRING;
-if (!connectionString) {
+const useStubDb = process.env.SKIP_DB === 'true';
+if (!connectionString && !useStubDb) {
   throw new Error('PostgreSQL connection string is required. Set DATABASE_URL or PG_CONNECTION_STRING.');
 }
 
-const client = new Client({ connectionString });
+const clientOptions = connectionString ? { connectionString } : {};
+const useSsl = connectionString && (process.env.PGSSLMODE
+  ? process.env.PGSSLMODE !== 'disable'
+  : connectionString.includes('.render.com'));
+if (useSsl) {
+  clientOptions.ssl = { rejectUnauthorized: false };
+}
+
+const client = useStubDb ? null : new Client(clientOptions);
 
 function waitFor(promise, timeoutMs = 0) {
   const buffer = new SharedArrayBuffer(4);
@@ -51,6 +60,10 @@ function waitFor(promise, timeoutMs = 0) {
 let connectionAttempted = false;
 let connectionPromise = null;
 function connectClient() {
+  if (useStubDb) {
+    return Promise.resolve();
+  }
+
   if (!connectionAttempted) {
     connectionAttempted = true;
     connectionPromise = client.connect().catch((err) => {
@@ -60,7 +73,10 @@ function connectClient() {
   }
   return connectionPromise;
 }
-connectClient();
+
+if (!useStubDb) {
+  connectClient();
+}
 
 function convertPlaceholders(sql) {
   let index = 0;
@@ -73,50 +89,59 @@ function normalizeParams(params) {
   return [params];
 }
 
-function prepareStatement() {
-  const queryText = arguments.length === 2 ? arguments[1] : arguments[0];
-  const sql = convertPlaceholders(queryText);
-  const name = `stmt_${Math.random().toString(36).slice(2, 10)}`;
+const prepareStatement = useStubDb
+  ? () => ({
+      get() { return null; },
+      all() { return []; },
+      run() { return null; },
+    })
+  : function prepareStatement() {
+      const queryText = arguments.length === 2 ? arguments[1] : arguments[0];
+      const sql = convertPlaceholders(queryText);
+      const name = `stmt_${Math.random().toString(36).slice(2, 10)}`;
 
-  return {
-    get(params) {
-      try {
-        const result = waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
-        return result.rows?.[0];
-      } catch (err) {
-        console.error('DB query error (get):', err?.message || err);
-        throw err;
-      }
-    },
-    all(params) {
-      try {
-        const result = waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
-        return result.rows || [];
-      } catch (err) {
-        console.error('DB query error (all):', err?.message || err);
-        throw err;
-      }
-    },
-    run(params) {
-      try {
-        return waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
-      } catch (err) {
-        console.error('DB query error (run):', err?.message || err);
-        throw err;
-      }
-    }
-  };
-}
+      return {
+        get(params) {
+          try {
+            const result = waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
+            return result.rows?.[0];
+          } catch (err) {
+            console.error('DB query error (get):', err?.message || err);
+            throw err;
+          }
+        },
+        all(params) {
+          try {
+            const result = waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
+            return result.rows || [];
+          } catch (err) {
+            console.error('DB query error (all):', err?.message || err);
+            throw err;
+          }
+        },
+        run(params) {
+          try {
+            return waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
+          } catch (err) {
+            console.error('DB query error (run):', err?.message || err);
+            throw err;
+          }
+        }
+      };
+    };
 
 const db = {
   prepare: prepareStatement,
   exec(sql) {
-    return waitFor(client.query(sql));
+    return useStubDb ? null : waitFor(client.query(sql));
   },
   pragma() {
     return null;
   },
   transaction(fn) {
+    if (useStubDb) {
+      return (...args) => fn(...args);
+    }
     return (...args) => {
       waitFor(client.query('BEGIN'));
       try {
@@ -307,6 +332,8 @@ async function initDb() {
 }
 
 // Start initialization in the background so module load doesn't block
-initDb().catch(err => console.error('initDb failed:', err));
+if (!useStubDb) {
+  initDb().catch(err => console.error('initDb failed:', err));
+}
 
 export default db;
