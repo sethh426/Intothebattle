@@ -912,6 +912,10 @@ if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
 }
 
+app.get('/healthz', (_req, res) => {
+  res.status(200).send('ok');
+});
+
 app.use((req, res, next) => {
   if (process.env.LOG_LEVEL === 'debug') {
     logger.debug({ method: req.method, path: req.path, ip: req.ip, query: req.query }, 'Incoming request');
