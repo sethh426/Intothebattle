@@ -9,605 +9,63 @@
   <meta name="author" content="IntoTheBattle" />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://intothebattle.com/" />
-
   <meta property="og:type" content="website" />
   <meta property="og:title" content="IntoTheBattle | Turn TikTok LIVE into a Battle Arena" />
   <meta property="og:description" content="A real-time TikTok LIVE battle overlay where viewers spawn, attack, power up, and compete on stream." />
   <meta property="og:url" content="https://intothebattle.com/" />
   <meta property="og:image" content="https://intothebattle.com/logo.svg" />
   <meta property="og:site_name" content="IntoTheBattle" />
-
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="IntoTheBattle | TikTok LIVE Battle Overlay" />
   <meta name="twitter:description" content="Turn viewer reactions, chat, likes, and gifts into real-time battle action." />
   <meta name="twitter:image" content="https://intothebattle.com/logo.svg" />
-
   <link rel="icon" href="/logo.svg" />
   <link rel="apple-touch-icon" href="/logo.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=DM+Sans:wght@400;500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
-
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebSite",
-        "@id": "https://intothebattle.com/#website",
-        "url": "https://intothebattle.com/",
-        "name": "IntoTheBattle",
-        "description": "Turn your TikTok LIVE into a playable battle arena with interactive overlays, real-time battle effects, and viewer engagement.",
-        "publisher": { "@id": "https://intothebattle.com/#organization" }
-      },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://intothebattle.com/#application",
-        "name": "IntoTheBattle",
-        "url": "https://intothebattle.com/",
-        "applicationCategory": "MultimediaApplication",
-        "operatingSystem": "Web",
-        "description": "Interactive TikTok LIVE battle overlay platform for streamers and content creators with real-time viewer engagement.",
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD", "category": "Free Trial" },
-        "creator": { "@id": "https://intothebattle.com/#organization" }
-      },
-      {
-        "@type": "Organization",
-        "@id": "https://intothebattle.com/#organization",
-        "name": "IntoTheBattle",
-        "url": "https://intothebattle.com/",
-        "logo": "https://intothebattle.com/logo.svg"
-      }
-    ]
-  }
-  </script>
-
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    * { margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    :root {
-      --void: #030406;
-      --night: #070a12;
-      --iron: #101520;
-      --panel: rgba(13, 18, 30, 0.78);
-      --gold: #f6c95b;
-      --gold-2: #ffdf8a;
-      --ember: #ff6a3d;
-      --crimson: #e83b5f;
-      --cyan: #55e7ff;
-      --green: #77f0a1;
-      --text: #f8f3e8;
-      --muted: #a8afbf;
-      --dim: #677083;
-      --line: rgba(246, 201, 91, 0.22);
-      --line-strong: rgba(246, 201, 91, 0.48);
-      --white-line: rgba(255, 255, 255, 0.1);
-      --shadow: 0 32px 90px rgba(0, 0, 0, 0.55);
-      --gold-glow: 0 0 44px rgba(246, 201, 91, 0.25);
-      --radius-xl: 34px;
-      --radius-lg: 24px;
-      --max: 1180px;
-    }
-    body {
-      min-height: 100vh;
-      font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at 18% 2%, rgba(246, 201, 91, 0.18), transparent 30%),
-        radial-gradient(circle at 84% 18%, rgba(232, 59, 95, 0.15), transparent 28%),
-        radial-gradient(circle at 75% 80%, rgba(85, 231, 255, 0.12), transparent 32%),
-        linear-gradient(180deg, #050608 0%, #070a12 42%, #030406 100%);
-      overflow-x: hidden;
-    }
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background-image:
-        linear-gradient(rgba(246, 201, 91, 0.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(246, 201, 91, 0.035) 1px, transparent 1px);
-      background-size: 58px 58px;
-      mask-image: radial-gradient(circle at top, black, transparent 72%);
-      opacity: 0.7;
-      z-index: -3;
-    }
-    body::after {
-      content: '';
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background: linear-gradient(90deg, rgba(255,255,255,0.02), transparent 18%, transparent 82%, rgba(255,255,255,0.02));
-      z-index: -2;
-    }
-    a { color: inherit; text-decoration: none; }
-    .page-shell { position: relative; overflow: hidden; }
-    .arena-glow {
-      position: absolute;
-      width: 660px;
-      height: 660px;
-      right: -280px;
-      top: 140px;
-      background: radial-gradient(circle, rgba(246, 201, 91, 0.16), transparent 62%);
-      filter: blur(10px);
-      z-index: 0;
-      pointer-events: none;
-    }
-    .nav-wrap {
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-      padding: 18px clamp(16px, 4vw, 42px) 0;
-    }
-    nav {
-      max-width: var(--max);
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 12px 14px;
-      border: 1px solid var(--line);
-      border-radius: 24px;
-      background: rgba(5, 7, 11, 0.76);
-      backdrop-filter: blur(22px);
-      box-shadow: 0 20px 70px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.08);
-    }
-    .brand { display: inline-flex; align-items: center; gap: 12px; min-width: 0; }
-    .brand-mark {
-      width: 48px;
-      height: 48px;
-      border-radius: 16px;
-      display: grid;
-      place-items: center;
-      background: linear-gradient(145deg, rgba(246,201,91,.16), rgba(255,255,255,.04));
-      border: 1px solid rgba(246,201,91,.34);
-      box-shadow: var(--gold-glow), inset 0 0 24px rgba(0,0,0,.35);
-      overflow: hidden;
-      flex: 0 0 auto;
-    }
-    .brand-mark img { width: 112%; height: 112%; object-fit: cover; display: block; }
-    .brand-text { line-height: 1; }
-    .brand-text strong {
-      display: block;
-      font-family: 'Black Ops One', 'Rajdhani', sans-serif;
-      letter-spacing: .9px;
-      font-size: 20px;
-      text-transform: uppercase;
-    }
-    .brand-text span {
-      display: block;
-      margin-top: 5px;
-      color: var(--muted);
-      font-size: 12px;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
-    .nav-links { display: flex; align-items: center; gap: 8px; }
-    .nav-link {
-      padding: 11px 14px;
-      border-radius: 999px;
-      color: var(--muted);
-      font-size: 14px;
-      font-weight: 700;
-      transition: color .18s ease, background .18s ease;
-    }
-    .nav-link:hover { color: var(--text); background: rgba(255,255,255,.06); }
-    .nav-cta {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 44px;
-      padding: 0 18px;
-      border-radius: 999px;
-      color: #160d02;
-      font-weight: 900;
-      font-size: 14px;
-      background: linear-gradient(135deg, var(--gold), #fff0b9 52%, var(--ember));
-      box-shadow: 0 16px 36px rgba(246,201,91,.22), inset 0 1px 0 rgba(255,255,255,.65);
-      transition: transform .18s ease, filter .18s ease;
-    }
-    .nav-cta:hover { transform: translateY(-1px); filter: brightness(1.05); }
-    main { position: relative; z-index: 1; }
-    .section { padding: clamp(64px, 9vw, 118px) clamp(18px, 4vw, 42px); }
-    .hero {
-      max-width: var(--max);
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: minmax(0, 1.02fr) minmax(360px, .98fr);
-      gap: clamp(32px, 5vw, 62px);
-      align-items: center;
-      padding-top: clamp(44px, 8vw, 92px);
-    }
-    .kicker {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      width: fit-content;
-      padding: 9px 13px;
-      margin-bottom: 20px;
-      border: 1px solid rgba(246,201,91,.28);
-      border-radius: 999px;
-      background: rgba(246,201,91,.08);
-      color: var(--gold-2);
-      font-size: 12px;
-      font-weight: 900;
-      letter-spacing: .13em;
-      text-transform: uppercase;
-    }
-    .kicker::before {
-      content: '';
-      width: 8px;
-      height: 8px;
-      border-radius: 999px;
-      background: var(--green);
-      box-shadow: 0 0 18px rgba(119,240,161,.8);
-    }
-    h1, h2, h3 { text-wrap: balance; }
-    .hero h1 {
-      font-family: 'Black Ops One', 'Rajdhani', sans-serif;
-      font-size: clamp(46px, 7vw, 92px);
-      line-height: .92;
-      letter-spacing: -1.2px;
-      text-transform: uppercase;
-      margin-bottom: 24px;
-    }
-    .hero h1 span {
-      display: block;
-      color: transparent;
-      background: linear-gradient(100deg, #fff7d7, var(--gold), #ff7a48 82%);
-      -webkit-background-clip: text;
-      background-clip: text;
-      filter: drop-shadow(0 0 22px rgba(246,201,91,.18));
-    }
-    .hero-lede {
-      max-width: 650px;
-      color: #c4ccdb;
-      font-size: clamp(17px, 2vw, 21px);
-      line-height: 1.72;
-      margin-bottom: 30px;
-    }
-    .hero-actions { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 28px; }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 56px;
-      padding: 0 24px;
-      border-radius: 16px;
-      font-weight: 900;
-      letter-spacing: .01em;
-      transition: transform .18s ease, border-color .18s ease, filter .18s ease;
-    }
-    .btn-primary {
-      color: #130a02;
-      background: linear-gradient(135deg, var(--gold), #fff1bd 52%, var(--ember));
-      box-shadow: 0 20px 55px rgba(246,201,91,.24), 0 0 0 1px rgba(255,255,255,.2) inset;
-    }
-    .btn-secondary { color: var(--text); border: 1px solid rgba(255,255,255,.13); background: rgba(255,255,255,.055); }
-    .btn:hover { transform: translateY(-2px); filter: brightness(1.04); }
-    .trust-row { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 13px; font-weight: 700; }
-    .trust-row span {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 11px;
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 999px;
-      background: rgba(255,255,255,.035);
-    }
-    .trust-row span::before { content: '✦'; color: var(--gold); }
-    .battle-card {
-      border-radius: var(--radius-xl);
-      padding: 1px;
-      background: linear-gradient(145deg, rgba(246,201,91,.7), rgba(255,255,255,.12) 30%, rgba(232,59,95,.35) 58%, rgba(85,231,255,.25));
-      box-shadow: var(--shadow), 0 0 120px rgba(246,201,91,.14);
-      transform: perspective(1200px) rotateX(2deg) rotateY(-3deg);
-    }
-    .battle-card-inner {
-      min-height: 640px;
-      overflow: hidden;
-      border-radius: calc(var(--radius-xl) - 1px);
-      background: linear-gradient(180deg, rgba(18,23,36,.96), rgba(4,6,10,.97));
-      border: 1px solid rgba(255,255,255,.08);
-      display: flex;
-      flex-direction: column;
-    }
-    .battle-topbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 18px 18px 12px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      background: rgba(0,0,0,.22);
-    }
-    .live-pill, .obs-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 11px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 900;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
-    .live-pill { color: #ffe5ea; background: rgba(232,59,95,.16); border: 1px solid rgba(232,59,95,.34); }
-    .live-pill::before { content: ''; width: 8px; height: 8px; border-radius: 99px; background: var(--crimson); box-shadow: 0 0 16px rgba(232,59,95,.9); }
-    .obs-pill { color: var(--gold-2); background: rgba(246,201,91,.12); border: 1px solid rgba(246,201,91,.26); }
-    .overlay-frame {
-      flex: 1 1 auto;
-      min-height: 420px;
-      margin: 18px;
-      border-radius: 24px;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,.08);
-      background: #000;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
-    }
-    .overlay-frame iframe { width: 100%; height: 100%; border: 0; display: block; background: #000; }
-    .event-feed { display: grid; gap: 10px; padding: 0 18px 18px; }
-    .event {
-      display: grid;
-      grid-template-columns: auto 1fr auto;
-      gap: 10px;
-      align-items: center;
-      padding: 12px 13px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.08);
-      background: rgba(255,255,255,.045);
-      color: #dfe6f3;
-      font-size: 13px;
-    }
-    .event i { width: 9px; height: 9px; border-radius: 99px; background: var(--gold); box-shadow: 0 0 12px rgba(246,201,91,.7); }
-    .event em { justify-self: end; color: var(--gold-2); font-style: normal; font-weight: 900; }
-    .section-head { max-width: 820px; margin: 0 auto 42px; text-align: center; }
-    .section-head .kicker { margin-left: auto; margin-right: auto; }
-    .section-head h2 { font-family: 'Black Ops One', 'Rajdhani', sans-serif; font-size: clamp(34px, 4.4vw, 62px); line-height: .98; text-transform: uppercase; margin-bottom: 18px; }
-    .section-head p { color: var(--muted); font-size: 17px; line-height: 1.72; }
-    .steps, .benefits { max-width: var(--max); margin: 0 auto; display: grid; gap: 18px; }
-    .steps { grid-template-columns: repeat(3, 1fr); }
-    .benefits { grid-template-columns: repeat(4, 1fr); }
-    .step-card, .benefit-card, .tool-card, .pricing-card {
-      border-radius: var(--radius-lg);
-      border: 1px solid var(--white-line);
-      background: linear-gradient(180deg, rgba(255,255,255,.066), rgba(255,255,255,.026));
-      box-shadow: 0 20px 70px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.08);
-      overflow: hidden;
-      position: relative;
-    }
-    .step-card { padding: 28px; }
-    .benefit-card { padding: 24px; min-height: 240px; }
-    .step-card::before, .benefit-card::before, .tool-card::before, .pricing-card::before {
-      content: '';
-      position: absolute;
-      inset: 0 0 auto 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(246,201,91,.55), transparent);
-    }
-    .step-num {
-      display: inline-grid;
-      place-items: center;
-      width: 42px;
-      height: 42px;
-      margin-bottom: 20px;
-      border-radius: 14px;
-      color: #170c02;
-      background: linear-gradient(135deg, var(--gold), #fff0bb);
-      font-weight: 1000;
-      box-shadow: var(--gold-glow);
-    }
-    .step-card h3, .benefit-card h3 { font-size: 22px; margin-bottom: 12px; letter-spacing: -.03em; }
-    .step-card p, .benefit-card p, .tool-card p { color: var(--muted); line-height: 1.72; }
-    .icon { width: 48px; height: 48px; display: grid; place-items: center; margin-bottom: 18px; border-radius: 16px; border: 1px solid rgba(246,201,91,.26); background: rgba(246,201,91,.09); color: var(--gold-2); font-size: 22px; }
-    .showcase { max-width: var(--max); margin: 0 auto; display: grid; grid-template-columns: .95fr 1.05fr; gap: 22px; align-items: stretch; }
-    .tool-card { padding: 30px; }
-    .tool-card h2 { font-family:'Black Ops One','Rajdhani',sans-serif; font-size:clamp(32px,4vw,56px); line-height:1; text-transform:uppercase; margin-bottom:16px; }
-    .tool-list { list-style: none; display: grid; gap: 14px; margin-top: 20px; }
-    .tool-list li { display: flex; gap: 12px; color: #d9dfec; line-height: 1.55; }
-    .tool-list li::before { content: '✓'; color: var(--green); font-weight: 900; }
-    .control-panel { border-radius: var(--radius-lg); border: 1px solid rgba(246,201,91,.22); background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.025)), radial-gradient(circle at 20% 10%, rgba(246,201,91,.12), transparent 30%); padding: 22px; box-shadow: var(--shadow); }
-    .dash-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 14px; border-radius: 16px; border: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.22); margin-bottom: 12px; }
-    .dash-row strong { font-size: 14px; }
-    .dash-row span { color: var(--muted); font-size: 13px; margin-top: 4px; display: block; }
-    .switch { width: 48px; height: 28px; border-radius: 999px; padding: 3px; background: linear-gradient(135deg, var(--gold), var(--green)); }
-    .switch::after { content: ''; display: block; width: 22px; height: 22px; border-radius: 50%; background: #06100b; margin-left: auto; }
-    .meter { height: 10px; border-radius: 999px; background: rgba(255,255,255,.09); overflow: hidden; }
-    .meter span { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--gold), var(--ember)); }
-    .pricing-band { max-width: var(--max); margin: 0 auto; display: grid; grid-template-columns: 1fr .72fr; gap: 20px; align-items: center; border-radius: 34px; padding: clamp(28px, 5vw, 48px); border: 1px solid var(--line-strong); background: radial-gradient(circle at top left, rgba(246,201,91,.16), transparent 34%), linear-gradient(135deg, rgba(255,255,255,.075), rgba(255,255,255,.025)); box-shadow: var(--shadow), var(--gold-glow); }
-    .pricing-band h2 { font-family: 'Black Ops One', 'Rajdhani', sans-serif; font-size: clamp(34px, 4vw, 58px); line-height: 1; text-transform: uppercase; margin-bottom: 14px; }
-    .pricing-band p { color: var(--muted); line-height: 1.7; max-width: 700px; }
-    .pricing-card { padding: 26px; background: rgba(5,7,12,.5); }
-    .price-label { color: var(--gold-2); font-weight: 900; letter-spacing: .12em; text-transform: uppercase; font-size: 12px; }
-    .price { font-family: 'Black Ops One', 'Rajdhani', sans-serif; font-size: 50px; margin: 12px 0 4px; }
-    .price small { font-family: 'DM Sans', sans-serif; color: var(--muted); font-size: 15px; }
-    .pricing-card .btn { width: 100%; margin-top: 18px; }
-    .faq { max-width: 920px; margin: 0 auto; display: grid; gap: 12px; }
-    details { border: 1px solid rgba(255,255,255,.09); border-radius: 18px; background: rgba(255,255,255,.04); padding: 18px 20px; }
-    summary { cursor: pointer; font-weight: 900; color: #fff; list-style: none; display: flex; justify-content: space-between; gap: 20px; }
-    summary::-webkit-details-marker { display: none; }
-    summary::after { content: '+'; color: var(--gold); }
-    details[open] summary::after { content: '−'; }
-    details p { margin-top: 12px; color: var(--muted); line-height: 1.72; }
-    footer { padding: 34px clamp(18px, 4vw, 42px) 48px; border-top: 1px solid rgba(255,255,255,.08); background: rgba(0,0,0,.18); }
-    .footer-inner { max-width: var(--max); margin: 0 auto; display: flex; justify-content: space-between; gap: 18px; color: var(--dim); font-size: 14px; flex-wrap: wrap; }
-    .footer-inner a { color: var(--muted); font-weight: 700; }
-    @media (max-width: 1080px) {
-      .hero, .showcase, .pricing-band { grid-template-columns: 1fr; }
-      .battle-card { transform: none; }
-      .benefits { grid-template-columns: repeat(2, 1fr); }
-    }
-    @media (max-width: 760px) {
-      .nav-wrap { padding: 12px 12px 0; }
-      nav { border-radius: 18px; }
-      .brand-text span, .nav-link { display: none; }
-      .brand-mark { width: 42px; height: 42px; border-radius: 14px; }
-      .brand-text strong { font-size: 16px; }
-      .nav-cta { min-height: 40px; padding: 0 14px; font-size: 13px; }
-      .hero { grid-template-columns: 1fr; padding-top: 42px; }
-      .hero h1 { font-size: clamp(42px, 13vw, 66px); }
-      .hero-actions .btn { width: 100%; }
-      .trust-row span { width: 100%; justify-content: center; }
-      .battle-card-inner { min-height: 520px; }
-      .overlay-frame { min-height: 330px; margin: 14px; }
-      .steps, .benefits { grid-template-columns: 1fr; }
-      .section { padding-top: 70px; padding-bottom: 70px; }
-      .pricing-card .btn { min-height: 52px; }
-    }
+    *,*::before,*::after{box-sizing:border-box}*{margin:0;padding:0}html{scroll-behavior:smooth}body{min-height:100vh;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f8f3e8;background:radial-gradient(circle at 18% 2%,rgba(246,201,91,.18),transparent 30%),radial-gradient(circle at 84% 18%,rgba(232,59,95,.15),transparent 28%),radial-gradient(circle at 75% 80%,rgba(85,231,255,.12),transparent 32%),linear-gradient(180deg,#050608 0%,#070a12 42%,#030406 100%);overflow-x:hidden}body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(246,201,91,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(246,201,91,.035) 1px,transparent 1px);background-size:58px 58px;mask-image:radial-gradient(circle at top,black,transparent 72%);opacity:.7;z-index:-3}a{color:inherit;text-decoration:none}.page-shell{position:relative;overflow:hidden}.nav-wrap{position:sticky;top:0;z-index:1000;padding:18px clamp(16px,4vw,42px) 0}nav{max-width:1180px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 14px;border:1px solid rgba(246,201,91,.22);border-radius:24px;background:rgba(5,7,11,.76);backdrop-filter:blur(22px);box-shadow:0 20px 70px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.08)}.brand{display:inline-flex;align-items:center;gap:12px;min-width:0}.brand-mark{width:48px;height:48px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(246,201,91,.16),rgba(255,255,255,.04));border:1px solid rgba(246,201,91,.34);box-shadow:0 0 44px rgba(246,201,91,.25),inset 0 0 24px rgba(0,0,0,.35);overflow:hidden;flex:0 0 auto}.brand-mark span{font-size:25px}.brand-text{line-height:1}.brand-text strong{display:block;letter-spacing:.9px;font-size:20px;text-transform:uppercase;font-weight:1000}.brand-text span{display:block;margin-top:5px;color:#a8afbf;font-size:12px;letter-spacing:.08em;text-transform:uppercase}.nav-links{display:flex;align-items:center;gap:8px}.nav-link{padding:11px 14px;border-radius:999px;color:#a8afbf;font-size:14px;font-weight:700;transition:color .18s ease,background .18s ease}.nav-link:hover{color:#fff;background:rgba(255,255,255,.06)}.nav-cta{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 18px;border-radius:999px;color:#160d02;font-weight:900;font-size:14px;background:linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d);box-shadow:0 16px 36px rgba(246,201,91,.22),inset 0 1px 0 rgba(255,255,255,.65)}main{position:relative;z-index:1}.section{padding:clamp(64px,9vw,118px) clamp(18px,4vw,42px)}.hero{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1.02fr) minmax(360px,.98fr);gap:clamp(32px,5vw,62px);align-items:center;padding-top:clamp(44px,8vw,92px)}.kicker{display:inline-flex;align-items:center;gap:10px;width:fit-content;padding:9px 13px;margin-bottom:20px;border:1px solid rgba(246,201,91,.28);border-radius:999px;background:rgba(246,201,91,.08);color:#ffdf8a;font-size:12px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.kicker::before{content:"";width:8px;height:8px;border-radius:999px;background:#77f0a1;box-shadow:0 0 18px rgba(119,240,161,.8)}h1,h2,h3{text-wrap:balance}.hero h1{font-size:clamp(46px,7vw,92px);line-height:.92;letter-spacing:-1.2px;text-transform:uppercase;margin-bottom:24px;font-weight:1000}.hero h1 span{display:block;color:transparent;background:linear-gradient(100deg,#fff7d7,#f6c95b,#ff7a48 82%);-webkit-background-clip:text;background-clip:text;filter:drop-shadow(0 0 22px rgba(246,201,91,.18))}.hero-lede{max-width:650px;color:#c4ccdb;font-size:clamp(17px,2vw,21px);line-height:1.72;margin-bottom:30px}.hero-actions{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-bottom:28px}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 24px;border-radius:16px;font-weight:900;letter-spacing:.01em}.btn-primary{color:#130a02;background:linear-gradient(135deg,#f6c95b,#fff1bd 52%,#ff6a3d);box-shadow:0 20px 55px rgba(246,201,91,.24),0 0 0 1px rgba(255,255,255,.2) inset}.btn-secondary{color:#f8f3e8;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.055)}.trust-row{display:flex;flex-wrap:wrap;gap:10px;color:#a8afbf;font-size:13px;font-weight:700}.trust-row span{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(255,255,255,.035)}.trust-row span::before{content:"✦";color:#f6c95b}.battle-card{border-radius:34px;padding:1px;background:linear-gradient(145deg,rgba(246,201,91,.7),rgba(255,255,255,.12) 30%,rgba(232,59,95,.35) 58%,rgba(85,231,255,.25));box-shadow:0 32px 90px rgba(0,0,0,.55),0 0 120px rgba(246,201,91,.14);transform:perspective(1200px) rotateX(2deg) rotateY(-3deg)}.battle-card-inner{min-height:640px;overflow:hidden;border-radius:33px;background:linear-gradient(180deg,rgba(18,23,36,.96),rgba(4,6,10,.97));border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column}.battle-topbar{display:flex;justify-content:space-between;align-items:center;padding:18px 18px 12px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.22)}.live-pill,.obs-pill{display:inline-flex;align-items:center;gap:8px;padding:8px 11px;border-radius:999px;font-size:12px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}.live-pill{color:#ffe5ea;background:rgba(232,59,95,.16);border:1px solid rgba(232,59,95,.34)}.live-pill::before{content:"";width:8px;height:8px;border-radius:99px;background:#e83b5f;box-shadow:0 0 16px rgba(232,59,95,.9)}.obs-pill{color:#ffdf8a;background:rgba(246,201,91,.12);border:1px solid rgba(246,201,91,.26)}.arena-preview{position:relative;flex:1;min-height:420px;margin:18px;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:radial-gradient(circle at 50% 38%,rgba(246,201,91,.14),transparent 34%),radial-gradient(circle at 18% 72%,rgba(85,231,255,.12),transparent 24%),linear-gradient(180deg,#090d17,#03050a)}.arena-ring{position:absolute;inset:14%;border-radius:50%;border:1px solid rgba(246,201,91,.22);box-shadow:0 0 70px rgba(246,201,91,.12),inset 0 0 70px rgba(246,201,91,.05)}.laser{position:absolute;width:48%;height:4px;left:27%;top:44%;background:linear-gradient(90deg,transparent,#55e7ff,#f6c95b,transparent);box-shadow:0 0 18px rgba(85,231,255,.8);transform:rotate(-19deg);animation:pulse 1.6s ease-in-out infinite}.impact{position:absolute;width:82px;height:82px;right:18%;top:32%;border-radius:50%;background:radial-gradient(circle,#fff3bd,#ff6a3d 45%,transparent 72%);filter:blur(.2px);animation:boom 1.6s ease-in-out infinite}.player{position:absolute;width:92px;padding:10px;border-radius:16px;background:rgba(5,7,12,.74);border:1px solid rgba(255,255,255,.12);box-shadow:0 18px 38px rgba(0,0,0,.36)}.player small{display:block;color:#fff;font-weight:900;margin-bottom:7px}.hp{height:7px;border-radius:99px;background:rgba(255,255,255,.12);overflow:hidden}.hp span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#77f0a1,#f6c95b,#ff6a3d)}.p1{left:12%;top:24%}.p2{right:13%;top:31%}.p3{left:36%;bottom:18%}.horde-bar{position:absolute;left:18px;right:18px;bottom:18px;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;border:1px solid rgba(232,59,95,.34);background:linear-gradient(90deg,rgba(232,59,95,.18),rgba(246,201,91,.08));color:#ffe5ea}.horde-bar strong{letter-spacing:.1em;text-transform:uppercase}.event-feed{display:grid;gap:10px;padding:0 18px 18px}.event{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:12px 13px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.045);color:#dfe6f3;font-size:13px}.event i{width:9px;height:9px;border-radius:99px;background:#f6c95b;box-shadow:0 0 12px rgba(246,201,91,.7)}.event em{justify-self:end;color:#ffdf8a;font-style:normal;font-weight:900}@keyframes pulse{0%,100%{opacity:.45;transform:rotate(-19deg) scaleX(.92)}50%{opacity:1;transform:rotate(-19deg) scaleX(1.06)}}@keyframes boom{0%,100%{transform:scale(.82);opacity:.55}50%{transform:scale(1.08);opacity:1}}.section-head{max-width:820px;margin:0 auto 42px;text-align:center}.section-head .kicker{margin-left:auto;margin-right:auto}.section-head h2{font-size:clamp(34px,4.4vw,62px);line-height:.98;text-transform:uppercase;margin-bottom:18px;font-weight:1000}.section-head p{color:#a8afbf;font-size:17px;line-height:1.72}.steps,.benefits{max-width:1180px;margin:0 auto;display:grid;gap:18px}.steps{grid-template-columns:repeat(3,1fr)}.benefits{grid-template-columns:repeat(4,1fr)}.step-card,.benefit-card,.tool-card,.pricing-card{border-radius:24px;border:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,rgba(255,255,255,.066),rgba(255,255,255,.026));box-shadow:0 20px 70px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.08);overflow:hidden;position:relative}.step-card{padding:28px}.benefit-card{padding:24px;min-height:220px}.step-num{display:inline-grid;place-items:center;width:42px;height:42px;margin-bottom:20px;border-radius:14px;color:#170c02;background:linear-gradient(135deg,#f6c95b,#fff0bb);font-weight:1000;box-shadow:0 0 44px rgba(246,201,91,.25)}.step-card h3,.benefit-card h3{font-size:22px;margin-bottom:12px}.step-card p,.benefit-card p,.tool-card p{color:#a8afbf;line-height:1.72}.icon{width:48px;height:48px;display:grid;place-items:center;margin-bottom:18px;border-radius:16px;border:1px solid rgba(246,201,91,.26);background:rgba(246,201,91,.09);color:#ffdf8a;font-size:22px}.showcase{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:.95fr 1.05fr;gap:22px;align-items:stretch}.tool-card{padding:30px}.tool-card h2{font-size:clamp(32px,4vw,56px);line-height:1;text-transform:uppercase;margin-bottom:16px;font-weight:1000}.tool-list{list-style:none;display:grid;gap:14px;margin-top:20px}.tool-list li{display:flex;gap:12px;color:#d9dfec;line-height:1.55}.tool-list li::before{content:"✓";color:#77f0a1;font-weight:900}.control-panel{border-radius:24px;border:1px solid rgba(246,201,91,.22);background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.025)),radial-gradient(circle at 20% 10%,rgba(246,201,91,.12),transparent 30%);padding:22px;box-shadow:0 32px 90px rgba(0,0,0,.55)}.dash-row{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.22);margin-bottom:12px}.dash-row strong{font-size:14px}.dash-row span{color:#a8afbf;font-size:13px;margin-top:4px;display:block}.switch{width:48px;height:28px;border-radius:999px;padding:3px;background:linear-gradient(135deg,#f6c95b,#77f0a1)}.switch::after{content:"";display:block;width:22px;height:22px;border-radius:50%;background:#06100b;margin-left:auto}.meter{height:10px;border-radius:999px;background:rgba(255,255,255,.09);overflow:hidden}.meter span{display:block;height:100%;background:linear-gradient(90deg,#55e7ff,#f6c95b,#ff6a3d)}.pricing-band{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1fr .72fr;gap:20px;align-items:center;border-radius:34px;padding:clamp(28px,5vw,48px);border:1px solid rgba(246,201,91,.48);background:radial-gradient(circle at top left,rgba(246,201,91,.16),transparent 34%),linear-gradient(135deg,rgba(255,255,255,.075),rgba(255,255,255,.025));box-shadow:0 32px 90px rgba(0,0,0,.55),0 0 44px rgba(246,201,91,.25)}.pricing-band h2{font-size:clamp(34px,4vw,58px);line-height:1;text-transform:uppercase;margin-bottom:14px;font-weight:1000}.pricing-band p{color:#a8afbf;line-height:1.7;max-width:700px}.pricing-card{padding:26px;background:rgba(5,7,12,.5)}.price-label{color:#ffdf8a;font-weight:900;letter-spacing:.12em;text-transform:uppercase;font-size:12px}.price{font-size:50px;margin:12px 0 4px;font-weight:1000}.price small{color:#a8afbf;font-size:15px}.pricing-card .btn{width:100%;margin-top:18px}.faq{max-width:920px;margin:0 auto;display:grid;gap:12px}details{border:1px solid rgba(255,255,255,.09);border-radius:18px;background:rgba(255,255,255,.04);padding:18px 20px}summary{cursor:pointer;font-weight:900;color:#fff;list-style:none;display:flex;justify-content:space-between;gap:20px}summary::-webkit-details-marker{display:none}summary::after{content:"+";color:#f6c95b}details[open] summary::after{content:"−"}details p{margin-top:12px;color:#a8afbf;line-height:1.72}footer{padding:34px clamp(18px,4vw,42px) 48px;border-top:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.18)}.footer-inner{max-width:1180px;margin:0 auto;display:flex;justify-content:space-between;gap:18px;color:#677083;font-size:14px;flex-wrap:wrap}.footer-inner a{color:#a8afbf;font-weight:700}@media(max-width:1080px){.hero,.showcase,.pricing-band{grid-template-columns:1fr}.battle-card{transform:none}.benefits{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.nav-wrap{padding:12px 12px 0}nav{border-radius:18px}.brand-text span,.nav-link{display:none}.brand-mark{width:42px;height:42px;border-radius:14px}.brand-text strong{font-size:16px}.nav-cta{min-height:40px;padding:0 14px;font-size:13px}.hero{grid-template-columns:1fr;padding-top:42px}.hero h1{font-size:clamp(42px,13vw,66px)}.hero-actions .btn{width:100%}.trust-row span{width:100%;justify-content:center}.battle-card-inner{min-height:520px}.arena-preview{min-height:330px;margin:14px}.player{width:74px}.p2{right:26px}.steps,.benefits{grid-template-columns:1fr}.section{padding-top:70px;padding-bottom:70px}.pricing-card .btn{min-height:52px}}
   </style>
 </head>
 <body>
   <div class="page-shell">
-    <div class="arena-glow" aria-hidden="true"></div>
-
     <div class="nav-wrap">
       <nav aria-label="Main navigation">
         <a class="brand" href="/" aria-label="IntoTheBattle home">
-          <span class="brand-mark"><img src="/logo.svg" alt="IntoTheBattle logo" /></span>
-          <span class="brand-text">
-            <strong>IntoTheBattle</strong>
-            <span>TikTok LIVE arena overlay</span>
-          </span>
+          <span class="brand-mark"><span>⚔️</span></span>
+          <span class="brand-text"><strong>IntoTheBattle</strong><span>TikTok LIVE arena overlay</span></span>
         </a>
-        <div class="nav-links">
-          <a class="nav-link" href="#how-it-works">How it works</a>
-          <a class="nav-link" href="#creator-tools">Creator tools</a>
-          <a class="nav-link" href="/login">Login</a>
-          <a class="nav-cta" href="/signup">Start free trial</a>
-        </div>
+        <div class="nav-links"><a class="nav-link" href="#how-it-works">How it works</a><a class="nav-link" href="#creator-tools">Creator tools</a><a class="nav-link" href="/login">Login</a><a class="nav-cta" href="/signup">Start free trial</a></div>
       </nav>
     </div>
-
     <main>
       <section class="section hero" aria-labelledby="hero-title">
         <div>
           <div class="kicker">Built for TikTok LIVE creators</div>
           <h1 id="hero-title">Turn your TikTok LIVE into <span>a battle arena.</span></h1>
           <p class="hero-lede">Viewers join the fight through chat, likes, gifts, and live reactions. IntoTheBattle gives creators a stream-ready overlay, real-time battle events, and dashboard controls built to make every LIVE feel playable.</p>
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="/signup">Start your free trial →</a>
-            <a class="btn btn-secondary" href="#how-it-works">See how it works</a>
-          </div>
-          <div class="trust-row" aria-label="Product highlights">
-            <span>OBS + TikTok Studio ready</span>
-            <span>Real-time Socket.IO overlay</span>
-            <span>Creator dashboard controls</span>
-          </div>
+          <div class="hero-actions"><a class="btn btn-primary" href="/signup">Start your free trial →</a><a class="btn btn-secondary" href="#how-it-works">See how it works</a></div>
+          <div class="trust-row" aria-label="Product highlights"><span>OBS + TikTok Studio ready</span><span>No iframe network calls</span><span>Creator dashboard controls</span></div>
         </div>
-
-        <aside class="battle-card" aria-label="Live overlay demo preview">
+        <aside class="battle-card" aria-label="Static battle overlay preview">
           <div class="battle-card-inner">
-            <div class="battle-topbar">
-              <span class="live-pill">Live overlay demo</span>
-              <span class="obs-pill">Demo room</span>
+            <div class="battle-topbar"><span class="live-pill">Static demo preview</span><span class="obs-pill">Safe load</span></div>
+            <div class="arena-preview" aria-hidden="true">
+              <div class="arena-ring"></div><div class="laser"></div><div class="impact"></div>
+              <div class="player p1"><small>@Nova</small><div class="hp"><span style="width:84%"></span></div></div>
+              <div class="player p2"><small>@Jax</small><div class="hp"><span style="width:38%"></span></div></div>
+              <div class="player p3"><small>@Milo</small><div class="hp"><span style="width:62%"></span></div></div>
+              <div class="horde-bar"><strong>The Horde</strong><span>42 viewers pushing the arena</span></div>
             </div>
-            <div class="overlay-frame">
-              <iframe src="/overlay.html?room_id=demo" title="Live IntoTheBattle overlay demo" loading="lazy" allow="autoplay; fullscreen"></iframe>
-            </div>
-            <div class="event-feed" aria-label="Demo battle events">
-              <div class="event"><i></i><span>The preview uses a demo room so public visitors do not hit the protected creator overlay path.</span><em>Demo</em></div>
-              <div class="event"><i></i><span>If no TikTok LIVE room is connected, the overlay falls back to demo battle action.</span><em>Auto</em></div>
-            </div>
+            <div class="event-feed" aria-label="Example live battle events"><div class="event"><i></i><span><b>@Nova</b> joined the arena from chat</span><em>Spawn</em></div><div class="event"><i></i><span><b>@Jax</b> attacked @Milo for 18 damage</span><em>Hit</em></div><div class="event"><i></i><span><b>@Luna</b> sent a gift — Fire Strike activated</span><em>Power</em></div></div>
           </div>
         </aside>
       </section>
-
-      <section id="how-it-works" class="section" aria-labelledby="how-title">
-        <div class="section-head">
-          <div class="kicker">Launch in minutes</div>
-          <h2 id="how-title">From live stream to live combat.</h2>
-          <p>Keep the setup simple. Connect the stream, add the overlay, and give viewers something to do besides scroll away.</p>
-        </div>
-        <div class="steps">
-          <article class="step-card">
-            <span class="step-num">1</span>
-            <h3>Connect your TikTok LIVE</h3>
-            <p>Use the creator dashboard to connect the live session and prepare your battle room before the audience arrives.</p>
-          </article>
-          <article class="step-card">
-            <span class="step-num">2</span>
-            <h3>Add it to OBS or TikTok Studio</h3>
-            <p>Use it as an OBS browser source, or add the overlay window as a window capture inside TikTok Studio.</p>
-          </article>
-          <article class="step-card">
-            <span class="step-num">3</span>
-            <h3>Let viewers fight live</h3>
-            <p>Viewers spawn, attack, power up, and push the battle through chat activity and live reactions.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="section" aria-labelledby="benefits-title">
-        <div class="section-head">
-          <div class="kicker">Why creators use it</div>
-          <h2 id="benefits-title">Make the audience part of the show.</h2>
-          <p>IntoTheBattle is designed around one goal: give viewers a reason to stay, react, gift, and come back for the next fight.</p>
-        </div>
-        <div class="benefits">
-          <article class="benefit-card"><div class="icon">⚔</div><h3>Viewer-powered combat</h3><p>Chat, likes, follows, and gifts can become battle actions that viewers understand instantly.</p></article>
-          <article class="benefit-card"><div class="icon">◎</div><h3>Stream-ready overlay</h3><p>Give your LIVE a premium visual layer without rebuilding your whole stream setup.</p></article>
-          <article class="benefit-card"><div class="icon">✦</div><h3>Gift-worthy moments</h3><p>Powerups and effects create moments viewers can trigger, watch, and talk about in real time.</p></article>
-          <article class="benefit-card"><div class="icon">▣</div><h3>Creator control</h3><p>Manage room visuals, audio, overlays, and state from a dashboard built for active streams.</p></article>
-        </div>
-      </section>
-
-      <section id="creator-tools" class="section" aria-labelledby="tools-title">
-        <div class="showcase">
-          <article class="tool-card">
-            <div class="kicker">Creator command center</div>
-            <h2 id="tools-title">Your stream. Your arena. Your rules.</h2>
-            <p>Control the stream experience without forcing viewers through a complicated app. The dashboard keeps the creator in control while the overlay keeps the audience watching.</p>
-            <ul class="tool-list">
-              <li>Upload custom backgrounds and audio for your battle room.</li>
-              <li>Connect, reset, and monitor stream state from one place.</li>
-              <li>Display live battle activity through an OBS browser source or TikTok Studio window capture.</li>
-              <li>Use rooms, access, and account controls for beta creator onboarding.</li>
-            </ul>
-          </article>
-          <aside class="control-panel" aria-label="Dashboard control preview">
-            <div class="dash-row"><div><strong>Battle overlay</strong><span>Browser source or window capture active</span></div><div class="switch"></div></div>
-            <div class="dash-row"><div><strong>Viewer spawn rate</strong><span>Chat joins and live actions</span></div><strong>High</strong></div>
-            <div class="dash-row"><div><strong>Room energy</strong><span>Gifts, likes, and attacks</span></div><strong>Live</strong></div>
-            <div class="dash-row"><div><strong>Audio impact</strong><span>Attack and gift sounds enabled</span></div><div class="switch"></div></div>
-            <div style="padding:16px 14px 8px"><div style="display:flex;justify-content:space-between;color:var(--muted);font-size:13px;font-weight:800;margin-bottom:10px"><span>Audience heat</span><span>82%</span></div><div class="meter"><span style="width:82%"></span></div></div>
-          </aside>
-        </div>
-      </section>
-
-      <section class="section" aria-labelledby="cta-title">
-        <div class="pricing-band">
-          <div>
-            <div class="kicker">Ready for beta creators</div>
-            <h2 id="cta-title">Give your viewers a reason to fight for the screen.</h2>
-            <p>Start with a trial, connect your stream, and test the arena with your audience. The goal is simple: more interaction, more watch time, and a LIVE that feels like an event.</p>
-          </div>
-          <aside class="pricing-card" aria-label="Trial call to action">
-            <div class="price-label">Creator trial</div>
-            <div class="price">Free <small>to start</small></div>
-            <p style="color:var(--muted);line-height:1.65">Set up your first room and bring the battle overlay into your next stream.</p>
-            <a class="btn btn-primary" href="/signup">Start free trial</a>
-            <a class="btn btn-secondary" href="/login" style="width:100%;margin-top:12px">Login</a>
-          </aside>
-        </div>
-      </section>
-
-      <section class="section" aria-labelledby="faq-title">
-        <div class="section-head"><div class="kicker">Creator questions</div><h2 id="faq-title">Built for live chaos, kept simple.</h2></div>
-        <div class="faq">
-          <details><summary>Is this made specifically for TikTok LIVE?</summary><p>Yes. The product direction is focused on TikTok LIVE creators who want an interactive battle overlay for viewer-driven engagement.</p></details>
-          <details><summary>Can I use it with OBS or TikTok Studio?</summary><p>Yes. In OBS, add the overlay as a browser source. In TikTok Studio, open the overlay in a browser window and add it as a window capture.</p></details>
-          <details><summary>Do viewers need to install anything?</summary><p>No. The intended experience is driven by live stream actions such as chat, likes, follows, and gifts. Viewers interact from the stream.</p></details>
-        </div>
-      </section>
+      <section id="how-it-works" class="section" aria-labelledby="how-title"><div class="section-head"><div class="kicker">Launch in minutes</div><h2 id="how-title">From live stream to live combat.</h2><p>Keep the setup simple. Connect the stream, add the overlay, and give viewers something to do besides scroll away.</p></div><div class="steps"><article class="step-card"><span class="step-num">1</span><h3>Connect your TikTok LIVE</h3><p>Use the creator dashboard to connect the live session and prepare your battle room before the audience arrives.</p></article><article class="step-card"><span class="step-num">2</span><h3>Add it to OBS or TikTok Studio</h3><p>Use it as an OBS browser source, or add the overlay window as a window capture inside TikTok Studio.</p></article><article class="step-card"><span class="step-num">3</span><h3>Let viewers fight live</h3><p>Viewers spawn, attack, power up, and push the battle through chat activity and live reactions.</p></article></div></section>
+      <section class="section" aria-labelledby="benefits-title"><div class="section-head"><div class="kicker">Why creators use it</div><h2 id="benefits-title">Make the audience part of the show.</h2><p>IntoTheBattle is designed around one goal: give viewers a reason to stay, react, gift, and come back for the next fight.</p></div><div class="benefits"><article class="benefit-card"><div class="icon">⚔</div><h3>Viewer-powered combat</h3><p>Chat, likes, follows, and gifts can become battle actions that viewers understand instantly.</p></article><article class="benefit-card"><div class="icon">◎</div><h3>Stream-ready overlay</h3><p>Give your LIVE a premium visual layer without rebuilding your whole stream setup.</p></article><article class="benefit-card"><div class="icon">✦</div><h3>Gift-worthy moments</h3><p>Powerups and effects create moments viewers can trigger, watch, and talk about in real time.</p></article><article class="benefit-card"><div class="icon">▣</div><h3>Creator control</h3><p>Manage room visuals, audio, overlays, and state from a dashboard built for active streams.</p></article></div></section>
+      <section id="creator-tools" class="section" aria-labelledby="tools-title"><div class="showcase"><article class="tool-card"><div class="kicker">Creator command center</div><h2 id="tools-title">Your stream. Your arena. Your rules.</h2><p>Control the stream experience without forcing viewers through a complicated app. The dashboard keeps the creator in control while the overlay keeps the audience watching.</p><ul class="tool-list"><li>Upload custom backgrounds and audio for your battle room.</li><li>Connect, reset, and monitor stream state from one place.</li><li>Display live battle activity through an OBS browser source or TikTok Studio window capture.</li><li>Use rooms, access, and account controls for beta creator onboarding.</li></ul></article><aside class="control-panel" aria-label="Dashboard control preview"><div class="dash-row"><div><strong>Battle overlay</strong><span>Browser source or window capture active</span></div><div class="switch"></div></div><div class="dash-row"><div><strong>Viewer spawn rate</strong><span>Chat joins and live actions</span></div><strong>High</strong></div><div class="dash-row"><div><strong>Room energy</strong><span>Gifts, likes, and attacks</span></div><strong>Live</strong></div><div class="dash-row"><div><strong>Audio impact</strong><span>Attack and gift sounds enabled</span></div><div class="switch"></div></div><div style="padding:16px 14px 8px"><div style="display:flex;justify-content:space-between;color:#a8afbf;font-size:13px;font-weight:800;margin-bottom:10px"><span>Audience heat</span><span>82%</span></div><div class="meter"><span style="width:82%"></span></div></div></aside></div></section>
+      <section class="section" aria-labelledby="cta-title"><div class="pricing-band"><div><div class="kicker">Ready for beta creators</div><h2 id="cta-title">Give your viewers a reason to fight for the screen.</h2><p>Start with a trial, connect your stream, and test the arena with your audience. The goal is simple: more interaction, more watch time, and a LIVE that feels like an event.</p></div><aside class="pricing-card" aria-label="Trial call to action"><div class="price-label">Creator trial</div><div class="price">Free <small>to start</small></div><p style="color:#a8afbf;line-height:1.65">Set up your first room and bring the battle overlay into your next stream.</p><a class="btn btn-primary" href="/signup">Start free trial</a><a class="btn btn-secondary" href="/login" style="width:100%;margin-top:12px">Login</a></aside></div></section>
+      <section class="section" aria-labelledby="faq-title"><div class="section-head"><div class="kicker">Creator questions</div><h2 id="faq-title">Built for live chaos, kept simple.</h2></div><div class="faq"><details><summary>Is this made specifically for TikTok LIVE?</summary><p>Yes. The product direction is focused on TikTok LIVE creators who want an interactive battle overlay for viewer-driven engagement.</p></details><details><summary>Can I use it with OBS or TikTok Studio?</summary><p>Yes. In OBS, add the overlay as a browser source. In TikTok Studio, open the overlay in a browser window and add it as a window capture.</p></details><details><summary>Do viewers need to install anything?</summary><p>No. The intended experience is driven by live stream actions such as chat, likes, follows, and gifts. Viewers interact from the stream.</p></details></div></section>
     </main>
-
-    <footer>
-      <div class="footer-inner">
-        <span>© 2026 IntoTheBattle. Built for creators who make LIVE streams feel playable.</span>
-        <span><a href="/login">Login</a> · <a href="/signup">Start trial</a> · <a href="/paywall">Upgrade</a></span>
-      </div>
-    </footer>
+    <footer><div class="footer-inner"><span>© 2026 IntoTheBattle. Built for creators who make LIVE streams feel playable.</span><span><a href="/login">Login</a> · <a href="/signup">Start trial</a> · <a href="/paywall">Upgrade</a></span></div></footer>
   </div>
 </body>
 </html>
