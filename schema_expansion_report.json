@@ -10,7 +10,79 @@
     },
     {
       "path": "home.html",
-      "blocks": []
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "expanded_sample": [
+            {
+              "@type": [
+                "https://schema.org/SoftwareApplication"
+              ],
+              "https://schema.org/applicationCategory": [
+                {
+                  "@value": "MultimediaApplication"
+                }
+              ],
+              "https://schema.org/creator": [
+                {
+                  "@type": [
+                    "https://schema.org/Organization"
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "IntoTheBattle"
+                    }
+                  ]
+                }
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "A TikTok LIVE interactive battle overlay platform for creators, streamers, and live audience engagement."
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle"
+                }
+              ],
+              "https://schema.org/offers": [
+                {
+                  "@type": [
+                    "https://schema.org/Offer"
+                  ],
+                  "https://schema.org/description": [
+                    {
+                      "@value": "Free trial available"
+                    }
+                  ],
+                  "https://schema.org/price": [
+                    {
+                      "@value": "0"
+                    }
+                  ],
+                  "https://schema.org/priceCurrency": [
+                    {
+                      "@value": "USD"
+                    }
+                  ]
+                }
+              ],
+              "https://schema.org/operatingSystem": [
+                {
+                  "@value": "Web"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "path": "login.html",
@@ -168,14 +240,14 @@
                       ],
                       "https://schema.org/text": [
                         {
-                          "@value": "Enter your email on this signup page and click 'Generate Access Code' to receive a trial code instantly."
+                          "@value": "Use the Google button to sign up instantly, or click the email signup link to register with your email."
                         }
                       ]
                     }
                   ],
                   "https://schema.org/name": [
                     {
-                      "@value": "How do I get my access code?"
+                      "@value": "How do I sign up?"
                     }
                   ]
                 }
@@ -200,7 +272,7 @@
   ],
   "summary": {
     "total_files": 15,
-    "expanded": 3,
+    "expanded": 4,
     "errors": 0
   }
 }

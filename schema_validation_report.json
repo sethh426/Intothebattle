@@ -10,7 +10,15 @@
     },
     {
       "path": "home.html",
-      "blocks": []
+      "blocks": [
+        {
+          "index": 1,
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"SoftwareApplication\",\n    \"name\": \"IntoTheBattle\",\n    \"applicationCategory\": \"MultimediaApplication\",\n    \"operatingSystem\": \"Web\",\n    \"description\": \"A TikTok LIVE interactive battle overlay platform for creators, streamers, and live audience engagement.\",\n    \"url\": \"https://intothebattle.com/\",\n    \"offers\": {\n      \"@type\": \"Offer\",\n      \"price\": \"0\",\n      \"priceCurrency\": \"USD\",\n      \"description\": \"Free trial available\"\n    },\n    ",
+          "ok": true,
+          "errors": [],
+          "warnings": []
+        }
+      ]
     },
     {
       "path": "login.html",
@@ -87,8 +95,8 @@
   ],
   "summary": {
     "total_files": 15,
-    "files_with_jsonld": 3,
-    "total_blocks": 3,
+    "files_with_jsonld": 4,
+    "total_blocks": 4,
     "errors": 0,
     "warnings": 0
   }

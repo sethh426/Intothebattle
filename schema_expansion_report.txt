@@ -1,7 +1,8 @@
-JSON-LD expansion summary: files scanned: 15, expanded blocks: 3, errors: 0
+JSON-LD expansion summary: files scanned: 15, expanded blocks: 4, errors: 0
 - dashboard-welcome.html: no JSON-LD blocks
 - dashboard.html: no JSON-LD blocks
-- home.html: no JSON-LD blocks
+- home.html: 1 block(s)
+  - block #1: expanded OK
 - login.html: 1 block(s)
   - block #1: expanded OK
 - overlay-phaser.html: no JSON-LD blocks

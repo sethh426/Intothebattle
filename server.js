@@ -35,6 +35,9 @@ function getDefaultRoom() {
   return getOrCreateRoom(DEFAULT_ROOM_ID);
 }
 
+// Feature gate for room-scoped behavior. When false, server runs as single-instance
+const enableRoomScoped = process.env.ENABLE_ROOM_SCOPED === 'true';
+
 function requiresRoomId() {
   try {
     const row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('require_room_id');
@@ -940,28 +943,35 @@ function emitGiftAttackAndSync(room, result) {
   setTimeout(() => emitRoomEvent(room, 'gameState', room.players), 40);
 }
 
-if (process.env.REDIS_URL) {
+const enableRedisAdapter = process.env.ENABLE_REDIS_ADAPTER === 'true';
+if (process.env.REDIS_URL && enableRedisAdapter) {
   (async () => {
     try {
       const pubClient = createRedisClient({ url: process.env.REDIS_URL });
       const subClient = pubClient.duplicate();
-      
+
       // Add 5s timeout to prevent hanging on unreachable Redis
-      const connectTimeout = new Promise((_, reject) => 
+      const connectTimeout = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Redis connection timeout after 5s')), 5000)
       );
-      
+
       await Promise.race([
         Promise.all([pubClient.connect(), subClient.connect()]),
         connectTimeout
       ]);
-      
+
       io.adapter(createAdapter(pubClient, subClient));
-      logger.info({ redis: process.env.REDIS_URL }, 'Redis adapter connected for Socket.IO');
+      logger.info({ redis: process.env.REDIS_URL }, 'Socket.IO Redis adapter enabled');
     } catch (err) {
       logger.error({ err }, 'Failed to initialize Redis adapter for Socket.IO - continuing without Redis');
     }
   })();
+} else {
+  if (process.env.REDIS_URL && !enableRedisAdapter) {
+    logger.info({ redis: process.env.REDIS_URL }, 'REDIS_URL present but ENABLE_REDIS_ADAPTER=false — running single-instance Socket.IO');
+  } else {
+    logger.info('Socket.IO running in single-instance mode (no Redis)');
+  }
 }
 
 app.set('trust proxy', 1);
@@ -1146,7 +1156,7 @@ app.post('/auth/create-account', express.json(), (req, res) => {
 
 app.get(['/overlay.html', '/overlay'], (req, res, next) => {
 
-  if (req.query.room_id) {
+  if (enableRoomScoped && req.query.room_id) {
     return res.sendFile(path.join(__dirname, 'overlay.html'));
   }
   return requireAccess(req, res, () => res.sendFile(path.join(__dirname, 'overlay.html')));
@@ -1170,7 +1180,7 @@ function assignDefaultRoomIfMissing(row) {
 function socketAuth(socket, next) {
   // Allow unauthenticated overlays to supply a room id via the socket auth payload
   // (client: io({ auth: { roomId } })) or query param (legacy).
-  const authRoom = socket.handshake?.auth?.roomId || socket.handshake?.query?.room_id;
+  const authRoom = enableRoomScoped ? (socket.handshake?.auth?.roomId || socket.handshake?.query?.room_id) : null;
   if (authRoom) {
     socket.roomId = String(authRoom);
     return next();
@@ -1202,7 +1212,7 @@ function socketAuth(socket, next) {
     logger.warn({ rowId: row?.id, code: row?.code, isRevoked: row?.is_revoked, expiresAt: row?.expires_at }, 'Socket auth failed: expired or revoked');
     return next(new Error('Unauthorized: expired or revoked'));
   }
-  socket.roomId = assignDefaultRoomIfMissing(row);
+  socket.roomId = enableRoomScoped ? assignDefaultRoomIfMissing(row) : DEFAULT_ROOM_ID;
   socket.accessCode = row;
   next();
 }
@@ -1226,7 +1236,7 @@ function requireRoom(req, res, next) {
       logger.warn({ path: req.path, method: req.method, rowId: row?.id, code: row?.code, isRevoked: row?.is_revoked, expiresAt: row?.expires_at }, 'API auth failed: expired or revoked');
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
-    req.roomId = assignDefaultRoomIfMissing(row);
+    req.roomId = enableRoomScoped ? assignDefaultRoomIfMissing(row) : DEFAULT_ROOM_ID;
     logger.info({ path: req.path, method: req.method, rowId: row.id, code: row.code, roomId: req.roomId, requiresRoomId: requiresRoomId() }, '/api/connect auth success');
   } else {
     const user = auth.record;
@@ -1234,7 +1244,7 @@ function requireRoom(req, res, next) {
       logger.warn({ path: req.path, method: req.method, userId: user.id }, 'API auth failed: user disabled');
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
-    const roomId = getUserRoomId(user.id) || DEFAULT_ROOM_ID;
+    const roomId = enableRoomScoped ? (getUserRoomId(user.id) || DEFAULT_ROOM_ID) : DEFAULT_ROOM_ID;
     req.roomId = roomId;
     req.user = user;
     logger.info({ path: req.path, method: req.method, userId: user.id, roomId, requiresRoomId: requiresRoomId() }, '/api/connect auth success');
@@ -1269,7 +1279,7 @@ app.get('/metrics', async (_req, res) => {
 
 app.get('/audio/:filename', (req, res) => {
   const filename = path.basename(req.params.filename);
-  const room = req.room || (req.query.room_id ? getOrCreateRoom(String(req.query.room_id)) : null);
+  const room = req.room || (enableRoomScoped && req.query.room_id ? getOrCreateRoom(String(req.query.room_id)) : null);
   if (!room) return res.status(401).send('Unauthorized');
   const { audioDir } = getRoomPaths(room.roomId);
   const runtimePath = path.join(audioDir, filename);
@@ -1396,7 +1406,7 @@ app.get('/debug/session-info', (req, res) => {
 app.get('/stats', checkTrial, (_req, res) => res.sendFile(path.join(__dirname, 'stats.html')));
 
 app.get('/state', (req, res) => {
-  if (req.query.room_id) {
+  if (enableRoomScoped && req.query.room_id) {
     const room = getOrCreateRoom(String(req.query.room_id));
     loadRoomPlayerStats(room);
     loadRoomBackground(room);
@@ -1526,7 +1536,7 @@ app.get('/background/:filename', (req, res) => {
   try {
     // Support public background fetches by room_id query param (for unauthenticated overlays)
     let room = null;
-    if (req.query && req.query.room_id) {
+    if (enableRoomScoped && req.query && req.query.room_id) {
       room = getOrCreateRoom(String(req.query.room_id));
     } else {
       // Fallback to existing requireRoom behavior using session_token cookie

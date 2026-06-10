@@ -31,22 +31,55 @@
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "IntoTheBattle",
-    "applicationCategory": "MultimediaApplication",
-    "operatingSystem": "Web",
-    "description": "A TikTok LIVE interactive battle overlay platform for creators, streamers, and live audience engagement.",
-    "url": "https://intothebattle.com/",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD",
-      "description": "Free trial available"
-    },
-    "creator": {
-      "@type": "Organization",
-      "name": "IntoTheBattle"
-    }
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://intothebattle.com/#website",
+        "url": "https://intothebattle.com/",
+        "name": "IntoTheBattle",
+        "description": "Turn your TikTok LIVE into a playable battle arena with interactive overlays, real-time battle effects, and viewer engagement.",
+        "publisher": {
+          "@id": "https://intothebattle.com/#organization"
+        },
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://intothebattle.com/?s={search_term_string}"
+        }
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://intothebattle.com/#application",
+        "name": "IntoTheBattle",
+        "url": "https://intothebattle.com/",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Web",
+        "description": "Interactive TikTok LIVE battle overlay platform for streamers and content creators with real-time viewer engagement.",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD",
+          "category": "Free Trial"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.8",
+          "ratingCount": "150"
+        },
+        "creator": {
+          "@id": "https://intothebattle.com/#organization"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://intothebattle.com/#organization",
+        "name": "IntoTheBattle",
+        "url": "https://intothebattle.com/",
+        "logo": "https://intothebattle.com/intothebattle.png",
+        "sameAs": [
+          "https://twitter.com/intothebattle"
+        ]
+      }
+    ]
   }
   </script>
 

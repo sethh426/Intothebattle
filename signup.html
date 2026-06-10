@@ -3,9 +3,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IntoTheBattle Signup</title>
+  <title>Start Free Trial — IntoTheBattle | TikTok LIVE Battle Overlay</title>
+  <meta name="description" content="Start your free IntoTheBattle trial today. Set up an interactive TikTok LIVE battle overlay in minutes with real-time viewer engagement and stream management tools." />
+  <meta name="keywords" content="IntoTheBattle free trial, TikTok LIVE overlay, interactive streaming, creator tools, battle overlay setup" />
+  <meta name="robots" content="index, follow" />
+  <meta name="author" content="IntoTheBattle" />
+  <link rel="canonical" href="https://intothebattle.com/signup" />
+  
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Start Your Free IntoTheBattle Trial" />
+  <meta property="og:description" content="Get started with IntoTheBattle free trial. Turn your TikTok LIVE into an interactive battle arena." />
+  <meta property="og:url" content="https://intothebattle.com/signup" />
+  <meta property="og:image" content="https://intothebattle.com/intothebattle.png" />
+  <meta property="og:site_name" content="IntoTheBattle" />
+  
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Start Your Free IntoTheBattle Trial" />
+  <meta name="twitter:description" content="Get started with IntoTheBattle free trial. Turn your TikTok LIVE into an interactive battle arena." />
+  <meta name="twitter:image" content="https://intothebattle.com/intothebattle.png" />
+  
+  <link rel="icon" href="/intothebattle.png" />
+  <link rel="apple-touch-icon" href="/intothebattle.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "IntoTheBattle Free Trial Signup",
+    "url": "https://intothebattle.com/signup",
+    "description": "Start your free trial of IntoTheBattle, the interactive TikTok LIVE battle overlay platform.",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "IntoTheBattle",
+      "url": "https://intothebattle.com/"
+    }
+  }
+  </script>
+  
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -358,8 +394,8 @@
       },
       {
         "@type": "Question",
-        "name": "How do I get my access code?",
-        "acceptedAnswer": { "@type": "Answer", "text": "Enter your email on this signup page and click 'Generate Access Code' to receive a trial code instantly." }
+        "name": "How do I sign up?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Use the Google button to sign up instantly, or click the email signup link to register with your email." }
       }
     ]
   }
@@ -379,230 +415,22 @@
 
       <div class="info-block">
         <strong>Sign up for a battle-ready room</strong>
-        Enter your email, generate a secure access code, and configure your first room. Players will join with health, damage, and powerup effects that actually matter on stream.
+        Sign up instantly with Google, or register with email on the next page.
       </div>
 
-      <div class="step-indicator">
-        <div class="step-dot active" id="step1-dot"></div>
-        <div class="step-dot" id="step2-dot"></div>
+      <div class="action-buttons">
+        <a href="/auth/google" class="btn btn-primary" style="display:inline-flex;align-items:center;justify-content:center;gap:10px;">
+          Continue with Google
+        </a>
+        <a href="/register" class="btn" style="background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.1); margin-top: 12px;">
+          Sign up with email
+        </a>
       </div>
 
-      <form id="signupForm">
-        <div class="form-section active" id="step1">
-          <div class="form-group">
-            <label for="email">Email Address</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-
-          <button type="button" class="btn btn-primary" onclick="generateCode()">
-            Generate Access Code
-          </button>
-
-          <div class="alert" id="codeAlert"></div>
-
-          <div class="code-display" id="codeDisplay" style="display: none;">
-            <div class="code-display-label">Your Access Code</div>
-            <div class="code-display-value" id="generatedCode"></div>
-            <button type="button" class="code-copy-btn" onclick="copyCode()">📋 Copy Code</button>
-            <div class="code-copied" id="codeCopied">✓ Copied to clipboard</div>
-          </div>
-
-          <div class="form-group" id="step1-submit" style="display: none;">
-            <label for="codeConfirm">Enter Your Code Below</label>
-            <input
-              type="text"
-              id="codeConfirm"
-              name="codeConfirm"
-              placeholder="ABC123XYZ"
-              style="text-transform: uppercase;"
-            />
-          </div>
-
-          <button
-            type="button"
-            class="btn btn-primary"
-            id="continueBtn"
-            onclick="continueToStep2()"
-            style="display: none; margin-top: 12px;"
-          >
-            Continue →
-          </button>
-        </div>
-
-        <div class="form-section" id="step2">
-          <div class="form-group">
-            <label for="name">Full Name</label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              placeholder="Your Name"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="tiktokUsername">TikTok Username</label>
-            <input
-              type="text"
-              id="tiktokUsername"
-              name="tiktokUsername"
-              placeholder="@yourhandle"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="roomName">Room Name (Battle Title)</label>
-            <input
-              type="text"
-              id="roomName"
-              name="roomName"
-              placeholder="My Battle Royale"
-              required
-            />
-          </div>
-
-          <div class="alert" id="profileAlert"></div>
-
-          <button type="submit" class="btn btn-primary">
-            🚀 Create Account & Start Trial
-          </button>
-
-          <button
-            type="button"
-            class="btn"
-            onclick="backToStep1()"
-            style="background: transparent; border: 1px solid var(--border); color: var(--text); margin-top: 12px;"
-          >
-            ← Back
-          </button>
-        </div>
-      </form>
-
-      <div class="login-link">
+      <div class="login-link" style="margin-top: 20px;">
         Already have an account? <a href="/login">Sign in here</a>
       </div>
     </div>
   </div>
-
-  <script>
-    let currentStep = 1;
-    let generatedAccessCode = null;
-    let userEmail = null;
-
-    function showAlert(elementId, message, type) {
-      const alert = document.getElementById(elementId);
-      alert.textContent = message;
-      alert.className = `alert show ${type}`;
-      setTimeout(() => alert.classList.remove('show'), 4000);
-    }
-
-    async function generateCode() {
-      const email = document.getElementById('email').value.trim();
-      if (!email) {
-        showAlert('codeAlert', '❌ Please enter your email', 'error');
-        return;
-      }
-
-      try {
-        const res = await fetch('/auth/generate-code', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to generate code');
-
-        generatedAccessCode = data.code;
-        userEmail = email;
-
-        document.getElementById('generatedCode').textContent = generatedAccessCode;
-        document.getElementById('codeDisplay').style.display = 'block';
-        document.getElementById('step1-submit').style.display = 'block';
-        document.getElementById('continueBtn').style.display = 'block';
-        showAlert('codeAlert', '✓ Code generated! Enter it below to continue.', 'success');
-      } catch (err) {
-        showAlert('codeAlert', `❌ ${err.message}`, 'error');
-      }
-    }
-
-    function copyCode() {
-      navigator.clipboard.writeText(generatedAccessCode).then(() => {
-        const copied = document.getElementById('codeCopied');
-        copied.classList.add('show');
-        setTimeout(() => copied.classList.remove('show'), 2000);
-      });
-    }
-
-    function continueToStep2() {
-      const codeConfirm = document.getElementById('codeConfirm').value.trim().toUpperCase();
-      if (!codeConfirm) {
-        showAlert('codeAlert', '❌ Please enter your code', 'error');
-        return;
-      }
-
-      if (codeConfirm !== generatedAccessCode) {
-        showAlert('codeAlert', '❌ Code does not match', 'error');
-        return;
-      }
-
-      currentStep = 2;
-      document.getElementById('step1').classList.remove('active');
-      document.getElementById('step2').classList.add('active');
-      document.getElementById('step1-dot').classList.remove('active');
-      document.getElementById('step2-dot').classList.add('active');
-    }
-
-    function backToStep1() {
-      currentStep = 1;
-      document.getElementById('step2').classList.remove('active');
-      document.getElementById('step1').classList.add('active');
-      document.getElementById('step2-dot').classList.remove('active');
-      document.getElementById('step1-dot').classList.add('active');
-    }
-
-    document.getElementById('signupForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const name = document.getElementById('name').value.trim();
-      const tiktokUsername = document.getElementById('tiktokUsername').value.trim();
-      const roomName = document.getElementById('roomName').value.trim();
-
-      if (!name || !tiktokUsername || !roomName) {
-        showAlert('profileAlert', '❌ Please fill in all fields', 'error');
-        return;
-      }
-
-      try {
-        const res = await fetch('/auth/create-account', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: userEmail,
-            code: generatedAccessCode,
-            name,
-            tiktokUsername,
-            roomName,
-          }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to create account');
-
-        window.location.href = '/dashboard';
-      } catch (err) {
-        showAlert('profileAlert', `❌ ${err.message}`, 'error');
-      }
-    });
-  </script>
 </body>
 </html>
