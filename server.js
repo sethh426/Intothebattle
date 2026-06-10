@@ -974,10 +974,40 @@ if (process.env.REDIS_URL && enableRedisAdapter) {
   }
 }
 
-app.set('trust proxy', 1);
+// Production proxy trust configuration
+// In production, trust all proxies; in development, trust only the immediate proxy
+const isProduction = process.env.NODE_ENV === 'production';
+app.set('trust proxy', isProduction ? true : 1);
+
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+
+// Request debug logging middleware
+app.use((req, res, next) => {
+  const startTime = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - startTime;
+    const logData = {
+      method: req.method,
+      path: req.path,
+      statusCode: res.statusCode,
+      durationMs: duration,
+      ip: req.ip,
+      userAgent: req.get('user-agent'),
+    };
+    
+    // Log at appropriate level based on status code
+    if (res.statusCode >= 500) {
+      logger.error(logData, `${req.method} ${req.path}`);
+    } else if (res.statusCode >= 400) {
+      logger.warn(logData, `${req.method} ${req.path}`);
+    } else {
+      logger.debug(logData, `${req.method} ${req.path}`);
+    }
+  });
+  next();
+});
 
 app.use('/', authRoutes);
 app.use('/admin', adminRoutes);
@@ -1019,7 +1049,13 @@ app.get('/', (req, res) => {
     }
   }
   // If not authenticated, serve the public homepage instead of forcing login
-  return res.sendFile(path.join(__dirname, 'home.html'));
+  const homePath = path.join(__dirname, 'home.html');
+  res.sendFile(homePath, (err) => {
+    if (err) {
+      logger.error({ err, path: homePath }, 'Failed to serve homepage');
+      res.status(500).send('Internal Server Error');
+    }
+  });
 });
 
 app.get('/home', (_req, res) => res.sendFile(path.join(__dirname, 'home.html')));

@@ -74,10 +74,6 @@ function connectClient() {
   return connectionPromise;
 }
 
-if (!useStubDb) {
-  connectClient();
-}
-
 function convertPlaceholders(sql) {
   let index = 0;
   return sql.replace(/\?/g, () => `$${++index}`);
