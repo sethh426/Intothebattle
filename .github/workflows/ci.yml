@@ -50,6 +50,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Syntax-check server
+        run: node --check server.js
+
+      - name: Start server and check /healthz
+        run: |
+          PORT=3000 nohup node server.js >server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sS http://localhost:3000/healthz >/dev/null; then
+              echo "healthz OK"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Server failed to respond; dumping logs"
+          tail -n 200 server.log
+          exit 1
+
       - name: Validate schemas
         run: npm run validate:schemas
 
