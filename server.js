@@ -945,12 +945,21 @@ if (process.env.REDIS_URL) {
     try {
       const pubClient = createRedisClient({ url: process.env.REDIS_URL });
       const subClient = pubClient.duplicate();
-      await pubClient.connect();
-      await subClient.connect();
+      
+      // Add 5s timeout to prevent hanging on unreachable Redis
+      const connectTimeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Redis connection timeout after 5s')), 5000)
+      );
+      
+      await Promise.race([
+        Promise.all([pubClient.connect(), subClient.connect()]),
+        connectTimeout
+      ]);
+      
       io.adapter(createAdapter(pubClient, subClient));
       logger.info({ redis: process.env.REDIS_URL }, 'Redis adapter connected for Socket.IO');
     } catch (err) {
-      logger.error({ err }, 'Failed to initialize Redis adapter for Socket.IO');
+      logger.error({ err }, 'Failed to initialize Redis adapter for Socket.IO - continuing without Redis');
     }
   })();
 }
