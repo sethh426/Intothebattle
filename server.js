@@ -908,6 +908,17 @@ function handleMentionAttack(room, attackerId, attackerNick, comment) {
 // APP & SOCKET.IO SETUP
 // ────────────────────────────────
 const app        = express();
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
+app.use((req, res, next) => {
+  if (process.env.LOG_LEVEL === 'debug') {
+    logger.debug({ method: req.method, path: req.path, ip: req.ip, query: req.query }, 'Incoming request');
+  }
+  next();
+});
+
 const httpServer = createServer(app);
 const io         = new Server(httpServer, { cors: { origin: '*' } });
 
@@ -1995,6 +2006,23 @@ function tick() {
 }
 
 setInterval(tick, 100);
+
+// Return explicit 404 responses and log missing routes/assets.
+app.use((req, res) => {
+  logger.warn({ method: req.method, path: req.path, query: req.query }, 'Route not found');
+  if (req.accepts('html')) {
+    return res.status(404).send('<h1>404 Not Found</h1><p>The requested resource was not found on the server.</p>');
+  }
+  if (req.accepts('json')) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  return res.status(404).type('txt').send('Not found');
+});
+
+app.use((err, req, res, next) => {
+  logger.error({ err, method: req.method, path: req.path }, 'Unhandled server error');
+  res.status(500).send('Internal server error');
+});
 
 httpServer.listen(PORT, HOST, () => {
   logger.info('\n🎮 PvP Game Server running!');
