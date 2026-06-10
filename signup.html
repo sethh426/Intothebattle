@@ -124,6 +124,19 @@
       display: block;
     }
 
+    .brand-logo-link {
+      display: block;
+      width: 76px;
+      height: 76px;
+      margin: 0 auto 18px;
+    }
+
+    .brand-logo-link img {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
     .card-title {
       font-family: 'Rajdhani', sans-serif;
       font-size: 28px;
@@ -407,6 +420,9 @@
 
   <div class="container">
     <div class="card">
+      <a href="/" class="brand-logo-link" aria-label="Back to previous page" onclick="if (window.history.length > 1) { window.history.back(); return false; }">
+        <img src="/logo.svg" alt="IntoTheBattle logo" />
+      </a>
       <div class="card-header">
         <span class="card-icon">🎮</span>
         <div class="card-title">Create your Battle Account</div>

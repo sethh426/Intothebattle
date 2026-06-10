@@ -2030,9 +2030,21 @@ function tick() {
 
 setInterval(tick, 100);
 
+// Quiet known noisy probes and missing favicon requests.
+app.get('/favicon.ico', (_req, res) => {
+  return res.status(204).end();
+});
+
+app.all('/wp-login.php', (_req, res) => {
+  return res.status(404).end();
+});
+
 // Return explicit 404 responses and log missing routes/assets.
 app.use((req, res) => {
-  logger.warn({ method: req.method, path: req.path, query: req.query }, 'Route not found');
+  const quiet404Paths = new Set(['/favicon.ico', '/wp-login.php']);
+  const logFn = quiet404Paths.has(req.path) ? logger.debug.bind(logger) : logger.warn.bind(logger);
+
+  logFn({ method: req.method, path: req.path, query: req.query }, 'Route not found');
   if (req.accepts('html')) {
     return res.status(404).send('<h1>404 Not Found</h1><p>The requested resource was not found on the server.</p>');
   }
