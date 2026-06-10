@@ -14,7 +14,7 @@ if (!connectionString) {
 
 const client = new Client({ connectionString });
 
-function waitFor(promise) {
+function waitFor(promise, timeoutMs = 0) {
   const buffer = new SharedArrayBuffer(4);
   const state = new Int32Array(buffer);
   let result;
@@ -30,15 +30,27 @@ function waitFor(promise) {
     Atomics.notify(state, 0, 1);
   });
 
+  const start = Date.now();
   while (Atomics.load(state, 0) === 0) {
-    Atomics.wait(state, 0, 0, 1000);
+    const elapsed = Date.now() - start;
+    if (timeoutMs > 0 && elapsed >= timeoutMs) break;
+    const waitMs = timeoutMs > 0 ? Math.min(1000, timeoutMs - elapsed) : 1000;
+    Atomics.wait(state, 0, 0, waitMs);
+  }
+
+  if (Atomics.load(state, 0) === 0) {
+    throw new Error('waitFor: timeout while waiting for promise');
   }
 
   if (error) throw error;
   return result;
 }
 
-waitFor(client.connect());
+// Initiate connection asynchronously without blocking the event loop
+// The client will connect in the background; queries will retry if needed
+client.connect().catch((err) => {
+  console.error('DB background connection error (non-blocking):', err?.message || err);
+});
 
 function convertPlaceholders(sql) {
   let index = 0;
@@ -58,15 +70,30 @@ function prepareStatement() {
 
   return {
     get(params) {
-      const result = waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
-      return result.rows?.[0];
+      try {
+        const result = waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
+        return result.rows?.[0];
+      } catch (err) {
+        console.error('DB query error (get):', err?.message || err);
+        throw err;
+      }
     },
     all(params) {
-      const result = waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
-      return result.rows || [];
+      try {
+        const result = waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
+        return result.rows || [];
+      } catch (err) {
+        console.error('DB query error (all):', err?.message || err);
+        throw err;
+      }
     },
     run(params) {
-      return waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
+      try {
+        return waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
+      } catch (err) {
+        console.error('DB query error (run):', err?.message || err);
+        throw err;
+      }
     }
   };
 }
@@ -94,226 +121,182 @@ const db = {
   }
 };
 
-const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
-db.exec(schema);
+async function initDb() {
+  try {
+    await client.connect();
+    console.info('Postgres connected — running schema and migrations');
 
-try {
-  db.exec('ALTER TABLE access_codes ADD COLUMN owner_name TEXT');
-} catch (_) {}
+    const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+    await client.query(schema);
 
-try {
-  db.exec('ALTER TABLE access_codes ADD COLUMN paypal_subscription_id TEXT');
-} catch (_) {}
+    const safeExec = async (sql) => {
+      try { await client.query(sql); } catch (_) {}
+    };
 
-try {
-  db.exec('ALTER TABLE access_codes ADD COLUMN room_id TEXT');
-} catch (_) {}
+    await safeExec("ALTER TABLE access_codes ADD COLUMN owner_name TEXT");
+    await safeExec("ALTER TABLE access_codes ADD COLUMN paypal_subscription_id TEXT");
+    await safeExec("ALTER TABLE access_codes ADD COLUMN room_id TEXT");
 
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS room_settings (
-      room_id TEXT PRIMARY KEY,
-      overlay_settings TEXT DEFAULT '{}',
-      audio_config TEXT DEFAULT '{}',
-      audio_library TEXT DEFAULT '[]',
-      background_filename TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-} catch (_) {}
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS room_settings (
+        room_id TEXT PRIMARY KEY,
+        overlay_settings TEXT DEFAULT '{}',
+        audio_config TEXT DEFAULT '{}',
+        audio_library TEXT DEFAULT '[]',
+        background_filename TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS app_settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL
-    )
-  `);
-  db.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT (key) DO NOTHING').run('require_room_id', '1');
-} catch (_) {}
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `);
+    try {
+      await client.query("INSERT INTO app_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO NOTHING", ['require_room_id', '1']);
+    } catch (_) {}
 
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      email TEXT UNIQUE NOT NULL,
-      password_hash TEXT,
-      name TEXT,
-      tiktok_username TEXT,
-      session_token TEXT,
-      is_active INTEGER DEFAULT 1,
-      email_verified INTEGER DEFAULT 0,
-      email_verification_token TEXT,
-      email_verification_expires TIMESTAMP,
-      password_reset_token TEXT,
-      password_reset_expires TIMESTAMP,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      last_login TIMESTAMP
-    )
-  `);
-} catch (_) {}
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        password_hash TEXT,
+        name TEXT,
+        tiktok_username TEXT,
+        session_token TEXT,
+        is_active INTEGER DEFAULT 1,
+        email_verified INTEGER DEFAULT 0,
+        email_verification_token TEXT,
+        email_verification_expires TIMESTAMP,
+        password_reset_token TEXT,
+        password_reset_expires TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_login TIMESTAMP
+      )
+    `);
 
-try {
-  db.exec('ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0');
-} catch (_) {}
+    await safeExec('ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0');
+    await safeExec('ALTER TABLE users ADD COLUMN email_verification_token TEXT');
+    await safeExec('ALTER TABLE users ADD COLUMN email_verification_expires TIMESTAMP');
+    await safeExec('ALTER TABLE users ADD COLUMN password_reset_token TEXT');
+    await safeExec('ALTER TABLE users ADD COLUMN password_reset_expires TIMESTAMP');
 
-try {
-  db.exec('ALTER TABLE users ADD COLUMN email_verification_token TEXT');
-} catch (_) {}
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS user_rooms (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        room_id TEXT UNIQUE NOT NULL,
+        room_name TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
 
-try {
-  db.exec('ALTER TABLE users ADD COLUMN email_verification_expires TIMESTAMP');
-} catch (_) {}
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        paypal_subscription_id TEXT UNIQUE,
+        plan_type TEXT,
+        status TEXT DEFAULT 'active',
+        started_at TIMESTAMP,
+        next_billing_date TIMESTAMP,
+        expires_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
 
-try {
-  db.exec('ALTER TABLE users ADD COLUMN password_reset_token TEXT');
-} catch (_) {}
+    await safeExec('ALTER TABLE access_codes ADD COLUMN user_id INTEGER');
+    await safeExec("ALTER TABLE access_codes ADD COLUMN code_type TEXT DEFAULT 'trial'");
 
-try {
-  db.exec('ALTER TABLE users ADD COLUMN password_reset_expires TIMESTAMP');
-} catch (_) {}
+    // Migrate access_codes without room_id
+    try {
+      const res = await client.query("SELECT id FROM access_codes WHERE room_id IS NULL OR room_id = ''");
+      const codesWithoutRoom = res.rows || [];
+      for (const row of codesWithoutRoom) {
+        const roomId = Math.random().toString(36).slice(2, 10);
+        await client.query('UPDATE access_codes SET room_id = $1 WHERE id = $2', [roomId, row.id]);
+      }
+    } catch (_) {}
 
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS user_rooms (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL,
-      room_id TEXT UNIQUE NOT NULL,
-      room_name TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(user_id) REFERENCES users(id)
-    )
-  `);
-} catch (_) {}
+    await safeExec('ALTER TABLE access_codes ADD COLUMN trial_started TIMESTAMP');
+    await safeExec('ALTER TABLE access_codes ADD COLUMN trial_days INTEGER DEFAULT 14');
+    await safeExec("ALTER TABLE access_codes ADD COLUMN subscription_status TEXT DEFAULT 'active'");
+    await safeExec('ALTER TABLE access_codes ADD COLUMN streamer_name TEXT');
+    await safeExec('ALTER TABLE access_codes ADD COLUMN tiktok_username TEXT');
 
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS subscriptions (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER NOT NULL,
-      paypal_subscription_id TEXT UNIQUE,
-      plan_type TEXT,
-      status TEXT DEFAULT 'active',
-      started_at TIMESTAMP,
-      next_billing_date TIMESTAMP,
-      expires_at TIMESTAMP,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(user_id) REFERENCES users(id)
-    )
-  `);
-} catch (_) {}
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS battle_stats (
+        id SERIAL PRIMARY KEY,
+        code_id INTEGER NOT NULL,
+        room_id TEXT,
+        total_battles INTEGER DEFAULT 0,
+        total_wins INTEGER DEFAULT 0,
+        total_kills INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(code_id) REFERENCES access_codes(id)
+      )
+    `);
 
-try {
-  db.exec('ALTER TABLE access_codes ADD COLUMN user_id INTEGER');
-} catch (_) {}
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS room_player_stats (
+        room_id TEXT NOT NULL,
+        unique_id TEXT NOT NULL,
+        nickname TEXT,
+        hp INTEGER DEFAULT 300,
+        max_hp INTEGER DEFAULT 300,
+        strength INTEGER DEFAULT 15,
+        kills INTEGER DEFAULT 0,
+        kill_streak INTEGER DEFAULT 0,
+        last_kill_time INTEGER DEFAULT 0,
+        alive INTEGER DEFAULT 0,
+        last_active INTEGER,
+        color TEXT,
+        message_boost_expires INTEGER DEFAULT 0,
+        force_spawn INTEGER DEFAULT 0,
+        PRIMARY KEY(room_id, unique_id)
+      )
+    `);
 
-try {
-  db.exec("ALTER TABLE access_codes ADD COLUMN code_type TEXT DEFAULT 'trial'");
-} catch (_) {}
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS global_player_stats (
+        unique_id TEXT PRIMARY KEY,
+        nickname TEXT,
+        hp INTEGER DEFAULT 300,
+        max_hp INTEGER DEFAULT 300,
+        strength INTEGER DEFAULT 15,
+        kills INTEGER DEFAULT 0,
+        last_active INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
-try {
-  const codesWithoutRoom = db.prepare("SELECT id FROM access_codes WHERE room_id IS NULL OR room_id = ''").all();
-  const updateRoom = db.prepare('UPDATE access_codes SET room_id = ? WHERE id = ?');
-  const migrateRooms = db.transaction(() => {
-    codesWithoutRoom.forEach(row => {
-      updateRoom.run(Math.random().toString(36).slice(2, 10), row.id);
-    });
-  });
-  migrateRooms();
-} catch (_) {}
+    // Seed beta access codes
+    try {
+      for (let i = 1; i <= 25; i++) {
+        await client.query(
+          `INSERT INTO access_codes (code, email, expires_at, trial_started, subscription_status) VALUES ($1, $2, '2099-12-31 23:59:59', CURRENT_TIMESTAMP, 'active') ON CONFLICT (code) DO NOTHING`,
+          [`Betatester${i}`, `betatester${i}@tiktokbr.com`]
+        );
+      }
+    } catch (_) {}
 
-// ─── TRIAL & MONETIZATION COLUMNS ──────────────────────────────────────────
-try {
-  db.exec('ALTER TABLE access_codes ADD COLUMN trial_started TIMESTAMP');
-} catch (_) {}
-
-try {
-  db.exec('ALTER TABLE access_codes ADD COLUMN trial_days INTEGER DEFAULT 14');
-} catch (_) {}
-
-try {
-  db.exec("ALTER TABLE access_codes ADD COLUMN subscription_status TEXT DEFAULT 'active'");
-} catch (_) {}
-
-try {
-  db.exec('ALTER TABLE access_codes ADD COLUMN streamer_name TEXT');
-} catch (_) {}
-
-try {
-  db.exec('ALTER TABLE access_codes ADD COLUMN tiktok_username TEXT');
-} catch (_) {}
-
-// ─── BATTLE STATS TABLE ────────────────────────────────────────────────────
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS battle_stats (
-      id SERIAL PRIMARY KEY,
-      code_id INTEGER NOT NULL,
-      room_id TEXT,
-      total_battles INTEGER DEFAULT 0,
-      total_wins INTEGER DEFAULT 0,
-      total_kills INTEGER DEFAULT 0,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY(code_id) REFERENCES access_codes(id)
-    )
-  `);
-} catch (_) {}
-
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS room_player_stats (
-      room_id TEXT NOT NULL,
-      unique_id TEXT NOT NULL,
-      nickname TEXT,
-      hp INTEGER DEFAULT 300,
-      max_hp INTEGER DEFAULT 300,
-      strength INTEGER DEFAULT 15,
-      kills INTEGER DEFAULT 0,
-      kill_streak INTEGER DEFAULT 0,
-      last_kill_time INTEGER DEFAULT 0,
-      alive INTEGER DEFAULT 0,
-      last_active INTEGER,
-      color TEXT,
-      message_boost_expires INTEGER DEFAULT 0,
-      force_spawn INTEGER DEFAULT 0,
-      PRIMARY KEY(room_id, unique_id)
-    )
-  `);
-} catch (_) {}
-
-try {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS global_player_stats (
-      unique_id TEXT PRIMARY KEY,
-      nickname TEXT,
-      hp INTEGER DEFAULT 300,
-      max_hp INTEGER DEFAULT 300,
-      strength INTEGER DEFAULT 15,
-      kills INTEGER DEFAULT 0,
-      last_active INTEGER,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-} catch (_) {}
-
-// ─── SEED: BETA ACCESS CODES (betatester1–betatester25) ──────────────────────
-const insertCode = db.prepare(`
-  INSERT INTO access_codes (code, email, expires_at, trial_started, subscription_status) ON CONFLICT (code) DO NOTHING
-  VALUES (?, ?, '2099-12-31 23:59:59', CURRENT_TIMESTAMP, 'active')
-`);
-
-const seedBetaCodes = db.transaction(() => {
-  for (let i = 1; i <= 25; i++) {
-    insertCode.run(`Betatester${i}`, `betatester${i}@tiktokbr.com`);
+    console.info('DB initialization complete');
+  } catch (err) {
+    console.error('DB init error:', err?.message || err);
   }
-});
+}
 
-seedBetaCodes();
+// Start initialization in the background so module load doesn't block
+initDb().catch(err => console.error('initDb failed:', err));
 
 export default db;
