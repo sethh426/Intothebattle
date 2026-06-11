@@ -36,8 +36,11 @@ function getDefaultRoom() {
   return getOrCreateRoom(DEFAULT_ROOM_ID);
 }
 
-// Feature gate for room-scoped behavior. When false, server runs as single-instance
-const enableRoomScoped = process.env.ENABLE_ROOM_SCOPED === 'true';
+// Feature gate for room-scoped behavior. Production defaults to signed,
+// room-scoped overlay access unless explicitly disabled.
+const enableRoomScoped = process.env.ENABLE_ROOM_SCOPED == null
+  ? process.env.NODE_ENV === 'production'
+  : process.env.ENABLE_ROOM_SCOPED === 'true';
 
 function requiresRoomId() {
   try {

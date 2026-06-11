@@ -112,12 +112,13 @@ NODE_ENV=development
 PORT=3000
 API_KEY=your_tiktok_api_key
 JWT_SECRET=replace_with_a_long_random_secret
-OVERLAY_TOKEN_SECRET=replace_with_a_second_long_random_secret
 DATABASE_URL=postgres://postgres:example@localhost:5432/tiktokbr
 REDIS_URL=redis://localhost:6379
 ENABLE_ROOM_SCOPED=true
 APP_BASE_URL=http://localhost:3000
 ```
+
+`OVERLAY_TOKEN_SECRET` is optional locally and recommended in production. If it is not set, signed overlay URLs use `JWT_SECRET`.
 
 Payment/email variables are only needed when testing those flows:
 
@@ -140,6 +141,8 @@ DEV_TEST_MODE=false
 DISK_PATH=/var/data
 METRICS_TOKEN=replace_with_a_metrics_scrape_token
 ```
+
+`METRICS_TOKEN` is only needed if Prometheus or another monitor scrapes `/metrics`. In production, `/metrics` returns 404 when no token is configured.
 
 ### Run locally with Node
 
@@ -300,6 +303,10 @@ OVERLAY_TOKEN_SECRET=<long random overlay signing secret>
 ENABLE_ROOM_SCOPED=true
 METRICS_TOKEN=<long random metrics scrape token>
 ```
+
+`ENABLE_ROOM_SCOPED` defaults to `true` in production when unset. Set it explicitly if your host makes env behavior easier to audit.
+
+`OVERLAY_TOKEN_SECRET` can be added later; until then, overlay URLs are signed with `JWT_SECRET`. `METRICS_TOKEN` can also be added later if you are not scraping `/metrics` yet.
 
 Use a managed PostgreSQL service for production. Do not rely on local JSON files or ephemeral app storage for production state.
 

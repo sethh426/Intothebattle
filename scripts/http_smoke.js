@@ -23,7 +23,6 @@ const server = spawn(process.execPath, ['server.js'], {
     API_KEY: 'test',
     JWT_SECRET: jwtSecret,
     OVERLAY_TOKEN_SECRET: jwtSecret,
-    ENABLE_ROOM_SCOPED: 'true',
     SKIP_DB: 'true',
     DEV_TEST_MODE: 'false',
     DISK_PATH: diskPath,
