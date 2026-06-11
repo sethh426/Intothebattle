@@ -3,35 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Register — IntoTheBattle | Create Your TikTok Battle Overlay Account</title>
-  <meta name="description" content="Create a free IntoTheBattle account to set up your interactive TikTok LIVE battle overlay with real-time viewer engagement and stream management." />
-  <meta name="keywords" content="IntoTheBattle register, TikTok overlay signup, creator account, battle overlay setup, stream tools" />
+  <title>Create Account — IntoTheBattle | TikTok LIVE Battle Overlay</title>
+  <meta name="description" content="Create your IntoTheBattle creator account with email and set up your TikTok LIVE battle overlay room." />
+  <meta name="keywords" content="IntoTheBattle register, TikTok LIVE overlay signup, creator account, battle overlay setup, streamer tools" />
   <meta name="robots" content="index, follow" />
   <meta name="author" content="IntoTheBattle" />
   <link rel="canonical" href="https://intothebattle.com/register" />
-  
+
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Create Your IntoTheBattle Account" />
-  <meta property="og:description" content="Join creators using IntoTheBattle to turn TikTok LIVE into an interactive battle arena." />
+  <meta property="og:description" content="Use email to create your creator account and continue setting up your TikTok LIVE battle room." />
   <meta property="og:url" content="https://intothebattle.com/register" />
-  <meta property="og:image" content="https://intothebattle.com/intothebattlelogo_logo_only.svg" />
+  <meta property="og:image" content="https://intothebattle.com/logo.svg" />
   <meta property="og:site_name" content="IntoTheBattle" />
-  
+
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Create Your IntoTheBattle Account" />
-  <meta name="twitter:description" content="Join creators using IntoTheBattle to turn TikTok LIVE into an interactive battle arena." />
-  <meta name="twitter:image" content="https://intothebattle.com/intothebattlelogo_logo_only.svg" />
-  
-  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
-  <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
-  
+  <meta name="twitter:description" content="Create your TikTok LIVE battle overlay account and continue to room setup." />
+  <meta name="twitter:image" content="https://intothebattle.com/logo.svg" />
+
+  <link rel="icon" href="/logo.svg" />
+  <link rel="apple-touch-icon" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    "name": "IntoTheBattle Registration",
+    "name": "IntoTheBattle Email Registration",
     "url": "https://intothebattle.com/register",
-    "description": "Create a free account to set up your TikTok LIVE battle overlay with interactive viewer engagement.",
+    "description": "Create your IntoTheBattle account with email and continue setting up your TikTok LIVE battle overlay.",
     "isPartOf": {
       "@type": "WebSite",
       "name": "IntoTheBattle",
@@ -39,93 +42,679 @@
     }
   }
   </script>
-  
+
   <style>
-    :root {
-      --primary: #4D96FF;
-      --accent: #6BCB77;
-      --dark: #050d1a;
-      --muted: #8ca2d1;
-      --card-bg: rgba(8,18,40,0.96);
-      --border: rgba(255,255,255,0.06);
-      --success: #6BCB77;
-      --error: #ff5f6d;
-    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #f6c95b;
+      --gold-2: #ffdf8a;
+      --ember: #ff6a3d;
+      --crimson: #e83b5f;
+      --cyan: #55e7ff;
+      --green: #77f0a1;
+      --bg: #030406;
+      --panel: rgba(13, 18, 30, .82);
+      --panel-strong: rgba(13, 18, 28, .96);
+      --line: rgba(246, 201, 91, .22);
+      --white-line: rgba(255, 255, 255, .1);
+      --muted: #a8afbf;
+      --dim: #677083;
+      --text: #fff8e6;
+      --error: #ff5f6d;
+      --success: #77f0a1;
+      --shadow: 0 32px 90px rgba(0, 0, 0, .55);
+    }
+
+    html { scroll-behavior: smooth; }
+
     body {
       min-height: 100vh;
-      background: radial-gradient(circle at top left, rgba(77,150,255,.06), transparent 25%), var(--dark);
-      color: #e8eef8;
+      font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 2%, rgba(246, 201, 91, .18), transparent 30%),
+        radial-gradient(circle at 84% 18%, rgba(232, 59, 95, .15), transparent 28%),
+        radial-gradient(circle at 75% 80%, rgba(85, 231, 255, .12), transparent 32%),
+        linear-gradient(180deg, #050608 0%, #070a12 42%, #030406 100%);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(246, 201, 91, .035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(246, 201, 91, .035) 1px, transparent 1px);
+      background-size: 58px 58px;
+      mask-image: radial-gradient(circle at top, black, transparent 72%);
+      opacity: .7;
+      z-index: -3;
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      inset: auto 0 0;
+      height: 34vh;
+      pointer-events: none;
+      background:
+        linear-gradient(to top, rgba(0, 0, 0, .82), transparent),
+        repeating-linear-gradient(90deg, transparent 0 22px, rgba(0, 0, 0, .34) 22px 25px);
+      opacity: .42;
+      z-index: -2;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .nav-wrap {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      padding: 18px clamp(16px, 4vw, 42px) 0;
+    }
+
+    nav {
+      max-width: 1180px;
+      margin: 0 auto;
       display: flex;
       align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(5, 7, 11, .76);
+      backdrop-filter: blur(22px);
+      box-shadow: 0 20px 70px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .08);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 46px;
+      height: 46px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      padding: 4px;
+      background: linear-gradient(145deg, rgba(246, 201, 91, .16), rgba(255, 255, 255, .04));
+      border: 1px solid rgba(246, 201, 91, .34);
+      box-shadow: 0 0 44px rgba(246, 201, 91, .22), inset 0 0 24px rgba(0, 0, 0, .35);
+      overflow: hidden;
+      flex: 0 0 auto;
+    }
+
+    .brand-mark img { width: 100%; height: 100%; object-fit: contain; display: block; }
+
+    .brand-text { line-height: 1; }
+    .brand-text strong {
+      display: block;
+      font-family: 'Rajdhani', sans-serif;
+      letter-spacing: .08em;
+      font-size: 20px;
+      text-transform: uppercase;
+    }
+    .brand-text span {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+
+    .nav-links { display: flex; align-items: center; gap: 8px; }
+    .nav-link {
+      padding: 11px 14px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 800;
+      transition: color .18s ease, background .18s ease;
+    }
+    .nav-link:hover { color: var(--text); background: rgba(255, 255, 255, .06); }
+    .nav-cta {
+      display: inline-flex;
+      align-items: center;
       justify-content: center;
-      padding: 28px;
-      font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      min-height: 42px;
+      padding: 0 18px;
+      border-radius: 999px;
+      color: #160d02;
+      font-weight: 900;
+      font-size: 14px;
+      background: linear-gradient(135deg, var(--gold), #fff0b9 52%, var(--ember));
+      box-shadow: 0 16px 36px rgba(246, 201, 91, .22), inset 0 1px 0 rgba(255, 255, 255, .65);
     }
-    .card {
-      width: min(720px, 100%);
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 36px;
-      box-shadow: 0 28px 80px rgba(0,0,0,.35);
+
+    .register-shell {
+      width: min(1180px, calc(100% - 36px));
+      min-height: calc(100vh - 88px);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(0, .95fr) minmax(380px, 1.05fr);
+      gap: clamp(30px, 5vw, 70px);
+      align-items: center;
+      padding: clamp(32px, 5vw, 64px) 0 58px;
     }
-    h1 { font-family: 'Rajdhani', sans-serif; font-size: 28px; margin-bottom: 6px; }
-    p.lead { color: var(--muted); margin-bottom: 18px; }
-    .form-grid { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
-    .form-group { margin-bottom: 12px; }
-    label { display:block; font-size: 13px; color: var(--muted); margin-bottom: 8px; font-weight:600; }
-    input[type="text"], input[type="email"], input[type="password"] {
-      width:100%; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.06); background: rgba(255,255,255,0.03); color: #fff; font-size: 15px;
+
+    .hero-copy h1 {
+      max-width: 700px;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: clamp(46px, 7vw, 84px);
+      line-height: .92;
+      letter-spacing: -.03em;
+      text-transform: uppercase;
+      margin-bottom: 22px;
     }
+
+    .hero-copy h1 span {
+      display: block;
+      color: transparent;
+      background: linear-gradient(100deg, #fff7d7, var(--gold), var(--ember));
+      -webkit-background-clip: text;
+      background-clip: text;
+      filter: drop-shadow(0 0 28px rgba(246, 201, 91, .18));
+    }
+
+    .lede {
+      max-width: 620px;
+      color: #c7cedd;
+      font-size: clamp(17px, 2vw, 21px);
+      line-height: 1.7;
+      margin-bottom: 26px;
+    }
+
+    .trust-list {
+      list-style: none;
+      display: grid;
+      gap: 12px;
+      max-width: 620px;
+    }
+
+    .trust-list li {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      color: #dfe6f3;
+      line-height: 1.55;
+    }
+
+    .trust-list li::before {
+      content: '✦';
+      color: var(--gold);
+      font-weight: 900;
+      line-height: 1.55;
+    }
+
+    .mini-panel {
+      margin-top: 28px;
+      max-width: 620px;
+      border: 1px solid rgba(246, 201, 91, .22);
+      border-radius: 24px;
+      padding: 18px;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(246, 201, 91, .12), transparent 32%),
+        rgba(255, 255, 255, .045);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07);
+    }
+
+    .mini-panel-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      color: var(--gold-2);
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .mini-item {
+      padding: 12px;
+      border-radius: 16px;
+      background: rgba(0, 0, 0, .24);
+      border: 1px solid rgba(255, 255, 255, .08);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .mini-item b {
+      display: block;
+      color: #fff;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+
+    .register-card-wrap { position: relative; }
+    .register-card-wrap::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 34px;
+      background: linear-gradient(145deg, rgba(246, 201, 91, .72), rgba(255, 255, 255, .1) 28%, rgba(232, 59, 95, .45) 62%, rgba(85, 231, 255, .25));
+      filter: drop-shadow(0 28px 95px rgba(0, 0, 0, .56));
+      z-index: -1;
+    }
+
+    .register-card {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(28px, 4vw, 42px);
+      border-radius: 33px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      background:
+        radial-gradient(circle at 50% 8%, rgba(246, 201, 91, .16), transparent 28%),
+        linear-gradient(180deg, var(--panel-strong), rgba(4, 6, 10, .96));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
+    }
+
+    .card-top { text-align: center; margin-bottom: 24px; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      width: fit-content;
+      margin-bottom: 14px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(119, 240, 161, .24);
+      background: rgba(119, 240, 161, .08);
+      color: #b8ffd0;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 99px;
+      background: var(--green);
+      box-shadow: 0 0 16px rgba(119, 240, 161, .9);
+    }
+
+    .card-title {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: clamp(32px, 4vw, 46px);
+      line-height: .95;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .card-sub {
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 15px;
+      max-width: 430px;
+      margin: 0 auto;
+    }
+
+    .google-option {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .divider {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+      margin: 18px 0;
+      color: var(--dim);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      height: 1px;
+      background: rgba(255, 255, 255, .1);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .form-group { display: grid; gap: 8px; }
     .full { grid-column: 1 / -1; }
-    .btn { width:100%; padding:14px 16px; border-radius:12px; border:none; font-weight:700; cursor:pointer; }
-    .btn-primary { background: linear-gradient(135deg,var(--primary),#6ab0ff); color:#fff; }
-    .notice { border-radius:12px; padding:12px 14px; margin-bottom:12px; font-size:14px; }
-    .notice.error { background: rgba(255,95,109,.08); border:1px solid rgba(255,95,109,.12); color: var(--error); }
-    .notice.success { background: rgba(107,203,119,.06); border:1px solid rgba(107,203,119,.12); color: var(--success); }
-    .helper { margin-top:14px; color: var(--muted); font-size:14px; }
-    .helper a { color: var(--primary); text-decoration:none; font-weight:600 }
-    .challenge-instruction { color: var(--muted); margin-bottom:12px; font-size:14px; }
-    .challenge-grid { display:grid; grid-template-columns: repeat(3,1fr); gap:12px; }
-    .challenge-card { cursor:pointer; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,.06); background: rgba(255,255,255,0.02); padding:8px; display:flex; flex-direction:column; align-items:center; gap:8px; transition: box-shadow .15s, transform .15s, border-color .15s; }
-    .challenge-card img { width:100%; height:120px; object-fit:cover; border-radius:8px; }
-    .challenge-card .challenge-label { color:#fff; font-size:14px; text-align:center; }
-    .challenge-card.selected { box-shadow: 0 8px 30px rgba(77,150,255,.12); border-color: rgba(77,150,255,.6); transform: translateY(-4px); }
-    @media(max-width:720px) { .form-grid { grid-template-columns: 1fr; } .challenge-grid { grid-template-columns: repeat(2,1fr); } .challenge-card img { height:100px; } }
+
+    label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    input[type="text"], input[type="email"], input[type="password"] {
+      width: 100%;
+      min-height: 52px;
+      padding: 13px 15px;
+      border-radius: 15px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      background: rgba(255, 255, 255, .055);
+      color: #fff;
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+    }
+
+    input:focus {
+      border-color: rgba(246, 201, 91, .55);
+      background: rgba(246, 201, 91, .07);
+      box-shadow: 0 0 0 4px rgba(246, 201, 91, .09);
+    }
+
+    input::placeholder { color: rgba(255, 255, 255, .28); }
+
+    .security-panel {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, .1);
+      background: rgba(255, 255, 255, .04);
+    }
+
+    .security-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .security-head strong {
+      font-size: 14px;
+      color: #fff;
+    }
+
+    .security-head span {
+      color: var(--gold-2);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
+
+    .challenge-instruction {
+      color: var(--muted);
+      margin-bottom: 12px;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .challenge-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .challenge-card {
+      cursor: pointer;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .08);
+      background: rgba(0, 0, 0, .2);
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      transition: box-shadow .15s, transform .15s, border-color .15s, background .15s;
+      font-family: inherit;
+    }
+
+    .challenge-card img {
+      width: 100%;
+      height: 92px;
+      object-fit: cover;
+      border-radius: 11px;
+      display: block;
+    }
+
+    .challenge-card .challenge-label {
+      color: #fff;
+      font-size: 12px;
+      text-align: center;
+      font-weight: 800;
+    }
+
+    .challenge-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(246, 201, 91, .38);
+      background: rgba(246, 201, 91, .06);
+    }
+
+    .challenge-card.selected {
+      box-shadow: 0 12px 34px rgba(246, 201, 91, .14);
+      border-color: rgba(246, 201, 91, .72);
+      transform: translateY(-3px);
+      background: rgba(246, 201, 91, .1);
+    }
+
+    .actions {
+      display: grid;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 56px;
+      padding: 0 20px;
+      border-radius: 16px;
+      border: 1px solid transparent;
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing: .01em;
+      cursor: pointer;
+      transition: transform .16s ease, filter .16s ease, box-shadow .16s ease, border-color .16s ease, opacity .16s ease;
+      font-family: inherit;
+    }
+
+    .btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.06); }
+    .btn:disabled { opacity: .56; cursor: not-allowed; }
+
+    .btn-primary {
+      color: #150b02;
+      background: linear-gradient(135deg, var(--gold), #fff1bd 52%, var(--ember));
+      box-shadow: 0 20px 55px rgba(246, 201, 91, .24), inset 0 1px 0 rgba(255, 255, 255, .65);
+    }
+
+    .btn-secondary {
+      color: #f8f3e8;
+      background: rgba(255, 255, 255, .065);
+      border-color: rgba(255, 255, 255, .12);
+    }
+
+    .notice {
+      border-radius: 16px;
+      padding: 13px 15px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      line-height: 1.45;
+      border: 1px solid rgba(255, 255, 255, .1);
+    }
+
+    .notice.error {
+      background: rgba(255, 95, 109, .08);
+      border-color: rgba(255, 95, 109, .22);
+      color: #ff9aa4;
+    }
+
+    .notice.success {
+      background: rgba(119, 240, 161, .08);
+      border-color: rgba(119, 240, 161, .22);
+      color: var(--success);
+    }
+
+    .helper {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      text-align: center;
+    }
+
+    .helper a { color: var(--gold-2); font-weight: 900; }
+
+    .form-note {
+      margin-top: 12px;
+      color: var(--dim);
+      font-size: 12px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    @media (max-width: 980px) {
+      .register-shell {
+        grid-template-columns: 1fr;
+        padding-top: 34px;
+      }
+      .hero-copy { text-align: center; }
+      .lede, .trust-list, .mini-panel { margin-left: auto; margin-right: auto; }
+      .trust-list li { justify-content: center; }
+    }
+
+    @media (max-width: 620px) {
+      .nav-wrap { padding: 12px 12px 0; }
+      nav { border-radius: 18px; }
+      .brand-text span, .nav-link { display: none; }
+      .register-shell { width: min(100% - 24px, 1180px); padding-top: 24px; }
+      .hero-copy h1 { font-size: clamp(40px, 13vw, 62px); }
+      .form-grid, .mini-grid { grid-template-columns: 1fr; }
+      .challenge-grid { grid-template-columns: 1fr 1fr; }
+      .register-card { padding: 24px; }
+      .security-head { align-items: flex-start; flex-direction: column; }
+    }
   </style>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    "name": "Register - IntoTheBattle",
-    "url": "https://intothebattle.com/register",
-    "description": "Register for IntoTheBattle and control your TikTok LIVE battle room, overlay effects, and subscription access."
-  }
-  </script>
 </head>
 <body>
-  <div class="card">
-    <h1>Build your live battle room</h1>
-    <p>Register with email, name, and TikTok username to control your live overlay, manage your arena, and launch subscription-powered viewer battles.</p>
-    <a href="/auth/google" class="btn btn-primary" style="margin-bottom:18px;display:inline-flex;align-items:center;justify-content:center;gap:10px;">Continue with Google</a>
-    <p class="helper">Prefer Google sign-in? Use the button above to create an account instantly.</p>
-    <div id="status"></div>
-    <div class="form-group"><label for="name">Name</label><input id="name" type="text" autocomplete="name" /></div>
-    <div class="form-group"><label for="tiktokUsername">TikTok Username</label><input id="tiktokUsername" type="text" autocomplete="off" placeholder="yourusername" /></div>
-    <div class="form-group"><label for="email">Email</label><input id="email" type="email" autocomplete="email" /></div>
-    <div class="form-group"><label for="password">Password</label><input id="password" type="password" autocomplete="new-password" /></div>
-    <div class="form-group">
-      <label>Security check</label>
-      <div id="challengeInstruction" class="challenge-instruction">Loading security check…</div>
-      <div id="challengeGrid" class="challenge-grid"></div>
-      <p class="helper">Select the correct image to prove you’re human before creating your creator account.</p>
-    </div>
-    <input id="captchaToken" type="hidden" />
-    <input id="captchaAnswer" type="hidden" />
-    <button id="registerBtn" type="button" disabled>Register</button>
-    <p class="helper">Already have an account? <a href="/login">Login here</a>.</p>
+  <div class="nav-wrap">
+    <nav aria-label="Main navigation">
+      <a class="brand" href="/" aria-label="IntoTheBattle home">
+        <span class="brand-mark"><img src="/logo.svg" alt="IntoTheBattle logo" /></span>
+        <span class="brand-text">
+          <strong>IntoTheBattle</strong>
+          <span>Email creator setup</span>
+        </span>
+      </a>
+      <div class="nav-links">
+        <a class="nav-link" href="/signup">Signup options</a>
+        <a class="nav-link" href="/login">Login</a>
+        <a class="nav-cta" href="/auth/google">Use Google</a>
+      </div>
+    </nav>
   </div>
+
+  <main class="register-shell">
+    <section class="hero-copy" aria-labelledby="register-title">
+      <h1 id="register-title">Create your account. <span>Build your room.</span></h1>
+      <p class="lede">Use email to create your creator account, then continue into setup for your TikTok LIVE battle room, overlay controls, and stream-ready arena.</p>
+      <ul class="trust-list">
+        <li>Works with OBS browser sources and TikTok Studio window capture.</li>
+        <li>Dashboard controls for rooms, visuals, audio, and stream state.</li>
+        <li>Viewer-powered attacks and gift-triggered effects built for LIVE chaos.</li>
+      </ul>
+      <div class="mini-panel" aria-label="Registration outcome preview">
+        <div class="mini-panel-top"><span>After registration</span><span>Setup ready</span></div>
+        <div class="mini-grid">
+          <div class="mini-item"><b>Account</b>Creator profile</div>
+          <div class="mini-item"><b>Room</b>Battle setup</div>
+          <div class="mini-item"><b>Overlay</b>Stream path</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="register-card-wrap" aria-label="Create email account">
+      <div class="register-card">
+        <div class="card-top">
+          <div class="eyebrow">Email account setup</div>
+          <h2 class="card-title">Enter the arena</h2>
+          <p class="card-sub">Create your account with email, then continue to your welcome setup page.</p>
+        </div>
+
+        <div class="google-option">
+          <a href="/auth/google" class="btn btn-secondary">Prefer Google? Continue with Google</a>
+          <p class="helper">Google is the fastest path, but email works just as well.</p>
+        </div>
+
+        <div class="divider">Email details</div>
+
+        <div id="status" aria-live="polite"></div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="name">Name</label>
+            <input id="name" type="text" autocomplete="name" placeholder="Creator name" />
+          </div>
+          <div class="form-group">
+            <label for="email">Email</label>
+            <input id="email" type="email" autocomplete="email" placeholder="you@example.com" />
+          </div>
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input id="password" type="password" autocomplete="new-password" placeholder="Create a password" />
+          </div>
+          <div class="form-group">
+            <label for="tiktokUsername">TikTok username</label>
+            <input id="tiktokUsername" type="text" autocomplete="off" placeholder="yourusername" />
+          </div>
+        </div>
+
+        <div class="security-panel">
+          <div class="security-head">
+            <strong>Quick security check</strong>
+            <span>Choose one image</span>
+          </div>
+          <div id="challengeInstruction" class="challenge-instruction">Loading security check…</div>
+          <div id="challengeGrid" class="challenge-grid"></div>
+          <p class="form-note">This helps keep automated signups away from creator accounts.</p>
+        </div>
+
+        <input id="captchaToken" type="hidden" />
+        <input id="captchaAnswer" type="hidden" />
+
+        <div class="actions">
+          <button id="registerBtn" type="button" class="btn btn-primary" disabled>Create account and continue →</button>
+        </div>
+
+        <p class="helper" style="margin-top:16px;">Already have an account? <a href="/login">Sign in here</a>.</p>
+      </div>
+    </section>
+  </main>
+
   <script>
     const statusEl = document.getElementById('status');
     const registerBtn = document.getElementById('registerBtn');
@@ -141,6 +730,11 @@
 
     function showStatus(message, isError = false) {
       statusEl.innerHTML = `<div class="notice ${isError ? 'error' : 'success'}">${message}</div>`;
+    }
+
+    function setLoading(isLoading) {
+      registerBtn.disabled = isLoading || !captchaTokenInput.value;
+      registerBtn.textContent = isLoading ? 'Creating account…' : 'Create account and continue →';
     }
 
     function renderChallenge(challenge) {
@@ -166,6 +760,7 @@
     }
 
     async function loadSecurityChallenge() {
+      registerBtn.disabled = true;
       try {
         const res = await fetch('/auth/user/register-challenge', { credentials: 'same-origin' });
         const json = await res.json();
@@ -174,8 +769,10 @@
         }
         renderChallenge({ ...json.challenge, token: json.token });
       } catch (err) {
-        challengeInstruction.textContent = 'Unable to load security check. Refresh the page to try again.';
+        challengeInstruction.innerHTML = 'Unable to load security check. <button type="button" id="retryChallenge" class="btn btn-secondary" style="min-height:38px;padding:0 12px;margin-left:8px;font-size:13px;">Retry</button>';
         registerBtn.disabled = true;
+        const retry = document.getElementById('retryChallenge');
+        if (retry) retry.addEventListener('click', loadSecurityChallenge);
         console.error(err);
       }
     }
@@ -183,20 +780,26 @@
     async function registerAccount() {
       statusEl.innerHTML = '';
       const name = nameInput.value.trim();
-      const tiktokUsername = tiktokInput.value.trim();
+      const tiktokUsername = tiktokInput.value.trim().replace(/^@+/, '');
       const email = emailInput.value.trim();
       const password = passwordInput.value;
       const captchaToken = captchaTokenInput.value;
       const captchaAnswer = captchaAnswerInput.value;
 
-      if (!name || !tiktokUsername || !email || !password) {
-        return showStatus('All fields are required.', true);
+      if (!name || !email || !password || !tiktokUsername) {
+        return showStatus('Please complete every field before continuing.', true);
+      }
+      if (!email.includes('@') || !email.includes('.')) {
+        return showStatus('Please enter a valid email address.', true);
+      }
+      if (password.length < 8) {
+        return showStatus('Please use a password with at least 8 characters.', true);
       }
       if (!captchaToken || !captchaAnswer) {
-        return showStatus('Please complete the security check by selecting the correct image.', true);
+        return showStatus('Please complete the quick security check before continuing.', true);
       }
 
-      registerBtn.disabled = true;
+      setLoading(true);
       try {
         const res = await fetch('/auth/user/register', {
           method: 'POST',
@@ -213,18 +816,18 @@
         });
         const json = await res.json();
         if (!res.ok) {
-          showStatus(json.error || 'Registration failed.', true);
+          showStatus(json.error || 'Registration failed. Please try again.', true);
           await loadSecurityChallenge();
           return;
         }
 
-        showStatus(`Account created successfully. Account ID: ${json.accountId}. Redirecting to your welcome page...`);
-        setTimeout(() => { window.location.href = '/dashboard/welcome'; }, 2200);
+        showStatus('Account created. Taking you to setup…');
+        setTimeout(() => { window.location.href = '/dashboard/welcome'; }, 1100);
       } catch (err) {
-        showStatus('Registration failed. Try again.', true);
+        showStatus('Registration failed. Please try again.', true);
         await loadSecurityChallenge();
       } finally {
-        registerBtn.disabled = false;
+        setLoading(false);
       }
     }
 
@@ -233,4 +836,3 @@
   </script>
 </body>
 </html>
-
