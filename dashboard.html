@@ -486,7 +486,7 @@ input[type=text]:focus, select:focus {
 <div class="dashboard-shell">
   <div class="topbar">
     <div class="brand">
-      <a href="/" class="brand-logo" aria-label="Back to previous page" onclick="if (window.history.length > 1) { window.history.back(); return false; }"><img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" style="width:100%;height:auto;display:block;"></a>
+      <a href="/" class="brand-logo" aria-label="Back to previous page" onclick="if (window.history.length > 1) { window.history.back(); return false; }"><img src="/intothebattlelogo_logo_only.svg" style="transform:scale(1.1);transform-origin:center;width:100%;height:auto;display:block;" alt="IntoTheBattle logo"></a>
       <div class="brand-text">
         <h1>IntoTheBattle Command Center</h1>
         <p>Interactive TikTok LIVE overlay management system</p>
@@ -871,3 +871,4 @@ socket.on('connect', () => { socket.emit('register', { type: 'dashboard' }); });
 </script>
 </body>
 </html>
+
