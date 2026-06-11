@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>IntoTheBattle Overlay Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Exo+2:wght@400;700;900&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #02040a; font-family: 'Exo 2', 'Segoe UI', sans-serif; }
+    body { display: grid; place-items: center; }
+    #game-container { position: relative; width: min(100vw, 1920px); aspect-ratio: 16 / 9; overflow: hidden; background: #02040a; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 0 48px rgba(140,80,255,.18); }
+    #status-badge { position: fixed; left: 50%; bottom: 12px; transform: translateX(-50%); z-index: 20; padding: 5px 16px; border-radius: 999px; border: 1px solid rgba(255,216,79,.22); background: rgba(0,0,0,.68); color: #ffd84f; font: 800 11px 'Rajdhani', sans-serif; letter-spacing: 1px; text-transform: uppercase; pointer-events: none; }
+    .corner-label { position: fixed; top: 12px; left: 12px; z-index: 20; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(122,252,255,.26); background: rgba(0,0,0,.54); color: #7afcff; font: 800 11px 'Rajdhani', sans-serif; letter-spacing: 1px; text-transform: uppercase; }
+  </style>
+</head>
+<body>
+  <div class="corner-label">Live overlay demo</div>
+  <div id="game-container"></div>
+  <div id="status-badge">Demo mode</div>
+
+  <script src="/js/overlay-scene.js"></script>
+  <script>
+    const config = {
+      type: Phaser.AUTO,
+      parent: 'game-container',
+      width: 1280,
+      height: 720,
+      backgroundColor: '#02040a',
+      scene: OverlayScene,
+      physics: { default: 'arcade', arcade: { debug: false } },
+      render: { pixelArt: false, antialias: true },
+      scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }
+    };
+
+    const game = new Phaser.Game(config);
+    const demoPlayers = [
+      { id: 'nova', name: '@Nova', health: 92, kills: 3, deaths: 0 },
+      { id: 'jax', name: '@Jax', health: 58, kills: 1, deaths: 2 },
+      { id: 'luna', name: '@Luna', health: 76, kills: 2, deaths: 1 },
+      { id: 'milo', name: '@Milo', health: 41, kills: 0, deaths: 2 }
+    ];
+
+    function whenSceneReady(callback) {
+      const timer = setInterval(() => {
+        const scene = game.scene.scenes[0];
+        if (scene && scene.playerContainer && scene.damageContainer && scene.bannerContainer) {
+          clearInterval(timer);
+          callback(scene);
+        }
+      }, 80);
+    }
+
+    whenSceneReady((scene) => {
+      scene.updateLayoutConfig('gap', 18);
+      scene.updateLayoutConfig('zoom', 92);
+      demoPlayers.forEach((player) => scene.addPlayerCard(player));
+      scene.showBanner('DEMO MODE', 'streak');
+
+      let step = 0;
+      setInterval(() => {
+        const attacker = demoPlayers[step % demoPlayers.length];
+        const target = demoPlayers[(step + 1) % demoPlayers.length];
+        const damage = [18, 27, 42, 64][step % 4];
+        const type = damage >= 42 ? 'critical' : 'normal';
+        target.health = Math.max(12, target.health - Math.floor(damage / 3));
+        scene.updatePlayerStats(target.id, { health: target.health, kills: target.kills, deaths: target.deaths });
+        scene.showDamage(640 + Math.random() * 220 - 110, 300 + Math.random() * 70 - 35, '-' + damage, type);
+        if (step % 3 === 0) scene.showBanner(attacker.name + ' activated Fire Strike', 'gift');
+        if (step % 5 === 0) scene.flashScreen(180, '#ff6a3d');
+        if (step % 7 === 0) scene.shakeCam(7);
+        if (target.health <= 18) {
+          target.health = 100;
+          target.deaths += 1;
+          attacker.kills += 1;
+          scene.updatePlayerStats(attacker.id, { health: attacker.health, kills: attacker.kills, deaths: attacker.deaths });
+          scene.updatePlayerStats(target.id, { health: target.health, kills: target.kills, deaths: target.deaths });
+          scene.showBanner(attacker.name + ' got the knockout', 'kill');
+        }
+        step += 1;
+      }, 1700);
+    });
+  </script>
+</body>
+</html>
