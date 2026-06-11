@@ -83,6 +83,18 @@ function ensureTrialSubscription(userId) {
   return db.prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1").get(userId);
 }
 
+function ensureUserRoom(userId, name) {
+  const existingRoom = db.prepare('SELECT * FROM user_rooms WHERE user_id = ? ORDER BY created_at DESC LIMIT 1').get(userId);
+  if (existingRoom) return existingRoom;
+
+  const roomId = uuidv4().replace(/-/g, '').slice(0, 10);
+  const roomName = `${String(name || 'Creator').trim()}'s room`;
+  db.prepare('INSERT INTO user_rooms (user_id, room_id, room_name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)')
+    .run(userId, roomId, roomName);
+  db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
+  return { room_id: roomId, room_name: roomName };
+}
+
 const router = express.Router();
 
 const loginLimiter = rateLimit({
@@ -921,6 +933,7 @@ router.get('/auth/google/callback', async (req, res) => {
       if (!user.email_verified) {
         db.prepare('UPDATE users SET email_verified = 1 WHERE id = ?').run(user.id);
       }
+      ensureUserRoom(user.id, user.name);
       ensureTrialSubscription(user.id);
     }
 
@@ -928,7 +941,7 @@ router.get('/auth/google/callback', async (req, res) => {
     db.prepare('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?').run(sessionToken, user.id);
     setSessionCookie(res, sessionToken);
     res.clearCookie('google_oauth_state', { ...COOKIE_OPTIONS, httpOnly: true, sameSite: 'lax' });
-    return res.redirect('/dashboard');
+    return res.redirect('/dashboard/welcome');
   } catch (err) {
     console.error('Google OAuth callback error:', err);
     return res.status(500).send('Google login failed.');

@@ -218,8 +218,8 @@
           return;
         }
 
-        showStatus(`Account created successfully. Account ID: ${json.accountId}. Redirecting to dashboard...`);
-        setTimeout(() => { window.location.href = '/dashboard'; }, 2400);
+        showStatus(`Account created successfully. Account ID: ${json.accountId}. Redirecting to your welcome page...`);
+        setTimeout(() => { window.location.href = '/dashboard/welcome'; }, 2200);
       } catch (err) {
         showStatus('Registration failed. Try again.', true);
         await loadSecurityChallenge();

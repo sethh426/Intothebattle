@@ -390,6 +390,160 @@
       }
     }
   </style>
+  <style>
+    :root {
+      --page-bg: #050610;
+      --surface: rgba(10, 16, 32, 0.96);
+      --surface-strong: rgba(6, 10, 21, 0.98);
+      --gold: #f6c95b;
+      --muted: #9fafd1;
+      --text: #eef3ff;
+      --accent: #4d96ff;
+    }
+
+    body {
+      background: var(--page-bg);
+    }
+
+    .container {
+      max-width: 920px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(10, 16, 32, 0.96), rgba(6, 10, 21, 0.95));
+      border-radius: 34px;
+      border: 1px solid rgba(246, 201, 91, 0.2);
+      box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28);
+      padding: 36px 40px;
+      backdrop-filter: blur(20px);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 34px;
+      background: linear-gradient(145deg, rgba(246, 201, 91, 0.3), rgba(255, 255, 255, 0.05));
+      opacity: 0.28;
+      pointer-events: none;
+    }
+
+    .card-header {
+      text-align: center;
+      margin-bottom: 28px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand-logo-link {
+      width: 78px;
+      height: 78px;
+      margin: 0 auto 22px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.05);
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .brand-logo-link img { width: 60%; height: 60%; }
+
+    .card-title {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: clamp(32px, 4vw, 40px);
+      letter-spacing: -0.03em;
+      color: #fff;
+      margin: 0 auto;
+      max-width: 12ch;
+    }
+
+    .card-sub {
+      color: var(--muted);
+      margin-top: 12px;
+      font-size: 15px;
+      line-height: 1.75;
+    }
+
+    .info-block {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 22px;
+      padding: 20px 22px;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      line-height: 1.75;
+      position: relative;
+      z-index: 1;
+    }
+
+    .info-block strong {
+      color: #fff;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .button-group {
+      display: grid;
+      gap: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 56px;
+      padding: 0 22px;
+      border-radius: 18px;
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 900;
+      letter-spacing: .02em;
+      transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--gold), #fff1bd 52%, #ff6a3d);
+      color: #130b01;
+      box-shadow: 0 18px 45px rgba(246, 201, 91, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.08);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+
+    .btn:hover { transform: translateY(-1px); }
+
+    .login-link {
+      text-align: center;
+      margin-top: 22px;
+      color: var(--text-muted);
+      font-size: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .login-link a { color: var(--gold); text-decoration: none; font-weight: 700; }
+    .login-link a:hover { text-decoration: underline; }
+
+    @media (max-width: 760px) {
+      .card { padding: 28px 24px; }
+      .card-title { font-size: 30px; }
+      .button-group { gap: 12px; }
+    }
+
+    @media (max-width: 520px) {
+      .container { max-width: 100%; }
+    }
+  </style>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -418,33 +572,35 @@
   <div class="orb orb-1"></div>
   <div class="orb orb-2"></div>
 
-  <div class="container">
-    <div class="card">
-      <a href="/" class="brand-logo-link" aria-label="Back to previous page" onclick="if (window.history.length > 1) { window.history.back(); return false; }">
-        <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
+  <div class="page-shell">
+    <div class="page-header">
+      <a href="/" class="brand">
+        <span class="brand-mark"><img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo"></span>
+        <span class="brand-name"><strong>Into The Battle</strong><span>Live Overlay Studio</span></span>
       </a>
-      <div class="card-header">
-        <span class="card-icon">🎮</span>
-        <div class="card-title">Create your Battle Account</div>
-        <div class="card-sub">14-day trial, TikTok LIVE overlay access, no credit card required</div>
-      </div>
+      <a href="/login" class="header-action">Sign in</a>
+    </div>
 
-      <div class="info-block">
-        <strong>Sign up for a battle-ready room</strong>
-        Sign up instantly with Google, or register with email on the next page.
-      </div>
+    <div class="container">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Start your battle-ready account</span>
+          <p class="card-sub">Begin your free 14-day trial with instant overlay access for TikTok LIVE. Google signup and email signup both lead to the same account experience.</p>
+        </div>
 
-      <div class="action-buttons">
-        <a href="/auth/google" class="btn btn-primary" style="display:inline-flex;align-items:center;justify-content:center;gap:10px;">
-          Continue with Google
-        </a>
-        <a href="/register" class="btn" style="background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.1); margin-top: 12px;">
-          Sign up with email
-        </a>
-      </div>
+        <div class="info-block">
+          <strong>Primary path</strong>
+          Start free trial with Google for the fastest onboarding, or continue with email registration if you prefer a classic account setup.
+        </div>
 
-      <div class="login-link" style="margin-top: 20px;">
-        Already have an account? <a href="/login">Sign in here</a>
+        <div class="button-group">
+          <a href="/auth/google" class="btn btn-primary">Start free trial with Google</a>
+          <a href="/register" class="btn btn-secondary">Create account with email</a>
+        </div>
+
+        <div class="login-link">
+          Already have an account? <a href="/login">Sign in</a>
+        </div>
       </div>
     </div>
   </div>
