@@ -14,12 +14,12 @@ if (!fs.existsSync(homePath)) {
 const original = fs.readFileSync(homePath, 'utf8');
 let updated = original.replace(
   '<span class="brand-mark"><span>⚔️</span></span>',
-  '<span class="brand-mark"><img src="/logo.svg" alt="IntoTheBattle logo" style="width:100%;height:100%;display:block;object-fit:contain;" /></span>'
+  '<span class="brand-mark"><img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" style="width:100%;height:100%;display:block;object-fit:contain;" /></span>'
 );
 
 if (updated !== original) {
   fs.writeFileSync(homePath, updated, 'utf8');
-  console.log('[patch-home-logo] Replaced home page header emoji with /logo.svg.');
+  console.log('[patch-home-logo] Replaced home page header emoji with /intothebattlelogo_logo_only.svg.');
 } else {
   console.log('[patch-home-logo] Home page logo already patched or pattern not found.');
 }
