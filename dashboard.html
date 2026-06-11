@@ -594,7 +594,7 @@ input[type=text]:focus, select:focus {
   </div>
   <!-- FOOTER with CLEAR OVERLAY BUTTON -->
   <div class="footer">
-    <button class="footer-btn primary" onclick="window.open(currentRoomId ? '/overlay?room_id=' + encodeURIComponent(currentRoomId) : '/overlay','_blank')">🖥️ Open Overlay</button>
+    <button class="footer-btn primary" onclick="openOverlay()">🖥️ Open Overlay</button>
     <button class="footer-btn secondary" onclick="window.open('/stats','_blank')">↗ Stats</button>
     <button class="footer-btn secondary" onclick="window.open('/api/status','_blank')">↗ Raw JSON</button>
     <button class="footer-btn secondary" onclick="window.open('/dashboard','_self')">🔄 Refresh Dashboard</button>
@@ -605,6 +605,7 @@ input[type=text]:focus, select:focus {
 const socket = io();
 let overlayCount = 0;
 let currentRoomId = null;
+let currentOverlayUrl = null;
 let audioLibraryData = [];
 let audioConfigData = {};
 const EVENTS = ['attack','gift','kill','respawn','heal','follow'];
@@ -667,6 +668,7 @@ async function fetchStatus() {
     const res = await fetch('/api/status', { credentials: 'same-origin' });
     const data = await res.json();
     currentRoomId = data.roomId || null;
+    currentOverlayUrl = data.overlayUrl || null;
 
     // Only update the username input field once, on first page load
     if (initialLoad) {
@@ -693,6 +695,10 @@ async function fetchStatus() {
 
 fetchStatus();
 setInterval(fetchStatus, 10000);
+
+function openOverlay() {
+  window.open(currentOverlayUrl || '/overlay', '_blank');
+}
 
 const usernameInput = document.getElementById('username');
 if (usernameInput) {

@@ -20,6 +20,7 @@ import adminRoutes from './tiktokbr/routes/admin.js';
 import paypalRoutes from './tiktokbr/routes/paypal.js';
 import requireAccess from './tiktokbr/middleware/auth.js';
 import checkTrial from './tiktokbr/middleware/checkTrial.js';
+import { getE2EAuthRecord } from './tiktokbr/auth/e2eAuth.js';
 import {
   getOrCreateRoom,
   getRoom,
@@ -50,6 +51,9 @@ function requiresRoomId() {
 
 function getAuthRecord(token) {
   if (!token) return null;
+  const e2eAuth = getE2EAuthRecord(token);
+  if (e2eAuth) return e2eAuth;
+
   try {
     const accessCode = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
     if (accessCode) return { type: 'code', record: accessCode };
@@ -108,6 +112,109 @@ const API_KEY = process.env.API_KEY;
 let DEV_TEST_MODE = process.env.DEV_TEST_MODE === 'true';
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
+const OVERLAY_TOKEN_PARAM = 'overlay_token';
+const OVERLAY_TOKEN_TTL = process.env.OVERLAY_TOKEN_TTL || '365d';
+
+function getOverlayTokenSecret() {
+  return process.env.OVERLAY_TOKEN_SECRET || process.env.JWT_SECRET || '';
+}
+
+function normalizeRoomId(value) {
+  const roomId = String(value || '').trim();
+  return /^[A-Za-z0-9_-]{1,80}$/.test(roomId) ? roomId : '';
+}
+
+function createOverlayToken(roomId) {
+  const normalizedRoomId = normalizeRoomId(roomId);
+  const secret = getOverlayTokenSecret();
+  if (!normalizedRoomId || !secret) return '';
+  return jwt.sign({ purpose: 'overlay', roomId: normalizedRoomId }, secret, { expiresIn: OVERLAY_TOKEN_TTL });
+}
+
+function verifyOverlayToken(roomId, token) {
+  const normalizedRoomId = normalizeRoomId(roomId);
+  if (!normalizedRoomId || !token) return false;
+  try {
+    const payload = jwt.verify(String(token), getOverlayTokenSecret());
+    return payload?.purpose === 'overlay' && payload?.roomId === normalizedRoomId;
+  } catch (_err) {
+    return false;
+  }
+}
+
+function getOverlayTokenFromRequest(req) {
+  return req.query?.[OVERLAY_TOKEN_PARAM] || req.query?.overlayToken || '';
+}
+
+function getOverlayTokenFromSocket(socket) {
+  return socket.handshake?.auth?.overlayToken
+    || socket.handshake?.auth?.overlay_token
+    || socket.handshake?.query?.[OVERLAY_TOKEN_PARAM]
+    || socket.handshake?.query?.overlayToken
+    || '';
+}
+
+function appendOverlayAuth(urlPath, roomId, token, extraParams = {}) {
+  const url = new URL(urlPath, 'http://localhost');
+  url.searchParams.set('room_id', roomId);
+  url.searchParams.set(OVERLAY_TOKEN_PARAM, token);
+  for (const [key, value] of Object.entries(extraParams)) {
+    if (value != null && value !== '') url.searchParams.set(key, String(value));
+  }
+  return `${url.pathname}${url.search}`;
+}
+
+function buildOverlayUrl(req, roomId) {
+  const normalizedRoomId = normalizeRoomId(roomId);
+  const token = createOverlayToken(normalizedRoomId);
+  if (!normalizedRoomId || !token) return null;
+
+  const configuredBase = process.env.APP_BASE_URL;
+  const inferredBase = req ? `${req.protocol}://${req.get('host')}` : `http://localhost:${PORT}`;
+  const base = (configuredBase || inferredBase).replace(/\/$/, '');
+  return `${base}${appendOverlayAuth('/overlay', normalizedRoomId, token)}`;
+}
+
+function validateRuntimeConfiguration() {
+  const production = process.env.NODE_ENV === 'production';
+  if (production && !process.env.JWT_SECRET) {
+    logger.fatal('JWT_SECRET is required in production');
+    process.exit(1);
+  }
+  if (production && enableRoomScoped && !getOverlayTokenSecret()) {
+    logger.fatal('OVERLAY_TOKEN_SECRET or JWT_SECRET is required for room-scoped overlay URLs');
+    process.exit(1);
+  }
+}
+
+function validateWritableStorage() {
+  const storageRoot = process.env.DISK_PATH || __dirname;
+  const requiredDirs = [
+    storageRoot,
+    path.join(storageRoot, 'backgrounds'),
+    path.join(storageRoot, 'audio'),
+  ];
+
+  try {
+    for (const dir of requiredDirs) {
+      fs.mkdirSync(dir, { recursive: true });
+      fs.accessSync(dir, fs.constants.W_OK);
+    }
+    const probe = path.join(storageRoot, `.write-test-${process.pid}`);
+    fs.writeFileSync(probe, 'ok');
+    fs.unlinkSync(probe);
+  } catch (err) {
+    const message = `DISK_PATH is not writable: ${storageRoot}`;
+    if (process.env.NODE_ENV === 'production') {
+      logger.fatal({ err, storageRoot }, message);
+      process.exit(1);
+    }
+    logger.warn({ err, storageRoot }, message);
+  }
+}
+
+validateRuntimeConfiguration();
+validateWritableStorage();
 
 let currentStreamer = process.argv[2] || '';
 let client = null;
@@ -1103,7 +1210,7 @@ app.get('/login', (req, res) => {
   }
   res.sendFile(path.join(__dirname, 'login.html'));
 });
-app.get('/profile', (_req, res) => res.sendFile(path.join(__dirname, 'profile.html')));
+app.get('/profile', requireAccess, (_req, res) => res.sendFile(path.join(__dirname, 'profile.html')));
 app.get('/request-password-reset', (_req, res) => res.sendFile(path.join(__dirname, 'request-password-reset.html')));
 app.get('/reset-password', (_req, res) => res.sendFile(path.join(__dirname, 'reset-password.html')));
 app.get('/paywall', (_req, res) => res.sendFile(path.join(__dirname, 'paywall.html')));
@@ -1190,9 +1297,12 @@ app.post('/auth/create-account', express.json(), (req, res) => {
   }
 });
 
-app.get(['/overlay.html', '/overlay'], (req, res, next) => {
-
+app.get(['/overlay.html', '/overlay'], (req, res) => {
   if (enableRoomScoped && req.query.room_id) {
+    const roomId = normalizeRoomId(req.query.room_id);
+    const overlayToken = getOverlayTokenFromRequest(req);
+    if (!roomId) return res.status(400).send('Invalid room id');
+    if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).send('Unauthorized overlay URL');
     return res.sendFile(path.join(__dirname, 'overlay.html'));
   }
   return requireAccess(req, res, () => res.sendFile(path.join(__dirname, 'overlay.html')));
@@ -1214,12 +1324,25 @@ function assignDefaultRoomIfMissing(row) {
 }
 
 function socketAuth(socket, next) {
-  // Allow unauthenticated overlays to supply a room id via the socket auth payload
-  // (client: io({ auth: { roomId } })) or query param (legacy).
+  const e2eAuth = getE2EAuthRecord(parseCookies(socket.request).session_token);
+  if (e2eAuth) {
+    socket.roomId = enableRoomScoped ? assignDefaultRoomIfMissing(e2eAuth.record) : DEFAULT_ROOM_ID;
+    socket.accessCode = e2eAuth.record;
+    return next();
+  }
+
+  // Allow signed OBS overlays to supply a room id through the Socket.IO handshake.
   const authRoom = enableRoomScoped ? (socket.handshake?.auth?.roomId || socket.handshake?.query?.room_id) : null;
   if (authRoom) {
-    socket.roomId = String(authRoom);
-    return next();
+    const roomId = normalizeRoomId(authRoom);
+    const overlayToken = getOverlayTokenFromSocket(socket);
+    if (roomId && verifyOverlayToken(roomId, overlayToken)) {
+      socket.roomId = roomId;
+      socket.data.overlayAuth = true;
+      return next();
+    }
+    logger.warn({ authRoom: authRoom || null, tokenPresent: !!overlayToken }, 'Socket auth failed: invalid overlay token');
+    return next(new Error('Unauthorized: invalid overlay token'));
   }
 
   // Otherwise require a valid session_token cookie and DB-backed access code
@@ -1293,18 +1416,64 @@ function requireRoom(req, res, next) {
   next();
 }
 
+function getSessionRoom(req) {
+  const token = req.cookies?.session_token;
+  const auth = getAuthRecord(token);
+  if (!auth) return null;
+
+  let roomId = DEFAULT_ROOM_ID;
+  if (auth.type === 'code') {
+    const row = auth.record;
+    if (row.is_revoked || new Date(row.expires_at) < new Date()) return null;
+    roomId = enableRoomScoped ? assignDefaultRoomIfMissing(row) : DEFAULT_ROOM_ID;
+  } else {
+    const user = auth.record;
+    if (!user.is_active) return null;
+    roomId = enableRoomScoped ? (getUserRoomId(user.id) || DEFAULT_ROOM_ID) : DEFAULT_ROOM_ID;
+  }
+
+  const room = getOrCreateRoom(roomId);
+  loadRoomPlayerStats(room);
+  loadRoomBackground(room);
+  loadRoomAudioConfig(room);
+  return room;
+}
+
 io.use(socketAuth);
 
 app.use((req, res, next) => {
   if (req.path === '/dashboard.html' || req.path === '/dashboard-login.html') {
     return res.redirect('/dashboard');
   }
+  if (req.path === '/profile.html') {
+    return res.redirect('/profile');
+  }
+  if (req.path === '/stats.html') {
+    return res.redirect('/stats');
+  }
+  if (req.path.startsWith('/backgrounds/') || /^\/audio\/[^/]+\/.+/.test(req.path) || /^\/players_[^/]+\.json$/.test(req.path)) {
+    return res.status(404).send('Not found');
+  }
   next();
 });
 
 app.use(express.static(__dirname));
 
-app.get('/metrics', async (_req, res) => {
+function requireMetricsAccess(req, res, next) {
+  if (process.env.NODE_ENV !== 'production') return next();
+
+  const expectedToken = process.env.METRICS_TOKEN;
+  if (!expectedToken) return res.status(404).send('Not found');
+
+  const authHeader = req.get('authorization') || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
+  const suppliedToken = bearerToken || req.get('x-metrics-token') || req.query.token;
+  if (suppliedToken === expectedToken) return next();
+
+  return res.status(401).send('Unauthorized');
+}
+
+app.get('/metrics', requireMetricsAccess, async (_req, res) => {
   try {
     res.setHeader('Content-Type', register.contentType);
     res.end(await register.metrics());
@@ -1315,7 +1484,15 @@ app.get('/metrics', async (_req, res) => {
 
 app.get('/audio/:filename', (req, res) => {
   const filename = path.basename(req.params.filename);
-  const room = req.room || (enableRoomScoped && req.query.room_id ? getOrCreateRoom(String(req.query.room_id)) : null);
+  let room = req.room || null;
+  if (!room && enableRoomScoped && req.query.room_id) {
+    const roomId = normalizeRoomId(req.query.room_id);
+    const overlayToken = getOverlayTokenFromRequest(req);
+    if (!roomId) return res.status(400).send('Invalid room id');
+    if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).send('Unauthorized');
+    room = getOrCreateRoom(roomId);
+  }
+  if (!room) room = getSessionRoom(req);
   if (!room) return res.status(401).send('Unauthorized');
   const { audioDir } = getRoomPaths(room.roomId);
   const runtimePath = path.join(audioDir, filename);
@@ -1443,7 +1620,11 @@ app.get('/stats', checkTrial, (_req, res) => res.sendFile(path.join(__dirname, '
 
 app.get('/state', (req, res) => {
   if (enableRoomScoped && req.query.room_id) {
-    const room = getOrCreateRoom(String(req.query.room_id));
+    const roomId = normalizeRoomId(req.query.room_id);
+    const overlayToken = getOverlayTokenFromRequest(req);
+    if (!roomId) return res.status(400).json({ success: false, error: 'Invalid room id' });
+    if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    const room = getOrCreateRoom(roomId);
     loadRoomPlayerStats(room);
     loadRoomBackground(room);
     loadRoomAudioConfig(room);
@@ -1457,6 +1638,7 @@ app.get('/state', (req, res) => {
 
 app.get('/api/status', requireRoom, (req, res) => res.json({
   roomId:           req.room.roomId,
+  overlayUrl:       buildOverlayUrl(req, req.room.roomId),
   username:         req.room.streamerUsername || currentStreamer,
   connected:        !!(client && client.connected),
   overlayConnected: req.room.overlayCount > 0,
@@ -1570,21 +1752,17 @@ app.post('/api/background/clear', requireRoom, (req, res) => {
 
 app.get('/background/:filename', (req, res) => {
   try {
-    // Support public background fetches by room_id query param (for unauthenticated overlays)
+    // Support signed public background fetches by room_id query param for OBS overlays.
     let room = null;
     if (enableRoomScoped && req.query && req.query.room_id) {
-      room = getOrCreateRoom(String(req.query.room_id));
+      const roomId = normalizeRoomId(req.query.room_id);
+      const overlayToken = getOverlayTokenFromRequest(req);
+      if (!roomId) return res.status(400).send('Invalid room id');
+      if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).send('Unauthorized');
+      room = getOrCreateRoom(roomId);
     } else {
-      // Fallback to existing requireRoom behavior using session_token cookie
-      const token = req.cookies?.session_token;
-      if (!token) return res.status(401).send('Unauthorized');
-      const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
-      if (!row || row.is_revoked || new Date(row.expires_at) < new Date()) return res.status(401).send('Unauthorized');
-      if (!row.room_id) return res.status(400).send('No room assigned');
-      room = getOrCreateRoom(row.room_id);
-      loadRoomPlayerStats(room);
-      loadRoomBackground(room);
-      loadRoomAudioConfig(room);
+      room = getSessionRoom(req);
+      if (!room) return res.status(401).send('Unauthorized');
     }
 
     const { backgroundDir } = getRoomPaths(room.roomId);

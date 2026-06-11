@@ -6,13 +6,18 @@ services:
       - '3000:3000'
     environment:
       - NODE_ENV=development
+      - API_KEY=test
+      - JWT_SECRET=local_dev_change_me
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=postgres://postgres:example@postgres:5432/tiktokbr
+      - ENABLE_ROOM_SCOPED=true
+      - DISK_PATH=/usr/src/app/data
     depends_on:
       - redis
       - postgres
     volumes:
       - ./:/usr/src/app
+      - ./data:/usr/src/app/data
 
   redis:
     image: redis:6-alpine

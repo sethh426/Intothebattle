@@ -19,6 +19,8 @@ class OverlayScene extends Phaser.Scene {
       zoom: 100
     };
     this.isDarkTheme = true;
+    this.customBackground = null;
+    this.customBackgroundKey = null;
   }
 
   create() {
@@ -79,7 +81,32 @@ class OverlayScene extends Phaser.Scene {
     graphics.generateTexture('backgroundTexture', this.scale.width, this.scale.height);
     graphics.destroy();
 
-    this.add.image(this.scale.width / 2, this.scale.height / 2, 'backgroundTexture');
+    this.add.image(this.scale.width / 2, this.scale.height / 2, 'backgroundTexture').setDepth(-20);
+  }
+
+  setBackgroundImageUrl(url) {
+    if (this.customBackground) {
+      this.customBackground.destroy();
+      this.customBackground = null;
+    }
+    if (this.customBackgroundKey && this.textures.exists(this.customBackgroundKey)) {
+      this.textures.remove(this.customBackgroundKey);
+      this.customBackgroundKey = null;
+    }
+    if (!url) return;
+
+    const textureKey = `roomBackground-${Date.now()}`;
+    this.customBackgroundKey = textureKey;
+    this.load.image(textureKey, url);
+    this.load.once('complete', () => {
+      if (!this.textures.exists(textureKey)) return;
+      const image = this.add.image(this.scale.width / 2, this.scale.height / 2, textureKey);
+      const scale = Math.max(this.scale.width / image.width, this.scale.height / image.height);
+      image.setScale(scale);
+      image.setDepth(-10);
+      this.customBackground = image;
+    });
+    this.load.start();
   }
 
   update() {
@@ -387,6 +414,7 @@ class OverlayScene extends Phaser.Scene {
       healthText: healthText,
       statsText: statsText,
       nameText: nameText,
+      maxHealthBarWidth: cardWidth - padding * 2,
       data: playerData
     });
 
@@ -418,7 +446,7 @@ class OverlayScene extends Phaser.Scene {
 
     // Update health bar
     if (stats.health !== undefined) {
-      const newWidth = (player.container.width - 16) * (stats.health / 100);
+      const newWidth = player.maxHealthBarWidth * (stats.health / 100);
       this.tweens.add({
         targets: player.healthBar,
         width: newWidth,
@@ -435,6 +463,7 @@ class OverlayScene extends Phaser.Scene {
       } else {
         player.healthBar.setFillStyle(0xff5566, 1);
       }
+      player.data.health = stats.health;
     }
 
     // Update stats text

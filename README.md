@@ -112,8 +112,10 @@ NODE_ENV=development
 PORT=3000
 API_KEY=your_tiktok_api_key
 JWT_SECRET=replace_with_a_long_random_secret
+OVERLAY_TOKEN_SECRET=replace_with_a_second_long_random_secret
 DATABASE_URL=postgres://postgres:example@localhost:5432/tiktokbr
 REDIS_URL=redis://localhost:6379
+ENABLE_ROOM_SCOPED=true
 APP_BASE_URL=http://localhost:3000
 ```
 
@@ -136,6 +138,7 @@ SENTRY_DSN=
 LOG_LEVEL=info
 DEV_TEST_MODE=false
 DISK_PATH=/var/data
+METRICS_TOKEN=replace_with_a_metrics_scrape_token
 ```
 
 ### Run locally with Node
@@ -219,7 +222,7 @@ GET /login
 GET /signup
 GET /paywall
 GET /my-code
-GET /overlay or /overlay.html
+GET /overlay or /overlay.html with signed room_id + overlay_token for OBS/browser-source access
 ```
 
 Protected creator pages:
@@ -242,7 +245,7 @@ Health/monitoring:
 
 ```text
 GET /api/status
-GET /metrics
+GET /metrics (requires METRICS_TOKEN in production)
 ```
 
 ## Route Security Direction
@@ -293,6 +296,9 @@ PAYPAL_CLIENT_SECRET=<PayPal client secret>
 PAYPAL_WEBHOOK_ID=<PayPal webhook id>
 POSTMARK_API_TOKEN=<Postmark token>
 EMAIL_FROM=Battle Royale <no-reply@intothebattle.com>
+OVERLAY_TOKEN_SECRET=<long random overlay signing secret>
+ENABLE_ROOM_SCOPED=true
+METRICS_TOKEN=<long random metrics scrape token>
 ```
 
 Use a managed PostgreSQL service for production. Do not rely on local JSON files or ephemeral app storage for production state.
@@ -307,14 +313,20 @@ This project uses GitHub Actions (`.github/workflows/ci.yml`) as the canonical C
 		- `node --check server.js` (syntax check)
 		- a short startup smoke test that launches the server and probes `GET /healthz`
 		- `npm run validate:schemas` (JSON-LD schema validation)
+		- `npm run test:http` (local HTTP smoke tests with stub DB and temp storage)
+		- `npm run test:e2e` (Chromium Playwright visual smoke tests)
 		- `npm audit --audit-level=high` (non-blocking)
 
 - Local reproduction steps (recommended):
 
 ```bash
 npm ci
+python -m pip install -r requirements-dev.txt
 node --check server.js
 npm run validate:schemas
+npm run test:http
+npm run test:e2e:install
+npm run test:e2e
 # start the server and verify health endpoint
 PORT=3000 npm start &
 curl -fsS http://localhost:3000/healthz
@@ -338,13 +350,16 @@ If you want, I can also add a small GitHub Actions job that posts the failing jo
 ```bash
 npm start
 npm run start:dev
+npm run test:http
+npm run test:e2e
+npm run test:e2e:install
 npm run test:postmark
 npm run validate:schema
 npm run validate:schema-expand
 npm run validate:schemas
 ```
 
-The project does not yet have a complete automated test suite. CI should start with dependency install and schema validation, then expand into route tests, auth tests, upload tests, and persistence tests.
+The project now has baseline automated smoke coverage for startup, protected routes, signed overlay access, schema validation, and browser-visible page rendering. It should still expand into deeper route tests, auth tests, upload tests, persistence tests, and mocked integration tests for TikTok, PayPal, Postmark, and Google OAuth.
 
 ## Immediate Sprint Priorities
 

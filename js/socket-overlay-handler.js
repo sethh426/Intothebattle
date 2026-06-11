@@ -4,28 +4,155 @@
  */
 
 function initSocketOverlay(game) {
-  const socket = io();
   const scene = game.scene.scenes[0];
   const statusBadge = document.getElementById('status-badge');
+  const overlayParams = new URLSearchParams(window.location.search);
+  const overlayRoomId = overlayParams.get('room_id') || '';
+  const overlayToken = overlayParams.get('overlay_token') || overlayParams.get('overlayToken') || '';
+  const audioConfig = {};
+  const audioCache = {};
+
+  function withOverlayAuth(path, extraParams = {}) {
+    const url = new URL(path, window.location.origin);
+    if (overlayRoomId && overlayToken) {
+      url.searchParams.set('room_id', overlayRoomId);
+      url.searchParams.set('overlay_token', overlayToken);
+    }
+    Object.entries(extraParams).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== '') {
+        url.searchParams.set(key, value);
+      }
+    });
+    return `${url.pathname}${url.search}`;
+  }
+
+  window.overlayAuth = { roomId: overlayRoomId, overlayToken, withOverlayAuth };
+
+  const socketOptions = { transports: ['websocket', 'polling'], timeout: 5000 };
+  if (overlayRoomId && overlayToken) {
+    socketOptions.auth = { roomId: overlayRoomId, overlayToken };
+    socketOptions.query = { room_id: overlayRoomId, overlay_token: overlayToken };
+  }
+
+  const socket = io(socketOptions);
+
+  function setStatus(text, className) {
+    if (!statusBadge) return;
+    statusBadge.textContent = text;
+    statusBadge.className = className;
+  }
+
+  function normalizePlayer(id, player) {
+    const rawHp = Number(player.hp ?? player.health ?? 100);
+    const maxHp = Number(player.maxHp ?? player.maxHealth ?? 100);
+    const health = maxHp > 0 ? Math.max(0, Math.min(100, (rawHp / maxHp) * 100)) : rawHp;
+    return {
+      id: player.uniqueId || player.id || player.userId || id,
+      name: player.nickname || player.name || player.uniqueId || id,
+      health,
+      kills: Number(player.kills || 0),
+      deaths: Number(player.deaths || 0)
+    };
+  }
+
+  function syncGameState(state) {
+    if (!state || typeof state !== 'object') return;
+    const activeIds = new Set();
+
+    Object.entries(state).forEach(([id, player]) => {
+      if (!player || player.alive === false) return;
+      const normalized = normalizePlayer(id, player);
+      activeIds.add(normalized.id);
+      const existing = scene.playerGroups?.find(p => p.playerId === normalized.id);
+      if (existing) {
+        scene.updatePlayerStats(normalized.id, normalized);
+      } else {
+        scene.addPlayerCard(normalized);
+      }
+    });
+
+    if (Array.isArray(scene.playerGroups)) {
+      [...scene.playerGroups].forEach(player => {
+        if (!activeIds.has(player.playerId)) scene.removePlayerCard(player.playerId);
+      });
+    }
+  }
+
+  function getAudio(filename) {
+    if (!filename) return null;
+    if (!audioCache[filename]) {
+      const audio = new Audio(withOverlayAuth(`/audio/${encodeURIComponent(filename)}`));
+      audio.preload = 'auto';
+      audioCache[filename] = audio;
+    }
+    return audioCache[filename];
+  }
+
+  function playSound(event) {
+    const filename = audioConfig[event];
+    if (!filename) return;
+    try {
+      const audio = getAudio(filename);
+      if (!audio) return;
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    } catch (_err) {
+      // Browser autoplay policies can reject playback until OBS/user interaction.
+    }
+  }
 
   // Status updates
   socket.on('connect', () => {
     console.log('Socket connected');
-    statusBadge.textContent = 'CONNECTED';
-    statusBadge.className = 'connected';
+    setStatus('CONNECTED', 'connected');
+    socket.emit('register', { type: 'overlay' });
+    fetch(withOverlayAuth('/state'))
+      .then(response => response.ok ? response.json() : null)
+      .then(syncGameState)
+      .catch(() => {});
   });
 
   socket.on('disconnect', () => {
     console.log('Socket disconnected');
-    statusBadge.textContent = 'DISCONNECTED';
-    statusBadge.className = 'disconnected';
+    setStatus('DISCONNECTED', 'disconnected');
   });
 
   socket.on('error', (err) => {
     console.error('Socket error:', err);
-    statusBadge.textContent = 'ERROR';
-    statusBadge.className = 'disconnected';
+    setStatus('ERROR', 'disconnected');
   });
+
+  socket.on('connect_error', () => {
+    setStatus('SERVER ERROR', 'disconnected');
+  });
+
+  socket.on('gameState', syncGameState);
+  socket.on('audioConfig', (config) => {
+    Object.keys(audioConfig).forEach(key => delete audioConfig[key]);
+    if (config && typeof config === 'object') Object.assign(audioConfig, config);
+  });
+  socket.on('backgroundChanged', (data) => {
+    const filename = data && data.filename;
+    if (!filename) {
+      if (scene.setBackgroundImageUrl) scene.setBackgroundImageUrl(null);
+      return;
+    }
+    if (scene.setBackgroundImageUrl) {
+      scene.setBackgroundImageUrl(withOverlayAuth(`/background/${encodeURIComponent(filename)}`, { v: Date.now() }));
+    }
+  });
+  socket.on('overlaySettings', (settings) => {
+    if (!settings || typeof settings !== 'object') return;
+    if (settings.laserColor && scene.updateLaserColor) scene.updateLaserColor(settings.laserColor);
+    if (settings.shotSpeed !== undefined && scene.updateLayoutConfig) {
+      scene.updateLayoutConfig('shotSpeed', Number(settings.shotSpeed));
+    }
+  });
+  socket.on('laserColor', (data) => {
+    const color = typeof data === 'string' ? data : data && data.color;
+    if (color && scene.updateLaserColor) scene.updateLaserColor(color);
+  });
+  socket.on('soundEvent', (data) => playSound(data && data.event));
 
   // Overlay events
   socket.on('damage', (data) => {
@@ -58,6 +185,24 @@ function initSocketOverlay(game) {
     // data: { id, stats: { health, kills, deaths, ... } }
     scene.updatePlayerStats(data.id || data.userId, data.stats || data);
   });
+
+  socket.on('attack', (data) => {
+    if (!data) return;
+    const type = data.killed ? 'kill' : data.critical ? 'critical' : 'normal';
+    scene.showDamage(game.scale.width / 2, game.scale.height * 0.35, data.damage || 'HIT', type);
+    playSound('attack');
+  });
+
+  socket.on('giftAttack', (data) => {
+    if (!data) return;
+    const type = data.killed ? 'kill' : data.tier === 'legendary' ? 'critical' : 'normal';
+    scene.showDamage(game.scale.width / 2, game.scale.height * 0.32, data.damage || 'GIFT', type);
+    playSound(data.killed ? 'kill' : 'gift');
+  });
+
+  socket.on('heal', () => playSound('heal'));
+  socket.on('spawn', () => playSound('respawn'));
+  socket.on('respawn', () => playSound('respawn'));
 
   socket.on('effect:flash', (data) => {
     // data: { duration, color }
