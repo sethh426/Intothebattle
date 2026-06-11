@@ -1,7 +1,11 @@
 import db from '../db/db.js';
+import { getE2EAuthRecord } from '../auth/e2eAuth.js';
 
 function getAuthRecord(token) {
   if (!token) return null;
+  const e2eAuth = getE2EAuthRecord(token);
+  if (e2eAuth) return e2eAuth;
+
   const accessCode = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
   if (accessCode) return { type: 'code', record: accessCode };
   const user = db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);

@@ -4,3 +4,6 @@ backgrounds/
 players.json
 tiktokbr.db
 tiktokbr/*.db*
+data/
+playwright-report/
+test-results/
