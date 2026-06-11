@@ -3,22 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Start Free Trial — IntoTheBattle | TikTok LIVE Battle Overlay</title>
-  <meta name="description" content="Start your free IntoTheBattle creator trial and set up an interactive TikTok LIVE battle overlay in minutes." />
-  <meta name="keywords" content="IntoTheBattle free trial, TikTok LIVE overlay, interactive stream overlay, OBS browser source, TikTok Studio, creator tools" />
+  <title>Start 7-Day Trial — IntoTheBattle | TikTok LIVE Battle Overlay</title>
+  <meta name="description" content="Start your 7-day IntoTheBattle creator trial and set up an interactive TikTok LIVE battle overlay in minutes." />
+  <meta name="keywords" content="IntoTheBattle 7 day trial, TikTok LIVE overlay, interactive stream overlay, OBS browser source, TikTok Studio, creator tools" />
   <meta name="robots" content="index, follow" />
   <meta name="author" content="IntoTheBattle" />
   <link rel="canonical" href="https://intothebattle.com/signup" />
 
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Start Your Free IntoTheBattle Trial" />
+  <meta property="og:title" content="Start Your 7-Day IntoTheBattle Trial" />
   <meta property="og:description" content="Turn your TikTok LIVE into a playable battle arena with a creator-ready overlay and dashboard." />
   <meta property="og:url" content="https://intothebattle.com/signup" />
   <meta property="og:image" content="https://intothebattle.com/logo.svg" />
   <meta property="og:site_name" content="IntoTheBattle" />
 
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Start Your Free IntoTheBattle Trial" />
+  <meta name="twitter:title" content="Start Your 7-Day IntoTheBattle Trial" />
   <meta name="twitter:description" content="Create your creator account and set up your TikTok LIVE battle overlay." />
   <meta name="twitter:image" content="https://intothebattle.com/logo.svg" />
 
@@ -26,15 +26,15 @@
   <link rel="apple-touch-icon" href="/logo.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
 
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    "name": "IntoTheBattle Free Trial Signup",
+    "name": "IntoTheBattle 7-Day Trial Signup",
     "url": "https://intothebattle.com/signup",
-    "description": "Start your free trial of IntoTheBattle, the interactive TikTok LIVE battle overlay platform.",
+    "description": "Start your 7-day trial of IntoTheBattle, the interactive TikTok LIVE battle overlay platform.",
     "isPartOf": {
       "@type": "WebSite",
       "name": "IntoTheBattle",
@@ -44,64 +44,86 @@
   </script>
 
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; }
+    * { margin: 0; padding: 0; }
+
     :root {
+      --void: #030406;
+      --night: #070a12;
+      --iron: #101520;
+      --panel: rgba(13, 18, 30, .82);
+      --panel-strong: rgba(12, 16, 27, .96);
       --gold: #f6c95b;
       --gold-2: #ffdf8a;
       --ember: #ff6a3d;
       --crimson: #e83b5f;
       --cyan: #55e7ff;
       --green: #77f0a1;
-      --bg: #030406;
-      --panel: rgba(13, 18, 30, .84);
-      --panel-strong: rgba(13, 18, 28, .96);
-      --line: rgba(246, 201, 91, .22);
-      --line-strong: rgba(246, 201, 91, .48);
-      --white-line: rgba(255, 255, 255, .1);
+      --text: #fff8e6;
       --muted: #a8afbf;
       --dim: #677083;
-      --text: #fff8e6;
-      --shadow: 0 32px 90px rgba(0, 0, 0, .55);
+      --line: rgba(246, 201, 91, .24);
+      --line-strong: rgba(246, 201, 91, .54);
+      --white-line: rgba(255, 255, 255, .1);
+      --shadow: 0 34px 95px rgba(0, 0, 0, .58);
+      --glow: 0 0 54px rgba(246, 201, 91, .23);
+      --radius-xl: 34px;
+      --radius-lg: 24px;
+      --max: 1180px;
     }
 
     html { scroll-behavior: smooth; }
+
     body {
       min-height: 100vh;
       font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       color: var(--text);
       background:
-        radial-gradient(circle at 17% 3%, rgba(246, 201, 91, .18), transparent 30%),
-        radial-gradient(circle at 84% 16%, rgba(232, 59, 95, .15), transparent 28%),
-        radial-gradient(circle at 76% 84%, rgba(85, 231, 255, .12), transparent 32%),
-        linear-gradient(180deg, #050608 0%, #070a12 42%, #030406 100%);
+        radial-gradient(circle at 18% 2%, rgba(246, 201, 91, .2), transparent 30%),
+        radial-gradient(circle at 84% 14%, rgba(232, 59, 95, .16), transparent 28%),
+        radial-gradient(circle at 76% 86%, rgba(85, 231, 255, .13), transparent 32%),
+        linear-gradient(180deg, #050608 0%, #070a12 44%, #030406 100%);
       overflow-x: hidden;
     }
+
     body::before {
       content: '';
       position: fixed;
       inset: 0;
       pointer-events: none;
       background-image:
-        linear-gradient(rgba(246, 201, 91, .035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(246, 201, 91, .035) 1px, transparent 1px);
+        linear-gradient(rgba(246, 201, 91, .04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(246, 201, 91, .04) 1px, transparent 1px);
       background-size: 58px 58px;
-      mask-image: radial-gradient(circle at top, black, transparent 72%);
-      opacity: .72;
-      z-index: -3;
+      mask-image: radial-gradient(circle at top, black, transparent 74%);
+      opacity: .75;
+      z-index: -4;
     }
+
     body::after {
       content: '';
       position: fixed;
       inset: auto 0 0;
-      height: 34vh;
+      height: 38vh;
       pointer-events: none;
       background:
-        linear-gradient(to top, rgba(0, 0, 0, .84), transparent),
+        linear-gradient(to top, rgba(0, 0, 0, .88), transparent),
         repeating-linear-gradient(90deg, transparent 0 22px, rgba(0, 0, 0, .34) 22px 25px);
       opacity: .42;
+      z-index: -3;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .orb {
+      position: fixed;
+      pointer-events: none;
+      border-radius: 999px;
+      filter: blur(10px);
       z-index: -2;
     }
-    a { color: inherit; text-decoration: none; }
+    .orb-a { width: 540px; height: 540px; left: -230px; top: 130px; background: radial-gradient(circle, rgba(246, 201, 91, .16), transparent 64%); }
+    .orb-b { width: 620px; height: 620px; right: -300px; bottom: -110px; background: radial-gradient(circle, rgba(85, 231, 255, .12), transparent 66%); }
 
     .nav-wrap {
       position: sticky;
@@ -109,8 +131,9 @@
       z-index: 20;
       padding: 18px clamp(16px, 4vw, 42px) 0;
     }
+
     nav {
-      max-width: 1180px;
+      max-width: var(--max);
       margin: 0 auto;
       display: flex;
       align-items: center;
@@ -119,37 +142,43 @@
       padding: 12px 14px;
       border: 1px solid var(--line);
       border-radius: 24px;
-      background: rgba(5, 7, 11, .76);
+      background: rgba(5, 7, 11, .78);
       backdrop-filter: blur(22px);
       box-shadow: 0 20px 70px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .08);
     }
+
     .brand {
       display: inline-flex;
       align-items: center;
       gap: 12px;
       min-width: 0;
     }
-    .brand-mark {
-      width: 46px;
-      height: 46px;
-      border-radius: 16px;
+
+    .brand-mark,
+    .card-logo {
       display: grid;
       place-items: center;
-      padding: 4px;
       background: linear-gradient(145deg, rgba(246, 201, 91, .16), rgba(255, 255, 255, .04));
-      border: 1px solid rgba(246, 201, 91, .34);
-      box-shadow: 0 0 44px rgba(246, 201, 91, .22), inset 0 0 24px rgba(0, 0, 0, .35);
+      border: 1px solid rgba(246, 201, 91, .36);
+      box-shadow: var(--glow), inset 0 0 24px rgba(0, 0, 0, .35);
       overflow: hidden;
       flex: 0 0 auto;
     }
-    .brand-mark img {
+
+    .brand-mark { width: 48px; height: 48px; border-radius: 16px; padding: 3px; }
+    .card-logo { width: 86px; height: 86px; margin: 0 auto 16px; border-radius: 26px; padding: 6px; }
+
+    .brand-mark img,
+    .card-logo img {
       width: 100%;
       height: 100%;
-      object-fit: contain;
-      display: block;
       max-width: 100%;
       max-height: 100%;
+      display: block;
+      object-fit: cover;
+      border-radius: inherit;
     }
+
     .brand-text { line-height: 1; }
     .brand-text strong {
       display: block;
@@ -167,6 +196,7 @@
       text-transform: uppercase;
       font-weight: 800;
     }
+
     .nav-links { display: flex; align-items: center; gap: 8px; }
     .nav-link {
       padding: 11px 14px;
@@ -192,22 +222,47 @@
     }
 
     .signup-shell {
-      width: min(1180px, calc(100% - 36px));
+      width: min(var(--max), calc(100% - 36px));
       min-height: calc(100vh - 88px);
       margin: 0 auto;
       display: grid;
-      grid-template-columns: minmax(0, 1.02fr) minmax(380px, .98fr);
+      grid-template-columns: minmax(0, 1.04fr) minmax(380px, .96fr);
       gap: clamp(30px, 5vw, 70px);
       align-items: center;
-      padding: clamp(34px, 5vw, 66px) 0 58px;
+      padding: clamp(34px, 5vw, 68px) 0 58px;
+    }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      width: fit-content;
+      margin-bottom: 20px;
+      padding: 9px 13px;
+      border: 1px solid rgba(246, 201, 91, .3);
+      border-radius: 999px;
+      background: rgba(246, 201, 91, .08);
+      color: var(--gold-2);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    .kicker::before {
+      content: '';
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 18px rgba(119, 240, 161, .8);
     }
 
     .hero-copy h1 {
-      max-width: 720px;
-      font-family: 'Rajdhani', sans-serif;
-      font-size: clamp(48px, 7vw, 92px);
-      line-height: .9;
-      letter-spacing: -.03em;
+      max-width: 760px;
+      font-family: 'Black Ops One', 'Rajdhani', sans-serif;
+      font-size: clamp(46px, 6.6vw, 88px);
+      line-height: .95;
+      letter-spacing: -.02em;
       text-transform: uppercase;
       margin-bottom: 22px;
     }
@@ -226,11 +281,12 @@
       line-height: 1.7;
       margin-bottom: 26px;
     }
+
     .trust-chips {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-      max-width: 650px;
+      max-width: 660px;
       margin-bottom: 28px;
     }
     .trust-chips span {
@@ -247,22 +303,25 @@
     }
     .trust-chips span::before { content: '✦'; color: var(--gold); }
 
-    .preview-panel {
-      max-width: 650px;
-      border: 1px solid rgba(246, 201, 91, .22);
-      border-radius: 26px;
-      padding: 18px;
-      background:
-        radial-gradient(circle at 20% 20%, rgba(246, 201, 91, .12), transparent 32%),
-        rgba(255, 255, 255, .045);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07);
+    .battle-preview {
+      max-width: 670px;
+      padding: 1px;
+      border-radius: 28px;
+      background: linear-gradient(145deg, rgba(246, 201, 91, .5), rgba(255, 255, 255, .08) 35%, rgba(232, 59, 95, .35), rgba(85, 231, 255, .22));
+      box-shadow: var(--shadow), 0 0 90px rgba(246, 201, 91, .1);
+    }
+    .battle-preview-inner {
+      border-radius: 27px;
+      padding: 16px;
+      background: linear-gradient(180deg, rgba(18, 23, 36, .94), rgba(4, 6, 10, .96));
+      border: 1px solid rgba(255, 255, 255, .08);
     }
     .preview-top {
       display: flex;
       justify-content: space-between;
       gap: 12px;
       align-items: center;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
       color: var(--gold-2);
       font-size: 12px;
       font-weight: 900;
@@ -271,8 +330,8 @@
     }
     .preview-arena {
       position: relative;
-      min-height: 170px;
-      border-radius: 20px;
+      min-height: 230px;
+      border-radius: 22px;
       overflow: hidden;
       border: 1px solid rgba(255, 255, 255, .08);
       background:
@@ -283,37 +342,37 @@
     .preview-arena::before {
       content: '';
       position: absolute;
-      inset: 18%;
+      inset: 14%;
       border-radius: 50%;
       border: 1px solid rgba(246, 201, 91, .22);
       box-shadow: 0 0 70px rgba(246, 201, 91, .12), inset 0 0 70px rgba(246, 201, 91, .05);
     }
     .laser {
       position: absolute;
-      width: 48%;
-      height: 4px;
-      left: 27%;
-      top: 42%;
+      width: 52%;
+      height: 5px;
+      left: 26%;
+      top: 41%;
       background: linear-gradient(90deg, transparent, var(--cyan), var(--gold), transparent);
-      box-shadow: 0 0 18px rgba(85, 231, 255, .8);
+      box-shadow: 0 0 20px rgba(85, 231, 255, .85);
       transform: rotate(-16deg);
       animation: pulse 1.6s ease-in-out infinite;
     }
     .impact {
       position: absolute;
-      width: 64px;
-      height: 64px;
-      right: 18%;
-      top: 25%;
+      width: 74px;
+      height: 74px;
+      right: 17%;
+      top: 23%;
       border-radius: 50%;
       background: radial-gradient(circle, #fff3bd, var(--ember) 45%, transparent 72%);
       animation: boom 1.6s ease-in-out infinite;
     }
     .player {
       position: absolute;
-      width: 84px;
-      padding: 9px;
-      border-radius: 14px;
+      width: 92px;
+      padding: 10px;
+      border-radius: 16px;
       background: rgba(5, 7, 12, .74);
       border: 1px solid rgba(255, 255, 255, .12);
       box-shadow: 0 18px 38px rgba(0, 0, 0, .36);
@@ -321,8 +380,9 @@
     .player small { display: block; color: #fff; font-weight: 900; margin-bottom: 7px; }
     .hp { height: 7px; border-radius: 99px; background: rgba(255, 255, 255, .12); overflow: hidden; }
     .hp span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--green), var(--gold), var(--ember)); }
-    .p1 { left: 10%; top: 26%; }
-    .p2 { right: 12%; top: 34%; }
+    .p1 { left: 10%; top: 25%; }
+    .p2 { right: 11%; top: 33%; }
+    .p3 { left: 36%; bottom: 20%; }
     .horde-strip {
       position: absolute;
       left: 14px;
@@ -332,10 +392,10 @@
       justify-content: space-between;
       align-items: center;
       gap: 12px;
-      padding: 11px 13px;
+      padding: 12px 14px;
       border-radius: 16px;
       border: 1px solid rgba(232, 59, 95, .34);
-      background: linear-gradient(90deg, rgba(232, 59, 95, .18), rgba(246, 201, 91, .08));
+      background: linear-gradient(90deg, rgba(232, 59, 95, .2), rgba(246, 201, 91, .08));
       color: #ffe5ea;
       font-size: 12px;
       font-weight: 900;
@@ -348,9 +408,9 @@
       content: '';
       position: absolute;
       inset: -1px;
-      border-radius: 34px;
-      background: linear-gradient(145deg, rgba(246, 201, 91, .72), rgba(255, 255, 255, .1) 28%, rgba(232, 59, 95, .45) 62%, rgba(85, 231, 255, .25));
-      filter: drop-shadow(0 28px 95px rgba(0, 0, 0, .56));
+      border-radius: var(--radius-xl);
+      background: linear-gradient(145deg, rgba(246, 201, 91, .74), rgba(255, 255, 255, .1) 28%, rgba(232, 59, 95, .45) 62%, rgba(85, 231, 255, .25));
+      filter: drop-shadow(0 28px 95px rgba(0, 0, 0, .58));
       z-index: -1;
     }
     .signup-card {
@@ -360,32 +420,26 @@
       border-radius: 33px;
       border: 1px solid rgba(255, 255, 255, .1);
       background:
-        radial-gradient(circle at 50% 8%, rgba(246, 201, 91, .16), transparent 28%),
+        radial-gradient(circle at 50% 8%, rgba(246, 201, 91, .17), transparent 28%),
         linear-gradient(180deg, var(--panel-strong), rgba(4, 6, 10, .96));
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
     }
+    .signup-card::after {
+      content: '';
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      bottom: 20px;
+      height: 70px;
+      border-radius: 22px;
+      border: 1px solid rgba(232, 59, 95, .25);
+      background: linear-gradient(90deg, rgba(232, 59, 95, .14), rgba(246, 201, 91, .06));
+      opacity: .7;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .card-content { position: relative; z-index: 1; }
     .card-top { text-align: center; margin-bottom: 24px; }
-    .card-logo {
-      width: 76px;
-      height: 76px;
-      margin: 0 auto 16px;
-      display: grid;
-      place-items: center;
-      padding: 6px;
-      border-radius: 24px;
-      border: 1px solid rgba(246, 201, 91, .4);
-      background: rgba(246, 201, 91, .08);
-      box-shadow: 0 0 54px rgba(246, 201, 91, .2), inset 0 0 28px rgba(0, 0, 0, .42);
-      overflow: hidden;
-    }
-    .card-logo img {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      display: block;
-      max-width: 100%;
-      max-height: 100%;
-    }
     .eyebrow {
       display: inline-flex;
       align-items: center;
@@ -411,9 +465,9 @@
       box-shadow: 0 0 16px rgba(119, 240, 161, .9);
     }
     .card-title {
-      font-family: 'Rajdhani', sans-serif;
+      font-family: 'Black Ops One', 'Rajdhani', sans-serif;
       font-size: clamp(32px, 4vw, 48px);
-      line-height: .95;
+      line-height: 1;
       text-transform: uppercase;
       margin-bottom: 12px;
     }
@@ -447,7 +501,7 @@
       box-shadow: 0 20px 55px rgba(246, 201, 91, .24), inset 0 1px 0 rgba(255, 255, 255, .65);
     }
     .btn-secondary {
-      color: #f8f3e8;
+      color: var(--text);
       background: rgba(255, 255, 255, .065);
       border-color: rgba(255, 255, 255, .12);
     }
@@ -497,6 +551,8 @@
       text-align: center;
       color: var(--muted);
       font-size: 14px;
+      position: relative;
+      z-index: 1;
     }
     .login-link a { color: var(--gold-2); font-weight: 900; }
 
@@ -512,7 +568,7 @@
     @media (max-width: 980px) {
       .signup-shell { grid-template-columns: 1fr; padding-top: 34px; }
       .hero-copy { text-align: center; }
-      .lede, .preview-panel { margin-left: auto; margin-right: auto; }
+      .kicker, .lede, .battle-preview { margin-left: auto; margin-right: auto; }
       .trust-chips { justify-content: center; margin-left: auto; margin-right: auto; }
     }
     @media (max-width: 620px) {
@@ -520,20 +576,24 @@
       nav { border-radius: 18px; }
       .brand-text span, .nav-link { display: none; }
       .brand-mark { width: 42px; height: 42px; }
-      .signup-shell { width: min(100% - 24px, 1180px); padding-top: 24px; }
-      .hero-copy h1 { font-size: clamp(40px, 13vw, 64px); }
+      .signup-shell { width: min(100% - 24px, var(--max)); padding-top: 24px; }
+      .hero-copy h1 { font-size: clamp(38px, 12vw, 58px); }
       .trust-chips span { width: 100%; justify-content: center; }
       .trial-grid { grid-template-columns: 1fr; }
       .signup-card { padding: 24px; }
-      .card-logo { width: 64px; height: 64px; border-radius: 20px; }
-      .preview-arena { min-height: 150px; }
-      .player { width: 72px; }
+      .card-logo { width: 70px; height: 70px; border-radius: 22px; }
+      .preview-arena { min-height: 170px; }
+      .player { width: 74px; }
       .p2 { right: 7%; }
+      .p3 { display: none; }
       .horde-strip { font-size: 10px; }
     }
   </style>
 </head>
 <body>
+  <div class="orb orb-a" aria-hidden="true"></div>
+  <div class="orb orb-b" aria-hidden="true"></div>
+
   <div class="nav-wrap">
     <nav aria-label="Main navigation">
       <a class="brand" href="/" aria-label="IntoTheBattle home">
@@ -553,55 +613,61 @@
 
   <main class="signup-shell">
     <section class="hero-copy" aria-labelledby="signup-title">
-      <h1 id="signup-title">Start your creator trial. <span>Launch your arena.</span></h1>
-      <p class="lede">Turn chat, likes, follows, and gifts into a live battle your viewers can influence. Set up your room, add the overlay, and bring the arena into your next stream.</p>
+      <div class="kicker">7-day creator trial</div>
+      <h1 id="signup-title">Launch your live battle arena.</h1>
+      <p class="lede">Turn chat, likes, follows, and gifts into real-time combat your viewers can influence. Build your room, add the overlay, and make your next LIVE feel playable.</p>
       <div class="trust-chips" aria-label="Trial highlights">
-        <span>14-day creator trial</span>
+        <span>7-day creator trial</span>
         <span>No credit card required</span>
         <span>OBS + TikTok Studio ready</span>
       </div>
 
-      <div class="preview-panel" aria-label="Battle room preview">
-        <div class="preview-top"><span>Battle room preview</span><span>Stream-ready</span></div>
-        <div class="preview-arena" aria-hidden="true">
-          <div class="laser"></div>
-          <div class="impact"></div>
-          <div class="player p1"><small>@Nova</small><div class="hp"><span style="width:84%"></span></div></div>
-          <div class="player p2"><small>@Jax</small><div class="hp"><span style="width:42%"></span></div></div>
-          <div class="horde-strip"><span>The Horde</span><span>42 viewers</span></div>
+      <div class="battle-preview" aria-label="Battle room preview">
+        <div class="battle-preview-inner">
+          <div class="preview-top"><span>Battle room preview</span><span>Stream-ready</span></div>
+          <div class="preview-arena" aria-hidden="true">
+            <div class="laser"></div>
+            <div class="impact"></div>
+            <div class="player p1"><small>@Nova</small><div class="hp"><span style="width:84%"></span></div></div>
+            <div class="player p2"><small>@Jax</small><div class="hp"><span style="width:42%"></span></div></div>
+            <div class="player p3"><small>@Milo</small><div class="hp"><span style="width:64%"></span></div></div>
+            <div class="horde-strip"><span>The Horde</span><span>42 viewers pushing the arena</span></div>
+          </div>
         </div>
       </div>
     </section>
 
     <section class="signup-card-wrap" aria-label="Start creator trial">
       <div class="signup-card">
-        <div class="card-top">
-          <a class="card-logo" href="/" aria-label="IntoTheBattle home">
-            <img src="/logo.svg" alt="IntoTheBattle logo" />
-          </a>
-          <div class="eyebrow">Creator beta access</div>
-          <h2 class="card-title">Enter the arena</h2>
-          <p class="card-sub">Choose the fastest path and continue into setup for your creator room.</p>
-        </div>
-
-        <div class="actions">
-          <a href="/auth/google" class="btn btn-primary">Start free trial with Google →</a>
-          <a href="/register" class="btn btn-secondary">Create account with email</a>
-        </div>
-
-        <p class="microcopy">Your creator room unlocks automatically after signup. You can finish setup from the welcome dashboard.</p>
-
-        <div class="trial-panel">
-          <strong>Your trial includes:</strong>
-          <div class="trial-grid">
-            <div class="trial-item"><b>Room</b>Private creator setup</div>
-            <div class="trial-item"><b>Overlay</b>Stream-ready display</div>
-            <div class="trial-item"><b>Controls</b>Dashboard tools</div>
-            <div class="trial-item"><b>Effects</b>Chat and gift action</div>
+        <div class="card-content">
+          <div class="card-top">
+            <a class="card-logo" href="/" aria-label="IntoTheBattle home">
+              <img src="/logo.svg" alt="IntoTheBattle logo" />
+            </a>
+            <div class="eyebrow">Creator beta access</div>
+            <h2 class="card-title">Enter the arena</h2>
+            <p class="card-sub">Choose the fastest path and continue into setup for your creator room.</p>
           </div>
-        </div>
 
-        <div class="login-link">Already have an account? <a href="/login">Sign in here</a>.</div>
+          <div class="actions">
+            <a href="/auth/google" class="btn btn-primary">Start 7-day trial with Google →</a>
+            <a href="/register" class="btn btn-secondary">Create account with email</a>
+          </div>
+
+          <p class="microcopy">Your creator room unlocks automatically after signup. Finish setup from the welcome dashboard.</p>
+
+          <div class="trial-panel">
+            <strong>Your 7-day trial includes:</strong>
+            <div class="trial-grid">
+              <div class="trial-item"><b>Room</b>Private creator setup</div>
+              <div class="trial-item"><b>Overlay</b>Stream-ready display</div>
+              <div class="trial-item"><b>Controls</b>Dashboard tools</div>
+              <div class="trial-item"><b>Effects</b>Chat and gift action</div>
+            </div>
+          </div>
+
+          <div class="login-link">Already have an account? <a href="/login">Sign in here</a>.</div>
+        </div>
       </div>
     </section>
   </main>
