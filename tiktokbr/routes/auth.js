@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import postmark from 'postmark';
 import { v4 as uuidv4 } from 'uuid';
-import db from '../db/db.js';
+import db, { getAsync, runAsync } from '../db/db.js';
 
 function getPostmarkClient() {
   const token = process.env.POSTMARK_API_TOKEN;
@@ -83,6 +83,22 @@ function ensureTrialSubscription(userId) {
   return db.prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1").get(userId);
 }
 
+async function ensureTrialSubscriptionAsync(userId) {
+  const existing = await getAsync("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1", userId);
+  if (existing) return existing;
+
+  const trialDays = 14;
+  const trialExpiresAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 19)
+    .replace('T', ' ');
+  await runAsync(
+    'INSERT INTO subscriptions (user_id, status, started_at, next_billing_date, expires_at, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+    [userId, 'trial', trialExpiresAt, trialExpiresAt]
+  );
+  return getAsync("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1", userId);
+}
+
 function ensureUserRoom(userId, name) {
   const existingRoom = db.prepare('SELECT * FROM user_rooms WHERE user_id = ? ORDER BY created_at DESC LIMIT 1').get(userId);
   if (existingRoom) return existingRoom;
@@ -92,6 +108,20 @@ function ensureUserRoom(userId, name) {
   db.prepare('INSERT INTO user_rooms (user_id, room_id, room_name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)')
     .run(userId, roomId, roomName);
   db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
+  return { room_id: roomId, room_name: roomName };
+}
+
+async function ensureUserRoomAsync(userId, name) {
+  const existingRoom = await getAsync('SELECT * FROM user_rooms WHERE user_id = ? ORDER BY created_at DESC LIMIT 1', userId);
+  if (existingRoom) return existingRoom;
+
+  const roomId = uuidv4().replace(/-/g, '').slice(0, 10);
+  const roomName = `${String(name || 'Creator').trim()}'s room`;
+  await runAsync(
+    'INSERT INTO user_rooms (user_id, room_id, room_name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+    [userId, roomId, roomName]
+  );
+  await runAsync('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING', roomId);
   return { room_id: roomId, room_name: roomName };
 }
 
@@ -830,7 +860,8 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
     'INSERT INTO users (email, password_hash, name, tiktok_username, is_active, session_token, email_verified, email_verification_token, email_verification_expires, created_at, updated_at) VALUES (?, ?, ?, ?, 1, NULL, 0, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id'
   ).run(email, passwordHash, name, tiktokUsername, verificationToken, verificationExpiresAt);
 
-  const userId = Array.isArray(result) && result.length ? result[0].id : null;
+  const userId = result.rows?.[0]?.id || (Array.isArray(result) && result.length ? result[0].id : null);
+  if (!userId) return res.status(500).json({ success: false, error: 'Unable to create account.' });
   const sessionToken = createSessionToken({ userId, email });
   db.prepare('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?').run(sessionToken, userId);
   const user = { id: userId, email, name };
@@ -927,37 +958,38 @@ router.get('/auth/google/callback', async (req, res) => {
     }
 
     const email = String(profile.email).toLowerCase();
-    let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    let user = await getAsync('SELECT * FROM users WHERE email = ?', email);
 
     if (!user) {
       const name = profile.name || profile.given_name || email.split('@')[0];
       const tiktokUsername = normalizeGoogleUsername(email);
-      const result = db.prepare(
-        'INSERT INTO users (email, password_hash, name, tiktok_username, is_active, session_token, email_verified, email_verification_token, email_verification_expires, created_at, updated_at) VALUES (?, NULL, ?, ?, 1, NULL, 1, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id'
-      ).run(email, name, tiktokUsername);
-      const userId = Array.isArray(result) && result.length ? result[0].id : null;
-      const roomId = uuidv4().replace(/-/g, '').slice(0, 10);
-      db.prepare('INSERT INTO user_rooms (user_id, room_id, room_name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)').run(
-        userId,
-        roomId,
-        `${name}'s room`
+      const result = await runAsync(
+        'INSERT INTO users (email, password_hash, name, tiktok_username, is_active, session_token, email_verified, email_verification_token, email_verification_expires, created_at, updated_at) VALUES (?, NULL, ?, ?, 1, NULL, 1, NULL, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) RETURNING id',
+        [email, name, tiktokUsername]
       );
-      db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
-      ensureTrialSubscription(userId);
-      user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+      const userId = result.rows?.[0]?.id || null;
+      if (!userId) throw new Error('Google OAuth user insert did not return an id');
+      const roomId = uuidv4().replace(/-/g, '').slice(0, 10);
+      await runAsync(
+        'INSERT INTO user_rooms (user_id, room_id, room_name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
+        [userId, roomId, `${name}'s room`]
+      );
+      await runAsync('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING', roomId);
+      await ensureTrialSubscriptionAsync(userId);
+      user = await getAsync('SELECT * FROM users WHERE id = ?', userId);
     } else {
       if (!user.is_active) {
         return res.status(403).send('Your account is disabled.');
       }
       if (!user.email_verified) {
-        db.prepare('UPDATE users SET email_verified = 1 WHERE id = ?').run(user.id);
+        await runAsync('UPDATE users SET email_verified = 1 WHERE id = ?', user.id);
       }
-      ensureUserRoom(user.id, user.name);
-      ensureTrialSubscription(user.id);
+      await ensureUserRoomAsync(user.id, user.name);
+      await ensureTrialSubscriptionAsync(user.id);
     }
 
     const sessionToken = createSessionToken({ userId: user.id, email });
-    db.prepare('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?').run(sessionToken, user.id);
+    await runAsync('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?', [sessionToken, user.id]);
     setSessionCookie(res, sessionToken);
     res.clearCookie('google_oauth_state', { ...COOKIE_OPTIONS, httpOnly: true, sameSite: 'lax' });
     return res.redirect('/dashboard/welcome');

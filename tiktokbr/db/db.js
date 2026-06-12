@@ -1,6 +1,8 @@
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { Worker } from 'worker_threads';
 import { Client } from 'pg';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -22,6 +24,20 @@ if (useSsl) {
 }
 
 const client = useStubDb ? null : new Client(clientOptions);
+const workerPath = path.join(__dirname, 'pgWorker.js');
+const syncWorker = useStubDb ? null : new Worker(workerPath, { workerData: { clientOptions } });
+if (syncWorker) {
+  syncWorker.on('error', (err) => {
+    console.error('DB sync worker error:', err?.message || err);
+    updateDbHealth({ lastError: err?.message || String(err) });
+  });
+  syncWorker.on('exit', (code) => {
+    if (code !== 0) {
+      console.error('DB sync worker exited unexpectedly:', code);
+      updateDbHealth({ lastError: `DB sync worker exited with code ${code}` });
+    }
+  });
+}
 const dbHealth = {
   mode: useStubDb ? 'stub' : 'postgres',
   configured: Boolean(connectionString) || useStubDb,
@@ -32,6 +48,8 @@ const dbHealth = {
   lastError: null,
   updatedAt: new Date().toISOString(),
 };
+let initializationPromise = null;
+const syncQueryTimeoutMs = Number(process.env.DB_SYNC_QUERY_TIMEOUT_MS || 10000);
 
 function updateDbHealth(patch) {
   Object.assign(dbHealth, patch, { updatedAt: new Date().toISOString() });
@@ -39,38 +57,6 @@ function updateDbHealth(patch) {
 
 export function getDbHealthSnapshot() {
   return { ...dbHealth };
-}
-
-function waitFor(promise, timeoutMs = 0) {
-  const buffer = new SharedArrayBuffer(4);
-  const state = new Int32Array(buffer);
-  let result;
-  let error;
-
-  promise.then((value) => {
-    result = value;
-    Atomics.store(state, 0, 1);
-    Atomics.notify(state, 0, 1);
-  }).catch((err) => {
-    error = err;
-    Atomics.store(state, 0, 1);
-    Atomics.notify(state, 0, 1);
-  });
-
-  const start = Date.now();
-  while (Atomics.load(state, 0) === 0) {
-    const elapsed = Date.now() - start;
-    if (timeoutMs > 0 && elapsed >= timeoutMs) break;
-    const waitMs = timeoutMs > 0 ? Math.min(1000, timeoutMs - elapsed) : 1000;
-    Atomics.wait(state, 0, 0, waitMs);
-  }
-
-  if (Atomics.load(state, 0) === 0) {
-    throw new Error('waitFor: timeout while waiting for promise');
-  }
-
-  if (error) throw error;
-  return result;
 }
 
 // Initiate connection asynchronously without blocking the event loop
@@ -108,6 +94,58 @@ function normalizeParams(params) {
   return [params];
 }
 
+function normalizeStatementArgs(args) {
+  if (!args.length) return [];
+  if (args.length === 1) return normalizeParams(args[0]);
+  return args;
+}
+
+function querySync(sql, params) {
+  if (useStubDb) return { rows: [], rowCount: 0 };
+  if (!syncWorker) throw new Error('Postgres sync worker is not available');
+
+  const id = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const resultFile = path.join(os.tmpdir(), `intothebattle-db-${id}.json`);
+  const sab = new SharedArrayBuffer(4);
+  const state = new Int32Array(sab);
+
+  syncWorker.postMessage({ sql, values: normalizeParams(params), resultFile, sab });
+  const waitResult = Atomics.wait(state, 0, 0, syncQueryTimeoutMs);
+  if (waitResult === 'timed-out') {
+    try { fs.rmSync(resultFile, { force: true }); } catch (_) {}
+    throw new Error(`Postgres sync query timed out after ${syncQueryTimeoutMs}ms`);
+  }
+
+  try {
+    const result = JSON.parse(fs.readFileSync(resultFile, 'utf8'));
+    if (!result.ok) throw new Error(result.error || 'Postgres sync query failed');
+    return result;
+  } finally {
+    try { fs.rmSync(resultFile, { force: true }); } catch (_) {}
+  }
+}
+
+async function queryAsync(sql, params) {
+  if (useStubDb) return { rows: [], rowCount: 0 };
+  if (initializationPromise) await initializationPromise;
+  await connectClient();
+  return client.query(convertPlaceholders(sql), normalizeParams(params));
+}
+
+export async function getAsync(sql, params) {
+  const result = await queryAsync(sql, params);
+  return result.rows?.[0] || null;
+}
+
+export async function allAsync(sql, params) {
+  const result = await queryAsync(sql, params);
+  return result.rows || [];
+}
+
+export async function runAsync(sql, params) {
+  return queryAsync(sql, params);
+}
+
 const prepareStatement = useStubDb
   ? () => ({
       get() { return null; },
@@ -117,30 +155,29 @@ const prepareStatement = useStubDb
   : function prepareStatement() {
       const queryText = arguments.length === 2 ? arguments[1] : arguments[0];
       const sql = convertPlaceholders(queryText);
-      const name = `stmt_${Math.random().toString(36).slice(2, 10)}`;
 
       return {
-        get(params) {
+        get(...params) {
           try {
-            const result = waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
+            const result = querySync(sql, normalizeStatementArgs(params));
             return result.rows?.[0];
           } catch (err) {
             console.error('DB query error (get):', err?.message || err);
             throw err;
           }
         },
-        all(params) {
+        all(...params) {
           try {
-            const result = waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
+            const result = querySync(sql, normalizeStatementArgs(params));
             return result.rows || [];
           } catch (err) {
             console.error('DB query error (all):', err?.message || err);
             throw err;
           }
         },
-        run(params) {
+        run(...params) {
           try {
-            return waitFor(client.query({ name, text: sql, values: normalizeParams(params) }));
+            return querySync(sql, normalizeStatementArgs(params));
           } catch (err) {
             console.error('DB query error (run):', err?.message || err);
             throw err;
@@ -152,7 +189,7 @@ const prepareStatement = useStubDb
 const db = {
   prepare: prepareStatement,
   exec(sql) {
-    return useStubDb ? null : waitFor(client.query(sql));
+    return useStubDb ? null : querySync(sql);
   },
   pragma() {
     return null;
@@ -162,13 +199,13 @@ const db = {
       return (...args) => fn(...args);
     }
     return (...args) => {
-      waitFor(client.query('BEGIN'));
+      querySync('BEGIN');
       try {
         const result = fn(...args);
-        waitFor(client.query('COMMIT'));
+        querySync('COMMIT');
         return result;
       } catch (error) {
-        waitFor(client.query('ROLLBACK'));
+        querySync('ROLLBACK');
         throw error;
       }
     };
@@ -354,7 +391,10 @@ async function initDb() {
 
 // Start initialization in the background so module load doesn't block
 if (!useStubDb) {
-  initDb().catch(err => console.error('initDb failed:', err));
+  initializationPromise = initDb().catch(err => {
+    console.error('initDb failed:', err);
+    throw err;
+  });
 }
 
 export default db;

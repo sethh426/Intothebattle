@@ -1,19 +1,19 @@
-import db from '../db/db.js';
+import { getAsync, runAsync } from '../db/db.js';
 import { getE2EAuthRecord } from '../auth/e2eAuth.js';
 
-function getAuthRecord(token) {
+async function getAuthRecord(token) {
   if (!token) return null;
   const e2eAuth = getE2EAuthRecord(token);
   if (e2eAuth) return e2eAuth;
 
-  const accessCode = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
+  const accessCode = await getAsync('SELECT * FROM access_codes WHERE session_token = ?', token);
   if (accessCode) return { type: 'code', record: accessCode };
-  const user = db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
+  const user = await getAsync('SELECT * FROM users WHERE session_token = ?', token);
   if (user) return { type: 'user', record: user };
   return null;
 }
 
-export default function checkTrial(req, res, next) {
+export default async function checkTrial(req, res, next) {
   const token = req.cookies?.session_token;
   if (!token) {
     console.info('checkTrial: no session token present — redirecting to /login');
@@ -21,7 +21,7 @@ export default function checkTrial(req, res, next) {
   }
 
   try {
-    const auth = getAuthRecord(token);
+    const auth = await getAuthRecord(token);
     if (!auth) return res.redirect('/login');
 
     if (auth.type === 'code') {
@@ -66,15 +66,16 @@ export default function checkTrial(req, res, next) {
         return res.redirect('/login?reason=device');
       }
 
-      db.prepare('UPDATE access_codes SET last_seen = CURRENT_TIMESTAMP WHERE id = ?').run(row.id);
+      await runAsync('UPDATE access_codes SET last_seen = CURRENT_TIMESTAMP WHERE id = ?', row.id);
       req.accessCode = row;
     } else {
       const user = auth.record;
       if (!user.is_active) return res.redirect('/paywall?reason=revoked');
 
-      const subscription = db.prepare(
-        'SELECT * FROM subscriptions WHERE user_id = ? AND status IN (\'active\',\'trial\') ORDER BY updated_at DESC LIMIT 1'
-      ).get(user.id);
+      const subscription = await getAsync(
+        'SELECT * FROM subscriptions WHERE user_id = ? AND status IN (\'active\',\'trial\') ORDER BY updated_at DESC LIMIT 1',
+        user.id
+      );
 
       if (!subscription) {
         console.info('checkTrial -> user has no subscription; redirecting to paywall', { userId: user.id, email: user.email || null });
@@ -90,7 +91,7 @@ export default function checkTrial(req, res, next) {
         }
       }
 
-      db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
+      await runAsync('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', user.id);
       req.user = user;
       req.subscription = subscription;
     }

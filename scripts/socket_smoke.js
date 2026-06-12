@@ -168,8 +168,9 @@ try {
   const dashboard = connectSocket({
     extraHeaders: { Cookie: `session_token=${e2eSessionToken}` },
   });
+  const dashboardReadyPromise = waitForEvent(dashboard, 'serverReady', payload => payload.roomId === roomId);
   await waitForEvent(dashboard, 'connect');
-  const dashboardReady = await waitForEvent(dashboard, 'serverReady', payload => payload.roomId === roomId);
+  const dashboardReady = await dashboardReadyPromise;
   assert(dashboardReady.roomId === roomId, 'dashboard serverReady should use E2E room');
   const initialDashboardCountPromise = waitForEvent(dashboard, 'overlayCount', payload => payload.count === 0);
   const dashboardSettingsPromise = waitForEvent(dashboard, 'overlaySettings', payload => payload && typeof payload === 'object');
@@ -188,8 +189,9 @@ try {
     });
     overlaySockets.push(overlay);
 
+    const overlayReadyPromise = waitForEvent(overlay, 'serverReady', payload => payload.roomId === roomId);
     await waitForEvent(overlay, 'connect');
-    const overlayReady = await waitForEvent(overlay, 'serverReady', payload => payload.roomId === roomId);
+    const overlayReady = await overlayReadyPromise;
     assert(overlayReady.roomId === roomId, 'signed overlay serverReady should use signed room');
 
     const overlayGameStatePromise = waitForEvent(overlay, 'gameState', payload => payload && typeof payload === 'object');
