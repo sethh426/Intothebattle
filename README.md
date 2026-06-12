@@ -251,6 +251,7 @@ Health/monitoring:
 
 ```text
 GET /api/status
+GET /api/subscription/status
 GET /metrics (requires METRICS_TOKEN in production)
 GET /api/runtime/diagnostics (requires DIAGNOSTICS_TOKEN or METRICS_TOKEN in production)
 ```

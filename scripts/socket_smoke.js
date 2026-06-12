@@ -55,8 +55,8 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
-async function request(pathname) {
-  return fetch(`${baseUrl}${pathname}`, { redirect: 'manual' });
+async function request(pathname, options = {}) {
+  return fetch(`${baseUrl}${pathname}`, { redirect: 'manual', ...options });
 }
 
 async function waitForHealth() {
@@ -149,6 +149,20 @@ async function expectRejectedOverlaySocket() {
 
 try {
   await waitForHealth();
+  const unauthSubscriptionStatus = await request('/api/subscription/status');
+  assert(unauthSubscriptionStatus.status === 401, 'subscription status should require authentication');
+
+  const subscriptionStatusRes = await request('/api/subscription/status', {
+    headers: { Cookie: `session_token=${e2eSessionToken}` },
+  });
+  assert(subscriptionStatusRes.status === 200, 'authenticated subscription status should return 200');
+  const subscriptionStatus = await subscriptionStatusRes.json();
+  assert(subscriptionStatus.success === true, 'subscription status should report success');
+  assert(subscriptionStatus.type === 'code', 'E2E subscription status should use code auth');
+  assert(subscriptionStatus.status === 'active', 'E2E subscription status should be active');
+  assert(subscriptionStatus.accessAllowed === true, 'E2E subscription status should allow access');
+  assert(subscriptionStatus.actionRequired === false, 'E2E subscription status should not require action');
+
   await expectRejectedOverlaySocket();
 
   const dashboard = connectSocket({

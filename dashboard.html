@@ -159,6 +159,37 @@ body {
   font-size: 13px;
   font-weight: 700;
 }
+.subscription-chip {
+  border: 1px solid rgba(255,255,255,.08);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(255,255,255,.05);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.subscription-chip.active {
+  background: rgba(65,211,125,.12);
+  border-color: rgba(65,211,125,.25);
+  color: var(--green);
+}
+.subscription-chip.trial {
+  background: rgba(242,193,78,.12);
+  border-color: rgba(242,193,78,.25);
+  color: var(--yellow);
+}
+.subscription-chip.attention {
+  background: rgba(255,95,109,.12);
+  border-color: rgba(255,95,109,.25);
+  color: var(--red);
+}
 .live-dot {
   width: 9px;
   height: 9px;
@@ -494,6 +525,7 @@ input[type=text]:focus, select:focus {
     </div>
     <div class="topbar-right">
       <div class="live-chip"><div class="live-dot"></div>LIVE SYSTEM</div>
+      <button type="button" class="subscription-chip" id="subscription-chip" onclick="openBillingStatus()">Checking plan</button>
       <button class="btn btn-secondary" onclick="window.location.href='/profile'">Account</button>
     </div>
   </div>
@@ -606,6 +638,7 @@ const socket = io();
 let overlayCount = 0;
 let currentRoomId = null;
 let currentOverlayUrl = null;
+let subscriptionStatusData = null;
 let audioLibraryData = [];
 let audioConfigData = {};
 const EVENTS = ['attack','gift','kill','respawn','heal','follow'];
@@ -663,6 +696,57 @@ function setTikTokStatus(state, username) {
   }
 }
 
+function setSubscriptionChip(data) {
+  const chip = document.getElementById('subscription-chip');
+  if (!chip) return;
+
+  subscriptionStatusData = data;
+  let label = 'Plan status';
+  let className = 'subscription-chip';
+
+  if (!data || !data.success) {
+    label = 'Plan unavailable';
+  } else if (data.actionRequired) {
+    label = data.status === 'none' ? 'Plan required' : `Plan ${data.status}`;
+    className += ' attention';
+  } else if (data.status === 'trial') {
+    const days = data.trial && Number.isFinite(data.trial.daysRemaining)
+      ? data.trial.daysRemaining
+      : null;
+    label = days == null ? 'Trial active' : `Trial ${days}d left`;
+    className += ' trial';
+  } else {
+    label = 'Plan active';
+    className += ' active';
+  }
+
+  chip.textContent = label;
+  chip.className = className;
+  chip.title = data && data.actionRequired ? 'Open upgrade page' : 'Open account profile';
+}
+
+async function fetchSubscriptionStatus() {
+  try {
+    const res = await fetch('/api/subscription/status', { credentials: 'same-origin' });
+    if (!res.ok) {
+      setSubscriptionChip(null);
+      return;
+    }
+    setSubscriptionChip(await res.json());
+  } catch (e) {
+    console.warn(e);
+    setSubscriptionChip(null);
+  }
+}
+
+function openBillingStatus() {
+  if (subscriptionStatusData && subscriptionStatusData.actionRequired) {
+    window.location.href = subscriptionStatusData.paywallUrl || '/paywall';
+    return;
+  }
+  window.location.href = '/profile';
+}
+
 async function fetchStatus() {
   try {
     const res = await fetch('/api/status', { credentials: 'same-origin' });
@@ -694,7 +778,9 @@ async function fetchStatus() {
 }
 
 fetchStatus();
+fetchSubscriptionStatus();
 setInterval(fetchStatus, 10000);
+setInterval(fetchSubscriptionStatus, 60000);
 
 function openOverlay() {
   window.open(currentOverlayUrl || '/overlay', '_blank');

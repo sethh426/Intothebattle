@@ -1465,6 +1465,170 @@ function getSessionRoom(req) {
   return room;
 }
 
+function parseDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function toIsoStringOrNull(date) {
+  return date ? date.toISOString() : null;
+}
+
+function daysRemainingUntil(date, now = new Date()) {
+  if (!date) return null;
+  return Math.max(0, Math.ceil((date.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
+}
+
+function paywallUrl(reason) {
+  return `/paywall?reason=${encodeURIComponent(reason || 'subscription_required')}`;
+}
+
+function buildAccessCodeSubscriptionStatus(row, now = new Date()) {
+  const expiresAt = parseDate(row.expires_at);
+  const trialStartedAt = parseDate(row.trial_started);
+  const trialDays = Number(row.trial_days || 14);
+  const trialEndsAt = trialStartedAt
+    ? new Date(trialStartedAt.getTime() + trialDays * 24 * 60 * 60 * 1000)
+    : null;
+  const rawStatus = String(row.subscription_status || 'active').toLowerCase();
+
+  let status = rawStatus;
+  let reason = null;
+  let accessAllowed = true;
+
+  if (row.is_revoked) {
+    status = 'revoked';
+    reason = 'revoked';
+    accessAllowed = false;
+  } else if (expiresAt && expiresAt < now) {
+    status = 'expired';
+    reason = 'expired';
+    accessAllowed = false;
+  } else if (trialStartedAt && rawStatus !== 'active') {
+    if (trialEndsAt && now <= trialEndsAt) {
+      status = 'trial';
+    } else {
+      status = 'expired';
+      reason = 'trial_expired';
+      accessAllowed = false;
+    }
+  } else if (['cancelled', 'suspended', 'expired', 'revoked'].includes(rawStatus)) {
+    reason = rawStatus;
+    accessAllowed = false;
+  } else {
+    status = rawStatus || 'active';
+  }
+
+  return {
+    type: 'code',
+    status,
+    reason,
+    accessAllowed,
+    actionRequired: !accessAllowed,
+    paywallUrl: accessAllowed ? null : paywallUrl(reason),
+    trial: trialStartedAt ? {
+      startedAt: toIsoStringOrNull(trialStartedAt),
+      days: trialDays,
+      endsAt: toIsoStringOrNull(trialEndsAt),
+      daysRemaining: daysRemainingUntil(trialEndsAt, now),
+    } : null,
+    subscription: {
+      status: rawStatus,
+      planType: row.code_type || 'access-code',
+      paypalSubscriptionId: row.paypal_subscription_id || null,
+      startedAt: toIsoStringOrNull(trialStartedAt),
+      nextBillingDate: null,
+      expiresAt: toIsoStringOrNull(expiresAt),
+    },
+  };
+}
+
+function buildUserSubscriptionStatus(user, now = new Date()) {
+  if (!user.is_active) {
+    return {
+      type: 'user',
+      status: 'revoked',
+      reason: 'revoked',
+      accessAllowed: false,
+      actionRequired: true,
+      paywallUrl: paywallUrl('revoked'),
+      trial: null,
+      subscription: null,
+    };
+  }
+
+  const subscription = db.prepare(
+    'SELECT * FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1'
+  ).get(user.id);
+
+  if (!subscription) {
+    return {
+      type: 'user',
+      status: 'none',
+      reason: 'no_subscription',
+      accessAllowed: false,
+      actionRequired: true,
+      paywallUrl: paywallUrl('no_subscription'),
+      trial: null,
+      subscription: null,
+    };
+  }
+
+  const rawStatus = String(subscription.status || 'unknown').toLowerCase();
+  const startedAt = parseDate(subscription.started_at);
+  const expiresAt = parseDate(subscription.expires_at);
+  const nextBillingDate = parseDate(subscription.next_billing_date);
+  let status = rawStatus;
+  let reason = null;
+  let accessAllowed = rawStatus === 'active';
+
+  if (rawStatus === 'trial') {
+    if (expiresAt && now <= expiresAt) {
+      accessAllowed = true;
+    } else {
+      status = 'expired';
+      reason = 'trial_expired';
+      accessAllowed = false;
+    }
+  } else if (!accessAllowed) {
+    reason = ['cancelled', 'suspended', 'expired'].includes(rawStatus)
+      ? rawStatus
+      : 'subscription_required';
+  }
+
+  return {
+    type: 'user',
+    status,
+    reason,
+    accessAllowed,
+    actionRequired: !accessAllowed,
+    paywallUrl: accessAllowed ? null : paywallUrl(reason),
+    trial: rawStatus === 'trial' ? {
+      startedAt: toIsoStringOrNull(startedAt),
+      days: startedAt && expiresAt
+        ? Math.max(0, Math.round((expiresAt.getTime() - startedAt.getTime()) / (24 * 60 * 60 * 1000)))
+        : null,
+      endsAt: toIsoStringOrNull(expiresAt),
+      daysRemaining: daysRemainingUntil(expiresAt, now),
+    } : null,
+    subscription: {
+      status: rawStatus,
+      planType: subscription.plan_type || (rawStatus === 'trial' ? 'trial' : 'PayPal'),
+      paypalSubscriptionId: subscription.paypal_subscription_id || null,
+      startedAt: toIsoStringOrNull(startedAt),
+      nextBillingDate: toIsoStringOrNull(nextBillingDate),
+      expiresAt: toIsoStringOrNull(expiresAt),
+    },
+  };
+}
+
+function buildSubscriptionStatus(auth) {
+  if (!auth) return null;
+  if (auth.type === 'code') return buildAccessCodeSubscriptionStatus(auth.record);
+  return buildUserSubscriptionStatus(auth.record);
+}
+
 io.use(socketAuth);
 
 app.use((req, res, next) => {
@@ -1721,6 +1885,20 @@ app.get('/api/status', requireRoom, (req, res) => res.json({
   overlaySettings:  req.room.overlaySettings,
   devTestMode:      DEV_TEST_MODE,
 }));
+
+app.get('/api/subscription/status', (req, res) => {
+  try {
+    const auth = getAuthRecord(req.cookies?.session_token);
+    if (!auth) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+    const status = buildSubscriptionStatus(auth);
+    if (!status) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    return res.json({ success: true, ...status });
+  } catch (err) {
+    logger.error({ err }, 'Failed to build subscription status');
+    return res.status(500).json({ success: false, error: 'Unable to load subscription status' });
+  }
+});
 
 app.post('/api/dev/test-mode', blockInProduction, (req, res) => {
   const { enabled } = req.body || {};

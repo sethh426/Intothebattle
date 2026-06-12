@@ -60,6 +60,7 @@ class OverlayScene extends Phaser.Scene {
     // Create containers for floating text effects
     this.damageContainer = this.add.container(0, 0);
     this.bannerContainer = this.add.container(0, 0);
+    this.isReady = true;
   }
 
   createBackground() {

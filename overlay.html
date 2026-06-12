@@ -91,7 +91,17 @@
 
     const game = new Phaser.Game(config);
     window.overlayGame = game;
-    initSocketOverlay(game);
+
+    function startSocketOverlayWhenReady() {
+      const scene = game.scene.getScene('OverlayScene') || game.scene.scenes[0];
+      if (scene && scene.isReady) {
+        initSocketOverlay(game);
+        return;
+      }
+      window.setTimeout(startSocketOverlayWhenReady, 50);
+    }
+
+    startSocketOverlayWhenReady();
   </script>
 </body>
 </html>

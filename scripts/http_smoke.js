@@ -89,6 +89,7 @@ try {
   assert((profileHtml.headers.get('location') || '').startsWith('/profile'), '/profile.html should redirect to /profile');
 
   await expectStatus('/api/status', 401);
+  await expectStatus('/api/subscription/status', 401);
   await expectStatus('/metrics', 401);
   await expectStatus(`/metrics?token=${encodeURIComponent(metricsToken)}`, 200);
   await expectStatus('/api/runtime/diagnostics', 401);

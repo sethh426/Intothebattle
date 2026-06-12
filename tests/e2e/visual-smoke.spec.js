@@ -128,6 +128,7 @@ test('dashboard renders with E2E auth fixture', async ({ context, page }, testIn
   const errors = await watchPage(page);
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle' });
   await expect(page.getByText('IntoTheBattle Command Center')).toBeVisible();
+  await expect(page.getByText('Plan active')).toBeVisible();
   await expect(page.getByText('Open Overlay')).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'dashboard');
