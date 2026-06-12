@@ -1194,6 +1194,7 @@ app.get('/', (req, res) => {
 app.get('/home', (_req, res) => res.sendFile(path.join(__dirname, 'home.html')));
 app.get('/verify-email', (_req, res) => res.sendFile(path.join(__dirname, 'verify-email.html')));
 app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));
+app.get(['/overlay-preview', '/overlay-preview.html'], (_req, res) => res.sendFile(path.join(__dirname, 'overlay-demo.html')));
 app.get('/register', (req, res) => {
   const token = req.cookies?.session_token;
   const auth = getAuthRecord(token);

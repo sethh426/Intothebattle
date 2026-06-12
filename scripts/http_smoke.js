@@ -75,7 +75,7 @@ try {
   await waitForHealth();
 
   await expectStatus('/healthz', 200);
-  for (const pathname of ['/', '/home', '/login', '/signup', '/paywall']) {
+  for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/overlay-preview']) {
     await expectStatus(pathname, 200);
   }
 

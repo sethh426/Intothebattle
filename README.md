@@ -229,6 +229,7 @@ GET /signup
 GET /paywall
 GET /my-code
 GET /overlay or /overlay.html with signed room_id + overlay_token for OBS/browser-source access
+GET /overlay-preview for public demo/recording footage without room auth
 ```
 
 Protected creator pages:
