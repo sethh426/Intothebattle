@@ -115,6 +115,25 @@ const COOKIE_OPTIONS = {
   sameSite: 'lax',
   secure: process.env.NODE_ENV === 'production',
 };
+const MAX_BCRYPT_ROUNDS = Number(process.env.MAX_BCRYPT_ROUNDS || 14);
+
+function getBcryptRounds(hash) {
+  const match = String(hash || '').match(/^\$2[aby]\$(\d{2})\$/);
+  return match ? Number(match[1]) : null;
+}
+
+function isBcryptHashSafe(hash) {
+  const rounds = getBcryptRounds(hash);
+  return rounds !== null && rounds >= 4 && rounds <= MAX_BCRYPT_ROUNDS;
+}
+
+async function comparePasswordSafe(password, hash, context = 'password') {
+  if (!isBcryptHashSafe(hash)) {
+    console.warn(`${context} bcrypt hash has unsupported cost; rejecting compare`);
+    return false;
+  }
+  return bcrypt.compare(password, hash);
+}
 
 function escapeHtml(value) {
   return String(value || '')
@@ -690,7 +709,7 @@ router.post('/auth/user/change-password', express.json(), async (req, res) => {
     return res.status(400).json({ success: false, error: 'Current and new passwords are required.' });
   }
 
-  const validPassword = await bcrypt.compare(currentPassword, user.password_hash || '');
+  const validPassword = await comparePasswordSafe(currentPassword, user.password_hash || '', 'change-password');
   if (!validPassword) {
     return res.status(401).json({ success: false, error: 'Current password is incorrect.' });
   }
@@ -961,7 +980,7 @@ router.post('/auth/user/login', express.json(), async (req, res) => {
     return res.status(401).json({ success: false, error: 'Invalid email or password.' });
   }
 
-  const validPassword = await bcrypt.compare(password, user.password_hash);
+  const validPassword = await comparePasswordSafe(password, user.password_hash, 'user-login');
   if (!validPassword) {
     return res.status(401).json({ success: false, error: 'Invalid email or password.' });
   }

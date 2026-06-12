@@ -11,6 +11,7 @@ const COOKIE_OPTIONS = {
   sameSite: 'strict',
   secure: process.env.NODE_ENV === 'production',
 };
+const MAX_BCRYPT_ROUNDS = Number(process.env.MAX_BCRYPT_ROUNDS || 14);
 
 function escapeHtml(value) {
   return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -27,10 +28,24 @@ function timingSafeCompare(value, expected) {
   return crypto.timingSafeEqual(a, b);
 }
 
+function getBcryptRounds(hash) {
+  const match = String(hash || '').match(/^\$2[aby]\$(\d{2})\$/);
+  return match ? Number(match[1]) : null;
+}
+
+function isBcryptHashSafe(hash) {
+  const rounds = getBcryptRounds(hash);
+  return rounds !== null && rounds >= 4 && rounds <= MAX_BCRYPT_ROUNDS;
+}
+
 function compareAdminPassword(password) {
   const stored = process.env.ADMIN_PASSWORD || '';
   if (!stored) return false;
   if (stored.startsWith('$2a$') || stored.startsWith('$2b$') || stored.startsWith('$2y$')) {
+    if (!isBcryptHashSafe(stored)) {
+      console.warn('Admin bcrypt hash has unsupported cost; rejecting compare');
+      return false;
+    }
     return bcrypt.compareSync(password, stored);
   }
   return timingSafeCompare(password, stored);
