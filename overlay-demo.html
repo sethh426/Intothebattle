@@ -9,20 +9,9 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Exo+2:wght@700;900&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #02040a;
-      font-family: 'Exo 2', 'Segoe UI', sans-serif;
-    }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #02040a; font-family: 'Exo 2', 'Segoe UI', sans-serif; }
     body { display: grid; place-items: center; }
-    #game-container {
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      background: #02040a;
-    }
+    #game-container { width: 100vw; height: 100vh; overflow: hidden; background: #02040a; }
     canvas { display: block; width: 100% !important; height: 100% !important; }
   </style>
 </head>
@@ -39,170 +28,144 @@
 
       create() {
         const { width, height } = this.scale;
+        this.cx = width / 2;
+        this.cy = height / 2;
         this.drawBackground(width, height);
-        this.drawHeader(width);
-        this.drawHordeBar(width, height);
+        this.drawScoreboard(width);
+        this.drawArena(width, height);
         this.createPlayers(width, height);
-        this.createEventFeed(width, height);
-        this.scheduleCombat(width, height);
+        this.createEventRail(width, height);
+        this.drawHordeBar(width, height);
+        this.time.addEvent({ delay: 1350, loop: true, callback: () => this.combatTick(width, height) });
       }
 
       drawBackground(width, height) {
         const g = this.add.graphics();
-        g.fillGradientStyle(0x07101f, 0x050914, 0x12070b, 0x030406, 1);
+        g.fillGradientStyle(0x06111f, 0x070914, 0x16080d, 0x030406, 1);
         g.fillRect(0, 0, width, height);
-
-        g.lineStyle(1, 0x1e5f85, 0.14);
-        for (let x = 0; x <= width; x += 64) g.lineBetween(x, 0, x, height);
-        for (let y = 0; y <= height; y += 64) g.lineBetween(0, y, width, y);
-
-        const cx = width * 0.5;
-        const cy = height * 0.52;
-        for (let i = 0; i < 5; i += 1) {
-          g.lineStyle(2, 0xf6c95b, 0.08 - i * 0.01);
-          g.strokeCircle(cx, cy, Math.min(width, height) * (0.18 + i * 0.07));
-        }
-
-        const glow = this.add.graphics();
-        glow.fillStyle(0xf6c95b, 0.06);
-        glow.fillCircle(width * 0.5, height * 0.5, Math.min(width, height) * 0.34);
-        glow.fillStyle(0x55e7ff, 0.05);
-        glow.fillCircle(width * 0.18, height * 0.78, Math.min(width, height) * 0.23);
-        glow.fillStyle(0xe83b5f, 0.05);
-        glow.fillCircle(width * 0.86, height * 0.24, Math.min(width, height) * 0.22);
+        g.lineStyle(1, 0x2c6f91, 0.11);
+        for (let x = 0; x <= width; x += 72) g.lineBetween(x, 0, x, height);
+        for (let y = 0; y <= height; y += 72) g.lineBetween(0, y, width, y);
+        g.fillStyle(0xf6c95b, 0.055); g.fillCircle(width * 0.5, height * 0.52, 270);
+        g.fillStyle(0x55e7ff, 0.045); g.fillCircle(width * 0.18, height * 0.78, 180);
+        g.fillStyle(0xe83b5f, 0.045); g.fillCircle(width * 0.86, height * 0.25, 170);
       }
 
-      drawHeader(width) {
-        const bar = this.add.graphics();
-        bar.fillStyle(0x000000, 0.34);
-        bar.fillRoundedRect(22, 18, width - 44, 54, 18);
-        bar.lineStyle(1, 0xf6c95b, 0.24);
-        bar.strokeRoundedRect(22, 18, width - 44, 54, 18);
-
-        this.add.text(42, 34, 'INTOTHEBATTLE', {
-          fontFamily: 'Exo 2', fontSize: '18px', fontStyle: '900', color: '#fff8e6', letterSpacing: 2
-        });
-        this.add.text(width - 42, 35, 'LIVE ARENA DEMO', {
-          fontFamily: 'Rajdhani', fontSize: '17px', fontStyle: '700', color: '#ffdf8a'
-        }).setOrigin(1, 0);
-
-        const liveDot = this.add.circle(width - 192, 45, 5, 0xe83b5f, 1);
-        this.tweens.add({ targets: liveDot, alpha: 0.25, duration: 620, yoyo: true, repeat: -1 });
-      }
-
-      drawHordeBar(width, height) {
-        const y = height - 78;
+      drawScoreboard(width) {
         const g = this.add.graphics();
-        g.fillGradientStyle(0x34101b, 0x351018, 0x38210a, 0x16090b, 0.88);
-        g.fillRoundedRect(26, y, width - 52, 52, 18);
-        g.lineStyle(1, 0xe83b5f, 0.36);
-        g.strokeRoundedRect(26, y, width - 52, 52, 18);
-        this.add.text(48, y + 15, 'THE HORDE', {
-          fontFamily: 'Rajdhani', fontSize: '20px', fontStyle: '700', color: '#ffe5ea'
-        });
-        this.hordeText = this.add.text(width - 48, y + 15, '42 VIEWERS CHARGING THE ARENA', {
-          fontFamily: 'Rajdhani', fontSize: '18px', fontStyle: '700', color: '#ffdf8a'
-        }).setOrigin(1, 0);
+        g.fillStyle(0x03060b, 0.78);
+        g.fillRoundedRect(34, 26, width - 68, 68, 20);
+        g.lineStyle(1, 0xf6c95b, 0.28);
+        g.strokeRoundedRect(34, 26, width - 68, 68, 20);
+        this.add.text(60, 43, 'INTOTHEBATTLE', { fontFamily: 'Exo 2', fontSize: '22px', fontStyle: '900', color: '#fff8e6' });
+        this.add.text(60, 67, 'VIEWER-POWERED LIVE ARENA', { fontFamily: 'Rajdhani', fontSize: '14px', fontStyle: '700', color: '#a8afbf' });
+        this.add.text(width - 60, 42, 'LIVE PREVIEW', { fontFamily: 'Rajdhani', fontSize: '20px', fontStyle: '700', color: '#ffdf8a' }).setOrigin(1, 0);
+        const dot = this.add.circle(width - 205, 54, 5, 0xe83b5f, 1);
+        this.tweens.add({ targets: dot, alpha: 0.22, duration: 620, yoyo: true, repeat: -1 });
+      }
+
+      drawArena(width, height) {
+        const g = this.add.graphics();
+        const cx = width / 2;
+        const cy = height * 0.5;
+        g.lineStyle(3, 0xf6c95b, 0.18);
+        g.strokeCircle(cx, cy, 210);
+        g.lineStyle(2, 0xf6c95b, 0.12);
+        g.strokeCircle(cx, cy, 148);
+        g.lineStyle(1, 0x55e7ff, 0.13);
+        g.strokeCircle(cx, cy, 282);
+        g.fillStyle(0x000000, 0.16);
+        g.fillCircle(cx, cy, 122);
+        this.add.text(cx, cy - 10, 'ARENA', { fontFamily: 'Exo 2', fontSize: '34px', fontStyle: '900', color: '#ffffff', alpha: 0.16 }).setOrigin(0.5);
       }
 
       createPlayers(width, height) {
-        const positions = [
-          { id: 'nova', name: '@Nova', x: width * 0.16, y: height * 0.27, hp: 92, accent: 0x77f0a1 },
-          { id: 'jax', name: '@Jax', x: width * 0.74, y: height * 0.32, hp: 58, accent: 0xff6a3d },
-          { id: 'luna', name: '@Luna', x: width * 0.39, y: height * 0.63, hp: 76, accent: 0x55e7ff },
-          { id: 'milo', name: '@Milo', x: width * 0.59, y: height * 0.52, hp: 41, accent: 0xf6c95b }
+        const data = [
+          { id: 'nova', name: '@Nova', x: width * 0.25, y: height * 0.36, hp: 92, accent: 0x77f0a1 },
+          { id: 'jax', name: '@Jax', x: width * 0.75, y: height * 0.36, hp: 58, accent: 0xff6a3d },
+          { id: 'luna', name: '@Luna', x: width * 0.35, y: height * 0.63, hp: 76, accent: 0x55e7ff },
+          { id: 'milo', name: '@Milo', x: width * 0.65, y: height * 0.63, hp: 41, accent: 0xf6c95b }
         ];
-        positions.forEach((data, index) => this.players.push(this.createPlayerCard(data, index)));
+        data.forEach((player, index) => this.players.push(this.createPlayerCard(player, index)));
       }
 
       createPlayerCard(data, index) {
         const group = this.add.container(data.x, data.y);
         group.demo = data;
-
         const bg = this.add.graphics();
-        bg.fillStyle(0x05070c, 0.82);
-        bg.fillRoundedRect(-58, -42, 116, 84, 18);
-        bg.lineStyle(2, data.accent, 0.46);
-        bg.strokeRoundedRect(-58, -42, 116, 84, 18);
+        bg.fillStyle(0x05070c, 0.9);
+        bg.fillRoundedRect(-72, -48, 144, 96, 18);
+        bg.lineStyle(2, data.accent, 0.52);
+        bg.strokeRoundedRect(-72, -48, 144, 96, 18);
         group.add(bg);
-
-        const avatar = this.add.circle(-34, -10, 18, data.accent, 0.2);
+        const avatar = this.add.circle(-48, -15, 19, data.accent, 0.2);
         avatar.setStrokeStyle(2, data.accent, 0.78);
         group.add(avatar);
-
-        const name = this.add.text(-8, -28, data.name, {
-          fontFamily: 'Rajdhani', fontSize: '18px', fontStyle: '700', color: '#ffffff'
-        });
-        group.add(name);
-
-        const hpBg = this.add.rectangle(0, 18, 92, 8, 0xffffff, 0.12).setOrigin(0.5);
-        group.add(hpBg);
-
-        const hp = this.add.rectangle(-46, 18, 92 * data.hp / 100, 8, data.accent, 1).setOrigin(0, 0.5);
+        group.add(this.add.text(-18, -34, data.name, { fontFamily: 'Rajdhani', fontSize: '20px', fontStyle: '700', color: '#ffffff' }));
+        group.add(this.add.text(-18, -12, 'ACTIVE', { fontFamily: 'Rajdhani', fontSize: '12px', fontStyle: '700', color: '#a8afbf' }));
+        group.add(this.add.rectangle(0, 22, 112, 9, 0xffffff, 0.12).setOrigin(0.5));
+        const hp = this.add.rectangle(-56, 22, 112 * data.hp / 100, 9, data.accent, 1).setOrigin(0, 0.5);
         group.add(hp);
         group.hpBar = hp;
-
-        const hpText = this.add.text(0, 31, `${data.hp} HP`, {
-          fontFamily: 'Rajdhani', fontSize: '13px', fontStyle: '700', color: '#a8afbf'
-        }).setOrigin(0.5, 0);
+        const hpText = this.add.text(0, 34, `${data.hp} HP`, { fontFamily: 'Rajdhani', fontSize: '14px', fontStyle: '700', color: '#ffdf8a' }).setOrigin(0.5, 0);
         group.add(hpText);
         group.hpText = hpText;
-
-        this.tweens.add({ targets: group, y: data.y - 7, duration: 1200 + index * 180, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        this.tweens.add({ targets: group, y: data.y - 6, duration: 1150 + index * 170, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         return group;
       }
 
-      createEventFeed(width, height) {
-        this.feed = this.add.container(32, height - 190);
+      createEventRail(width, height) {
+        this.feed = this.add.container(40, height - 204);
         this.feedItems = [];
-        ['@Nova joined the arena', '@Jax charged Fire Strike', '@Luna healed the Horde'].forEach((text, i) => this.pushFeed(text, i === 0));
+        ['@Nova joined the arena', '@Jax charged Fire Strike', '@Luna boosted the Horde'].forEach((text, i) => this.pushFeed(text, i === 0));
       }
 
       pushFeed(text, instant = false) {
-        const item = this.add.container(0, this.feedItems.length * 32);
+        const item = this.add.container(0, this.feedItems.length * 34);
         const bg = this.add.graphics();
-        bg.fillStyle(0x000000, 0.38);
-        bg.fillRoundedRect(0, 0, 300, 26, 10);
-        bg.lineStyle(1, 0xffffff, 0.08);
-        bg.strokeRoundedRect(0, 0, 300, 26, 10);
+        bg.fillStyle(0x000000, 0.46);
+        bg.fillRoundedRect(0, 0, 328, 28, 10);
+        bg.lineStyle(1, 0xffffff, 0.09);
+        bg.strokeRoundedRect(0, 0, 328, 28, 10);
         item.add(bg);
-        item.add(this.add.circle(13, 13, 4, 0xf6c95b, 1));
-        item.add(this.add.text(26, 6, text, { fontFamily: 'Rajdhani', fontSize: '15px', fontStyle: '700', color: '#dfe6f3' }));
-        item.setAlpha(instant ? 0.82 : 0);
+        item.add(this.add.circle(14, 14, 4, 0xf6c95b, 1));
+        item.add(this.add.text(28, 6, text, { fontFamily: 'Rajdhani', fontSize: '16px', fontStyle: '700', color: '#dfe6f3' }));
+        item.setAlpha(instant ? 0.86 : 0);
         this.feed.add(item);
         this.feedItems.unshift(item);
-        this.feedItems.forEach((entry, i) => this.tweens.add({ targets: entry, y: i * 32, alpha: i > 2 ? 0 : 0.82, duration: 240 }));
+        this.feedItems.forEach((entry, i) => this.tweens.add({ targets: entry, y: i * 34, alpha: i > 2 ? 0 : 0.86, duration: 240 }));
         this.feedItems = this.feedItems.slice(0, 4);
       }
 
-      scheduleCombat(width, height) {
-        this.time.addEvent({ delay: 1250, loop: true, callback: () => this.combatTick(width, height) });
+      drawHordeBar(width, height) {
+        const y = height - 74;
+        const g = this.add.graphics();
+        g.fillGradientStyle(0x34101b, 0x351018, 0x38210a, 0x16090b, 0.9);
+        g.fillRoundedRect(34, y, width - 68, 48, 18);
+        g.lineStyle(1, 0xe83b5f, 0.42);
+        g.strokeRoundedRect(34, y, width - 68, 48, 18);
+        this.add.text(58, y + 13, 'THE HORDE', { fontFamily: 'Rajdhani', fontSize: '20px', fontStyle: '700', color: '#ffe5ea' });
+        this.hordeText = this.add.text(width - 58, y + 13, '42 VIEWERS PUSHING THE ARENA', { fontFamily: 'Rajdhani', fontSize: '18px', fontStyle: '700', color: '#ffdf8a' }).setOrigin(1, 0);
       }
 
       combatTick(width, height) {
         const attacker = this.players[this.tick % this.players.length];
         const target = this.players[(this.tick + 1) % this.players.length];
         const damage = [18, 27, 42, 64][this.tick % 4];
-        const color = damage >= 42 ? '#ff445f' : '#ffdf8a';
-
-        this.drawLaser(attacker.x, attacker.y, target.x, target.y, damage >= 42);
+        const critical = damage >= 42;
+        this.drawLaser(attacker.x, attacker.y, target.x, target.y, critical);
         target.demo.hp = Math.max(12, target.demo.hp - Math.floor(damage / 3));
-        this.tweens.add({ targets: target.hpBar, width: 92 * target.demo.hp / 100, duration: 260, ease: 'Power2' });
+        this.tweens.add({ targets: target.hpBar, width: 112 * target.demo.hp / 100, duration: 260, ease: 'Power2' });
         target.hpText.setText(`${target.demo.hp} HP`);
-
-        const dmg = this.add.text(target.x, target.y - 70, `-${damage}`, {
-          fontFamily: 'Exo 2', fontSize: damage >= 42 ? '32px' : '25px', fontStyle: '900', color,
-          stroke: '#000000', strokeThickness: 5
-        }).setOrigin(0.5);
-        this.tweens.add({ targets: dmg, y: dmg.y - 62, alpha: 0, duration: 850, ease: 'Quad.easeOut', onComplete: () => dmg.destroy() });
-
-        if (this.tick % 3 === 0) this.showBanner(`${attacker.demo.name} ACTIVATED FIRE STRIKE`);
+        const dmg = this.add.text(target.x, target.y - 76, `-${damage}`, { fontFamily: 'Exo 2', fontSize: critical ? '34px' : '26px', fontStyle: '900', color: critical ? '#ff445f' : '#ffdf8a', stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5);
+        this.tweens.add({ targets: dmg, y: dmg.y - 60, alpha: 0, duration: 850, ease: 'Quad.easeOut', onComplete: () => dmg.destroy() });
+        if (this.tick % 3 === 0) this.showBanner(`${attacker.demo.name} FIRE STRIKE`);
         if (this.tick % 5 === 0) this.flashScreen(width, height);
         if (target.demo.hp <= 18) {
           target.demo.hp = 100;
           target.hpText.setText('100 HP');
-          target.hpBar.width = 92;
-          this.showBanner(`${attacker.demo.name} GOT THE KNOCKOUT`);
+          target.hpBar.width = 112;
+          this.showBanner(`${attacker.demo.name} KNOCKOUT`);
         }
         this.pushFeed(`${attacker.demo.name} hit ${target.demo.name} for ${damage}`);
         this.hordeText.setText(`${42 + (this.tick % 11)} VIEWERS PUSHING THE ARENA`);
@@ -210,27 +173,24 @@
       }
 
       drawLaser(x1, y1, x2, y2, critical) {
-        const line = this.add.line(0, 0, x1, y1, x2, y2, critical ? 0xff445f : 0x55e7ff, 0.92).setLineWidth(critical ? 6 : 4);
+        const line = this.add.line(0, 0, x1, y1, x2, y2, critical ? 0xff445f : 0x55e7ff, 0.95).setLineWidth(critical ? 7 : 4);
         line.setBlendMode(Phaser.BlendModes.ADD);
         this.tweens.add({ targets: line, alpha: 0, duration: 260, onComplete: () => line.destroy() });
       }
 
       showBanner(text) {
-        const banner = this.add.text(this.scale.width / 2, 100, text, {
-          fontFamily: 'Exo 2', fontSize: '28px', fontStyle: '900', color: '#ffdf8a',
-          stroke: '#000000', strokeThickness: 6
-        }).setOrigin(0.5).setAlpha(0);
-        this.tweens.add({ targets: banner, y: 118, alpha: 1, duration: 220, ease: 'Back.easeOut' });
-        this.time.delayedCall(900, () => this.tweens.add({ targets: banner, y: 92, alpha: 0, duration: 350, onComplete: () => banner.destroy() }));
+        const banner = this.add.text(this.scale.width / 2, 126, text, { fontFamily: 'Exo 2', fontSize: '30px', fontStyle: '900', color: '#ffdf8a', stroke: '#000000', strokeThickness: 6 }).setOrigin(0.5).setAlpha(0);
+        this.tweens.add({ targets: banner, y: 146, alpha: 1, duration: 220, ease: 'Back.easeOut' });
+        this.time.delayedCall(900, () => this.tweens.add({ targets: banner, y: 116, alpha: 0, duration: 350, onComplete: () => banner.destroy() }));
       }
 
       flashScreen(width, height) {
-        const flash = this.add.rectangle(width / 2, height / 2, width, height, 0xff6a3d, 0.18);
+        const flash = this.add.rectangle(width / 2, height / 2, width, height, 0xff6a3d, 0.16);
         this.tweens.add({ targets: flash, alpha: 0, duration: 220, onComplete: () => flash.destroy() });
       }
     }
 
-    const game = new Phaser.Game({
+    new Phaser.Game({
       type: Phaser.CANVAS,
       parent: 'game-container',
       width: 1280,
