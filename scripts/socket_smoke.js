@@ -11,6 +11,7 @@ const baseUrl = `http://${host}:${port}`;
 const roomId = 'socket-smoke-room';
 const jwtSecret = 'socket-smoke-secret';
 const e2eSessionToken = 'socket-smoke-session';
+const overlayClientCount = Number(process.env.SOCKET_SMOKE_OVERLAY_COUNT || 10);
 const diskPath = fs.mkdtempSync(path.join(os.tmpdir(), 'intothebattle-socket-smoke-'));
 const overlayToken = jwt.sign({ purpose: 'overlay', roomId }, jwtSecret, { expiresIn: '1h' });
 
@@ -165,32 +166,58 @@ try {
   await dashboardSettingsPromise;
   await dashboardGameStatePromise;
 
-  const overlay = connectSocket({
-    auth: { roomId, overlayToken },
-    query: { room_id: roomId, overlay_token: overlayToken },
-  });
-  await waitForEvent(overlay, 'connect');
-  const overlayReady = await waitForEvent(overlay, 'serverReady', payload => payload.roomId === roomId);
-  assert(overlayReady.roomId === roomId, 'signed overlay serverReady should use signed room');
-  const overlayGameStatePromise = waitForEvent(overlay, 'gameState', payload => payload && typeof payload === 'object');
-  const overlayAudioConfigPromise = waitForEvent(overlay, 'audioConfig', payload => payload && typeof payload === 'object');
-  const overlaySettingsPromise = waitForEvent(overlay, 'overlaySettings', payload => payload && typeof payload === 'object');
-  const overlayLaserColorPromise = waitForEvent(overlay, 'laserColor', value => typeof value === 'string' && value.length > 0);
-  const dashboardConnectedCountPromise = waitForEvent(dashboard, 'overlayCount', payload => payload.count === 1);
-  overlay.emit('register', { type: 'overlay' });
+  const overlaySockets = [];
+  for (let index = 0; index < overlayClientCount; index++) {
+    const overlay = connectSocket({
+      auth: { roomId, overlayToken },
+      query: { room_id: roomId, overlay_token: overlayToken },
+    });
+    overlaySockets.push(overlay);
 
-  await overlayGameStatePromise;
-  await overlayAudioConfigPromise;
-  await overlaySettingsPromise;
-  await overlayLaserColorPromise;
+    await waitForEvent(overlay, 'connect');
+    const overlayReady = await waitForEvent(overlay, 'serverReady', payload => payload.roomId === roomId);
+    assert(overlayReady.roomId === roomId, 'signed overlay serverReady should use signed room');
 
-  const dashboardConnectedCount = await dashboardConnectedCountPromise;
-  assert(dashboardConnectedCount.count === 1, 'dashboard should see overlay count increment to one');
+    const overlayGameStatePromise = waitForEvent(overlay, 'gameState', payload => payload && typeof payload === 'object');
+    const overlayAudioConfigPromise = waitForEvent(overlay, 'audioConfig', payload => payload && typeof payload === 'object');
+    const overlaySettingsPromise = waitForEvent(overlay, 'overlaySettings', payload => payload && typeof payload === 'object');
+    const overlayLaserColorPromise = waitForEvent(overlay, 'laserColor', value => typeof value === 'string' && value.length > 0);
+    const expectedCount = index + 1;
+    const dashboardConnectedCountPromise = waitForEvent(
+      dashboard,
+      'overlayCount',
+      payload => payload.count === expectedCount,
+      10000
+    );
+    overlay.emit('register', { type: 'overlay' });
 
-  const dashboardDisconnectedCountPromise = waitForEvent(dashboard, 'overlayCount', payload => payload.count === 0);
-  overlay.disconnect();
-  const dashboardDisconnectedCount = await dashboardDisconnectedCountPromise;
-  assert(dashboardDisconnectedCount.count === 0, 'dashboard should see overlay count decrement to zero');
+    await overlayGameStatePromise;
+    await overlayAudioConfigPromise;
+    await overlaySettingsPromise;
+    await overlayLaserColorPromise;
+
+    const dashboardConnectedCount = await dashboardConnectedCountPromise;
+    assert(
+      dashboardConnectedCount.count === expectedCount,
+      `dashboard should see overlay count increment to ${expectedCount}`
+    );
+  }
+
+  for (let index = overlaySockets.length - 1; index >= 0; index--) {
+    const expectedCount = index;
+    const dashboardDisconnectedCountPromise = waitForEvent(
+      dashboard,
+      'overlayCount',
+      payload => payload.count === expectedCount,
+      10000
+    );
+    overlaySockets[index].disconnect();
+    const dashboardDisconnectedCount = await dashboardDisconnectedCountPromise;
+    assert(
+      dashboardDisconnectedCount.count === expectedCount,
+      `dashboard should see overlay count decrement to ${expectedCount}`
+    );
+  }
 
   console.log('Socket smoke checks passed');
 } catch (err) {
