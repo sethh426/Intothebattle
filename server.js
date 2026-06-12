@@ -1331,6 +1331,13 @@ app.get(['/overlay.html', '/overlay'], (req, res) => {
     if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).send('Unauthorized overlay URL');
     return res.sendFile(path.join(__dirname, 'overlay.html'));
   }
+  if (enableRoomScoped) {
+    const room = getSessionRoom(req);
+    if (room) {
+      const overlayUrl = buildOverlayUrl(req, room.roomId);
+      if (overlayUrl) return res.redirect(302, overlayUrl);
+    }
+  }
   return requireAccess(req, res, () => res.sendFile(path.join(__dirname, 'overlay.html')));
 });
 app.get('/admin-panel',  requireAccess, (_req, res) => res.redirect('/admin'));
