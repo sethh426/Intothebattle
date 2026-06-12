@@ -139,6 +139,7 @@ SENTRY_DSN=
 LOG_LEVEL=info
 DEV_TEST_MODE=false
 DISK_PATH=/var/data
+TRUST_PROXY_HOPS=1
 METRICS_TOKEN=replace_with_a_metrics_scrape_token
 DIAGNOSTICS_TOKEN=
 ```
@@ -300,6 +301,7 @@ REDIS_URL=<managed Redis connection string>
 SENTRY_DSN=<optional Sentry DSN>
 LOG_LEVEL=info
 DISK_PATH=/var/data
+TRUST_PROXY_HOPS=1
 PAYPAL_CLIENT_ID=<PayPal client id>
 PAYPAL_CLIENT_SECRET=<PayPal client secret>
 PAYPAL_WEBHOOK_ID=<PayPal webhook id>

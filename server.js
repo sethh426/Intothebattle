@@ -1044,9 +1044,8 @@ function handleMentionAttack(room, attackerId, attackerNick, comment) {
 // APP & SOCKET.IO SETUP
 // ────────────────────────────────
 const app        = express();
-if (process.env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);
-}
+const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 1);
+app.set('trust proxy', trustProxyHops);
 
 app.get('/healthz', (_req, res) => {
   res.status(200).send('ok');
@@ -1106,11 +1105,6 @@ if (process.env.REDIS_URL && enableRedisAdapter) {
     logger.info('Socket.IO running in single-instance mode (no Redis)');
   }
 }
-
-// Production proxy trust configuration
-// In production, trust all proxies; in development, trust only the immediate proxy
-const isProduction = process.env.NODE_ENV === 'production';
-app.set('trust proxy', isProduction ? true : 1);
 
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
