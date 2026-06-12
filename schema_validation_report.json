@@ -48,6 +48,10 @@
       ]
     },
     {
+      "path": "overlay-demo.html",
+      "blocks": []
+    },
+    {
       "path": "overlay-legacy.html",
       "blocks": [
         {
@@ -169,7 +173,7 @@
     }
   ],
   "summary": {
-    "total_files": 16,
+    "total_files": 17,
     "files_with_jsonld": 12,
     "total_blocks": 13,
     "errors": 0,

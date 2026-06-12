@@ -22,6 +22,24 @@ if (useSsl) {
 }
 
 const client = useStubDb ? null : new Client(clientOptions);
+const dbHealth = {
+  mode: useStubDb ? 'stub' : 'postgres',
+  configured: Boolean(connectionString) || useStubDb,
+  ssl: Boolean(useSsl),
+  connectionAttempted: false,
+  connected: useStubDb,
+  initialized: useStubDb,
+  lastError: null,
+  updatedAt: new Date().toISOString(),
+};
+
+function updateDbHealth(patch) {
+  Object.assign(dbHealth, patch, { updatedAt: new Date().toISOString() });
+}
+
+export function getDbHealthSnapshot() {
+  return { ...dbHealth };
+}
 
 function waitFor(promise, timeoutMs = 0) {
   const buffer = new SharedArrayBuffer(4);
@@ -66,10 +84,15 @@ function connectClient() {
 
   if (!connectionAttempted) {
     connectionAttempted = true;
+    updateDbHealth({ connectionAttempted: true });
     connectionPromise = client.connect().catch((err) => {
       console.error('DB background connection error (non-blocking):', err?.message || err);
+      updateDbHealth({ connected: false, initialized: false, lastError: err?.message || String(err) });
       throw err;
     });
+    connectionPromise.then(() => {
+      updateDbHealth({ connected: true, lastError: null });
+    }).catch(() => {});
   }
   return connectionPromise;
 }
@@ -322,8 +345,10 @@ async function initDb() {
     } catch (_) {}
 
     console.info('DB initialization complete');
+    updateDbHealth({ connected: true, initialized: true, lastError: null });
   } catch (err) {
     console.error('DB init error:', err?.message || err);
+    updateDbHealth({ initialized: false, lastError: err?.message || String(err) });
   }
 }
 

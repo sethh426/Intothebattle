@@ -1,4 +1,4 @@
-Schema validation summary: files scanned: 16, files with JSON-LD: 12, blocks: 13, errors: 0, warnings: 0
+Schema validation summary: files scanned: 17, files with JSON-LD: 12, blocks: 13, errors: 0, warnings: 0
 - dashboard-welcome.html: 1 JSON-LD block(s)
   - block #1: OK
 - dashboard.html: 1 JSON-LD block(s)
@@ -7,6 +7,7 @@ Schema validation summary: files scanned: 16, files with JSON-LD: 12, blocks: 13
 - login.html: 2 JSON-LD block(s)
   - block #1: OK
   - block #2: OK
+- overlay-demo.html: no JSON-LD blocks found
 - overlay-legacy.html: 1 JSON-LD block(s)
   - block #1: OK
 - overlay-phaser.html: no JSON-LD blocks found

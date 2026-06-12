@@ -91,6 +91,12 @@ try {
   await expectStatus('/api/status', 401);
   await expectStatus('/metrics', 401);
   await expectStatus(`/metrics?token=${encodeURIComponent(metricsToken)}`, 200);
+  await expectStatus('/api/runtime/diagnostics', 401);
+  const diagnostics = await expectStatus(`/api/runtime/diagnostics?token=${encodeURIComponent(metricsToken)}`, 200);
+  const diagnosticsBody = await diagnostics.json();
+  assert(diagnosticsBody.ok === true, 'diagnostics should report ok');
+  assert(diagnosticsBody.storage?.ok === true, 'diagnostics storage check should report ok');
+  assert(diagnosticsBody.database?.mode === 'stub', 'diagnostics should report stub database in smoke mode');
 
   await expectStatus(`/overlay?room_id=${roomId}`, 401);
   await expectStatus(`/overlay?room_id=${roomId}&overlay_token=bad`, 401);

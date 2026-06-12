@@ -140,9 +140,12 @@ LOG_LEVEL=info
 DEV_TEST_MODE=false
 DISK_PATH=/var/data
 METRICS_TOKEN=replace_with_a_metrics_scrape_token
+DIAGNOSTICS_TOKEN=
 ```
 
 `METRICS_TOKEN` is only needed if Prometheus or another monitor scrapes `/metrics`. In production, `/metrics` returns 404 when no token is configured.
+
+`DIAGNOSTICS_TOKEN` is optional. If it is unset, `/api/runtime/diagnostics` accepts `METRICS_TOKEN`.
 
 ### Run locally with Node
 
@@ -249,6 +252,7 @@ Health/monitoring:
 ```text
 GET /api/status
 GET /metrics (requires METRICS_TOKEN in production)
+GET /api/runtime/diagnostics (requires DIAGNOSTICS_TOKEN or METRICS_TOKEN in production)
 ```
 
 ## Route Security Direction
@@ -302,6 +306,7 @@ EMAIL_FROM=Battle Royale <no-reply@intothebattle.com>
 OVERLAY_TOKEN_SECRET=<long random overlay signing secret>
 ENABLE_ROOM_SCOPED=true
 METRICS_TOKEN=<long random metrics scrape token>
+DIAGNOSTICS_TOKEN=<optional separate diagnostics token>
 ```
 
 `ENABLE_ROOM_SCOPED` defaults to `true` in production when unset. Set it explicitly if your host makes env behavior easier to audit.
@@ -309,6 +314,16 @@ METRICS_TOKEN=<long random metrics scrape token>
 `OVERLAY_TOKEN_SECRET` can be added later; until then, overlay URLs are signed with `JWT_SECRET`. `METRICS_TOKEN` can also be added later if you are not scraping `/metrics` yet.
 
 Use a managed PostgreSQL service for production. Do not rely on local JSON files or ephemeral app storage for production state.
+
+Render recovery checks:
+
+```bash
+curl -fsS https://tiktokbr.onrender.com/healthz
+curl -fsS "https://tiktokbr.onrender.com/api/runtime/diagnostics?token=$METRICS_TOKEN"
+curl -fsS https://www.intothebattle.com/healthz
+```
+
+The diagnostics response reports runtime bind settings, whether required secrets are present, storage writability under `DISK_PATH`, and the background database connection state. It never returns secret values.
 
 ## CI & Deployment Guidance
 

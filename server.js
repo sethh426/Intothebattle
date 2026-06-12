@@ -14,7 +14,7 @@ import promClient from 'prom-client';
 import fs from 'fs';
 import multer from 'multer';
 import jwt from 'jsonwebtoken';
-import db from './tiktokbr/db/db.js';
+import db, { getDbHealthSnapshot } from './tiktokbr/db/db.js';
 import authRoutes from './tiktokbr/routes/auth.js';
 import adminRoutes from './tiktokbr/routes/admin.js';
 import paypalRoutes from './tiktokbr/routes/paypal.js';
@@ -117,6 +117,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
 const OVERLAY_TOKEN_PARAM = 'overlay_token';
 const OVERLAY_TOKEN_TTL = process.env.OVERLAY_TOKEN_TTL || '365d';
+const STORAGE_ROOT = process.env.DISK_PATH || __dirname;
 
 function getOverlayTokenSecret() {
   return process.env.OVERLAY_TOKEN_SECRET || process.env.JWT_SECRET || '';
@@ -190,30 +191,52 @@ function validateRuntimeConfiguration() {
   }
 }
 
-function validateWritableStorage() {
-  const storageRoot = process.env.DISK_PATH || __dirname;
+function checkWritableStorage() {
   const requiredDirs = [
-    storageRoot,
-    path.join(storageRoot, 'backgrounds'),
-    path.join(storageRoot, 'audio'),
+    STORAGE_ROOT,
+    path.join(STORAGE_ROOT, 'backgrounds'),
+    path.join(STORAGE_ROOT, 'audio'),
   ];
 
+  const result = {
+    ok: true,
+    mode: process.env.DISK_PATH ? 'persistent' : 'local',
+    root: STORAGE_ROOT,
+    dirs: requiredDirs.map(dir => ({ path: dir, exists: fs.existsSync(dir), writable: false })),
+    error: null,
+  };
+
   try {
-    for (const dir of requiredDirs) {
+    for (const [index, dir] of requiredDirs.entries()) {
       fs.mkdirSync(dir, { recursive: true });
       fs.accessSync(dir, fs.constants.W_OK);
+      result.dirs[index] = { path: dir, exists: true, writable: true };
     }
-    const probe = path.join(storageRoot, `.write-test-${process.pid}`);
+    const probe = path.join(STORAGE_ROOT, `.write-test-${process.pid}`);
     fs.writeFileSync(probe, 'ok');
     fs.unlinkSync(probe);
   } catch (err) {
-    const message = `DISK_PATH is not writable: ${storageRoot}`;
+    result.ok = false;
+    result.error = err?.message || String(err);
+  }
+  return result;
+}
+
+function validateWritableStorage() {
+  const storage = checkWritableStorage();
+  if (!storage.ok) {
+    const message = `DISK_PATH is not writable: ${STORAGE_ROOT}`;
     if (process.env.NODE_ENV === 'production') {
-      logger.fatal({ err, storageRoot }, message);
+      logger.fatal({ err: storage.error, storageRoot: STORAGE_ROOT }, message);
       process.exit(1);
     }
-    logger.warn({ err, storageRoot }, message);
+    logger.warn({ err: storage.error, storageRoot: STORAGE_ROOT }, message);
   }
+  logger.info({
+    mode: storage.mode,
+    root: storage.root,
+    dirs: storage.dirs,
+  }, 'Persistence storage check');
 }
 
 validateRuntimeConfiguration();
@@ -1476,6 +1499,20 @@ function requireMetricsAccess(req, res, next) {
   return res.status(401).send('Unauthorized');
 }
 
+function requireDiagnosticsAccess(req, res, next) {
+  if (process.env.NODE_ENV !== 'production') return next();
+
+  const expectedToken = process.env.DIAGNOSTICS_TOKEN || process.env.METRICS_TOKEN;
+  if (!expectedToken) return res.status(404).send('Not found');
+
+  const authHeader = req.get('authorization') || '';
+  const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
+  const suppliedToken = bearerToken || req.get('x-diagnostics-token') || req.get('x-metrics-token') || req.query.token;
+  if (suppliedToken === expectedToken) return next();
+
+  return res.status(401).send('Unauthorized');
+}
+
 app.get('/metrics', requireMetricsAccess, async (_req, res) => {
   try {
     res.setHeader('Content-Type', register.contentType);
@@ -1483,6 +1520,39 @@ app.get('/metrics', requireMetricsAccess, async (_req, res) => {
   } catch (err) {
     res.status(500).end(err.message);
   }
+});
+
+app.get('/api/runtime/diagnostics', requireDiagnosticsAccess, (req, res) => {
+  const storage = checkWritableStorage();
+  const dbHealth = getDbHealthSnapshot();
+  const ok = storage.ok && (dbHealth.mode === 'stub' || dbHealth.initialized);
+
+  res.status(ok ? 200 : 503).json({
+    ok,
+    time: new Date().toISOString(),
+    request: {
+      host: req.get('host'),
+      protocol: req.protocol,
+    },
+    runtime: {
+      nodeEnv: process.env.NODE_ENV || 'development',
+      host: HOST,
+      port: PORT,
+      envPortPresent: Boolean(process.env.PORT),
+      roomScoped: enableRoomScoped,
+      devTestMode: DEV_TEST_MODE,
+    },
+    config: {
+      appBaseUrl: process.env.APP_BASE_URL || null,
+      jwtSecretPresent: Boolean(process.env.JWT_SECRET),
+      overlayTokenSecretPresent: Boolean(process.env.OVERLAY_TOKEN_SECRET),
+      apiKeyPresent: Boolean(API_KEY),
+      metricsTokenPresent: Boolean(process.env.METRICS_TOKEN),
+      diagnosticsTokenPresent: Boolean(process.env.DIAGNOSTICS_TOKEN),
+    },
+    storage,
+    database: dbHealth,
+  });
 });
 
 app.get('/audio/:filename', (req, res) => {
