@@ -56,6 +56,9 @@ jobs:
       - name: HTTP smoke tests
         run: npm run test:http
 
+      - name: Socket.IO room smoke tests
+        run: npm run test:socket
+
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 

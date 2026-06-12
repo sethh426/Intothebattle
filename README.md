@@ -336,6 +336,7 @@ This project uses GitHub Actions (`.github/workflows/ci.yml`) as the canonical C
 		- a short startup smoke test that launches the server and probes `GET /healthz`
 		- `npm run validate:schemas` (JSON-LD schema validation)
 		- `npm run test:http` (local HTTP smoke tests with stub DB and temp storage)
+		- `npm run test:socket` (signed overlay/dashboard Socket.IO room-routing smoke tests)
 		- `npm run test:e2e` (Chromium Playwright visual smoke tests)
 		- `npm audit --audit-level=high` (non-blocking)
 
@@ -347,6 +348,7 @@ python -m pip install -r requirements-dev.txt
 node --check server.js
 npm run validate:schemas
 npm run test:http
+npm run test:socket
 npm run test:e2e:install
 npm run test:e2e
 # start the server and verify health endpoint

@@ -8,6 +8,7 @@
     "start": "node server.js",
     "start:dev": "NODE_ENV=development node server.js",
     "test:http": "node scripts/http_smoke.js",
+    "test:socket": "node scripts/socket_smoke.js",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "test:postmark": "node scripts/test_postmark.js",
@@ -38,6 +39,7 @@
     "uuid": "^11.1.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.60.0"
+    "@playwright/test": "^1.60.0",
+    "socket.io-client": "^4.7.5"
   }
 }
