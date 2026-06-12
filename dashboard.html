@@ -602,6 +602,65 @@ input[type=text]:focus, select:focus {
         <button class="btn btn-primary" onclick="testStreak()">Streak</button>
       </div>
     </div>
+    <!-- Sponsor Screen -->
+    <div class="card col-12">
+      <div class="card-header"><div class="card-title">Sponsor Screen</div><div class="card-badge" id="sponsorCountBadge">0 Videos</div></div>
+      <div class="grid" style="grid-template-columns:repeat(12,1fr); gap:18px;">
+        <div style="grid-column:span 5;">
+          <div class="input-group">
+            <label class="input-label">Sponsor Video</label>
+            <input type="file" id="sponsorFileInput" accept="video/mp4,video/webm,video/quicktime,video/x-m4v">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Partner</label>
+            <input id="sponsorPartnerInput" type="text" maxlength="70" placeholder="Sponsor name">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Headline</label>
+            <input id="sponsorTitleInput" type="text" maxlength="90" placeholder="Sponsor Spotlight">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Subtitle</label>
+            <input id="sponsorSubtitleInput" type="text" maxlength="140" placeholder="We will be right back to the battle.">
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="uploadSponsorVideo()">Upload Video</button>
+            <button class="btn btn-success" onclick="playSponsorScene()">Play Screen</button>
+            <button class="btn btn-danger" onclick="stopSponsorScene()">Stop</button>
+          </div>
+        </div>
+        <div style="grid-column:span 3;">
+          <div class="input-group">
+            <label class="input-label">Duration</label>
+            <select id="sponsorDurationInput">
+              <option value="10000">10 seconds</option>
+              <option value="15000" selected>15 seconds</option>
+              <option value="30000">30 seconds</option>
+              <option value="60000">60 seconds</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Video Fit</label>
+            <select id="sponsorFitInput">
+              <option value="cover" selected>Cover screen</option>
+              <option value="contain">Show full video</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Audio</label>
+            <select id="sponsorMutedInput">
+              <option value="true" selected>Muted autoplay</option>
+              <option value="false">Try video audio</option>
+            </select>
+          </div>
+          <button class="btn btn-secondary" style="width:100%;" onclick="openSponsorPreview()">Open Preview</button>
+        </div>
+        <div style="grid-column:span 4;">
+          <div class="section-title">Uploaded Sponsor Videos</div>
+          <div class="audio-files" id="sponsorLibrary"><p style="color:var(--text-soft);">No sponsor videos uploaded yet.</p></div>
+        </div>
+      </div>
+    </div>
     <!-- Audio Manager -->
     <div class="card col-12">
       <div class="card-header"><div class="card-title">Audio Manager</div><div class="card-badge" id="audioCountBadge">0 Sounds Loaded</div></div>
@@ -641,6 +700,8 @@ let currentOverlayUrl = null;
 let subscriptionStatusData = null;
 let audioLibraryData = [];
 let audioConfigData = {};
+let sponsorLibraryData = [];
+let selectedSponsorFilename = '';
 const EVENTS = ['attack','gift','kill','respawn','heal','follow'];
 const EVENT_CLASSES = { attack:'event-attack', gift:'event-gift', kill:'event-kill', respawn:'event-respawn', heal:'event-heal', follow:'event-follow' };
 
@@ -853,6 +914,136 @@ function testOverlayHeal() { runOverlayTest('heal'); }
 function testOverlayKill() { runOverlayTest('kill'); }
 function testStreak() { apiCall('/api/overlay/test/streak'); toast('Streak test triggered'); }
 
+// Sponsor Screen
+function sponsorInputValue(id, fallback = '') {
+  const el = document.getElementById(id);
+  return (el && el.value.trim()) || fallback;
+}
+function currentSponsorPayload(filename = selectedSponsorFilename) {
+  const selected = sponsorLibraryData.find(file => file.filename === filename);
+  return {
+    filename: filename || null,
+    partner: sponsorInputValue('sponsorPartnerInput', selected?.partner || 'IntoTheBattle Partner'),
+    title: sponsorInputValue('sponsorTitleInput', selected?.title || 'Sponsor Spotlight'),
+    subtitle: sponsorInputValue('sponsorSubtitleInput', selected?.subtitle || 'Thanks for powering tonight\'s arena.'),
+    durationMs: Number(document.getElementById('sponsorDurationInput')?.value || 15000),
+    muted: document.getElementById('sponsorMutedInput')?.value !== 'false',
+    fit: document.getElementById('sponsorFitInput')?.value || 'cover',
+  };
+}
+function setSponsorInputs(file) {
+  if (!file) return;
+  selectedSponsorFilename = file.filename;
+  document.getElementById('sponsorPartnerInput').value = file.partner || 'Sponsor';
+  document.getElementById('sponsorTitleInput').value = file.title || file.originalName || 'Sponsor Spotlight';
+  document.getElementById('sponsorSubtitleInput').value = file.subtitle || 'We will be right back to the battle.';
+}
+function renderSponsorLibrary() {
+  const container = document.getElementById('sponsorLibrary');
+  const badge = document.getElementById('sponsorCountBadge');
+  if (!container) return;
+  container.innerHTML = '';
+  if (badge) badge.textContent = `${sponsorLibraryData.length} Video${sponsorLibraryData.length !== 1 ? 's' : ''}`;
+  if (!sponsorLibraryData.length) {
+    container.innerHTML = '<p style="color:var(--text-soft);">No sponsor videos uploaded yet.</p>';
+    selectedSponsorFilename = '';
+    return;
+  }
+  if (!selectedSponsorFilename || !sponsorLibraryData.some(file => file.filename === selectedSponsorFilename)) {
+    setSponsorInputs(sponsorLibraryData[0]);
+  }
+  sponsorLibraryData.forEach(file => {
+    const row = document.createElement('div');
+    row.className = 'audio-row';
+    if (file.filename === selectedSponsorFilename) row.style.borderColor = 'rgba(65,211,125,.55)';
+    row.innerHTML = `
+      <div>▶</div>
+      <div class="audio-name">${escapeHtml(file.title || file.originalName)}</div>
+      <div class="audio-size">${formatBytes(file.size || 0)}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    `;
+    const actions = row.querySelector('div:last-child');
+    const selectBtn = document.createElement('button');
+    selectBtn.className = 'btn btn-secondary';
+    selectBtn.textContent = 'Select';
+    selectBtn.addEventListener('click', () => { setSponsorInputs(file); renderSponsorLibrary(); });
+    const playBtn = document.createElement('button');
+    playBtn.className = 'btn btn-success';
+    playBtn.textContent = 'Play';
+    playBtn.addEventListener('click', () => { setSponsorInputs(file); playSponsorScene(file.filename); });
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn btn-danger';
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.addEventListener('click', () => deleteSponsorVideo(file.filename));
+    actions.append(selectBtn, playBtn, deleteBtn);
+    container.appendChild(row);
+  });
+}
+function uploadSponsorVideo() {
+  const input = document.getElementById('sponsorFileInput');
+  const file = input && input.files[0];
+  if (!file) { toast('Choose a sponsor video first', true); return; }
+  const fd = new FormData();
+  fd.append('sponsor', file);
+  fd.append('partner', sponsorInputValue('sponsorPartnerInput', 'Sponsor'));
+  fd.append('title', sponsorInputValue('sponsorTitleInput', file.name.replace(/\.[^.]+$/, '')));
+  fd.append('subtitle', sponsorInputValue('sponsorSubtitleInput', 'We will be right back to the battle.'));
+  fetch('/api/sponsor/upload', { method: 'POST', credentials: 'same-origin', body: fd })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.success) { toast(d.error || 'Sponsor upload failed', true); return; }
+      sponsorLibraryData.push(d.file);
+      setSponsorInputs(d.file);
+      renderSponsorLibrary();
+      input.value = '';
+      toast('Sponsor video uploaded');
+    })
+    .catch(() => toast('Sponsor upload failed', true));
+}
+function playSponsorScene(filename = selectedSponsorFilename) {
+  apiCall('/api/sponsor/play', 'POST', currentSponsorPayload(filename))
+    .then(d => { if (d.success) toast('Sponsor screen sent to overlay'); });
+}
+function stopSponsorScene() {
+  apiCall('/api/sponsor/stop', 'POST').then(d => { if (d.success) toast('Sponsor screen stopped'); });
+}
+function deleteSponsorVideo(filename) {
+  if (!confirm('Delete this sponsor video?')) return;
+  fetch('/api/sponsor/delete/' + encodeURIComponent(filename), { method: 'DELETE', credentials: 'same-origin' })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.success) { toast(d.error || 'Delete failed', true); return; }
+      sponsorLibraryData = sponsorLibraryData.filter(file => file.filename !== filename);
+      if (selectedSponsorFilename === filename) selectedSponsorFilename = '';
+      renderSponsorLibrary();
+      toast('Sponsor video deleted');
+    })
+    .catch(() => toast('Delete failed', true));
+}
+function openSponsorPreview() {
+  const payload = currentSponsorPayload();
+  const overlayUrl = new URL(currentOverlayUrl || '/overlay', window.location.origin);
+  overlayUrl.searchParams.set('sponsor_preview', '1');
+  overlayUrl.searchParams.set('sponsor_title', payload.title);
+  overlayUrl.searchParams.set('sponsor_partner', payload.partner);
+  overlayUrl.searchParams.set('sponsor_subtitle', payload.subtitle);
+  overlayUrl.searchParams.set('sponsor_duration', payload.durationMs);
+  overlayUrl.searchParams.set('sponsor_muted', payload.muted ? '1' : '0');
+  overlayUrl.searchParams.set('sponsor_fit', payload.fit);
+  if (payload.filename) overlayUrl.searchParams.set('sponsor_video', payload.filename);
+  window.open(overlayUrl.toString(), '_blank');
+}
+function loadSponsors() {
+  fetch('/api/sponsors', { credentials: 'same-origin' })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.success) return;
+      sponsorLibraryData = d.library || [];
+      renderSponsorLibrary();
+    })
+    .catch(() => {});
+}
+
 // Audio Manager
 function formatBytes(bytes) {
   if (bytes < 1024) return bytes + ' B';
@@ -958,6 +1149,7 @@ fetch('/api/audio').then(r => r.json()).then(d => {
     renderAssignTable();
   }
 });
+loadSponsors();
 // Register as dashboard client
 socket.on('connect', () => { socket.emit('register', { type: 'dashboard' }); });
 </script>

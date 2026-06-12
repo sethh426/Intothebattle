@@ -156,3 +156,24 @@ test('signed overlay renders a nonblank canvas', async ({ page }, testInfo) => {
   await capture(page, testInfo, 'overlay');
   expect(errors).toEqual([]);
 });
+
+test('signed overlay sponsor preview renders transitioned ad scene', async ({ page }, testInfo) => {
+  const errors = await watchPage(page);
+  const params = new URLSearchParams({
+    room_id: roomId,
+    overlay_token: overlayToken,
+    sponsor_preview: '1',
+    sponsor_partner: 'Arcade Forge',
+    sponsor_title: 'Tonight\'s Arena Sponsor',
+    sponsor_subtitle: 'Premium sponsor screen preview for stream breaks.',
+    sponsor_duration: '15000',
+  });
+  await page.goto(`${baseUrl}/overlay?${params.toString()}`, { waitUntil: 'networkidle' });
+  await expect(page.locator('#sponsorScene')).toHaveClass(/active/, { timeout: 3000 });
+  await expect(page.getByText('Tonight\'s Arena Sponsor')).toBeVisible();
+  await expect(page.locator('.panel-wrapper')).toBeHidden();
+  await expect(page.locator('#status-badge')).toBeHidden();
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'overlay-sponsor-preview');
+  expect(errors).toEqual([]);
+});

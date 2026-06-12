@@ -107,6 +107,8 @@ try {
 
   await expectStatus(`/background/missing.png?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 404);
   await expectStatus(`/audio/missing.mp3?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 404);
+  await expectStatus(`/sponsor/missing.mp4?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 404);
+  await expectStatus(`/sponsor/missing.mp4?room_id=${roomId}&overlay_token=bad`, 401);
   await expectStatus(`/backgrounds/${roomId}/missing.png`, 404);
   await expectStatus(`/audio/${roomId}/missing.mp3`, 404);
 

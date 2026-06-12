@@ -196,6 +196,7 @@ function checkWritableStorage() {
     STORAGE_ROOT,
     path.join(STORAGE_ROOT, 'backgrounds'),
     path.join(STORAGE_ROOT, 'audio'),
+    path.join(STORAGE_ROOT, 'sponsors'),
   ];
 
   const result = {
@@ -694,6 +695,57 @@ function saveRoomAudioConfig(room) {
   }
 }
 
+function loadRoomSponsorConfig(room) {
+  try {
+    const { sponsorDir, sponsorConfigFile } = getRoomPaths(room.roomId);
+    ensureDir(sponsorDir);
+
+    if (!Array.isArray(room.sponsorLibrary)) room.sponsorLibrary = [];
+    if (!room.sponsorLibrary.length && fs.existsSync(sponsorConfigFile)) {
+      const saved = JSON.parse(fs.readFileSync(sponsorConfigFile, 'utf8'));
+      room.sponsorLibrary = Array.isArray(saved.library) ? saved.library : [];
+    }
+
+    const diskFiles = fs.existsSync(sponsorDir)
+      ? fs.readdirSync(sponsorDir).filter(file => ALLOWED_SPONSOR_EXTS.has(path.extname(file).toLowerCase()))
+      : [];
+
+    const known = new Set(room.sponsorLibrary.map(entry => entry.filename));
+    diskFiles.forEach(filename => {
+      if (!known.has(filename)) {
+        const filePath = path.join(sponsorDir, filename);
+        room.sponsorLibrary.push({
+          filename,
+          originalName: filename,
+          title: path.basename(filename, path.extname(filename)),
+          partner: 'Sponsor',
+          size: fs.existsSync(filePath) ? fs.statSync(filePath).size : 0,
+          uploadedAt: new Date().toISOString(),
+        });
+      }
+    });
+
+    room.sponsorLibrary = room.sponsorLibrary.filter(entry => {
+      const runtimePath = path.join(sponsorDir, entry.filename);
+      return isSafePath(sponsorDir, runtimePath) && fs.existsSync(runtimePath);
+    });
+    room.sponsorLibrary.sort((a, b) => a.originalName.localeCompare(b.originalName, undefined, { numeric: true, sensitivity: 'base' }));
+    saveRoomSponsorConfig(room);
+  } catch (err) {
+    console.error('Error loading sponsor media for room', room.roomId, err);
+  }
+}
+
+function saveRoomSponsorConfig(room) {
+  try {
+    const { sponsorDir, sponsorConfigFile } = getRoomPaths(room.roomId);
+    ensureDir(sponsorDir);
+    fs.writeFileSync(sponsorConfigFile, JSON.stringify({ library: room.sponsorLibrary || [] }, null, 2));
+  } catch (err) {
+    console.error('Error saving sponsor media config for room', room.roomId, err);
+  }
+}
+
 function savePlayerStats() {
   for (const room of getAllRooms().values()) {
     saveRoomPlayerStats(room);
@@ -715,6 +767,12 @@ function loadCurrentBackground() {
 function loadAudioConfig() {
   for (const room of getAllRooms().values()) {
     loadRoomAudioConfig(room);
+  }
+}
+
+function loadSponsorConfig() {
+  for (const room of getAllRooms().values()) {
+    loadRoomSponsorConfig(room);
   }
 }
 
@@ -770,6 +828,37 @@ const audioUpload = multer({
     const ext = path.extname(file.originalname || '').toLowerCase();
     const ok  = ALLOWED_AUDIO_EXTS.has(ext) && ALLOWED_AUDIO_MIMES.has(file.mimetype);
     ok ? cb(null, true) : cb(new Error('Invalid audio type. Use MP3, M4A, WAV, OGG, AAC, FLAC, or WEBM.'));
+  },
+});
+
+const ALLOWED_SPONSOR_EXTS = new Set(['.mp4', '.webm', '.m4v', '.mov']);
+const ALLOWED_SPONSOR_MIMES = new Set([
+  'video/mp4',
+  'video/webm',
+  'video/quicktime',
+  'video/x-m4v',
+  'application/octet-stream',
+]);
+
+const sponsorUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const fallbackDir = path.join(process.env.DISK_PATH || __dirname, 'sponsors');
+      const sponsorDir = req?.room ? getRoomPaths(req.room.roomId).sponsorDir : fallbackDir;
+      ensureDir(sponsorDir);
+      cb(null, sponsorDir);
+    },
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname || '').toLowerCase();
+      const safeExt = ALLOWED_SPONSOR_EXTS.has(ext) ? ext : '.mp4';
+      cb(null, `sponsor-${Date.now()}-${Math.random().toString(36).slice(2)}${safeExt}`);
+    },
+  }),
+  limits: { fileSize: 250 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const ok = ALLOWED_SPONSOR_EXTS.has(ext) && ALLOWED_SPONSOR_MIMES.has(file.mimetype);
+    ok ? cb(null, true) : cb(new Error('Invalid sponsor media type. Upload MP4, WEBM, M4V, or MOV video.'));
   },
 });
 
@@ -1740,6 +1829,61 @@ app.get('/audio/:filename', (req, res) => {
   return res.status(404).send('Audio file not found');
 });
 
+app.get('/sponsor/:filename', (req, res) => {
+  const filename = path.basename(req.params.filename);
+  let room = req.room || null;
+  if (!room && enableRoomScoped && req.query.room_id) {
+    const roomId = normalizeRoomId(req.query.room_id);
+    const overlayToken = getOverlayTokenFromRequest(req);
+    if (!roomId) return res.status(400).send('Invalid room id');
+    if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).send('Unauthorized');
+    room = getOrCreateRoom(roomId);
+  }
+  if (!room) room = getSessionRoom(req);
+  if (!room) return res.status(401).send('Unauthorized');
+  loadRoomSponsorConfig(room);
+  const { sponsorDir } = getRoomPaths(room.roomId);
+  const runtimePath = path.join(sponsorDir, filename);
+  if (!isSafePath(sponsorDir, runtimePath)) return res.status(403).send('Forbidden');
+  if (fs.existsSync(runtimePath)) return res.sendFile(runtimePath);
+  return res.status(404).send('Sponsor media not found');
+});
+
+function sanitizeSponsorText(value, fallback = '', maxLength = 120) {
+  const text = String(value || '').trim();
+  return (text || fallback).slice(0, maxLength);
+}
+
+function parseSponsorDuration(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 15000;
+  return Math.max(5000, Math.min(120000, Math.round(parsed)));
+}
+
+function parseSponsorMuted(value) {
+  return !(value === false || value === 'false' || value === '0' || value === 0);
+}
+
+function buildSponsorScenePayload(room, body = {}) {
+  loadRoomSponsorConfig(room);
+  const filename = body.filename ? path.basename(String(body.filename)) : '';
+  const entry = filename ? room.sponsorLibrary.find(item => item.filename === filename) : null;
+  if (filename && !entry) return { error: 'Sponsor media not found' };
+
+  return {
+    action: 'show',
+    filename: entry?.filename || null,
+    title: sanitizeSponsorText(body.title, entry?.title || entry?.originalName || 'Sponsor Spotlight', 90),
+    partner: sanitizeSponsorText(body.partner, entry?.partner || 'Presented By', 70),
+    subtitle: sanitizeSponsorText(body.subtitle, 'We will be right back to the battle.', 140),
+    durationMs: parseSponsorDuration(body.durationMs),
+    muted: parseSponsorMuted(body.muted),
+    fit: ['cover', 'contain'].includes(body.fit) ? body.fit : 'cover',
+    theme: ['arena', 'premium', 'minimal'].includes(body.theme) ? body.theme : 'arena',
+    _ts: Date.now(),
+  };
+}
+
 io.on('connection', (socket) => {
   const room = getOrCreateRoom(socket.roomId);
   if (!room) {
@@ -1751,6 +1895,7 @@ io.on('connection', (socket) => {
     loadRoomPlayerStats(room);
     loadRoomBackground(room);
     loadRoomAudioConfig(room);
+    loadRoomSponsorConfig(room);
     room.initialized = true;
   }
 
@@ -2090,6 +2235,62 @@ app.delete('/api/audio/delete/:filename', requireRoom, (req, res) => {
   if (changed) emitRoomEvent(req.room, 'audioConfig', req.room.audioConfig);
   console.log(`🗑️ Deleted audio for room ${req.room.roomId}: ${filename}`);
   res.json({ success: true, filename, configUpdated: changed });
+});
+
+app.get('/api/sponsors', requireRoom, (req, res) => {
+  loadRoomSponsorConfig(req.room);
+  res.json({ success: true, library: req.room.sponsorLibrary || [] });
+});
+
+app.post('/api/sponsor/upload', requireRoom, (req, res) => {
+  res.type('application/json');
+  sponsorUpload.single('sponsor')(req, res, (err) => {
+    if (err) return res.status(400).json({ success: false, error: err.message });
+    if (!req.file) return res.status(400).json({ success: false, error: 'No sponsor video uploaded.' });
+
+    loadRoomSponsorConfig(req.room);
+    const entry = {
+      filename: req.file.filename,
+      originalName: req.file.originalname,
+      title: sanitizeSponsorText(req.body?.title, path.basename(req.file.originalname, path.extname(req.file.originalname)), 90),
+      partner: sanitizeSponsorText(req.body?.partner, 'Sponsor', 70),
+      subtitle: sanitizeSponsorText(req.body?.subtitle, 'We will be right back to the battle.', 140),
+      size: req.file.size,
+      uploadedAt: new Date().toISOString(),
+    };
+    req.room.sponsorLibrary.push(entry);
+    saveRoomSponsorConfig(req.room);
+    console.log(`Sponsor media uploaded for room ${req.room.roomId}: ${req.file.originalname} -> ${req.file.filename}`);
+    res.json({ success: true, file: entry });
+  });
+});
+
+app.delete('/api/sponsor/delete/:filename', requireRoom, (req, res) => {
+  const filename = path.basename(req.params.filename);
+  const { sponsorDir } = getRoomPaths(req.room.roomId);
+  const filepath = path.join(sponsorDir, filename);
+  if (!isSafePath(sponsorDir, filepath)) return res.status(403).json({ success: false, error: 'Forbidden' });
+
+  loadRoomSponsorConfig(req.room);
+  const before = req.room.sponsorLibrary.length;
+  req.room.sponsorLibrary = req.room.sponsorLibrary.filter(file => file.filename !== filename);
+  if (req.room.sponsorLibrary.length === before) return res.status(404).json({ success: false, error: 'Sponsor media not found.' });
+
+  try { if (fs.existsSync(filepath)) fs.unlinkSync(filepath); } catch (_err) {}
+  saveRoomSponsorConfig(req.room);
+  res.json({ success: true, filename });
+});
+
+app.post('/api/sponsor/play', requireRoom, (req, res) => {
+  const payload = buildSponsorScenePayload(req.room, req.body || {});
+  if (payload.error) return res.status(404).json({ success: false, error: payload.error });
+  emitRoomEvent(req.room, 'sponsorScene', payload);
+  res.json({ success: true, scene: payload });
+});
+
+app.post('/api/sponsor/stop', requireRoom, (req, res) => {
+  emitRoomEvent(req.room, 'sponsorScene', { action: 'hide', _ts: Date.now() });
+  res.json({ success: true });
 });
 
 function blockInProduction(_req, res, next) {
@@ -2538,6 +2739,7 @@ httpServer.listen(PORT, HOST, () => {
   try { loadPlayerStats(); } catch (err) { logger.error({ err }, 'Failed to load player stats'); }
   try { loadCurrentBackground(); } catch (err) { logger.error({ err }, 'Failed to load current background'); }
   try { loadAudioConfig(); } catch (err) { logger.error({ err }, 'Failed to load audio config'); }
+  try { loadSponsorConfig(); } catch (err) { logger.error({ err }, 'Failed to load sponsor media config'); }
 
   if (currentStreamer) {
     try { connectToStreamer(currentStreamer); } catch (err) { logger.error({ err, streamer: currentStreamer }, 'Failed to connect to streamer on startup'); }

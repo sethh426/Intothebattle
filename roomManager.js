@@ -36,6 +36,10 @@ function getRoomAudioDir(roomId) {
   return path.join(ROOT_DIR, 'audio', roomId);
 }
 
+function getRoomSponsorDir(roomId) {
+  return path.join(ROOT_DIR, 'sponsors', roomId);
+}
+
 function getRoomAudioConfigFile(roomId) {
   return path.join(getRoomAudioDir(roomId), 'audio-config.json');
 }
@@ -46,11 +50,13 @@ export function getRoomPaths(roomId) {
     playerStatsFile: path.join(ROOT_DIR, `players_${roomId}.json`),
     backgroundMetaFile: path.join(backgroundDir, 'current-bg.json'),
     audioConfigFile: getRoomAudioConfigFile(roomId),
+    sponsorConfigFile: path.join(getRoomSponsorDir(roomId), 'sponsor-config.json'),
   };
 
   return {
     backgroundDir,
     audioDir: getRoomAudioDir(roomId),
+    sponsorDir: getRoomSponsorDir(roomId),
     // Legacy disk storage paths are migration-only. New data should use
     // room_settings / room_player_stats in the database.
     ...legacyPaths,
@@ -78,6 +84,7 @@ export function getOrCreateRoom(roomId) {
     audioLibrary: saved?.audio_library
       ? JSON.parse(saved.audio_library)
       : [],
+    sponsorLibrary: [],
     currentBackground: saved?.background_filename
       ? { filename: saved.background_filename }
       : null,
@@ -86,6 +93,7 @@ export function getOrCreateRoom(roomId) {
 
   ensureDir(getRoomBackgroundDir(roomId));
   ensureDir(getRoomAudioDir(roomId));
+  ensureDir(getRoomSponsorDir(roomId));
 
   rooms.set(roomId, room);
   return room;
