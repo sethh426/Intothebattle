@@ -112,6 +112,8 @@ body.signed-overlay #overlay-container {
 }
 body.hide-overlay-controls .panel-wrapper { display:none !important; }
 body.hide-overlay-status #status-badge { display:none !important; }
+body.sponsor-active .damage,
+body.sponsor-active .banner { display:none !important; }
 
 /* ── Panel ── */
 .panel-wrapper { position:fixed; top:16px; right:0; display:flex; align-items:flex-start; pointer-events:auto; z-index:30; }
@@ -295,61 +297,286 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 @keyframes bannerOut { to  { opacity:0; transform:translate(-50%,-16px); } }
 
 .sponsor-scene {
-  position:absolute; inset:0; z-index:12; overflow:hidden;
-  display:grid; place-items:center; color:#fff;
+  --sponsor-duration:15000ms;
+  position:absolute; inset:0; z-index:12; overflow:hidden; color:#fff;
   opacity:0; visibility:hidden; pointer-events:none;
   transform:scale(1.018);
+  isolation:isolate;
   transition:opacity 560ms ease,transform 700ms cubic-bezier(.16,1,.3,1),visibility 0s linear 700ms;
   background:
     radial-gradient(circle at 18% 20%, rgba(246,201,91,0.18), transparent 28%),
     radial-gradient(circle at 82% 72%, rgba(85,231,255,0.14), transparent 30%),
     linear-gradient(135deg, #03060c 0%, #0c1725 42%, #17090d 100%);
 }
+.sponsor-scene::before {
+  content:""; position:absolute; inset:-12%; z-index:-2; opacity:0;
+  background:
+    linear-gradient(rgba(122,252,255,0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(122,252,255,0.1) 1px, transparent 1px);
+  background-size:54px 54px;
+  transform:perspective(700px) rotateX(58deg) translateY(12%);
+  transition:opacity 500ms ease;
+}
+.sponsor-scene::after {
+  content:""; position:absolute; inset:0; z-index:5; pointer-events:none;
+  background:
+    linear-gradient(90deg, rgba(122,252,255,0.16), transparent 12%, transparent 88%, rgba(255,68,110,0.14)),
+    radial-gradient(circle at center, transparent 48%, rgba(0,0,0,0.56) 100%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px);
+  opacity:0.42; mix-blend-mode:screen;
+}
 .sponsor-scene.active {
   opacity:1; visibility:visible; pointer-events:auto; transform:scale(1);
   transition:opacity 560ms ease,transform 700ms cubic-bezier(.16,1,.3,1),visibility 0s;
 }
+.sponsor-scene.active::before {
+  opacity:0.32;
+  animation:sponsorGridDrift 4s linear infinite;
+}
 .sponsor-scene video {
   position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
-  opacity:.78; filter:saturate(1.08) contrast(1.08);
+  opacity:0; transform:scale(1.045);
+  filter:saturate(1.08) contrast(1.08);
+  transition:opacity 520ms ease,transform 900ms cubic-bezier(.16,1,.3,1),filter 520ms ease;
 }
-.sponsor-scene.contain video { object-fit:contain; opacity:1; background:#02040a; filter:none; }
+.sponsor-scene.live video { opacity:.78; transform:scale(1); }
+.sponsor-scene.outro video,
+.sponsor-scene.intro video { opacity:0; }
+.sponsor-scene.contain.live video { object-fit:contain; opacity:1; background:#02040a; filter:none; }
+
+.sponsor-intro,
+.sponsor-live,
+.sponsor-outro {
+  position:absolute; inset:0; z-index:1; opacity:0; pointer-events:none;
+  transition:opacity 260ms ease;
+}
+.sponsor-scene.intro .sponsor-intro,
+.sponsor-scene.live .sponsor-live,
+.sponsor-scene.outro .sponsor-outro { opacity:1; }
+
+.sponsor-intro { display:grid; place-items:center; text-align:center; }
+.sponsor-gate {
+  position:absolute; top:0; bottom:0; width:30%; background:rgba(5,9,19,0.92);
+  box-shadow:0 0 60px rgba(0,0,0,0.7);
+}
+.sponsor-gate-left { left:-32%; }
+.sponsor-gate-right { right:-32%; }
+.sponsor-scene.intro .sponsor-gate-left { animation:sponsorGateLeft 1760ms cubic-bezier(.16,1,.3,1) both; }
+.sponsor-scene.intro .sponsor-gate-right { animation:sponsorGateRight 1760ms cubic-bezier(.16,1,.3,1) both; }
+.sponsor-sweep {
+  position:absolute; top:-18%; bottom:-18%; width:26%; opacity:0; mix-blend-mode:screen;
+  transform:skewX(-12deg);
+}
+.sponsor-sweep-gold { left:-32%; background:rgba(246,201,91,0.18); }
+.sponsor-sweep-cyan { right:-26%; background:rgba(85,231,255,0.16); transform:skewX(14deg); }
+.sponsor-scene.intro .sponsor-sweep-gold { animation:sponsorSweepGold 1450ms cubic-bezier(.16,1,.3,1) both; }
+.sponsor-scene.intro .sponsor-sweep-cyan { animation:sponsorSweepCyan 1540ms 120ms cubic-bezier(.16,1,.3,1) both; }
+.sponsor-ring {
+  position:absolute; left:50%; top:50%; border-radius:50%; transform:translate(-50%,-50%) scale(.68);
+  opacity:0; mix-blend-mode:screen;
+}
+.sponsor-ring-cyan { width:34%; aspect-ratio:1; border:3px solid rgba(85,231,255,0.34); box-shadow:0 0 45px rgba(85,231,255,0.16); }
+.sponsor-ring-gold { width:45%; aspect-ratio:1; border:2px solid rgba(246,201,91,0.27); box-shadow:0 0 52px rgba(246,201,91,0.12); }
+.sponsor-scene.intro .sponsor-ring-cyan { animation:sponsorRingPulse 1580ms 70ms cubic-bezier(.16,1,.3,1) both; }
+.sponsor-scene.intro .sponsor-ring-gold { animation:sponsorRingPulse 1720ms 150ms cubic-bezier(.16,1,.3,1) both reverse; }
+.sponsor-intro-rail {
+  position:absolute; left:50%; width:0; height:4px; transform:translateX(-50%);
+  border-radius:99px; box-shadow:0 0 22px currentColor;
+}
+.sponsor-intro-rail-top { top:19%; color:#ffdf8a; background:#ffdf8a; }
+.sponsor-intro-rail-bottom { bottom:19%; color:#55e7ff; background:#55e7ff; }
+.sponsor-scene.intro .sponsor-intro-rail { animation:sponsorRail 1380ms 90ms cubic-bezier(.16,1,.3,1) both; }
+.sponsor-intro-copy {
+  position:relative; z-index:2; display:grid; gap:18px; justify-items:center;
+  padding:42px; text-shadow:0 0 28px rgba(255,106,61,0.52),0 5px 28px rgba(0,0,0,.85);
+}
+.sponsor-intro-title {
+  font:900 84px 'Exo 2','Segoe UI',sans-serif; line-height:.9; letter-spacing:0; color:#fff8e6;
+  opacity:0; transform:translateY(14px) scale(.88);
+}
+.sponsor-intro-partner {
+  max-width:920px; font:800 28px 'Rajdhani','Segoe UI',sans-serif; line-height:1.05;
+  letter-spacing:0; color:#d7f5ff; text-transform:uppercase; opacity:0;
+}
+.sponsor-scene.intro .sponsor-intro-title { animation:sponsorIntroTitle 1180ms 60ms cubic-bezier(.16,1,.3,1) both; }
+.sponsor-scene.intro .sponsor-intro-partner { animation:sponsorIntroPartner 880ms 210ms cubic-bezier(.16,1,.3,1) both; }
+.sponsor-spark-field { position:absolute; inset:0; pointer-events:none; }
+.sponsor-spark-field span {
+  position:absolute; width:5px; height:5px; border-radius:50%; opacity:0;
+  background:#55e7ff; box-shadow:0 0 14px currentColor; color:#55e7ff;
+}
+.sponsor-spark-field span:nth-child(3n) { background:#ffdf8a; color:#ffdf8a; }
+.sponsor-spark-field span:nth-child(1) { left:22%; top:34%; }
+.sponsor-spark-field span:nth-child(2) { left:31%; top:58%; }
+.sponsor-spark-field span:nth-child(3) { left:42%; top:27%; }
+.sponsor-spark-field span:nth-child(4) { left:54%; top:66%; }
+.sponsor-spark-field span:nth-child(5) { left:66%; top:38%; }
+.sponsor-spark-field span:nth-child(6) { left:75%; top:55%; }
+.sponsor-spark-field span:nth-child(7) { left:18%; top:70%; }
+.sponsor-spark-field span:nth-child(8) { left:83%; top:28%; }
+.sponsor-spark-field span:nth-child(9) { left:48%; top:76%; }
+.sponsor-spark-field span:nth-child(10) { left:38%; top:46%; }
+.sponsor-spark-field span:nth-child(11) { left:59%; top:22%; }
+.sponsor-spark-field span:nth-child(12) { left:70%; top:73%; }
+.sponsor-scene.intro .sponsor-spark-field span {
+  animation:sponsorSpark 760ms ease-out both;
+  animation-delay:calc(110ms + var(--spark-index, 0) * 24ms);
+}
+.sponsor-spark-field span:nth-child(1) { --spark-index:1; }
+.sponsor-spark-field span:nth-child(2) { --spark-index:2; }
+.sponsor-spark-field span:nth-child(3) { --spark-index:3; }
+.sponsor-spark-field span:nth-child(4) { --spark-index:4; }
+.sponsor-spark-field span:nth-child(5) { --spark-index:5; }
+.sponsor-spark-field span:nth-child(6) { --spark-index:6; }
+.sponsor-spark-field span:nth-child(7) { --spark-index:7; }
+.sponsor-spark-field span:nth-child(8) { --spark-index:8; }
+.sponsor-spark-field span:nth-child(9) { --spark-index:9; }
+.sponsor-spark-field span:nth-child(10) { --spark-index:10; }
+.sponsor-spark-field span:nth-child(11) { --spark-index:11; }
+.sponsor-spark-field span:nth-child(12) { --spark-index:12; }
+
+.sponsor-live { z-index:2; }
 .sponsor-scrim {
   position:absolute; inset:0;
   background:
-    linear-gradient(90deg, rgba(1,4,10,.78), rgba(1,4,10,.25) 45%, rgba(1,4,10,.58)),
-    linear-gradient(0deg, rgba(0,0,0,.62), transparent 34%, rgba(0,0,0,.5));
+    linear-gradient(90deg, rgba(1,4,10,.82), rgba(1,4,10,.26) 45%, rgba(1,4,10,.6)),
+    linear-gradient(0deg, rgba(0,0,0,.66), transparent 34%, rgba(0,0,0,.5));
 }
 .sponsor-frame {
-  position:relative; width:min(86vw,1180px); min-height:52vh;
+  position:relative; width:min(86%,1180px); min-height:52%;
   display:flex; flex-direction:column; justify-content:flex-end; gap:18px;
-  padding:clamp(34px,5vw,76px); text-shadow:0 4px 24px rgba(0,0,0,.86);
+  padding:76px; text-shadow:0 4px 24px rgba(0,0,0,.86);
 }
 .sponsor-kicker {
   width:max-content; max-width:100%; padding:8px 15px; border:1px solid rgba(246,201,91,.54);
   background:rgba(246,201,91,.12); color:#ffdf8a; border-radius:999px;
-  font:800 clamp(13px,1.5vw,18px) 'Rajdhani',sans-serif; letter-spacing:2px; text-transform:uppercase;
+  font:800 18px 'Rajdhani',sans-serif; letter-spacing:0; text-transform:uppercase;
 }
 .sponsor-title {
-  max-width:980px; font:900 clamp(46px,8vw,104px) 'Exo 2','Segoe UI',sans-serif;
+  max-width:980px; font:900 84px 'Exo 2','Segoe UI',sans-serif;
   line-height:.92; letter-spacing:0; color:#fff8e6;
 }
 .sponsor-subtitle {
-  max-width:780px; font:700 clamp(21px,3vw,38px) 'Rajdhani','Segoe UI',sans-serif;
-  line-height:1.05; color:#d7f5ff;
+  max-width:780px; font:700 32px 'Rajdhani','Segoe UI',sans-serif;
+  line-height:1.05; color:#d7f5ff; letter-spacing:0;
 }
 .sponsor-brand {
-  position:absolute; top:clamp(22px,3vw,42px); right:clamp(28px,4vw,64px);
-  font:900 clamp(16px,2vw,28px) 'Exo 2','Segoe UI',sans-serif; color:#ffffff;
+  position:absolute; top:42px; right:64px;
+  font:900 26px 'Exo 2','Segoe UI',sans-serif; color:#ffffff;
   letter-spacing:0; text-transform:uppercase;
 }
 .sponsor-progress {
-  position:absolute; left:clamp(34px,5vw,76px); right:clamp(34px,5vw,76px); bottom:clamp(22px,3vw,44px);
+  position:absolute; left:76px; right:76px; bottom:40px;
   height:5px; border-radius:999px; background:rgba(255,255,255,.16); overflow:hidden;
 }
-.sponsor-progress span { display:block; height:100%; width:0; background:linear-gradient(90deg,#ffdf8a,#55e7ff); }
-.sponsor-scene.active .sponsor-progress span { animation:sponsorProgress var(--sponsor-duration,15000ms) linear forwards; }
-@keyframes sponsorProgress { to { width:100%; } }
+.sponsor-progress span {
+  display:block; height:100%; width:100%; transform:scaleX(0); transform-origin:left center;
+  background:linear-gradient(90deg,#ffdf8a,#55e7ff);
+}
+.sponsor-return-hint {
+  position:absolute; right:76px; bottom:58px;
+  font:800 18px 'Rajdhani','Segoe UI',sans-serif; color:#9fefff;
+  letter-spacing:0; text-transform:uppercase; opacity:0;
+}
+.sponsor-scene.live .sponsor-progress span { animation:sponsorProgress var(--sponsor-duration) linear forwards; }
+.sponsor-scene.live .sponsor-brand,
+.sponsor-scene.live .sponsor-kicker,
+.sponsor-scene.live .sponsor-title,
+.sponsor-scene.live .sponsor-subtitle,
+.sponsor-scene.live .sponsor-return-hint { animation:sponsorLiveCopy 640ms 160ms cubic-bezier(.16,1,.3,1) both; }
+.sponsor-scene.live .sponsor-return-hint { animation-delay:360ms; }
+
+.sponsor-outro {
+  z-index:3; display:grid; place-items:center; text-align:center;
+  background:rgba(2,4,10,0.5);
+}
+.sponsor-outro-wipe {
+  position:absolute; top:-18%; bottom:-18%; left:-32%; width:28%;
+  background:rgba(85,231,255,0.22); transform:skewX(12deg); mix-blend-mode:screen;
+}
+.sponsor-outro-title {
+  position:relative; z-index:2; font:900 72px 'Exo 2','Segoe UI',sans-serif;
+  line-height:.95; letter-spacing:0; color:#fff8e6; opacity:0; transform:scale(.86);
+  text-shadow:0 0 24px rgba(85,231,255,0.78),0 5px 26px rgba(0,0,0,.86);
+}
+.sponsor-scene.outro .sponsor-outro-wipe { animation:sponsorOutroWipe 1020ms cubic-bezier(.16,1,.3,1) both; }
+.sponsor-scene.outro .sponsor-outro-title { animation:sponsorOutroTitle 920ms 80ms cubic-bezier(.16,1,.3,1) both; }
+
+@media (max-width:900px) {
+  .sponsor-intro-title,
+  .sponsor-title { font-size:58px; }
+  .sponsor-outro-title { font-size:52px; }
+  .sponsor-intro-partner,
+  .sponsor-subtitle { font-size:24px; }
+  .sponsor-frame { padding:48px; width:92%; }
+  .sponsor-brand { top:28px; right:34px; font-size:20px; }
+  .sponsor-progress { left:48px; right:48px; bottom:28px; }
+  .sponsor-return-hint { right:48px; bottom:44px; font-size:15px; }
+}
+@media (max-width:560px) {
+  .sponsor-intro-title,
+  .sponsor-title { font-size:38px; }
+  .sponsor-outro-title { font-size:34px; }
+  .sponsor-intro-partner,
+  .sponsor-subtitle { font-size:18px; }
+  .sponsor-kicker { font-size:14px; }
+  .sponsor-frame { padding:30px; width:96%; gap:12px; }
+  .sponsor-brand { top:20px; right:24px; font-size:16px; }
+  .sponsor-progress { left:30px; right:30px; bottom:22px; }
+  .sponsor-return-hint { display:none; }
+}
+@keyframes sponsorProgress { to { transform:scaleX(1); } }
+@keyframes sponsorGridDrift { to { transform:perspective(700px) rotateX(58deg) translateY(12%) translateY(54px); } }
+@keyframes sponsorGateLeft {
+  0% { left:-32%; opacity:.92; } 32% { left:0; opacity:.82; } 100% { left:-34%; opacity:.1; }
+}
+@keyframes sponsorGateRight {
+  0% { right:-32%; opacity:.92; } 32% { right:0; opacity:.82; } 100% { right:-34%; opacity:.1; }
+}
+@keyframes sponsorSweepGold {
+  0% { left:-32%; opacity:0; } 16% { opacity:.9; } 100% { left:112%; opacity:0; }
+}
+@keyframes sponsorSweepCyan {
+  0% { right:-26%; opacity:0; } 18% { opacity:.85; } 100% { right:114%; opacity:0; }
+}
+@keyframes sponsorRingPulse {
+  0% { opacity:0; transform:translate(-50%,-50%) scale(.58) rotate(0deg); }
+  45% { opacity:1; }
+  100% { opacity:0; transform:translate(-50%,-50%) scale(1.22) rotate(18deg); }
+}
+@keyframes sponsorRail {
+  0% { width:0; opacity:0; }
+  38% { width:78%; opacity:1; }
+  100% { width:70%; opacity:.38; }
+}
+@keyframes sponsorIntroTitle {
+  0% { opacity:0; transform:translateY(14px) scale(.88); filter:blur(8px); }
+  62% { opacity:1; transform:translateY(-3px) scale(1.02); filter:blur(0); }
+  100% { opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
+}
+@keyframes sponsorIntroPartner {
+  0% { opacity:0; transform:translateY(18px); }
+  100% { opacity:1; transform:translateY(0); }
+}
+@keyframes sponsorSpark {
+  0% { opacity:0; transform:translate(0,0) scale(.5); }
+  28% { opacity:.95; }
+  100% { opacity:0; transform:translate(36px,-24px) scale(2.1); }
+}
+@keyframes sponsorLiveCopy {
+  0% { opacity:0; transform:translateX(-18px); }
+  100% { opacity:1; transform:translateX(0); }
+}
+@keyframes sponsorOutroWipe {
+  0% { left:-32%; opacity:0; }
+  18% { opacity:.95; }
+  100% { left:118%; opacity:0; }
+}
+@keyframes sponsorOutroTitle {
+  0% { opacity:0; transform:scale(.86); filter:blur(8px); }
+  44% { opacity:1; transform:scale(1); filter:blur(0); }
+  100% { opacity:0; transform:scale(1.04); filter:blur(0); }
+}
 
 .reload-overlay {
   position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:99999;
@@ -366,14 +593,40 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   <canvas id="canvas"></canvas>
   <div id="sponsorScene" class="sponsor-scene" aria-hidden="true">
     <video id="sponsorVideo" playsinline preload="metadata"></video>
-    <div class="sponsor-scrim"></div>
-    <div class="sponsor-brand" id="sponsorBrand">IntoTheBattle</div>
-    <div class="sponsor-frame">
-      <div class="sponsor-kicker" id="sponsorKicker">Sponsor Spotlight</div>
-      <div class="sponsor-title" id="sponsorTitle">Presented By Our Sponsor</div>
-      <div class="sponsor-subtitle" id="sponsorSubtitle">We will be right back to the battle.</div>
+    <div class="sponsor-intro" aria-hidden="true">
+      <div class="sponsor-gate sponsor-gate-left"></div>
+      <div class="sponsor-gate sponsor-gate-right"></div>
+      <div class="sponsor-sweep sponsor-sweep-gold"></div>
+      <div class="sponsor-sweep sponsor-sweep-cyan"></div>
+      <div class="sponsor-ring sponsor-ring-cyan"></div>
+      <div class="sponsor-ring sponsor-ring-gold"></div>
+      <div class="sponsor-intro-rail sponsor-intro-rail-top"></div>
+      <div class="sponsor-intro-rail sponsor-intro-rail-bottom"></div>
+      <div class="sponsor-spark-field" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <div class="sponsor-intro-copy">
+        <div class="sponsor-intro-title">SPONSOR BREAK</div>
+        <div class="sponsor-intro-partner" id="sponsorIntroPartner">Presented by IntoTheBattle</div>
+      </div>
     </div>
-    <div class="sponsor-progress"><span id="sponsorProgress"></span></div>
+    <div class="sponsor-live" aria-hidden="true">
+      <div class="sponsor-scrim"></div>
+      <div class="sponsor-brand" id="sponsorBrand">IntoTheBattle</div>
+      <div class="sponsor-frame">
+        <div class="sponsor-kicker" id="sponsorKicker">Sponsor Spotlight</div>
+        <div class="sponsor-title" id="sponsorTitle">Presented By Our Sponsor</div>
+        <div class="sponsor-subtitle" id="sponsorSubtitle">We will be right back to the battle.</div>
+      </div>
+      <div class="sponsor-return-hint">BACK TO THE BATTLE SOON</div>
+      <div class="sponsor-progress"><span id="sponsorProgress"></span></div>
+    </div>
+    <div class="sponsor-outro" aria-hidden="true">
+      <div class="sponsor-outro-wipe"></div>
+      <div class="sponsor-outro-title" id="sponsorOutroTitle">BACK TO THE BATTLE</div>
+    </div>
   </div>
 </div>
 
@@ -498,11 +751,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const statusDiv = document.getElementById('status-badge');
   const sponsorScene = document.getElementById('sponsorScene');
   const sponsorVideo = document.getElementById('sponsorVideo');
+  const sponsorIntroPartner = document.getElementById('sponsorIntroPartner');
   const sponsorBrand = document.getElementById('sponsorBrand');
   const sponsorKicker = document.getElementById('sponsorKicker');
   const sponsorTitle = document.getElementById('sponsorTitle');
   const sponsorSubtitle = document.getElementById('sponsorSubtitle');
   const sponsorProgress = document.getElementById('sponsorProgress');
+  const sponsorOutroTitle = document.getElementById('sponsorOutroTitle');
 
   // ── Panel DOM refs ──
   const gapControl     = document.getElementById('gapControl');
@@ -536,6 +791,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let darkMode        = true;
   let _demoTimer      = null;
   let sponsorTimer    = null;
+  let sponsorState    = 'battle';
+  let sponsorQueue    = [];
+  let activeSponsorPayload = null;
+  let sponsorAudioContext = null;
   let renderScale     = 1;
   const recentAttackKeys = new Map();
   const recentCheerKeys = new Map();
@@ -605,50 +864,152 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     el.textContent = String(value || fallback || '').slice(0, 140);
   }
 
-  function hideSponsorScene() {
+  function clearSponsorTimer() {
     if (sponsorTimer) {
       clearTimeout(sponsorTimer);
       sponsorTimer = null;
     }
+  }
+
+  function normalizeSponsorPayload(payload = {}) {
+    const duration = Number(payload.durationMs);
+    const filename = payload.filename ? String(payload.filename) : '';
+    let videoUrl = payload.videoUrl || payload.url || payload.src || '';
+    if (!videoUrl && filename) {
+      videoUrl = withOverlayAuth(`/sponsor/${encodeURIComponent(filename)}`, { v: payload._ts || Date.now() });
+    }
+
+    return {
+      action: payload.action || 'show',
+      filename,
+      videoUrl,
+      partner: String(payload.partner || 'IntoTheBattle').slice(0, 70),
+      kicker: String(payload.kicker || 'Sponsor Spotlight').slice(0, 70),
+      title: String(payload.title || 'Presented By Our Sponsor').slice(0, 90),
+      subtitle: String(payload.subtitle || 'We will be right back to the battle.').slice(0, 140),
+      durationMs: Number.isFinite(duration) ? Math.max(5000, Math.min(120000, Math.round(duration))) : 15000,
+      muted: payload.muted !== false,
+      fit: payload.fit === 'contain' ? 'contain' : 'cover',
+      _ts: payload._ts || Date.now(),
+    };
+  }
+
+  function resetSponsorVideo(clearSource = true) {
     if (sponsorVideo) {
       sponsorVideo.pause();
       sponsorVideo.onended = null;
-      sponsorVideo.removeAttribute('src');
-      sponsorVideo.load();
-    }
-    if (sponsorScene) {
-      sponsorScene.classList.remove('active');
-      sponsorScene.setAttribute('aria-hidden', 'true');
+      if (clearSource) {
+        sponsorVideo.removeAttribute('src');
+        sponsorVideo.load();
+      }
     }
   }
 
-  function showSponsorScene(payload = {}) {
-    if (!sponsorScene) return;
-    if (sponsorTimer) clearTimeout(sponsorTimer);
-
-    const durationMs = Math.max(5000, Math.min(120000, Number(payload.durationMs) || 15000));
-    setSponsorText(sponsorBrand, payload.partner || 'IntoTheBattle', 'IntoTheBattle');
-    setSponsorText(sponsorKicker, payload.kicker || 'Sponsor Spotlight', 'Sponsor Spotlight');
-    setSponsorText(sponsorTitle, payload.title || 'Presented By Our Sponsor', 'Presented By Our Sponsor');
-    setSponsorText(sponsorSubtitle, payload.subtitle || 'We will be right back to the battle.', 'We will be right back to the battle.');
-
-    sponsorScene.style.setProperty('--sponsor-duration', `${durationMs}ms`);
-    sponsorScene.classList.toggle('contain', payload.fit === 'contain');
-    if (sponsorProgress) {
-      sponsorProgress.style.animation = 'none';
-      sponsorProgress.offsetHeight;
-      sponsorProgress.style.animation = '';
+  function setSponsorSceneState(nextState) {
+    if (sponsorScene) {
+      sponsorScene.classList.remove('intro', 'live', 'outro');
+      if (nextState) {
+        void sponsorScene.offsetWidth;
+        sponsorScene.classList.add(nextState);
+      }
     }
+  }
+
+  function playSponsorTone(kind) {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      if (!sponsorAudioContext) sponsorAudioContext = new AudioContext();
+      const audioCtx = sponsorAudioContext;
+      if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+      const now = audioCtx.currentTime;
+
+      const playTone = (start, duration, from, to, type, volume) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(from, now + start);
+        osc.frequency.exponentialRampToValueAtTime(to, now + start + duration);
+        gain.gain.setValueAtTime(0.0001, now + start);
+        gain.gain.exponentialRampToValueAtTime(volume, now + start + duration * 0.24);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + start);
+        osc.stop(now + start + duration + 0.02);
+      };
+
+      if (kind === 'intro') {
+        playTone(0, 0.32, 160, 92, 'sawtooth', 0.08);
+        playTone(0.18, 0.46, 420, 720, 'triangle', 0.045);
+      } else {
+        playTone(0, 0.24, 220, 520, 'triangle', 0.05);
+        playTone(0.12, 0.34, 110, 70, 'sine', 0.055);
+      }
+    } catch (_err) {
+      // Some browsers and OBS profiles block WebAudio until interaction.
+    }
+  }
+
+  function finishSponsorScene() {
+    clearSponsorTimer();
+    resetSponsorVideo(true);
+    if (sponsorScene) {
+      sponsorScene.classList.remove('active', 'intro', 'live', 'outro', 'contain');
+      sponsorScene.setAttribute('aria-hidden', 'true');
+    }
+    document.body.classList.remove('sponsor-active');
+    sponsorState = 'battle';
+    activeSponsorPayload = null;
+
+    const next = sponsorQueue.shift();
+    if (next) {
+      sponsorTimer = setTimeout(() => {
+        sponsorTimer = null;
+        startSponsorIntro(next);
+      }, 250);
+    }
+  }
+
+  function startSponsorIntro(payload) {
+    clearSponsorTimer();
+    activeSponsorPayload = payload;
+    sponsorState = 'intro';
+    resetSponsorVideo(true);
+    setSponsorText(sponsorIntroPartner, `Presented by ${payload.partner}`, 'Presented by IntoTheBattle');
+
+    sponsorScene.style.setProperty('--sponsor-duration', `${payload.durationMs}ms`);
+    sponsorScene.classList.toggle('contain', payload.fit === 'contain');
+    sponsorScene.classList.add('active');
+    sponsorScene.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('sponsor-active');
+    setSponsorSceneState('intro');
+    playSponsorTone('intro');
+
+    sponsorTimer = setTimeout(() => {
+      sponsorTimer = null;
+      startSponsorLive(payload);
+    }, 1850);
+  }
+
+  function startSponsorLive(payload) {
+    if (!sponsorScene || sponsorState === 'battle') return;
+    clearSponsorTimer();
+    sponsorState = 'live';
+
+    setSponsorText(sponsorBrand, payload.partner, 'IntoTheBattle');
+    setSponsorText(sponsorKicker, payload.kicker, 'Sponsor Spotlight');
+    setSponsorText(sponsorTitle, payload.title, 'Presented By Our Sponsor');
+    setSponsorText(sponsorSubtitle, payload.subtitle, 'We will be right back to the battle.');
+    setSponsorSceneState('live');
 
     if (sponsorVideo) {
-      sponsorVideo.pause();
-      sponsorVideo.removeAttribute('src');
-      sponsorVideo.load();
-      if (payload.filename) {
-        sponsorVideo.src = withOverlayAuth(`/sponsor/${encodeURIComponent(payload.filename)}`, { v: payload._ts || Date.now() });
-        sponsorVideo.muted = payload.muted !== false;
+      resetSponsorVideo(true);
+      if (payload.videoUrl) {
+        sponsorVideo.muted = payload.muted;
         sponsorVideo.loop = false;
-        sponsorVideo.onended = hideSponsorScene;
+        sponsorVideo.src = payload.videoUrl;
+        sponsorVideo.onended = () => startSponsorOutro(payload);
         sponsorVideo.play().catch(() => {
           sponsorVideo.muted = true;
           sponsorVideo.play().catch(() => {});
@@ -656,12 +1017,59 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       }
     }
 
-    sponsorScene.classList.add('active');
-    sponsorScene.setAttribute('aria-hidden', 'false');
-    sponsorTimer = setTimeout(hideSponsorScene, durationMs);
+    sponsorTimer = setTimeout(() => {
+      sponsorTimer = null;
+      startSponsorOutro(payload);
+    }, payload.durationMs);
   }
 
-  window.overlaySponsorScene = { show: showSponsorScene, hide: hideSponsorScene };
+  function startSponsorOutro(payload = {}, forced = false) {
+    if (!sponsorScene || sponsorState === 'battle') return;
+    clearSponsorTimer();
+    sponsorState = 'outro';
+    setSponsorText(sponsorOutroTitle, forced ? 'RETURNING TO BATTLE' : 'BACK TO THE BATTLE', 'BACK TO THE BATTLE');
+    resetSponsorVideo(false);
+    setSponsorSceneState('outro');
+    playSponsorTone('outro');
+
+    sponsorTimer = setTimeout(() => {
+      sponsorTimer = null;
+      finishSponsorScene();
+    }, 1250);
+  }
+
+  function hideSponsorScene() {
+    sponsorQueue = [];
+    if (!sponsorScene) return;
+    if (sponsorState === 'battle') {
+      finishSponsorScene();
+      return;
+    }
+    startSponsorOutro(activeSponsorPayload || {}, true);
+  }
+
+  function showSponsorScene(payload = {}) {
+    if (!sponsorScene) return;
+    if (payload && payload.action === 'hide') {
+      hideSponsorScene();
+      return;
+    }
+
+    const scenePayload = normalizeSponsorPayload(payload);
+    if (sponsorState !== 'battle') {
+      sponsorQueue.push(scenePayload);
+      return;
+    }
+
+    startSponsorIntro(scenePayload);
+  }
+
+  window.overlaySponsorScene = {
+    show: showSponsorScene,
+    hide: hideSponsorScene,
+    stop: hideSponsorScene,
+    state: () => sponsorState,
+  };
 
   // ── Demo players ──
   const DEMO_PLAYERS = [
