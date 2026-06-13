@@ -554,14 +554,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const overlayRoomId = overlayParams.get('room_id') || '';
   const overlayToken  = overlayParams.get('overlay_token') || overlayParams.get('overlayToken') || '';
   const isSignedOverlay = Boolean(overlayRoomId && overlayToken);
+  const isPublicDemo = overlayParams.get('demo') === '1'
+    || /^\/overlay-(demo|preview)(?:\.html)?\/?$/i.test(window.location.pathname);
 
-  if (isSignedOverlay) {
+  if (isSignedOverlay || isPublicDemo) {
     document.body.classList.add('signed-overlay');
   }
-  if (isSignedOverlay && overlayParams.get('controls') !== '1') {
+  if ((isSignedOverlay || isPublicDemo) && overlayParams.get('controls') !== '1') {
     document.body.classList.add('hide-overlay-controls');
   }
-  if (isSignedOverlay && overlayParams.get('debug') !== '1') {
+  if ((isSignedOverlay || isPublicDemo) && overlayParams.get('debug') !== '1') {
     document.body.classList.add('hide-overlay-status');
   }
 
@@ -2241,7 +2243,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
   }
 
-  initSocket();
+  if (isPublicDemo) {
+    enterDemoMode();
+  } else {
+    initSocket();
+  }
   if (overlayParams.get('sponsor_preview') === '1') {
     setTimeout(() => {
       showSponsorScene({
