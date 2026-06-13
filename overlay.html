@@ -61,24 +61,54 @@
 
 * { margin:0; padding:0; box-sizing:border-box; }
 html,body { width:100%; height:100%; overflow:hidden; background:var(--bg-deep); font-family:'Exo 2','Segoe UI',sans-serif; }
-body { display:flex; align-items:center; justify-content:center; }
+body {
+  display:flex; align-items:center; justify-content:center;
+  padding:clamp(10px,1.8vw,28px);
+  background:
+    linear-gradient(180deg, rgba(122,252,255,0.06), transparent 28%),
+    linear-gradient(135deg, #030711 0%, #071223 48%, #09040d 100%);
+}
 
 #overlay-container {
-  position:relative; width:min(90vw,1920px); aspect-ratio:16/9;
-  background:rgba(4,8,18,0.92);
-  border:1px solid rgba(180,120,255,0.35); border-radius:18px;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06),0 0 48px rgba(140,80,255,0.18),0 0 120px rgba(80,40,180,0.08);
+  position:relative; width:min(96vw,1920px); max-height:calc(100vh - clamp(20px,3.6vw,56px)); aspect-ratio:16/9;
+  background:rgba(4,8,18,0.94);
+  border:2px solid rgba(122,252,255,0.42); border-radius:20px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.08),
+    inset 0 0 44px rgba(122,252,255,0.08),
+    0 0 0 1px rgba(255,255,255,0.04),
+    0 18px 70px rgba(0,0,0,0.62),
+    0 0 70px rgba(122,252,255,0.13),
+    0 0 130px rgba(255,68,110,0.08);
   overflow:hidden;
 }
-#canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
+#overlay-container::before {
+  content:""; position:absolute; inset:10px; z-index:20; pointer-events:none;
+  border:1px solid rgba(255,255,255,0.09); border-radius:14px;
+  box-shadow:inset 0 0 26px rgba(122,252,255,0.08);
+}
+#overlay-container::after {
+  content:""; position:absolute; inset:0; z-index:19; pointer-events:none;
+  background:
+    linear-gradient(90deg, rgba(122,252,255,0.18), transparent 10%, transparent 90%, rgba(255,68,110,0.14)),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px);
+  opacity:0.34; mix-blend-mode:screen;
+}
+#canvas { position:absolute; inset:0; width:100%; height:100%; display:block; border-radius:inherit; }
 body.signed-overlay { display:block; }
 body.signed-overlay #overlay-container {
-  width:100vw;
-  height:100vh !important;
+  position:fixed;
+  inset:clamp(10px,1.45vw,24px);
+  width:auto;
+  height:auto !important;
   aspect-ratio:auto;
-  border:0;
-  border-radius:0;
-  box-shadow:none;
+  border:2px solid rgba(122,252,255,0.5);
+  border-radius:clamp(12px,1.25vw,22px);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,0.08),
+    inset 0 0 48px rgba(122,252,255,0.08),
+    0 0 42px rgba(122,252,255,0.14),
+    0 0 92px rgba(255,68,110,0.09);
 }
 body.hide-overlay-controls .panel-wrapper { display:none !important; }
 body.hide-overlay-status #status-badge { display:none !important; }
@@ -237,13 +267,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 }
 
 .banner {
-  position:fixed; left:50%; top:8%; transform:translate(-50%,0); z-index:10000; pointer-events:none;
+  position:fixed; left:50%; top:58%; transform:translate(-50%,0); z-index:10000; pointer-events:none;
   font-family:'Rajdhani',sans-serif; font-weight:900; text-align:center;
-  animation:bannerIn 0.35s cubic-bezier(0.2,1.4,0.4,1),bannerOut 0.5s ease-in 2.6s forwards; white-space:nowrap;
+  display:flex; align-items:center; justify-content:center; min-height:clamp(34px,4.2vw,58px);
+  padding:clamp(7px,1vw,13px) clamp(18px,2.2vw,34px);
+  overflow:hidden; white-space:nowrap; text-overflow:ellipsis; box-sizing:border-box;
+  background:
+    linear-gradient(90deg, rgba(255,44,68,0.2), rgba(6,14,28,0.88) 28%, rgba(6,14,28,0.88) 72%, rgba(122,252,255,0.16)),
+    rgba(5,10,19,0.88);
+  border:1px solid rgba(255,255,255,0.14); border-radius:12px;
+  box-shadow:0 14px 36px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+  animation:bannerIn 0.35s cubic-bezier(0.2,1.4,0.4,1),bannerOut 0.5s ease-in 2.6s forwards;
 }
+.banner-content {
+  display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.banner-content strong { margin:0 0.16em; }
 .banner.kill      { font-size:clamp(18px,2vw,32px);   color:#ffcc44; text-shadow:0 0 30px rgba(255,200,0,0.9),0 0 80px rgba(255,100,0,0.6); letter-spacing:2px; }
 .banner.streak    { font-size:clamp(20px,2.2vw,36px); color:#ff44aa; text-shadow:0 0 40px rgba(255,68,170,0.9),0 0 80px rgba(255,0,100,0.4); letter-spacing:3px; }
-.banner.gift      { font-size:clamp(14px,1.8vw,26px); color:#fff; background:rgba(0,0,0,0.55); padding:10px 32px; border-radius:40px; backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.12); text-shadow:0 0 20px rgba(255,255,255,0.8); }
+.banner.gift      { font-size:clamp(14px,1.8vw,26px); color:#fff; text-shadow:0 0 20px rgba(255,255,255,0.8); }
 .banner.legendary { font-size:clamp(22px,2.5vw,40px); color:#FFD700; text-shadow:0 0 40px rgba(255,215,0,1),0 0 100px rgba(255,140,0,0.8); letter-spacing:4px; animation:bannerIn 0.35s cubic-bezier(0.2,1.4,0.4,1),legendaryPulse 0.5s ease-in-out infinite alternate,bannerOut 0.5s ease-in 3.5s forwards; }
 @keyframes legendaryPulse {
   from { text-shadow:0 0 40px rgba(255,215,0,1),0 0 100px rgba(255,140,0,0.8); }
@@ -494,6 +536,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let darkMode        = true;
   let _demoTimer      = null;
   let sponsorTimer    = null;
+  let renderScale     = 1;
+  const recentAttackKeys = new Map();
+  const recentCheerKeys = new Map();
+  const lastKnownPositions = new Map();
+  const visualEventQueue = [];
+  let visualEventScheduled = false;
+  let pendingGameState = null;
+  let gameStateScheduled = false;
+  let lastVisualEventSeq = 0;
+  let stateFetchInFlight = false;
+  let registerAcked = false;
+  let registerRetryTimer = null;
 
   const HORDE_ID = '__HORDE__';
   const overlayParams = new URLSearchParams(window.location.search);
@@ -526,7 +580,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function makeSocketOptions() {
-    const options = { transports: ['websocket', 'polling'], timeout: 5000 };
+    const options = {
+      transports: ['websocket', 'polling'],
+      timeout: 8000,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 4000,
+      randomizationFactor: 0.4,
+    };
     if (isSignedOverlay) {
       options.auth = { roomId: overlayRoomId, overlayToken };
       options.query = { room_id: overlayRoomId, overlay_token: overlayToken };
@@ -620,13 +682,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function resizeCanvas() {
     const rect = container.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
-    canvas.width  = rect.width;
-    canvas.height = rect.height;
+    renderScale = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+    canvas.width  = Math.max(1, Math.round(rect.width * renderScale));
+    canvas.height = Math.max(1, Math.round(rect.height * renderScale));
+    ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
   }
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
-  function cw() { return canvas.width;  }
-  function ch() { return canvas.height; }
+  function cw() { return canvas.width / renderScale;  }
+  function ch() { return canvas.height / renderScale; }
 
   // ── Panel: collapsible sections ──
   function setPanelOpen(open) {
@@ -761,9 +827,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return activePlayers()
       .filter(p => isAlive(p) && p.uniqueId !== HORDE_ID)
       .sort((a, b) => {
-        const hd = (b.hp || 0) - (a.hp || 0); if (hd !== 0) return hd;
+        const md = (b.maxHp || b.hp || 0) - (a.maxHp || a.hp || 0); if (md !== 0) return md;
         const kd = (b.kills || 0) - (a.kills || 0); if (kd !== 0) return kd;
-        return (b.lastActive || 0) - (a.lastActive || 0);
+        return String(a.nickname || a.uniqueId || '').localeCompare(String(b.nickname || b.uniqueId || ''));
       })
       .slice(0, hordeThreshold);
   }
@@ -777,6 +843,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       hp:       rest.reduce((s, p) => s + (p.hp    || 0),   0),
       maxHp:    rest.reduce((s, p) => s + (p.maxHp || 100), 0),
       hordeCount: rest.length,
+      memberIds: rest.map(p => p.uniqueId),
     };
   }
 
@@ -791,15 +858,59 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
   }
 
-  function getHordePosition() {
-    return { x: cw() / 2 + offsetX, y: ch() * 0.70 + offsetY + ch() * 0.18 * (1 - layoutZoom) };
+  function getHordeLayout() {
+    const W = cw(), H = ch();
+    const pad = Math.max(18, Math.min(W, H) * 0.035);
+    const barW = Math.min(W - pad * 2, W * 0.62 + Math.min(120, H * 0.1));
+    const barH = Math.max(58, Math.min(112, H * 0.125 * layoutZoom));
+    const centerX = Math.max(pad + barW / 2, Math.min(W - pad - barW / 2, W / 2 + offsetX * 0.45));
+    const topY = Math.max(H * 0.45, Math.min(H - pad - barH, H * 0.56 + offsetY * 0.34));
+    return {
+      x: centerX,
+      y: topY + barH * 0.46,
+      barX: centerX - barW / 2,
+      barY: topY,
+      barW,
+      barH,
+      radius: Math.max(14, barH * 0.22),
+    };
   }
 
-  function getPositionForPlayer(id) {
+  function getHordePosition() {
+    const layout = getHordeLayout();
+    return { x: layout.x, y: layout.y };
+  }
+
+  function rememberPosition(id, pos, scope) {
+    if (!id || !pos) return;
+    lastKnownPositions.set(String(id).toLowerCase(), { x: pos.x, y: pos.y, scope, ts: Date.now() });
+  }
+
+  function getCachedPosition(id, scope) {
+    const entry = lastKnownPositions.get(String(id || '').toLowerCase());
+    if (!entry || Date.now() - entry.ts > 2500) return null;
+    if (scope && entry.scope !== scope) return null;
+    return { x: entry.x, y: entry.y };
+  }
+
+  function getTopPositionForPlayer(id) {
     const top = topPlayers();
-    const idx = top.findIndex(p => p.uniqueId === id || p.id === id);
-    if (idx !== -1) return getPlayerPosition(idx, top.length);
-    return hordePlayer() ? getHordePosition() : null;
+    const wanted = String(id || '').toLowerCase();
+    const idx = top.findIndex(p => [p.uniqueId, p.id, p.nickname, p.name].some(value => String(value || '').toLowerCase() === wanted));
+    return idx !== -1 ? getPlayerPosition(idx, top.length) : null;
+  }
+
+  function getPositionForPlayer(id, preferredScope) {
+    if (preferredScope === 'horde') {
+      return hordePlayer()
+        ? getHordePosition()
+        : getCachedPosition(id, 'horde') || getCachedPosition(HORDE_ID, 'horde');
+    }
+
+    const topPosition = getTopPositionForPlayer(id);
+    if (preferredScope === 'top') return topPosition || getCachedPosition(id, 'top');
+
+    return topPosition || getCachedPosition(id) || (hordePlayer() ? getHordePosition() : null);
   }
 
   function canvasToViewport(cx, cy) {
@@ -831,9 +942,27 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     dur = dur || 3200;
     const el = document.createElement('div');
     el.className = 'banner ' + cls;
-    el.innerHTML = html;
+    el.innerHTML = `<span class="banner-content">${html}</span>`;
+    el.style.visibility = 'hidden';
     document.body.appendChild(el);
+    placeBannerAboveHorde(el);
+    el.style.visibility = '';
     setTimeout(() => el.remove(), dur);
+  }
+
+  function placeBannerAboveHorde(el) {
+    const layout = getHordeLayout();
+    const left = canvasToViewport(layout.barX, layout.barY);
+    const right = canvasToViewport(layout.barX + layout.barW, layout.barY);
+    const width = Math.max(220, right.x - left.x);
+    el.style.width = `${width}px`;
+    el.style.maxWidth = 'calc(100vw - 32px)';
+    const rect = el.getBoundingClientRect();
+    const scaleY = canvas.getBoundingClientRect().height / Math.max(1, ch());
+    const gap = Math.max(16, Math.min(30, layout.barH * 0.26 * scaleY));
+    const anchor = canvasToViewport(layout.x, Math.max(20, layout.barY));
+    el.style.left = `${anchor.x}px`;
+    el.style.top = `${Math.max(12, anchor.y - rect.height - gap)}px`;
   }
 
   function showDamage(cx, cy, damage, kill, critical) {
@@ -893,6 +1022,155 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         c.beginPath(); c.arc(this.x, this.y, this.r * Math.max(0, this.life), 0, Math.PI * 2); c.fill();
       }
       c.restore();
+    }
+  }
+
+  function clamp01(value) {
+    return Math.max(0, Math.min(1, Number(value) || 0));
+  }
+
+  function easeOutCubic(t) {
+    return 1 - Math.pow(1 - clamp01(t), 3);
+  }
+
+  function drawHeartShape(c, x, y, size, color, alpha, rotation) {
+    c.save();
+    c.translate(x, y);
+    c.rotate(rotation || 0);
+    c.scale(size / 18, size / 18);
+    c.globalAlpha *= Math.max(0, alpha);
+    c.fillStyle = color;
+    c.shadowColor = color;
+    c.shadowBlur = Math.max(5, size * 0.75);
+    c.beginPath();
+    c.moveTo(0, 7);
+    c.bezierCurveTo(-14, -2, -9, -15, -1, -9);
+    c.bezierCurveTo(1, -15, 14, -2, 0, 7);
+    c.fill();
+    c.restore();
+  }
+
+  function roundedRectPath(c, x, y, w, h, r) {
+    const radius = Math.min(r, w / 2, h / 2);
+    c.beginPath();
+    c.moveTo(x + radius, y);
+    c.lineTo(x + w - radius, y);
+    c.quadraticCurveTo(x + w, y, x + w, y + radius);
+    c.lineTo(x + w, y + h - radius);
+    c.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+    c.lineTo(x + radius, y + h);
+    c.quadraticCurveTo(x, y + h, x, y + h - radius);
+    c.lineTo(x, y + radius);
+    c.quadraticCurveTo(x, y, x + radius, y);
+    c.closePath();
+  }
+
+  class HeartBloom {
+    constructor(pos, hearts, intensity, meta) {
+      meta = meta || {};
+      this.pos       = { x: pos.x, y: pos.y };
+      this.hearts    = Math.max(1, Number(hearts) || 1);
+      this.intensity = clamp01(intensity);
+      this.rate      = Number(meta.rate) || 0;
+      this.color     = meta.color || '#ff4f8f';
+      this.start     = Date.now();
+      this.duration  = 1320 + this.intensity * 420;
+      const palette  = [this.color, '#ff4f8f', '#ff8bc2', '#ffd1e3', '#ffd166', '#8fffd2'];
+      const count    = Math.min(16, Math.max(5, 4 + this.hearts * 2 + Math.floor(this.intensity * 6)));
+
+      this.motes = Array.from({ length: count }, (_, i) => {
+        const spread = Math.PI * 2 * (i / count) + Math.random() * 0.45;
+        return {
+          angle: spread,
+          delay: Math.random() * 0.18 + i * 0.018,
+          orbit: 12 + Math.random() * (26 + this.intensity * 12),
+          lift: 38 + Math.random() * (42 + this.intensity * 24),
+          drift: (Math.random() - 0.5) * (26 + this.intensity * 18),
+          size: 6.5 + Math.random() * 5.5 + this.intensity * 2,
+          color: palette[i % palette.length],
+          spin: (Math.random() - 0.5) * 0.55,
+        };
+      });
+    }
+
+    update() {
+      this.progress = Math.min(1, (Date.now() - this.start) / this.duration);
+      return this.progress < 1;
+    }
+
+    draw() {
+      const p = clamp01(this.progress);
+      const { x, y } = this.pos;
+      const lift = easeOutCubic(p);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+
+      const aura = ctx.createRadialGradient(x, y, 0, x, y, 58 + this.intensity * 30);
+      aura.addColorStop(0, `rgba(255,120,180,${0.18 * (1 - p)})`);
+      aura.addColorStop(0.5, `rgba(255,209,102,${0.07 * (1 - p)})`);
+      aura.addColorStop(1, 'rgba(255,120,180,0)');
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(x, y, 58 + this.intensity * 30, 0, Math.PI * 2);
+      ctx.fill();
+
+      for (let i = 0; i < 2; i++) {
+        const ringT = clamp01((p - i * 0.13) / 0.87);
+        if (ringT <= 0 || ringT >= 1) continue;
+        ctx.globalAlpha = (1 - ringT) * (0.58 - i * 0.16);
+        ctx.strokeStyle = i === 0 ? '#ff7ab6' : '#8fffd2';
+        ctx.lineWidth = 2.5 - i * 0.5;
+        ctx.beginPath();
+        ctx.arc(x, y, 16 + ringT * (58 + this.intensity * 26), 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      this.motes.forEach(mote => {
+        const local = clamp01((p - mote.delay) / (1 - mote.delay));
+        if (local <= 0 || local >= 1) return;
+        const e = easeOutCubic(local);
+        const alpha = Math.sin(local * Math.PI) * 0.92;
+        const hx = x + Math.cos(mote.angle) * mote.orbit * e + mote.drift * local;
+        const hy = y + Math.sin(mote.angle) * mote.orbit * 0.34 * e - mote.lift * e + Math.sin(local * Math.PI * 4 + mote.angle) * 2.8;
+        const size = mote.size * (1 + Math.sin(local * Math.PI) * 0.2);
+        ctx.globalAlpha = 1;
+        drawHeartShape(ctx, hx, hy, size, mote.color, alpha, mote.spin * local);
+
+        if (local > 0.28 && local < 0.82) {
+          ctx.globalAlpha = alpha * 0.45;
+          ctx.fillStyle = '#fff7d8';
+          ctx.beginPath();
+          ctx.arc(hx + size * 0.45, hy - size * 0.3, Math.max(1, size * 0.12), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+      ctx.globalAlpha = 1;
+
+      ctx.restore();
+
+      if (p < 0.78) {
+        const labelAlpha = Math.min(1, p / 0.15) * (1 - Math.max(0, p - 0.48) / 0.3);
+        const labelY = y - 44 - 20 * lift;
+        const text = `CHEER +${this.hearts * 5}`;
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, labelAlpha);
+        ctx.font = `800 ${Math.max(12, ch() * 0.032)}px 'Rajdhani','Segoe UI',sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const w = ctx.measureText(text).width + 24;
+        ctx.fillStyle = 'rgba(6,10,20,0.62)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.26)';
+        ctx.lineWidth = 1.2;
+        roundedRectPath(ctx, x - w / 2, labelY - 13, w, 26, 13);
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowColor = '#ff7ab6';
+        ctx.shadowBlur = 10;
+        ctx.fillStyle = '#ffe3f0';
+        ctx.fillText(text, x, labelY + 1);
+        ctx.restore();
+      }
     }
   }
 
@@ -1168,15 +1446,53 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     meteor:'fire', tsunami:'ripple', nuke:'explosion', nukes:'explosion',
   };
 
+  function attackKey(attackerId, targetId, effect) {
+    return `${String(attackerId || '').toLowerCase()}|${String(targetId || '').toLowerCase()}|${String(effect || '').toLowerCase()}`;
+  }
+
+  function cheerKey(playerId) {
+    return String(playerId || '').toLowerCase();
+  }
+
+  function rememberCheer(playerId) {
+    const now = Date.now();
+    recentCheerKeys.set(cheerKey(playerId), now);
+    for (const [key, ts] of recentCheerKeys) {
+      if (now - ts > 1500) recentCheerKeys.delete(key);
+    }
+  }
+
+  function hasRecentCheer(playerId) {
+    const ts = recentCheerKeys.get(cheerKey(playerId));
+    return Boolean(ts && Date.now() - ts < 700);
+  }
+
+  function rememberAttack(attackerId, targetId, effect) {
+    const now = Date.now();
+    recentAttackKeys.set(attackKey(attackerId, targetId, effect), now);
+    for (const [key, ts] of recentAttackKeys) {
+      if (now - ts > 1500) recentAttackKeys.delete(key);
+    }
+  }
+
+  function hasRecentAttack(attackerId, targetId, effect) {
+    const ts = recentAttackKeys.get(attackKey(attackerId, targetId, effect));
+    return Boolean(ts && Date.now() - ts < 650);
+  }
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+  }
+
   function fireAttack(attackerId, targetId, damage, killed, special, effect, meta) {
     meta = meta || {};
     const from = attackerId === HORDE_ID
       ? (hordePlayer() ? getHordePosition() : null)
-      : getPositionForPlayer(attackerId) || (hordePlayer() ? getHordePosition() : null);
+      : getPositionForPlayer(attackerId, meta.attackerScope) || (hordePlayer() ? getHordePosition() : null);
     const to = targetId === HORDE_ID
       ? (hordePlayer() ? getHordePosition() : null)
-      : getPositionForPlayer(targetId) || (hordePlayer() ? getHordePosition() : null);
-    if (!from || !to) return;
+      : getPositionForPlayer(targetId, meta.targetScope) || (hordePlayer() ? getHordePosition() : null);
+    if (!from || !to) return false;
 
     let type;
     if (effect)      { type = TYPE_MAP[String(effect).toLowerCase()] || String(effect).toLowerCase(); }
@@ -1199,26 +1515,66 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }));
     showDamage(to.x, to.y, damage || 0, !!killed, !!meta.critical);
     playSound(killed ? 'kill' : 'attack');
+    return true;
+  }
+
+  function handleCommentDamage(data) {
+    if (!data) return;
+    const attackerId = data.attackerId || data.attacker;
+    const targetId = data.targetId || data.target;
+    const effect = data.effect || (data.special ? 'gift' : null);
+    if (!attackerId || !targetId || hasRecentAttack(attackerId, targetId, effect)) return;
+
+    setTimeout(() => {
+      if (hasRecentAttack(attackerId, targetId, effect)) return;
+      const fired = fireAttack(attackerId, targetId, data.damage, data.killed, data.special, effect, {
+        intensity: data.intensity,
+        critical: data.critical,
+        giftBoosted: data.giftBoosted,
+        laserColor: data.laserColor,
+        shotSpeed: data.shotSpeed,
+        attackerScope: data.attackerScope,
+        targetScope: data.targetScope,
+      });
+      if (fired) {
+        rememberAttack(attackerId, targetId, effect);
+        if (data.special) {
+          showBanner('gift', `${escapeHtml(data.attackerNick || attackerId)} used <strong>${escapeHtml(data.commandDescription || effect || 'special attack')}</strong>`, 1800);
+        }
+      }
+    }, 90);
   }
 
   // ═══════════════════════════════════════
   // HEART / RESPAWN EFFECTS
   // ═══════════════════════════════════════
-  function fireHeartEffect(playerId, hearts, intensity) {
+  function fireHeartEffect(playerId, hearts, intensity, meta) {
     hearts = hearts || 1; intensity = intensity || 0;
     let pos = getPositionForPlayer(playerId);
     if (!pos) { const top = topPlayers(); pos = top.length ? getPlayerPosition(0, top.length) : getHordePosition(); }
-    const emojis = ['❤️','💖','💘','💝'];
-    const count  = Math.max(1, Math.floor(hearts * (1 + intensity * 2)));
-    for (let i = 0; i < count; i++) {
-      setTimeout(() => {
-        const atk = new Attack(pos, pos, 'static');
-        atk.particles.push(new Particle(pos.x, pos.y, { speed: 5 + Math.random() * 5, emoji: emojis[i % emojis.length], fontSize: 16 + i * 3 + intensity * 8, decay: 0.016 - intensity * 0.003, rise: 2.5 + intensity * 2 }));
-        attacks.push(atk);
-      }, i * 90);
-    }
-    // Apply actual healing to the player
+    if (pos) attacks.push(new HeartBloom(pos, hearts, intensity, meta));
+    rememberCheer(playerId);
     applyHeal(playerId, hearts * 5);
+  }
+
+  function showSocialBoost(data) {
+    if (!data) return;
+    const name = escapeHtml(data.nickname || data.uniqueId || 'viewer');
+    showBanner('gift', `SHARE BOOST <strong>${name}</strong>`, 2200);
+    const pos = getPositionForPlayer(data.uniqueId);
+    if (!pos) return;
+    const atk = new Attack(pos, pos, 'static');
+    const color = data.color || '#ffd166';
+    for (let i = 0; i < 20; i++) {
+      atk.particles.push(new Particle(pos.x, pos.y, {
+        speed: 2.5 + Math.random() * 4.5,
+        color: i % 2 ? color : '#7afcff',
+        radius: 2 + Math.random() * 2.8,
+        decay: 0.02,
+        rise: 1.8 + Math.random() * 1.4,
+      }));
+    }
+    attacks.push(atk);
   }
 
   function spawnRespawnEffect(uniqueId) {
@@ -1253,6 +1609,79 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.strokeStyle = 'rgba(140,80,255,0.22)';
       ctx.beginPath(); ctx.moveTo(0, H * 0.60); ctx.lineTo(W, H * 0.60); ctx.stroke();
     }
+  }
+
+  function drawBattleInsignia(x, y, radius, accent) {
+    const blade = Math.max(4, radius * 0.12);
+    const length = radius * 1.45;
+    const guard = radius * 0.34;
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const aura = ctx.createRadialGradient(0, 0, radius * 0.15, 0, 0, radius * 1.05);
+    aura.addColorStop(0, 'rgba(255,255,255,0.16)');
+    aura.addColorStop(1, 'rgba(122,252,255,0)');
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius * 1.02, 0, Math.PI * 2);
+    ctx.fill();
+
+    [-1, 1].forEach(side => {
+      ctx.save();
+      ctx.rotate(side * Math.PI / 4);
+      const grad = ctx.createLinearGradient(0, -length * 0.48, 0, length * 0.46);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.42, '#bfefff');
+      grad.addColorStop(0.7, '#7d8ba9');
+      grad.addColorStop(1, '#30264d');
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+      ctx.lineWidth = blade + 5;
+      ctx.beginPath();
+      ctx.moveTo(0, -length * 0.46);
+      ctx.lineTo(0, length * 0.34);
+      ctx.stroke();
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = blade;
+      ctx.beginPath();
+      ctx.moveTo(0, -length * 0.46);
+      ctx.lineTo(0, length * 0.34);
+      ctx.stroke();
+
+      ctx.strokeStyle = accent || '#7afcff';
+      ctx.globalAlpha = 0.75;
+      ctx.lineWidth = Math.max(2, blade * 0.32);
+      ctx.beginPath();
+      ctx.moveTo(-guard, length * 0.05);
+      ctx.lineTo(guard, length * 0.05);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      ctx.fillStyle = '#403066';
+      roundedRectPath(ctx, -blade * 0.55, length * 0.17, blade * 1.1, length * 0.25, blade * 0.35);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    ctx.strokeStyle = accent || '#7afcff';
+    ctx.globalAlpha = 0.82;
+    ctx.lineWidth = Math.max(2, radius * 0.045);
+    ctx.beginPath();
+    ctx.arc(0, radius * 0.18, radius * 0.36, Math.PI * 0.05, Math.PI * 0.95);
+    ctx.stroke();
+
+    ctx.fillStyle = accent || '#7afcff';
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(0, -radius * 0.54);
+    ctx.lineTo(radius * 0.16, -radius * 0.24);
+    ctx.lineTo(0, -radius * 0.12);
+    ctx.lineTo(-radius * 0.16, -radius * 0.24);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   }
 
   // ═══════════════════════════════════════
@@ -1291,8 +1720,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.fillStyle = 'rgba(8,18,30,0.92)';
     ctx.beginPath(); ctx.arc(pos.x, avatarY, avatarR - 2, 0, Math.PI * 2); ctx.fill();
 
-    ctx.font = `${avatarR * 1.3}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
-    ctx.fillText(player.iconEmoji || '⚔️', pos.x, avatarY);
+    const defaultSwordIcon = '\u2694\uFE0F';
+    const defaultGemIcon = '\u{1F48E}';
+    const customIcon = player.iconEmoji;
+    if (customIcon && customIcon !== defaultSwordIcon && customIcon !== defaultGemIcon) {
+      ctx.font = `${avatarR * 1.04}px Arial`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
+      ctx.fillText(customIcon, pos.x, avatarY);
+    } else {
+      drawBattleInsignia(pos.x, avatarY, avatarR * 0.78, rank === 1 ? '#ffd451' : '#7afcff');
+    }
 
     const name = (player.nickname || player.uniqueId || 'Player').slice(0, 13);
     ctx.font = `bold ${Math.max(9, cardH * 0.11)}px 'Rajdhani','Segoe UI',sans-serif`;
@@ -1328,53 +1765,125 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   // ═══════════════════════════════════════
   function drawHorde(horde) {
     if (!horde) return;
-    const pos = getHordePosition();
-    const H = ch(), W = cw();
-    const ring  = H * 0.22 * layoutZoom;
-    const pulse = 0.5 + Math.sin(Date.now() / 350) * 0.5;
+    const { barX, barY, barW, barH, radius } = getHordeLayout();
+    const hpPct = Math.max(0, Math.min(1, horde.hp / Math.max(1, horde.maxHp)));
+    const pulse = 0.5 + Math.sin(Date.now() / 330) * 0.5;
+    const badgeW = Math.min(barW * 0.22, Math.max(132, barW * 0.16));
+    const trackX = barX + badgeW + barH * 0.28;
+    const trackY = barY + barH * 0.49;
+    const trackW = barX + barW - trackX - barH * 0.22;
+    const trackH = Math.max(12, barH * 0.22);
 
-    // background glow
-    ctx.fillStyle = `rgba(255,70,70,${0.15 + pulse * 0.08})`;
-    ctx.beginPath(); ctx.arc(pos.x, pos.y, ring + pulse * 5, 0, Math.PI * 2); ctx.fill();
-    // outer ring
-    ctx.strokeStyle = `rgba(255,70,70,${0.75 + pulse * 0.2})`; ctx.lineWidth = Math.max(2, ring * 0.12);
-    ctx.beginPath(); ctx.arc(pos.x, pos.y, ring * 0.88, 0, Math.PI * 2); ctx.stroke();
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
 
-    // skull emoji
-    ctx.font = `${ring * 1.5}px Arial`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('💀', pos.x, pos.y);
+    ctx.shadowColor = 'rgba(255,44,68,0.34)';
+    ctx.shadowBlur = 26 + pulse * 10;
+    const shell = ctx.createLinearGradient(barX, barY, barX + barW, barY + barH);
+    shell.addColorStop(0, 'rgba(42,10,18,0.94)');
+    shell.addColorStop(0.5, 'rgba(13,20,32,0.94)');
+    shell.addColorStop(1, 'rgba(48,10,18,0.94)');
+    ctx.fillStyle = shell;
+    roundedRectPath(ctx, barX, barY, barW, barH, radius);
+    ctx.fill();
+    ctx.shadowBlur = 0;
 
-    // name & count above the ring
-    const nameY = pos.y - ring * 1.05;
-    ctx.font = `bold ${Math.max(11, H * 0.065)}px 'Rajdhani','Segoe UI',sans-serif`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 4;
-    ctx.strokeText('⚔ THE HORDE', pos.x, nameY);
-    ctx.fillStyle = '#ff7b7b'; ctx.fillText('⚔ THE HORDE', pos.x, nameY);
-    ctx.font = `${Math.max(9, H * 0.045)}px 'Rajdhani','Segoe UI',sans-serif`;
-    ctx.fillStyle = '#ffc2c2'; ctx.fillText(`${horde.hordeCount} players`, pos.x, nameY + H * 0.055);
+    ctx.strokeStyle = `rgba(255,85,102,${0.42 + pulse * 0.22})`;
+    ctx.lineWidth = 2;
+    roundedRectPath(ctx, barX + 1, barY + 1, barW - 2, barH - 2, radius - 1);
+    ctx.stroke();
 
-    // HP bar below the ring
-    const barY = pos.y + ring * 0.85;
-    const barW = Math.min(W * 0.28, W - 40);   // keep some margin
-    const barH = Math.max(10, H * 0.032);
-    const barX = pos.x - barW / 2;
+    const topRail = ctx.createLinearGradient(barX, 0, barX + barW, 0);
+    topRail.addColorStop(0, 'rgba(255,66,78,0.95)');
+    topRail.addColorStop(0.55, 'rgba(255,120,80,0.72)');
+    topRail.addColorStop(1, 'rgba(122,252,255,0.72)');
+    ctx.fillStyle = topRail;
+    roundedRectPath(ctx, barX + 8, barY + 7, barW - 16, Math.max(4, barH * 0.055), 4);
+    ctx.fill();
 
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(barX, barY, barW, barH);
-    const hpPct = Math.min(1, horde.hp / Math.max(1, horde.maxHp));
-    const hpGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
-    hpGrad.addColorStop(0, '#ff2222'); hpGrad.addColorStop(1, '#ff8888');
-    ctx.fillStyle = hpGrad; ctx.fillRect(barX + 2, barY + 2, (barW - 4) * hpPct, barH - 4);
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5; ctx.strokeRect(barX, barY, barW, barH);
+    const badgeGrad = ctx.createLinearGradient(barX, 0, barX + badgeW, 0);
+    badgeGrad.addColorStop(0, 'rgba(255,44,68,0.92)');
+    badgeGrad.addColorStop(1, 'rgba(120,18,30,0.62)');
+    ctx.fillStyle = badgeGrad;
+    roundedRectPath(ctx, barX + 12, barY + barH * 0.18, badgeW - 18, barH * 0.64, Math.max(10, barH * 0.18));
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,210,210,0.2)';
+    ctx.lineWidth = 1;
+    roundedRectPath(ctx, barX + 12, barY + barH * 0.18, badgeW - 18, barH * 0.64, Math.max(10, barH * 0.18));
+    ctx.stroke();
 
-    // HP text below the bar
-    const hpTextY = barY + barH + H * 0.04;
-    ctx.font = `${Math.max(9, H * 0.04)}px 'Rajdhani','Segoe UI',sans-serif`;
-    ctx.textAlign = 'center'; ctx.fillStyle = '#ffaaaa';
-    ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
-    const hpText = `${Math.round(horde.hp)} / ${Math.round(horde.maxHp)}`;
-    ctx.strokeText(hpText, pos.x, hpTextY);
-    ctx.fillText(hpText, pos.x, hpTextY);
+    ctx.font = `900 ${Math.max(14, barH * 0.26)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff4f4';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 8;
+    ctx.fillText('HORDE', barX + 12 + (badgeW - 18) / 2, barY + barH * 0.43);
+    ctx.font = `800 ${Math.max(10, barH * 0.14)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.fillStyle = '#ffd4d4';
+    ctx.fillText(`${horde.hordeCount} IN RESERVE`, barX + 12 + (badgeW - 18) / 2, barY + barH * 0.64);
+    ctx.shadowBlur = 0;
+
+    ctx.font = `800 ${Math.max(13, barH * 0.18)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffe5e8';
+    ctx.fillText('RAID POOL', trackX, barY + barH * 0.31);
+    ctx.font = `700 ${Math.max(12, barH * 0.16)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.textAlign = 'right';
+    ctx.fillStyle = '#ffb3b8';
+    ctx.fillText(`${Math.round(horde.hp)} / ${Math.round(horde.maxHp)} HP`, barX + barW - barH * 0.22, barY + barH * 0.31);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    roundedRectPath(ctx, trackX, trackY, trackW, trackH, trackH / 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = 1;
+    roundedRectPath(ctx, trackX, trackY, trackW, trackH, trackH / 2);
+    ctx.stroke();
+
+    const fillW = Math.max(trackH, trackW * hpPct);
+    const hpGrad = ctx.createLinearGradient(trackX, 0, trackX + trackW, 0);
+    hpGrad.addColorStop(0, '#ff2e42');
+    hpGrad.addColorStop(0.55, '#ff6b58');
+    hpGrad.addColorStop(1, '#ffd166');
+    ctx.fillStyle = hpGrad;
+    roundedRectPath(ctx, trackX + 2, trackY + 2, Math.max(0, fillW - 4), trackH - 4, (trackH - 4) / 2);
+    ctx.fill();
+
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 10; i++) {
+      const sx = trackX + trackW * (i / 10);
+      ctx.beginPath();
+      ctx.moveTo(sx, trackY + 3);
+      ctx.lineTo(sx, trackY + trackH - 3);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    const sweepX = trackX + Math.max(0, fillW - trackH) * pulse;
+    ctx.fillStyle = 'rgba(255,255,255,0.34)';
+    roundedRectPath(ctx, sweepX, trackY + 2, Math.max(4, trackH * 0.28), trackH - 4, 4);
+    ctx.fill();
+
+    const blips = Math.min(12, horde.hordeCount || 0);
+    const blipY = barY + barH * 0.79;
+    ctx.textAlign = 'center';
+    for (let i = 0; i < blips; i++) {
+      const t = blips === 1 ? 0.5 : i / (blips - 1);
+      const bx = trackX + trackW * t;
+      ctx.fillStyle = i % 3 === 0 ? '#ff6b78' : '#7afcff';
+      ctx.globalAlpha = 0.62 + Math.sin(Date.now() / 280 + i) * 0.16;
+      ctx.beginPath();
+      ctx.moveTo(bx, blipY - 5);
+      ctx.lineTo(bx + 5, blipY + 5);
+      ctx.lineTo(bx - 5, blipY + 5);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   // ═══════════════════════════════════════
@@ -1385,8 +1894,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     drawBackground();
     const top = topPlayers();
-    top.forEach((p, i) => drawPlayerCard(p, getPlayerPosition(i, top.length), i + 1));
-    drawHorde(hordePlayer());
+    top.forEach((p, i) => {
+      const pos = getPlayerPosition(i, top.length);
+      rememberPosition(p.uniqueId, pos, 'top');
+      drawPlayerCard(p, pos, i + 1);
+    });
+    const horde = hordePlayer();
+    if (horde) {
+      const pos = getHordePosition();
+      rememberPosition(HORDE_ID, pos, 'horde');
+      (horde.memberIds || []).forEach(id => rememberPosition(id, pos, 'horde'));
+    }
+    drawHorde(horde);
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     attacks = attacks.filter(a => { const alive = a.update(); if (alive) a.draw(); return alive; });
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
@@ -1449,6 +1968,191 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return out;
   }
 
+  function applyGameState(state) {
+    players = normalizePlayers(state);
+    isDemoMode = false;
+    stopDemoLoop();
+    if (!Object.keys(players).length && !stateFetchInFlight) {
+      stateFetchInFlight = true;
+      fetch(withOverlayAuth('/state'))
+        .then(r => (r.ok ? r.json() : null))
+        .then(s => { if (s) receiveGameState(s); })
+        .catch(() => {})
+        .finally(() => { stateFetchInFlight = false; });
+    }
+  }
+
+  function receiveGameState(state) {
+    if (!state || typeof state !== 'object') return;
+    pendingGameState = state;
+    if (gameStateScheduled) return;
+    gameStateScheduled = true;
+    requestAnimationFrame(() => {
+      gameStateScheduled = false;
+      const nextState = pendingGameState;
+      pendingGameState = null;
+      if (nextState) applyGameState(nextState);
+    });
+  }
+
+  function eventSeq(data) {
+    const seq = Number(data && data._seq);
+    return Number.isFinite(seq) && seq > 0 ? seq : 0;
+  }
+
+  function mergeVisualPayload(previous, next) {
+    const merged = { ...previous, ...next };
+    const previousHearts = Number(previous.hearts) || 0;
+    const nextHearts = Number(next.hearts) || 0;
+    if (previousHearts || nextHearts) merged.hearts = Math.min(5, previousHearts + Math.max(1, nextHearts));
+    merged.intensity = Math.max(Number(previous.intensity) || 0, Number(next.intensity) || 0);
+    merged.rate = Math.max(Number(previous.rate) || 0, Number(next.rate) || 0);
+    merged.amount = Math.max(Number(previous.amount) || 0, Number(next.amount) || 0);
+    merged._seq = Math.max(eventSeq(previous), eventSeq(next)) || merged._seq;
+    return merged;
+  }
+
+  function scheduleVisualEvents() {
+    if (visualEventScheduled) return;
+    visualEventScheduled = true;
+    setTimeout(() => requestAnimationFrame(processVisualEvents), 55);
+  }
+
+  function enqueueVisualEvent(type, data, handler, options = {}) {
+    if (!data) return;
+    const seq = eventSeq(data);
+    const now = Date.now();
+    const mergeKey = options.mergeKey ? options.mergeKey(data) : '';
+
+    if (mergeKey) {
+      for (let i = visualEventQueue.length - 1; i >= 0; i--) {
+        const queued = visualEventQueue[i];
+        if (queued.type === type && queued.mergeKey === mergeKey && now - queued.queuedAt < 320) {
+          queued.data = mergeVisualPayload(queued.data, data);
+          queued.seq = Math.max(queued.seq || 0, seq || 0);
+          queued.queuedAt = now;
+          scheduleVisualEvents();
+          return;
+        }
+      }
+    }
+
+    visualEventQueue.push({ type, data, handler, seq, queuedAt: now, mergeKey });
+    if (visualEventQueue.length > 96) visualEventQueue.splice(0, visualEventQueue.length - 96);
+    scheduleVisualEvents();
+  }
+
+  function processVisualEvents() {
+    visualEventScheduled = false;
+    visualEventQueue.sort((a, b) => {
+      if (a.seq && b.seq && a.seq !== b.seq) return a.seq - b.seq;
+      return a.queuedAt - b.queuedAt;
+    });
+
+    let processed = 0;
+    while (visualEventQueue.length && processed < 7) {
+      const queued = visualEventQueue.shift();
+      if (queued.seq && queued.seq <= lastVisualEventSeq) continue;
+      if (queued.seq) lastVisualEventSeq = queued.seq;
+      try {
+        queued.handler(queued.data);
+      } catch (err) {
+        console.error('Overlay event handler failed', queued.type, err);
+      }
+      processed++;
+    }
+    if (visualEventQueue.length) scheduleVisualEvents();
+  }
+
+  function handleAttackEvent(data) {
+    if (!data) return;
+    const fired = fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect, {
+      intensity: data.intensity, critical: data.critical, streak: data.streak,
+      giftBoosted: data.giftBoosted, remainingHpPct: data.remainingHpPct,
+      killingBlow: data.killingBlow, laserColor: data.laserColor, shotSpeed: data.shotSpeed,
+      attackerScope: data.attackerScope, targetScope: data.targetScope,
+    });
+    if (fired) rememberAttack(data.attacker, data.target, data.effect);
+  }
+
+  function handleGiftAttackEvent(data) {
+    if (!data) return;
+    const s = overlaySettings.shotType;
+    const forcedEffect = s === 'beam' ? 'beam' : s === 'pulse' ? 'fire' : s === 'wave' ? 'ripple' : s === 'burst' ? 'explosion' : s === 'ripple' ? 'ripple' : 'laser';
+    const fired = fireAttack(data.attacker, data.target, data.damage, data.killed, true, forcedEffect, {
+      intensity: data.intensity || 0.5, giftBoosted: true,
+      remainingHpPct: data.killed ? 0 : 1,
+      killingBlow: !!data.killed, laserColor: data.giftColor,
+      attackerScope: data.attackerScope, targetScope: data.targetScope,
+    });
+    if (fired) rememberAttack(data.attacker, data.target, forcedEffect);
+  }
+
+  function handleLikeEvent(data) {
+    if (!data) return;
+    fireHeartEffect(data.uniqueId, data.hearts || 1, data.intensity || 0, data);
+    playSound('heal');
+  }
+
+  function handleHealEvent(data) {
+    if (!data || !data.uniqueId) return;
+    setTimeout(() => {
+      if (hasRecentCheer(data.uniqueId)) return;
+      const hearts = Math.max(1, Math.min(3, Math.round((Number(data.amount) || 5) / 10)));
+      fireHeartEffect(data.uniqueId, hearts, 0.35, { color: data.color || '#8fffd2' });
+      playSound('heal');
+    }, 140);
+  }
+
+  function handleKillEvent(data) {
+    if (!data) return;
+    fireAttack(data.killer, data.victim, data.damage, true, false, data.effect || 'explosion', {
+      intensity: 0.95, critical: true, streak: data.killerStreak || 0, remainingHpPct: 0,
+      attackerScope: data.attackerScope, targetScope: data.targetScope,
+    });
+    showBanner('kill', `${data.killerNick || data.killer} 💀 ${data.victimNick || data.victim}<span style="font-size:0.68em;opacity:0.8"> (${data.killerKills} kills)</span>`);
+    playSound('kill');
+  }
+
+  function handleStreakEvent(data) {
+    const name = data.nickname || data.killerNick || '???';
+    const streak = data.streak || data.streakCount || 0;
+    showBanner('streak', `🔥 ${name} – ${data.label || streak + ' KILL STREAK'}!`);
+  }
+
+  function handleGiftCelebration(data) {
+    if (!data) return;
+    const isLegend = data.tier === 'legendary';
+    showBanner(isLegend ? 'legendary' : 'gift', `${data.giftLabel || '🎁'} <strong>${data.nickname}</strong> sent <strong>${data.giftName || 'a gift'}</strong> · ${data.diamonds} 💎 · ${(data.tier || 'common').toUpperCase()}`, isLegend ? 4500 : 3200);
+  }
+
+  function handleFollowEvent(data) {
+    if (!data) return;
+    showBanner('gift', `NEW FOLLOWER <strong>${escapeHtml(data.nickname || data.uniqueId || 'viewer')}</strong>`, 2400);
+    const pos = getPositionForPlayer(data.uniqueId);
+    if (pos) attacks.push(new HeartBloom(pos, 2, 0.45, data));
+  }
+
+  function registerOverlaySocket() {
+    if (!socket || !socket.connected) return;
+    if (registerRetryTimer) {
+      clearTimeout(registerRetryTimer);
+      registerRetryTimer = null;
+    }
+
+    socket.emit('register', { type: 'overlay' }, ack => {
+      if (ack && ack.success) {
+        registerAcked = true;
+        if (Number.isFinite(Number(ack.eventSeq))) lastVisualEventSeq = Math.max(lastVisualEventSeq, Number(ack.eventSeq) - 1);
+        fetch(withOverlayAuth('/state')).then(r => (r.ok ? r.json() : null)).then(s => { if (s) receiveGameState(s); }).catch(() => {});
+      }
+    });
+
+    registerRetryTimer = setTimeout(() => {
+      if (!registerAcked && socket && socket.connected) registerOverlaySocket();
+    }, 2500);
+  }
+
   function initSocket() {
     if (typeof io === 'undefined') { enterDemoMode(); return; }
     try {
@@ -1458,10 +2162,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         isDemoMode = false; stopDemoLoop();
         statusDiv.textContent = '🟢 LIVE · CONNECTED';
         statusDiv.className   = 'connected';
-        socket.emit('register', { type: 'overlay' });
+        registerAcked = false;
+        registerOverlaySocket();
       });
 
       socket.on('disconnect', () => {
+        registerAcked = false;
+        if (registerRetryTimer) {
+          clearTimeout(registerRetryTimer);
+          registerRetryTimer = null;
+        }
         statusDiv.textContent = '🔴 DISCONNECTED · waiting...';
         statusDiv.className   = 'disconnected';
       });
@@ -1472,15 +2182,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         if (Object.keys(players).length === 0) enterDemoMode();
       });
 
-      socket.on('gameState', state => {
-        if (state && typeof state === 'object') {
-          players    = normalizePlayers(state);
-          isDemoMode = false; stopDemoLoop();
-          if (!Object.keys(players).length) {
-            fetch(withOverlayAuth('/state')).then(r => r.json()).then(s => { players = normalizePlayers(s || {}); }).catch(() => {});
-          }
-        }
-      });
+      socket.on('gameState', receiveGameState);
 
       socket.on('audioConfig',     cfg      => { if (cfg) audioConfig = cfg; });
       socket.on('overlaySettings', settings => { if (settings && typeof settings === 'object') overlaySettings = Object.assign({}, overlaySettings, settings); });
@@ -1498,50 +2200,20 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         img.src    = withOverlayAuth(`/background/${encodeURIComponent(filename)}`, { v: Date.now() });
       });
 
-      socket.on('attack', data => {
-        fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect, {
-          intensity: data.intensity, critical: data.critical, streak: data.streak,
-          giftBoosted: data.giftBoosted, remainingHpPct: data.remainingHpPct,
-          killingBlow: data.killingBlow, laserColor: data.laserColor, shotSpeed: data.shotSpeed,
-        });
-      });
-
-      socket.on('giftAttack', data => {
-        const s = overlaySettings.shotType;
-        const forcedEffect = s === 'beam' ? 'beam' : s === 'pulse' ? 'fire' : s === 'wave' ? 'ripple' : s === 'burst' ? 'explosion' : s === 'ripple' ? 'ripple' : 'laser';
-        fireAttack(data.attacker, data.target, data.damage, data.killed, true, forcedEffect, {
-          intensity: data.intensity || 0.5, giftBoosted: true,
-          remainingHpPct: data.killed ? 0 : 1,
-          killingBlow: !!data.killed, laserColor: data.giftColor,
-        });
-      });
-
-      socket.on('like', data => {
-        fireHeartEffect(data.uniqueId, data.hearts || 1, data.intensity || 0);
-        playSound('heal');
-        // Apply heal to live state as well (in case server hasn't sent update yet)
-        applyHeal(data.uniqueId, (data.hearts || 1) * 5);
-      });
+      socket.on('attack', data => enqueueVisualEvent('attack', data, handleAttackEvent));
+      socket.on('commentDamage', data => enqueueVisualEvent('commentDamage', data, handleCommentDamage));
+      socket.on('giftAttack', data => enqueueVisualEvent('giftAttack', data, handleGiftAttackEvent));
+      socket.on('like', data => enqueueVisualEvent('like', data, handleLikeEvent, { mergeKey: payload => payload.uniqueId || payload.nickname || 'viewer' }));
+      socket.on('heal', data => enqueueVisualEvent('heal', data, handleHealEvent, { mergeKey: payload => payload.uniqueId || 'viewer' }));
 
       socket.on('respawn',     data => { spawnRespawnEffect(data.uniqueId); });
       socket.on('soundEvent',  data => { if (data && data.event) playSound(data.event); });
 
-      socket.on('killEvent', data => {
-        fireAttack(data.killer, data.victim, data.damage, true, false, data.effect || 'explosion', { intensity: 0.95, critical: true, streak: data.killerStreak || 0, remainingHpPct: 0 });
-        showBanner('kill', `${data.killerNick || data.killer} 💀 ${data.victimNick || data.victim}<span style="font-size:0.68em;opacity:0.8"> (${data.killerKills} kills)</span>`);
-        playSound('kill');
-      });
-
-      socket.on('streakEvent', data => {
-        const name = data.nickname || data.killerNick || '???';
-        const streak = data.streak || data.streakCount || 0;
-        showBanner('streak', `🔥 ${name} – ${data.label || streak + ' KILL STREAK'}!`);
-      });
-
-      socket.on('giftCelebration', data => {
-        const isLegend = data.tier === 'legendary';
-        showBanner(isLegend ? 'legendary' : 'gift', `${data.giftLabel || '🎁'} <strong>${data.nickname}</strong> sent <strong>${data.giftName || 'a gift'}</strong> · ${data.diamonds} 💎 · ${(data.tier || 'common').toUpperCase()}`, isLegend ? 4500 : 3200);
-      });
+      socket.on('killEvent', data => enqueueVisualEvent('killEvent', data, handleKillEvent));
+      socket.on('streakEvent', data => enqueueVisualEvent('streakEvent', data, handleStreakEvent));
+      socket.on('giftCelebration', data => enqueueVisualEvent('giftCelebration', data, handleGiftCelebration));
+      socket.on('follow', data => enqueueVisualEvent('follow', data, handleFollowEvent));
+      socket.on('socialBoost', data => enqueueVisualEvent('socialBoost', data, showSocialBoost, { mergeKey: payload => payload.uniqueId || payload.nickname || 'viewer' }));
 
       socket.on('layoutUpdate', ({ gapX, gapY }) => {
         if (typeof gapX === 'number') { layoutGap = gapX; gapControl.value = gapX; syncFill(gapControl); }

@@ -289,7 +289,8 @@ function emitEvent(type, payload = {}) {
 
 function emitRoomEvent(room, type, payload = {}) {
   try {
-    io.to(room.roomId).emit(type, { ...payload, _ts: Date.now() });
+    room.eventSeq = (room.eventSeq || 0) + 1;
+    io.to(room.roomId).emit(type, { ...payload, _ts: Date.now(), _seq: room.eventSeq, _event: type });
   } catch (err) {
     logger.error({ err, type, room: room.roomId }, 'emitRoomEvent failed');
   }
@@ -1100,24 +1101,38 @@ function handleMentionAttack(room, attackerId, attackerNick, comment) {
       if (room.players[target.uniqueId]) room.players[target.uniqueId].forceSpawn = true;
     }
 
+    const topBefore = new Set(getTopPlayers(room, 5).map(p => p.uniqueId));
+    const attackerScope = topBefore.has(attackerId) ? 'top' : 'horde';
+    const targetScope = topBefore.has(target.uniqueId) ? 'top' : 'horde';
     const result = dealDamage(room, attackerId, target.uniqueId, multiplier);
     if (result) {
       result.effect = requestedEffect;                // force the chosen effect
       result.special            = isSpecialCommand;
       result.commandDescription = commandDescription || requestedEffect;
       result.giftBoosted        = boostActive;
+      result.attackerScope      = attackerScope;
+      result.targetScope        = targetScope;
 
       emitAttackAndSync(room, result);
       emitSoundAndSync(room, isSpecialCommand ? 'gift' : 'attack');
       emitRoomEvent(room, 'commentDamage', {
-        attacker: attackerNick,
-        target:   target.nickname,
+        attacker: attackerId,
+        attackerNick,
+        target:   target.uniqueId,
+        targetNick: target.nickname,
         damage:   result.damage,
+        killed:   result.killed,
         comment,
         special:  isSpecialCommand,
         effect:   requestedEffect,
         intensity: result.intensity,
         critical:  result.critical,
+        giftBoosted: boostActive,
+        commandDescription: commandDescription || requestedEffect,
+        laserColor: result.laserColor,
+        shotSpeed: result.shotSpeed,
+        attackerScope,
+        targetScope,
       });
 
       const cmdLabel = commandDescription || requestedEffect || 'MESSAGE';
@@ -1908,13 +1923,14 @@ io.on('connection', (socket) => {
     gameStateCount: Object.values(room.players).filter(p => p.alive).length,
   });
 
-  socket.on('register', ({ type } = {}) => {
+  socket.on('register', ({ type } = {}, ack) => {
     const clientType = String(type || 'unknown').toLowerCase();
+    const previousType = socket.data.clientType;
     socket.data.clientType = clientType;
     socket.join(room.roomId);
 
     if (clientType === 'overlay') {
-      room.overlayCount++;
+      if (previousType !== 'overlay') room.overlayCount++;
       emitRoomEvent(room, 'overlayCount', { count: room.overlayCount });
       updateOverlayGauge();
 
@@ -1926,10 +1942,19 @@ io.on('connection', (socket) => {
         socket.emit('backgroundChanged', { filename: room.currentBackground.filename });
       }
     } else if (clientType === 'dashboard' || clientType === 'stats') {
+      if (previousType === 'overlay') {
+        room.overlayCount = Math.max(0, room.overlayCount - 1);
+        emitRoomEvent(room, 'overlayCount', { count: room.overlayCount });
+        updateOverlayGauge();
+      }
       socket.emit('overlayCount',    { count: room.overlayCount });
       socket.emit('overlaySettings', room.overlaySettings);
       socket.emit('laserColor',      room.overlaySettings.laserColor);
       socket.emit('gameState',       room.players);
+    }
+
+    if (typeof ack === 'function') {
+      ack({ success: true, type: clientType, roomId: room.roomId, overlayCount: room.overlayCount, eventSeq: room.eventSeq || 0 });
     }
   });
 
@@ -2305,19 +2330,30 @@ function requireDevTestMode(_req, res, next) {
   next();
 }
 
-function ensureTestPlayers() {
+function ensureTestPlayers(options = {}) {
   const room = getDefaultRoom();
+  const reset = options.reset === true;
   const testPlayers = [
     { id: 'test_alpha',   nick: 'Alpha'   },
     { id: 'test_bravo',   nick: 'Bravo'   },
     { id: 'test_charlie', nick: 'Charlie' },
     { id: 'test_delta',   nick: 'Delta'   },
     { id: 'test_echo',    nick: 'Echo'    },
+    { id: 'test_foxtrot', nick: 'Foxtrot', hp: 180 },
+    { id: 'test_glitch',  nick: 'Glitch',  hp: 170 },
+    { id: 'test_nova',    nick: 'Nova',    hp: 160 },
   ];
   testPlayers.forEach((item, index) => {
+    if (!reset && room.players[item.id]) {
+      room.players[item.id].alive = room.players[item.id].alive !== false;
+      room.players[item.id].forceSpawn = true;
+      room.players[item.id].lastActive = Date.now();
+      return;
+    }
+    const maxHp = item.hp || CFG.BASE_HP;
     room.players[item.id] = {
       uniqueId: item.id, nickname: item.nick,
-      hp: CFG.BASE_HP, maxHp: CFG.BASE_HP,
+      hp: maxHp, maxHp,
       strength: CFG.BASE_STRENGTH, alive: true, kills: 0,
       killStreak: 0, lastKillTime: 0,
       lastActive: Date.now(),
@@ -2333,7 +2369,7 @@ function ensureTestPlayers() {
 app.get('/api/test/status', blockInProduction, (_req, res) => res.json({ enabled: DEV_TEST_MODE }));
 
 app.post('/api/test/spawn', blockInProduction, requireDevTestMode, (_req, res) => {
-  ensureTestPlayers();
+  ensureTestPlayers({ reset: true });
   console.log('🧪 Test players spawned');
   res.json({ success: true });
 });
@@ -2344,6 +2380,62 @@ app.post('/api/test/attack', blockInProduction, requireDevTestMode, (_req, res) 
   const result = handleMentionAttack(room, 'test_alpha', 'Alpha', '@test_bravo');
   emitRoomEvent(room, 'gameState', room.players);
   res.json({ success: true, result });
+});
+
+app.post('/api/test/horde-attack', blockInProduction, requireDevTestMode, (_req, res) => {
+  ensureTestPlayers();
+  const room = getDefaultRoom();
+  const result = handleMentionAttack(room, 'test_foxtrot', 'Foxtrot', '@test_alpha !laser');
+  emitRoomEvent(room, 'gameState', room.players);
+  res.json({ success: true, result });
+});
+
+app.post('/api/test/like', blockInProduction, requireDevTestMode, (_req, res) => {
+  ensureTestPlayers();
+  const room = getDefaultRoom();
+  const id = 'test_bravo';
+  const player = room.players[id];
+  const hearts = 2;
+  const intensity = 0.55;
+
+  awardStats(room, id, player.nickname, CFG.LIKE_HP_BOOST, 0);
+  emitSoundAndSync(room, 'heal', { intensity, tier: 'common' });
+  emitRoomEvent(room, 'like', {
+    uniqueId: id,
+    nickname: player.nickname,
+    hearts,
+    rate: 150,
+    intensity,
+    color: player.color || '#ff4f8f',
+  });
+  emitRoomEvent(room, 'gameState', room.players);
+  res.json({ success: true, uniqueId: id, hearts, intensity });
+});
+
+app.post('/api/test/follow', blockInProduction, requireDevTestMode, (_req, res) => {
+  ensureTestPlayers();
+  const room = getDefaultRoom();
+  const id = 'test_delta';
+  const player = room.players[id];
+  emitSoundAndSync(room, 'follow', { intensity: 0.6, tier: 'common' });
+  emitRoomEvent(room, 'follow', { uniqueId: id, nickname: player.nickname, color: player.color });
+  res.json({ success: true, uniqueId: id });
+});
+
+app.post('/api/test/social', blockInProduction, requireDevTestMode, (_req, res) => {
+  ensureTestPlayers();
+  const room = getDefaultRoom();
+  const id = 'test_echo';
+  const player = room.players[id];
+  awardStats(room, id, player.nickname, 0, CFG.SOCIAL_STRENGTH_BOOST);
+  emitRoomEvent(room, 'socialBoost', {
+    uniqueId: id,
+    nickname: player.nickname,
+    amount: CFG.SOCIAL_STRENGTH_BOOST,
+    color: player.color || '#ffd166',
+  });
+  emitRoomEvent(room, 'gameState', room.players);
+  res.json({ success: true, uniqueId: id, amount: CFG.SOCIAL_STRENGTH_BOOST });
 });
 
 app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) => {
@@ -2366,6 +2458,7 @@ app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) =>
   // Determine gift effect based on diamond amount (new rule)
   const giftEffect = diamonds > 100 ? 'fire' : 'laser';  // meteor or laser
 
+  const topBeforeGift = new Set(getTopPlayers(room, 5).map(p => p.uniqueId));
   targets.forEach(targetId => {
     const target = room.players[targetId];
     if (!target?.alive) return;
@@ -2385,6 +2478,8 @@ app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) =>
       effect: giftEffect,
       intensity: diamonds > 100 ? 1.0 : 0.7,
       giftColor: diamonds > 100 ? '#FF4500' : '#7afcff',
+      attackerScope: topBeforeGift.has(attackerId) ? 'top' : 'horde',
+      targetScope: topBeforeGift.has(targetId) ? 'top' : 'horde',
     };
     attacksMade.push(giftAttack);
     emitGiftAttackAndSync(room, giftAttack);
@@ -2501,6 +2596,7 @@ function setupTikTokEvents(tiktokClient, room) {
         targetsToAttack.push(aliveTargets.splice(idx, 1)[0]);
       }
 
+      const topBeforeGift = new Set(getTopPlayers(room, 5).map(p => p.uniqueId));
       targetsToAttack.forEach(target => {
         const damage = diamonds;
         target.hp    = Math.max(0, target.hp - damage);
@@ -2528,6 +2624,8 @@ function setupTikTokEvents(tiktokClient, room) {
           effect:    giftEffect,
           intensity: giftIntensity,
           giftColor: diamonds > 100 ? '#FF4500' : '#7afcff',
+          attackerScope: topBeforeGift.has(id) ? 'top' : 'horde',
+          targetScope: topBeforeGift.has(target.uniqueId) ? 'top' : 'horde',
         });
         emitSoundAndSync(room, killed ? 'kill' : 'gift', { intensity: giftIntensity, tier: diamonds > 100 ? 'legendary' : 'common' });
         console.log(`🎁 @${id} → @${target.uniqueId} via gift for ${damage} dmg${killed ? ' (KILL!)' : ''}`);
@@ -2587,6 +2685,12 @@ function setupTikTokEvents(tiktokClient, room) {
     if (!id) return;
     if (!room.players[id]) spawnPlayer(room, id, nickname);
     awardStats(room, id, nickname, 0, CFG.SOCIAL_STRENGTH_BOOST);
+    emitRoomEvent(room, 'socialBoost', {
+      uniqueId: id,
+      nickname,
+      amount: CFG.SOCIAL_STRENGTH_BOOST,
+      color: room.players[id]?.color || '#ffd166',
+    });
     emitRoomEvent(room, 'gameState', room.players);
   });
 
@@ -2653,11 +2757,11 @@ function getTopPlayers(roomOrCount = 20, count = 20) {
       const aF = a.forceSpawn ? 1 : 0;
       const bF = b.forceSpawn ? 1 : 0;
       if (aF !== bF) return bF - aF;
-      const aHp = a.hp != null ? a.hp : (a.maxHp || 0);
-      const bHp = b.hp != null ? b.hp : (b.maxHp || 0);
-      const hpDiff = bHp - aHp;
-      if (hpDiff !== 0) return hpDiff;
-      return (b.maxHp || 0) - (a.maxHp || 0);
+      const maxHpDiff = (b.maxHp || b.hp || 0) - (a.maxHp || a.hp || 0);
+      if (maxHpDiff !== 0) return maxHpDiff;
+      const killDiff = (b.kills || 0) - (a.kills || 0);
+      if (killDiff !== 0) return killDiff;
+      return String(a.nickname || a.uniqueId || '').localeCompare(String(b.nickname || b.uniqueId || ''));
     })
     .slice(0, count);
 }
@@ -2696,7 +2800,8 @@ function tick() {
   if (++saveCounter >= 100) { savePlayerStats(); saveCounter = 0; }
 }
 
-setInterval(tick, 100);
+const GAME_TICK_MS = Math.max(100, Number(process.env.GAME_TICK_MS || 250));
+setInterval(tick, GAME_TICK_MS);
 
 // Quiet known noisy probes and missing favicon requests.
 app.get('/favicon.ico', (_req, res) => {

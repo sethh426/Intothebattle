@@ -3,193 +3,767 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome | TikTok PvP Battle</title>
-    <meta name="description" content="Welcome to IntoTheBattle. Set up your interactive TikTok LIVE battle overlay in minutes. Get started with our guided onboarding and creator dashboard." />
-    <meta name="keywords" content="IntoTheBattle welcome, TikTok overlay setup, battle overlay tutorial, creator onboarding, get started" />
-    <meta name="robots" content="noindex, follow" />
-    <meta name="author" content="IntoTheBattle" />
-    <link rel="canonical" href="https://intothebattle.com/dashboard-welcome" />
-  
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Welcome to IntoTheBattle" />
-    <meta property="og:description" content="Get started with IntoTheBattle and set up your interactive TikTok LIVE battle overlay in minutes." />
-    <meta property="og:url" content="https://intothebattle.com/dashboard-welcome" />
-    <meta property="og:image" content="https://intothebattle.com/intothebattlelogo_logo_only.svg" />
-    <meta property="og:site_name" content="IntoTheBattle" />
-  
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Welcome to IntoTheBattle" />
-    <meta name="twitter:description" content="Get started with IntoTheBattle and set up your interactive TikTok LIVE battle overlay in minutes." />
-    <meta name="twitter:image" content="https://intothebattle.com/intothebattlelogo_logo_only.svg" />
-  
-    <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
-    <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
-  
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebPage",
-      "name": "Welcome to IntoTheBattle",
-      "url": "https://intothebattle.com/dashboard-welcome",
-      "description": "Welcome and onboarding guide for IntoTheBattle interactive TikTok LIVE battle overlay platform.",
-      "isPartOf": {
-        "@type": "WebSite",
-        "name": "IntoTheBattle",
-        "url": "https://intothebattle.com/"
-      }
+  <title>Welcome — IntoTheBattle | Creator Launchpad</title>
+  <meta name="description" content="Welcome to the IntoTheBattle creator launchpad. Open your dashboard, OBS overlay, sponsor screens, stats, and stream setup tools." />
+  <meta name="keywords" content="IntoTheBattle welcome, creator dashboard, TikTok LIVE overlay setup, OBS overlay, sponsor screen" />
+  <meta name="robots" content="noindex, follow" />
+  <meta name="author" content="IntoTheBattle" />
+  <link rel="canonical" href="https://intothebattle.com/dashboard/welcome" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="IntoTheBattle Creator Launchpad" />
+  <meta property="og:description" content="Open your IntoTheBattle dashboard, overlay, sponsor screens, stats, and stream setup tools." />
+  <meta property="og:url" content="https://intothebattle.com/dashboard/welcome" />
+  <meta property="og:image" content="https://intothebattle.com/intothebattlelogo_logo_only.svg" />
+  <meta property="og:site_name" content="IntoTheBattle" />
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="IntoTheBattle Creator Launchpad" />
+  <meta name="twitter:description" content="Open your dashboard, overlay, sponsor screens, stats, and stream setup tools." />
+  <meta name="twitter:image" content="https://intothebattle.com/intothebattlelogo_logo_only.svg" />
+
+  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
+  <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "IntoTheBattle Creator Launchpad",
+    "url": "https://intothebattle.com/dashboard/welcome",
+    "description": "Authenticated creator launchpad for IntoTheBattle dashboard, overlay, sponsor screens, stats, and stream setup tools.",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "IntoTheBattle",
+      "url": "https://intothebattle.com/"
     }
-    </script>
-  
+  }
+  </script>
+
   <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     :root {
       color-scheme: dark;
-      font-family: 'Inter', 'Segoe UI', sans-serif;
-      background: #050710;
-      color: #e7efff;
+      --bg: #090d14;
+      --surface: #121826;
+      --surface-2: #171f31;
+      --surface-3: #1f293d;
+      --border: #2d374d;
+      --text: #f3f6fb;
+      --text-soft: #a7b1c2;
+      --text-dim: #657086;
+      --blue: #5ab2ff;
+      --purple: #b388ff;
+      --green: #41d37d;
+      --yellow: #f2c14e;
+      --red: #ff5f6d;
+      --pink: #ff7fd1;
+      --blue-glow: rgba(90,178,255,.18);
+      --green-glow: rgba(65,211,125,.18);
+      --yellow-glow: rgba(242,193,78,.16);
+      --shadow: 0 10px 40px rgba(0,0,0,.35);
+      --card-border: 1px solid rgba(255,255,255,.06);
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(90,178,255,.14), transparent 28%),
+        radial-gradient(circle at 92% 8%, rgba(179,136,255,.12), transparent 28%),
+        radial-gradient(circle at 50% 100%, rgba(65,211,125,.08), transparent 34%),
+        var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      padding: 24px;
+      overflow-x: hidden;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .shell {
+      max-width: 1500px;
+      margin: 0 auto;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 22px 26px;
+      margin-bottom: 22px;
+      background: rgba(18,24,38,.92);
+      backdrop-filter: blur(12px);
+      border: var(--card-border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      min-width: 0;
+    }
+
+    .brand-logo {
+      width: 58px;
+      height: 58px;
+      flex: 0 0 auto;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--blue), var(--purple));
+      box-shadow: 0 0 30px rgba(90,178,255,.25);
+      overflow: hidden;
+    }
+
+    .brand-logo img {
+      width: 100%;
+      height: auto;
+      transform: scale(1.12);
+    }
+
+    .brand-text h1 {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.05;
+    }
+
+    .brand-text p {
+      margin-top: 5px;
+      color: var(--text-soft);
+      font-size: 13px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 40px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .chip.live {
+      background: rgba(65,211,125,.12);
+      border-color: rgba(65,211,125,.25);
+      color: var(--green);
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      margin-right: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 18px currentColor;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(360px, .8fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,.012));
+      border: var(--card-border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-main {
+      min-height: 420px;
+      padding: clamp(28px, 4vw, 46px);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background:
+        linear-gradient(135deg, rgba(90,178,255,.13), rgba(179,136,255,.06) 48%, rgba(65,211,125,.08)),
+        rgba(18,24,38,.9);
+    }
+
+    .hero-main::after {
+      content: "";
+      position: absolute;
+      inset: auto -8% -28% 34%;
+      height: 300px;
+      background: radial-gradient(circle, rgba(90,178,255,.2), transparent 62%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      width: max-content;
+      max-width: 100%;
+      display: inline-flex;
+      align-items: center;
+      padding: 9px 13px;
+      border-radius: 999px;
+      border: 1px solid rgba(90,178,255,.24);
+      background: rgba(90,178,255,.08);
+      color: var(--blue);
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .hero-copy {
+      position: relative;
+      z-index: 1;
+      margin-top: 54px;
+      max-width: 880px;
+    }
+
+    .hero-copy h2 {
+      font-size: clamp(42px, 6vw, 82px);
+      line-height: .94;
+      letter-spacing: -2px;
+      margin-bottom: 22px;
+    }
+
+    .hero-copy p {
+      color: var(--text-soft);
+      font-size: clamp(17px, 2vw, 21px);
+      line-height: 1.65;
+      max-width: 760px;
+    }
+
+    .actions {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 34px;
+    }
+
+    .btn {
+      min-height: 50px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 20px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.08);
+      font-weight: 800;
+      transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn.primary {
+      color: #08101d;
+      border: none;
+      background: linear-gradient(135deg, var(--blue), #8ed2ff);
+      box-shadow: 0 16px 34px rgba(90,178,255,.18);
+    }
+
+    .btn.secondary {
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+    }
+
+    .btn.green {
+      color: #06130c;
+      border: none;
+      background: linear-gradient(135deg, var(--green), #91f4b5);
+      box-shadow: 0 16px 34px rgba(65,211,125,.14);
+    }
+
+    .side-panel {
+      padding: 24px;
+      background: rgba(18,24,38,.88);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .badge {
+      color: var(--yellow);
+      background: rgba(242,193,78,.12);
+      border: 1px solid rgba(242,193,78,.22);
+      border-radius: 999px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .launch-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .side-note {
+      margin-top: auto;
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(65,211,125,.14);
+      background: linear-gradient(135deg, rgba(65,211,125,.09), rgba(90,178,255,.055));
+    }
+
+    .side-note strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--green);
+      font-size: 14px;
+    }
+
+    .side-note p {
+      color: var(--text-soft);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .launch-row {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.06);
+      background: rgba(255,255,255,.035);
+    }
+
+    .step-index {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      color: var(--blue);
+      background: rgba(90,178,255,.11);
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .launch-row strong {
+      display: block;
+      margin-bottom: 3px;
+      font-size: 14px;
+    }
+
+    .launch-row span {
+      display: block;
+      color: var(--text-soft);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .mini-action {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 11px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.08);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    .col-3 { grid-column: span 3; }
+    .col-4 { grid-column: span 4; }
+    .col-6 { grid-column: span 6; }
+    .col-8 { grid-column: span 8; }
+    .col-12 { grid-column: span 12; }
+
+    .card {
+      padding: 24px;
+      min-height: 210px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .card h3 {
+      font-size: 20px;
+      line-height: 1.1;
+      letter-spacing: -.4px;
+      margin-bottom: 10px;
+    }
+
+    .card p {
+      color: var(--text-soft);
+      font-size: 14px;
       line-height: 1.6;
     }
-    * { box-sizing: border-box; }
-    body { margin: 0; min-height: 100vh; background: radial-gradient(circle at top left, rgba(49, 92, 255, 0.25), transparent 28%), radial-gradient(circle at bottom right, rgba(255, 206, 0, 0.18), transparent 22%), #050710; }
-    .page { max-width: 1240px; margin: 0 auto; padding: 28px 24px 40px; }
-    header { display: grid; gap: 16px; margin-bottom: 40px; }
-    .eyebrow { display: inline-flex; align-items: center; gap: 10px; color: #7c93ff; font-size: 0.92rem; letter-spacing: 0.12em; text-transform: uppercase; }
-    .eyebrow::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: #7c93ff; box-shadow: 0 0 24px rgba(124,147,255,0.5); }
-    h1 { font-size: clamp(2.4rem, 4vw, 4.4rem); margin: 0; letter-spacing: -0.05em; }
-    p.lead { max-width: 780px; color: #c8d3ff; font-size: 1.05rem; }
-    .top-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
-    .action-button { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 22px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); background: rgba(79, 140, 255, 0.12); color: #f7fbff; text-decoration: none; font-weight: 700; transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease; }
-    .action-button:hover { transform: translateY(-2px); background: rgba(79, 140, 255, 0.22); box-shadow: 0 16px 36px rgba(79, 140, 255, 0.18); }
-    .hero-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 360px); gap: 24px; align-items: center; }
-    .hero-card { padding: 28px; border-radius: 28px; background: rgba(16, 26, 54, 0.92); border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 24px 80px rgba(0,0,0,0.25); }
-    .hero-card h2 { margin-top: 0; color: #ffd966; font-size: 1.3rem; }
-    .hero-card p { color: #c8d3ff; margin: 16px 0 0; font-size: 0.98rem; }
-    .hero-card ul { margin: 18px 0 0; padding-left: 20px; color: #d8e4ff; }
-    .hero-card li { margin-bottom: 10px; }
-    .hero-card li strong { color: #ffce6b; }
-    .section-grid { display: grid; gap: 24px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 40px; }
-    .section { padding: 28px; border-radius: 28px; background: rgba(8, 15, 34, 0.95); border: 1px solid rgba(147, 190, 255, 0.08); }
-    .section h2 { margin-top: 0; font-size: 1.2rem; color: #a4c8ff; }
-    .section p { color: #d8e8ff; }
-    .section small { display: block; margin-top: 12px; color: #8b9ee8; }
-    .feature-list { display: grid; gap: 16px; margin-top: 18px; }
-    .feature-card { padding: 20px; border-radius: 22px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); }
-    .feature-card h3 { margin: 0 0 10px; font-size: 1rem; color: #fff; }
-    .feature-card p { margin: 0; color: #c8d3ff; font-size: 0.95rem; }
-    .links-grid { display: grid; gap: 18px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .link-card { display: flex; flex-direction: column; gap: 14px; padding: 24px; border-radius: 26px; background: rgba(19, 32, 67, 0.95); border: 1px solid rgba(124,147,255,0.09); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.02); }
-    .link-card h3 { margin: 0; font-size: 1.1rem; color: #fff; }
-    .link-card p { margin: 0; color: #c8d3ff; font-size: 0.95rem; flex: 1; }
-    .link-card a { display: inline-flex; align-items: center; justify-content: center; padding: 12px 16px; border-radius: 999px; background: linear-gradient(135deg, #6f8aff, #4db3ff); color: #fff; text-decoration: none; font-weight: 700; transition: transform 0.16s ease, box-shadow 0.16s ease; }
-    .link-card a:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(77,179,255,0.25); }
-    .feature-pill { display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); border-radius: 999px; padding: 8px 12px; font-size: 0.9rem; color: #d3e1ff; }
-    .footer { margin-top: 32px; padding: 22px 24px; border-radius: 24px; background: rgba(11, 19, 45, 0.98); border: 1px solid rgba(255,255,255,0.06); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; }
-    .footer div { color: #a7b5dd; }
-    .footer a { color: #8abfff; text-decoration: none; font-weight: 700; }
-    @media (max-width: 960px) {
-      .hero-grid, .section-grid, .links-grid { grid-template-columns: 1fr; }
+
+    .metric {
+      min-width: 54px;
+      padding: 9px 10px;
+      text-align: center;
+      border-radius: 14px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.07);
+      color: var(--text);
+      font-family: 'Space Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
     }
-    @media (max-width: 620px) {
-      .page { padding: 18px 16px 26px; }
-      .hero-card, .section, .link-card, .footer { padding: 20px; }
+
+    .card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .system-panel {
+      padding: 24px;
+    }
+
+    .system-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .system-item {
+      min-height: 130px;
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.06);
+      background: rgba(255,255,255,.035);
+    }
+
+    .system-item strong {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 15px;
+    }
+
+    .system-item span {
+      color: var(--text-soft);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 20px 24px;
+      color: var(--text-soft);
+      background: rgba(18,24,38,.86);
+      border: var(--card-border);
+      border-radius: 22px;
+    }
+
+    .footer-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .footer-links a {
+      color: var(--blue);
+      font-weight: 800;
+      font-size: 13px;
+    }
+
+    @media (max-width: 1180px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .col-3,
+      .col-4,
+      .col-6,
+      .col-8 {
+        grid-column: span 6;
+      }
+
+      .system-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        padding: 16px;
+      }
+
+      .topbar,
+      .footer {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .topbar-right,
+      .footer-links {
+        justify-content: flex-start;
+      }
+
+      .brand-logo {
+        width: 50px;
+        height: 50px;
+      }
+
+      .hero-main,
+      .side-panel,
+      .card,
+      .system-panel {
+        padding: 20px;
+      }
+
+      .hero-copy {
+        margin-top: 38px;
+      }
+
+      .hero-copy h2 {
+        font-size: clamp(36px, 12vw, 54px);
+        letter-spacing: -1px;
+      }
+
+      .col-3,
+      .col-4,
+      .col-6,
+      .col-8,
+      .col-12 {
+        grid-column: span 12;
+      }
+
+      .launch-row {
+        grid-template-columns: 34px minmax(0, 1fr);
+      }
+
+      .launch-row .mini-action {
+        grid-column: 2;
+        justify-self: start;
+      }
+
+      .system-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 <body>
-  <main class="page">
-    <header>
-      <span class="eyebrow">Welcome back</span>
-      <h1>Control the TikTok PvP battle experience from one polished command center.</h1>
-      <p class="lead">This page gives you a quick breakdown of the platform, shows how damage, health, and audio are represented, and links you directly into the live overlay, stats tracker, and admin dashboard.</p>
-      <div class="top-actions">
-        <a class="action-button" href="/dashboard/logout">Logout and return to login</a>
-      </div>
+  <main class="shell">
+    <header class="topbar">
+      <a class="brand" href="/dashboard" aria-label="Open dashboard">
+        <span class="brand-logo"><img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo"></span>
+        <span class="brand-text">
+          <h1>IntoTheBattle</h1>
+          <p>Creator launchpad</p>
+        </span>
+      </a>
+      <nav class="topbar-right" aria-label="Creator navigation">
+        <span class="chip live"><span class="dot"></span>Ready room</span>
+        <a class="chip" href="/profile">Profile</a>
+        <a class="chip" href="/dashboard/logout">Logout</a>
+      </nav>
     </header>
 
-    <div class="hero-grid">
-      <section class="hero-card">
-        <h2>What you get</h2>
-        <p>Instant access to live battle metrics plus easy navigation to the control dashboard, the spectator overlay, and the leaderboard stats page.</p>
-        <ul>
-          <li><strong>Live player state</strong> including health, kills, and strength.</li>
-          <li><strong>Event-driven audio</strong> for attacks, heals, respawns, and gifts.</li>
-          <li><strong>Overlay-ready visuals</strong> that work with TikTok Live and staged game scenes.</li>
-          <li><strong>Polished admin UX</strong> built for fast, confident control.</li>
-        </ul>
-      </section>
-      <aside class="hero-card">
-        <h2>Quick facts</h2>
-        <p>Use this portal to understand the app structure, then jump into the page you need with confidence.</p>
-        <div class="feature-list">
-          <div class="feature-card">
-            <h3>Damage & Combat</h3>
-            <p>Attacks reduce HP in real time and trigger kill or hit effects. Every combat event is logged and highlighted instantly.</p>
+    <section class="hero">
+      <div class="panel hero-main">
+        <div>
+          <span class="eyebrow">Stream setup</span>
+          <div class="hero-copy">
+            <h2>Launch the arena with everything in reach.</h2>
+            <p>Open the command center, copy into the live overlay, test sponsor breaks, and keep your stream workflow moving from one focused page.</p>
           </div>
-          <div class="feature-card">
-            <h3>Health Points</h3>
-            <p>Player HP is tracked continuously and shown on the leaderboard. Maximum HP values determine who is currently winning the battle.</p>
+        </div>
+        <div class="actions">
+          <a class="btn primary" href="/dashboard">Open Dashboard</a>
+          <a class="btn green" href="/overlay" target="_blank" rel="noreferrer">Open Overlay</a>
+          <a class="btn secondary" href="/stats" target="_blank" rel="noreferrer">View Stats</a>
+        </div>
+      </div>
+
+      <aside class="panel side-panel">
+        <div class="panel-header">
+          <div class="panel-title">Go Live Checklist</div>
+          <div class="badge">4 steps</div>
+        </div>
+        <div class="launch-list">
+          <div class="launch-row">
+            <div class="step-index">01</div>
+            <div><strong>Connect TikTok</strong><span>Use the dashboard to connect or reset your stream session.</span></div>
+            <a class="mini-action" href="/dashboard">Control</a>
           </div>
-          <div class="feature-card">
-            <h3>Audio Feedback</h3>
-            <p>Sound cues are pushed live to the overlay so viewers instantly feel kills, heals, gift attacks, and respawns.</p>
+          <div class="launch-row">
+            <div class="step-index">02</div>
+            <div><strong>Open OBS source</strong><span>Use the signed overlay URL from your dashboard for browser source setup.</span></div>
+            <a class="mini-action" href="/overlay" target="_blank" rel="noreferrer">Overlay</a>
           </div>
+          <div class="launch-row">
+            <div class="step-index">03</div>
+            <div><strong>Check sponsor screen</strong><span>Upload or preview sponsor videos before the show starts.</span></div>
+            <a class="mini-action" href="/dashboard">Sponsors</a>
+          </div>
+          <div class="launch-row">
+            <div class="step-index">04</div>
+            <div><strong>Watch the room</strong><span>Track players, events, and performance during the stream.</span></div>
+            <a class="mini-action" href="/stats" target="_blank" rel="noreferrer">Stats</a>
+          </div>
+        </div>
+        <div class="side-note">
+          <strong>Recommended before going live</strong>
+          <p>Open the overlay once, confirm the sponsor screen preview, then keep the dashboard active as your control surface.</p>
         </div>
       </aside>
-    </div>
+    </section>
 
-    <div class="section-grid">
-      <section class="section">
-        <h2>How to use the app</h2>
-        <p>Start here after login and choose where you want to go next. The dashboard is your admin control room, the overlay is the live viewer-facing stage, and stats is the deeper leaderboard analysis.</p>
-        <small>Recommended flow: review the feature page, open the overlay, then use the dashboard for live controls.</small>
-      </section>
-      <section class="section">
-        <h2>Core concepts</h2>
-        <p>The app is built around three live systems: game state, spectator overlay, and analytics. Each section of this page explains one of those systems and links you into it.</p>
-        <div class="feature-list">
-          <div class="feature-card">
-            <h3>Live state</h3>
-            <p>Players are tracked by HP, kills, and strength. All updates are pushed via sockets to every connected client.</p>
+    <section class="grid" aria-label="Primary creator tools">
+      <article class="panel card col-3">
+        <div class="card-top">
+          <div>
+            <h3>Command Center</h3>
+            <p>Manage stream connection, overlay reloads, player state, background art, sponsor breaks, audio, and dev tests.</p>
           </div>
-          <div class="feature-card">
-            <h3>Overlay</h3>
-            <p>The overlay is designed to be clean and immersive, with no panels blocking the view of the battle action.</p>
-          </div>
-          <div class="feature-card">
-            <h3>Stats</h3>
-            <p>The stats page is the dedicated leaderboard and event feed system, making it easy to explore performance trends.</p>
-          </div>
+          <div class="metric">CTRL</div>
         </div>
-      </section>
-    </div>
+        <div class="card-actions">
+          <a class="btn primary" href="/dashboard">Open</a>
+        </div>
+      </article>
 
-    <div class="links-grid">
-      <article class="link-card">
-        <h3>Admin Dashboard</h3>
-        <p>Control overlay reloads, sound settings, and live state testing from the main application dashboard.</p>
-        <a href="/dashboard">Open Dashboard</a>
+      <article class="panel card col-3">
+        <div class="card-top">
+          <div>
+            <h3>Live Overlay</h3>
+            <p>Open the OBS-ready battle scene with signed room access and clean full-screen presentation.</p>
+          </div>
+          <div class="metric">OBS</div>
+        </div>
+        <div class="card-actions">
+          <a class="btn green" href="/overlay" target="_blank" rel="noreferrer">Open</a>
+        </div>
       </article>
-      <article class="link-card">
-        <h3>Live Overlay</h3>
-        <p>Open the overlay to see the viewer-facing battlefield with clean visuals and event animations.</p>
-        <a href="/overlay.html" target="_blank">Open Overlay</a>
-      </article>
-      <article class="link-card">
-        <h3>Stats Page</h3>
-        <p>View the dedicated leaderboard, recent event feed, and live usage details in an optimized analytics layout.</p>
-        <a href="/stats" target="_blank">Open Stats</a>
-      </article>
-    </div>
 
-    <div class="footer">
-      <div>
-        <div class="feature-pill">Feature: live damage and HP tracking</div>
-        <div class="feature-pill">Feature: audio cues for every key event</div>
-        <div class="feature-pill">Feature: instant access to app sections</div>
+      <article class="panel card col-3">
+        <div class="card-top">
+          <div>
+            <h3>Sponsor Breaks</h3>
+            <p>Queue sponsor videos and transition from battle to a polished advertising screen when the stream needs a break.</p>
+          </div>
+          <div class="metric">AD</div>
+        </div>
+        <div class="card-actions">
+          <a class="btn secondary" href="/dashboard">Manage</a>
+        </div>
+      </article>
+
+      <article class="panel card col-3">
+        <div class="card-top">
+          <div>
+            <h3>Stats Room</h3>
+            <p>Monitor leaderboards, live events, player counts, and room activity away from the control surface.</p>
+          </div>
+          <div class="metric">DATA</div>
+        </div>
+        <div class="card-actions">
+          <a class="btn secondary" href="/stats" target="_blank" rel="noreferrer">Open</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel system-panel" aria-label="Room systems">
+      <div class="panel-header">
+        <div class="panel-title">Room Systems</div>
+        <div class="badge">Production tools</div>
       </div>
-      <div>Need faster access? Use the links above or navigate directly from the app header.</div>
-    </div>
+      <div class="system-grid">
+        <div class="system-item">
+          <strong>Battle State</strong>
+          <span>Player HP, kills, strength, horde state, and live events stay synced to overlay and stats views.</span>
+        </div>
+        <div class="system-item">
+          <strong>Visual Stage</strong>
+          <span>The restored canvas overlay renders the main battle scene with full-screen OBS behavior.</span>
+        </div>
+        <div class="system-item">
+          <strong>Audio Cues</strong>
+          <span>Upload and assign sounds for attacks, gifts, kills, respawns, heals, and follows.</span>
+        </div>
+        <div class="system-item">
+          <strong>Sponsor Media</strong>
+          <span>Store room-scoped sponsor videos and transition them into the overlay without leaving the dashboard.</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div>Use this page as the starting point before each stream. The dashboard remains the live control surface.</div>
+      <div class="footer-links">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/overlay" target="_blank" rel="noreferrer">Overlay</a>
+        <a href="/stats" target="_blank" rel="noreferrer">Stats</a>
+        <a href="/profile">Profile</a>
+      </div>
+    </footer>
   </main>
 </body>
 </html>
-
-
