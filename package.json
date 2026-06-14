@@ -7,11 +7,14 @@
   "scripts": {
     "start": "node server.js",
     "start:dev": "NODE_ENV=development node server.js",
+    "audit:stability": "node scripts/stability_audit.js",
+    "lint": "node scripts/stability_audit.js",
     "test:http": "node scripts/http_smoke.js",
     "test:socket": "node scripts/socket_smoke.js",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
     "test:postmark": "node scripts/test_postmark.js",
+    "test:all": "npm run validate:schemas && npm run audit:stability && npm run test:http && npm run test:socket && npm run test:e2e",
     "validate:schema": "python tools/validate_schema.py",
     "validate:schema-expand": "python tools/validate_schema_expand.py",
     "validate:schemas": "npm run validate:schema && npm run validate:schema-expand"
@@ -19,7 +22,7 @@
   "dependencies": {
     "@sentry/node": "^8.15.0",
     "@socket.io/redis-adapter": "^7.1.0",
-    "@tiktool/live": "latest",
+    "@tiktool/live": "2.7.1",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "dotenv": "^17.4.2",
