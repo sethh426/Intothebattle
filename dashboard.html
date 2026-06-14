@@ -1,697 +1,204 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Creator Dashboard — IntoTheBattle | Battle Overlay Command Center</title>
-<meta name="description" content="Manage your TikTok LIVE battle overlay from the IntoTheBattle creator dashboard. Real-time controls, viewer statistics, battle events, and stream management." />
-<meta name="keywords" content="creator dashboard, TikTok LIVE overlay control, battle overlay management, stream dashboard, creator tools" />
-<meta name="robots" content="noindex, follow" />
-<meta name="author" content="IntoTheBattle" />
-<link rel="canonical" href="https://intothebattle.com/dashboard" />
-
-<meta property="og:type" content="website" />
-<meta property="og:title" content="IntoTheBattle Creator Dashboard" />
-<meta property="og:description" content="Manage your TikTok LIVE battle overlay with real-time controls and stream management tools." />
-<meta property="og:url" content="https://intothebattle.com/dashboard" />
-<meta property="og:image" content="https://intothebattle.com/intothebattlelogo_logo_only.svg" />
-<meta property="og:site_name" content="IntoTheBattle" />
-
-<meta name="twitter:card" content="summary" />
-<meta name="twitter:title" content="IntoTheBattle Creator Dashboard" />
-<meta name="twitter:description" content="Manage your TikTok LIVE battle overlay with real-time controls and stream management tools." />
-<meta name="twitter:image" content="https://intothebattle.com/intothebattlelogo_logo_only.svg" />
-
-<link rel="icon" href="/intothebattlelogo_logo_only.svg" />
-<link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebApplication",
-  "name": "IntoTheBattle Creator Dashboard",
-  "url": "https://intothebattle.com/dashboard",
-  "description": "Creator dashboard for managing TikTok LIVE battle overlay with real-time controls and stream management.",
-  "applicationCategory": "Productivity"
-}
-</script>
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-:root {
-  --bg: #090d14;
-  --surface: #121826;
-  --surface-2: #171f31;
-  --surface-3: #1f293d;
-  --border: #2d374d;
-  --text: #f3f6fb;
-  --text-soft: #a7b1c2;
-  --text-dim: #657086;
-  --blue: #5ab2ff;
-  --purple: #b388ff;
-  --green: #41d37d;
-  --yellow: #f2c14e;
-  --red: #ff5f6d;
-  --pink: #ff7fd1;
-  --blue-glow: rgba(90,178,255,.18);
-  --green-glow: rgba(65,211,125,.18);
-  --red-glow: rgba(255,95,109,.18);
-  --radius: 18px;
-  --radius-sm: 12px;
-  --shadow: 0 10px 40px rgba(0,0,0,.35);
-  --card-border: 1px solid rgba(255,255,255,.06);
-}
-body {
-  background: radial-gradient(circle at top left, rgba(90,178,255,.12), transparent 25%),
-              radial-gradient(circle at top right, rgba(179,136,255,.10), transparent 25%),
-              var(--bg);
-  color: var(--text);
-  font-family: 'DM Sans', sans-serif;
-  min-height: 100vh;
-  padding: 24px;
-}
-#toast {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%) translateY(30px);
-  background: rgba(16,20,30,.95);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,.08);
-  color: #fff;
-  padding: 14px 20px;
-  border-radius: 14px;
-  font-size: 13px;
-  font-weight: 600;
-  opacity: 0;
-  transition: .25s ease;
-  z-index: 9999;
-  pointer-events: none;
-}
-#toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-.dashboard-shell {
-  max-width: 1600px;
-  margin: auto;
-}
-/* HEADER */
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  padding: 22px 26px;
-  margin-bottom: 22px;
-  background: rgba(18,24,38,.92);
-  backdrop-filter: blur(12px);
-  border: var(--card-border);
-  border-radius: 24px;
-  box-shadow: var(--shadow);
-}
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-}
-.brand-logo {
-  width: 58px;
-  height: 58px;
-  border-radius: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  background: linear-gradient(135deg, var(--blue), var(--purple));
-  box-shadow: 0 0 30px rgba(90,178,255,.25);
-}
-.brand-text h1 {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -1px;
-}
-.brand-text p {
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--text-soft);
-}
-.topbar-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.live-chip {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(65,211,125,.12);
-  border: 1px solid rgba(65,211,125,.25);
-  color: var(--green);
-  padding: 10px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
-}
-.subscription-chip {
-  border: 1px solid rgba(255,255,255,.08);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 40px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  color: var(--text);
-  background: rgba(255,255,255,.05);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-.subscription-chip.active {
-  background: rgba(65,211,125,.12);
-  border-color: rgba(65,211,125,.25);
-  color: var(--green);
-}
-.subscription-chip.trial {
-  background: rgba(242,193,78,.12);
-  border-color: rgba(242,193,78,.25);
-  color: var(--yellow);
-}
-.subscription-chip.attention {
-  background: rgba(255,95,109,.12);
-  border-color: rgba(255,95,109,.25);
-  color: var(--red);
-}
-.live-dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--green);
-  animation: pulse 1.2s infinite;
-}
-@keyframes pulse {
-  0% { opacity: 1; transform: scale(1); }
-  50% { opacity: .35; transform: scale(.8); }
-  100% { opacity: 1; transform: scale(1); }
-}
-.grid {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  gap: 20px;
-}
-.col-12 { grid-column: span 12; }
-.col-8 { grid-column: span 8; }
-.col-6 { grid-column: span 6; }
-.col-4 { grid-column: span 4; }
-.card {
-  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
-  border: var(--card-border);
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow: var(--shadow);
-  position: relative;
-  overflow: hidden;
-}
-.card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,.03), transparent 40%);
-  pointer-events: none;
-}
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 22px;
-}
-.card-title {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--text-soft);
-}
-.card-badge {
-  padding: 7px 10px;
-  border-radius: 999px;
-  background: rgba(255,255,255,.05);
-  font-size: 11px;
-  color: var(--text-soft);
-  font-family: 'Space Mono', monospace;
-}
-.status-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 18px;
-}
-.status-chip.online {
-  background: rgba(65,211,125,.12);
-  border: 1px solid rgba(65,211,125,.22);
-  color: var(--green);
-}
-.status-chip.offline {
-  background: rgba(255,95,109,.12);
-  border: 1px solid rgba(255,95,109,.22);
-  color: var(--red);
-}
-.status-chip.idle {
-  background: rgba(242,193,78,.12);
-  border: 1px solid rgba(242,193,78,.22);
-  color: var(--yellow);
-}
-.pulse-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-}
-.input-group {
-  margin-bottom: 16px;
-}
-.input-label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-soft);
-}
-input[type=text], select {
-  width: 100%;
-  background: var(--surface-3);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: 14px;
-  color: var(--text);
-  padding: 14px 16px;
-  font-size: 14px;
-  transition: .2s ease;
-}
-input[type=text]:focus, select:focus {
-  outline: none;
-  border-color: var(--blue);
-  box-shadow: 0 0 0 4px rgba(90,178,255,.14);
-}
-.btn-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.btn {
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 13px 18px;
-  border-radius: 14px;
-  font-weight: 700;
-  font-size: 13px;
-  transition: .18s ease;
-  font-family: 'DM Sans', sans-serif;
-}
-.btn:hover {
-  transform: translateY(-2px);
-}
-.btn-primary {
-  background: var(--blue);
-  color: #09111b;
-}
-.btn-success {
-  background: var(--green);
-  color: #08110d;
-}
-.btn-danger {
-  background: var(--red);
-  color: #fff;
-}
-.btn-secondary {
-  background: rgba(255,255,255,.05);
-  color: var(--text);
-  border: 1px solid rgba(255,255,255,.06);
-}
-.btn-purple {
-  background: var(--purple);
-  color: #090d14;
-}
-.btn-warning {
-  background: var(--yellow);
-  color: #111;
-}
-.stat-box {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 0;
-  border-bottom: 1px solid rgba(255,255,255,.05);
-}
-.stat-box:last-child {
-  border-bottom: none;
-}
-.stat-label {
-  color: var(--text-soft);
-  font-size: 13px;
-}
-.stat-value {
-  font-family: 'Space Mono', monospace;
-  font-weight: 700;
-}
-.divider {
-  height: 1px;
-  background: rgba(255,255,255,.05);
-  margin: 18px 0;
-}
-/* AUDIO */
-.drop-zone {
-  position: relative;
-  border: 2px dashed rgba(90,178,255,.22);
-  background: rgba(90,178,255,.05);
-  border-radius: 24px;
-  padding: 40px 24px;
-  text-align: center;
-  margin-bottom: 20px;
-  transition: .2s ease;
-}
-.drop-zone:hover, .drop-zone.dragover {
-  border-color: var(--blue);
-  background: rgba(90,178,255,.08);
-}
-.drop-zone input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-.drop-icon {
-  font-size: 38px;
-  margin-bottom: 12px;
-}
-.drop-title {
-  font-size: 15px;
-  font-weight: 700;
-}
-.drop-sub {
-  margin-top: 6px;
-  color: var(--text-soft);
-  font-size: 12px;
-}
-.audio-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-}
-.section-title {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  color: var(--text-soft);
-  text-transform: uppercase;
-  margin-bottom: 14px;
-}
-.audio-files {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.audio-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(255,255,255,.03);
-  border: 1px solid rgba(255,255,255,.05);
-  border-radius: 14px;
-  padding: 12px;
-}
-.audio-name {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
-  font-weight: 600;
-}
-.audio-size {
-  font-size: 11px;
-  color: var(--text-dim);
-  font-family: 'Space Mono', monospace;
-}
-.assign-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.assign-table td {
-  padding: 10px 0;
-}
-.assign-table tr+tr td {
-  border-top: 1px solid rgba(255,255,255,.05);
-}
-.event-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 90px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 800;
-}
-.event-attack { background: rgba(90,178,255,.14); color: var(--blue); }
-.event-gift { background: rgba(242,193,78,.14); color: var(--yellow); }
-.event-kill { background: rgba(255,95,109,.14); color: var(--red); }
-.event-heal { background: rgba(179,136,255,.14); color: var(--purple); }
-.event-follow { background: rgba(255,127,209,.14); color: var(--pink); }
-.event-respawn { background: rgba(65,211,125,.14); color: var(--green); }
-.footer {
-  margin-top: 22px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-}
-.footer-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 20px;
-  border-radius: 16px;
-  font-size: 13px;
-  font-weight: 700;
-  text-decoration: none;
-  transition: .18s ease;
-  cursor: pointer;
-}
-.footer-btn.primary {
-  background: var(--green);
-  color: #08110d;
-}
-.footer-btn.secondary {
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.06);
-  color: var(--text);
-}
-@media(max-width: 1100px) {
-  .col-8, .col-6, .col-4 { grid-column: span 12; }
-  .audio-layout { grid-template-columns: 1fr; }
-}
-@media(max-width: 700px) {
-  body { padding: 14px; }
-  .topbar { flex-direction: column; align-items: flex-start; }
-  .brand { align-items: flex-start; }
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Creator Dashboard — IntoTheBattle Command Center</title>
+  <meta name="description" content="Manage your IntoTheBattle TikTok LIVE battle overlay, stream room, sponsor moments, audio, and visual effects." />
+  <meta name="robots" content="noindex, follow" />
+  <link rel="canonical" href="https://intothebattle.com/dashboard" />
+  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
+  <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=DM+Sans:wght@400;500;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:#030406; --panel:rgba(13,18,30,.82); --panel2:rgba(20,26,42,.72); --line:rgba(246,201,91,.22);
+      --line2:rgba(255,255,255,.1); --gold:#f6c95b; --gold2:#ffdf8a; --ember:#ff6a3d; --red:#e83b5f;
+      --cyan:#55e7ff; --green:#77f0a1; --text:#fff8e6; --muted:#a8afbf; --dim:#677083; --shadow:0 32px 90px rgba(0,0,0,.45);
+    }
+    body { min-height:100vh; padding:22px; font-family:'DM Sans',system-ui,sans-serif; color:var(--text); background:radial-gradient(circle at 14% 2%,rgba(246,201,91,.16),transparent 28%),radial-gradient(circle at 86% 10%,rgba(232,59,95,.13),transparent 30%),linear-gradient(180deg,#050608,#030406); overflow-x:hidden; }
+    body::before { content:''; position:fixed; inset:0; pointer-events:none; background-image:linear-gradient(rgba(246,201,91,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(246,201,91,.035) 1px,transparent 1px); background-size:58px 58px; mask-image:radial-gradient(circle at top,black,transparent 72%); z-index:-1; }
+    a { color:inherit; text-decoration:none; }
+    button,input,select { font-family:inherit; }
+    .shell { max-width:1500px; margin:0 auto; display:grid; gap:20px; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; gap:18px; padding:14px; border:1px solid var(--line); border-radius:26px; background:rgba(5,7,11,.76); backdrop-filter:blur(22px); box-shadow:var(--shadow); }
+    .brand { display:flex; align-items:center; gap:14px; min-width:0; }
+    .brand-logo { width:58px; height:58px; border-radius:18px; display:grid; place-items:center; overflow:hidden; border:1px solid rgba(246,201,91,.38); background:rgba(246,201,91,.08); box-shadow:0 0 42px rgba(246,201,91,.18); }
+    .brand-logo img { width:100%; height:auto; transform:scale(1.1); transform-origin:center; display:block; }
+    .brand h1 { font-family:'Black Ops One','Rajdhani',sans-serif; font-size:24px; line-height:1; text-transform:uppercase; letter-spacing:.02em; }
+    .brand p { margin-top:5px; color:var(--muted); font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+    .top-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+    .chip,.status-chip,.subscription-chip { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:40px; padding:9px 13px; border-radius:999px; border:1px solid var(--line2); background:rgba(255,255,255,.05); color:var(--muted); font-size:13px; font-weight:900; white-space:nowrap; }
+    .chip.live { color:var(--green); border-color:rgba(119,240,161,.25); background:rgba(119,240,161,.08); }
+    .dot,.pulse-dot { width:8px; height:8px; border-radius:99px; background:currentColor; box-shadow:0 0 16px currentColor; }
+    .subscription-chip { cursor:pointer; }
+    .subscription-chip.active { color:var(--green); border-color:rgba(119,240,161,.25); background:rgba(119,240,161,.08); }
+    .subscription-chip.trial { color:var(--gold2); border-color:rgba(246,201,91,.28); background:rgba(246,201,91,.08); }
+    .subscription-chip.attention { color:#ff9aa8; border-color:rgba(232,59,95,.28); background:rgba(232,59,95,.1); }
+    .hero { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(340px,.7fr); gap:20px; align-items:stretch; }
+    .hero-card,.card { position:relative; overflow:hidden; border:1px solid var(--line2); border-radius:28px; background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); box-shadow:0 24px 80px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08); }
+    .hero-card { padding:30px; border-color:var(--line); background:radial-gradient(circle at top left,rgba(246,201,91,.14),transparent 30%),linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.025)); }
+    .kicker { display:inline-flex; gap:9px; align-items:center; width:fit-content; margin-bottom:18px; padding:8px 12px; border-radius:999px; border:1px solid rgba(246,201,91,.3); color:var(--gold2); background:rgba(246,201,91,.08); font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; }
+    .kicker::before { content:''; width:8px; height:8px; border-radius:99px; background:var(--green); box-shadow:0 0 14px rgba(119,240,161,.9); }
+    .hero h2 { font-family:'Black Ops One','Rajdhani',sans-serif; font-size:clamp(34px,4vw,58px); line-height:1; text-transform:uppercase; max-width:820px; margin-bottom:16px; }
+    .hero h2 span { color:transparent; background:linear-gradient(100deg,#fff7d7,var(--gold),var(--ember)); -webkit-background-clip:text; background-clip:text; }
+    .hero p { color:#c7cedd; line-height:1.7; max-width:760px; }
+    .launch-row { display:flex; flex-wrap:wrap; gap:12px; margin-top:22px; }
+    .btn { border:0; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:46px; padding:0 16px; border-radius:15px; font-size:13px; font-weight:900; transition:.16s ease; }
+    .btn:hover { transform:translateY(-1px); filter:brightness(1.06); }
+    .btn-primary { color:#170c02; background:linear-gradient(135deg,var(--gold),#fff0b9 52%,var(--ember)); box-shadow:0 16px 36px rgba(246,201,91,.2); }
+    .btn-secondary { color:var(--text); background:rgba(255,255,255,.06); border:1px solid var(--line2); }
+    .btn-success { color:#071009; background:var(--green); }
+    .btn-danger { color:#fff; background:var(--red); }
+    .btn-warning { color:#170c02; background:var(--gold); }
+    .btn-purple { color:#071009; background:var(--cyan); }
+    .quick-panel { padding:24px; display:grid; gap:14px; }
+    .quick-stat { display:flex; justify-content:space-between; gap:14px; padding:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.2); border-radius:18px; }
+    .quick-stat span { color:var(--muted); font-size:13px; }
+    .quick-stat strong { color:#fff; }
+    .grid { display:grid; grid-template-columns:repeat(12,1fr); gap:20px; }
+    .col-12{grid-column:span 12}.col-8{grid-column:span 8}.col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}
+    .card { padding:24px; }
+    .card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:18px; }
+    .card-title { color:var(--gold2); font-size:12px; text-transform:uppercase; letter-spacing:.14em; font-weight:900; }
+    .card-head h3 { margin-top:6px; font-size:24px; line-height:1.1; }
+    .card-badge { padding:7px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:var(--muted); font-size:11px; font-weight:900; white-space:nowrap; }
+    .muted { color:var(--muted); line-height:1.6; font-size:13px; }
+    .status-chip { margin-bottom:14px; }
+    .status-chip.online { color:var(--green); border-color:rgba(119,240,161,.25); background:rgba(119,240,161,.08); }
+    .status-chip.offline { color:#ff9aa8; border-color:rgba(232,59,95,.28); background:rgba(232,59,95,.1); }
+    .status-chip.idle { color:var(--gold2); border-color:rgba(246,201,91,.28); background:rgba(246,201,91,.08); }
+    .form-group { margin-bottom:14px; }
+    .input-label { display:block; margin-bottom:8px; color:var(--muted); font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+    input[type=text],input[type=file],input[type=color],select { width:100%; min-height:48px; border-radius:15px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.055); color:#fff; padding:12px 14px; outline:none; }
+    input:focus,select:focus { border-color:rgba(246,201,91,.55); box-shadow:0 0 0 4px rgba(246,201,91,.08); }
+    .btn-row { display:flex; flex-wrap:wrap; gap:10px; }
+    .stat-box { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,.07); }
+    .stat-box:last-child { border-bottom:0; }
+    .stat-label { color:var(--muted); font-size:13px; }.stat-value { color:#fff; font-weight:900; }
+    .divider { height:1px; background:rgba(255,255,255,.08); margin:16px 0; }
+    .drop-zone { position:relative; border:1px dashed rgba(246,201,91,.36); background:rgba(246,201,91,.055); border-radius:22px; padding:26px; text-align:center; margin-bottom:16px; }
+    .drop-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+    .drop-icon { font-size:34px; margin-bottom:8px; }.drop-title { font-weight:900; }.drop-sub { color:var(--muted); font-size:12px; margin-top:5px; }
+    .audio-layout,.sponsor-layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .section-title { color:var(--gold2); font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; margin-bottom:12px; }
+    .audio-files { display:grid; gap:10px; }
+    .audio-row { display:flex; align-items:center; gap:10px; padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.2); }
+    .audio-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:800; }
+    .audio-size { color:var(--dim); font-size:11px; }
+    .assign-table { width:100%; border-collapse:collapse; }.assign-table td { padding:10px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+    .event-pill { min-width:86px; display:inline-flex; justify-content:center; padding:7px 10px; border-radius:999px; font-size:11px; font-weight:900; text-transform:uppercase; }
+    .event-attack{background:rgba(85,231,255,.12);color:var(--cyan)}.event-gift{background:rgba(246,201,91,.12);color:var(--gold2)}.event-kill{background:rgba(232,59,95,.14);color:#ff9aa8}.event-heal{background:rgba(119,240,161,.12);color:var(--green)}.event-follow{background:rgba(255,255,255,.08);color:#fff}.event-respawn{background:rgba(85,231,255,.12);color:var(--cyan)}
+    details.tool { border:1px solid rgba(255,255,255,.09); border-radius:22px; background:rgba(255,255,255,.035); overflow:hidden; }
+    details.tool summary { cursor:pointer; padding:18px 20px; font-weight:900; color:#fff; list-style:none; display:flex; justify-content:space-between; gap:14px; }
+    details.tool summary::-webkit-details-marker{display:none} details.tool summary::after{content:'+';color:var(--gold)} details[open].tool summary::after{content:'−'} .tool-body{padding:0 20px 20px}
+    #toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(30px); z-index:100; opacity:0; pointer-events:none; padding:14px 18px; border-radius:16px; background:rgba(5,7,11,.92); border:1px solid var(--line); color:#fff; font-weight:800; transition:.2s ease; }
+    #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+    .footer { display:flex; flex-wrap:wrap; gap:12px; margin:4px 0 28px; }
+    .footer-btn { display:inline-flex; min-height:46px; align-items:center; justify-content:center; padding:0 16px; border-radius:15px; font-weight:900; cursor:pointer; border:1px solid var(--line2); background:rgba(255,255,255,.06); color:#fff; }
+    .footer-btn.primary { color:#170c02; background:linear-gradient(135deg,var(--gold),#fff0b9 52%,var(--ember)); border:0; }
+    @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,.sponsor-layout{grid-template-columns:1fr}}
+    @media(max-width:700px){body{padding:12px}.topbar{align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.btn{width:100%}}
+  </style>
 </head>
 <body>
 <div id="toast"></div>
-<div class="dashboard-shell">
-  <div class="topbar">
+<div class="shell">
+  <header class="topbar">
     <div class="brand">
-      <a href="/" class="brand-logo" aria-label="Back to previous page" onclick="if (window.history.length > 1) { window.history.back(); return false; }"><img src="/intothebattlelogo_logo_only.svg" style="transform:scale(1.1);transform-origin:center;width:100%;height:auto;display:block;" alt="IntoTheBattle logo"></a>
-      <div class="brand-text">
-        <h1>IntoTheBattle Command Center</h1>
-        <p>Interactive TikTok LIVE overlay management system</p>
-      </div>
+      <a href="/" class="brand-logo" aria-label="Home"><img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo"></a>
+      <div class="brand-text"><h1>IntoTheBattle Command Center</h1><p>Creator overlay control room</p></div>
     </div>
-    <div class="topbar-right">
-      <div class="live-chip"><div class="live-dot"></div>LIVE SYSTEM</div>
+    <div class="top-actions">
+      <div class="chip live"><span class="dot"></span>Live System</div>
       <button type="button" class="subscription-chip" id="subscription-chip" onclick="openBillingStatus()">Checking plan</button>
       <button class="btn btn-secondary" onclick="window.location.href='/profile'">Account</button>
     </div>
-  </div>
-  <div class="grid">
-    <!-- TikTok Connection -->
-    <div class="card col-6">
-      <div class="card-header">
-        <div class="card-title">TikTok Live Connection</div>
-        <div class="card-badge">Realtime WebSocket</div>
-      </div>
-      <div class="status-chip offline" id="tiktok-chip"><div class="pulse-dot"></div><span id="tiktok-label">Disconnected</span></div>
-      <div class="input-group">
-        <label class="input-label">TikTok Username</label>
-        <input type="text" id="username" placeholder="@yourusername" autocapitalize="none" autocorrect="off" spellcheck="false">
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-success" style="flex:1" onclick="connect()">✓ Connect</button>
-        <button class="btn btn-danger" style="flex:1" onclick="resetTikTok()">✕ Disconnect</button>
+  </header>
+
+  <section class="hero">
+    <div class="hero-card">
+      <div class="kicker">Creator dashboard</div>
+      <h2>Run the arena like a <span>premium live show.</span></h2>
+      <p>Connect TikTok LIVE, open your browser-source overlay, control visuals, trigger sponsor moments, and tune audio from one simplified command center.</p>
+      <div class="launch-row">
+        <button class="btn btn-primary" onclick="openOverlay()">Open Overlay</button>
+        <button class="btn btn-secondary" onclick="copyOverlayUrl()">Copy Overlay URL</button>
+        <button class="btn btn-secondary" onclick="window.open('/stats','_blank')">View Stats</button>
       </div>
     </div>
-    <!-- Overlay Status + Players -->
-    <div class="card col-6">
-      <div class="card-header">
-        <div class="card-title">Overlay Status</div>
-        <div class="card-badge">Browser Source</div>
-      </div>
-      <div class="status-chip offline" id="overlay-chip"><div class="pulse-dot"></div><span id="overlay-label">No overlay connected</span></div>
-      <div class="stat-box"><span class="stat-label">Active Players</span><span class="stat-value" id="player-count">—</span></div>
-      <div class="stat-box"><span class="stat-label">Dev Mode</span><span class="stat-value" id="dev-mode-badge">OFF</span></div>
+    <aside class="hero-card quick-panel">
+      <div class="quick-stat"><span>TikTok connection</span><strong id="tiktok-label-copy">Disconnected</strong></div>
+      <div class="quick-stat"><span>Overlay status</span><strong id="overlay-label-copy">No overlay connected</strong></div>
+      <div class="quick-stat"><span>Active players</span><strong id="player-count-copy">—</strong></div>
+      <div class="quick-stat"><span>Room mode</span><strong id="dev-mode-copy">Live</strong></div>
+    </aside>
+  </section>
+
+  <section class="grid">
+    <article class="card col-4">
+      <div class="card-head"><div><div class="card-title">Step 1</div><h3>Connect TikTok LIVE</h3></div><span class="card-badge">Stream input</span></div>
+      <div class="status-chip offline" id="tiktok-chip"><span class="pulse-dot"></span><span id="tiktok-label">Disconnected</span></div>
+      <div class="form-group"><label class="input-label">TikTok username</label><input type="text" id="username" placeholder="@yourusername" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
+      <div class="btn-row"><button class="btn btn-success" style="flex:1" onclick="connect()">Connect</button><button class="btn btn-danger" onclick="resetTikTok()">Disconnect</button></div>
+    </article>
+
+    <article class="card col-4">
+      <div class="card-head"><div><div class="card-title">Step 2</div><h3>Overlay launch</h3></div><span class="card-badge">OBS / TikTok Studio</span></div>
+      <div class="status-chip offline" id="overlay-chip"><span class="pulse-dot"></span><span id="overlay-label">No overlay connected</span></div>
+      <div class="stat-box"><span class="stat-label">Active players</span><span class="stat-value" id="player-count">—</span></div>
+      <div class="stat-box"><span class="stat-label">Dev mode</span><span class="stat-value" id="dev-mode-badge">OFF</span></div>
       <div class="divider"></div>
-      <div class="btn-row">
-        <button class="btn btn-primary" style="flex:1" onclick="reloadOverlay()">↺ Reload Overlay</button>
-        <button class="btn btn-secondary" onclick="clearPlayers()">Clear Players</button>
-        <button class="btn btn-secondary" onclick="toggleDevMode()">🧪 Toggle Dev Mode</button>
-      </div>
-    </div>
-    <!-- Background -->
-    <div class="card col-4">
-      <div class="card-header"><div class="card-title">Background Manager</div></div>
-      <div class="input-group">
-        <label class="input-label">Overlay Background</label>
-        <input type="file" id="bgUpload" accept="image/jpeg,image/png,image/gif,image/webp">
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" style="flex:1" onclick="uploadBackground()">Upload Background</button>
-        <button class="btn btn-warning" onclick="clearBackground()">Clear</button>
-      </div>
-      <p id="bgStatus" style="margin-top:14px; color:var(--text-soft); font-size:12px;">No background set</p>
-    </div>
-    <!-- Laser Controls -->
-    <div class="card col-4">
-      <div class="card-header"><div class="card-title">Laser Controls</div><div class="card-badge">Animation FX</div></div>
-      <div class="input-group">
-        <label class="input-label">Shot Style</label>
-        <select id="laserStyleSelect">
-          <option value="beam">Beam</option><option value="pulse">Pulse</option><option value="wave">Wave</option>
-        </select>
-      </div>
-      <div class="input-group">
-        <label class="input-label">Laser Color</label>
-        <input type="color" id="laserColorPicker" value="#5ab2ff" style="height:50px; padding:4px; border-radius:14px; background:var(--surface-3); border:1px solid rgba(255,255,255,.08);">
-      </div>
-      <button class="btn btn-primary" style="width:100%; margin-top:6px" onclick="saveLaserStyle()">Save Laser Style</button>
-    </div>
-    <!-- Dev Tools -->
-    <div class="card col-4">
-      <div class="card-header"><div class="card-title">Developer Tools</div></div>
-      <p style="color:var(--text-soft); font-size:13px; line-height:1.6; margin-bottom:18px;">Trigger overlay attacks, gifts, kills, heals, and animation tests instantly.</p>
-      <div class="btn-row">
-        <button class="btn btn-success" onclick="testOverlayAttack()">Attack</button>
-        <button class="btn btn-warning" onclick="testOverlayGift()">Gift</button>
-        <button class="btn btn-purple" onclick="testOverlayHeal()">Heal</button>
-        <button class="btn btn-danger" onclick="testOverlayKill()">Kill</button>
-        <button class="btn btn-primary" onclick="testStreak()">Streak</button>
-      </div>
-    </div>
-    <!-- Sponsor Screen -->
-    <div class="card col-12">
-      <div class="card-header"><div class="card-title">Sponsor Screen</div><div class="card-badge" id="sponsorCountBadge">0 Videos</div></div>
-      <div class="grid" style="grid-template-columns:repeat(12,1fr); gap:18px;">
-        <div style="grid-column:span 5;">
-          <div class="input-group">
-            <label class="input-label">Sponsor Video</label>
-            <input type="file" id="sponsorFileInput" accept="video/mp4,video/webm,video/quicktime,video/x-m4v">
-            <p style="margin-top:8px;color:var(--text-soft);font-size:12px;line-height:1.35;">Best playback: MP4 H.264/AAC or WebM, ideally under 100MB. Some MOV files upload but will not play in OBS/Chromium.</p>
-          </div>
-          <div class="input-group">
-            <label class="input-label">Partner</label>
-            <input id="sponsorPartnerInput" type="text" maxlength="70" placeholder="Sponsor name">
-          </div>
-          <div class="input-group">
-            <label class="input-label">Headline</label>
-            <input id="sponsorTitleInput" type="text" maxlength="90" placeholder="Sponsor Spotlight">
-          </div>
-          <div class="input-group">
-            <label class="input-label">Subtitle</label>
-            <input id="sponsorSubtitleInput" type="text" maxlength="140" placeholder="We will be right back to the battle.">
-          </div>
-          <div class="btn-row">
-            <button class="btn btn-primary" onclick="uploadSponsorVideo()">Upload Video</button>
-            <button class="btn btn-success" onclick="playSponsorScene()">Play Screen</button>
-            <button class="btn btn-danger" onclick="stopSponsorScene()">Stop</button>
-          </div>
-        </div>
-        <div style="grid-column:span 3;">
-          <div class="input-group">
-            <label class="input-label">Duration</label>
-            <select id="sponsorDurationInput">
-              <option value="10000">10 seconds</option>
-              <option value="15000" selected>15 seconds</option>
-              <option value="30000">30 seconds</option>
-              <option value="60000">60 seconds</option>
-            </select>
-          </div>
-          <div class="input-group">
-            <label class="input-label">Video Fit</label>
-            <select id="sponsorFitInput">
-              <option value="cover" selected>Cover screen</option>
-              <option value="contain">Show full video</option>
-            </select>
-          </div>
-          <div class="input-group">
-            <label class="input-label">Audio</label>
-            <select id="sponsorMutedInput">
-              <option value="true" selected>Muted autoplay</option>
-              <option value="false">Try video audio</option>
-            </select>
-          </div>
-          <button class="btn btn-secondary" style="width:100%;" onclick="openSponsorPreview()">Open Preview</button>
-        </div>
-        <div style="grid-column:span 4;">
-          <div class="section-title">Uploaded Sponsor Videos</div>
-          <div class="audio-files" id="sponsorLibrary"><p style="color:var(--text-soft);">No sponsor videos uploaded yet.</p></div>
-        </div>
-      </div>
-    </div>
-    <!-- Audio Manager -->
-    <div class="card col-12">
-      <div class="card-header"><div class="card-title">Audio Manager</div><div class="card-badge" id="audioCountBadge">0 Sounds Loaded</div></div>
-      <div class="drop-zone" id="dropZone">
-        <input type="file" id="audioFileInput" accept="audio/*">
-        <div class="drop-icon">🎵</div>
-        <div class="drop-title">Drag & Drop Audio Files</div>
-        <div class="drop-sub">MP3 • WAV • OGG • AAC • FLAC • WEBM</div>
-      </div>
-      <button class="btn btn-primary" style="width:100%; margin-bottom:24px" onclick="document.getElementById('audioFileInput').click()">📂 Browse Audio Files</button>
-      <div class="audio-layout">
+      <div class="btn-row"><button class="btn btn-primary" onclick="openOverlay()">Open Overlay</button><button class="btn btn-secondary" onclick="reloadOverlay()">Reload</button></div>
+    </article>
+
+    <article class="card col-4">
+      <div class="card-head"><div><div class="card-title">Step 3</div><h3>Visual polish</h3></div><span class="card-badge">Look & feel</span></div>
+      <div class="form-group"><label class="input-label">Background</label><input type="file" id="bgUpload" accept="image/jpeg,image/png,image/gif,image/webp"></div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="uploadBackground()">Upload</button><button class="btn btn-warning" onclick="clearBackground()">Clear</button></div>
+      <p id="bgStatus" class="muted" style="margin-top:12px;">No background set</p>
+      <div class="divider"></div>
+      <div class="form-group"><label class="input-label">Shot style</label><select id="laserStyleSelect"><option value="beam">Beam</option><option value="pulse">Pulse</option><option value="wave">Wave</option></select></div>
+      <div class="form-group"><label class="input-label">Laser color</label><input type="color" id="laserColorPicker" value="#f6c95b"></div>
+      <button class="btn btn-secondary" style="width:100%" onclick="saveLaserStyle()">Save FX Style</button>
+    </article>
+
+    <article class="card col-12">
+      <div class="card-head"><div><div class="card-title">Sponsor moments</div><h3>Full-screen sponsor screen</h3><p class="muted">Upload and trigger sponsor scenes for planned ad breaks, high-value moments, or manual brand placements.</p></div><span class="card-badge" id="sponsorCountBadge">0 Videos</span></div>
+      <div class="sponsor-layout">
         <div>
-          <div class="section-title">Uploaded Sounds</div>
-          <div class="audio-files" id="audioLibrary"><p style="color:var(--text-soft);">No audio uploaded yet.</p></div>
+          <div class="form-group"><label class="input-label">Sponsor video</label><input type="file" id="sponsorFileInput" accept="video/mp4,video/webm,video/quicktime,video/x-m4v"><p class="muted" style="margin-top:8px;">Best playback: MP4 H.264/AAC or WebM, ideally under 100MB.</p></div>
+          <div class="form-group"><label class="input-label">Partner</label><input id="sponsorPartnerInput" type="text" maxlength="70" placeholder="Sponsor name"></div>
+          <div class="form-group"><label class="input-label">Headline</label><input id="sponsorTitleInput" type="text" maxlength="90" placeholder="Sponsor Spotlight"></div>
+          <div class="form-group"><label class="input-label">Subtitle</label><input id="sponsorSubtitleInput" type="text" maxlength="140" placeholder="We will be right back to the battle."></div>
         </div>
         <div>
-          <div class="section-title">Event Assignments</div>
-          <table class="assign-table"><tbody id="assignTableBody"></tbody></table>
+          <div class="grid" style="gap:12px;"><div class="col-6"><label class="input-label">Duration</label><select id="sponsorDurationInput"><option value="10000">10 seconds</option><option value="15000" selected>15 seconds</option><option value="30000">30 seconds</option><option value="60000">60 seconds</option></select></div><div class="col-6"><label class="input-label">Video fit</label><select id="sponsorFitInput"><option value="cover" selected>Cover screen</option><option value="contain">Show full video</option></select></div><div class="col-12"><label class="input-label">Audio</label><select id="sponsorMutedInput"><option value="true" selected>Muted autoplay</option><option value="false">Try video audio</option></select></div></div>
+          <div class="btn-row" style="margin:16px 0;"><button class="btn btn-primary" onclick="uploadSponsorVideo()">Upload Video</button><button class="btn btn-success" onclick="playSponsorScene()">Play Screen</button><button class="btn btn-danger" onclick="stopSponsorScene()">Stop</button><button class="btn btn-secondary" onclick="openSponsorPreview()">Preview</button></div>
+          <div class="section-title">Uploaded sponsor videos</div><div class="audio-files" id="sponsorLibrary"><p class="muted">No sponsor videos uploaded yet.</p></div>
         </div>
       </div>
-    </div>
-  </div>
-  <!-- FOOTER with CLEAR OVERLAY BUTTON -->
-  <div class="footer">
-    <button class="footer-btn primary" onclick="openOverlay()">🖥️ Open Overlay</button>
-    <button class="footer-btn secondary" onclick="window.open('/stats','_blank')">↗ Stats</button>
-    <button class="footer-btn secondary" onclick="window.open('/api/status','_blank')">↗ Raw JSON</button>
-    <button class="footer-btn secondary" onclick="window.open('/dashboard','_self')">🔄 Refresh Dashboard</button>
-  </div>
+    </article>
+
+    <article class="card col-8">
+      <div class="card-head"><div><div class="card-title">Audio manager</div><h3>Sound library</h3><p class="muted">Upload sounds and assign them to live overlay events.</p></div><span class="card-badge" id="audioCountBadge">0 Sounds Loaded</span></div>
+      <div class="drop-zone" id="dropZone"><input type="file" id="audioFileInput" accept="audio/*"><div class="drop-icon">🎵</div><div class="drop-title">Drop audio files here</div><div class="drop-sub">MP3 • WAV • OGG • AAC • FLAC • WEBM</div></div>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:18px" onclick="document.getElementById('audioFileInput').click()">Browse Audio Files</button>
+      <div class="audio-layout"><div><div class="section-title">Uploaded sounds</div><div class="audio-files" id="audioLibrary"><p class="muted">No audio uploaded yet.</p></div></div><div><div class="section-title">Event assignments</div><table class="assign-table"><tbody id="assignTableBody"></tbody></table></div></div>
+    </article>
+
+    <aside class="col-4" style="display:grid;gap:20px;">
+      <details class="tool" open><summary>Live testing controls</summary><div class="tool-body"><p class="muted" style="margin-bottom:14px;">Use these during setup only. They trigger test overlay events.</p><div class="btn-row"><button class="btn btn-success" onclick="testOverlayAttack()">Attack</button><button class="btn btn-warning" onclick="testOverlayGift()">Gift</button><button class="btn btn-purple" onclick="testOverlayHeal()">Heal</button><button class="btn btn-danger" onclick="testOverlayKill()">Kill</button><button class="btn btn-primary" onclick="testStreak()">Streak</button></div></div></details>
+      <details class="tool"><summary>Maintenance</summary><div class="tool-body"><div class="btn-row"><button class="btn btn-secondary" onclick="clearPlayers()">Clear Players</button><button class="btn btn-secondary" onclick="toggleDevMode()">Toggle Dev Mode</button><button class="btn btn-secondary" onclick="window.open('/api/status','_blank')">Raw JSON</button></div></div></details>
+    </aside>
+  </section>
+
+  <div class="footer"><button class="footer-btn primary" onclick="openOverlay()">Open Overlay</button><button class="footer-btn" onclick="copyOverlayUrl()">Copy Overlay URL</button><button class="footer-btn" onclick="window.open('/stats','_blank')">Stats</button><button class="footer-btn" onclick="window.location.reload()">Refresh</button></div>
 </div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
@@ -706,454 +213,66 @@ let selectedSponsorFilename = '';
 const EVENTS = ['attack','gift','kill','respawn','heal','follow'];
 const EVENT_CLASSES = { attack:'event-attack', gift:'event-gift', kill:'event-kill', respawn:'event-respawn', heal:'event-heal', follow:'event-follow' };
 
-// Toast
-function toast(msg, isError = false) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.style.borderLeftColor = isError ? '#ff5f6d' : '#41d37d';
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 3000);
-}
+function text(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
+function toast(msg, isError = false) { const el = document.getElementById('toast'); el.textContent = msg; el.style.borderColor = isError ? 'rgba(232,59,95,.5)' : 'rgba(246,201,91,.35)'; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3000); }
+function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
+function formatBytes(bytes) { if (bytes < 1024) return bytes + ' B'; if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB'; return (bytes/(1024*1024)).toFixed(1) + ' MB'; }
+async function apiCall(endpoint, method = 'POST', body = null) { const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' }; if (body) opts.body = JSON.stringify(body); const res = await fetch(endpoint, opts); const json = await res.json().catch(() => ({})); if (!res.ok) toast(json.error || 'Request failed', true); return json; }
 
-// Socket events (matches server.js)
-socket.on('overlayCount', (data) => {
-  overlayCount = data.count || data;
-  const chip = document.getElementById('overlay-chip');
-  const label = document.getElementById('overlay-label');
-  if (overlayCount > 0) {
-    chip.className = 'status-chip online';
-    label.textContent = `Connected (${overlayCount} source${overlayCount > 1 ? 's' : ''})`;
-  } else {
-    chip.className = 'status-chip offline';
-    label.textContent = 'No overlay connected';
-  }
-});
-socket.on('gameState', (state) => {
-  const alive = Object.values(state || {}).filter(p => p.alive).length;
-  document.getElementById('player-count').textContent = alive;
-});
-socket.on('devModeChanged', (data) => {
-  document.getElementById('dev-mode-badge').textContent = data.enabled ? 'ON' : 'OFF';
-});
-socket.on('audioConfig', (cfg) => {
-  if (cfg) audioConfigData = cfg;
-  renderAssignTable();
-});
+socket.on('overlayCount', data => { overlayCount = data.count || data; const chip = document.getElementById('overlay-chip'); const label = document.getElementById('overlay-label'); if (overlayCount > 0) { chip.className = 'status-chip online'; label.textContent = `Connected (${overlayCount} source${overlayCount > 1 ? 's' : ''})`; text('overlay-label-copy', label.textContent); } else { chip.className = 'status-chip offline'; label.textContent = 'No overlay connected'; text('overlay-label-copy', 'No overlay connected'); }});
+socket.on('gameState', state => { const alive = Object.values(state || {}).filter(p => p.alive).length; text('player-count', alive); text('player-count-copy', alive); });
+socket.on('devModeChanged', data => { const value = data.enabled ? 'ON' : 'OFF'; text('dev-mode-badge', value); text('dev-mode-copy', data.enabled ? 'Testing' : 'Live'); });
+socket.on('audioConfig', cfg => { if (cfg) audioConfigData = cfg; renderAssignTable(); });
+socket.on('connect', () => { socket.emit('register', { type: 'dashboard' }); });
 
-// Status fetching – FIX: only set username on first load
 let initialLoad = true;
-
-function setTikTokStatus(state, username) {
-  const chip = document.getElementById('tiktok-chip');
-  const label = document.getElementById('tiktok-label');
-  if (state === 'connected') {
-    chip.className = 'status-chip online';
-    label.textContent = `Connected to @${username}`;
-  } else if (state === 'connecting') {
-    chip.className = 'status-chip idle';
-    label.textContent = 'Connecting...';
-  } else {
-    chip.className = 'status-chip offline';
-    label.textContent = 'Disconnected';
-  }
-}
-
-function setSubscriptionChip(data) {
-  const chip = document.getElementById('subscription-chip');
-  if (!chip) return;
-
-  subscriptionStatusData = data;
-  let label = 'Plan status';
-  let className = 'subscription-chip';
-
-  if (!data || !data.success) {
-    label = 'Plan unavailable';
-  } else if (data.actionRequired) {
-    label = data.status === 'none' ? 'Plan required' : `Plan ${data.status}`;
-    className += ' attention';
-  } else if (data.status === 'trial') {
-    const days = data.trial && Number.isFinite(data.trial.daysRemaining)
-      ? data.trial.daysRemaining
-      : null;
-    label = days == null ? 'Trial active' : `Trial ${days}d left`;
-    className += ' trial';
-  } else {
-    label = 'Plan active';
-    className += ' active';
-  }
-
-  chip.textContent = label;
-  chip.className = className;
-  chip.title = data && data.actionRequired ? 'Open upgrade page' : 'Open account profile';
-}
-
-async function fetchSubscriptionStatus() {
-  try {
-    const res = await fetch('/api/subscription/status', { credentials: 'same-origin' });
-    if (!res.ok) {
-      setSubscriptionChip(null);
-      return;
-    }
-    setSubscriptionChip(await res.json());
-  } catch (e) {
-    console.warn(e);
-    setSubscriptionChip(null);
-  }
-}
-
-function openBillingStatus() {
-  if (subscriptionStatusData && subscriptionStatusData.actionRequired) {
-    window.location.href = subscriptionStatusData.paywallUrl || '/paywall';
-    return;
-  }
-  window.location.href = '/profile';
-}
-
-async function fetchStatus() {
-  try {
-    const res = await fetch('/api/status', { credentials: 'same-origin' });
-    const data = await res.json();
-    currentRoomId = data.roomId || null;
-    currentOverlayUrl = data.overlayUrl || null;
-
-    // Only update the username input field once, on first page load
-    if (initialLoad) {
-      document.getElementById('username').value = data.username || '';
-      initialLoad = false;
-    }
-
-    if (data.background?.filename) {
-      document.getElementById('bgStatus').textContent = `Background set: ${data.background.filename}`;
-    } else {
-      document.getElementById('bgStatus').textContent = 'No background set';
-    }
-
-    setTikTokStatus(data.connected ? 'connected' : 'disconnected', data.username);
-    document.getElementById('dev-mode-badge').textContent = data.devTestMode ? 'ON' : 'OFF';
-
-    if (data.overlayCount !== undefined) {
-      socket.emit('register', { type: 'dashboard' });
-    }
-  } catch (e) {
-    console.warn(e);
-  }
-}
-
-fetchStatus();
-fetchSubscriptionStatus();
-setInterval(fetchStatus, 10000);
-setInterval(fetchSubscriptionStatus, 60000);
-
-function openOverlay() {
-  window.open(currentOverlayUrl || '/overlay', '_blank');
-}
+function setTikTokStatus(state, username) { const chip = document.getElementById('tiktok-chip'); const label = document.getElementById('tiktok-label'); if (state === 'connected') { chip.className = 'status-chip online'; label.textContent = `Connected to @${username}`; } else if (state === 'connecting') { chip.className = 'status-chip idle'; label.textContent = 'Connecting...'; } else { chip.className = 'status-chip offline'; label.textContent = 'Disconnected'; } text('tiktok-label-copy', label.textContent); }
+function setSubscriptionChip(data) { const chip = document.getElementById('subscription-chip'); if (!chip) return; subscriptionStatusData = data; let label = 'Plan status'; let className = 'subscription-chip'; if (!data || !data.success) label = 'Plan unavailable'; else if (data.actionRequired) { label = data.status === 'none' ? 'Plan required' : `Plan ${data.status}`; className += ' attention'; } else if (data.status === 'trial') { const days = data.trial && Number.isFinite(data.trial.daysRemaining) ? data.trial.daysRemaining : null; label = days == null ? 'Trial active' : `Trial ${days}d left`; className += ' trial'; } else { label = 'Plan active'; className += ' active'; } chip.textContent = label; chip.className = className; }
+async function fetchSubscriptionStatus() { try { const res = await fetch('/api/subscription/status', { credentials: 'same-origin' }); if (!res.ok) return setSubscriptionChip(null); setSubscriptionChip(await res.json()); } catch (_) { setSubscriptionChip(null); } }
+function openBillingStatus() { if (subscriptionStatusData && subscriptionStatusData.actionRequired) window.location.href = subscriptionStatusData.paywallUrl || '/paywall'; else window.location.href = '/profile'; }
+async function fetchStatus() { try { const res = await fetch('/api/status', { credentials: 'same-origin' }); const data = await res.json(); currentRoomId = data.roomId || null; currentOverlayUrl = data.overlayUrl || null; if (initialLoad) { document.getElementById('username').value = data.username || ''; initialLoad = false; } text('bgStatus', data.background?.filename ? `Background set: ${data.background.filename}` : 'No background set'); setTikTokStatus(data.connected ? 'connected' : 'disconnected', data.username); const devValue = data.devTestMode ? 'ON' : 'OFF'; text('dev-mode-badge', devValue); text('dev-mode-copy', data.devTestMode ? 'Testing' : 'Live'); if (data.overlayCount !== undefined) socket.emit('register', { type: 'dashboard' }); } catch (e) { console.warn(e); } }
+function openOverlay() { window.open(currentOverlayUrl || '/overlay', '_blank'); }
+function copyOverlayUrl() { const url = currentOverlayUrl || `${window.location.origin}/overlay`; navigator.clipboard?.writeText(url).then(() => toast('Overlay URL copied')).catch(() => toast('Copy failed', true)); }
 
 const usernameInput = document.getElementById('username');
-if (usernameInput) {
-  usernameInput.addEventListener('input', (event) => {
-    const input = event.target;
-    const start = input.selectionStart;
-    const end = input.selectionEnd;
-    const normalized = input.value.toLowerCase();
-    if (normalized !== input.value) {
-      input.value = normalized;
-      if (typeof start === 'number' && typeof end === 'number') {
-        input.setSelectionRange(start, end);
-      }
-    }
-  });
-}
+if (usernameInput) usernameInput.addEventListener('input', event => { const input = event.target; const start = input.selectionStart; const end = input.selectionEnd; const normalized = input.value.toLowerCase(); if (normalized !== input.value) { input.value = normalized; if (typeof start === 'number' && typeof end === 'number') input.setSelectionRange(start, end); } });
+function connect() { let username = document.getElementById('username').value.trim().replace(/^@/, '').toLowerCase(); if (!username) return toast('Enter a username', true); setTikTokStatus('connecting', username); fetch('/api/connect', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body:JSON.stringify({ username }) }).then(r=>r.json()).then(d=>{ if(d.success){ setTikTokStatus('connected', username); toast(`Connected to @${username}`); } else { setTikTokStatus('disconnected'); toast(d.error || 'Connection failed', true); }}).catch(()=>{ setTikTokStatus('disconnected'); toast('Connection failed', true); }); }
+function resetTikTok(){ apiCall('/api/reset').then(()=>{ setTikTokStatus('disconnected'); toast('Disconnected'); }); }
+function reloadOverlay(){ apiCall('/api/overlay/reload'); toast('Overlay reload signal sent'); }
+function clearPlayers(){ if(confirm('Clear all players?')) apiCall('/api/players/clear').then(()=>toast('Players cleared')); }
+function toggleDevMode(){ fetchStatus().then(()=>apiCall('/api/dev/test-mode','POST',{ enabled: document.getElementById('dev-mode-badge').textContent !== 'ON' })); }
+function uploadBackground(){ const file = document.getElementById('bgUpload').files[0]; if(!file) return toast('Choose an image first', true); const fd = new FormData(); fd.append('background', file); fetch('/api/background/upload', { method:'POST', credentials:'same-origin', body:fd }).then(r=>r.json()).then(d=>{ if(d.success){ text('bgStatus', `Background set: ${file.name}`); toast('Background uploaded'); } else toast(d.error || 'Upload failed', true); }); }
+function clearBackground(){ apiCall('/api/background/clear').then(()=>{ text('bgStatus','No background set'); toast('Background cleared'); }); }
+function setLaserColor(color){ apiCall('/api/dev/laser-color','POST',{ color }); }
+function setShotStyle(type){ apiCall('/api/dev/overlay-settings','POST',{ shotType:type }); }
+function saveLaserStyle(){ setShotStyle(document.getElementById('laserStyleSelect').value); setLaserColor(document.getElementById('laserColorPicker').value); toast('FX style saved'); }
+function runOverlayTest(action){ apiCall(`/api/overlay/test/${action}`); toast(`${action} test triggered`); }
+function testOverlayAttack(){ runOverlayTest('attack'); } function testOverlayGift(){ runOverlayTest('gift'); } function testOverlayHeal(){ runOverlayTest('heal'); } function testOverlayKill(){ runOverlayTest('kill'); } function testStreak(){ apiCall('/api/overlay/test/streak'); toast('Streak test triggered'); }
 
-// API calls
-async function apiCall(endpoint, method = 'POST', body = null) {
-  const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(endpoint, opts);
-  const json = await res.json();
-  if (!res.ok) toast(json.error || 'Request failed', true);
-  return json;
-}
-function connect() {
-  let username = document.getElementById('username').value.trim().replace(/^@/, '').toLowerCase();
-  if (!username) { toast('Enter a username', true); return; }
-  setTikTokStatus('connecting', username);
-  fetch('/api/connect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify({ username }) })
-    .then(r => r.json())
-    .then(d => {
-      if (d.success) { setTikTokStatus('connected', username); toast(`Connected to @${username}`); }
-      else { setTikTokStatus('disconnected'); toast(d.error || 'Connection failed', true); }
-    })
-    .catch(() => { setTikTokStatus('disconnected'); toast('Connection failed', true); });
-}
-function resetTikTok() { apiCall('/api/reset').then(() => { setTikTokStatus('disconnected'); toast('Disconnected'); }); }
-function reloadOverlay() { apiCall('/api/overlay/reload'); toast('Overlay reload signal sent'); }
-function clearPlayers() { if(confirm('Clear all players?')) apiCall('/api/players/clear').then(() => toast('Players cleared')); }
-function toggleDevMode() { fetchStatus().then(() => { apiCall('/api/dev/test-mode', 'POST', { enabled: document.getElementById('dev-mode-badge').textContent !== 'ON' }); }); }
-function uploadBackground() {
-  const file = document.getElementById('bgUpload').files[0];
-  if (!file) { toast('Choose an image first', true); return; }
-  const fd = new FormData(); fd.append('background', file);
-  fetch('/api/background/upload', { method: 'POST', credentials: 'same-origin', body: fd })
-    .then(r => r.json())
-    .then(d => { if(d.success) { document.getElementById('bgStatus').textContent = `Background set: ${file.name}`; toast('Background uploaded'); } });
-}
-function clearBackground() { apiCall('/api/background/clear').then(() => { document.getElementById('bgStatus').textContent = 'No background set'; toast('Background cleared'); }); }
-function setLaserColor(color) { apiCall('/api/dev/laser-color', 'POST', { color }); }
-function setShotStyle(type) { apiCall('/api/dev/overlay-settings', 'POST', { shotType: type }); }
-function saveLaserStyle() {
-  const type = document.getElementById('laserStyleSelect').value;
-  const color = document.getElementById('laserColorPicker').value;
-  setShotStyle(type);
-  setLaserColor(color);
-  toast('Laser style saved');
-}
-// Test actions
-function runOverlayTest(action) { apiCall(`/api/overlay/test/${action}`); toast(`${action} test triggered`); }
-function testOverlayAttack() { runOverlayTest('attack'); }
-function testOverlayGift() { runOverlayTest('gift'); }
-function testOverlayHeal() { runOverlayTest('heal'); }
-function testOverlayKill() { runOverlayTest('kill'); }
-function testStreak() { apiCall('/api/overlay/test/streak'); toast('Streak test triggered'); }
+function sponsorInputValue(id, fallback = '') { const el = document.getElementById(id); return (el && el.value.trim()) || fallback; }
+function currentSponsorPayload(filename = selectedSponsorFilename) { const selected = sponsorLibraryData.find(file => file.filename === filename); return { filename: filename || null, partner: sponsorInputValue('sponsorPartnerInput', selected?.partner || 'IntoTheBattle Partner'), title: sponsorInputValue('sponsorTitleInput', selected?.title || 'Sponsor Spotlight'), subtitle: sponsorInputValue('sponsorSubtitleInput', selected?.subtitle || 'Thanks for powering tonight\'s arena.'), durationMs: Number(document.getElementById('sponsorDurationInput')?.value || 15000), muted: document.getElementById('sponsorMutedInput')?.value !== 'false', fit: document.getElementById('sponsorFitInput')?.value || 'cover' }; }
+function setSponsorInputs(file){ if(!file) return; selectedSponsorFilename = file.filename; document.getElementById('sponsorPartnerInput').value = file.partner || 'Sponsor'; document.getElementById('sponsorTitleInput').value = file.title || file.originalName || 'Sponsor Spotlight'; document.getElementById('sponsorSubtitleInput').value = file.subtitle || 'We will be right back to the battle.'; }
+function renderSponsorLibrary(){ const container = document.getElementById('sponsorLibrary'); const badge = document.getElementById('sponsorCountBadge'); if(!container) return; container.innerHTML = ''; if(badge) badge.textContent = `${sponsorLibraryData.length} Video${sponsorLibraryData.length !== 1 ? 's' : ''}`; if(!sponsorLibraryData.length){ container.innerHTML='<p class="muted">No sponsor videos uploaded yet.</p>'; selectedSponsorFilename=''; return; } if(!selectedSponsorFilename || !sponsorLibraryData.some(f=>f.filename===selectedSponsorFilename)) setSponsorInputs(sponsorLibraryData[0]); sponsorLibraryData.forEach(file=>{ const row=document.createElement('div'); row.className='audio-row'; if(file.filename===selectedSponsorFilename) row.style.borderColor='rgba(246,201,91,.55)'; row.innerHTML=`<div>▶</div><div class="audio-name">${escapeHtml(file.title || file.originalName)}</div><div class="audio-size">${formatBytes(file.size || 0)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;"></div>`; const actions=row.querySelector('div:last-child'); const selectBtn=document.createElement('button'); selectBtn.className='btn btn-secondary'; selectBtn.textContent='Select'; selectBtn.onclick=()=>{ setSponsorInputs(file); renderSponsorLibrary(); }; const playBtn=document.createElement('button'); playBtn.className='btn btn-success'; playBtn.textContent='Play'; playBtn.onclick=()=>{ setSponsorInputs(file); playSponsorScene(file.filename); }; const deleteBtn=document.createElement('button'); deleteBtn.className='btn btn-danger'; deleteBtn.textContent='Delete'; deleteBtn.onclick=()=>deleteSponsorVideo(file.filename); actions.append(selectBtn,playBtn,deleteBtn); container.appendChild(row); }); }
+function uploadSponsorVideo(){ const input=document.getElementById('sponsorFileInput'); const file=input && input.files[0]; if(!file) return toast('Choose a sponsor video first', true); const fd=new FormData(); fd.append('sponsor', file); fd.append('partner', sponsorInputValue('sponsorPartnerInput','Sponsor')); fd.append('title', sponsorInputValue('sponsorTitleInput', file.name.replace(/\.[^.]+$/,''))); fd.append('subtitle', sponsorInputValue('sponsorSubtitleInput','We will be right back to the battle.')); fetch('/api/sponsor/upload',{method:'POST',credentials:'same-origin',body:fd}).then(r=>r.json()).then(d=>{ if(!d.success) return toast(d.error || 'Sponsor upload failed', true); sponsorLibraryData.push(d.file); setSponsorInputs(d.file); renderSponsorLibrary(); input.value=''; toast('Sponsor video uploaded'); }).catch(()=>toast('Sponsor upload failed', true)); }
+function playSponsorScene(filename = selectedSponsorFilename){ apiCall('/api/sponsor/play','POST',currentSponsorPayload(filename)).then(d=>{ if(d.success) toast('Sponsor screen sent to overlay'); }); }
+function stopSponsorScene(){ apiCall('/api/sponsor/stop','POST').then(d=>{ if(d.success) toast('Sponsor screen stopped'); }); }
+function deleteSponsorVideo(filename){ if(!confirm('Delete this sponsor video?')) return; fetch('/api/sponsor/delete/'+encodeURIComponent(filename),{method:'DELETE',credentials:'same-origin'}).then(r=>r.json()).then(d=>{ if(!d.success) return toast(d.error || 'Delete failed', true); sponsorLibraryData=sponsorLibraryData.filter(file=>file.filename!==filename); if(selectedSponsorFilename===filename) selectedSponsorFilename=''; renderSponsorLibrary(); toast('Sponsor video deleted'); }).catch(()=>toast('Delete failed', true)); }
+function openSponsorPreview(){ const payload=currentSponsorPayload(); const overlayUrl=new URL(currentOverlayUrl || '/overlay', window.location.origin); overlayUrl.searchParams.set('sponsor_preview','1'); overlayUrl.searchParams.set('sponsor_title',payload.title); overlayUrl.searchParams.set('sponsor_partner',payload.partner); overlayUrl.searchParams.set('sponsor_subtitle',payload.subtitle); overlayUrl.searchParams.set('sponsor_duration',payload.durationMs); overlayUrl.searchParams.set('sponsor_muted',payload.muted ? '1':'0'); overlayUrl.searchParams.set('sponsor_fit',payload.fit); if(payload.filename) overlayUrl.searchParams.set('sponsor_video',payload.filename); window.open(overlayUrl.toString(), '_blank'); }
+function loadSponsors(){ fetch('/api/sponsors',{credentials:'same-origin'}).then(r=>r.json()).then(d=>{ if(d.success){ sponsorLibraryData=d.library || []; renderSponsorLibrary(); }}).catch(()=>{}); }
 
-// Sponsor Screen
-function sponsorInputValue(id, fallback = '') {
-  const el = document.getElementById(id);
-  return (el && el.value.trim()) || fallback;
-}
-function currentSponsorPayload(filename = selectedSponsorFilename) {
-  const selected = sponsorLibraryData.find(file => file.filename === filename);
-  return {
-    filename: filename || null,
-    partner: sponsorInputValue('sponsorPartnerInput', selected?.partner || 'IntoTheBattle Partner'),
-    title: sponsorInputValue('sponsorTitleInput', selected?.title || 'Sponsor Spotlight'),
-    subtitle: sponsorInputValue('sponsorSubtitleInput', selected?.subtitle || 'Thanks for powering tonight\'s arena.'),
-    durationMs: Number(document.getElementById('sponsorDurationInput')?.value || 15000),
-    muted: document.getElementById('sponsorMutedInput')?.value !== 'false',
-    fit: document.getElementById('sponsorFitInput')?.value || 'cover',
-  };
-}
-function setSponsorInputs(file) {
-  if (!file) return;
-  selectedSponsorFilename = file.filename;
-  document.getElementById('sponsorPartnerInput').value = file.partner || 'Sponsor';
-  document.getElementById('sponsorTitleInput').value = file.title || file.originalName || 'Sponsor Spotlight';
-  document.getElementById('sponsorSubtitleInput').value = file.subtitle || 'We will be right back to the battle.';
-}
-function renderSponsorLibrary() {
-  const container = document.getElementById('sponsorLibrary');
-  const badge = document.getElementById('sponsorCountBadge');
-  if (!container) return;
-  container.innerHTML = '';
-  if (badge) badge.textContent = `${sponsorLibraryData.length} Video${sponsorLibraryData.length !== 1 ? 's' : ''}`;
-  if (!sponsorLibraryData.length) {
-    container.innerHTML = '<p style="color:var(--text-soft);">No sponsor videos uploaded yet.</p>';
-    selectedSponsorFilename = '';
-    return;
-  }
-  if (!selectedSponsorFilename || !sponsorLibraryData.some(file => file.filename === selectedSponsorFilename)) {
-    setSponsorInputs(sponsorLibraryData[0]);
-  }
-  sponsorLibraryData.forEach(file => {
-    const row = document.createElement('div');
-    row.className = 'audio-row';
-    if (file.filename === selectedSponsorFilename) row.style.borderColor = 'rgba(65,211,125,.55)';
-    row.innerHTML = `
-      <div>▶</div>
-      <div class="audio-name">${escapeHtml(file.title || file.originalName)}</div>
-      <div class="audio-size">${formatBytes(file.size || 0)}</div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;"></div>
-    `;
-    const actions = row.querySelector('div:last-child');
-    const selectBtn = document.createElement('button');
-    selectBtn.className = 'btn btn-secondary';
-    selectBtn.textContent = 'Select';
-    selectBtn.addEventListener('click', () => { setSponsorInputs(file); renderSponsorLibrary(); });
-    const playBtn = document.createElement('button');
-    playBtn.className = 'btn btn-success';
-    playBtn.textContent = 'Play';
-    playBtn.addEventListener('click', () => { setSponsorInputs(file); playSponsorScene(file.filename); });
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'btn btn-danger';
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.addEventListener('click', () => deleteSponsorVideo(file.filename));
-    actions.append(selectBtn, playBtn, deleteBtn);
-    container.appendChild(row);
-  });
-}
-function uploadSponsorVideo() {
-  const input = document.getElementById('sponsorFileInput');
-  const file = input && input.files[0];
-  if (!file) { toast('Choose a sponsor video first', true); return; }
-  const fd = new FormData();
-  fd.append('sponsor', file);
-  fd.append('partner', sponsorInputValue('sponsorPartnerInput', 'Sponsor'));
-  fd.append('title', sponsorInputValue('sponsorTitleInput', file.name.replace(/\.[^.]+$/, '')));
-  fd.append('subtitle', sponsorInputValue('sponsorSubtitleInput', 'We will be right back to the battle.'));
-  fetch('/api/sponsor/upload', { method: 'POST', credentials: 'same-origin', body: fd })
-    .then(r => r.json())
-    .then(d => {
-      if (!d.success) { toast(d.error || 'Sponsor upload failed', true); return; }
-      sponsorLibraryData.push(d.file);
-      setSponsorInputs(d.file);
-      renderSponsorLibrary();
-      input.value = '';
-      toast('Sponsor video uploaded');
-    })
-    .catch(() => toast('Sponsor upload failed', true));
-}
-function playSponsorScene(filename = selectedSponsorFilename) {
-  apiCall('/api/sponsor/play', 'POST', currentSponsorPayload(filename))
-    .then(d => { if (d.success) toast('Sponsor screen sent to overlay'); });
-}
-function stopSponsorScene() {
-  apiCall('/api/sponsor/stop', 'POST').then(d => { if (d.success) toast('Sponsor screen stopped'); });
-}
-function deleteSponsorVideo(filename) {
-  if (!confirm('Delete this sponsor video?')) return;
-  fetch('/api/sponsor/delete/' + encodeURIComponent(filename), { method: 'DELETE', credentials: 'same-origin' })
-    .then(r => r.json())
-    .then(d => {
-      if (!d.success) { toast(d.error || 'Delete failed', true); return; }
-      sponsorLibraryData = sponsorLibraryData.filter(file => file.filename !== filename);
-      if (selectedSponsorFilename === filename) selectedSponsorFilename = '';
-      renderSponsorLibrary();
-      toast('Sponsor video deleted');
-    })
-    .catch(() => toast('Delete failed', true));
-}
-function openSponsorPreview() {
-  const payload = currentSponsorPayload();
-  const overlayUrl = new URL(currentOverlayUrl || '/overlay', window.location.origin);
-  overlayUrl.searchParams.set('sponsor_preview', '1');
-  overlayUrl.searchParams.set('sponsor_title', payload.title);
-  overlayUrl.searchParams.set('sponsor_partner', payload.partner);
-  overlayUrl.searchParams.set('sponsor_subtitle', payload.subtitle);
-  overlayUrl.searchParams.set('sponsor_duration', payload.durationMs);
-  overlayUrl.searchParams.set('sponsor_muted', payload.muted ? '1' : '0');
-  overlayUrl.searchParams.set('sponsor_fit', payload.fit);
-  if (payload.filename) overlayUrl.searchParams.set('sponsor_video', payload.filename);
-  window.open(overlayUrl.toString(), '_blank');
-}
-function loadSponsors() {
-  fetch('/api/sponsors', { credentials: 'same-origin' })
-    .then(r => r.json())
-    .then(d => {
-      if (!d.success) return;
-      sponsorLibraryData = d.library || [];
-      renderSponsorLibrary();
-    })
-    .catch(() => {});
-}
-
-// Audio Manager
-function formatBytes(bytes) {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
-  return (bytes/(1024*1024)).toFixed(1) + ' MB';
-}
 let previewAudio = null;
-function playPreview(filename, label) {
-  if (previewAudio) { previewAudio.pause(); previewAudio = null; }
-  const a = new Audio('/audio/' + filename);
-  a.currentTime = 0;
-  a.play().catch(() => {});
-  previewAudio = a;
-  a.onended = () => { previewAudio = null; };
-  toast('Playing: ' + label);
-}
-function renderAudioLibrary() {
-  const container = document.getElementById('audioLibrary');
-  container.innerHTML = '';
-  document.getElementById('audioCountBadge').textContent = `${audioLibraryData.length} Sound${audioLibraryData.length !== 1 ? 's' : ''}`;
-  if (!audioLibraryData.length) {
-    container.innerHTML = '<p style="color:var(--text-soft);">No audio uploaded yet.</p>';
-    return;
-  }
-  audioLibraryData.forEach(file => {
-    const row = document.createElement('div');
-    row.className = 'audio-row';
-    row.innerHTML = `
-      <div>🎵</div>
-      <div class="audio-name">${escapeHtml(file.originalName)}</div>
-      <div class="audio-size">${formatBytes(file.size)}</div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-secondary" onclick="playPreview('${file.filename}','${escapeHtml(file.originalName)}')">▶ Play</button>
-        <a class="btn btn-secondary" href="/audio/${file.filename}" download style="text-decoration:none">⬇</a>
-      </div>
-    `;
-    container.appendChild(row);
-  });
-}
-function renderAssignTable() {
-  const tbody = document.getElementById('assignTableBody');
-  tbody.innerHTML = '';
-  EVENTS.forEach(event => {
-    const currentFile = audioConfigData[event] || '';
-    const tr = document.createElement('tr');
-    let options = `<option value="">— None —</option>`;
-    audioLibraryData.forEach(f => {
-      options += `<option value="${f.filename}" ${currentFile === f.filename ? 'selected' : ''}>${escapeHtml(f.originalName)}</option>`;
-    });
-    tr.innerHTML = `
-      <td><span class="event-pill ${EVENT_CLASSES[event]}">${event}</span></td>
-      <td style="padding-left:14px">
-        <select data-event="${event}" onchange="assignAudio('${event}', this.value)">
-          ${options}
-        </select>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-function assignAudio(event, filename) {
-  fetch('/api/audio/assign', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ event, filename: filename || null })
-  })
-    .then(r => r.json())
-    .then(d => {
-      if (d.success) toast(`Assigned ${event} → ${filename || 'none'}`);
-      else toast('Assignment failed', true);
-    });
-}
-function uploadAudioFile(file) {
-  const fd = new FormData();
-  fd.append('audio', file);
-  fetch('/api/audio/upload', { method: 'POST', body: fd })
-    .then(r => r.json())
-    .then(d => {
-      if (d.success) {
-        audioLibraryData.push(d.file);
-        renderAudioLibrary();
-        renderAssignTable();
-        toast('Audio uploaded');
-      } else toast('Upload failed', true);
-    });
-}
-function escapeHtml(str) {
-  return String(str).replace(/[&<>]/g, function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m; });
-}
-// Drag & Drop
-const dropZone = document.getElementById('dropZone');
-const audioFileInput = document.getElementById('audioFileInput');
-audioFileInput.addEventListener('change', () => { if(audioFileInput.files[0]) uploadAudioFile(audioFileInput.files[0]); });
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
-dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); const file = e.dataTransfer.files[0]; if(file) uploadAudioFile(file); });
-// Initial load audio library
-fetch('/api/audio').then(r => r.json()).then(d => {
-  if (d.success) {
-    audioLibraryData = d.library || [];
-    audioConfigData = d.config || {};
-    renderAudioLibrary();
-    renderAssignTable();
-  }
-});
-loadSponsors();
-// Register as dashboard client
-socket.on('connect', () => { socket.emit('register', { type: 'dashboard' }); });
+function playPreview(filename,label){ if(previewAudio){ previewAudio.pause(); previewAudio=null; } const a=new Audio('/audio/'+filename); a.currentTime=0; a.play().catch(()=>{}); previewAudio=a; a.onended=()=>{ previewAudio=null; }; toast('Playing: '+label); }
+function renderAudioLibrary(){ const container=document.getElementById('audioLibrary'); container.innerHTML=''; document.getElementById('audioCountBadge').textContent=`${audioLibraryData.length} Sound${audioLibraryData.length !== 1 ? 's' : ''}`; if(!audioLibraryData.length){ container.innerHTML='<p class="muted">No audio uploaded yet.</p>'; return; } audioLibraryData.forEach(file=>{ const row=document.createElement('div'); row.className='audio-row'; row.innerHTML=`<div>🎵</div><div class="audio-name">${escapeHtml(file.originalName)}</div><div class="audio-size">${formatBytes(file.size)}</div><div style="display:flex;gap:8px;"><button class="btn btn-secondary" onclick="playPreview('${file.filename}','${escapeHtml(file.originalName)}')">Play</button><a class="btn btn-secondary" href="/audio/${file.filename}" download>⬇</a></div>`; container.appendChild(row); }); }
+function renderAssignTable(){ const tbody=document.getElementById('assignTableBody'); tbody.innerHTML=''; EVENTS.forEach(event=>{ const currentFile=audioConfigData[event] || ''; const tr=document.createElement('tr'); let options='<option value="">— None —</option>'; audioLibraryData.forEach(f=>{ options += `<option value="${f.filename}" ${currentFile===f.filename?'selected':''}>${escapeHtml(f.originalName)}</option>`; }); tr.innerHTML=`<td><span class="event-pill ${EVENT_CLASSES[event]}">${event}</span></td><td style="padding-left:14px"><select data-event="${event}" onchange="assignAudio('${event}', this.value)">${options}</select></td>`; tbody.appendChild(tr); }); }
+function assignAudio(event, filename){ fetch('/api/audio/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,filename:filename || null})}).then(r=>r.json()).then(d=>{ if(d.success) toast(`Assigned ${event} → ${filename || 'none'}`); else toast('Assignment failed', true); }); }
+function uploadAudioFile(file){ const fd=new FormData(); fd.append('audio',file); fetch('/api/audio/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData.push(d.file); renderAudioLibrary(); renderAssignTable(); toast('Audio uploaded'); } else toast('Upload failed', true); }); }
+const dropZone=document.getElementById('dropZone'); const audioFileInput=document.getElementById('audioFileInput');
+audioFileInput.addEventListener('change',()=>{ if(audioFileInput.files[0]) uploadAudioFile(audioFileInput.files[0]); });
+dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e=>{ e.preventDefault(); dropZone.classList.remove('dragover'); const file=e.dataTransfer.files[0]; if(file) uploadAudioFile(file); });
+fetch('/api/audio').then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData=d.library || []; audioConfigData=d.config || {}; renderAudioLibrary(); renderAssignTable(); }}).catch(()=>{});
+fetchStatus(); fetchSubscriptionStatus(); loadSponsors(); setInterval(fetchStatus,10000); setInterval(fetchSubscriptionStatus,60000);
 </script>
 </body>
 </html>
-
