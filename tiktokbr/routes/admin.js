@@ -1,10 +1,15 @@
 import express from 'express';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
+import multer from 'multer';
 import db from '../db/db.js';
 
 const router = express.Router();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const COOKIE_NAME = 'admin_session_token';
 const COOKIE_OPTIONS = {
   httpOnly: true,
@@ -12,10 +17,64 @@ const COOKIE_OPTIONS = {
   secure: process.env.NODE_ENV === 'production',
 };
 const MAX_BCRYPT_ROUNDS = Number(process.env.MAX_BCRYPT_ROUNDS || 14);
+const SPONSOR_MEDIA_EXTS = new Set(['.mp4', '.webm', '.m4v', '.mov']);
+const SPONSOR_MEDIA_MIMES = new Set(['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v']);
+const PLATFORM_SPONSOR_DIR = path.join(process.env.DISK_PATH || path.resolve(__dirname, '..', '..'), 'platform-sponsors');
+
+function ensureDir(dir) {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+}
+
+function isSafePath(baseDir, targetPath) {
+  const relative = path.relative(path.resolve(baseDir), path.resolve(targetPath));
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
 
 function escapeHtml(value) {
-  return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
+
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function sanitizeSponsorText(value, fallback = '', maxLength = 140) {
+  const cleaned = String(value || '').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim();
+  return (cleaned || fallback).slice(0, maxLength);
+}
+
+function parseDurationMs(value) {
+  const duration = Number(value);
+  return Number.isFinite(duration) ? Math.max(5000, Math.min(120000, Math.round(duration))) : 15000;
+}
+
+function parseWeight(value) {
+  const weight = Number(value);
+  return Number.isFinite(weight) ? Math.max(1, Math.min(20, Math.round(weight))) : 1;
+}
+
+const sponsorUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      ensureDir(PLATFORM_SPONSOR_DIR);
+      cb(null, PLATFORM_SPONSOR_DIR);
+    },
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname || '').toLowerCase();
+      const safeExt = SPONSOR_MEDIA_EXTS.has(ext) ? ext : '.mp4';
+      cb(null, `platform-sponsor-${Date.now()}-${Math.random().toString(36).slice(2)}${safeExt}`);
+    },
+  }),
+  limits: { fileSize: 250 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const ok = SPONSOR_MEDIA_EXTS.has(ext) && SPONSOR_MEDIA_MIMES.has(file.mimetype);
+    cb(ok ? null : new Error('Upload MP4, WebM, M4V, or MOV video.'), ok);
+  },
+});
 
 function getCookieOptions() {
   return { ...COOKIE_OPTIONS };
@@ -120,11 +179,13 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     table button { padding: 8px 12px; border-radius: 8px; background: #4b90ff; color: #fff; border: none; cursor: pointer; }
     table button:hover { background: #3672d9; }
     a { color: #8fb8ff; text-decoration: none; }
+    .admin-nav { display:flex; gap:12px; flex-wrap:wrap; margin: 0 0 18px; }
   </style>
 </head>
 <body>
   <div class="wrapper">
     <h1>Admin Panel</h1>
+    <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Sponsor Platform</a><a href="/admin/logout">Logout</a></div>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${createdCode ? `<div class="notice success">New access code created: <strong>${escapeHtml(createdCode)}</strong> <button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(createdCode)}')">Copy</button></div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
@@ -353,6 +414,222 @@ router.post('/create-promo', requireAdminAuth, (req, res) => {
   }
 
   res.redirect(`/admin?message=${encodeURIComponent(`Promo ${code} created`)}`);
+});
+
+function parseStatsMode(value) {
+  return ['endcap', 'delayed', 'hidden', 'always'].includes(value) ? value : 'endcap';
+}
+
+function parseFit(value) {
+  return value === 'contain' ? 'contain' : 'cover';
+}
+
+function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {}) {
+  const rows = creatives.map((creative) => {
+    const isActive = creative.status === 'active';
+    const statsOptions = ['endcap', 'delayed', 'hidden', 'always']
+      .map(mode => `<option value="${mode}" ${creative.stats_mode === mode ? 'selected' : ''}>${escapeHtml(mode)}</option>`)
+      .join('');
+    const fitOptions = ['cover', 'contain']
+      .map(fit => `<option value="${fit}" ${creative.fit === fit ? 'selected' : ''}>${escapeHtml(fit)}</option>`)
+      .join('');
+
+    return `<tr>
+      <td>
+        <strong>${escapeHtml(creative.partner || 'Partner')}</strong><br />
+        <span>${escapeHtml(creative.title || 'Sponsor Spotlight')}</span><br />
+        <small>${escapeHtml(creative.filename)}</small>
+      </td>
+      <td>${escapeHtml(creative.status || 'active')}</td>
+      <td>
+        <form method="POST" action="/admin/sponsors/${creative.id}/update">
+          <label>Partner</label>
+          <input name="partner" value="${escapeAttr(creative.partner || '')}" />
+          <label>Headline</label>
+          <input name="title" value="${escapeAttr(creative.title || '')}" />
+          <label>Subtitle</label>
+          <input name="subtitle" value="${escapeAttr(creative.subtitle || '')}" />
+          <div class="inline-grid">
+            <span><label>Duration</label><input name="duration_ms" type="number" min="5000" max="120000" step="1000" value="${escapeAttr(creative.duration_ms || 15000)}" /></span>
+            <span><label>Weight</label><input name="weight" type="number" min="1" max="20" value="${escapeAttr(creative.weight || 1)}" /></span>
+            <span><label>Stats</label><select name="stats_mode">${statsOptions}</select></span>
+            <span><label>Fit</label><select name="fit">${fitOptions}</select></span>
+          </div>
+          <label><input name="muted" type="checkbox" value="1" ${creative.muted ? 'checked' : ''} /> Muted autoplay</label>
+          <button type="submit">Save Creative</button>
+        </form>
+      </td>
+      <td>
+        <form method="POST" action="/admin/sponsors/${creative.id}/toggle">
+          <button type="submit">${isActive ? 'Pause' : 'Activate'}</button>
+        </form>
+        <form method="POST" action="/admin/sponsors/${creative.id}/delete" onsubmit="return confirm('Delete this creative?')" style="margin-top:10px;">
+          <button type="submit" class="danger">Delete</button>
+        </form>
+      </td>
+    </tr>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sponsor Platform - Admin</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #07101f; color: #ebf4ff; margin: 0; padding: 24px; }
+    .wrapper { max-width: 1180px; margin: 0 auto; }
+    h1 { margin-bottom: 10px; }
+    .admin-nav { display:flex; gap:12px; flex-wrap:wrap; margin: 0 0 18px; }
+    a { color:#8fb8ff; text-decoration:none; }
+    .notice { margin-bottom: 16px; padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.06); }
+    .error { color: #ffb6b6; }
+    .success { color: #c6ffc3; }
+    .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(130,170,255,0.16); border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+    label { display: block; margin: 10px 0 6px; color: #99b4ff; font-size: 14px; }
+    input, select { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: #fff; }
+    input[type="checkbox"] { width:auto; margin-right:8px; }
+    button { margin-top: 12px; width: 100%; padding: 12px; border: none; border-radius: 10px; background: #4b90ff; color: #fff; cursor: pointer; font-weight: 700; }
+    button.danger { background: #d9435f; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { vertical-align: top; border: 1px solid rgba(255,255,255,0.08); padding: 12px; font-size: 13px; }
+    th { background: rgba(75,144,255,0.12); text-align: left; }
+    small { color:#9fb2d7; word-break: break-all; }
+    .inline-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    @media(max-width:900px){ .inline-grid{grid-template-columns:1fr} table, thead, tbody, tr, th, td{display:block} th{display:none} td{border-bottom:0} tr{border:1px solid rgba(255,255,255,0.08); margin-bottom:14px} }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1>Sponsor Platform</h1>
+    <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Sponsor Platform</a><a href="/admin/logout">Logout</a></div>
+    ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
+    ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
+    <div class="card">
+      <h2>Upload platform creative</h2>
+      <form method="POST" action="/admin/sponsors/upload" enctype="multipart/form-data">
+        <label>Video file</label>
+        <input name="creative" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v" required />
+        <label>Partner</label>
+        <input name="partner" placeholder="Brand name" />
+        <label>Headline</label>
+        <input name="title" placeholder="Sponsor Spotlight" />
+        <label>Subtitle</label>
+        <input name="subtitle" placeholder="We will be right back to the battle." />
+        <div class="inline-grid">
+          <span><label>Duration</label><input name="duration_ms" type="number" min="5000" max="120000" step="1000" value="15000" /></span>
+          <span><label>Weight</label><input name="weight" type="number" min="1" max="20" value="1" /></span>
+          <span><label>Stats</label><select name="stats_mode"><option value="endcap">endcap</option><option value="delayed">delayed</option><option value="hidden">hidden</option><option value="always">always</option></select></span>
+          <span><label>Fit</label><select name="fit"><option value="cover">cover</option><option value="contain">contain</option></select></span>
+        </div>
+        <label><input name="muted" type="checkbox" value="1" checked /> Muted autoplay</label>
+        <button type="submit">Upload Creative</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Creative inventory</h2>
+      <table>
+        <thead><tr><th>Creative</th><th>Status</th><th>Configuration</th><th>Actions</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="4">No platform creatives uploaded yet.</td></tr>'}</tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function listPlatformSponsorCreatives() {
+  return db.prepare('SELECT * FROM platform_sponsor_creatives ORDER BY uploaded_at DESC, id DESC').all();
+}
+
+router.get('/sponsors', requireAdminAuth, (req, res) => {
+  res.send(renderSponsorAdminPage({
+    message: String(req.query.message || ''),
+    error: String(req.query.error || ''),
+    creatives: listPlatformSponsorCreatives(),
+  }));
+});
+
+router.post('/sponsors/upload', requireAdminAuth, (req, res) => {
+  sponsorUpload.single('creative')(req, res, (err) => {
+    if (err) return res.redirect(`/admin/sponsors?error=${encodeURIComponent(err.message || 'Upload failed')}`);
+    if (!req.file) return res.redirect(`/admin/sponsors?error=${encodeURIComponent('Choose a video file')}`);
+
+    try {
+      db.prepare(`
+        INSERT INTO platform_sponsor_creatives
+          (filename, original_name, partner, title, subtitle, duration_ms, stats_mode, fit, muted, weight, status, uploaded_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      `).run(
+        req.file.filename,
+        req.file.originalname,
+        sanitizeSponsorText(req.body.partner, 'Partner', 70),
+        sanitizeSponsorText(req.body.title, 'Sponsor Spotlight', 90),
+        sanitizeSponsorText(req.body.subtitle, 'We will be right back to the battle.', 140),
+        parseDurationMs(req.body.duration_ms),
+        parseStatsMode(req.body.stats_mode),
+        parseFit(req.body.fit),
+        req.body.muted === '1' ? 1 : 0,
+        parseWeight(req.body.weight)
+      );
+      return res.redirect('/admin/sponsors?message=Creative%20uploaded');
+    } catch (insertErr) {
+      try {
+        const filepath = path.join(PLATFORM_SPONSOR_DIR, req.file.filename);
+        if (isSafePath(PLATFORM_SPONSOR_DIR, filepath) && fs.existsSync(filepath)) fs.unlinkSync(filepath);
+      } catch (_) {}
+      return res.redirect(`/admin/sponsors?error=${encodeURIComponent(insertErr.message || 'Creative save failed')}`);
+    }
+  });
+});
+
+router.post('/sponsors/:id/update', requireAdminAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.redirect('/admin/sponsors?error=Invalid%20creative');
+
+  db.prepare(`
+    UPDATE platform_sponsor_creatives
+    SET partner = ?, title = ?, subtitle = ?, duration_ms = ?, stats_mode = ?, fit = ?, muted = ?, weight = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(
+    sanitizeSponsorText(req.body.partner, 'Partner', 70),
+    sanitizeSponsorText(req.body.title, 'Sponsor Spotlight', 90),
+    sanitizeSponsorText(req.body.subtitle, 'We will be right back to the battle.', 140),
+    parseDurationMs(req.body.duration_ms),
+    parseStatsMode(req.body.stats_mode),
+    parseFit(req.body.fit),
+    req.body.muted === '1' ? 1 : 0,
+    parseWeight(req.body.weight),
+    id
+  );
+  res.redirect('/admin/sponsors?message=Creative%20saved');
+});
+
+router.post('/sponsors/:id/toggle', requireAdminAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const creative = Number.isFinite(id)
+    ? db.prepare('SELECT * FROM platform_sponsor_creatives WHERE id = ?').get(id)
+    : null;
+  if (!creative) return res.redirect('/admin/sponsors?error=Creative%20not%20found');
+
+  const nextStatus = creative.status === 'active' ? 'paused' : 'active';
+  db.prepare('UPDATE platform_sponsor_creatives SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(nextStatus, id);
+  res.redirect(`/admin/sponsors?message=${encodeURIComponent(`Creative ${nextStatus}`)}`);
+});
+
+router.post('/sponsors/:id/delete', requireAdminAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const creative = Number.isFinite(id)
+    ? db.prepare('SELECT * FROM platform_sponsor_creatives WHERE id = ?').get(id)
+    : null;
+  if (!creative) return res.redirect('/admin/sponsors?error=Creative%20not%20found');
+
+  db.prepare('DELETE FROM platform_sponsor_creatives WHERE id = ?').run(id);
+  try {
+    const filepath = path.join(PLATFORM_SPONSOR_DIR, creative.filename);
+    if (isSafePath(PLATFORM_SPONSOR_DIR, filepath) && fs.existsSync(filepath)) fs.unlinkSync(filepath);
+  } catch (_) {}
+  res.redirect('/admin/sponsors?message=Creative%20deleted');
 });
 
 router.get('/codes', requireAdminAuth, (req, res) => {

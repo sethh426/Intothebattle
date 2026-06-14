@@ -19,7 +19,7 @@ import authRoutes from './tiktokbr/routes/auth.js';
 import adminRoutes from './tiktokbr/routes/admin.js';
 import paypalRoutes from './tiktokbr/routes/paypal.js';
 import requireAccess from './tiktokbr/middleware/auth.js';
-import checkTrial from './tiktokbr/middleware/checkTrial.js';
+import requireDashboardAccess from './tiktokbr/middleware/requireDashboardAccess.js';
 import { getE2EAuthRecord } from './tiktokbr/auth/e2eAuth.js';
 import {
   getOrCreateRoom,
@@ -78,6 +78,48 @@ function getUserRoomId(userId) {
   }
 }
 
+const PAID_ACCESS_CODE_TYPES = new Set(['paid', 'pro', 'creator-pro', 'creator_pro', 'subscriber']);
+
+function getLatestUserSubscription(userId) {
+  try {
+    return db.prepare('SELECT * FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1').get(userId);
+  } catch (err) {
+    logger.error({ err, userId }, 'Failed to read user subscription');
+    return null;
+  }
+}
+
+function isActiveSubscription(subscription) {
+  return String(subscription?.status || '').toLowerCase() === 'active';
+}
+
+function isPaidAccessCode(row) {
+  if (!row || row.is_revoked) return false;
+  const codeType = String(row.code_type || '').toLowerCase();
+  const subscriptionStatus = String(row.subscription_status || '').toLowerCase();
+  return !row.is_promo && Boolean(
+    row.paypal_subscription_id ||
+    PAID_ACCESS_CODE_TYPES.has(codeType) ||
+    subscriptionStatus === 'active'
+  );
+}
+
+function isPaidAuth(auth) {
+  if (!auth) return false;
+  if (auth.type === 'code') return isPaidAccessCode(auth.record);
+  return isActiveSubscription(getLatestUserSubscription(auth.record?.id));
+}
+
+function buildPlanEntitlements(auth) {
+  const paid = isPaidAuth(auth);
+  return {
+    tier: paid ? 'paid' : 'free',
+    planName: paid ? 'Creator Pro' : 'Free',
+    canUseCreatorSponsors: paid,
+    platformSponsorManaged: !paid,
+  };
+}
+
 function logAuthInfo(req, extras = {}) {
   logger.info({
     path: req?.path,
@@ -118,6 +160,10 @@ const HOST = process.env.HOST || '0.0.0.0';
 const OVERLAY_TOKEN_PARAM = 'overlay_token';
 const OVERLAY_TOKEN_TTL = process.env.OVERLAY_TOKEN_TTL || '365d';
 const STORAGE_ROOT = process.env.DISK_PATH || __dirname;
+const PLATFORM_SPONSOR_DIR = path.join(STORAGE_ROOT, 'platform-sponsors');
+const PLATFORM_SPONSOR_INITIAL_DELAY_MS = Number(process.env.PLATFORM_SPONSOR_INITIAL_DELAY_MS || 8 * 60 * 1000);
+const PLATFORM_SPONSOR_INTERVAL_MS = Number(process.env.PLATFORM_SPONSOR_INTERVAL_MS || 12 * 60 * 1000);
+const platformSponsorTimers = new Map();
 
 function getOverlayTokenSecret() {
   return process.env.OVERLAY_TOKEN_SECRET || process.env.JWT_SECRET || '';
@@ -197,6 +243,7 @@ function checkWritableStorage() {
     path.join(STORAGE_ROOT, 'backgrounds'),
     path.join(STORAGE_ROOT, 'audio'),
     path.join(STORAGE_ROOT, 'sponsors'),
+    PLATFORM_SPONSOR_DIR,
   ];
 
   const result = {
@@ -293,6 +340,85 @@ function emitRoomEvent(room, type, payload = {}) {
     io.to(room.roomId).emit(type, { ...payload, _ts: Date.now(), _seq: room.eventSeq, _event: type });
   } catch (err) {
     logger.error({ err, type, room: room.roomId }, 'emitRoomEvent failed');
+  }
+}
+
+function listActivePlatformSponsorCreatives() {
+  try {
+    return db.prepare("SELECT * FROM platform_sponsor_creatives WHERE status = 'active' ORDER BY uploaded_at DESC, id DESC").all();
+  } catch (err) {
+    logger.error({ err }, 'Failed to load platform sponsor creatives');
+    return [];
+  }
+}
+
+function pickPlatformSponsorCreative() {
+  const creatives = listActivePlatformSponsorCreatives();
+  if (!creatives.length) return null;
+  const totalWeight = creatives.reduce((sum, creative) => sum + Math.max(1, Number(creative.weight) || 1), 0);
+  let cursor = Math.random() * totalWeight;
+  for (const creative of creatives) {
+    cursor -= Math.max(1, Number(creative.weight) || 1);
+    if (cursor <= 0) return creative;
+  }
+  return creatives[0];
+}
+
+function buildPlatformSponsorPayload(room, creative) {
+  const token = createOverlayToken(room.roomId);
+  return {
+    action: 'show',
+    source: 'platform',
+    videoUrl: appendOverlayAuth(`/platform-sponsor/${encodeURIComponent(creative.filename)}`, room.roomId, token, { v: Date.now() }),
+    partner: sanitizeSponsorText(creative.partner, 'IntoTheBattle Partner', 70),
+    title: sanitizeSponsorText(creative.title, 'Sponsor Spotlight', 90),
+    subtitle: sanitizeSponsorText(creative.subtitle, 'We will be right back to the battle.', 140),
+    durationMs: parseSponsorDuration(creative.duration_ms),
+    muted: Number(creative.muted) !== 0,
+    fit: creative.fit === 'contain' ? 'contain' : 'cover',
+    statsMode: parseSponsorStatsMode(creative.stats_mode),
+    creativeId: creative.id,
+  };
+}
+
+function clearPlatformSponsorSchedule(roomId) {
+  const timer = platformSponsorTimers.get(roomId);
+  if (timer) clearTimeout(timer);
+  platformSponsorTimers.delete(roomId);
+}
+
+function scheduleNextPlatformSponsor(room, delayMs = PLATFORM_SPONSOR_INTERVAL_MS) {
+  if (!room?.roomId) return;
+  clearPlatformSponsorSchedule(room.roomId);
+  const safeDelay = Math.max(5000, Number(delayMs) || PLATFORM_SPONSOR_INTERVAL_MS);
+  const timer = setTimeout(() => {
+    platformSponsorTimers.delete(room.roomId);
+    if (room.planEntitlements?.canUseCreatorSponsors) return;
+
+    if ((room.overlayCount || 0) > 0) {
+      const creative = pickPlatformSponsorCreative();
+      if (creative) {
+        const payload = buildPlatformSponsorPayload(room, creative);
+        emitRoomEvent(room, 'sponsorScene', payload);
+        logger.info({ roomId: room.roomId, creativeId: creative.id }, 'Platform sponsor break emitted');
+      }
+    }
+
+    scheduleNextPlatformSponsor(room, PLATFORM_SPONSOR_INTERVAL_MS);
+  }, safeDelay);
+  if (typeof timer.unref === 'function') timer.unref();
+  platformSponsorTimers.set(room.roomId, timer);
+}
+
+function updatePlatformSponsorSchedule(room, entitlements) {
+  if (!room?.roomId) return;
+  room.planEntitlements = entitlements;
+  if (entitlements?.canUseCreatorSponsors) {
+    clearPlatformSponsorSchedule(room.roomId);
+    return;
+  }
+  if (!platformSponsorTimers.has(room.roomId)) {
+    scheduleNextPlatformSponsor(room, PLATFORM_SPONSOR_INITIAL_DELAY_MS);
   }
 }
 
@@ -1259,26 +1385,14 @@ app.get('/', (req, res) => {
       if (auth?.type === 'code') {
         const row = auth.record;
         if (row && !row.is_revoked) {
-          if (row.trial_started) {
-            const trialStart = new Date(row.trial_started);
-            const trialEnd = new Date(trialStart.getTime() + (row.trial_days || 14) * 24 * 60 * 60 * 1000);
-            const now = new Date();
-            if (now <= trialEnd || row.subscription_status === 'active') {
-              return res.redirect('/dashboard');
-            }
-            res.clearCookie('session_token', { path: '/', httpOnly: true, sameSite: 'lax' });
-          } else {
-            return res.redirect('/dashboard');
-          }
+          if (new Date(row.expires_at) >= new Date()) return res.redirect('/dashboard');
+          res.clearCookie('session_token', { path: '/', httpOnly: true, sameSite: 'lax' });
         }
       }
       if (auth?.type === 'user') {
         const user = auth.record;
         if (user && user.is_active) {
-          const subscription = db.prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1").get(user.id);
-          if (subscription) {
-            return res.redirect('/dashboard');
-          }
+          return res.redirect('/dashboard');
         }
       }
     } catch (err) {
@@ -1307,10 +1421,7 @@ app.get('/register', (req, res) => {
   if (auth?.type === 'user') {
     const user = auth.record;
     if (user && user.is_active) {
-      const subscription = db.prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1").get(user.id);
-      if (subscription) {
-        return res.redirect('/dashboard');
-      }
+      return res.redirect('/dashboard');
     }
   }
   res.sendFile(path.join(__dirname, 'register.html'));
@@ -1321,24 +1432,13 @@ app.get('/login', (req, res) => {
   if (auth?.type === 'code') {
     const row = auth.record;
     if (row && !row.is_revoked) {
-      if (!row.trial_started) {
-        return res.redirect('/dashboard');
-      }
-      const trialStart = new Date(row.trial_started);
-      const trialEnd = new Date(trialStart.getTime() + (row.trial_days || 14) * 24 * 60 * 60 * 1000);
-      const now = new Date();
-      if (now <= trialEnd || row.subscription_status === 'active') {
-        return res.redirect('/dashboard');
-      }
+      if (new Date(row.expires_at) >= new Date()) return res.redirect('/dashboard');
     }
   }
   if (auth?.type === 'user') {
     const user = auth.record;
     if (user && user.is_active) {
-      const subscription = db.prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1").get(user.id);
-      if (subscription) {
-        return res.redirect('/dashboard');
-      }
+      return res.redirect('/dashboard');
     }
   }
   res.sendFile(path.join(__dirname, 'login.html'));
@@ -1352,25 +1452,14 @@ app.get('/paywall-link', (_req, res) => {
   res.redirect(302, url);
 });
 
-// Auth endpoints for trial signup
+// Legacy code endpoints. Open code generation is retired; normal creator
+// signup now creates a free account through /register or Google.
 app.post('/auth/generate-code', express.json(), (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: 'Email required' });
-
-  try {
-    const code = Math.random().toString(36).slice(2, 10).toUpperCase();
-    const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
-    
-    db.prepare(`
-      INSERT INTO access_codes (code, email, expires_at, trial_started, trial_days, subscription_status)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP, 14, 'trial')
-    `).run(code, email.toLowerCase().trim(), expiresAt);
-    
-    res.json({ success: true, code });
-  } catch (err) {
-    console.error('Code generation error:', err);
-    res.status(500).json({ error: 'Failed to generate code' });
-  }
+  res.status(410).json({
+    success: false,
+    error: 'Open code generation has been retired. Create a free creator account instead.',
+    signupUrl: '/signup',
+  });
 });
 
 app.post('/auth/create-account', express.json(), (req, res) => {
@@ -1396,19 +1485,14 @@ app.post('/auth/create-account', express.json(), (req, res) => {
     // Create first room
     const roomId = Math.random().toString(36).slice(2, 10);
 
-    // Update access code with profile and session
-    // Ensure trial metadata is initialized and set session token
-    const trialDaysDefault = 14;
-    const expiresAt = new Date(Date.now() + trialDaysDefault * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+    // Update access code with profile and session. Existing access codes keep
+    // their original expiration and paid/free status.
     db.prepare(`
       UPDATE access_codes
       SET session_token = ?, streamer_name = ?, tiktok_username = ?, room_id = ?,
-          trial_started = COALESCE(trial_started, CURRENT_TIMESTAMP),
-          trial_days = COALESCE(trial_days, ?),
-          subscription_status = COALESCE(subscription_status, 'trial'),
-          expires_at = COALESCE(expires_at, ?)
+          subscription_status = COALESCE(subscription_status, 'active')
       WHERE id = ?
-    `).run(sessionToken, name, tiktokUsername, roomId, trialDaysDefault, expiresAt, row.id);
+    `).run(sessionToken, name, tiktokUsername, roomId, row.id);
 
     // Create room settings
     db.prepare(`
@@ -1507,12 +1591,23 @@ function socketAuth(socket, next) {
   }
 
   const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
-  if (!row || row.is_revoked || new Date(row.expires_at) < new Date()) {
-    logger.warn({ rowId: row?.id, code: row?.code, isRevoked: row?.is_revoked, expiresAt: row?.expires_at }, 'Socket auth failed: expired or revoked');
-    return next(new Error('Unauthorized: expired or revoked'));
+  if (row) {
+    if (row.is_revoked || new Date(row.expires_at) < new Date()) {
+      logger.warn({ rowId: row?.id, code: row?.code, isRevoked: row?.is_revoked, expiresAt: row?.expires_at }, 'Socket auth failed: expired or revoked');
+      return next(new Error('Unauthorized: expired or revoked'));
+    }
+    socket.roomId = enableRoomScoped ? assignDefaultRoomIfMissing(row) : DEFAULT_ROOM_ID;
+    socket.accessCode = row;
+    return next();
   }
-  socket.roomId = enableRoomScoped ? assignDefaultRoomIfMissing(row) : DEFAULT_ROOM_ID;
-  socket.accessCode = row;
+
+  const user = db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
+  if (!user || !user.is_active) {
+    logger.warn({ userId: user?.id, isActive: user?.is_active }, 'Socket auth failed: invalid user session');
+    return next(new Error('Unauthorized: invalid session'));
+  }
+  socket.roomId = enableRoomScoped ? (getUserRoomId(user.id) || DEFAULT_ROOM_ID) : DEFAULT_ROOM_ID;
+  socket.user = user;
   next();
 }
 
@@ -1528,6 +1623,7 @@ function requireRoom(req, res, next) {
     logger.warn({ path: req.path, method: req.method, tokenPresent: true }, 'API auth failed: invalid token');
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
+  req.auth = auth;
 
   if (auth.type === 'code') {
     const row = auth.record;
@@ -1553,6 +1649,21 @@ function requireRoom(req, res, next) {
   loadRoomPlayerStats(req.room);
   loadRoomBackground(req.room);
   loadRoomAudioConfig(req.room);
+  req.planEntitlements = buildPlanEntitlements(auth);
+  updatePlatformSponsorSchedule(req.room, req.planEntitlements);
+  next();
+}
+
+function requireCreatorSponsorAccess(req, res, next) {
+  const auth = req.auth || getAuthRecord(req.cookies?.session_token);
+  if (!isPaidAuth(auth)) {
+    return res.status(403).json({
+      success: false,
+      error: 'Creator sponsor controls require Creator Pro.',
+      upgradeUrl: '/paywall?reason=creator_sponsors',
+      plan: buildPlanEntitlements(auth),
+    });
+  }
   next();
 }
 
@@ -1600,14 +1711,10 @@ function paywallUrl(reason) {
 
 function buildAccessCodeSubscriptionStatus(row, now = new Date()) {
   const expiresAt = parseDate(row.expires_at);
-  const trialStartedAt = parseDate(row.trial_started);
-  const trialDays = Number(row.trial_days || 14);
-  const trialEndsAt = trialStartedAt
-    ? new Date(trialStartedAt.getTime() + trialDays * 24 * 60 * 60 * 1000)
-    : null;
   const rawStatus = String(row.subscription_status || 'active').toLowerCase();
+  const paid = isPaidAccessCode(row);
 
-  let status = rawStatus;
+  let status = paid ? 'active' : 'free';
   let reason = null;
   let accessAllowed = true;
 
@@ -1619,39 +1726,26 @@ function buildAccessCodeSubscriptionStatus(row, now = new Date()) {
     status = 'expired';
     reason = 'expired';
     accessAllowed = false;
-  } else if (trialStartedAt && rawStatus !== 'active') {
-    if (trialEndsAt && now <= trialEndsAt) {
-      status = 'trial';
-    } else {
-      status = 'expired';
-      reason = 'trial_expired';
-      accessAllowed = false;
-    }
   } else if (['cancelled', 'suspended', 'expired', 'revoked'].includes(rawStatus)) {
-    reason = rawStatus;
-    accessAllowed = false;
-  } else {
-    status = rawStatus || 'active';
+    status = 'free';
   }
 
   return {
     type: 'code',
     status,
+    tier: paid && accessAllowed ? 'paid' : 'free',
+    planName: paid && accessAllowed ? 'Creator Pro' : 'Free',
+    canUseCreatorSponsors: paid && accessAllowed,
+    platformSponsorManaged: !(paid && accessAllowed),
     reason,
     accessAllowed,
     actionRequired: !accessAllowed,
     paywallUrl: accessAllowed ? null : paywallUrl(reason),
-    trial: trialStartedAt ? {
-      startedAt: toIsoStringOrNull(trialStartedAt),
-      days: trialDays,
-      endsAt: toIsoStringOrNull(trialEndsAt),
-      daysRemaining: daysRemainingUntil(trialEndsAt, now),
-    } : null,
     subscription: {
       status: rawStatus,
-      planType: row.code_type || 'access-code',
+      planType: paid ? 'Creator Pro' : 'Free',
       paypalSubscriptionId: row.paypal_subscription_id || null,
-      startedAt: toIsoStringOrNull(trialStartedAt),
+      startedAt: null,
       nextBillingDate: null,
       expiresAt: toIsoStringOrNull(expiresAt),
     },
@@ -1667,7 +1761,6 @@ function buildUserSubscriptionStatus(user, now = new Date()) {
       accessAllowed: false,
       actionRequired: true,
       paywallUrl: paywallUrl('revoked'),
-      trial: null,
       subscription: null,
     };
   }
@@ -1679,13 +1772,23 @@ function buildUserSubscriptionStatus(user, now = new Date()) {
   if (!subscription) {
     return {
       type: 'user',
-      status: 'none',
-      reason: 'no_subscription',
-      accessAllowed: false,
-      actionRequired: true,
-      paywallUrl: paywallUrl('no_subscription'),
-      trial: null,
-      subscription: null,
+      status: 'free',
+      tier: 'free',
+      planName: 'Free',
+      canUseCreatorSponsors: false,
+      platformSponsorManaged: true,
+      reason: null,
+      accessAllowed: true,
+      actionRequired: false,
+      paywallUrl: null,
+      subscription: {
+        status: 'free',
+        planType: 'Free',
+        paypalSubscriptionId: null,
+        startedAt: null,
+        nextBillingDate: null,
+        expiresAt: null,
+      },
     };
   }
 
@@ -1695,40 +1798,27 @@ function buildUserSubscriptionStatus(user, now = new Date()) {
   const nextBillingDate = parseDate(subscription.next_billing_date);
   let status = rawStatus;
   let reason = null;
-  let accessAllowed = rawStatus === 'active';
+  let accessAllowed = true;
+  const paid = rawStatus === 'active';
 
-  if (rawStatus === 'trial') {
-    if (expiresAt && now <= expiresAt) {
-      accessAllowed = true;
-    } else {
-      status = 'expired';
-      reason = 'trial_expired';
-      accessAllowed = false;
-    }
-  } else if (!accessAllowed) {
-    reason = ['cancelled', 'suspended', 'expired'].includes(rawStatus)
-      ? rawStatus
-      : 'subscription_required';
+  if (!paid) {
+    status = 'free';
   }
 
   return {
     type: 'user',
     status,
+    tier: paid ? 'paid' : 'free',
+    planName: paid ? 'Creator Pro' : 'Free',
+    canUseCreatorSponsors: paid,
+    platformSponsorManaged: !paid,
     reason,
     accessAllowed,
     actionRequired: !accessAllowed,
     paywallUrl: accessAllowed ? null : paywallUrl(reason),
-    trial: rawStatus === 'trial' ? {
-      startedAt: toIsoStringOrNull(startedAt),
-      days: startedAt && expiresAt
-        ? Math.max(0, Math.round((expiresAt.getTime() - startedAt.getTime()) / (24 * 60 * 60 * 1000)))
-        : null,
-      endsAt: toIsoStringOrNull(expiresAt),
-      daysRemaining: daysRemainingUntil(expiresAt, now),
-    } : null,
     subscription: {
       status: rawStatus,
-      planType: subscription.plan_type || (rawStatus === 'trial' ? 'trial' : 'PayPal'),
+      planType: paid ? (subscription.plan_type || 'Creator Pro') : 'Free',
       paypalSubscriptionId: subscription.paypal_subscription_id || null,
       startedAt: toIsoStringOrNull(startedAt),
       nextBillingDate: toIsoStringOrNull(nextBillingDate),
@@ -1872,6 +1962,35 @@ app.get('/sponsor/:filename', (req, res) => {
   return res.status(404).send('Sponsor media not found');
 });
 
+function hasAdminSession(req) {
+  const token = req.cookies?.admin_session_token;
+  if (!token) return false;
+  try {
+    const row = db.prepare('SELECT * FROM admin_sessions WHERE session_token = ?').get(token);
+    return Boolean(row && new Date(row.expires_at) >= new Date());
+  } catch (err) {
+    logger.error({ err }, 'Failed to verify admin media access');
+    return false;
+  }
+}
+
+app.get('/platform-sponsor/:filename', (req, res) => {
+  if (enableRoomScoped && req.query.room_id) {
+    const roomId = normalizeRoomId(req.query.room_id);
+    const overlayToken = getOverlayTokenFromRequest(req);
+    if (!roomId) return res.status(400).send('Invalid room id');
+    if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).send('Unauthorized');
+  } else if (!hasAdminSession(req)) {
+    return res.status(401).send('Unauthorized');
+  }
+
+  const filename = path.basename(req.params.filename);
+  const runtimePath = path.join(PLATFORM_SPONSOR_DIR, filename);
+  if (!isSafePath(PLATFORM_SPONSOR_DIR, runtimePath)) return res.status(403).send('Forbidden');
+  if (!fs.existsSync(runtimePath)) return res.status(404).send('Sponsor media not found');
+  return sendSponsorMedia(req, res, runtimePath, filename);
+});
+
 function sanitizeSponsorText(value, fallback = '', maxLength = 120) {
   const text = String(value || '').trim();
   return (text || fallback).slice(0, maxLength);
@@ -1885,6 +2004,10 @@ function parseSponsorDuration(value) {
 
 function parseSponsorMuted(value) {
   return !(value === false || value === 'false' || value === '0' || value === 0);
+}
+
+function parseSponsorStatsMode(value) {
+  return ['endcap', 'delayed', 'hidden', 'always'].includes(value) ? value : 'endcap';
 }
 
 function sponsorContentType(filename) {
@@ -1979,6 +2102,7 @@ function buildSponsorScenePayload(room, body = {}) {
     durationMs: parseSponsorDuration(body.durationMs),
     muted: parseSponsorMuted(body.muted),
     fit: ['cover', 'contain'].includes(body.fit) ? body.fit : 'cover',
+    statsMode: parseSponsorStatsMode(body.statsMode),
     theme: ['arena', 'premium', 'minimal'].includes(body.theme) ? body.theme : 'arena',
     _ts: Date.now(),
   };
@@ -2081,11 +2205,11 @@ app.get('/logout', (req, res) => {
   res.redirect('/');
 });
 
-app.get('/dashboard', checkTrial, (_req, res) => {
+app.get('/dashboard', requireDashboardAccess, (_req, res) => {
   res.sendFile(path.join(__dirname, 'dashboard.html'));
 });
 
-app.get('/dashboard/welcome', checkTrial, (_req, res) => {
+app.get('/dashboard/welcome', requireDashboardAccess, (_req, res) => {
   res.sendFile(path.join(__dirname, 'dashboard-welcome.html'));
 });
 
@@ -2110,7 +2234,7 @@ app.get('/debug/session-info', (req, res) => {
   }
 });
 
-app.get('/stats', checkTrial, (_req, res) => res.sendFile(path.join(__dirname, 'stats.html')));
+app.get('/stats', requireDashboardAccess, (_req, res) => res.sendFile(path.join(__dirname, 'stats.html')));
 
 app.get('/state', (req, res) => {
   if (enableRoomScoped && req.query.room_id) {
@@ -2133,6 +2257,7 @@ app.get('/state', (req, res) => {
 app.get('/api/status', requireRoom, (req, res) => res.json({
   roomId:           req.room.roomId,
   overlayUrl:       buildOverlayUrl(req, req.room.roomId),
+  plan:             buildPlanEntitlements(req.auth),
   username:         req.room.streamerUsername || currentStreamer,
   connected:        !!(client && client.connected),
   overlayConnected: req.room.overlayCount > 0,
@@ -2347,12 +2472,12 @@ app.delete('/api/audio/delete/:filename', requireRoom, (req, res) => {
   res.json({ success: true, filename, configUpdated: changed });
 });
 
-app.get('/api/sponsors', requireRoom, (req, res) => {
+app.get('/api/sponsors', requireRoom, requireCreatorSponsorAccess, (req, res) => {
   loadRoomSponsorConfig(req.room);
   res.json({ success: true, library: req.room.sponsorLibrary || [] });
 });
 
-app.post('/api/sponsor/upload', requireRoom, (req, res) => {
+app.post('/api/sponsor/upload', requireRoom, requireCreatorSponsorAccess, (req, res) => {
   res.type('application/json');
   sponsorUpload.single('sponsor')(req, res, (err) => {
     if (err) return res.status(400).json({ success: false, error: err.message });
@@ -2375,7 +2500,7 @@ app.post('/api/sponsor/upload', requireRoom, (req, res) => {
   });
 });
 
-app.delete('/api/sponsor/delete/:filename', requireRoom, (req, res) => {
+app.delete('/api/sponsor/delete/:filename', requireRoom, requireCreatorSponsorAccess, (req, res) => {
   const filename = path.basename(req.params.filename);
   const { sponsorDir } = getRoomPaths(req.room.roomId);
   const filepath = path.join(sponsorDir, filename);
@@ -2391,14 +2516,14 @@ app.delete('/api/sponsor/delete/:filename', requireRoom, (req, res) => {
   res.json({ success: true, filename });
 });
 
-app.post('/api/sponsor/play', requireRoom, (req, res) => {
+app.post('/api/sponsor/play', requireRoom, requireCreatorSponsorAccess, (req, res) => {
   const payload = buildSponsorScenePayload(req.room, req.body || {});
   if (payload.error) return res.status(404).json({ success: false, error: payload.error });
   emitRoomEvent(req.room, 'sponsorScene', payload);
   res.json({ success: true, scene: payload });
 });
 
-app.post('/api/sponsor/stop', requireRoom, (req, res) => {
+app.post('/api/sponsor/stop', requireRoom, requireCreatorSponsorAccess, (req, res) => {
   emitRoomEvent(req.room, 'sponsorScene', { action: 'hide', _ts: Date.now() });
   res.json({ success: true });
 });

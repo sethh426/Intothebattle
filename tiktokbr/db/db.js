@@ -304,6 +304,25 @@ async function initDb() {
       )
     `);
 
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS platform_sponsor_creatives (
+        id SERIAL PRIMARY KEY,
+        filename TEXT UNIQUE NOT NULL,
+        original_name TEXT,
+        partner TEXT,
+        title TEXT,
+        subtitle TEXT,
+        duration_ms INTEGER DEFAULT 15000,
+        stats_mode TEXT DEFAULT 'endcap',
+        fit TEXT DEFAULT 'cover',
+        muted INTEGER DEFAULT 1,
+        weight INTEGER DEFAULT 1,
+        status TEXT DEFAULT 'active',
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     await safeExec('ALTER TABLE access_codes ADD COLUMN user_id INTEGER');
     await safeExec("ALTER TABLE access_codes ADD COLUMN code_type TEXT DEFAULT 'trial'");
 

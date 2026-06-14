@@ -36,7 +36,7 @@
     .dot,.pulse-dot { width:8px; height:8px; border-radius:99px; background:currentColor; box-shadow:0 0 16px currentColor; }
     .subscription-chip { cursor:pointer; }
     .subscription-chip.active { color:var(--green); border-color:rgba(119,240,161,.25); background:rgba(119,240,161,.08); }
-    .subscription-chip.trial { color:var(--gold2); border-color:rgba(246,201,91,.28); background:rgba(246,201,91,.08); }
+    .subscription-chip.free { color:var(--gold2); border-color:rgba(246,201,91,.28); background:rgba(246,201,91,.08); }
     .subscription-chip.attention { color:#ff9aa8; border-color:rgba(232,59,95,.28); background:rgba(232,59,95,.1); }
     .hero { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(340px,.7fr); gap:20px; align-items:stretch; }
     .hero-card,.card { position:relative; overflow:hidden; border:1px solid var(--line2); border-radius:28px; background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); box-shadow:0 24px 80px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08); }
@@ -74,6 +74,8 @@
     .form-group { margin-bottom:14px; }
     .input-label { display:block; margin-bottom:8px; color:var(--muted); font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
     input[type=text],input[type=file],input[type=color],select { width:100%; min-height:48px; border-radius:15px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.055); color:#fff; padding:12px 14px; outline:none; }
+    select { background-color:#111827; color:var(--text); }
+    select option { background:#fff8e6; color:#111827; font-weight:800; }
     input:focus,select:focus { border-color:rgba(246,201,91,.55); box-shadow:0 0 0 4px rgba(246,201,91,.08); }
     .btn-row { display:flex; flex-wrap:wrap; gap:10px; }
     .stat-box { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,.07); }
@@ -84,6 +86,27 @@
     .drop-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; }
     .drop-icon { font-size:34px; margin-bottom:8px; }.drop-title { font-weight:900; }.drop-sub { color:var(--muted); font-size:12px; margin-top:5px; }
     .audio-layout,.sponsor-layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .sponsor-layout { grid-template-columns:minmax(360px,.9fr) minmax(520px,1.1fr); align-items:start; }
+    .sponsor-creative,.sponsor-controls { min-width:0; display:grid; gap:14px; }
+    .sponsor-fields,.sponsor-playback,.sponsor-library-panel,.sponsor-selected {
+      min-width:0; border:1px solid rgba(255,255,255,.08); border-radius:22px;
+      background:rgba(0,0,0,.18); padding:18px;
+    }
+    .sponsor-selected { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px; align-items:center; }
+    .sponsor-selected-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:900; color:#fff8e6; }
+    .sponsor-selected-meta { color:var(--muted); font-size:12px; font-weight:800; margin-top:4px; }
+    .sponsor-library-panel .audio-files { max-height:312px; overflow:auto; padding-right:4px; }
+    .sponsor-row { align-items:flex-start; gap:12px; }
+    .sponsor-row.active { border-color:rgba(246,201,91,.55); background:rgba(246,201,91,.08); }
+    .sponsor-row-main { min-width:0; flex:1; }
+    .sponsor-row-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+    .sponsor-row-actions .btn { min-height:38px; padding:0 12px; }
+    .sponsor-status-pill { display:inline-flex; align-items:center; min-height:30px; padding:5px 9px; border-radius:999px; border:1px solid rgba(246,201,91,.22); color:var(--gold2); background:rgba(246,201,91,.08); font-size:11px; font-weight:900; text-transform:uppercase; }
+    .sponsor-upgrade { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; align-items:center; margin-bottom:18px; padding:18px; border-radius:22px; border:1px solid rgba(246,201,91,.28); background:rgba(246,201,91,.075); }
+    .sponsor-upgrade strong { display:block; color:#fff8e6; margin-bottom:5px; }
+    .sponsor-upgrade[hidden] { display:none; }
+    .sponsor-locked { opacity:.58; }
+    .sponsor-locked input,.sponsor-locked select,.sponsor-locked button { pointer-events:none; }
     .section-title { color:var(--gold2); font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; margin-bottom:12px; }
     .audio-files { display:grid; gap:10px; }
     .audio-row { display:flex; align-items:center; gap:10px; padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.2); }
@@ -100,7 +123,7 @@
     .footer { display:flex; flex-wrap:wrap; gap:12px; margin:4px 0 28px; }
     .footer-btn { display:inline-flex; min-height:46px; align-items:center; justify-content:center; padding:0 16px; border-radius:15px; font-weight:900; cursor:pointer; border:1px solid var(--line2); background:rgba(255,255,255,.06); color:#fff; }
     .footer-btn.primary { color:#170c02; background:linear-gradient(135deg,var(--gold),#fff0b9 52%,var(--ember)); border:0; }
-    @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,.sponsor-layout{grid-template-columns:1fr}}
+    @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,.sponsor-layout,.sponsor-upgrade{grid-template-columns:1fr}}
     @media(max-width:700px){body{padding:12px}.topbar{align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.btn{width:100%}}
   </style>
 </head>
@@ -166,19 +189,41 @@
       <button class="btn btn-secondary" style="width:100%" onclick="saveLaserStyle()">Save FX Style</button>
     </article>
 
-    <article class="card col-12">
+    <article class="card col-12" id="creatorSponsorCard">
       <div class="card-head"><div><div class="card-title">Sponsor moments</div><h3>Full-screen sponsor screen</h3><p class="muted">Upload and trigger sponsor scenes for planned ad breaks, high-value moments, or manual brand placements.</p></div><span class="card-badge" id="sponsorCountBadge">0 Videos</span></div>
+      <div class="sponsor-upgrade" id="sponsorUpgradeNotice" hidden>
+        <div><strong>Creator Pro sponsor controls</strong><p class="muted">Upgrade to upload, preview, time, and trigger your own brand videos during live breaks. Free accounts keep the core overlay and battle controls.</p></div>
+        <button class="btn btn-primary" onclick="window.location.href='/paywall?reason=creator_sponsors'">Upgrade to Pro</button>
+      </div>
       <div class="sponsor-layout">
-        <div>
-          <div class="form-group"><label class="input-label">Sponsor video</label><input type="file" id="sponsorFileInput" accept="video/mp4,video/webm,video/quicktime,video/x-m4v"><p class="muted" style="margin-top:8px;">Best playback: MP4 H.264/AAC or WebM, ideally under 100MB.</p></div>
-          <div class="form-group"><label class="input-label">Partner</label><input id="sponsorPartnerInput" type="text" maxlength="70" placeholder="Sponsor name"></div>
-          <div class="form-group"><label class="input-label">Headline</label><input id="sponsorTitleInput" type="text" maxlength="90" placeholder="Sponsor Spotlight"></div>
-          <div class="form-group"><label class="input-label">Subtitle</label><input id="sponsorSubtitleInput" type="text" maxlength="140" placeholder="We will be right back to the battle."></div>
+        <div class="sponsor-creative">
+          <div class="sponsor-fields">
+            <div class="section-title">Sponsor creative</div>
+            <div class="form-group"><label class="input-label">Sponsor video</label><input type="file" id="sponsorFileInput" accept="video/mp4,video/webm,video/quicktime,video/x-m4v"><p class="muted" style="margin-top:8px;">MP4 H.264/AAC or WebM, under 100MB.</p></div>
+            <div class="form-group"><label class="input-label">Partner</label><input id="sponsorPartnerInput" type="text" maxlength="70" placeholder="Sponsor name"></div>
+            <div class="form-group"><label class="input-label">Headline</label><input id="sponsorTitleInput" type="text" maxlength="90" placeholder="Sponsor Spotlight"></div>
+            <div class="form-group"><label class="input-label">Subtitle</label><input id="sponsorSubtitleInput" type="text" maxlength="140" placeholder="We will be right back to the battle."></div>
+            <button class="btn btn-primary" style="width:100%" onclick="uploadSponsorVideo()">Upload Video</button>
+          </div>
         </div>
-        <div>
-          <div class="grid" style="gap:12px;"><div class="col-6"><label class="input-label">Duration</label><select id="sponsorDurationInput"><option value="10000">10 seconds</option><option value="15000" selected>15 seconds</option><option value="30000">30 seconds</option><option value="60000">60 seconds</option></select></div><div class="col-6"><label class="input-label">Video fit</label><select id="sponsorFitInput"><option value="cover" selected>Cover screen</option><option value="contain">Show full video</option></select></div><div class="col-12"><label class="input-label">Audio</label><select id="sponsorMutedInput"><option value="true" selected>Muted autoplay</option><option value="false">Try video audio</option></select></div></div>
-          <div class="btn-row" style="margin:16px 0;"><button class="btn btn-primary" onclick="uploadSponsorVideo()">Upload Video</button><button class="btn btn-success" onclick="playSponsorScene()">Play Screen</button><button class="btn btn-danger" onclick="stopSponsorScene()">Stop</button><button class="btn btn-secondary" onclick="openSponsorPreview()">Preview</button></div>
-          <div class="section-title">Uploaded sponsor videos</div><div class="audio-files" id="sponsorLibrary"><p class="muted">No sponsor videos uploaded yet.</p></div>
+        <div class="sponsor-controls">
+          <div class="sponsor-selected" id="sponsorSelectedSummary">
+            <div><div class="sponsor-selected-title">No sponsor video selected</div><div class="sponsor-selected-meta">Upload or select a creative.</div></div>
+            <span class="sponsor-status-pill">Selected</span>
+          </div>
+          <div class="sponsor-playback">
+            <div class="section-title">Playback</div>
+            <div class="grid" style="gap:12px;">
+              <div class="col-6"><label class="input-label">Break length</label><select id="sponsorDurationInput"><option value="10000">10 seconds</option><option value="15000" selected>15 seconds</option><option value="30000">30 seconds</option><option value="60000">60 seconds</option></select></div>
+              <div class="col-6"><label class="input-label">Video fit</label><select id="sponsorFitInput"><option value="cover" selected>Cover screen</option><option value="contain">Show full video</option></select></div>
+              <div class="col-6"><label class="input-label">Audio</label><select id="sponsorMutedInput"><option value="true" selected>Muted autoplay</option><option value="false">Try video audio</option></select></div>
+              <div class="col-6"><label class="input-label">Battle stats</label><select id="sponsorStatsModeInput"><option value="endcap" selected>End-cap stats</option><option value="delayed">After video starts</option><option value="hidden">Hide during video</option><option value="always">Always show</option></select></div>
+            </div>
+            <div class="btn-row" style="margin-top:16px;"><button class="btn btn-success" onclick="playSponsorScene()">Play Screen</button><button class="btn btn-secondary" onclick="openSponsorPreview()">Preview</button><button class="btn btn-danger" onclick="stopSponsorScene()">Stop</button></div>
+          </div>
+          <div class="sponsor-library-panel">
+            <div class="section-title">Uploaded sponsor videos</div><div class="audio-files" id="sponsorLibrary"><p class="muted">No sponsor videos uploaded yet.</p></div>
+          </div>
         </div>
       </div>
     </article>
@@ -210,6 +255,7 @@ let audioLibraryData = [];
 let audioConfigData = {};
 let sponsorLibraryData = [];
 let selectedSponsorFilename = '';
+let canUseCreatorSponsors = false;
 const EVENTS = ['attack','gift','kill','respawn','heal','follow'];
 const EVENT_CLASSES = { attack:'event-attack', gift:'event-gift', kill:'event-kill', respawn:'event-respawn', heal:'event-heal', follow:'event-follow' };
 
@@ -227,7 +273,48 @@ socket.on('connect', () => { socket.emit('register', { type: 'dashboard' }); });
 
 let initialLoad = true;
 function setTikTokStatus(state, username) { const chip = document.getElementById('tiktok-chip'); const label = document.getElementById('tiktok-label'); if (state === 'connected') { chip.className = 'status-chip online'; label.textContent = `Connected to @${username}`; } else if (state === 'connecting') { chip.className = 'status-chip idle'; label.textContent = 'Connecting...'; } else { chip.className = 'status-chip offline'; label.textContent = 'Disconnected'; } text('tiktok-label-copy', label.textContent); }
-function setSubscriptionChip(data) { const chip = document.getElementById('subscription-chip'); if (!chip) return; subscriptionStatusData = data; let label = 'Plan status'; let className = 'subscription-chip'; if (!data || !data.success) label = 'Plan unavailable'; else if (data.actionRequired) { label = data.status === 'none' ? 'Plan required' : `Plan ${data.status}`; className += ' attention'; } else if (data.status === 'trial') { const days = data.trial && Number.isFinite(data.trial.daysRemaining) ? data.trial.daysRemaining : null; label = days == null ? 'Trial active' : `Trial ${days}d left`; className += ' trial'; } else { label = 'Plan active'; className += ' active'; } chip.textContent = label; chip.className = className; }
+function setSponsorControlsAvailability(enabled) {
+  canUseCreatorSponsors = !!enabled;
+  const card = document.getElementById('creatorSponsorCard');
+  const notice = document.getElementById('sponsorUpgradeNotice');
+  const layout = card?.querySelector('.sponsor-layout');
+  if (notice) notice.hidden = canUseCreatorSponsors;
+  if (layout) layout.classList.toggle('sponsor-locked', !canUseCreatorSponsors);
+  card?.querySelectorAll('.sponsor-layout input, .sponsor-layout select, .sponsor-layout button').forEach(el => {
+    el.disabled = !canUseCreatorSponsors;
+  });
+  if (!canUseCreatorSponsors) {
+    sponsorLibraryData = [];
+    selectedSponsorFilename = '';
+    renderSponsorLibrary();
+  }
+}
+function setSubscriptionChip(data) {
+  const chip = document.getElementById('subscription-chip');
+  if (!chip) return;
+  subscriptionStatusData = data;
+  let label = 'Plan status';
+  let className = 'subscription-chip';
+  if (!data || !data.success) {
+    label = 'Plan unavailable';
+    setSponsorControlsAvailability(false);
+  } else if (data.actionRequired) {
+    label = `Plan ${data.status || 'attention'}`;
+    className += ' attention';
+    setSponsorControlsAvailability(false);
+  } else if (data.tier === 'paid' || data.canUseCreatorSponsors) {
+    label = data.planName || 'Creator Pro';
+    className += ' active';
+    setSponsorControlsAvailability(true);
+    loadSponsors();
+  } else {
+    label = data.planName || 'Free';
+    className += ' free';
+    setSponsorControlsAvailability(false);
+  }
+  chip.textContent = label;
+  chip.className = className;
+}
 async function fetchSubscriptionStatus() { try { const res = await fetch('/api/subscription/status', { credentials: 'same-origin' }); if (!res.ok) return setSubscriptionChip(null); setSubscriptionChip(await res.json()); } catch (_) { setSubscriptionChip(null); } }
 function openBillingStatus() { if (subscriptionStatusData && subscriptionStatusData.actionRequired) window.location.href = subscriptionStatusData.paywallUrl || '/paywall'; else window.location.href = '/profile'; }
 async function fetchStatus() { try { const res = await fetch('/api/status', { credentials: 'same-origin' }); const data = await res.json(); currentRoomId = data.roomId || null; currentOverlayUrl = data.overlayUrl || null; if (initialLoad) { document.getElementById('username').value = data.username || ''; initialLoad = false; } text('bgStatus', data.background?.filename ? `Background set: ${data.background.filename}` : 'No background set'); setTikTokStatus(data.connected ? 'connected' : 'disconnected', data.username); const devValue = data.devTestMode ? 'ON' : 'OFF'; text('dev-mode-badge', devValue); text('dev-mode-copy', data.devTestMode ? 'Testing' : 'Live'); if (data.overlayCount !== undefined) socket.emit('register', { type: 'dashboard' }); } catch (e) { console.warn(e); } }
@@ -250,15 +337,168 @@ function runOverlayTest(action){ apiCall(`/api/overlay/test/${action}`); toast(`
 function testOverlayAttack(){ runOverlayTest('attack'); } function testOverlayGift(){ runOverlayTest('gift'); } function testOverlayHeal(){ runOverlayTest('heal'); } function testOverlayKill(){ runOverlayTest('kill'); } function testStreak(){ apiCall('/api/overlay/test/streak'); toast('Streak test triggered'); }
 
 function sponsorInputValue(id, fallback = '') { const el = document.getElementById(id); return (el && el.value.trim()) || fallback; }
-function currentSponsorPayload(filename = selectedSponsorFilename) { const selected = sponsorLibraryData.find(file => file.filename === filename); return { filename: filename || null, partner: sponsorInputValue('sponsorPartnerInput', selected?.partner || 'IntoTheBattle Partner'), title: sponsorInputValue('sponsorTitleInput', selected?.title || 'Sponsor Spotlight'), subtitle: sponsorInputValue('sponsorSubtitleInput', selected?.subtitle || 'Thanks for powering tonight\'s arena.'), durationMs: Number(document.getElementById('sponsorDurationInput')?.value || 15000), muted: document.getElementById('sponsorMutedInput')?.value !== 'false', fit: document.getElementById('sponsorFitInput')?.value || 'cover' }; }
-function setSponsorInputs(file){ if(!file) return; selectedSponsorFilename = file.filename; document.getElementById('sponsorPartnerInput').value = file.partner || 'Sponsor'; document.getElementById('sponsorTitleInput').value = file.title || file.originalName || 'Sponsor Spotlight'; document.getElementById('sponsorSubtitleInput').value = file.subtitle || 'We will be right back to the battle.'; }
-function renderSponsorLibrary(){ const container = document.getElementById('sponsorLibrary'); const badge = document.getElementById('sponsorCountBadge'); if(!container) return; container.innerHTML = ''; if(badge) badge.textContent = `${sponsorLibraryData.length} Video${sponsorLibraryData.length !== 1 ? 's' : ''}`; if(!sponsorLibraryData.length){ container.innerHTML='<p class="muted">No sponsor videos uploaded yet.</p>'; selectedSponsorFilename=''; return; } if(!selectedSponsorFilename || !sponsorLibraryData.some(f=>f.filename===selectedSponsorFilename)) setSponsorInputs(sponsorLibraryData[0]); sponsorLibraryData.forEach(file=>{ const row=document.createElement('div'); row.className='audio-row'; if(file.filename===selectedSponsorFilename) row.style.borderColor='rgba(246,201,91,.55)'; row.innerHTML=`<div>▶</div><div class="audio-name">${escapeHtml(file.title || file.originalName)}</div><div class="audio-size">${formatBytes(file.size || 0)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;"></div>`; const actions=row.querySelector('div:last-child'); const selectBtn=document.createElement('button'); selectBtn.className='btn btn-secondary'; selectBtn.textContent='Select'; selectBtn.onclick=()=>{ setSponsorInputs(file); renderSponsorLibrary(); }; const playBtn=document.createElement('button'); playBtn.className='btn btn-success'; playBtn.textContent='Play'; playBtn.onclick=()=>{ setSponsorInputs(file); playSponsorScene(file.filename); }; const deleteBtn=document.createElement('button'); deleteBtn.className='btn btn-danger'; deleteBtn.textContent='Delete'; deleteBtn.onclick=()=>deleteSponsorVideo(file.filename); actions.append(selectBtn,playBtn,deleteBtn); container.appendChild(row); }); }
-function uploadSponsorVideo(){ const input=document.getElementById('sponsorFileInput'); const file=input && input.files[0]; if(!file) return toast('Choose a sponsor video first', true); const fd=new FormData(); fd.append('sponsor', file); fd.append('partner', sponsorInputValue('sponsorPartnerInput','Sponsor')); fd.append('title', sponsorInputValue('sponsorTitleInput', file.name.replace(/\.[^.]+$/,''))); fd.append('subtitle', sponsorInputValue('sponsorSubtitleInput','We will be right back to the battle.')); fetch('/api/sponsor/upload',{method:'POST',credentials:'same-origin',body:fd}).then(r=>r.json()).then(d=>{ if(!d.success) return toast(d.error || 'Sponsor upload failed', true); sponsorLibraryData.push(d.file); setSponsorInputs(d.file); renderSponsorLibrary(); input.value=''; toast('Sponsor video uploaded'); }).catch(()=>toast('Sponsor upload failed', true)); }
-function playSponsorScene(filename = selectedSponsorFilename){ apiCall('/api/sponsor/play','POST',currentSponsorPayload(filename)).then(d=>{ if(d.success) toast('Sponsor screen sent to overlay'); }); }
-function stopSponsorScene(){ apiCall('/api/sponsor/stop','POST').then(d=>{ if(d.success) toast('Sponsor screen stopped'); }); }
-function deleteSponsorVideo(filename){ if(!confirm('Delete this sponsor video?')) return; fetch('/api/sponsor/delete/'+encodeURIComponent(filename),{method:'DELETE',credentials:'same-origin'}).then(r=>r.json()).then(d=>{ if(!d.success) return toast(d.error || 'Delete failed', true); sponsorLibraryData=sponsorLibraryData.filter(file=>file.filename!==filename); if(selectedSponsorFilename===filename) selectedSponsorFilename=''; renderSponsorLibrary(); toast('Sponsor video deleted'); }).catch(()=>toast('Delete failed', true)); }
-function openSponsorPreview(){ const payload=currentSponsorPayload(); const overlayUrl=new URL(currentOverlayUrl || '/overlay', window.location.origin); overlayUrl.searchParams.set('sponsor_preview','1'); overlayUrl.searchParams.set('sponsor_title',payload.title); overlayUrl.searchParams.set('sponsor_partner',payload.partner); overlayUrl.searchParams.set('sponsor_subtitle',payload.subtitle); overlayUrl.searchParams.set('sponsor_duration',payload.durationMs); overlayUrl.searchParams.set('sponsor_muted',payload.muted ? '1':'0'); overlayUrl.searchParams.set('sponsor_fit',payload.fit); if(payload.filename) overlayUrl.searchParams.set('sponsor_video',payload.filename); window.open(overlayUrl.toString(), '_blank'); }
-function loadSponsors(){ fetch('/api/sponsors',{credentials:'same-origin'}).then(r=>r.json()).then(d=>{ if(d.success){ sponsorLibraryData=d.library || []; renderSponsorLibrary(); }}).catch(()=>{}); }
+function selectedSponsorFile(filename = selectedSponsorFilename) { return sponsorLibraryData.find(file => file.filename === filename) || null; }
+function sponsorStatsMode() {
+  const value = document.getElementById('sponsorStatsModeInput')?.value || 'endcap';
+  return ['endcap','delayed','hidden','always'].includes(value) ? value : 'endcap';
+}
+function currentSponsorPayload(filename = selectedSponsorFilename) {
+  const selected = selectedSponsorFile(filename);
+  return {
+    filename: filename || null,
+    partner: sponsorInputValue('sponsorPartnerInput', selected?.partner || 'IntoTheBattle Partner'),
+    title: sponsorInputValue('sponsorTitleInput', selected?.title || 'Sponsor Spotlight'),
+    subtitle: sponsorInputValue('sponsorSubtitleInput', selected?.subtitle || 'Thanks for powering tonight\'s arena.'),
+    durationMs: Number(document.getElementById('sponsorDurationInput')?.value || 15000),
+    muted: document.getElementById('sponsorMutedInput')?.value !== 'false',
+    fit: document.getElementById('sponsorFitInput')?.value || 'cover',
+    statsMode: sponsorStatsMode(),
+  };
+}
+function updateSponsorSelectedSummary() {
+  const summary = document.getElementById('sponsorSelectedSummary');
+  if (!summary) return;
+  const file = selectedSponsorFile();
+  const title = summary.querySelector('.sponsor-selected-title');
+  const meta = summary.querySelector('.sponsor-selected-meta');
+  if (!canUseCreatorSponsors) {
+    if (title) title.textContent = 'Creator Pro feature';
+    if (meta) meta.textContent = 'Upgrade to manage your own brand videos.';
+    return;
+  }
+  if (!file) {
+    if (title) title.textContent = 'No sponsor video selected';
+    if (meta) meta.textContent = 'Upload or select a creative.';
+    return;
+  }
+  if (title) title.textContent = file.title || file.originalName || 'Sponsor creative';
+  if (meta) meta.textContent = `${file.partner || 'Sponsor'} · ${formatBytes(file.size || 0)}`;
+}
+function setSponsorInputs(file) {
+  if (!file) return;
+  selectedSponsorFilename = file.filename;
+  document.getElementById('sponsorPartnerInput').value = file.partner || 'Sponsor';
+  document.getElementById('sponsorTitleInput').value = file.title || file.originalName || 'Sponsor Spotlight';
+  document.getElementById('sponsorSubtitleInput').value = file.subtitle || 'We will be right back to the battle.';
+  updateSponsorSelectedSummary();
+}
+function renderSponsorLibrary() {
+  const container = document.getElementById('sponsorLibrary');
+  const badge = document.getElementById('sponsorCountBadge');
+  if (!container) return;
+  container.innerHTML = '';
+  if (!canUseCreatorSponsors) {
+    if (badge) badge.textContent = 'Pro Feature';
+    container.innerHTML = '<p class="muted">Creator Pro unlocks the sponsor video library, previews, and manual break controls.</p>';
+    updateSponsorSelectedSummary();
+    return;
+  }
+  if (badge) badge.textContent = `${sponsorLibraryData.length} Video${sponsorLibraryData.length !== 1 ? 's' : ''}`;
+  if (!sponsorLibraryData.length) {
+    container.innerHTML = '<p class="muted">No sponsor videos uploaded yet.</p>';
+    selectedSponsorFilename = '';
+    updateSponsorSelectedSummary();
+    return;
+  }
+  if (!selectedSponsorFilename || !sponsorLibraryData.some(f => f.filename === selectedSponsorFilename)) setSponsorInputs(sponsorLibraryData[0]);
+  sponsorLibraryData.forEach(file => {
+    const row = document.createElement('div');
+    row.className = `audio-row sponsor-row${file.filename === selectedSponsorFilename ? ' active' : ''}`;
+    const icon = document.createElement('div');
+    icon.className = 'sponsor-status-pill';
+    icon.textContent = 'Video';
+    const main = document.createElement('div');
+    main.className = 'sponsor-row-main';
+    const name = document.createElement('div');
+    name.className = 'audio-name';
+    name.textContent = file.title || file.originalName || 'Sponsor creative';
+    const size = document.createElement('div');
+    size.className = 'audio-size';
+    size.textContent = `${file.partner || 'Sponsor'} · ${formatBytes(file.size || 0)}`;
+    main.append(name, size);
+    const actions = document.createElement('div');
+    actions.className = 'sponsor-row-actions';
+    const selectBtn = document.createElement('button');
+    selectBtn.className = 'btn btn-secondary';
+    selectBtn.textContent = file.filename === selectedSponsorFilename ? 'Selected' : 'Select';
+    selectBtn.onclick = () => { setSponsorInputs(file); renderSponsorLibrary(); };
+    const playBtn = document.createElement('button');
+    playBtn.className = 'btn btn-success';
+    playBtn.textContent = 'Play';
+    playBtn.onclick = () => { setSponsorInputs(file); renderSponsorLibrary(); playSponsorScene(file.filename); };
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn btn-danger';
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.onclick = () => deleteSponsorVideo(file.filename);
+    actions.append(selectBtn, playBtn, deleteBtn);
+    row.append(icon, main, actions);
+    container.appendChild(row);
+  });
+  updateSponsorSelectedSummary();
+}
+function uploadSponsorVideo() {
+  if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true);
+  const input = document.getElementById('sponsorFileInput');
+  const file = input && input.files[0];
+  if (!file) return toast('Choose a sponsor video first', true);
+  const fd = new FormData();
+  fd.append('sponsor', file);
+  fd.append('partner', sponsorInputValue('sponsorPartnerInput', 'Sponsor'));
+  fd.append('title', sponsorInputValue('sponsorTitleInput', file.name.replace(/\.[^.]+$/, '')));
+  fd.append('subtitle', sponsorInputValue('sponsorSubtitleInput', 'We will be right back to the battle.'));
+  fetch('/api/sponsor/upload', { method:'POST', credentials:'same-origin', body:fd })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.success) return toast(d.error || 'Sponsor upload failed', true);
+      sponsorLibraryData = [d.file, ...sponsorLibraryData.filter(item => item.filename !== d.file.filename)];
+      setSponsorInputs(d.file);
+      renderSponsorLibrary();
+      input.value = '';
+      toast('Sponsor video uploaded');
+    })
+    .catch(() => toast('Sponsor upload failed', true));
+}
+function playSponsorScene(filename = selectedSponsorFilename) {
+  if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true);
+  apiCall('/api/sponsor/play','POST',currentSponsorPayload(filename)).then(d => { if (d.success) toast('Sponsor screen sent to overlay'); });
+}
+function stopSponsorScene() { if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true); apiCall('/api/sponsor/stop','POST').then(d => { if (d.success) toast('Sponsor screen stopped'); }); }
+function deleteSponsorVideo(filename) {
+  if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true);
+  if (!confirm('Delete this sponsor video?')) return;
+  fetch('/api/sponsor/delete/' + encodeURIComponent(filename), { method:'DELETE', credentials:'same-origin' })
+    .then(r => r.json())
+    .then(d => {
+      if (!d.success) return toast(d.error || 'Delete failed', true);
+      sponsorLibraryData = sponsorLibraryData.filter(file => file.filename !== filename);
+      if (selectedSponsorFilename === filename) selectedSponsorFilename = '';
+      renderSponsorLibrary();
+      toast('Sponsor video deleted');
+    })
+    .catch(() => toast('Delete failed', true));
+}
+function openSponsorPreview() {
+  if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true);
+  const payload = currentSponsorPayload();
+  const overlayUrl = new URL(currentOverlayUrl || '/overlay', window.location.origin);
+  overlayUrl.searchParams.set('sponsor_preview','1');
+  overlayUrl.searchParams.set('sponsor_title',payload.title);
+  overlayUrl.searchParams.set('sponsor_partner',payload.partner);
+  overlayUrl.searchParams.set('sponsor_subtitle',payload.subtitle);
+  overlayUrl.searchParams.set('sponsor_duration',payload.durationMs);
+  overlayUrl.searchParams.set('sponsor_muted',payload.muted ? '1':'0');
+  overlayUrl.searchParams.set('sponsor_fit',payload.fit);
+  overlayUrl.searchParams.set('sponsor_stats',payload.statsMode);
+  if (payload.filename) overlayUrl.searchParams.set('sponsor_video',payload.filename);
+  window.open(overlayUrl.toString(), '_blank');
+}
+function loadSponsors() {
+  if (!canUseCreatorSponsors) return;
+  fetch('/api/sponsors',{credentials:'same-origin'})
+    .then(r => r.json())
+    .then(d => { if (d.success) { sponsorLibraryData = d.library || []; renderSponsorLibrary(); }})
+    .catch(() => {});
+}
 
 let previewAudio = null;
 function playPreview(filename,label){ if(previewAudio){ previewAudio.pause(); previewAudio=null; } const a=new Audio('/audio/'+filename); a.currentTime=0; a.play().catch(()=>{}); previewAudio=a; a.onended=()=>{ previewAudio=null; }; toast('Playing: '+label); }
@@ -272,7 +512,7 @@ dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classLis
 dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', e=>{ e.preventDefault(); dropZone.classList.remove('dragover'); const file=e.dataTransfer.files[0]; if(file) uploadAudioFile(file); });
 fetch('/api/audio').then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData=d.library || []; audioConfigData=d.config || {}; renderAudioLibrary(); renderAssignTable(); }}).catch(()=>{});
-fetchStatus(); fetchSubscriptionStatus(); loadSponsors(); setInterval(fetchStatus,10000); setInterval(fetchSubscriptionStatus,60000);
+fetchStatus(); fetchSubscriptionStatus(); setInterval(fetchStatus,10000); setInterval(fetchSubscriptionStatus,60000);
 </script>
 </body>
 </html>

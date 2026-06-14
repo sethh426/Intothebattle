@@ -120,14 +120,14 @@
         updateEmailVerificationStatus(json.user);
 
         const subscription = json.subscription;
-        if (subscription && subscription.status) {
+        if (subscription && subscription.status === 'active') {
           subscriptionEl.innerHTML = `
             <p class="note">Status: <strong>${subscription.status}</strong></p>
-            <p class="note">Plan: ${subscription.plan_type || 'PayPal'}</p>
+            <p class="note">Plan: ${subscription.plan_type || 'Creator Pro'}</p>
             <p class="note">Next billing: ${subscription.next_billing_date || 'Pending'}</p>
           `;
         } else {
-          subscriptionEl.innerHTML = '<p class="note">No active subscription found. Upgrade from the paywall when you are ready.</p>';
+          subscriptionEl.innerHTML = '<p class="note">Plan: <strong>Free</strong></p><p class="note">Upgrade to Creator Pro when you want advanced creator controls.</p>';
         }
 
         roomListEl.innerHTML = json.rooms.length

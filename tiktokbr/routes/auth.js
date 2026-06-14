@@ -68,37 +68,6 @@ function normalizeGoogleUsername(email) {
   return email.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 24) || 'google-user';
 }
 
-function ensureTrialSubscription(userId) {
-  const existing = db.prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1").get(userId);
-  if (existing) return existing;
-
-  const trialDays = 14;
-  const trialExpiresAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 19)
-    .replace('T', ' ');
-  db.prepare(
-    'INSERT INTO subscriptions (user_id, status, started_at, next_billing_date, expires_at, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
-  ).run(userId, 'trial', trialExpiresAt, trialExpiresAt);
-  return db.prepare("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1").get(userId);
-}
-
-async function ensureTrialSubscriptionAsync(userId) {
-  const existing = await getAsync("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1", userId);
-  if (existing) return existing;
-
-  const trialDays = 14;
-  const trialExpiresAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 19)
-    .replace('T', ' ');
-  await runAsync(
-    'INSERT INTO subscriptions (user_id, status, started_at, next_billing_date, expires_at, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
-    [userId, 'trial', trialExpiresAt, trialExpiresAt]
-  );
-  return getAsync("SELECT * FROM subscriptions WHERE user_id = ? AND status IN ('active','trial') ORDER BY updated_at DESC LIMIT 1", userId);
-}
-
 function ensureUserRoom(userId, name) {
   const existingRoom = db.prepare('SELECT * FROM user_rooms WHERE user_id = ? ORDER BY created_at DESC LIMIT 1').get(userId);
   if (existingRoom) return existingRoom;
@@ -879,15 +848,6 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
     console.error('Verification email failed:', err);
   });
 
-  const trialDays = 14;
-  const trialExpiresAt = new Date(Date.now() + trialDays * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 19)
-    .replace('T', ' ');
-  db.prepare(
-    'INSERT INTO subscriptions (user_id, status, started_at, next_billing_date, expires_at, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
-  ).run(userId, 'trial', trialExpiresAt, trialExpiresAt);
-
   const accountId = `ACC-${String(userId).padStart(6, '0')}`;
   return res.json({
     success: true,
@@ -975,7 +935,6 @@ router.get('/auth/google/callback', async (req, res) => {
         [userId, roomId, `${name}'s room`]
       );
       await runAsync('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING', roomId);
-      await ensureTrialSubscriptionAsync(userId);
       user = await getAsync('SELECT * FROM users WHERE id = ?', userId);
     } else {
       if (!user.is_active) {
@@ -985,7 +944,6 @@ router.get('/auth/google/callback', async (req, res) => {
         await runAsync('UPDATE users SET email_verified = 1 WHERE id = ?', user.id);
       }
       await ensureUserRoomAsync(user.id, user.name);
-      await ensureTrialSubscriptionAsync(user.id);
     }
 
     const sessionToken = createSessionToken({ userId: user.id, email });
