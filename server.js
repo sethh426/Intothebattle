@@ -712,9 +712,53 @@ function saveRoomPlayerStats(room) {
   }
 }
 
+function roomBackgroundExists(room, filename = room?.currentBackground?.filename) {
+  if (!room || !filename) return false;
+  try {
+    const { backgroundDir } = getRoomPaths(room.roomId);
+    const filepath = path.join(backgroundDir, filename);
+    return isSafePath(backgroundDir, filepath) && fs.existsSync(filepath);
+  } catch (_err) {
+    return false;
+  }
+}
+
+function buildBackgroundPayload(room, extraParams = {}) {
+  const filename = room?.currentBackground?.filename;
+  if (!room || !filename || !roomBackgroundExists(room, filename)) return null;
+
+  const urlPath = `/background/${encodeURIComponent(filename)}`;
+  const token = createOverlayToken(room.roomId);
+  let url;
+  if (enableRoomScoped && token) {
+    url = appendOverlayAuth(urlPath, room.roomId, token, extraParams);
+  } else {
+    const parsed = new URL(urlPath, 'http://localhost');
+    for (const [key, value] of Object.entries(extraParams)) {
+      if (value != null && value !== '') parsed.searchParams.set(key, String(value));
+    }
+    url = `${parsed.pathname}${parsed.search}`;
+  }
+
+  return { ...room.currentBackground, filename, url };
+}
+
+function deleteRoomBackgroundFile(room, filename = room?.currentBackground?.filename) {
+  if (!room || !filename) return;
+  const { backgroundDir, backgroundMetaFile } = getRoomPaths(room.roomId);
+  const filepath = path.join(backgroundDir, filename);
+  if (isSafePath(backgroundDir, filepath) && fs.existsSync(filepath)) fs.unlinkSync(filepath);
+  if (fs.existsSync(backgroundMetaFile)) fs.unlinkSync(backgroundMetaFile);
+}
+
 function loadRoomBackground(room) {
   try {
-    if (room.currentBackground) return;
+    if (room.currentBackground) {
+      if (roomBackgroundExists(room)) return;
+      console.warn(`Background file missing for room ${room.roomId}: ${room.currentBackground.filename}`);
+      room.currentBackground = null;
+      saveRoomSettings(room.roomId);
+    }
     const { backgroundDir, backgroundMetaFile } = getRoomPaths(room.roomId);
     ensureDir(backgroundDir);
     if (fs.existsSync(backgroundMetaFile)) {
@@ -727,10 +771,24 @@ function loadRoomBackground(room) {
   }
 }
 
-function saveRoomBackgroundMeta(room, filename) {
+function saveRoomBackgroundMeta(room, file) {
   try {
-    room.currentBackground = { filename };
+    const filename = typeof file === 'string' ? file : file?.filename;
+    if (!filename) {
+      room.currentBackground = null;
+      saveRoomSettings(room.roomId);
+      return;
+    }
+    room.currentBackground = {
+      filename,
+      originalName: file?.originalname || file?.originalName || filename,
+      size: file?.size || 0,
+      uploadedAt: new Date().toISOString(),
+    };
     saveRoomSettings(room.roomId);
+    const { backgroundDir, backgroundMetaFile } = getRoomPaths(room.roomId);
+    ensureDir(backgroundDir);
+    fs.writeFileSync(backgroundMetaFile, JSON.stringify(room.currentBackground, null, 2));
   } catch (err) {
     console.error('Error saving background meta for room', room.roomId, err);
   }
@@ -2158,9 +2216,8 @@ io.on('connection', (socket) => {
       socket.emit('audioConfig',      room.audioConfig);
       socket.emit('overlaySettings',  room.overlaySettings);
       socket.emit('laserColor',       room.overlaySettings.laserColor);
-      if (room.currentBackground) {
-        socket.emit('backgroundChanged', { filename: room.currentBackground.filename });
-      }
+      const background = buildBackgroundPayload(room, { v: Date.now() });
+      if (background) socket.emit('backgroundChanged', background);
     } else if (clientType === 'dashboard' || clientType === 'stats') {
       if (previousType === 'overlay') {
         room.overlayCount = Math.max(0, room.overlayCount - 1);
@@ -2274,7 +2331,7 @@ app.get('/api/status', requireRoom, (req, res) => res.json({
   overlayConnected: req.room.overlayCount > 0,
   overlayCount:     req.room.overlayCount,
   playerCount:      Object.values(req.room.players).filter(p => p.alive).length,
-  background:       req.room.currentBackground,
+  background:       buildBackgroundPayload(req.room, { v: Date.now() }),
   overlaySettings:  req.room.overlaySettings,
   devTestMode:      DEV_TEST_MODE,
 }));
@@ -2370,10 +2427,11 @@ app.post('/api/background/upload', requireRoom, (req, res) => {
       if (err)       return res.status(400).json({ success: false, error: err.message || 'Background upload failed' });
       if (!req.file) return res.status(400).json({ success: false, error: 'No background image was uploaded.' });
       deleteRoomBackgroundFile(req.room);
-      saveRoomBackgroundMeta(req.room, req.file.filename);
-      emitRoomEvent(req.room, 'backgroundChanged', { filename: req.file.filename });
+      saveRoomBackgroundMeta(req.room, req.file);
+      const background = buildBackgroundPayload(req.room, { v: Date.now() });
+      emitRoomEvent(req.room, 'backgroundChanged', background || { filename: null });
       console.log(`📸 Background uploaded for room ${req.room.roomId}: ${req.file.filename}`);
-      return res.json({ success: true, filename: req.file.filename, url: `/background/${req.file.filename}` });
+      return res.json({ success: true, filename: req.file.filename, background, url: background?.url || `/background/${encodeURIComponent(req.file.filename)}` });
     } catch (uploadErr) {
       console.error('Background upload error:', uploadErr);
       return res.status(500).json({ success: false, error: uploadErr.message || 'Server error during background upload' });
@@ -2385,6 +2443,7 @@ app.post('/api/background/clear', requireRoom, (req, res) => {
   try {
     deleteRoomBackgroundFile(req.room);
     req.room.currentBackground = null;
+    saveRoomSettings(req.room.roomId);
     emitRoomEvent(req.room, 'backgroundChanged', { filename: null });
     console.log(`📸 Background cleared for room ${req.room.roomId}`);
     res.json({ success: true });

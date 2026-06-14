@@ -321,7 +321,18 @@ function setSubscriptionChip(data) {
 }
 async function fetchSubscriptionStatus() { try { const res = await fetch('/api/subscription/status', { credentials: 'same-origin' }); if (!res.ok) return setSubscriptionChip(null); setSubscriptionChip(await res.json()); } catch (_) { setSubscriptionChip(null); } }
 function openBillingStatus() { if (subscriptionStatusData && subscriptionStatusData.actionRequired) window.location.href = subscriptionStatusData.paywallUrl || '/paywall'; else window.location.href = '/profile'; }
-function updateBackgroundPreview(filename, label = filename) {
+function cacheBustAssetUrl(src) {
+  if (!src) return '';
+  try {
+    const url = new URL(src, window.location.origin);
+    url.searchParams.set('v', Date.now());
+    return `${url.pathname}${url.search}`;
+  } catch (_err) {
+    const sep = src.includes('?') ? '&' : '?';
+    return `${src}${sep}v=${Date.now()}`;
+  }
+}
+function updateBackgroundPreview(filename, label = filename, url = '') {
   const wrap = document.getElementById('backgroundPreview');
   const image = document.getElementById('backgroundPreviewImage');
   const empty = document.getElementById('backgroundPreviewEmpty');
@@ -345,10 +356,10 @@ function updateBackgroundPreview(filename, label = filename) {
     empty.textContent = 'Background image could not be loaded';
     text('bgStatus', `Background unavailable: ${label || filename}`);
   };
-  image.src = `/background/${encodeURIComponent(filename)}?v=${Date.now()}`;
+  image.src = cacheBustAssetUrl(url || `/background/${encodeURIComponent(filename)}`);
   text('bgStatus', `Background set: ${label || filename}`);
 }
-async function fetchStatus() { try { const res = await fetch('/api/status', { credentials: 'same-origin' }); const data = await res.json(); currentRoomId = data.roomId || null; currentOverlayUrl = data.overlayUrl || null; if (initialLoad) { document.getElementById('username').value = data.username || ''; initialLoad = false; } updateBackgroundPreview(data.background?.filename || '', data.background?.originalName || data.background?.filename || ''); setTikTokStatus(data.connected ? 'connected' : 'disconnected', data.username); const devValue = data.devTestMode ? 'ON' : 'OFF'; text('dev-mode-badge', devValue); text('dev-mode-copy', data.devTestMode ? 'Testing' : 'Live'); if (data.overlayCount !== undefined) socket.emit('register', { type: 'dashboard' }); } catch (e) { console.warn(e); } }
+async function fetchStatus() { try { const res = await fetch('/api/status', { credentials: 'same-origin' }); const data = await res.json(); currentRoomId = data.roomId || null; currentOverlayUrl = data.overlayUrl || null; if (initialLoad) { document.getElementById('username').value = data.username || ''; initialLoad = false; } updateBackgroundPreview(data.background?.filename || '', data.background?.originalName || data.background?.filename || '', data.background?.url || ''); setTikTokStatus(data.connected ? 'connected' : 'disconnected', data.username); const devValue = data.devTestMode ? 'ON' : 'OFF'; text('dev-mode-badge', devValue); text('dev-mode-copy', data.devTestMode ? 'Testing' : 'Live'); if (data.overlayCount !== undefined) socket.emit('register', { type: 'dashboard' }); } catch (e) { console.warn(e); } }
 function openOverlay() { window.open(currentOverlayUrl || '/overlay', '_blank'); }
 function copyOverlayUrl() { const url = currentOverlayUrl || `${window.location.origin}/overlay`; navigator.clipboard?.writeText(url).then(() => toast('Overlay URL copied')).catch(() => toast('Copy failed', true)); }
 
@@ -359,7 +370,7 @@ function resetTikTok(){ apiCall('/api/reset').then(()=>{ setTikTokStatus('discon
 function reloadOverlay(){ apiCall('/api/overlay/reload'); toast('Overlay reload signal sent'); }
 function clearPlayers(){ if(confirm('Clear all players?')) apiCall('/api/players/clear').then(()=>toast('Players cleared')); }
 function toggleDevMode(){ fetchStatus().then(()=>apiCall('/api/dev/test-mode','POST',{ enabled: document.getElementById('dev-mode-badge').textContent !== 'ON' })); }
-function uploadBackground(){ const file = document.getElementById('bgUpload').files[0]; if(!file) return toast('Choose an image first', true); const fd = new FormData(); fd.append('background', file); fetch('/api/background/upload', { method:'POST', credentials:'same-origin', body:fd }).then(r=>r.json()).then(d=>{ if(d.success){ updateBackgroundPreview(d.filename, file.name); toast('Background uploaded'); } else toast(d.error || 'Upload failed', true); }); }
+function uploadBackground(){ const file = document.getElementById('bgUpload').files[0]; if(!file) return toast('Choose an image first', true); const fd = new FormData(); fd.append('background', file); fetch('/api/background/upload', { method:'POST', credentials:'same-origin', body:fd }).then(r=>r.json()).then(d=>{ if(d.success){ updateBackgroundPreview(d.filename, file.name, d.background?.url || d.url || ''); toast('Background uploaded'); } else toast(d.error || 'Upload failed', true); }); }
 function clearBackground(){ apiCall('/api/background/clear').then(()=>{ updateBackgroundPreview(''); toast('Background cleared'); }); }
 function runOverlayTest(action){ apiCall(`/api/overlay/test/${action}`); toast(`${action} test triggered`); }
 function testOverlayAttack(){ runOverlayTest('attack'); } function testOverlayGift(){ runOverlayTest('gift'); } function testOverlayHeal(){ runOverlayTest('heal'); } function testOverlayKill(){ runOverlayTest('kill'); } function testStreak(){ apiCall('/api/overlay/test/streak'); toast('Streak test triggered'); }

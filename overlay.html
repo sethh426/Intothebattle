@@ -3456,7 +3456,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         if (!filename) { backgroundImg = null; return; }
         const img = new Image();
         img.onload = () => { backgroundImg = img; };
-        img.src    = withOverlayAuth(`/background/${encodeURIComponent(filename)}`, { v: Date.now() });
+        img.onerror = () => { console.warn('Overlay background failed to load', filename); };
+        img.src = data.url
+          ? withOverlayAuth(data.url, { v: Date.now() })
+          : withOverlayAuth(`/background/${encodeURIComponent(filename)}`, { v: Date.now() });
       });
 
       socket.on('attack', data => enqueueVisualEvent('attack', data, handleAttackEvent));
