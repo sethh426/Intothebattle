@@ -113,6 +113,10 @@ body.signed-overlay #overlay-container {
     0 0 42px rgba(246,201,91,0.13),
     0 0 92px rgba(122,252,255,0.09);
 }
+body.public-demo-overlay #overlay-container {
+  inset:8px;
+  border-radius:18px;
+}
 body.hide-overlay-controls .panel-wrapper { display:none !important; }
 body.hide-overlay-status #status-badge { display:none !important; }
 body.sponsor-active .damage,
@@ -1070,6 +1074,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   if (isSignedOverlay || isPublicDemo) {
     document.body.classList.add('signed-overlay');
   }
+  if (isPublicDemo) {
+    document.body.classList.add('public-demo-overlay');
+  }
   if ((isSignedOverlay || isPublicDemo) && overlayParams.get('controls') !== '1') {
     document.body.classList.add('hide-overlay-controls');
   }
@@ -1658,6 +1665,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   // ── Save / Load (no hordeThreshold) ──
   function saveLayout() {
+    if (isPublicDemo) return;
     try {
       localStorage.setItem('battleOverlayLayout', JSON.stringify({
         gap: layoutGap, offsetX, offsetY,
@@ -1667,7 +1675,34 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       }));
     } catch (_) {}
   }
+  function applyPublicDemoLayout() {
+    layoutGap = 0;
+    offsetX = 0;
+    offsetY = 0;
+    layoutZoom = 0.96;
+    darkMode = true;
+    overlaySettings.shotSpeed = 1;
+    overlaySettings.laserColor = '#7afcff';
+    overlaySettings.shotType = 'beam';
+    gapControl.value = 0;
+    offsetXControl.value = 0;
+    offsetYControl.value = 0;
+    zoomControl.value = 96;
+    heightControl.value = 100;
+    shotSpeedControl.value = 100;
+    themeToggle.checked = true;
+    container.style.height = '100%';
+    setActiveShotType('beam');
+    setLaserColor('#7afcff');
+    allSliders.forEach(syncFill);
+    updateLabels();
+    resizeCanvas();
+  }
   function loadLayout() {
+    if (isPublicDemo) {
+      applyPublicDemoLayout();
+      return;
+    }
     let s;
     try { s = JSON.parse(localStorage.getItem('battleOverlayLayout') || 'null'); } catch (_) {}
     if (!s) return;

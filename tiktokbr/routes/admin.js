@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import multer from 'multer';
 import db from '../db/db.js';
+import { triggerPlatformSponsorTest } from '../platformSponsorTestBus.js';
 
 const router = express.Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -474,6 +475,9 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {
         </form>
       </td>
       <td>
+        <form method="POST" action="/admin/sponsors/${creative.id}/test">
+          <button type="submit" class="test">Test Live</button>
+        </form>
         <form method="POST" action="/admin/sponsors/${creative.id}/toggle">
           <button type="submit">${isActive ? 'Pause' : 'Activate'}</button>
         </form>
@@ -512,12 +516,17 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {
     input, select { width: 100%; min-height:46px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.055); color: #fff; }
     input[type="checkbox"] { width:auto; min-height:0; margin-right:8px; }
     button { margin-top: 12px; width: 100%; min-height:44px; padding: 0 14px; border: none; border-radius: 14px; background: linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color: #170c02; cursor: pointer; font-weight: 900; }
+    button.test { color:#041014; background: linear-gradient(135deg,#55e7ff,#b9fbff); }
+    button.secondary { color:#fff8e6; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); }
     button.danger { color:#fff; background: #d9435f; }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; overflow:hidden; border-radius:16px; }
     th, td { vertical-align: top; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 12px; font-size: 13px; }
     th { background: rgba(246,201,91,0.09); color:#ffdf8a; text-align: left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     small { color:#9fb2d7; word-break: break-all; }
     .inline-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .test-panel { display:flex; align-items:center; justify-content:space-between; gap:18px; }
+    .test-panel p { margin:6px 0 0; color:#a8afbf; line-height:1.5; }
+    .test-panel form { min-width:220px; }
     @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.inline-grid{grid-template-columns:1fr} table, thead, tbody, tr, th, td{display:block} th{display:none} td{border-bottom:0} tr{border:1px solid rgba(255,255,255,0.08); border-radius:16px; margin-bottom:14px; overflow:hidden} }
   </style>
 </head>
@@ -532,6 +541,15 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
+    <div class="card test-panel">
+      <div>
+        <h2>Live overlay testing</h2>
+        <p>Use each row's Test Live button to send that saved creative to connected overlay rooms. Stop clears the current test screen everywhere.</p>
+      </div>
+      <form method="POST" action="/admin/sponsors/stop-test">
+        <button type="submit" class="secondary">Stop Live Test</button>
+      </form>
+    </div>
     <div class="card">
       <h2>Upload platform creative</h2>
       <form method="POST" action="/admin/sponsors/upload" enctype="multipart/form-data">
@@ -630,6 +648,28 @@ router.post('/sponsors/:id/update', requireAdminAuth, (req, res) => {
     id
   );
   res.redirect('/admin/sponsors?message=Creative%20saved');
+});
+
+router.post('/sponsors/:id/test', requireAdminAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.redirect('/admin/sponsors?error=Invalid%20creative');
+  try {
+    const result = triggerPlatformSponsorTest({ creativeId: id, action: 'show' });
+    const noun = result.roomCount === 1 ? 'overlay' : 'overlays';
+    res.redirect(`/admin/sponsors?message=${encodeURIComponent(`Test sent to ${result.roomCount} live ${noun}`)}`);
+  } catch (err) {
+    res.redirect(`/admin/sponsors?error=${encodeURIComponent(err.message || 'Test failed')}`);
+  }
+});
+
+router.post('/sponsors/stop-test', requireAdminAuth, (_req, res) => {
+  try {
+    const result = triggerPlatformSponsorTest({ action: 'hide' });
+    const noun = result.roomCount === 1 ? 'overlay' : 'overlays';
+    res.redirect(`/admin/sponsors?message=${encodeURIComponent(`Stopped live test on ${result.roomCount} ${noun}`)}`);
+  } catch (err) {
+    res.redirect(`/admin/sponsors?error=${encodeURIComponent(err.message || 'Stop failed')}`);
+  }
 });
 
 router.post('/sponsors/:id/toggle', requireAdminAuth, (req, res) => {

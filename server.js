@@ -21,6 +21,7 @@ import paypalRoutes from './tiktokbr/routes/paypal.js';
 import requireAccess from './tiktokbr/middleware/auth.js';
 import requireDashboardAccess from './tiktokbr/middleware/requireDashboardAccess.js';
 import { getE2EAuthRecord } from './tiktokbr/auth/e2eAuth.js';
+import { setPlatformSponsorTestHandler } from './tiktokbr/platformSponsorTestBus.js';
 import {
   getOrCreateRoom,
   getRoom,
@@ -421,6 +422,38 @@ function updatePlatformSponsorSchedule(room, entitlements) {
     scheduleNextPlatformSponsor(room, PLATFORM_SPONSOR_INITIAL_DELAY_MS);
   }
 }
+
+setPlatformSponsorTestHandler(({ creativeId, action = 'show' } = {}) => {
+  const liveRooms = Array.from(getAllRooms().values())
+    .filter(room => room && (room.overlayCount || 0) > 0);
+
+  if (action === 'hide') {
+    liveRooms.forEach(room => emitRoomEvent(room, 'sponsorScene', { action: 'hide', _ts: Date.now() }));
+    logger.info({ roomCount: liveRooms.length }, 'Admin stopped platform sponsor test');
+    return { roomCount: liveRooms.length };
+  }
+
+  const id = Number(creativeId);
+  const creative = Number.isFinite(id)
+    ? db.prepare('SELECT * FROM platform_sponsor_creatives WHERE id = ?').get(id)
+    : null;
+  if (!creative) {
+    const err = new Error('Creative not found');
+    err.status = 404;
+    throw err;
+  }
+  if (!liveRooms.length) {
+    const err = new Error('No live overlays are connected.');
+    err.status = 409;
+    throw err;
+  }
+
+  liveRooms.forEach(room => {
+    emitRoomEvent(room, 'sponsorScene', buildPlatformSponsorPayload(room, creative));
+  });
+  logger.info({ creativeId: creative.id, roomCount: liveRooms.length }, 'Admin emitted platform sponsor test');
+  return { creativeId: creative.id, roomCount: liveRooms.length, title: creative.title };
+});
 
 function getTotalOverlayCount() {
   return Array.from(getAllRooms().values()).reduce((sum, room) => sum + (room.overlayCount || 0), 0);
