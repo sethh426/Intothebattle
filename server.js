@@ -841,6 +841,13 @@ const ALLOWED_SPONSOR_MIMES = new Set([
   'application/octet-stream',
 ]);
 
+const SPONSOR_CONTENT_TYPES = new Map([
+  ['.mp4', 'video/mp4'],
+  ['.m4v', 'video/mp4'],
+  ['.webm', 'video/webm'],
+  ['.mov', 'video/quicktime'],
+]);
+
 const sponsorUpload = multer({
   storage: multer.diskStorage({
     destination: (req, _file, cb) => {
@@ -1861,7 +1868,7 @@ app.get('/sponsor/:filename', (req, res) => {
   const { sponsorDir } = getRoomPaths(room.roomId);
   const runtimePath = path.join(sponsorDir, filename);
   if (!isSafePath(sponsorDir, runtimePath)) return res.status(403).send('Forbidden');
-  if (fs.existsSync(runtimePath)) return res.sendFile(runtimePath);
+  if (fs.existsSync(runtimePath)) return sendSponsorMedia(req, res, runtimePath, filename);
   return res.status(404).send('Sponsor media not found');
 });
 
@@ -1878,6 +1885,83 @@ function parseSponsorDuration(value) {
 
 function parseSponsorMuted(value) {
   return !(value === false || value === 'false' || value === '0' || value === 0);
+}
+
+function sponsorContentType(filename) {
+  return SPONSOR_CONTENT_TYPES.get(path.extname(filename || '').toLowerCase()) || 'application/octet-stream';
+}
+
+function inlineContentDisposition(filename) {
+  const fallback = path.basename(filename || 'sponsor-video').replace(/["\r\n]/g, '');
+  return `inline; filename="${fallback}"`;
+}
+
+function sendSponsorMedia(req, res, filepath, filename) {
+  let stat;
+  try {
+    stat = fs.statSync(filepath);
+  } catch (_err) {
+    return res.status(404).send('Sponsor media not found');
+  }
+
+  const fileSize = stat.size;
+  const contentType = sponsorContentType(filename);
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Cache-Control', 'private, max-age=300');
+  res.setHeader('Content-Type', contentType);
+  res.setHeader('Content-Disposition', inlineContentDisposition(filename));
+
+  if (!fileSize) {
+    res.setHeader('Content-Length', '0');
+    return res.status(204).end();
+  }
+
+  const range = req.headers.range;
+  if (!range) {
+    res.setHeader('Content-Length', fileSize);
+    if (req.method === 'HEAD') return res.status(200).end();
+    const stream = fs.createReadStream(filepath);
+    stream.on('error', () => {
+      if (!res.headersSent) res.status(500).end();
+      else res.destroy();
+    });
+    return stream.pipe(res);
+  }
+
+  const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+  if (!match) {
+    res.setHeader('Content-Range', `bytes */${fileSize}`);
+    return res.status(416).end();
+  }
+
+  let start;
+  let end;
+  if (match[1] === '' && match[2] !== '') {
+    const suffixLength = Number(match[2]);
+    start = Math.max(fileSize - suffixLength, 0);
+    end = fileSize - 1;
+  } else {
+    start = Number(match[1] || 0);
+    end = match[2] === '' ? fileSize - 1 : Number(match[2]);
+  }
+
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end >= fileSize || start > end) {
+    res.setHeader('Content-Range', `bytes */${fileSize}`);
+    return res.status(416).end();
+  }
+
+  const chunkSize = end - start + 1;
+  res.status(206);
+  res.setHeader('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+  res.setHeader('Content-Length', chunkSize);
+  if (req.method === 'HEAD') return res.end();
+
+  const stream = fs.createReadStream(filepath, { start, end });
+  stream.on('error', () => {
+    if (!res.headersSent) res.status(500).end();
+    else res.destroy();
+  });
+  return stream.pipe(res);
 }
 
 function buildSponsorScenePayload(room, body = {}) {

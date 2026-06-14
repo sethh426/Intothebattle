@@ -339,10 +339,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   filter:saturate(1.08) contrast(1.08);
   transition:opacity 520ms ease,transform 900ms cubic-bezier(.16,1,.3,1),filter 520ms ease;
 }
-.sponsor-scene.live video { opacity:.78; transform:scale(1); }
+.sponsor-scene.live.video-ready video { opacity:.82; transform:scale(1); }
 .sponsor-scene.outro video,
 .sponsor-scene.intro video { opacity:0; }
-.sponsor-scene.contain.live video { object-fit:contain; opacity:1; background:#02040a; filter:none; }
+.sponsor-scene.contain.live.video-ready video { object-fit:contain; opacity:1; background:#02040a; filter:none; }
 
 .sponsor-intro,
 .sponsor-live,
@@ -478,6 +478,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   font:800 18px 'Rajdhani','Segoe UI',sans-serif; color:#9fefff;
   letter-spacing:0; text-transform:uppercase; opacity:0;
 }
+.sponsor-media-status {
+  position:absolute; left:76px; bottom:58px; max-width:min(560px,42%);
+  font:800 14px 'Rajdhani','Segoe UI',sans-serif; color:#ffdf8a;
+  letter-spacing:0; text-transform:uppercase; opacity:0;
+  text-shadow:0 2px 16px rgba(0,0,0,.86);
+  transition:opacity 240ms ease;
+}
+.sponsor-scene.live.video-loading .sponsor-media-status,
+.sponsor-scene.live.video-error .sponsor-media-status { opacity:.88; }
 .sponsor-scene.live .sponsor-progress span { animation:sponsorProgress var(--sponsor-duration) linear forwards; }
 .sponsor-scene.live .sponsor-brand,
 .sponsor-scene.live .sponsor-kicker,
@@ -512,6 +521,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .sponsor-brand { top:28px; right:34px; font-size:20px; }
   .sponsor-progress { left:48px; right:48px; bottom:28px; }
   .sponsor-return-hint { right:48px; bottom:44px; font-size:15px; }
+  .sponsor-media-status { left:48px; bottom:44px; max-width:52%; }
 }
 @media (max-width:560px) {
   .sponsor-intro-title,
@@ -524,6 +534,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .sponsor-brand { top:20px; right:24px; font-size:16px; }
   .sponsor-progress { left:30px; right:30px; bottom:22px; }
   .sponsor-return-hint { display:none; }
+  .sponsor-media-status { display:none; }
 }
 @keyframes sponsorProgress { to { transform:scaleX(1); } }
 @keyframes sponsorGridDrift { to { transform:perspective(700px) rotateX(58deg) translateY(12%) translateY(54px); } }
@@ -620,6 +631,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         <div class="sponsor-title" id="sponsorTitle">Presented By Our Sponsor</div>
         <div class="sponsor-subtitle" id="sponsorSubtitle">We will be right back to the battle.</div>
       </div>
+      <div class="sponsor-media-status" id="sponsorMediaStatus">Preparing sponsor media</div>
       <div class="sponsor-return-hint">BACK TO THE BATTLE SOON</div>
       <div class="sponsor-progress"><span id="sponsorProgress"></span></div>
     </div>
@@ -757,6 +769,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const sponsorTitle = document.getElementById('sponsorTitle');
   const sponsorSubtitle = document.getElementById('sponsorSubtitle');
   const sponsorProgress = document.getElementById('sponsorProgress');
+  const sponsorMediaStatus = document.getElementById('sponsorMediaStatus');
   const sponsorOutroTitle = document.getElementById('sponsorOutroTitle');
 
   // ── Panel DOM refs ──
@@ -795,6 +808,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let sponsorQueue    = [];
   let activeSponsorPayload = null;
   let sponsorAudioContext = null;
+  let sponsorVideoLoadToken = 0;
   let renderScale     = 1;
   const recentAttackKeys = new Map();
   const recentCheerKeys = new Map();
@@ -894,15 +908,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
   }
 
-  function resetSponsorVideo(clearSource = true) {
+  function resetSponsorVideo(clearSource = true, cancelLoad = true) {
+    if (cancelLoad) sponsorVideoLoadToken += 1;
     if (sponsorVideo) {
       sponsorVideo.pause();
       sponsorVideo.onended = null;
+      sponsorVideo.oncanplay = null;
+      sponsorVideo.onloadeddata = null;
+      sponsorVideo.onerror = null;
+      sponsorVideo.onstalled = null;
+      sponsorVideo.onwaiting = null;
       if (clearSource) {
         sponsorVideo.removeAttribute('src');
         sponsorVideo.load();
       }
     }
+    if (sponsorScene) {
+      sponsorScene.classList.remove('video-ready', 'video-loading', 'video-error');
+    }
+    setSponsorText(sponsorMediaStatus, '', '');
   }
 
   function setSponsorSceneState(nextState) {
@@ -915,6 +939,92 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
   }
 
+  function setSponsorMediaStatus(message, stateClass) {
+    if (!sponsorScene) return;
+    sponsorScene.classList.remove('video-ready', 'video-loading', 'video-error');
+    if (stateClass) sponsorScene.classList.add(stateClass);
+    setSponsorText(sponsorMediaStatus, message || '', '');
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  function preloadSponsorVideo(payload) {
+    sponsorVideoLoadToken += 1;
+    const token = sponsorVideoLoadToken;
+
+    if (!sponsorVideo || !payload.videoUrl) {
+      setSponsorMediaStatus('', null);
+      return Promise.resolve(false);
+    }
+
+    setSponsorMediaStatus('Preparing sponsor media', 'video-loading');
+    resetSponsorVideo(true, false);
+    setSponsorMediaStatus('Preparing sponsor media', 'video-loading');
+
+    return new Promise(resolve => {
+      let settled = false;
+      const done = (ready, message, stateClass) => {
+        if (settled || token !== sponsorVideoLoadToken) return;
+        settled = true;
+        setSponsorMediaStatus(message, stateClass);
+        resolve(ready);
+      };
+
+      sponsorVideo.preload = 'auto';
+      sponsorVideo.playsInline = true;
+      sponsorVideo.disablePictureInPicture = true;
+      sponsorVideo.muted = payload.muted;
+      sponsorVideo.loop = false;
+      sponsorVideo.src = payload.videoUrl;
+      sponsorVideo.onloadeddata = () => done(true, '', 'video-ready');
+      sponsorVideo.oncanplay = () => done(true, '', 'video-ready');
+      sponsorVideo.onerror = () => done(false, 'Sponsor media could not play', 'video-error');
+      sponsorVideo.onstalled = () => setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
+      sponsorVideo.onwaiting = () => setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
+
+      try {
+        sponsorVideo.load();
+        if (sponsorVideo.readyState >= 2) done(true, '', 'video-ready');
+      } catch (_err) {
+        done(false, 'Sponsor media could not load', 'video-error');
+      }
+    });
+  }
+
+  function playPreparedSponsorVideo(payload) {
+    if (!sponsorVideo || !payload.videoUrl) {
+      setSponsorMediaStatus('', null);
+      return;
+    }
+
+    if (sponsorVideo.readyState >= 2) setSponsorMediaStatus('', 'video-ready');
+    else setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
+
+    sponsorVideo.onloadeddata = () => setSponsorMediaStatus('', 'video-ready');
+    sponsorVideo.oncanplay = () => setSponsorMediaStatus('', 'video-ready');
+    sponsorVideo.onplaying = () => setSponsorMediaStatus('', 'video-ready');
+    sponsorVideo.onwaiting = () => setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
+    sponsorVideo.onstalled = () => setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
+    sponsorVideo.onerror = () => setSponsorMediaStatus('Sponsor media could not play', 'video-error');
+    sponsorVideo.onended = () => startSponsorOutro(payload);
+
+    try {
+      sponsorVideo.currentTime = 0;
+    } catch (_err) {}
+
+    const playAttempt = sponsorVideo.play();
+    if (playAttempt && typeof playAttempt.catch === 'function') {
+      playAttempt.catch(() => {
+        sponsorVideo.muted = true;
+        sponsorVideo.play().catch(() => {
+          setSponsorMediaStatus('Sponsor media could not play', 'video-error');
+        });
+      });
+    }
+  }
+
   function playSponsorTone(kind) {
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -923,6 +1033,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const audioCtx = sponsorAudioContext;
       if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
       const now = audioCtx.currentTime;
+      const output = audioCtx.createGain();
+      const compressor = audioCtx.createDynamicsCompressor();
+      output.gain.setValueAtTime(0.0001, now);
+      output.gain.exponentialRampToValueAtTime(kind === 'intro' ? 0.16 : 0.11, now + 0.08);
+      output.gain.exponentialRampToValueAtTime(0.0001, now + (kind === 'intro' ? 1.28 : 0.82));
+      output.connect(compressor);
+      compressor.connect(audioCtx.destination);
 
       const playTone = (start, duration, from, to, type, volume) => {
         const osc = audioCtx.createOscillator();
@@ -934,17 +1051,48 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         gain.gain.exponentialRampToValueAtTime(volume, now + start + duration * 0.24);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(output);
         osc.start(now + start);
         osc.stop(now + start + duration + 0.02);
       };
 
+      const playNoise = (start, duration, filterType, from, to, volume) => {
+        const bufferSize = Math.max(1, Math.floor(audioCtx.sampleRate * duration));
+        const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i += 1) {
+          data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+        }
+        const noise = audioCtx.createBufferSource();
+        const filter = audioCtx.createBiquadFilter();
+        const gain = audioCtx.createGain();
+        noise.buffer = buffer;
+        filter.type = filterType;
+        filter.frequency.setValueAtTime(from, now + start);
+        filter.frequency.exponentialRampToValueAtTime(to, now + start + duration);
+        filter.Q.setValueAtTime(0.9, now + start);
+        gain.gain.setValueAtTime(0.0001, now + start);
+        gain.gain.exponentialRampToValueAtTime(volume, now + start + duration * 0.18);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(output);
+        noise.start(now + start);
+        noise.stop(now + start + duration + 0.02);
+      };
+
       if (kind === 'intro') {
-        playTone(0, 0.32, 160, 92, 'sawtooth', 0.08);
-        playTone(0.18, 0.46, 420, 720, 'triangle', 0.045);
+        playNoise(0, 0.72, 'bandpass', 180, 3200, 0.11);
+        playTone(0, 0.58, 92, 38, 'sine', 0.18);
+        playTone(0.2, 0.62, 146.83, 98, 'sawtooth', 0.052);
+        playTone(0.52, 0.18, 587.33, 880, 'triangle', 0.048);
+        playTone(0.68, 0.22, 880, 1174.66, 'triangle', 0.04);
+        playNoise(0.62, 0.26, 'highpass', 520, 2600, 0.07);
       } else {
-        playTone(0, 0.24, 220, 520, 'triangle', 0.05);
-        playTone(0.12, 0.34, 110, 70, 'sine', 0.055);
+        playNoise(0, 0.34, 'bandpass', 260, 2200, 0.065);
+        playTone(0, 0.3, 196, 392, 'triangle', 0.052);
+        playTone(0.16, 0.42, 73.42, 49, 'sine', 0.09);
+        playTone(0.28, 0.2, 783.99, 987.77, 'triangle', 0.035);
       }
     } catch (_err) {
       // Some browsers and OBS profiles block WebAudio until interaction.
@@ -986,10 +1134,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     setSponsorSceneState('intro');
     playSponsorTone('intro');
 
-    sponsorTimer = setTimeout(() => {
-      sponsorTimer = null;
-      startSponsorLive(payload);
-    }, 1850);
+    const videoReady = preloadSponsorVideo(payload);
+    Promise.all([
+      sleep(1850),
+      payload.videoUrl ? Promise.race([videoReady, sleep(3600).then(() => false)]) : Promise.resolve(false),
+    ]).then(() => {
+      if (sponsorState === 'intro' && activeSponsorPayload === payload) startSponsorLive(payload);
+    });
   }
 
   function startSponsorLive(payload) {
@@ -1003,19 +1154,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     setSponsorText(sponsorSubtitle, payload.subtitle, 'We will be right back to the battle.');
     setSponsorSceneState('live');
 
-    if (sponsorVideo) {
-      resetSponsorVideo(true);
-      if (payload.videoUrl) {
-        sponsorVideo.muted = payload.muted;
-        sponsorVideo.loop = false;
-        sponsorVideo.src = payload.videoUrl;
-        sponsorVideo.onended = () => startSponsorOutro(payload);
-        sponsorVideo.play().catch(() => {
-          sponsorVideo.muted = true;
-          sponsorVideo.play().catch(() => {});
-        });
-      }
-    }
+    playPreparedSponsorVideo(payload);
 
     sponsorTimer = setTimeout(() => {
       sponsorTimer = null;
