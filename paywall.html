@@ -44,6 +44,12 @@
     .btn:hover { transform:translateY(-1px); filter:brightness(1.06); }
     .primary { color:#170c02; background:linear-gradient(135deg,var(--gold),#fff0b9 52%,var(--ember)); box-shadow:0 18px 46px rgba(246,201,91,.22); margin-bottom:12px; }
     .secondary { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:#fff; }
+    .payment-box { margin-top:4px; display:grid; gap:12px; }
+    .payment-status { min-height:48px; padding:14px 16px; border-radius:16px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.055); color:#c7cedd; line-height:1.45; font-size:14px; }
+    .payment-status.success { color:#b8ffd0; border-color:rgba(119,240,161,.25); background:rgba(119,240,161,.08); }
+    .payment-status.error { color:#ffb1b8; border-color:rgba(232,59,95,.25); background:rgba(232,59,95,.1); }
+    .paypal-shell { min-height:80px; padding:8px; border-radius:18px; border:1px solid rgba(246,201,91,.18); background:rgba(0,0,0,.18); }
+    .hidden { display:none !important; }
     .footer { margin-top:18px; text-align:center; color:var(--muted); font-size:13px; line-height:1.6; }
     .footer a { color:var(--gold2); font-weight:900; }
     @media(max-width:860px) { body{padding:14px}.wrap{grid-template-columns:1fr}.hero,.card{padding:26px} }
@@ -74,19 +80,122 @@
         <li>Overlay support for OBS and TikTok Studio</li>
         <li>Future transition and sponsor tooling</li>
       </ul>
-      <button class="btn primary" onclick="upgradeToPaid()">Upgrade via PayPal</button>
-      <button class="btn secondary" onclick="logoutUser()">Logout</button>
+      <div class="payment-box" aria-label="PayPal checkout">
+        <div id="paymentStatus" class="payment-status">Loading secure PayPal checkout...</div>
+        <div id="paypalButtons" class="paypal-shell"></div>
+        <button id="fallbackPayPal" class="btn primary hidden" type="button" onclick="upgradeToPaid()">Continue to PayPal</button>
+      </div>
+      <button class="btn secondary" onclick="window.location.href='/dashboard'">Back to dashboard</button>
       <div class="footer">Questions? <a href="mailto:support@intothebattle.com">Contact support</a></div>
     </section>
   </main>
   <script>
+    const paymentStatus = document.getElementById('paymentStatus');
+    const paypalButtonsEl = document.getElementById('paypalButtons');
+    const fallbackPayPal = document.getElementById('fallbackPayPal');
+    let fallbackPayPalUrl = '/paywall-link?fallback=1';
+
+    function setPaymentStatus(message, type = '') {
+      paymentStatus.textContent = message;
+      paymentStatus.className = `payment-status ${type}`.trim();
+    }
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing) return resolve();
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('PayPal checkout script could not load.'));
+        document.head.appendChild(script);
+      });
+    }
+
+    function showFallback(message, type = '') {
+      setPaymentStatus(message, type);
+      paypalButtonsEl.classList.add('hidden');
+      fallbackPayPal.classList.remove('hidden');
+    }
+
+    async function initPayPalCheckout() {
+      try {
+        const configRes = await fetch('/api/paypal/config', { credentials: 'same-origin' });
+        const config = await configRes.json().catch(() => ({}));
+        if (!configRes.ok) {
+          paypalButtonsEl.classList.add('hidden');
+          fallbackPayPal.textContent = 'Log in to upgrade';
+          fallbackPayPal.onclick = () => { window.location.href = config.loginUrl || '/login?next=/paywall'; };
+          fallbackPayPal.classList.remove('hidden');
+          setPaymentStatus(config.error || 'Log in before upgrading to Creator Pro.', 'error');
+          return;
+        }
+
+        if (config.fallbackUrl) fallbackPayPalUrl = config.fallbackUrl;
+        if (!config.configured) {
+          showFallback('PayPal subscription checkout needs PAYPAL_PLAN_ID on the server. The hosted PayPal link is available as a fallback.', 'error');
+          return;
+        }
+
+        const sdkUrl = new URL(config.sdkUrl);
+        sdkUrl.searchParams.set('client-id', config.clientId);
+        sdkUrl.searchParams.set('vault', 'true');
+        sdkUrl.searchParams.set('intent', 'subscription');
+        sdkUrl.searchParams.set('components', 'buttons');
+        sdkUrl.searchParams.set('currency', config.currency || 'USD');
+
+        await loadScript(sdkUrl.toString());
+        if (!window.paypal?.Buttons) throw new Error('PayPal checkout did not initialize.');
+
+        setPaymentStatus('Choose PayPal or card below. Your account unlocks only after PayPal confirms the subscription.');
+        window.paypal.Buttons({
+          style: {
+            layout: 'vertical',
+            shape: 'rect',
+            label: 'subscribe',
+            color: 'gold',
+          },
+          createSubscription(_data, actions) {
+            return actions.subscription.create({
+              plan_id: config.planId,
+              custom_id: `user:${config.user.id}`,
+            });
+          },
+          async onApprove(data) {
+            const subscriptionID = data.subscriptionID || data.subscriptionId;
+            if (!subscriptionID) throw new Error('PayPal did not return a subscription id.');
+            setPaymentStatus('PayPal approved the subscription. Verifying and activating your Creator Pro account...', 'success');
+            const activateRes = await fetch('/api/paypal/subscription/activate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'same-origin',
+              body: JSON.stringify({ subscriptionID }),
+            });
+            const result = await activateRes.json().catch(() => ({}));
+            if (!activateRes.ok || !result.success) {
+              throw new Error(result.error || 'PayPal approved, but account activation failed.');
+            }
+            window.location.href = result.redirectUrl || '/billing/success';
+          },
+          onCancel() {
+            window.location.href = '/billing/cancel';
+          },
+          onError(err) {
+            console.error('PayPal checkout error:', err);
+            showFallback(err?.message || 'PayPal checkout failed to load. You can try the hosted PayPal link instead.', 'error');
+          },
+        }).render('#paypalButtons');
+      } catch (err) {
+        console.error('PayPal checkout setup failed:', err);
+        showFallback(err.message || 'PayPal checkout is temporarily unavailable. Try the hosted PayPal link instead.', 'error');
+      }
+    }
+
     function upgradeToPaid() {
-      window.location.href = '/paywall-link';
+      window.location.href = fallbackPayPalUrl;
     }
-    async function logoutUser() {
-      try { await fetch('/auth/user/logout', { method: 'POST', credentials: 'same-origin' }); } catch (_err) {}
-      window.location.href = '/';
-    }
+    initPayPalCheckout();
   </script>
 </body>
 </html>

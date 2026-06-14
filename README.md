@@ -125,12 +125,17 @@ Payment/email variables are only needed when testing those flows:
 ```text
 PAYPAL_CLIENT_ID=
 PAYPAL_CLIENT_SECRET=
+PAYPAL_PLAN_ID=
+PAYPAL_MODE=live
+PAYPAL_CURRENCY=USD
 PAYPAL_WEBHOOK_ID=
 PAYPAL_PAYMENT_LINK=
 POSTMARK_API_TOKEN=
 EMAIL_FROM=Battle Royale <no-reply@example.com>
 POSTMARK_TEST_EMAIL=
 ```
+
+`PAYPAL_PLAN_ID` (or `PAYPAL_SUBSCRIPTION_PLAN_ID`) is required for the in-app Creator Pro subscription button. `PAYPAL_PAYMENT_LINK` is only a hosted-link fallback.
 
 Optional production/diagnostic variables:
 
@@ -304,6 +309,9 @@ DISK_PATH=/var/data
 TRUST_PROXY_HOPS=1
 PAYPAL_CLIENT_ID=<PayPal client id>
 PAYPAL_CLIENT_SECRET=<PayPal client secret>
+PAYPAL_PLAN_ID=<PayPal subscription plan id>
+PAYPAL_MODE=live
+PAYPAL_CURRENCY=USD
 PAYPAL_WEBHOOK_ID=<PayPal webhook id>
 POSTMARK_API_TOKEN=<Postmark token>
 EMAIL_FROM=Battle Royale <no-reply@intothebattle.com>

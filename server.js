@@ -1447,8 +1447,19 @@ app.get('/profile', requireAccess, (_req, res) => res.sendFile(path.join(__dirna
 app.get('/request-password-reset', (_req, res) => res.sendFile(path.join(__dirname, 'request-password-reset.html')));
 app.get('/reset-password', (_req, res) => res.sendFile(path.join(__dirname, 'reset-password.html')));
 app.get('/paywall', (_req, res) => res.sendFile(path.join(__dirname, 'paywall.html')));
-app.get('/paywall-link', (_req, res) => {
-  const url = process.env.PAYPAL_PAYMENT_LINK || 'https://www.paypal.com';
+app.get('/paywall-link', (req, res) => {
+  const inAppCheckoutConfigured = Boolean(
+    process.env.PAYPAL_CLIENT_ID &&
+    (process.env.PAYPAL_PLAN_ID || process.env.PAYPAL_SUBSCRIPTION_PLAN_ID)
+  );
+  if (inAppCheckoutConfigured && req.query?.fallback !== '1') {
+    return res.redirect(302, '/paywall?checkout=paypal');
+  }
+
+  const url = process.env.PAYPAL_PAYMENT_LINK;
+  if (!url) {
+    return res.redirect(302, '/billing/error?reason=paypal_not_configured');
+  }
   res.redirect(302, url);
 });
 
