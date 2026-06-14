@@ -3,122 +3,66 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Login — IntoTheBattle | Access Your TikTok Battle Overlay</title>
-  <meta name="description" content="Log into your IntoTheBattle account to access your TikTok LIVE battle overlay, creator dashboard, and stream management tools. Legacy access codes supported." />
-  <meta name="keywords" content="IntoTheBattle login, TikTok overlay access, creator dashboard, battle overlay login, stream management" />
+  <title>Login — IntoTheBattle | Creator Command Center</title>
+  <meta name="description" content="Log into IntoTheBattle to access your TikTok LIVE battle overlay, creator dashboard, stream controls, and sponsor moments." />
+  <meta name="keywords" content="IntoTheBattle login, TikTok LIVE overlay login, creator dashboard, streamer overlay tools" />
   <meta name="robots" content="index, follow" />
   <meta name="author" content="IntoTheBattle" />
   <link rel="canonical" href="https://intothebattle.com/login" />
-  
   <meta property="og:type" content="website" />
   <meta property="og:title" content="IntoTheBattle Login" />
-  <meta property="og:description" content="Secure login to your TikTok LIVE battle overlay and creator dashboard." />
+  <meta property="og:description" content="Access your TikTok LIVE battle overlay and creator command center." />
   <meta property="og:url" content="https://intothebattle.com/login" />
   <meta property="og:image" content="https://intothebattle.com/intothebattlelogo_logo_only.svg" />
   <meta property="og:site_name" content="IntoTheBattle" />
-  
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="IntoTheBattle Login" />
   <meta name="twitter:description" content="Access your TikTok LIVE battle overlay and creator dashboard." />
   <meta name="twitter:image" content="https://intothebattle.com/intothebattlelogo_logo_only.svg" />
-  
   <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
   <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-  
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    "name": "IntoTheBattle Login",
-    "url": "https://intothebattle.com/login",
-    "description": "Log into IntoTheBattle to access your TikTok LIVE battle overlay, creator dashboard, and stream management tools.",
-    "isPartOf": {
-      "@type": "WebSite",
-      "name": "IntoTheBattle",
-      "url": "https://intothebattle.com/"
-    }
-  }
-  </script>
-  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=DM+Sans:wght@400;500;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
   <style>
-    :root { --bg:#050d1a; --surface:#0f1726; --border:rgba(255,255,255,.08); --text:#e8eef8; --muted:#8ca2d1; --accent:#4d96ff; --success:#6bcb77; }
-    *{box-sizing:border-box;margin:0;padding:0;font-family:'DM Sans',sans-serif;}
-    body{min-height:100vh;background:radial-gradient(circle at top, rgba(77,150,255,.16), transparent 30%), var(--bg);color:var(--text);display:flex;align-items:center;justify-content:center;padding:30px;}
-    .page{width:min(1080px,100%);display:grid;grid-template-columns:1.1fr 0.9fr;gap:28px;}
-    .hero, .form-card{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:28px;padding:36px;box-shadow:0 30px 80px rgba(0,0,0,.25);}
-    .hero .brand-logo{width:56px;height:56px;border-radius:18px;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;margin-bottom:24px;}
-    .hero h1{font-size:2.9rem;line-height:1.02;margin-bottom:18px;letter-spacing:-1px;}
-    .hero p{color:var(--muted);margin-bottom:28px;max-width:36rem;line-height:1.8;}
-    .hero-links{display:flex;flex-wrap:wrap;gap:14px;}
-    .hero-links a{display:inline-flex;align-items:center;justify-content:center;padding:14px 24px;border-radius:16px;text-decoration:none;font-weight:700;transition:transform .2s ease;}
-    .hero-links a.primary{background:linear-gradient(135deg,var(--accent),#6ab0ff);color:#fff;}
-    .hero-links a.secondary{border:1px solid rgba(255,255,255,.12);color:var(--text);background:rgba(255,255,255,.04);}
-    .hero-links a:hover{transform:translateY(-1px);}
-    .section-title{font-size:.85rem;text-transform:uppercase;color:var(--muted);letter-spacing:1px;margin-bottom:16px;}
-    .form-group{margin-bottom:20px;}
-    label{display:block;font-size:.9rem;color:var(--muted);margin-bottom:8px;}
-    input{width:100%;padding:14px 16px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--text);font-size:1rem;}
-    button{width:100%;padding:14px 16px;border:none;border-radius:16px;font-size:1rem;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--accent),#6ab0ff);cursor:pointer;transition:transform .2s ease;}
-    button:hover{transform:translateY(-1px);}
-    .inline-link{display:inline-flex;gap:8px;color:var(--accent);text-decoration:none;margin-top:14px;font-size:.95rem;}
-    .notice{border-radius:16px;padding:16px;margin-bottom:20px;font-size:.96rem;}
-    .error{background:rgba(255,85,95,.12);border:1px solid rgba(255,85,95,.18);color:#ffb1b1;}
-    .success{background:rgba(107,203,119,.12);border:1px solid rgba(107,203,119,.18);color:#c6ffcf;}
-    .form-card h2{margin-bottom:20px;font-size:1.35rem;}
-    .btn-google{width:100%;padding:14px 16px;margin-bottom:18px;border:none;border-radius:16px;font-size:1rem;font-weight:700;color:#111;background:#fff;cursor:pointer;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:10px;}
-    .btn-google:hover{transform:translateY(-1px);}
-    .form-divider{height:1px;background:rgba(255,255,255,.08);margin:28px 0;}
-    @media(max-width:1024px){.page{grid-template-columns:1fr;}}
-    @media(max-width:720px){body{padding:20px;} .page{gap:20px;} .hero{padding:28px;} .form-card{padding:28px;}}
+    *{box-sizing:border-box;margin:0;padding:0}html{scroll-behavior:smooth}:root{--gold:#f6c95b;--gold2:#ffdf8a;--ember:#ff6a3d;--red:#e83b5f;--green:#77f0a1;--text:#fff8e6;--muted:#a8afbf;--dim:#677083;--line:rgba(246,201,91,.24);--white:rgba(255,255,255,.1);--shadow:0 32px 90px rgba(0,0,0,.48)}body{min-height:100vh;font-family:'DM Sans',system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text);background:radial-gradient(circle at 18% 2%,rgba(246,201,91,.18),transparent 30%),radial-gradient(circle at 84% 18%,rgba(232,59,95,.14),transparent 28%),linear-gradient(180deg,#050608 0%,#070a12 42%,#030406 100%);overflow-x:hidden}body:before{content:'';position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(246,201,91,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(246,201,91,.035) 1px,transparent 1px);background-size:58px 58px;mask-image:radial-gradient(circle at top,black,transparent 72%);z-index:-1}a{color:inherit;text-decoration:none}.page{width:min(1120px,calc(100% - 36px));min-height:100vh;margin:0 auto;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(380px,.95fr);gap:clamp(28px,5vw,64px);align-items:center;padding:42px 0}.hero,.form-card{border-radius:34px;border:1px solid var(--white);background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.08);overflow:hidden}.hero{padding:clamp(30px,4vw,46px);border-color:var(--line);background:radial-gradient(circle at top left,rgba(246,201,91,.15),transparent 34%),linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.025))}.brand-logo{width:76px;height:76px;border-radius:24px;display:grid;place-items:center;overflow:hidden;border:1px solid rgba(246,201,91,.38);background:rgba(246,201,91,.08);box-shadow:0 0 48px rgba(246,201,91,.18);margin-bottom:24px}.brand-logo img{width:100%;height:auto;display:block;transform:scale(1.1);transform-origin:center}.kicker,.section-title{display:inline-flex;width:fit-content;margin-bottom:16px;padding:8px 12px;border-radius:999px;border:1px solid rgba(246,201,91,.3);background:rgba(246,201,91,.08);color:var(--gold2);font-size:12px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}.hero h1{font-family:'Black Ops One','Rajdhani',sans-serif;font-size:clamp(40px,5.5vw,76px);line-height:1;text-transform:uppercase;margin-bottom:18px}.hero h1 span{color:transparent;background:linear-gradient(100deg,#fff7d7,var(--gold),var(--ember));-webkit-background-clip:text;background-clip:text}.hero p{color:#c7cedd;font-size:17px;line-height:1.72;max-width:640px;margin-bottom:26px}.hero-links{display:flex;flex-wrap:wrap;gap:12px}.link-btn,.btn-google,button{display:inline-flex;align-items:center;justify-content:center;min-height:54px;padding:0 20px;border-radius:16px;border:0;font-weight:900;font-size:15px;cursor:pointer;transition:.16s ease}.link-btn:hover,.btn-google:hover,button:hover{transform:translateY(-1px);filter:brightness(1.05)}.primary,button{color:#170c02;background:linear-gradient(135deg,var(--gold),#fff0b9 52%,var(--ember));box-shadow:0 18px 46px rgba(246,201,91,.22)}.secondary{color:var(--text);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}.form-card{padding:clamp(28px,4vw,38px);background:rgba(5,7,11,.74);border-color:rgba(246,201,91,.36)}.form-card h2{font-family:'Rajdhani',sans-serif;font-size:30px;text-transform:uppercase;margin-bottom:16px}.btn-google{width:100%;margin-bottom:18px;color:#120a02;background:#fff}.form-divider{height:1px;background:rgba(255,255,255,.09);margin:24px 0}.form-group{margin-bottom:16px}label{display:block;margin-bottom:8px;color:var(--muted);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}input{width:100%;min-height:52px;padding:13px 15px;border-radius:16px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.055);color:#fff;font:inherit}input:focus{outline:none;border-color:rgba(246,201,91,.55);box-shadow:0 0 0 4px rgba(246,201,91,.08)}button{width:100%}.inline-link{display:inline-flex;margin-top:13px;color:var(--gold2);font-weight:900}.notice{border-radius:16px;padding:14px 16px;margin-bottom:16px;font-size:14px;line-height:1.5}.error{background:rgba(232,59,95,.1);border:1px solid rgba(232,59,95,.25);color:#ffb1b8}.success{background:rgba(119,240,161,.08);border:1px solid rgba(119,240,161,.25);color:#b8ffd0}.legacy-note{color:var(--muted);font-size:13px;line-height:1.55;margin-bottom:14px}@media(max-width:940px){.page{grid-template-columns:1fr}.hero h1{font-size:clamp(38px,10vw,62px)}}@media(max-width:620px){.page{width:min(100% - 24px,1120px);padding:24px 0}.hero,.form-card{padding:24px}.hero-links .link-btn{width:100%}}
   </style>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    "name": "Login - IntoTheBattle",
-    "url": "https://intothebattle.com/login",
-    "description": "Log in to your IntoTheBattle account or use a legacy access code to enter your overlay room."
-  }
-  </script>
 </head>
 <body>
-  <div class="page">
-    <div class="hero">
-      <a href="/" class="brand-logo" aria-label="Back to previous page" onclick="if (window.history.length > 1) { window.history.back(); return false; }"><img src="/intothebattlelogo_logo_only.svg" style="transform:scale(1.1);transform-origin:center;width:100%;height:auto;" alt="IntoTheBattle logo"/></a>
-      <div class="section-title">IntoTheBattle</div>
-      <h1>Access your battle overlay and creator command center.</h1>
-      <p>Login with your account, start a free trial, or continue using a legacy access code. Everything you need for TikTok LIVE stream management is here.</p>
-      <div class="hero-links">
-        <a href="/signup" class="primary">Start free trial</a>
-        <a href="/register" class="secondary">Create account</a>
-      </div>
-    </div>
-    <div class="form-card">
+  <main class="page">
+    <section class="hero">
+      <a href="/" class="brand-logo" aria-label="IntoTheBattle home"><img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" /></a>
+      <div class="kicker">Creator access</div>
+      <h1>Return to your <span>command center.</span></h1>
+      <p>Open your overlay, manage stream controls, run sponsor moments, and prepare the battle room for your next TikTok LIVE.</p>
+      <div class="hero-links"><a href="/signup" class="link-btn primary">Start free trial</a><a href="/register" class="link-btn secondary">Create account</a></div>
+    </section>
+
+    <section class="form-card">
       <div class="section-title">Account login</div>
+      <h2>Enter the arena</h2>
       <div id="accountStatus"></div>
-      <a href="/auth/google" class="btn btn-google" id="googleLoginBtn">Continue with Google</a>
+      <a href="/auth/google" class="btn-google" id="googleLoginBtn">Continue with Google</a>
       <div class="form-divider"></div>
       <div class="form-group"><label for="email">Email</label><input id="email" type="email" autocomplete="username" /></div>
       <div class="form-group"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" /></div>
       <button id="loginBtn" type="button">Login</button>
       <a href="/request-password-reset" class="inline-link">Forgot password?</a>
       <div class="form-divider"></div>
-      <div class="section-title">Legacy access code</div>
+      <div class="section-title">Legacy access</div>
+      <p class="legacy-note">Use this only if your account still uses an older access-code flow.</p>
       <form method="POST" action="/login" id="accessCodeForm">
         <div class="form-group"><label for="code">Access code</label><input id="code" name="code" type="text" autocomplete="off" required placeholder="XXXX-XXXX-XXXX" /></div>
         <input id="fp" name="fingerprint" type="hidden" />
         <button type="submit">Use access code</button>
       </form>
-    </div>
-  </div>
+    </section>
+  </main>
   <script>
     const statusEl = document.getElementById('accountStatus');
     const loginBtn = document.getElementById('loginBtn');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
-    const accessFingerprintInput = document.getElementById('fp');
     function showStatus(message, isError = false) {
       statusEl.innerHTML = `<div class="notice ${isError ? 'error' : 'success'}">${message}</div>`;
     }
@@ -129,17 +73,12 @@
       if (!email || !password) return showStatus('Email and password are required.', true);
       try {
         const res = await fetch('/auth/user/login', {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          credentials:'same-origin',
-          body: JSON.stringify({ email, password }),
+          method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify({ email, password })
         });
         const json = await res.json();
         if (!res.ok) return showStatus(json.error || 'Login failed.', true);
         window.location.href = '/dashboard';
-      } catch (err) {
-        showStatus('Login failed. Please try again.', true);
-      }
+      } catch (err) { showStatus('Login failed. Please try again.', true); }
     });
     function setFingerprint(fp) {
       const input = document.getElementById('fp');
@@ -150,15 +89,10 @@
   <script src="https://cdn.jsdelivr.net/npm/fingerprintjs2@2/dist/fingerprint2.min.js"></script>
   <script>
     if (window.Fingerprint2) {
-      Fingerprint2.get(function(components) {
-        const values = components.map(c => c.value);
-        setFingerprint(Fingerprint2.x64hash128(values.join(''), 31));
-      });
+      Fingerprint2.get(function(components) { setFingerprint(Fingerprint2.x64hash128(components.map(c => c.value).join(''), 31)); });
     } else {
       document.addEventListener('DOMContentLoaded', () => setFingerprint('unknown-device'));
     }
   </script>
 </body>
 </html>
-
-
