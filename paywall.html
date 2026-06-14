@@ -3,335 +3,36 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Premium Subscription Plans — IntoTheBattle | Upgrade Your Battle Overlay</title>
-  <meta name="description" content="Upgrade to IntoTheBattle premium plans and unlock advanced features for your TikTok LIVE battle overlay. Unlimited rooms, advanced analytics, and premium support." />
-  <meta name="keywords" content="IntoTheBattle premium, subscription plans, upgrade overlay, advanced features, creator subscription" />
+  <title>Upgrade — IntoTheBattle Creator Pro</title>
+  <meta name="description" content="Upgrade IntoTheBattle to keep your TikTok LIVE battle overlay, sponsor moments, custom audio, and creator controls active." />
   <meta name="robots" content="index, follow" />
-  <meta name="author" content="IntoTheBattle" />
   <link rel="canonical" href="https://intothebattle.com/paywall" />
-  
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="IntoTheBattle Premium Plans" />
-  <meta property="og:description" content="Upgrade to unlock premium features for your TikTok LIVE battle overlay and advanced creator tools." />
-  <meta property="og:url" content="https://intothebattle.com/paywall" />
-  <meta property="og:image" content="https://intothebattle.com/intothebattlelogo_logo_only.svg" />
-  <meta property="og:site_name" content="IntoTheBattle" />
-  
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="IntoTheBattle Premium Plans" />
-  <meta name="twitter:description" content="Upgrade to unlock premium features for your TikTok LIVE battle overlay and advanced creator tools." />
-  <meta name="twitter:image" content="https://intothebattle.com/intothebattlelogo_logo_only.svg" />
-  
   <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
   <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-  
-    <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebPage",
-      "@name": "IntoTheBattle Premium Subscription",
-      "url": "https://intothebattle.com/paywall",
-      "description": "Premium subscription plans for IntoTheBattle with advanced features for TikTok LIVE creators.",
-      "isPartOf": {
-        "@type": "WebSite",
-        "name": "IntoTheBattle",
-        "url": "https://intothebattle.com/"
-      }
-    }
-    </script>
-  
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=DM+Sans:wght@400;500;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --primary: #4D96FF;
-      --accent: #6BCB77;
-      --dark: #050d1a;
-      --card: #0a1428;
-      --border: rgba(77, 150, 255, 0.15);
-      --text: #e8eef8;
-      --text-muted: #5a7a9e;
-      --warning: #FFB647;
-    }
-
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--dark);
-      color: var(--text);
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      position: relative;
-      overflow: hidden;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      background-image:
-        linear-gradient(rgba(77, 150, 255, 0.04) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(77, 150, 255, 0.04) 1px, transparent 1px);
-      background-size: 48px 48px;
-      animation: gridShift 20s linear infinite;
-      pointer-events: none;
-    }
-
-    @keyframes gridShift { from { background-position: 0 0; } to { background-position: 48px 48px; } }
-
-    .orb {
-      position: fixed;
-      border-radius: 50%;
-      filter: blur(90px);
-      pointer-events: none;
-      z-index: 1;
-    }
-    .orb-1 { width: 420px; height: 420px; background: rgba(77, 150, 255, 0.1); top: -140px; right: -80px; }
-    .orb-2 { width: 360px; height: 360px; background: rgba(107, 203, 119, 0.07); bottom: -80px; left: -100px; }
-
-    .container {
-      position: relative;
-      z-index: 10;
-      width: 100%;
-      max-width: 520px;
-    }
-
-    .card {
-      background: rgba(8, 18, 40, 0.92);
-      border: 2px solid var(--warning);
-      border-radius: 20px;
-      padding: 48px 36px;
-      box-shadow: 0 0 60px rgba(255, 182, 71, 0.15), 0 24px 48px rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(20px);
-      animation: fadeUp 0.5s ease both;
-      text-align: center;
-    }
-
-    @keyframes fadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
-
-    .card-icon {
-      font-size: 64px;
-      margin-bottom: 20px;
-      display: block;
-    }
-
-    .card-title {
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 32px;
-      font-weight: 700;
-      color: #fff;
-      letter-spacing: 0.5px;
-      margin-bottom: 12px;
-    }
-
-    .card-sub {
-      font-size: 16px;
-      color: var(--text-muted);
-      margin-bottom: 32px;
-      line-height: 1.6;
-    }
-
-    .warning-box {
-      background: rgba(255, 182, 71, 0.1);
-      border: 1px solid var(--warning);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 32px;
-      text-align: left;
-    }
-
-    .warning-title {
-      font-weight: 700;
-      color: var(--warning);
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .warning-text {
-      font-size: 14px;
-      color: var(--text-muted);
-      line-height: 1.6;
-    }
-
-    .pricing-card {
-      background: rgba(77, 150, 255, 0.05);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 32px;
-      margin-bottom: 32px;
-      text-align: left;
-    }
-
-    .pricing-title {
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 24px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-
-    .pricing-price {
-      font-size: 42px;
-      font-weight: 700;
-      color: var(--primary);
-      margin-bottom: 4px;
-    }
-
-    .pricing-period {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-bottom: 20px;
-    }
-
-    .pricing-features {
-      list-style: none;
-      margin-bottom: 24px;
-    }
-
-    .pricing-features li {
-      padding: 8px 0;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 14px;
-    }
-
-    .pricing-features li::before {
-      content: '✓';
-      color: var(--accent);
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-
-    .btn {
-      width: 100%;
-      padding: 16px;
-      border-radius: 10px;
-      border: none;
-      color: #fff;
-      font-size: 16px;
-      font-weight: 700;
-      font-family: 'DM Sans', sans-serif;
-      cursor: pointer;
-      letter-spacing: 0.5px;
-      transition: filter 0.15s, transform 0.15s, box-shadow 0.15s;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary), #6ab0ff);
-      box-shadow: 0 0 24px rgba(77, 150, 255, 0.3);
-      margin-bottom: 12px;
-    }
-
-    .btn-primary:hover {
-      filter: brightness(1.1);
-      transform: translateY(-2px);
-      box-shadow: 0 0 36px rgba(77, 150, 255, 0.45);
-    }
-
-    .btn-secondary {
-      background: transparent;
-      border: 2px solid var(--border);
-      color: var(--text);
-    }
-
-    .btn-secondary:hover {
-      border-color: var(--primary);
-      background: rgba(77, 150, 255, 0.1);
-    }
-
-    .footer-text {
-      font-size: 13px;
-      color: var(--text-muted);
-      text-align: center;
-      margin-top: 20px;
-    }
-
-    .footer-link {
-      color: var(--primary);
-      text-decoration: none;
-      font-weight: 600;
-    }
-
-    .footer-link:hover {
-      text-decoration: underline;
-    }
-
-    @media (max-width: 480px) {
-      .card {
-        padding: 32px 24px;
-      }
-
-      .card-title {
-        font-size: 26px;
-      }
-
-      .pricing-price {
-        font-size: 36px;
-      }
-    }
+    *{box-sizing:border-box;margin:0;padding:0}body{min-height:100vh;display:grid;place-items:center;padding:24px;font-family:'DM Sans',system-ui,sans-serif;color:#fff8e6;background:radial-gradient(circle at 18% 2%,rgba(246,201,91,.18),transparent 30%),radial-gradient(circle at 84% 16%,rgba(232,59,95,.13),transparent 30%),linear-gradient(180deg,#050608,#030406)}body:before{content:'';position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(246,201,91,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(246,201,91,.035) 1px,transparent 1px);background-size:58px 58px;mask-image:radial-gradient(circle at top,black,transparent 72%);z-index:-1}.wrap{width:min(100%,1040px);display:grid;grid-template-columns:1.1fr .9fr;gap:22px;align-items:stretch}.hero,.card{border-radius:32px;border:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025));box-shadow:0 32px 90px rgba(0,0,0,.45)}.hero{padding:38px;border-color:rgba(246,201,91,.24);background:radial-gradient(circle at top left,rgba(246,201,91,.16),transparent 34%),linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.025))}.logo{width:76px;height:76px;border-radius:24px;border:1px solid rgba(246,201,91,.38);background:rgba(246,201,91,.08);overflow:hidden;margin-bottom:24px}.logo img{width:100%;height:auto;display:block;transform:scale(1.1)}.kicker{display:inline-flex;margin-bottom:16px;padding:8px 12px;border-radius:999px;border:1px solid rgba(246,201,91,.3);background:rgba(246,201,91,.08);color:#ffdf8a;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.12em}h1{font-family:'Black Ops One','Rajdhani',sans-serif;font-size:clamp(38px,5vw,68px);line-height:1;text-transform:uppercase;margin-bottom:16px}h1 span{color:transparent;background:linear-gradient(100deg,#fff7d7,#f6c95b,#ff6a3d);-webkit-background-clip:text;background-clip:text}.sub{color:#c7cedd;line-height:1.7;font-size:17px}.features{display:grid;gap:12px;margin-top:26px}.feature{padding:14px 16px;border-radius:18px;border:1px solid rgba(255,255,255,.08);background:rgba(0,0,0,.2);color:#dfe6f3}.feature b{color:#ffdf8a}.card{padding:32px;background:rgba(5,7,11,.72);border-color:rgba(246,201,91,.4)}.price-label{color:#ffdf8a;text-transform:uppercase;letter-spacing:.12em;font-size:12px;font-weight:900}.plan{font-size:24px;font-weight:900;margin:10px 0}.price{font-family:'Black Ops One','Rajdhani',sans-serif;font-size:58px;line-height:1;margin-bottom:6px}.price small{font-family:'DM Sans';font-size:16px;color:#a8afbf}.period{color:#a8afbf;margin-bottom:22px}.list{list-style:none;display:grid;gap:12px;margin:24px 0}.list li{display:flex;gap:10px;color:#dfe6f3}.list li:before{content:'✓';color:#77f0a1;font-weight:900}.btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:56px;border:0;border-radius:16px;font-weight:900;font-size:16px;cursor:pointer}.primary{color:#170c02;background:linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d);box-shadow:0 18px 46px rgba(246,201,91,.22);margin-bottom:12px}.secondary{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#fff}.footer{margin-top:18px;text-align:center;color:#a8afbf;font-size:13px}.footer a{color:#ffdf8a;text-decoration:none;font-weight:900}@media(max-width:860px){.wrap{grid-template-columns:1fr}.hero,.card{padding:26px}}
   </style>
 </head>
 <body>
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
-
-  <div class="container">
-    <div class="card">
-      <span class="card-icon">⏰</span>
-      <h1 class="card-title">Trial Ended</h1>
-      <p class="card-sub">Your 7-day free trial has ended. Upgrade to continue using Battle Royale LIVE.</p>
-
-      <div class="warning-box">
-        <div class="warning-title">
-          <span>⚠️</span> What happens next?
-        </div>
-        <div class="warning-text">
-          Your dashboard and overlays will be locked. All your settings and analytics are saved—just upgrade to get back in.
-        </div>
-      </div>
-
-      <div class="pricing-card">
-        <h2 class="pricing-title">Creator Pro</h2>
-        <div class="pricing-price">$29<span style="font-size: 20px">/mo</span></div>
-        <div class="pricing-period">Cancel anytime. No long-term contract.</div>
-        <ul class="pricing-features">
-          <li>Unlimited battle rooms</li>
-          <li>Custom audio & effects</li>
-          <li>Real-time analytics</li>
-          <li>Multi-stream support</li>
-          <li>Priority support</li>
-        </ul>
-      </div>
-
-      <button class="btn btn-primary" onclick="upgradeToPaid()">
-        💳 Upgrade Now via PayPal
-      </button>
-
-      <button class="btn btn-secondary" onclick="window.location.href='/logout'">
-        Logout
-      </button>
-
-      <div class="footer-text">
-        Questions? <a href="mailto:support@battleroyalelive.com" class="footer-link">Contact Support</a>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    function upgradeToPaid() {
-      // Redirect to the server-managed PayPal subscription link.
-      window.location.href = '/paywall-link';
-    }
-  </script>
+  <main class="wrap">
+    <section class="hero">
+      <div class="logo"><img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo"></div>
+      <div class="kicker">Creator Pro</div>
+      <h1>Keep your arena <span>live.</span></h1>
+      <p class="sub">Upgrade to continue using your battle overlay, custom audio, sponsor moments, room controls, and creator dashboard after the trial.</p>
+      <div class="features"><div class="feature"><b>Overlay control:</b> browser-source overlay, reload controls, and room state.</div><div class="feature"><b>Sponsor moments:</b> upload and trigger full-screen sponsor screens.</div><div class="feature"><b>Creator assets:</b> custom backgrounds, sounds, and event assignments.</div></div>
+    </section>
+    <section class="card">
+      <div class="price-label">Subscription</div><div class="plan">Creator Pro</div><div class="price">$29<small>/mo</small></div><div class="period">Cancel anytime. No long-term contract.</div>
+      <ul class="list"><li>Battle rooms and creator dashboard</li><li>Custom audio and visual controls</li><li>Sponsor screens and premium moments</li><li>Overlay support for OBS and TikTok Studio</li><li>Future transition and sponsor tooling</li></ul>
+      <button class="btn primary" onclick="upgradeToPaid()">Upgrade via PayPal</button>
+      <button class="btn secondary" onclick="window.location.href='/dashboard/logout'">Logout</button>
+      <div class="footer">Questions? <a href="mailto:support@intothebattle.com">Contact support</a></div>
+    </section>
+  </main>
+  <script>function upgradeToPaid(){window.location.href='/paywall-link';}</script>
 </body>
 </html>
-
-
