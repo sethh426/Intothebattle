@@ -113,7 +113,10 @@ body.signed-overlay #overlay-container {
 body.hide-overlay-controls .panel-wrapper { display:none !important; }
 body.hide-overlay-status #status-badge { display:none !important; }
 body.sponsor-active .damage,
-body.sponsor-active .banner { display:none !important; }
+body.sponsor-active .banner,
+body.sponsor-active .panel-tab,
+body.sponsor-active .layout-panel,
+body.sponsor-active #status-badge { display:none !important; }
 
 /* ── Panel ── */
 .panel-wrapper { position:fixed; top:16px; right:0; display:flex; align-items:flex-start; pointer-events:auto; z-index:30; }
@@ -474,13 +477,146 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   background:linear-gradient(90deg,#ffdf8a,#55e7ff);
 }
 .sponsor-return-hint {
-  position:absolute; right:76px; bottom:58px;
-  font:800 18px 'Rajdhani','Segoe UI',sans-serif; color:#9fefff;
+  position:absolute; right:76px; bottom:55px;
+  padding:6px 12px; border-radius:999px; background:rgba(0,0,0,.34);
+  border:1px solid rgba(85,231,255,.18);
+  font:900 24px 'Rajdhani','Segoe UI',sans-serif; color:#9fefff;
   letter-spacing:0; text-transform:uppercase; opacity:0;
 }
+.sponsor-live-stats {
+  position:absolute; left:60px; right:60px; bottom:76px; width:auto;
+  padding:24px 26px 22px; border:1px solid rgba(122,252,255,.36); border-radius:8px;
+  overflow:hidden; isolation:isolate;
+  background:
+    radial-gradient(circle at 8% 20%, rgba(255,223,138,.15), transparent 26%),
+    radial-gradient(circle at 86% 70%, rgba(85,231,255,.14), transparent 28%),
+    linear-gradient(110deg,rgba(5,12,24,.84),rgba(7,18,32,.68) 48%,rgba(7,9,18,.72));
+  background-size:160% 160%;
+  box-shadow:0 18px 48px rgba(0,0,0,.42),0 0 36px rgba(85,231,255,.08), inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter:blur(18px); opacity:0; transform:translateY(16px);
+  text-shadow:0 2px 14px rgba(0,0,0,.8);
+}
+.sponsor-live-stats::before {
+  content:""; position:absolute; inset:-1px; z-index:0; pointer-events:none; border-radius:9px; padding:1px;
+  background:linear-gradient(90deg,rgba(255,223,138,.9),rgba(85,231,255,.95),rgba(255,74,110,.62),rgba(255,223,138,.9));
+  background-size:240% 100%;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+  opacity:.78;
+}
+.sponsor-live-stats::after {
+  content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+  background:
+    linear-gradient(100deg,transparent 0%,rgba(255,255,255,.12) 46%,transparent 62%),
+    repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 1px,transparent 1px 7px);
+  transform:translateX(-125%);
+  mix-blend-mode:screen;
+}
+.sponsor-live-stats > * { position:relative; z-index:1; }
+.sponsor-scene.live .sponsor-live-stats {
+  animation:sponsorStatsIn 780ms 220ms cubic-bezier(.16,1,.3,1) both,sponsorStatsBg 7s 900ms ease-in-out infinite;
+}
+.sponsor-scene.live .sponsor-live-stats::before { animation:sponsorStatsBorder 4.8s linear infinite; }
+.sponsor-scene.live .sponsor-live-stats::after { animation:sponsorStatsSheen 3.8s 900ms cubic-bezier(.16,1,.3,1) infinite; }
+.sponsor-stats-head {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  margin-bottom:14px; font:900 32px 'Rajdhani','Segoe UI',sans-serif;
+  color:#ffdf8a; letter-spacing:0; text-transform:uppercase;
+}
+.sponsor-stats-head span:last-child {
+  color:#9fefff; font-size:24px; opacity:.9; position:relative; padding-left:28px;
+}
+.sponsor-stats-head span:last-child::before {
+  content:""; position:absolute; left:0; top:50%; width:14px; height:14px; border-radius:50%;
+  background:#55e7ff; box-shadow:0 0 16px rgba(85,231,255,.95); transform:translateY(-50%);
+  animation:sponsorLivePulse 1.2s ease-in-out infinite;
+}
+.sponsor-stats-grid {
+  display:grid; grid-template-columns:minmax(230px,.82fr) minmax(520px,1.78fr) minmax(420px,1.44fr); gap:14px;
+}
+.sponsor-stat {
+  position:relative; min-width:0; min-height:136px; padding:24px 26px 22px;
+  display:flex; flex-direction:column; justify-content:center;
+  border:1px solid rgba(255,255,255,.12); border-radius:8px;
+  background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.038));
+  opacity:0; transform:translateY(14px);
+}
+.sponsor-stat::before {
+  content:""; position:absolute; left:0; top:18px; bottom:18px; width:4px; border-radius:0 999px 999px 0;
+  background:linear-gradient(180deg,#ffdf8a,#55e7ff);
+  box-shadow:0 0 18px rgba(85,231,255,.34);
+}
+.sponsor-scene.live .sponsor-stat { animation:sponsorStatItemIn 520ms cubic-bezier(.16,1,.3,1) both; }
+.sponsor-scene.live .sponsor-stat:nth-child(1) { animation-delay:380ms; }
+.sponsor-scene.live .sponsor-stat:nth-child(2) { animation-delay:450ms; }
+.sponsor-scene.live .sponsor-stat:nth-child(3) { animation-delay:520ms; }
+.sponsor-stat:hover {
+  border-color:rgba(122,252,255,.28);
+}
+.sponsor-stat-label {
+  display:block; margin-bottom:8px; font:900 23px 'Rajdhani','Segoe UI',sans-serif;
+  color:#ffdf8a; text-transform:uppercase; letter-spacing:0;
+}
+.sponsor-stat-value {
+  display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font:900 56px 'Exo 2','Segoe UI',sans-serif; line-height:1.18; color:#fff8e6; letter-spacing:0;
+}
+.sponsor-stat-score .sponsor-stat-value {
+  font-size:78px;
+  line-height:1.22;
+}
+.sponsor-stat-fighter .sponsor-stat-value {
+  font-size:52px;
+}
+.sponsor-stat-sub {
+  display:block; margin-top:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font:900 27px 'Rajdhani','Segoe UI',sans-serif; line-height:1.22; color:#9fefff;
+  text-transform:uppercase; letter-spacing:0;
+}
+.sponsor-horde-bar {
+  height:15px; margin-top:16px; border-radius:999px; overflow:hidden;
+  background:rgba(255,255,255,.14);
+}
+.sponsor-horde-bar span {
+  display:block; width:100%; height:100%; transform:scaleX(0); transform-origin:left center;
+  background:linear-gradient(90deg,#ff2e42,#ff6b58,#ffd166,#55e7ff);
+  background-size:180% 100%;
+  transition:transform 320ms ease;
+  animation:sponsorHordeFlow 2.8s linear infinite;
+}
+.sponsor-leaderboard {
+  margin-top:18px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px;
+}
+.sponsor-leader-row {
+  display:grid; grid-template-columns:48px minmax(0,1fr); align-items:center; gap:12px;
+  min-height:96px; padding:18px 22px; border-radius:8px; background:rgba(0,0,0,.28);
+  border:1px solid rgba(255,255,255,.07);
+  opacity:0; transform:translateX(-14px);
+}
+.sponsor-scene.live .sponsor-leader-row { animation:sponsorLeaderIn 480ms cubic-bezier(.16,1,.3,1) both; }
+.sponsor-scene.live .sponsor-leader-row:nth-child(1) { animation-delay:680ms; }
+.sponsor-scene.live .sponsor-leader-row:nth-child(2) { animation-delay:760ms; }
+.sponsor-scene.live .sponsor-leader-row:nth-child(3) { animation-delay:840ms; }
+.sponsor-leader-rank {
+  font:900 42px 'Rajdhani','Segoe UI',sans-serif; color:#ffdf8a;
+}
+.sponsor-leader-copy {
+  min-width:0; display:flex; flex-direction:column; gap:6px;
+}
+.sponsor-leader-name {
+  display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  font:900 42px 'Rajdhani','Segoe UI',sans-serif; line-height:1.3; color:#eef8ff;
+}
+.sponsor-leader-meta {
+  display:block; overflow:hidden; text-overflow:ellipsis;
+  font:900 29px 'Rajdhani','Segoe UI',sans-serif; line-height:1.26; color:#9fefff; white-space:nowrap;
+}
 .sponsor-media-status {
-  position:absolute; left:76px; bottom:58px; max-width:min(560px,42%);
-  font:800 14px 'Rajdhani','Segoe UI',sans-serif; color:#ffdf8a;
+  position:absolute; left:76px; bottom:55px; max-width:min(720px,48%);
+  padding:6px 12px; border-radius:999px; background:rgba(0,0,0,.34);
+  border:1px solid rgba(255,223,138,.18);
+  font:900 22px 'Rajdhani','Segoe UI',sans-serif; color:#ffdf8a;
   letter-spacing:0; text-transform:uppercase; opacity:0;
   text-shadow:0 2px 16px rgba(0,0,0,.86);
   transition:opacity 240ms ease;
@@ -519,6 +655,19 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .sponsor-subtitle { font-size:24px; }
   .sponsor-frame { padding:48px; width:92%; }
   .sponsor-brand { top:28px; right:34px; font-size:20px; }
+  .sponsor-live-stats { left:34px; right:34px; bottom:64px; padding:16px; }
+  .sponsor-stats-head { font-size:24px; }
+  .sponsor-stats-head span:last-child { font-size:18px; }
+  .sponsor-stats-grid { grid-template-columns:1fr; }
+  .sponsor-leaderboard { grid-template-columns:1fr; }
+  .sponsor-stat { min-height:110px; padding:18px 20px; }
+  .sponsor-stat-value,
+  .sponsor-stat-score .sponsor-stat-value,
+  .sponsor-stat-fighter .sponsor-stat-value { font-size:42px; }
+  .sponsor-stat-sub { font-size:22px; }
+  .sponsor-leader-row { min-height:58px; }
+  .sponsor-leader-name { font-size:24px; }
+  .sponsor-leader-meta { font-size:18px; }
   .sponsor-progress { left:48px; right:48px; bottom:28px; }
   .sponsor-return-hint { right:48px; bottom:44px; font-size:15px; }
   .sponsor-media-status { left:48px; bottom:44px; max-width:52%; }
@@ -532,6 +681,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .sponsor-kicker { font-size:14px; }
   .sponsor-frame { padding:30px; width:96%; gap:12px; }
   .sponsor-brand { top:20px; right:24px; font-size:16px; }
+  .sponsor-live-stats { display:none; }
   .sponsor-progress { left:30px; right:30px; bottom:22px; }
   .sponsor-return-hint { display:none; }
   .sponsor-media-status { display:none; }
@@ -577,6 +727,38 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 @keyframes sponsorLiveCopy {
   0% { opacity:0; transform:translateX(-18px); }
   100% { opacity:1; transform:translateX(0); }
+}
+@keyframes sponsorStatsIn {
+  0% { opacity:0; transform:translateY(28px) scale(.985); filter:blur(10px); }
+  52% { opacity:1; transform:translateY(-2px) scale(1.002); filter:blur(0); }
+  100% { opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
+}
+@keyframes sponsorStatsBg {
+  0%,100% { background-position:0% 50%; }
+  50% { background-position:100% 50%; }
+}
+@keyframes sponsorStatsBorder {
+  to { background-position:240% 0; }
+}
+@keyframes sponsorStatsSheen {
+  0% { transform:translateX(-125%); opacity:0; }
+  20% { opacity:.7; }
+  52%,100% { transform:translateX(125%); opacity:0; }
+}
+@keyframes sponsorLivePulse {
+  0%,100% { transform:translateY(-50%) scale(.82); opacity:.62; }
+  50% { transform:translateY(-50%) scale(1.18); opacity:1; }
+}
+@keyframes sponsorStatItemIn {
+  0% { opacity:0; transform:translateY(14px); }
+  100% { opacity:1; transform:translateY(0); }
+}
+@keyframes sponsorLeaderIn {
+  0% { opacity:0; transform:translateX(-14px); }
+  100% { opacity:1; transform:translateX(0); }
+}
+@keyframes sponsorHordeFlow {
+  to { background-position:180% 0; }
 }
 @keyframes sponsorOutroWipe {
   0% { left:-32%; opacity:0; }
@@ -630,6 +812,28 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         <div class="sponsor-kicker" id="sponsorKicker">Sponsor Spotlight</div>
         <div class="sponsor-title" id="sponsorTitle">Presented By Our Sponsor</div>
         <div class="sponsor-subtitle" id="sponsorSubtitle">We will be right back to the battle.</div>
+      </div>
+      <div class="sponsor-live-stats" id="sponsorLiveStats" aria-label="Live battle stats">
+        <div class="sponsor-stats-head"><span>Live Battle</span><span id="sponsorStatPulse">Updating</span></div>
+        <div class="sponsor-stats-grid">
+          <div class="sponsor-stat sponsor-stat-score">
+            <span class="sponsor-stat-label">Alive Fighters</span>
+            <span class="sponsor-stat-value" id="sponsorStatAlive">0/0</span>
+            <span class="sponsor-stat-sub" id="sponsorStatKills">0 total kills</span>
+          </div>
+          <div class="sponsor-stat sponsor-stat-horde">
+            <span class="sponsor-stat-label">Horde Pressure</span>
+            <span class="sponsor-stat-value" id="sponsorStatHordeHp">0/0 HP</span>
+            <span class="sponsor-stat-sub" id="sponsorStatHordeReserve">0 in reserve</span>
+            <div class="sponsor-horde-bar"><span id="sponsorStatHordeBar"></span></div>
+          </div>
+          <div class="sponsor-stat sponsor-stat-fighter">
+            <span class="sponsor-stat-label">Top Fighter</span>
+            <span class="sponsor-stat-value" id="sponsorStatLeaderName">Awaiting players</span>
+            <span class="sponsor-stat-sub" id="sponsorStatLeaderMeta">0 kills</span>
+          </div>
+        </div>
+        <div class="sponsor-leaderboard" id="sponsorLeaderboard"></div>
       </div>
       <div class="sponsor-media-status" id="sponsorMediaStatus">Preparing sponsor media</div>
       <div class="sponsor-return-hint">BACK TO THE BATTLE SOON</div>
@@ -769,6 +973,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const sponsorTitle = document.getElementById('sponsorTitle');
   const sponsorSubtitle = document.getElementById('sponsorSubtitle');
   const sponsorProgress = document.getElementById('sponsorProgress');
+  const sponsorLiveStats = document.getElementById('sponsorLiveStats');
+  const sponsorStatPulse = document.getElementById('sponsorStatPulse');
+  const sponsorStatAlive = document.getElementById('sponsorStatAlive');
+  const sponsorStatKills = document.getElementById('sponsorStatKills');
+  const sponsorStatHordeHp = document.getElementById('sponsorStatHordeHp');
+  const sponsorStatHordeReserve = document.getElementById('sponsorStatHordeReserve');
+  const sponsorStatHordeBar = document.getElementById('sponsorStatHordeBar');
+  const sponsorStatLeaderName = document.getElementById('sponsorStatLeaderName');
+  const sponsorStatLeaderMeta = document.getElementById('sponsorStatLeaderMeta');
+  const sponsorLeaderboard = document.getElementById('sponsorLeaderboard');
   const sponsorMediaStatus = document.getElementById('sponsorMediaStatus');
   const sponsorOutroTitle = document.getElementById('sponsorOutroTitle');
 
@@ -809,6 +1023,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let activeSponsorPayload = null;
   let sponsorAudioContext = null;
   let sponsorVideoLoadToken = 0;
+  let sponsorStatsLastRender = 0;
+  let sponsorLeaderboardSignature = '';
   let renderScale     = 1;
   const recentAttackKeys = new Map();
   const recentCheerKeys = new Map();
@@ -1131,6 +1347,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     sponsorScene.classList.add('active');
     sponsorScene.setAttribute('aria-hidden', 'false');
     document.body.classList.add('sponsor-active');
+    renderSponsorStats(true);
     setSponsorSceneState('intro');
     playSponsorTone('intro');
 
@@ -1152,6 +1369,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     setSponsorText(sponsorKicker, payload.kicker, 'Sponsor Spotlight');
     setSponsorText(sponsorTitle, payload.title, 'Presented By Our Sponsor');
     setSponsorText(sponsorSubtitle, payload.subtitle, 'We will be right back to the battle.');
+    renderSponsorStats(true);
     setSponsorSceneState('live');
 
     playPreparedSponsorVideo(payload);
@@ -1394,6 +1612,115 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       hordeCount: rest.length,
       memberIds: rest.map(p => p.uniqueId),
     };
+  }
+
+  function sponsorPlayerName(player) {
+    return String(player?.nickname || player?.uniqueId || 'Player').slice(0, 24);
+  }
+
+  function sponsorNumber(value) {
+    const n = Number(value) || 0;
+    if (Math.abs(n) >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
+    if (Math.abs(n) >= 1000) return `${(n / 1000).toFixed(1)}K`;
+    return String(Math.round(n));
+  }
+
+  function sponsorLeaderboardPlayers() {
+    return activePlayers()
+      .filter(p => isAlive(p) && p.uniqueId !== HORDE_ID)
+      .sort((a, b) => {
+        const killDiff = (b.kills || 0) - (a.kills || 0);
+        if (killDiff !== 0) return killDiff;
+        const hpDiff = (b.hp || 0) - (a.hp || 0);
+        if (hpDiff !== 0) return hpDiff;
+        return sponsorPlayerName(a).localeCompare(sponsorPlayerName(b));
+      })
+      .slice(0, 3);
+  }
+
+  function renderSponsorStats(force = false) {
+    if (!sponsorLiveStats) return;
+    const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+    if (!force && now - sponsorStatsLastRender < 500) return;
+    sponsorStatsLastRender = now;
+
+    const roster = activePlayers().filter(p => p && p.uniqueId !== HORDE_ID);
+    const alive = roster.filter(isAlive);
+    const totalKills = roster.reduce((sum, player) => sum + (Number(player.kills) || 0), 0);
+    const horde = hordePlayer();
+    const leaders = sponsorLeaderboardPlayers();
+    const leader = leaders[0] || alive[0] || roster[0] || null;
+
+    setSponsorText(sponsorStatPulse, sponsorState === 'battle' ? 'Ready' : 'Live', 'Live');
+    setSponsorText(sponsorStatAlive, `${alive.length}/${Math.max(roster.length, alive.length)}`, '0/0');
+    setSponsorText(sponsorStatKills, `${sponsorNumber(totalKills)} total kills`, '0 total kills');
+
+    if (horde) {
+      const hordeHp = Math.max(0, Number(horde.hp) || 0);
+      const hordeMax = Math.max(1, Number(horde.maxHp) || 1);
+      const hordePct = Math.max(0, Math.min(1, hordeHp / hordeMax));
+      setSponsorText(sponsorStatHordeHp, `${sponsorNumber(hordeHp)}/${sponsorNumber(hordeMax)} HP`, '0/0 HP');
+      setSponsorText(sponsorStatHordeReserve, `${horde.hordeCount || 0} in reserve`, '0 in reserve');
+      if (sponsorStatHordeBar) sponsorStatHordeBar.style.transform = `scaleX(${hordePct})`;
+    } else {
+      setSponsorText(sponsorStatHordeHp, 'No horde', 'No horde');
+      setSponsorText(sponsorStatHordeReserve, '0 in reserve', '0 in reserve');
+      if (sponsorStatHordeBar) sponsorStatHordeBar.style.transform = 'scaleX(0)';
+    }
+
+    if (leader) {
+      setSponsorText(sponsorStatLeaderName, sponsorPlayerName(leader), 'Awaiting players');
+      setSponsorText(sponsorStatLeaderMeta, `${Number(leader.kills) || 0} kills`, '0 kills');
+    } else {
+      setSponsorText(sponsorStatLeaderName, 'Awaiting players', 'Awaiting players');
+      setSponsorText(sponsorStatLeaderMeta, '0 kills', '0 kills');
+    }
+
+    if (!sponsorLeaderboard) return;
+    const leaderboardSignature = leaders
+      .map(player => `${player.uniqueId || player.nickname || ''}:${Number(player.kills) || 0}:${Math.round(Number(player.hp) || 0)}`)
+      .join('|') || 'empty';
+    if (!force && leaderboardSignature === sponsorLeaderboardSignature) return;
+    sponsorLeaderboardSignature = leaderboardSignature;
+    sponsorLeaderboard.textContent = '';
+    if (!leaders.length) {
+      const empty = document.createElement('div');
+      empty.className = 'sponsor-leader-row';
+      const rank = document.createElement('span');
+      rank.className = 'sponsor-leader-rank';
+      rank.textContent = '--';
+      const copy = document.createElement('span');
+      copy.className = 'sponsor-leader-copy';
+      const name = document.createElement('span');
+      name.className = 'sponsor-leader-name';
+      name.textContent = 'Waiting for fighters';
+      const meta = document.createElement('span');
+      meta.className = 'sponsor-leader-meta';
+      meta.textContent = '0 K';
+      copy.append(name, meta);
+      empty.append(rank, copy);
+      sponsorLeaderboard.appendChild(empty);
+      return;
+    }
+
+    leaders.forEach((player, index) => {
+      const row = document.createElement('div');
+      row.className = 'sponsor-leader-row';
+      const rank = document.createElement('span');
+      rank.className = 'sponsor-leader-rank';
+      rank.textContent = `#${index + 1}`;
+      const copy = document.createElement('span');
+      copy.className = 'sponsor-leader-copy';
+      const name = document.createElement('span');
+      name.className = 'sponsor-leader-name';
+      name.textContent = sponsorPlayerName(player);
+      const meta = document.createElement('span');
+      meta.className = 'sponsor-leader-meta';
+      meta.textContent = `${Number(player.kills) || 0} K / ${Math.round(Number(player.hp) || 0)} HP`;
+      copy.append(name, meta);
+      row.append(rank, copy);
+      sponsorLeaderboard.appendChild(row);
+    });
   }
 
   function getPlayerPosition(index, total) {
@@ -2458,6 +2785,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     attacks = attacks.filter(a => { const alive = a.update(); if (alive) a.draw(); return alive; });
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    if (sponsorState !== 'battle') renderSponsorStats();
     requestAnimationFrame(draw);
   }
 
@@ -2521,6 +2849,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     players = normalizePlayers(state);
     isDemoMode = false;
     stopDemoLoop();
+    if (sponsorState !== 'battle') renderSponsorStats(true);
     if (!Object.keys(players).length && !stateFetchInFlight) {
       stateFetchInFlight = true;
       fetch(withOverlayAuth('/state'))
