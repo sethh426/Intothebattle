@@ -304,16 +304,16 @@
     .trust-chips span::before { content: '✦'; color: var(--gold); }
 
     .battle-preview {
-      max-width: 670px;
+      max-width: 720px;
       padding: 1px;
       border-radius: 28px;
-      background: linear-gradient(145deg, rgba(246, 201, 91, .5), rgba(255, 255, 255, .08) 35%, rgba(232, 59, 95, .35), rgba(85, 231, 255, .22));
-      box-shadow: var(--shadow), 0 0 90px rgba(246, 201, 91, .1);
+      background: linear-gradient(145deg, rgba(246, 201, 91, .62), rgba(255, 255, 255, .1) 35%, rgba(232, 59, 95, .36), rgba(85, 231, 255, .24));
+      box-shadow: var(--shadow), 0 0 90px rgba(85, 231, 255, .08);
     }
     .battle-preview-inner {
       border-radius: 27px;
-      padding: 16px;
-      background: linear-gradient(180deg, rgba(18, 23, 36, .94), rgba(4, 6, 10, .96));
+      padding: 12px;
+      background: linear-gradient(180deg, rgba(15, 20, 32, .96), rgba(4, 6, 10, .97));
       border: 1px solid rgba(255, 255, 255, .08);
     }
     .preview-top {
@@ -321,86 +321,30 @@
       justify-content: space-between;
       gap: 12px;
       align-items: center;
-      margin-bottom: 12px;
+      padding: 2px 4px 10px;
       color: var(--gold-2);
       font-size: 12px;
       font-weight: 900;
-      letter-spacing: .12em;
+      letter-spacing: .1em;
       text-transform: uppercase;
     }
-    .preview-arena {
-      position: relative;
-      min-height: 230px;
-      border-radius: 22px;
-      overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, .08);
-      background:
-        radial-gradient(circle at 52% 34%, rgba(246, 201, 91, .14), transparent 34%),
-        radial-gradient(circle at 20% 72%, rgba(85, 231, 255, .12), transparent 24%),
-        linear-gradient(180deg, #090d17, #03050a);
-    }
-    .preview-arena::before {
-      content: '';
-      position: absolute;
-      inset: 14%;
-      border-radius: 50%;
-      border: 1px solid rgba(246, 201, 91, .22);
-      box-shadow: 0 0 70px rgba(246, 201, 91, .12), inset 0 0 70px rgba(246, 201, 91, .05);
-    }
-    .laser {
-      position: absolute;
-      width: 52%;
-      height: 5px;
-      left: 26%;
-      top: 41%;
-      background: linear-gradient(90deg, transparent, var(--cyan), var(--gold), transparent);
-      box-shadow: 0 0 20px rgba(85, 231, 255, .85);
-      transform: rotate(-16deg);
-      animation: pulse 1.6s ease-in-out infinite;
-    }
-    .impact {
-      position: absolute;
-      width: 74px;
-      height: 74px;
-      right: 17%;
-      top: 23%;
-      border-radius: 50%;
-      background: radial-gradient(circle, #fff3bd, var(--ember) 45%, transparent 72%);
-      animation: boom 1.6s ease-in-out infinite;
-    }
-    .player {
-      position: absolute;
-      width: 92px;
-      padding: 10px;
-      border-radius: 16px;
-      background: rgba(5, 7, 12, .74);
-      border: 1px solid rgba(255, 255, 255, .12);
-      box-shadow: 0 18px 38px rgba(0, 0, 0, .36);
-    }
-    .player small { display: block; color: #fff; font-weight: 900; margin-bottom: 7px; }
-    .hp { height: 7px; border-radius: 99px; background: rgba(255, 255, 255, .12); overflow: hidden; }
-    .hp span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--green), var(--gold), var(--ember)); }
-    .p1 { left: 10%; top: 25%; }
-    .p2 { right: 11%; top: 33%; }
-    .p3 { left: 36%; bottom: 20%; }
-    .horde-strip {
-      position: absolute;
-      left: 14px;
-      right: 14px;
-      bottom: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 14px;
-      border-radius: 16px;
-      border: 1px solid rgba(232, 59, 95, .34);
-      background: linear-gradient(90deg, rgba(232, 59, 95, .2), rgba(246, 201, 91, .08));
-      color: #ffe5ea;
-      font-size: 12px;
-      font-weight: 900;
-      text-transform: uppercase;
+    .preview-top span:last-child {
+      color: var(--cyan);
       letter-spacing: .08em;
+    }
+    .preview-frame {
+      aspect-ratio: 16 / 9;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid rgba(85, 231, 255, .2);
+      background: #02040a;
+      box-shadow: inset 0 0 0 1px rgba(246, 201, 91, .1), 0 18px 42px rgba(0, 0, 0, .34);
+    }
+    .preview-frame iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: block;
     }
 
     .signup-card-wrap { position: relative; }
@@ -513,41 +457,70 @@
       margin-bottom: 22px;
     }
     .access-panel {
+      display: grid;
+      gap: 14px;
       padding: 18px;
       border-radius: 22px;
       border: 1px solid rgba(255, 255, 255, .1);
       background: rgba(255, 255, 255, .045);
     }
-    .access-panel strong {
+    .access-panel > strong {
       display: block;
       color: #fff;
       font-size: 14px;
-      margin-bottom: 12px;
     }
-    .access-grid {
+    .plan-compare {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
+      gap: 12px;
     }
-    .access-item {
-      padding: 12px;
-      border-radius: 15px;
-      background: rgba(0, 0, 0, .24);
+    .plan-column {
+      min-width: 0;
+      padding: 14px;
+      border-radius: 18px;
       border: 1px solid rgba(255, 255, 255, .08);
+      background: rgba(0, 0, 0, .24);
+    }
+    .plan-column.pro {
+      border-color: rgba(246, 201, 91, .26);
+      background: rgba(246, 201, 91, .075);
+    }
+    .plan-column b {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--gold);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 20px;
+      line-height: 1;
+      margin-bottom: 10px;
+    }
+    .plan-column b span {
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .plan-column ul {
+      display: grid;
+      gap: 8px;
+      list-style: none;
       color: #cbd3e2;
       font-size: 13px;
       line-height: 1.35;
     }
-    .access-item b {
-      display: block;
-      color: var(--gold);
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 19px;
-      line-height: 1;
-      margin-bottom: 5px;
+    .plan-column li::before {
+      content: '•';
+      color: var(--cyan);
+      margin-right: 7px;
     }
     .login-link {
-      margin-top: 18px;
+      margin-top: 22px;
+      padding-top: 18px;
+      border-top: 1px solid rgba(255, 255, 255, .08);
       text-align: center;
       color: var(--muted);
       font-size: 14px;
@@ -579,14 +552,11 @@
       .signup-shell { width: min(100% - 24px, var(--max)); padding-top: 24px; }
       .hero-copy h1 { font-size: clamp(38px, 12vw, 58px); }
       .trust-chips span { width: 100%; justify-content: center; }
-      .access-grid { grid-template-columns: 1fr; }
+      .plan-compare { grid-template-columns: 1fr; }
       .signup-card { padding: 24px; }
       .card-logo { width: 70px; height: 70px; border-radius: 22px; }
-      .preview-arena { min-height: 170px; }
-      .player { width: 74px; }
-      .p2 { right: 7%; }
-      .p3 { display: none; }
-      .horde-strip { font-size: 10px; }
+      .battle-preview-inner { padding: 10px; }
+      .preview-frame { border-radius: 18px; }
     }
   </style>
 </head>
@@ -622,16 +592,11 @@
         <span>OBS + TikTok Studio ready</span>
       </div>
 
-      <div class="battle-preview" aria-label="Battle room preview">
+      <div class="battle-preview" aria-label="Live battle demo preview">
         <div class="battle-preview-inner">
-          <div class="preview-top"><span>Battle room preview</span><span>Stream-ready</span></div>
-          <div class="preview-arena" aria-hidden="true">
-            <div class="laser"></div>
-            <div class="impact"></div>
-            <div class="player p1"><small>@Nova</small><div class="hp"><span style="width:84%"></span></div></div>
-            <div class="player p2"><small>@Jax</small><div class="hp"><span style="width:42%"></span></div></div>
-            <div class="player p3"><small>@Milo</small><div class="hp"><span style="width:64%"></span></div></div>
-            <div class="horde-strip"><span>The Horde</span><span>42 viewers pushing the arena</span></div>
+          <div class="preview-top"><span>Live battle demo</span><span>Real overlay</span></div>
+          <div class="preview-frame">
+            <iframe src="/overlay-preview?demo=1&controls=0" title="IntoTheBattle live overlay demo" loading="eager"></iframe>
           </div>
         </div>
       </div>
@@ -657,12 +622,26 @@
           <p class="microcopy">Your creator room unlocks automatically after signup. Finish setup from the welcome dashboard.</p>
 
           <div class="access-panel">
-            <strong>Your account includes:</strong>
-            <div class="access-grid">
-              <div class="access-item"><b>Room</b>Private creator setup</div>
-              <div class="access-item"><b>Overlay</b>Stream-ready display</div>
-              <div class="access-item"><b>Controls</b>Dashboard tools</div>
-              <div class="access-item"><b>Effects</b>Chat and gift action</div>
+            <strong>Choose the account that fits your stream.</strong>
+            <div class="plan-compare">
+              <div class="plan-column">
+                <b>Free <span>Start</span></b>
+                <ul>
+                  <li>Battle overlay and room setup</li>
+                  <li>Dashboard controls</li>
+                  <li>Viewer actions and effects</li>
+                  <li>Platform video moments included</li>
+                </ul>
+              </div>
+              <div class="plan-column pro">
+                <b>Creator Pro <span>Upgrade</span></b>
+                <ul>
+                  <li>Upload your own video moments</li>
+                  <li>Preview and trigger breaks live</li>
+                  <li>Custom timing and presentation controls</li>
+                  <li>Advanced creator branding tools</li>
+                </ul>
+              </div>
             </div>
           </div>
 

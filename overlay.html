@@ -1866,9 +1866,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const W = cw(), H = ch();
     const cardH      = H * 0.5 * 0.84 * layoutZoom;
     const cardW      = cardH * 0.72;
-    const totalWidth = cardW * total + layoutGap * Math.max(0, total - 1);
+    const compactFactor = total >= 5 ? 1.03 : total === 4 ? 1 : 1;
+    const baseSpacing = cardW * compactFactor;
+    const spacing = Math.max(cardW * 0.94, baseSpacing + layoutGap);
+    const totalWidth = total > 1 ? cardW + spacing * (total - 1) : cardW;
     return {
-      x: (W - totalWidth) / 2 + offsetX + index * (cardW + layoutGap) + cardW / 2,
+      x: (W - totalWidth) / 2 + offsetX + index * spacing + cardW / 2,
       y: H * 0.28 + offsetY + H * 0.16 * (1 - layoutZoom),
     };
   }

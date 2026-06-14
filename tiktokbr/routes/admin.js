@@ -160,32 +160,46 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin Panel - TIKTOKBR</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #07101f; color: #ebf4ff; margin: 0; padding: 24px; }
-    .wrapper { max-width: 1100px; margin: 0 auto; }
-    h1 { margin-bottom: 14px; }
-    .notice { margin-bottom: 16px; padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.06); }
+    * { box-sizing: border-box; }
+    body { min-height:100vh; font-family: Inter, Arial, sans-serif; background:radial-gradient(circle at 16% 0,rgba(246,201,91,.18),transparent 30%),radial-gradient(circle at 88% 12%,rgba(232,59,95,.14),transparent 28%),linear-gradient(180deg,#050608,#030406); color:#fff8e6; margin:0; padding:24px; }
+    body::before { content:""; position:fixed; inset:0; pointer-events:none; background-image:linear-gradient(rgba(246,201,91,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(246,201,91,.035) 1px,transparent 1px); background-size:58px 58px; mask-image:radial-gradient(circle at top,black,transparent 72%); z-index:-1; }
+    .wrapper { max-width: 1220px; margin: 0 auto; display:grid; gap:18px; }
+    .admin-hero { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:18px; border:1px solid rgba(246,201,91,.24); border-radius:26px; background:rgba(5,7,11,.78); box-shadow:0 28px 80px rgba(0,0,0,.38); }
+    .admin-brand { display:flex; align-items:center; gap:14px; min-width:0; }
+    .admin-brand img { width:58px; height:58px; border-radius:18px; border:1px solid rgba(246,201,91,.34); background:rgba(246,201,91,.08); object-fit:cover; }
+    h1 { margin:0; font-size:clamp(28px,4vw,48px); line-height:1; text-transform:uppercase; }
+    .admin-brand p { margin:6px 0 0; color:#a8afbf; font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+    .notice { padding: 14px 16px; border-radius: 16px; border:1px solid rgba(255,255,255,.1); background: rgba(255,255,255,0.06); }
     .error { color: #ffb6b6; }
     .success { color: #c6ffc3; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
-    .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(130,170,255,0.16); border-radius: 14px; padding: 18px; }
-    label { display: block; margin: 10px 0 6px; color: #99b4ff; font-size: 14px; }
-    input, select { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: #fff; }
-    button { margin-top: 12px; width: 100%; padding: 12px; border: none; border-radius: 10px; background: #4b90ff; color: #fff; cursor: pointer; font-weight: 700; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    th, td { border: 1px solid rgba(255,255,255,0.08); padding: 10px; font-size: 13px; }
-    th { background: rgba(75,144,255,0.12); text-align: left; }
+    .card { background: linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); border: 1px solid rgba(255,255,255,.1); border-radius: 24px; padding: 20px; box-shadow:0 20px 60px rgba(0,0,0,.24); }
+    .card h2 { margin:0 0 12px; font-size:20px; }
+    label { display: block; margin: 10px 0 6px; color: #a8afbf; font-size: 12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+    input, select { width: 100%; min-height:46px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.055); color: #fff; }
+    input[type="checkbox"] { width:auto; min-height:0; margin-right:8px; }
+    button { margin-top: 12px; width: 100%; min-height:44px; padding: 0 14px; border: none; border-radius: 14px; background: linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color: #170c02; cursor: pointer; font-weight: 900; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; overflow:hidden; border-radius:16px; }
+    th, td { border-bottom: 1px solid rgba(255,255,255,0.08); padding: 12px; font-size: 13px; vertical-align:top; }
+    th { background: rgba(246,201,91,0.09); color:#ffdf8a; text-align: left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     .button-row { display: flex; gap: 12px; flex-wrap: wrap; }
     .button-row button { width: auto; flex: 1; }
-    table button { padding: 8px 12px; border-radius: 8px; background: #4b90ff; color: #fff; border: none; cursor: pointer; }
-    table button:hover { background: #3672d9; }
-    a { color: #8fb8ff; text-decoration: none; }
-    .admin-nav { display:flex; gap:12px; flex-wrap:wrap; margin: 0 0 18px; }
+    table button { min-height:36px; padding: 0 12px; border-radius: 12px; }
+    a { color: #ffdf8a; text-decoration: none; font-weight:800; }
+    .admin-nav { display:flex; gap:10px; flex-wrap:wrap; }
+    .admin-nav a { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:999px; border:1px solid rgba(255,255,255,.1); color:#fff8e6; background:rgba(255,255,255,.055); }
+    @media(max-width:720px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} }
   </style>
 </head>
 <body>
   <div class="wrapper">
-    <h1>Admin Panel</h1>
-    <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Sponsor Platform</a><a href="/admin/logout">Logout</a></div>
+    <header class="admin-hero">
+      <div class="admin-brand">
+        <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
+        <div><h1>Admin Panel</h1><p>Access, promos, and room controls</p></div>
+      </div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/logout">Logout</a></div>
+    </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${createdCode ? `<div class="notice success">New access code created: <strong>${escapeHtml(createdCode)}</strong> <button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(createdCode)}')">Copy</button></div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
@@ -477,32 +491,45 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sponsor Platform - Admin</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #07101f; color: #ebf4ff; margin: 0; padding: 24px; }
-    .wrapper { max-width: 1180px; margin: 0 auto; }
-    h1 { margin-bottom: 10px; }
-    .admin-nav { display:flex; gap:12px; flex-wrap:wrap; margin: 0 0 18px; }
-    a { color:#8fb8ff; text-decoration:none; }
-    .notice { margin-bottom: 16px; padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.06); }
+    * { box-sizing:border-box; }
+    body { min-height:100vh; font-family: Inter, Arial, sans-serif; background:radial-gradient(circle at 16% 0,rgba(246,201,91,.18),transparent 30%),radial-gradient(circle at 88% 12%,rgba(232,59,95,.14),transparent 28%),linear-gradient(180deg,#050608,#030406); color:#fff8e6; margin:0; padding:24px; }
+    body::before { content:""; position:fixed; inset:0; pointer-events:none; background-image:linear-gradient(rgba(246,201,91,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(246,201,91,.035) 1px,transparent 1px); background-size:58px 58px; mask-image:radial-gradient(circle at top,black,transparent 72%); z-index:-1; }
+    .wrapper { max-width: 1240px; margin: 0 auto; display:grid; gap:18px; }
+    .admin-hero { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:18px; border:1px solid rgba(246,201,91,.24); border-radius:26px; background:rgba(5,7,11,.78); box-shadow:0 28px 80px rgba(0,0,0,.38); }
+    .admin-brand { display:flex; align-items:center; gap:14px; min-width:0; }
+    .admin-brand img { width:58px; height:58px; border-radius:18px; border:1px solid rgba(246,201,91,.34); background:rgba(246,201,91,.08); object-fit:cover; }
+    h1 { margin:0; font-size:clamp(28px,4vw,48px); line-height:1; text-transform:uppercase; }
+    .admin-brand p { margin:6px 0 0; color:#a8afbf; font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+    .admin-nav { display:flex; gap:10px; flex-wrap:wrap; }
+    .admin-nav a { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:999px; border:1px solid rgba(255,255,255,.1); color:#fff8e6; background:rgba(255,255,255,.055); }
+    a { color:#ffdf8a; text-decoration:none; font-weight:800; }
+    .notice { padding: 14px 16px; border-radius: 16px; border:1px solid rgba(255,255,255,.1); background: rgba(255,255,255,0.06); }
     .error { color: #ffb6b6; }
     .success { color: #c6ffc3; }
-    .card { background: rgba(255,255,255,0.05); border: 1px solid rgba(130,170,255,0.16); border-radius: 14px; padding: 18px; margin-bottom: 18px; }
-    label { display: block; margin: 10px 0 6px; color: #99b4ff; font-size: 14px; }
-    input, select { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.04); color: #fff; }
-    input[type="checkbox"] { width:auto; margin-right:8px; }
-    button { margin-top: 12px; width: 100%; padding: 12px; border: none; border-radius: 10px; background: #4b90ff; color: #fff; cursor: pointer; font-weight: 700; }
-    button.danger { background: #d9435f; }
-    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-    th, td { vertical-align: top; border: 1px solid rgba(255,255,255,0.08); padding: 12px; font-size: 13px; }
-    th { background: rgba(75,144,255,0.12); text-align: left; }
+    .card { background: linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); border: 1px solid rgba(255,255,255,.1); border-radius: 24px; padding: 20px; box-shadow:0 20px 60px rgba(0,0,0,.24); }
+    .card h2 { margin:0 0 12px; font-size:22px; }
+    label { display: block; margin: 10px 0 6px; color: #a8afbf; font-size: 12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+    input, select { width: 100%; min-height:46px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.055); color: #fff; }
+    input[type="checkbox"] { width:auto; min-height:0; margin-right:8px; }
+    button { margin-top: 12px; width: 100%; min-height:44px; padding: 0 14px; border: none; border-radius: 14px; background: linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color: #170c02; cursor: pointer; font-weight: 900; }
+    button.danger { color:#fff; background: #d9435f; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; overflow:hidden; border-radius:16px; }
+    th, td { vertical-align: top; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 12px; font-size: 13px; }
+    th { background: rgba(246,201,91,0.09); color:#ffdf8a; text-align: left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     small { color:#9fb2d7; word-break: break-all; }
     .inline-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-    @media(max-width:900px){ .inline-grid{grid-template-columns:1fr} table, thead, tbody, tr, th, td{display:block} th{display:none} td{border-bottom:0} tr{border:1px solid rgba(255,255,255,0.08); margin-bottom:14px} }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.inline-grid{grid-template-columns:1fr} table, thead, tbody, tr, th, td{display:block} th{display:none} td{border-bottom:0} tr{border:1px solid rgba(255,255,255,0.08); border-radius:16px; margin-bottom:14px; overflow:hidden} }
   </style>
 </head>
 <body>
   <div class="wrapper">
-    <h1>Sponsor Platform</h1>
-    <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Sponsor Platform</a><a href="/admin/logout">Logout</a></div>
+    <header class="admin-hero">
+      <div class="admin-brand">
+        <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
+        <div><h1>Video Platform</h1><p>Company-controlled creative inventory</p></div>
+      </div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/logout">Logout</a></div>
+    </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
     <div class="card">

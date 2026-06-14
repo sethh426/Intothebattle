@@ -85,6 +85,10 @@
     .drop-zone { position:relative; border:1px dashed rgba(246,201,91,.36); background:rgba(246,201,91,.055); border-radius:22px; padding:26px; text-align:center; margin-bottom:16px; }
     .drop-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; }
     .drop-icon { font-size:34px; margin-bottom:8px; }.drop-title { font-weight:900; }.drop-sub { color:var(--muted); font-size:12px; margin-top:5px; }
+    .background-preview { display:grid; place-items:center; min-height:180px; margin-top:14px; border-radius:20px; border:1px solid rgba(85,231,255,.18); background:linear-gradient(135deg,rgba(85,231,255,.08),rgba(246,201,91,.055)),#050810; overflow:hidden; }
+    .background-preview img { width:100%; height:100%; min-height:180px; max-height:260px; object-fit:cover; display:block; }
+    .background-preview.empty img { display:none; }
+    .background-preview span { color:var(--muted); font-size:13px; font-weight:800; text-align:center; padding:20px; }
     .audio-layout,.sponsor-layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
     .sponsor-layout { grid-template-columns:minmax(360px,.9fr) minmax(520px,1.1fr); align-items:start; }
     .sponsor-creative,.sponsor-controls { min-width:0; display:grid; gap:14px; }
@@ -183,10 +187,10 @@
       <div class="form-group"><label class="input-label">Background</label><input type="file" id="bgUpload" accept="image/jpeg,image/png,image/gif,image/webp"></div>
       <div class="btn-row"><button class="btn btn-primary" onclick="uploadBackground()">Upload</button><button class="btn btn-warning" onclick="clearBackground()">Clear</button></div>
       <p id="bgStatus" class="muted" style="margin-top:12px;">No background set</p>
-      <div class="divider"></div>
-      <div class="form-group"><label class="input-label">Shot style</label><select id="laserStyleSelect"><option value="beam">Beam</option><option value="pulse">Pulse</option><option value="wave">Wave</option></select></div>
-      <div class="form-group"><label class="input-label">Laser color</label><input type="color" id="laserColorPicker" value="#f6c95b"></div>
-      <button class="btn btn-secondary" style="width:100%" onclick="saveLaserStyle()">Save FX Style</button>
+      <div class="background-preview empty" id="backgroundPreview">
+        <img id="backgroundPreviewImage" alt="Current overlay background preview">
+        <span id="backgroundPreviewEmpty">No background preview loaded</span>
+      </div>
     </article>
 
     <article class="card col-12" id="creatorSponsorCard">
@@ -317,7 +321,34 @@ function setSubscriptionChip(data) {
 }
 async function fetchSubscriptionStatus() { try { const res = await fetch('/api/subscription/status', { credentials: 'same-origin' }); if (!res.ok) return setSubscriptionChip(null); setSubscriptionChip(await res.json()); } catch (_) { setSubscriptionChip(null); } }
 function openBillingStatus() { if (subscriptionStatusData && subscriptionStatusData.actionRequired) window.location.href = subscriptionStatusData.paywallUrl || '/paywall'; else window.location.href = '/profile'; }
-async function fetchStatus() { try { const res = await fetch('/api/status', { credentials: 'same-origin' }); const data = await res.json(); currentRoomId = data.roomId || null; currentOverlayUrl = data.overlayUrl || null; if (initialLoad) { document.getElementById('username').value = data.username || ''; initialLoad = false; } text('bgStatus', data.background?.filename ? `Background set: ${data.background.filename}` : 'No background set'); setTikTokStatus(data.connected ? 'connected' : 'disconnected', data.username); const devValue = data.devTestMode ? 'ON' : 'OFF'; text('dev-mode-badge', devValue); text('dev-mode-copy', data.devTestMode ? 'Testing' : 'Live'); if (data.overlayCount !== undefined) socket.emit('register', { type: 'dashboard' }); } catch (e) { console.warn(e); } }
+function updateBackgroundPreview(filename, label = filename) {
+  const wrap = document.getElementById('backgroundPreview');
+  const image = document.getElementById('backgroundPreviewImage');
+  const empty = document.getElementById('backgroundPreviewEmpty');
+  if (!wrap || !image || !empty) return;
+  if (!filename) {
+    wrap.classList.add('empty');
+    image.removeAttribute('src');
+    empty.textContent = 'No background preview loaded';
+    text('bgStatus', 'No background set');
+    return;
+  }
+  wrap.classList.remove('empty');
+  empty.textContent = '';
+  image.onload = () => {
+    wrap.classList.remove('empty');
+    empty.textContent = '';
+  };
+  image.onerror = () => {
+    wrap.classList.add('empty');
+    image.removeAttribute('src');
+    empty.textContent = 'Background image could not be loaded';
+    text('bgStatus', `Background unavailable: ${label || filename}`);
+  };
+  image.src = `/background/${encodeURIComponent(filename)}?v=${Date.now()}`;
+  text('bgStatus', `Background set: ${label || filename}`);
+}
+async function fetchStatus() { try { const res = await fetch('/api/status', { credentials: 'same-origin' }); const data = await res.json(); currentRoomId = data.roomId || null; currentOverlayUrl = data.overlayUrl || null; if (initialLoad) { document.getElementById('username').value = data.username || ''; initialLoad = false; } updateBackgroundPreview(data.background?.filename || '', data.background?.originalName || data.background?.filename || ''); setTikTokStatus(data.connected ? 'connected' : 'disconnected', data.username); const devValue = data.devTestMode ? 'ON' : 'OFF'; text('dev-mode-badge', devValue); text('dev-mode-copy', data.devTestMode ? 'Testing' : 'Live'); if (data.overlayCount !== undefined) socket.emit('register', { type: 'dashboard' }); } catch (e) { console.warn(e); } }
 function openOverlay() { window.open(currentOverlayUrl || '/overlay', '_blank'); }
 function copyOverlayUrl() { const url = currentOverlayUrl || `${window.location.origin}/overlay`; navigator.clipboard?.writeText(url).then(() => toast('Overlay URL copied')).catch(() => toast('Copy failed', true)); }
 
@@ -328,11 +359,8 @@ function resetTikTok(){ apiCall('/api/reset').then(()=>{ setTikTokStatus('discon
 function reloadOverlay(){ apiCall('/api/overlay/reload'); toast('Overlay reload signal sent'); }
 function clearPlayers(){ if(confirm('Clear all players?')) apiCall('/api/players/clear').then(()=>toast('Players cleared')); }
 function toggleDevMode(){ fetchStatus().then(()=>apiCall('/api/dev/test-mode','POST',{ enabled: document.getElementById('dev-mode-badge').textContent !== 'ON' })); }
-function uploadBackground(){ const file = document.getElementById('bgUpload').files[0]; if(!file) return toast('Choose an image first', true); const fd = new FormData(); fd.append('background', file); fetch('/api/background/upload', { method:'POST', credentials:'same-origin', body:fd }).then(r=>r.json()).then(d=>{ if(d.success){ text('bgStatus', `Background set: ${file.name}`); toast('Background uploaded'); } else toast(d.error || 'Upload failed', true); }); }
-function clearBackground(){ apiCall('/api/background/clear').then(()=>{ text('bgStatus','No background set'); toast('Background cleared'); }); }
-function setLaserColor(color){ apiCall('/api/dev/laser-color','POST',{ color }); }
-function setShotStyle(type){ apiCall('/api/dev/overlay-settings','POST',{ shotType:type }); }
-function saveLaserStyle(){ setShotStyle(document.getElementById('laserStyleSelect').value); setLaserColor(document.getElementById('laserColorPicker').value); toast('FX style saved'); }
+function uploadBackground(){ const file = document.getElementById('bgUpload').files[0]; if(!file) return toast('Choose an image first', true); const fd = new FormData(); fd.append('background', file); fetch('/api/background/upload', { method:'POST', credentials:'same-origin', body:fd }).then(r=>r.json()).then(d=>{ if(d.success){ updateBackgroundPreview(d.filename, file.name); toast('Background uploaded'); } else toast(d.error || 'Upload failed', true); }); }
+function clearBackground(){ apiCall('/api/background/clear').then(()=>{ updateBackgroundPreview(''); toast('Background cleared'); }); }
 function runOverlayTest(action){ apiCall(`/api/overlay/test/${action}`); toast(`${action} test triggered`); }
 function testOverlayAttack(){ runOverlayTest('attack'); } function testOverlayGift(){ runOverlayTest('gift'); } function testOverlayHeal(){ runOverlayTest('heal'); } function testOverlayKill(){ runOverlayTest('kill'); } function testStreak(){ apiCall('/api/overlay/test/streak'); toast('Streak test triggered'); }
 

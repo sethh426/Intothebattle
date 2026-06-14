@@ -431,10 +431,10 @@ router.get('/billing/success', (req, res) => {
   const pending = req.query.pending === '1' || req.query.status === 'pending';
   return res.send(renderBillingResult({
     state: pending ? 'pending' : 'success',
-    title: pending ? 'Payment Processing' : 'Creator Pro Active',
+    title: pending ? 'Thank You' : 'Congratulations',
     message: pending
-      ? 'PayPal approved the subscription, and we are waiting for PayPal to mark it active. This page will keep checking for you.'
-      : 'Your Creator Pro access is ready. You can return to the dashboard now.',
+      ? 'Thank you for your purchase. PayPal approved the subscription, and we are waiting for PayPal to mark it active. This page will keep checking for you.'
+      : 'Thank you for your purchase. Your Creator Pro access is ready, and your dashboard is waiting.',
     subscriptionId,
   }));
 });
@@ -555,6 +555,11 @@ function renderBillingResult({ state = 'success', title = '', message = '', subs
   const safeState = ['success', 'pending', 'cancel', 'error'].includes(state) ? state : 'success';
   const isPending = safeState === 'pending' && subscriptionId;
   const accent = safeState === 'error' ? '#e83b5f' : safeState === 'cancel' ? '#a8afbf' : '#f6c95b';
+  const stateLabel = safeState === 'success'
+    ? 'Purchase Complete'
+    : safeState === 'pending'
+      ? 'Activation Pending'
+      : safeState;
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -563,13 +568,14 @@ function renderBillingResult({ state = 'success', title = '', message = '', subs
   <title>${escapeHtml(title || 'Billing Status')} - IntoTheBattle</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { min-height: 100vh; display: grid; place-items: center; padding: 24px; font-family: Arial, Helvetica, sans-serif; color: #fff8e6; background: radial-gradient(circle at 18% 8%, rgba(246,201,91,.18), transparent 30%), linear-gradient(180deg, #050608, #030406); }
-    .card { width: min(560px, 100%); padding: 34px; border-radius: 28px; border: 1px solid rgba(246,201,91,.24); background: rgba(5,7,11,.86); box-shadow: 0 30px 90px rgba(0,0,0,.45); }
+    body { min-height: 100vh; display: grid; place-items: center; padding: 24px; font-family: Arial, Helvetica, sans-serif; color: #fff8e6; background: radial-gradient(circle at 18% 8%, rgba(246,201,91,.18), transparent 30%), radial-gradient(circle at 82% 88%, rgba(255,106,61,.12), transparent 34%), linear-gradient(180deg, #050608, #030406); }
+    .card { width: min(620px, 100%); padding: clamp(28px, 6vw, 44px); border-radius: 28px; border: 1px solid rgba(246,201,91,.26); background: rgba(5,7,11,.9); box-shadow: 0 30px 90px rgba(0,0,0,.48); text-align: center; }
+    .logo { width: 104px; height: 104px; object-fit: contain; display: block; margin: 0 auto 18px; filter: drop-shadow(0 12px 28px rgba(246,201,91,.2)); }
     .kicker { display: inline-flex; margin-bottom: 18px; padding: 8px 12px; border-radius: 999px; color: ${accent}; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05); font-size: 12px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
-    h1 { font-size: clamp(32px, 7vw, 56px); line-height: 1; margin-bottom: 14px; text-transform: uppercase; }
-    p { color: #c4ccdb; line-height: 1.7; font-size: 16px; }
+    h1 { font-size: clamp(38px, 8vw, 68px); line-height: .95; margin-bottom: 16px; text-transform: uppercase; }
+    p { color: #d4d9e7; line-height: 1.7; font-size: 18px; max-width: 500px; margin: 0 auto; }
     .meta { margin-top: 18px; padding: 14px; border-radius: 16px; background: rgba(255,255,255,.055); color: #a8afbf; word-break: break-word; }
-    .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
+    .actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 30px; }
     a { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 18px; border-radius: 15px; color: #170c02; background: linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); font-weight: 900; text-decoration: none; }
     a.secondary { color: #fff; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); }
     #pollStatus { margin-top: 16px; color: #ffdf8a; font-size: 14px; }
@@ -577,7 +583,8 @@ function renderBillingResult({ state = 'success', title = '', message = '', subs
 </head>
 <body>
   <main class="card">
-    <div class="kicker">${escapeHtml(safeState)}</div>
+    <img class="logo" src="/logo.svg" alt="Into The Battle" />
+    <div class="kicker">${escapeHtml(stateLabel)}</div>
     <h1>${escapeHtml(title || 'Billing Status')}</h1>
     <p>${escapeHtml(message || 'Your billing status has been updated.')}</p>
     ${subscriptionId ? `<div class="meta">PayPal subscription: ${escapeHtml(subscriptionId)}</div>` : ''}
