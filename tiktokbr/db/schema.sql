@@ -130,11 +130,11 @@ CREATE TABLE IF NOT EXISTS room_player_stats (
   strength INTEGER DEFAULT 15,
   kills INTEGER DEFAULT 0,
   kill_streak INTEGER DEFAULT 0,
-  last_kill_time INTEGER DEFAULT 0,
+  last_kill_time BIGINT DEFAULT 0,
   alive INTEGER DEFAULT 0,
-  last_active INTEGER,
+  last_active BIGINT,
   color TEXT,
-  message_boost_expires INTEGER DEFAULT 0,
+  message_boost_expires BIGINT DEFAULT 0,
   force_spawn INTEGER DEFAULT 0,
   PRIMARY KEY(room_id, unique_id)
 );
@@ -146,7 +146,7 @@ CREATE TABLE IF NOT EXISTS global_player_stats (
   max_hp INTEGER DEFAULT 300,
   strength INTEGER DEFAULT 15,
   kills INTEGER DEFAULT 0,
-  last_active INTEGER,
+  last_active BIGINT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

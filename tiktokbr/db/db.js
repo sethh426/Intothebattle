@@ -391,11 +391,11 @@ async function initDb() {
         strength INTEGER DEFAULT 15,
         kills INTEGER DEFAULT 0,
         kill_streak INTEGER DEFAULT 0,
-        last_kill_time INTEGER DEFAULT 0,
+        last_kill_time BIGINT DEFAULT 0,
         alive INTEGER DEFAULT 0,
-        last_active INTEGER,
+        last_active BIGINT,
         color TEXT,
-        message_boost_expires INTEGER DEFAULT 0,
+        message_boost_expires BIGINT DEFAULT 0,
         force_spawn INTEGER DEFAULT 0,
         PRIMARY KEY(room_id, unique_id)
       )
@@ -409,11 +409,16 @@ async function initDb() {
         max_hp INTEGER DEFAULT 300,
         strength INTEGER DEFAULT 15,
         kills INTEGER DEFAULT 0,
-        last_active INTEGER,
+        last_active BIGINT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    await safeExec('ALTER TABLE room_player_stats ALTER COLUMN last_kill_time TYPE BIGINT USING last_kill_time::bigint');
+    await safeExec('ALTER TABLE room_player_stats ALTER COLUMN last_active TYPE BIGINT USING last_active::bigint');
+    await safeExec('ALTER TABLE room_player_stats ALTER COLUMN message_boost_expires TYPE BIGINT USING message_boost_expires::bigint');
+    await safeExec('ALTER TABLE global_player_stats ALTER COLUMN last_active TYPE BIGINT USING last_active::bigint');
 
     // Seed beta access codes
     try {

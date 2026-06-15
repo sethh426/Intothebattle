@@ -1270,7 +1270,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       sponsorVideo.pause();
       sponsorVideo.onended = null;
       sponsorVideo.oncanplay = null;
+      sponsorVideo.oncanplaythrough = null;
       sponsorVideo.onloadeddata = null;
+      sponsorVideo.onloadedmetadata = null;
       sponsorVideo.onplaying = null;
       sponsorVideo.onerror = null;
       sponsorVideo.onstalled = null;
@@ -1302,6 +1304,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     sponsorScene.classList.remove('video-ready', 'video-loading', 'video-error');
     if (stateClass) sponsorScene.classList.add(stateClass);
     setSponsorText(sponsorMediaStatus, message || '', '');
+  }
+
+  function sponsorVideoErrorMessage(prefix = 'Sponsor media could not play') {
+    if (!sponsorVideo?.error?.code) return prefix;
+    const labels = {
+      1: 'aborted',
+      2: 'network',
+      3: 'decode',
+      4: 'unsupported source',
+    };
+    const label = labels[sponsorVideo.error.code] || `code ${sponsorVideo.error.code}`;
+    return `${prefix} (${label})`;
   }
 
   function reportSponsorPlayback(payload, status, message = '') {
@@ -1355,7 +1369,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       sponsorVideo.src = payload.videoUrl;
       sponsorVideo.onloadeddata = () => done(true, '', 'video-ready');
       sponsorVideo.oncanplay = () => done(true, '', 'video-ready');
-      sponsorVideo.onerror = () => done(false, 'Sponsor media could not play', 'video-error');
+      sponsorVideo.oncanplaythrough = () => done(true, '', 'video-ready');
+      sponsorVideo.onerror = () => done(false, sponsorVideoErrorMessage('Sponsor media could not preload'), 'video-error');
       sponsorVideo.onstalled = () => setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
       sponsorVideo.onwaiting = () => setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
 
@@ -1376,28 +1391,72 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     let playingNotified = false;
-    const notifyPlaying = () => {
+    let readyFallbackTimer = null;
+    const clearReadyFallback = () => {
+      if (readyFallbackTimer) {
+        clearTimeout(readyFallbackTimer);
+        readyFallbackTimer = null;
+      }
+    };
+    const notifyPlaying = (message = '') => {
       if (playingNotified) return;
       playingNotified = true;
+      clearReadyFallback();
       setSponsorMediaStatus('', 'video-ready');
-      reportSponsorPlayback(payload, 'first_frame');
+      reportSponsorPlayback(payload, 'first_frame', message);
       hooks.onPlaying?.();
     };
+    const failPlayback = (message) => {
+      clearReadyFallback();
+      setSponsorMediaStatus(message, 'video-error');
+      reportSponsorPlayback(payload, 'failed', message);
+      hooks.onError?.();
+    };
+    const scheduleReadyFallback = (delay = 1200) => {
+      clearReadyFallback();
+      if (playingNotified || sponsorVideo.readyState < 2) return;
+      readyFallbackTimer = setTimeout(() => {
+        readyFallbackTimer = null;
+        if (
+          !playingNotified &&
+          sponsorState === 'live' &&
+          activeSponsorPayload === payload &&
+          sponsorVideo &&
+          sponsorVideo.readyState >= 2
+        ) {
+          notifyPlaying('Sponsor media started after ready-state fallback');
+        }
+      }, delay);
+    };
 
-    if (sponsorVideo.readyState >= 2) setSponsorMediaStatus('', 'video-ready');
-    else setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
+    sponsorVideo.muted = payload.muted !== false;
+    if (sponsorVideo.readyState >= 2) {
+      setSponsorMediaStatus('', 'video-ready');
+      scheduleReadyFallback(1400);
+    } else {
+      setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
+    }
 
-    sponsorVideo.onloadeddata = () => setSponsorMediaStatus('', 'video-ready');
-    sponsorVideo.oncanplay = () => setSponsorMediaStatus('', 'video-ready');
-    sponsorVideo.onplaying = notifyPlaying;
+    sponsorVideo.onloadeddata = () => {
+      setSponsorMediaStatus('', 'video-ready');
+      scheduleReadyFallback(1000);
+    };
+    sponsorVideo.oncanplay = () => {
+      setSponsorMediaStatus('', 'video-ready');
+      scheduleReadyFallback(900);
+    };
+    sponsorVideo.oncanplaythrough = () => {
+      setSponsorMediaStatus('', 'video-ready');
+      scheduleReadyFallback(700);
+    };
+    sponsorVideo.onplaying = () => notifyPlaying();
     sponsorVideo.onwaiting = () => setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
     sponsorVideo.onstalled = () => setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
     sponsorVideo.onerror = () => {
-      setSponsorMediaStatus('Sponsor media could not play', 'video-error');
-      reportSponsorPlayback(payload, 'failed', 'Sponsor media could not play');
-      hooks.onError?.();
+      failPlayback(sponsorVideoErrorMessage('Sponsor media could not play'));
     };
     sponsorVideo.onended = () => {
+      clearReadyFallback();
       if (sponsorState === 'live' && activeSponsorPayload === payload) {
         reportSponsorPlayback(payload, 'video_completed');
         if ((payload.statsMode || 'endcap') === 'endcap' && sponsorTimer) {
@@ -1415,19 +1474,20 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const playAttempt = sponsorVideo.play();
     if (playAttempt && typeof playAttempt.then === 'function') {
       playAttempt.then(notifyPlaying).catch(() => {
+        clearReadyFallback();
         sponsorVideo.muted = true;
         const mutedAttempt = sponsorVideo.play();
         if (mutedAttempt && typeof mutedAttempt.then === 'function') {
+          scheduleReadyFallback(1400);
           mutedAttempt.then(notifyPlaying).catch(() => {
-            setSponsorMediaStatus('Sponsor media could not play', 'video-error');
-            reportSponsorPlayback(payload, 'failed', 'Browser blocked sponsor media playback');
-            hooks.onError?.();
+            failPlayback('Browser blocked sponsor media playback');
           });
         } else {
           setTimeout(notifyPlaying, 120);
         }
       });
     } else {
+      scheduleReadyFallback(900);
       setTimeout(notifyPlaying, 120);
     }
   }
@@ -1572,7 +1632,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       resetSponsorVideo(true);
     } else {
       resetSponsorTimingClasses();
-      setSponsorMediaStatus(sponsorVideo.readyState >= 2 ? '' : 'Sponsor media is buffered', sponsorVideo.readyState >= 2 ? 'video-ready' : 'video-loading');
+      setSponsorMediaStatus(sponsorVideo.readyState >= 2 ? '' : 'Buffering sponsor media', sponsorVideo.readyState >= 2 ? 'video-ready' : 'video-loading');
     }
     setSponsorText(sponsorIntroPartner, `Presented by ${payload.partner}`, 'Presented by IntoTheBattle');
 
@@ -1617,10 +1677,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       sponsorVideoStartTimer = setTimeout(() => {
         sponsorVideoStartTimer = null;
         if (sponsorState === 'live' && activeSponsorPayload === payload && !sponsorTimer) {
-          setSponsorMediaStatus('Sponsor media is still loading', 'video-loading');
-          startSponsorClock(payload, payload.durationMs, false);
+          const readyEnough = Boolean(sponsorVideo && sponsorVideo.readyState >= 2);
+          if (readyEnough) {
+            setSponsorMediaStatus('', 'video-ready');
+            reportSponsorPlayback(payload, 'first_frame', 'Sponsor media started after live fallback');
+          } else {
+            setSponsorMediaStatus('Sponsor media is still loading', 'video-loading');
+            reportSponsorPlayback(payload, 'fallback_started', 'Sponsor media was not ready before live fallback');
+          }
+          startSponsorClock(payload, payload.durationMs, readyEnough);
         }
-      }, 2800);
+      }, 6500);
     } else {
       reportSponsorPlayback(payload, 'fallback_started', 'Sponsor break started without video media');
       startSponsorClock(payload, payload.durationMs, false);
@@ -2004,9 +2071,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const W = cw(), H = ch();
     const cardH      = H * 0.5 * 0.84 * layoutZoom;
     const cardW      = cardH * 0.72;
-    const compactFactor = total >= 5 ? 1.03 : total === 4 ? 1 : 1;
-    const baseSpacing = cardW * compactFactor;
-    const spacing = Math.max(cardW * 0.94, baseSpacing + layoutGap);
+    const baseGap = cardW * (total >= 5 ? 0.035 : total === 4 ? 0.05 : total === 3 ? 0.08 : 0.11);
+    const minGap = Math.max(6, Math.min(12, cardW * 0.035));
+    const maxGap = cardW * (total >= 5 ? 0.12 : total === 4 ? 0.16 : total === 3 ? 0.24 : 0.32);
+    const gapScale = total >= 5 ? 0.18 : total === 4 ? 0.24 : 0.32;
+    const visualGap = Math.min(Math.max(minGap, maxGap), Math.max(minGap, baseGap + Math.max(0, layoutGap) * gapScale));
+    const spacing = cardW + visualGap;
     const totalWidth = total > 1 ? cardW + spacing * (total - 1) : cardW;
     const baseY = isPublicDemo ? H * demoPlayerYRatio : H * 0.28;
     return {
