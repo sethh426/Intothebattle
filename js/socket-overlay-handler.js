@@ -4,7 +4,11 @@
  */
 
 function initSocketOverlay(game) {
-  const scene = game.scene.scenes[0];
+  const scene = game?.scene?.scenes?.[0];
+  if (!scene || !scene.sys || !scene.add) {
+    setTimeout(() => initSocketOverlay(game), 50);
+    return;
+  }
   const statusBadge = document.getElementById('status-badge');
   const overlayParams = new URLSearchParams(window.location.search);
   const overlayRoomId = overlayParams.get('room_id') || '';
@@ -27,6 +31,7 @@ function initSocketOverlay(game) {
   }
 
   window.overlayAuth = { roomId: overlayRoomId, overlayToken, withOverlayAuth };
+  if (scene.setOverlayAuthHelper) scene.setOverlayAuthHelper(withOverlayAuth);
 
   const socketOptions = { transports: ['websocket', 'polling'], timeout: 5000 };
   if (overlayRoomId && overlayToken) {
@@ -153,6 +158,18 @@ function initSocketOverlay(game) {
     if (color && scene.updateLaserColor) scene.updateLaserColor(color);
   });
   socket.on('soundEvent', (data) => playSound(data && data.event));
+  socket.on('sponsorScene', (payload) => {
+    if (!scene.playSponsorBreak || !scene.stopSponsorBreak) return;
+    if (payload && payload.action === 'hide') {
+      scene.stopSponsorBreak();
+      return;
+    }
+    const scenePayload = { ...(payload || {}) };
+    if (scenePayload.filename && !scenePayload.videoUrl) {
+      scenePayload.videoUrl = withOverlayAuth(`/sponsor/${encodeURIComponent(scenePayload.filename)}`, { v: scenePayload._ts || Date.now() });
+    }
+    scene.playSponsorBreak(scenePayload);
+  });
 
   // Overlay events
   socket.on('damage', (data) => {
@@ -234,6 +251,19 @@ function initSocketOverlay(game) {
     testShake: () => {
       socket.emit('effect:shake', { intensity: 8 });
     },
+    testSponsorBreak: (payload = {}) => {
+      if (!scene.playSponsorBreak) return;
+      scene.playSponsorBreak({
+        partner: 'IntoTheBattle',
+        kicker: 'Sponsor Break',
+        title: 'Presented By Our Sponsor',
+        subtitle: 'We will be right back to the battle.',
+        durationMs: 8000,
+        fit: 'cover',
+        muted: true,
+        ...payload,
+      });
+    },
     testAddPlayer: (name = 'Player ' + Math.floor(Math.random() * 1000)) => {
       const playerId = 'player_' + Date.now();
       socket.emit('playerJoined', {
@@ -257,4 +287,19 @@ function initSocketOverlay(game) {
   };
 
   console.log('Socket overlay initialized. Use window.overlaySocket for testing.');
+
+  if (overlayParams.get('sponsor_preview') === '1' && scene.playSponsorBreak) {
+    const filename = overlayParams.get('sponsor_video') || '';
+    const payload = {
+      filename,
+      videoUrl: filename ? withOverlayAuth(`/sponsor/${encodeURIComponent(filename)}`, { v: Date.now() }) : '',
+      title: overlayParams.get('sponsor_title') || 'Sponsor Spotlight',
+      partner: overlayParams.get('sponsor_partner') || 'IntoTheBattle Partner',
+      subtitle: overlayParams.get('sponsor_subtitle') || 'Thanks for powering tonight\'s arena.',
+      durationMs: Number(overlayParams.get('sponsor_duration')) || 15000,
+      muted: overlayParams.get('sponsor_muted') !== '0',
+      fit: overlayParams.get('sponsor_fit') || 'cover',
+    };
+    setTimeout(() => scene.playSponsorBreak(payload), 600);
+  }
 }
