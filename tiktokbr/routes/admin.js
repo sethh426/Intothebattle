@@ -440,9 +440,27 @@ function parseFit(value) {
   return value === 'contain' ? 'contain' : 'cover';
 }
 
+function sponsorPreviewHref(creative) {
+  const params = new URLSearchParams({
+    demo: '1',
+    sponsor_preview: '1',
+    sponsor_source: 'platform',
+    sponsor_video: creative.filename || '',
+    sponsor_partner: creative.partner || 'IntoTheBattle Partner',
+    sponsor_title: creative.title || 'Sponsor Spotlight',
+    sponsor_subtitle: creative.subtitle || 'We will be right back to the battle.',
+    sponsor_duration: String(parseDurationMs(creative.duration_ms)),
+    sponsor_muted: Number(creative.muted) === 0 ? '0' : '1',
+    sponsor_fit: parseFit(creative.fit),
+    sponsor_stats: parseStatsMode(creative.stats_mode),
+  });
+  return `/overlay-preview?${params.toString()}`;
+}
+
 function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {}) {
   const rows = creatives.map((creative) => {
     const isActive = creative.status === 'active';
+    const previewHref = sponsorPreviewHref(creative);
     const statsOptions = ['endcap', 'delayed', 'hidden', 'always']
       .map(mode => `<option value="${mode}" ${creative.stats_mode === mode ? 'selected' : ''}>${escapeHtml(mode)}</option>`)
       .join('');
@@ -476,8 +494,9 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {
         </form>
       </td>
       <td>
+        <a class="button-link preview" href="${escapeAttr(previewHref)}" target="_blank" rel="noopener">Preview</a>
         <form method="POST" action="/admin/sponsors/${creative.id}/test">
-          <button type="submit" class="test">Test Live</button>
+          <button type="submit" class="test">Run Live</button>
         </form>
         <form method="POST" action="/admin/sponsors/${creative.id}/toggle">
           <button type="submit">${isActive ? 'Pause' : 'Activate'}</button>
@@ -521,6 +540,8 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {
     button.test { color:#041014; background: linear-gradient(135deg,#55e7ff,#b9fbff); }
     button.secondary { color:#fff8e6; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); }
     button.danger { color:#fff; background: #d9435f; }
+    .button-link { margin-top:12px; width:100%; min-height:44px; padding:0 14px; border-radius:14px; display:inline-flex; align-items:center; justify-content:center; color:#170c02; background:linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); font-weight:900; text-decoration:none; }
+    .button-link.preview { color:#fff8e6; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; overflow:hidden; border-radius:16px; }
     th, td { vertical-align: top; border-bottom: 1px solid rgba(255,255,255,0.08); padding: 12px; font-size: 13px; }
     th { background: rgba(246,201,91,0.09); color:#ffdf8a; text-align: left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
@@ -546,7 +567,7 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {
     <div class="card test-panel">
       <div>
         <h2>Live overlay testing</h2>
-        <p>Use each row's Test Live button to send that saved creative to connected overlay rooms. Stop clears the current test screen everywhere.</p>
+        <p>Preview opens the selected creative in the actual overlay without needing a live room. Run Live sends that creative to every connected free-account overlay for a real broadcast test.</p>
       </div>
       <form method="POST" action="/admin/sponsors/stop-test">
         <button type="submit" class="secondary">Stop Live Test</button>
@@ -658,7 +679,7 @@ router.post('/sponsors/:id/test', requireAdminAuth, (req, res) => {
   try {
     const result = triggerPlatformSponsorTest({ creativeId: id, action: 'show' });
     const noun = result.roomCount === 1 ? 'overlay' : 'overlays';
-    res.redirect(`/admin/sponsors?message=${encodeURIComponent(`Test sent to ${result.roomCount} live ${noun}`)}`);
+    res.redirect(`/admin/sponsors?message=${encodeURIComponent(`Creative sent to ${result.roomCount} platform-managed live ${noun}`)}`);
   } catch (err) {
     res.redirect(`/admin/sponsors?error=${encodeURIComponent(err.message || 'Test failed')}`);
   }
@@ -668,7 +689,7 @@ router.post('/sponsors/stop-test', requireAdminAuth, (_req, res) => {
   try {
     const result = triggerPlatformSponsorTest({ action: 'hide' });
     const noun = result.roomCount === 1 ? 'overlay' : 'overlays';
-    res.redirect(`/admin/sponsors?message=${encodeURIComponent(`Stopped live test on ${result.roomCount} ${noun}`)}`);
+    res.redirect(`/admin/sponsors?message=${encodeURIComponent(`Stopped platform creative on ${result.roomCount} live ${noun}`)}`);
   } catch (err) {
     res.redirect(`/admin/sponsors?error=${encodeURIComponent(err.message || 'Stop failed')}`);
   }

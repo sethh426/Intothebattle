@@ -162,6 +162,7 @@ const OVERLAY_TOKEN_PARAM = 'overlay_token';
 const OVERLAY_TOKEN_TTL = process.env.OVERLAY_TOKEN_TTL || '365d';
 const STORAGE_ROOT = process.env.DISK_PATH || __dirname;
 const PLATFORM_SPONSOR_DIR = path.join(STORAGE_ROOT, 'platform-sponsors');
+const PLATFORM_SPONSOR_ENABLED = process.env.PLATFORM_SPONSOR_ENABLED !== 'false';
 const PLATFORM_SPONSOR_INITIAL_DELAY_MS = Number(process.env.PLATFORM_SPONSOR_INITIAL_DELAY_MS || 8 * 60 * 1000);
 const PLATFORM_SPONSOR_INTERVAL_MS = Number(process.env.PLATFORM_SPONSOR_INTERVAL_MS || 12 * 60 * 1000);
 const platformSponsorTimers = new Map();
@@ -389,6 +390,7 @@ function clearPlatformSponsorSchedule(roomId) {
 }
 
 function scheduleNextPlatformSponsor(room, delayMs = PLATFORM_SPONSOR_INTERVAL_MS) {
+  if (!PLATFORM_SPONSOR_ENABLED) return;
   if (!room?.roomId) return;
   clearPlatformSponsorSchedule(room.roomId);
   const safeDelay = Math.max(5000, Number(delayMs) || PLATFORM_SPONSOR_INTERVAL_MS);
@@ -414,7 +416,7 @@ function scheduleNextPlatformSponsor(room, delayMs = PLATFORM_SPONSOR_INTERVAL_M
 function updatePlatformSponsorSchedule(room, entitlements) {
   if (!room?.roomId) return;
   room.planEntitlements = entitlements;
-  if (entitlements?.canUseCreatorSponsors) {
+  if (!PLATFORM_SPONSOR_ENABLED || entitlements?.canUseCreatorSponsors) {
     clearPlatformSponsorSchedule(room.roomId);
     return;
   }
@@ -425,7 +427,7 @@ function updatePlatformSponsorSchedule(room, entitlements) {
 
 setPlatformSponsorTestHandler(({ creativeId, action = 'show' } = {}) => {
   const liveRooms = Array.from(getAllRooms().values())
-    .filter(room => room && (room.overlayCount || 0) > 0);
+    .filter(room => room && (room.overlayCount || 0) > 0 && !room.planEntitlements?.canUseCreatorSponsors);
 
   if (action === 'hide') {
     liveRooms.forEach(room => emitRoomEvent(room, 'sponsorScene', { action: 'hide', _ts: Date.now() }));
@@ -2081,6 +2083,7 @@ app.get('/api/runtime/diagnostics', requireDiagnosticsAccess, (req, res) => {
       apiKeyPresent: Boolean(API_KEY),
       metricsTokenPresent: Boolean(process.env.METRICS_TOKEN),
       diagnosticsTokenPresent: Boolean(process.env.DIAGNOSTICS_TOKEN),
+      platformSponsorEnabled: PLATFORM_SPONSOR_ENABLED,
     },
     storage,
     database: dbHealth,
@@ -2276,6 +2279,12 @@ io.on('connection', (socket) => {
     socket.disconnect();
     return;
   }
+  const socketAuthRecord = socket.user
+    ? { type: 'user', record: socket.user }
+    : socket.accessCode
+      ? { type: 'code', record: socket.accessCode }
+      : null;
+  updatePlatformSponsorSchedule(room, buildPlanEntitlements(socketAuthRecord));
 
   if (!room.initialized) {
     loadRoomPlayerStats(room);

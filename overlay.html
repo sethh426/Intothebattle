@@ -350,9 +350,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   transition:opacity 520ms ease,transform 900ms cubic-bezier(.16,1,.3,1),filter 520ms ease;
 }
 .sponsor-scene.live.video-ready video { opacity:.82; transform:scale(1); }
+.sponsor-scene.live.stats-visible.video-ready video {
+  opacity:.36;
+  filter:saturate(.82) contrast(.96) brightness(.72) blur(1px);
+}
 .sponsor-scene.outro video,
 .sponsor-scene.intro video { opacity:0; }
 .sponsor-scene.contain.live.video-ready video { object-fit:contain; opacity:1; background:#02040a; filter:none; }
+.sponsor-scene.contain.live.stats-visible.video-ready video { opacity:.32; filter:saturate(.82) contrast(.96) brightness(.72) blur(1px); }
 
 .sponsor-intro,
 .sponsor-live,
@@ -1168,6 +1173,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
   }
 
+  function pauseSponsorVideoForStats(payload) {
+    if (!sponsorVideo || !payload?.videoUrl || payload.statsMode !== 'endcap') return;
+    try {
+      if (!sponsorVideo.paused && !sponsorVideo.ended) sponsorVideo.pause();
+    } catch (_err) {}
+  }
+
   function resetSponsorTimingClasses() {
     clearSponsorVideoStartTimer();
     clearSponsorStatsTimers();
@@ -1194,7 +1206,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
     showAt = Math.min(showAt, Math.max(0, duration - 1200));
     scheduleSponsorStatsTimer(() => {
-      if (sponsorState === 'live' && activeSponsorPayload === payload) setSponsorStatsVisible(true);
+      if (sponsorState === 'live' && activeSponsorPayload === payload) {
+        if (mode === 'endcap' && startedByVideo) pauseSponsorVideoForStats(payload);
+        setSponsorStatsVisible(true);
+      }
     }, showAt);
   }
 
@@ -1347,7 +1362,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       hooks.onError?.();
     };
     sponsorVideo.onended = () => {
-      if (sponsorState === 'live' && activeSponsorPayload === payload) startSponsorOutro(payload);
+      if (sponsorState === 'live' && activeSponsorPayload === payload) {
+        if ((payload.statsMode || 'endcap') === 'endcap' && sponsorTimer) {
+          setSponsorStatsVisible(true);
+          return;
+        }
+        startSponsorOutro(payload);
+      }
     };
 
     try {
@@ -3545,8 +3566,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
   if (overlayParams.get('sponsor_preview') === '1') {
     setTimeout(() => {
+      const sponsorPreviewFilename = overlayParams.get('sponsor_video') || '';
+      const sponsorPreviewSource = overlayParams.get('sponsor_source') || '';
+      const sponsorPreviewVideoUrl = sponsorPreviewSource === 'platform' && sponsorPreviewFilename
+        ? `/platform-sponsor/${encodeURIComponent(sponsorPreviewFilename)}?v=${Date.now()}`
+        : '';
       showSponsorScene({
-        filename: overlayParams.get('sponsor_video') || '',
+        filename: sponsorPreviewSource === 'platform' ? '' : sponsorPreviewFilename,
+        videoUrl: sponsorPreviewVideoUrl,
         title: overlayParams.get('sponsor_title') || 'Sponsor Spotlight',
         partner: overlayParams.get('sponsor_partner') || 'IntoTheBattle Partner',
         subtitle: overlayParams.get('sponsor_subtitle') || 'Thanks for powering tonight\'s arena.',
