@@ -827,6 +827,52 @@ function saveRoomBackgroundMeta(room, file) {
   }
 }
 
+const AUDIO_FILE_EXTS = new Set(['.mp3', '.m4a', '.wav', '.ogg', '.webm', '.aac', '.flac']);
+const PRESET_AUDIO_LABELS = new Map([
+  ['sound1.mp3', 'Impact Hit'],
+  ['sound2.mp3', 'Power Strike'],
+  ['sound3.mp3', 'Boss Hit'],
+  ['sound4.mp3', 'Quick Zap'],
+  ['sound5.mp3', 'Level Up'],
+  ['sound6.mp3', 'Shield Pulse'],
+  ['sound7.mp3', 'Victory Blast'],
+  ['sound8.m4a', 'Arena Rise'],
+  ['sound9.mp3', 'Final Blow'],
+]);
+
+function listAudioFiles(dir) {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir).filter(file => AUDIO_FILE_EXTS.has(path.extname(file).toLowerCase()));
+}
+
+function getBundledAudioDir() {
+  return path.join(__dirname, 'audio');
+}
+
+function resolveAudioFile(room, filename) {
+  const safeName = path.basename(filename || '');
+  if (!room || !safeName) return null;
+  const { audioDir } = getRoomPaths(room.roomId);
+  const runtimePath = path.join(audioDir, safeName);
+  if (isSafePath(audioDir, runtimePath) && fs.existsSync(runtimePath)) return runtimePath;
+
+  const bundledDir = getBundledAudioDir();
+  const bundledPath = path.join(bundledDir, safeName);
+  if (isSafePath(bundledDir, bundledPath) && fs.existsSync(bundledPath)) return bundledPath;
+
+  return null;
+}
+
+function audioEntryFromFile(filename, filePath, source) {
+  return {
+    filename,
+    originalName: source === 'preset' ? (PRESET_AUDIO_LABELS.get(filename) || filename) : filename,
+    size: fs.existsSync(filePath) ? fs.statSync(filePath).size : 0,
+    uploadedAt: source === 'preset' ? '2026-01-01T00:00:00.000Z' : new Date().toISOString(),
+    source,
+  };
+}
+
 function loadRoomAudioConfig(room) {
   try {
     const { audioDir, audioConfigFile } = getRoomPaths(room.roomId);
@@ -837,6 +883,11 @@ function loadRoomAudioConfig(room) {
       path.join(__dirname, 'audio', 'audio', 'audio-config.json'),
     ];
     const repoConfig = repoCandidates.find(p => fs.existsSync(p));
+    const beforeAudioState = JSON.stringify({
+      config: room.audioConfig,
+      library: room.audioLibrary,
+      settings: room.overlaySettings,
+    });
 
     if (!room.audioLibrary.length && fs.existsSync(audioConfigFile)) {
       const saved = JSON.parse(fs.readFileSync(audioConfigFile, 'utf8'));
@@ -854,39 +905,44 @@ function loadRoomAudioConfig(room) {
       console.log(`🔊 Seeded room audio settings from repo into DB for room ${room.roomId}`);
     }
 
-    const repoFiles = fs.existsSync(audioDir)
-      ? fs.readdirSync(audioDir).filter(file => {
-          const ext = path.extname(file).toLowerCase();
-          return ['.mp3', '.m4a', '.wav', '.ogg', '.aac', '.flac', '.webm'].includes(ext);
-        })
-      : [];
+    const bundledAudioDir = getBundledAudioDir();
+    const runtimeFiles = listAudioFiles(audioDir);
+    const bundledFiles = listAudioFiles(bundledAudioDir);
 
     if (!room.audioLibrary.length) {
-      room.audioLibrary = repoFiles.map(filename => ({
-        filename,
-        originalName: filename,
-        size: fs.existsSync(path.join(audioDir, filename)) ? fs.statSync(path.join(audioDir, filename)).size : 0,
-        uploadedAt: new Date().toISOString(),
-      }));
+      room.audioLibrary = bundledFiles.map(filename => audioEntryFromFile(filename, path.join(bundledAudioDir, filename), 'preset'));
     } else {
       const known = new Set(room.audioLibrary.map(entry => entry.filename));
-      repoFiles.forEach(filename => {
+      bundledFiles.forEach(filename => {
         if (!known.has(filename)) {
-          const filePath = path.join(audioDir, filename);
-          room.audioLibrary.push({
-            filename,
-            originalName: filename,
-            size: fs.existsSync(filePath) ? fs.statSync(filePath).size : 0,
-            uploadedAt: new Date().toISOString(),
-          });
+          room.audioLibrary.push(audioEntryFromFile(filename, path.join(bundledAudioDir, filename), 'preset'));
+          known.add(filename);
+        }
+      });
+      runtimeFiles.forEach(filename => {
+        if (!known.has(filename)) {
+          room.audioLibrary.push(audioEntryFromFile(filename, path.join(audioDir, filename), 'uploaded'));
+          known.add(filename);
         }
       });
     }
 
-    room.audioLibrary = room.audioLibrary.filter(entry => {
-      const runtimePath = path.join(audioDir, entry.filename);
-      return isSafePath(audioDir, runtimePath) && fs.existsSync(runtimePath);
-    });
+    room.audioLibrary = room.audioLibrary
+      .map(entry => {
+        const filename = path.basename(entry?.filename || '');
+        const filePath = resolveAudioFile(room, filename);
+        if (!filename || !filePath) return null;
+        const source = filePath.startsWith(bundledAudioDir) ? 'preset' : (entry.source || 'uploaded');
+        return {
+          ...entry,
+          filename,
+          originalName: source === 'preset' ? (PRESET_AUDIO_LABELS.get(filename) || entry.originalName || filename) : (entry.originalName || filename),
+          size: fs.statSync(filePath).size,
+          uploadedAt: entry.uploadedAt || (source === 'preset' ? '2026-01-01T00:00:00.000Z' : new Date().toISOString()),
+          source,
+        };
+      })
+      .filter(Boolean);
 
     room.audioLibrary.sort((a, b) => a.originalName.localeCompare(b.originalName, undefined, { numeric: true, sensitivity: 'base' }));
 
@@ -896,8 +952,14 @@ function loadRoomAudioConfig(room) {
       eventOrder.forEach((event, idx) => {
         if (idx < room.audioLibrary.length) room.audioConfig[event] = room.audioLibrary[idx].filename;
       });
-      saveRoomSettings(room.roomId);
     }
+
+    const afterAudioState = JSON.stringify({
+      config: room.audioConfig,
+      library: room.audioLibrary,
+      settings: room.overlaySettings,
+    });
+    if (afterAudioState !== beforeAudioState) saveRoomSettings(room.roomId);
 
     console.log(`🔊 Loaded audio settings for room ${room.roomId} (${room.audioLibrary.length} files)`);
   } catch (err) {
@@ -2037,10 +2099,8 @@ app.get('/audio/:filename', (req, res) => {
   }
   if (!room) room = getSessionRoom(req);
   if (!room) return res.status(401).send('Unauthorized');
-  const { audioDir } = getRoomPaths(room.roomId);
-  const runtimePath = path.join(audioDir, filename);
-  if (!isSafePath(audioDir, runtimePath)) return res.status(403).send('Forbidden');
-  if (fs.existsSync(runtimePath)) return res.sendFile(runtimePath);
+  const audioPath = resolveAudioFile(room, filename);
+  if (audioPath) return res.sendFile(audioPath);
   return res.status(404).send('Audio file not found');
 });
 
