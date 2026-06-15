@@ -22,8 +22,17 @@ function normalizeBaseUrl(value) {
   }
 }
 
+function cleanEnv(value) {
+  return String(value || '').trim();
+}
+
+function looksLikePlaceholder(value) {
+  const text = cleanEnv(value);
+  return /^<[^>]+>$/.test(text) || /^(your|replace|changeme|todo)[-_a-z0-9\s:]*$/i.test(text);
+}
+
 function tokenValue() {
-  return process.env.POSTMARK_API_TOKEN || process.env.POSTMARK_SERVER_TOKEN || '';
+  return cleanEnv(process.env.POSTMARK_API_TOKEN || process.env.POSTMARK_SERVER_TOKEN || '');
 }
 
 function boolEnv(name, fallback = false) {
@@ -35,26 +44,30 @@ function boolEnv(name, fallback = false) {
 export function getEmailConfig() {
   const appBaseUrl = normalizeBaseUrl(process.env.APP_BASE_URL);
   const host = new URL(appBaseUrl).hostname || 'localhost';
-  const from = process.env.EMAIL_FROM || `IntoTheBattle <no-reply@${host}>`;
+  const from = cleanEnv(process.env.EMAIL_FROM) || `IntoTheBattle <no-reply@${host}>`;
   return {
     provider: 'postmark',
     token: tokenValue(),
     appBaseUrl,
     from,
-    replyTo: process.env.EMAIL_REPLY_TO || process.env.SUPPORT_EMAIL || '',
-    messageStream: process.env.POSTMARK_MESSAGE_STREAM || 'outbound',
+    replyTo: cleanEnv(process.env.EMAIL_REPLY_TO || process.env.SUPPORT_EMAIL || ''),
+    messageStream: cleanEnv(process.env.POSTMARK_MESSAGE_STREAM) || 'outbound',
     disabled: boolEnv('EMAIL_DISABLE_SEND', false),
   };
 }
 
 export function getEmailDiagnostics() {
   const config = getEmailConfig();
+  const apiTokenLooksPlaceholder = looksLikePlaceholder(config.token);
+  const emailFromLooksPlaceholder = looksLikePlaceholder(config.from);
   return {
     provider: config.provider,
-    enabled: Boolean(config.token && !config.disabled),
+    enabled: Boolean(config.token && !config.disabled && !apiTokenLooksPlaceholder && !emailFromLooksPlaceholder),
     disabled: config.disabled,
     apiTokenPresent: Boolean(config.token),
+    apiTokenLooksPlaceholder,
     emailFromPresent: Boolean(config.from),
+    emailFromLooksPlaceholder,
     emailFromDomain: extractEmailDomain(config.from),
     replyToPresent: Boolean(config.replyTo),
     messageStream: config.messageStream,
@@ -69,7 +82,7 @@ function extractEmailDomain(address) {
 
 function getPostmarkClient() {
   const config = getEmailConfig();
-  if (!config.token || config.disabled) return null;
+  if (!config.token || config.disabled || looksLikePlaceholder(config.token)) return null;
   if (!cachedClient || cachedToken !== config.token) {
     cachedClient = new postmark.ServerClient(config.token);
     cachedToken = config.token;
@@ -111,6 +124,16 @@ export async function sendTransactionalEmail({
   if (config.disabled) {
     console.warn({ to: recipient, tag }, 'Email delivery disabled by EMAIL_DISABLE_SEND');
     return { skipped: true, reason: 'disabled' };
+  }
+
+  if (looksLikePlaceholder(config.token)) {
+    console.warn({ to: recipient, tag }, 'POSTMARK_API_TOKEN looks like a placeholder; email was not sent');
+    return { skipped: true, reason: 'placeholder_postmark_token' };
+  }
+
+  if (looksLikePlaceholder(config.from)) {
+    console.warn({ to: recipient, tag }, 'EMAIL_FROM looks like a placeholder; email was not sent');
+    return { skipped: true, reason: 'placeholder_email_from' };
   }
 
   const client = getPostmarkClient();

@@ -263,6 +263,7 @@ GET /api/status
 GET /api/subscription/status
 GET /metrics (requires METRICS_TOKEN in production)
 GET /api/runtime/diagnostics (requires DIAGNOSTICS_TOKEN or METRICS_TOKEN in production)
+POST /api/runtime/email-test (requires DIAGNOSTICS_TOKEN or METRICS_TOKEN in production)
 ```
 
 ## Route Security Direction
@@ -336,6 +337,7 @@ Postmark production setup:
 - Keep transactional app emails in the `outbound` Message Stream unless you create a dedicated transactional stream and set `POSTMARK_MESSAGE_STREAM` to that stream ID.
 - Set `POSTMARK_TEST_EMAIL` locally or temporarily on Render when running `npm run test:postmark`.
 - Check `/api/runtime/diagnostics?token=<diagnostics-or-metrics-token>` for the `email` block; it reports whether the token, sender, stream, and base URL are configured without exposing secrets.
+- Send a live production test with `POST /api/runtime/email-test?token=<diagnostics-or-metrics-token>` and JSON body `{"to":"you@example.com"}`. It returns the Postmark message id or the provider error without exposing secrets.
 
 Use a managed PostgreSQL service for production. Do not rely on local JSON files or ephemeral app storage for production state.
 

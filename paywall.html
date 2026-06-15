@@ -71,8 +71,8 @@
     <section class="card" aria-label="Creator Pro plan">
       <div class="price-label">Subscription</div>
       <div class="plan">Creator Pro</div>
-      <div class="price">$29<small>/mo</small></div>
-      <div class="period">Cancel anytime. No long-term contract.</div>
+      <div class="price">$12<small>/mo + applicable tax</small></div>
+      <div class="period">Billed through PayPal. Cancel anytime with no long-term contract.</div>
       <ul class="list">
         <li>Battle rooms and creator dashboard</li>
         <li>Custom audio and visual controls</li>
@@ -148,7 +148,7 @@
         await loadScript(sdkUrl.toString());
         if (!window.paypal?.Buttons) throw new Error('PayPal checkout did not initialize.');
 
-        setPaymentStatus('Choose PayPal or card below. Your account unlocks only after PayPal confirms the subscription.');
+        setPaymentStatus('Choose PayPal or card below. PayPal may add applicable tax at checkout. Your account unlocks only after PayPal confirms the subscription.');
         window.paypal.Buttons({
           style: {
             layout: 'vertical',

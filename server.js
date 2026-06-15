@@ -21,7 +21,7 @@ import paypalRoutes from './tiktokbr/routes/paypal.js';
 import requireAccess from './tiktokbr/middleware/auth.js';
 import requireDashboardAccess from './tiktokbr/middleware/requireDashboardAccess.js';
 import { getE2EAuthRecord } from './tiktokbr/auth/e2eAuth.js';
-import { getEmailDiagnostics } from './tiktokbr/email/postmarkMailer.js';
+import { getEmailDiagnostics, sendTransactionalEmail } from './tiktokbr/email/postmarkMailer.js';
 import { setPlatformSponsorTestHandler } from './tiktokbr/platformSponsorTestBus.js';
 import {
   getOrCreateRoom,
@@ -2090,6 +2090,51 @@ app.get('/api/runtime/diagnostics', requireDiagnosticsAccess, (req, res) => {
     storage,
     database: dbHealth,
   });
+});
+
+app.post('/api/runtime/email-test', requireDiagnosticsAccess, async (req, res) => {
+  const to = String(req.body?.to || process.env.POSTMARK_TEST_EMAIL || '').trim();
+  if (!to) {
+    return res.status(400).json({
+      success: false,
+      error: 'Set POSTMARK_TEST_EMAIL or send {"to":"you@example.com"} in the request body.',
+      email: getEmailDiagnostics(),
+    });
+  }
+
+  try {
+    const delivery = await sendTransactionalEmail({
+      to,
+      subject: 'IntoTheBattle email test',
+      tag: 'runtime-email-test',
+      metadata: { source: 'runtime-diagnostics' },
+      htmlBody: '<p>IntoTheBattle email delivery is working.</p>',
+      textBody: 'IntoTheBattle email delivery is working.',
+    });
+
+    if (delivery.skipped) {
+      return res.status(503).json({
+        success: false,
+        skipped: true,
+        reason: delivery.reason,
+        email: getEmailDiagnostics(),
+      });
+    }
+
+    return res.json({
+      success: true,
+      messageId: delivery.messageId,
+      submittedAt: delivery.submittedAt,
+      email: getEmailDiagnostics(),
+    });
+  } catch (err) {
+    return res.status(502).json({
+      success: false,
+      error: err.message || 'Postmark email delivery failed.',
+      provider: err.emailDelivery || null,
+      email: getEmailDiagnostics(),
+    });
+  }
 });
 
 app.get('/audio/:filename', (req, res) => {

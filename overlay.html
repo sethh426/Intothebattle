@@ -1707,7 +1707,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     layoutGap = 0;
     offsetX = 0;
     offsetY = 0;
-    layoutZoom = 0.96;
+    layoutZoom = 1.08;
     darkMode = true;
     overlaySettings.shotSpeed = 1;
     overlaySettings.laserColor = '#7afcff';
@@ -1715,7 +1715,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     gapControl.value = 0;
     offsetXControl.value = 0;
     offsetYControl.value = 0;
-    zoomControl.value = 96;
+    zoomControl.value = 108;
     heightControl.value = 100;
     shotSpeedControl.value = 100;
     themeToggle.checked = true;
@@ -2146,6 +2146,36 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     c.lineTo(x, y + radius);
     c.quadraticCurveTo(x, y, x + radius, y);
     c.closePath();
+  }
+
+  function arenaFrame() {
+    const W = cw(), H = ch();
+    const inset = Math.max(2, Math.min(W, H) * 0.003);
+    return {
+      x: inset,
+      y: inset,
+      w: Math.max(1, W - inset * 2),
+      h: Math.max(1, H - inset * 2),
+      r: Math.max(12, Math.min(W, H) * 0.018),
+    };
+  }
+
+  function clipArenaFrame(frame = arenaFrame()) {
+    roundedRectPath(ctx, frame.x, frame.y, frame.w, frame.h, frame.r);
+    ctx.clip();
+    return frame;
+  }
+
+  function drawContainedBackgroundImage(img, frame) {
+    if (!img?.width || !img?.height) return;
+    const scale = Math.min(frame.w / img.width, frame.h / img.height);
+    const dw = img.width * scale;
+    const dh = img.height * scale;
+    const dx = frame.x + (frame.w - dw) / 2;
+    const dy = frame.y + (frame.h - dh) / 2;
+    ctx.fillStyle = '#02040a';
+    ctx.fillRect(frame.x, frame.y, frame.w, frame.h);
+    ctx.drawImage(img, dx, dy, dw, dh);
   }
 
   function fitCanvasText(c, text, maxWidth, fontFactory, maxSize, minSize) {
@@ -2716,14 +2746,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function drawBackground() {
     const W = cw(), H = ch();
     const now = Date.now() * 0.001;
+    const frame = arenaFrame();
+    ctx.save();
+    clipArenaFrame(frame);
     if (backgroundImg) {
-      const scale = Math.max(W / backgroundImg.width, H / backgroundImg.height);
-      ctx.drawImage(backgroundImg, (W - backgroundImg.width * scale) / 2, (H - backgroundImg.height * scale) / 2, backgroundImg.width * scale, backgroundImg.height * scale);
-      const vignette = ctx.createRadialGradient(W * 0.5, H * 0.45, H * 0.2, W * 0.5, H * 0.5, H * 0.86);
+      drawContainedBackgroundImage(backgroundImg, frame);
+      const vignette = ctx.createRadialGradient(frame.x + frame.w * 0.5, frame.y + frame.h * 0.45, frame.h * 0.2, frame.x + frame.w * 0.5, frame.y + frame.h * 0.5, frame.h * 0.86);
       vignette.addColorStop(0, 'rgba(0,0,0,0)');
       vignette.addColorStop(1, 'rgba(0,0,0,0.48)');
       ctx.fillStyle = vignette;
-      ctx.fillRect(0, 0, W, H);
+      ctx.fillRect(frame.x, frame.y, frame.w, frame.h);
+      ctx.restore();
       return;
     }
 
@@ -2786,6 +2819,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     vignette.addColorStop(1, 'rgba(0,0,0,0.62)');
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, W, H);
+    ctx.restore();
   }
 
   function drawArenaFrame() {
@@ -2922,14 +2956,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const hpPct = clamp01(hp / maxHp);
     const nearDeath = hpPct < 0.2;
     const H = ch();
+    const compactDemoCard = isPublicDemo;
     const cardH = H * 0.5 * 0.84 * layoutZoom;
     const cardW = cardH * 0.72;
-    const plateH = Math.max(122, cardH * 0.58);
+    const plateH = compactDemoCard ? Math.max(96, cardH * 0.58) : Math.max(122, cardH * 0.58);
     const plateX = pos.x - cardW / 2;
     const plateY = pos.y - plateH * 0.56;
     const radius = Math.max(12, plateH * 0.08);
-    const avatarR = Math.max(26, cardH * 0.15);
-    const avatarY = plateY + plateH * 0.45;
+    const avatarR = compactDemoCard ? Math.max(18, cardH * 0.14) : Math.max(26, cardH * 0.15);
+    const avatarY = plateY + plateH * (compactDemoCard ? 0.53 : 0.45);
     const barW = cardW - cardW * 0.16;
     const barH = Math.max(9, plateH * 0.075);
     const barX = pos.x - barW / 2;
@@ -2971,10 +3006,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     roundedRectPath(ctx, railX, plateY + plateH * 0.24, 4, railH, 3);
     ctx.fill();
 
-    const chipW = Math.max(34, cardW * 0.18);
-    const chipH = Math.max(20, plateH * 0.13);
+    const chipW = compactDemoCard ? Math.max(24, Math.min(30, cardW * 0.38)) : Math.max(34, cardW * 0.18);
+    const chipH = compactDemoCard ? Math.max(16, plateH * 0.12) : Math.max(20, plateH * 0.13);
     const chipX = plateX + cardW * 0.08;
-    const chipY = plateY + plateH * 0.15;
+    const chipY = plateY + plateH * (compactDemoCard ? 0.11 : 0.15);
     ctx.fillStyle = rank === 1 ? 'rgba(246,201,91,0.18)' : 'rgba(85,231,255,0.12)';
     roundedRectPath(ctx, chipX, chipY, chipW, chipH, chipH / 2);
     ctx.fill();
@@ -2982,7 +3017,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.lineWidth = 1;
     roundedRectPath(ctx, chipX, chipY, chipW, chipH, chipH / 2);
     ctx.stroke();
-    ctx.font = `900 ${Math.max(11, chipH * 0.58)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.font = `900 ${Math.max(compactDemoCard ? 9 : 11, chipH * 0.58)}px 'Rajdhani','Segoe UI',sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#fff8df';
@@ -3013,10 +3048,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     const name = (player.nickname || player.uniqueId || 'Player').slice(0, 18);
-    const nameY = plateY + plateH * 0.22;
+    const nameY = plateY + plateH * (compactDemoCard ? 0.31 : 0.22);
+    const nameMaxW = compactDemoCard ? cardW * 0.86 : cardW * 0.72;
+    if (compactDemoCard) {
+      const nameBoxH = Math.max(15, plateH * 0.15);
+      ctx.fillStyle = 'rgba(2,5,12,0.58)';
+      roundedRectPath(ctx, plateX + cardW * 0.07, nameY - nameBoxH / 2, cardW * 0.86, nameBoxH, nameBoxH / 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.lineWidth = 0.8;
+      roundedRectPath(ctx, plateX + cardW * 0.07, nameY - nameBoxH / 2, cardW * 0.86, nameBoxH, nameBoxH / 2);
+      ctx.stroke();
+    }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    fitCanvasText(ctx, name, cardW * 0.72, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(14, plateH * 0.115), 10);
-    ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(0,0,0,0.82)'; ctx.strokeText(name, pos.x, nameY);
+    fitCanvasText(ctx, name, nameMaxW, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(compactDemoCard ? 10 : 14, plateH * (compactDemoCard ? 0.105 : 0.115)), compactDemoCard ? 7 : 10);
+    ctx.lineWidth = compactDemoCard ? 2.6 : 3.5; ctx.strokeStyle = 'rgba(0,0,0,0.82)'; ctx.strokeText(name, pos.x, nameY);
     ctx.fillStyle = '#ffffff'; ctx.fillText(name, pos.x, nameY);
 
     ctx.fillStyle = 'rgba(0,0,0,0.56)';
@@ -3044,8 +3090,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.fillText(hpText, pos.x, barY + barH + plateH * 0.105);
 
     if (player.kills > 0) {
-      const badgeW = Math.max(44, cardW * 0.2);
-      const badgeH = Math.max(22, plateH * 0.13);
+      const badgeW = compactDemoCard ? Math.max(24, Math.min(34, cardW * 0.42)) : Math.max(44, cardW * 0.2);
+      const badgeH = compactDemoCard ? Math.max(16, plateH * 0.12) : Math.max(22, plateH * 0.13);
       const bx = plateX + cardW - badgeW - cardW * 0.08;
       const by = chipY;
       ctx.fillStyle = 'rgba(232,59,95,0.18)';
@@ -3054,9 +3100,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.strokeStyle = 'rgba(232,59,95,0.5)';
       roundedRectPath(ctx, bx, by, badgeW, badgeH, badgeH / 2);
       ctx.stroke();
-      ctx.font = `900 ${Math.max(10, badgeH * 0.54)}px 'Rajdhani','Segoe UI',sans-serif`;
+      ctx.font = `900 ${Math.max(compactDemoCard ? 9 : 10, badgeH * 0.54)}px 'Rajdhani','Segoe UI',sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff2f4';
-      ctx.fillText(`${player.kills} K`, bx + badgeW / 2, by + badgeH / 2 + 1);
+      ctx.fillText(compactDemoCard ? `${player.kills}K` : `${player.kills} K`, bx + badgeW / 2, by + badgeH / 2 + 1);
     }
     ctx.restore();
   }
@@ -3213,6 +3259,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.clearRect(0, 0, cw(), ch());
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     drawBackground();
+    ctx.save();
+    clipArenaFrame();
     const top = topPlayers();
     top.forEach((p, i) => {
       const pos = getPlayerPosition(i, top.length);
@@ -3228,6 +3276,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     drawHorde(horde);
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     attacks = attacks.filter(a => { const alive = a.update(); if (alive) a.draw(); return alive; });
+    ctx.restore();
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     drawArenaFrame();
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
@@ -3239,24 +3288,26 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   // DEMO MODE
   // ═══════════════════════════════════════
   const ALL_EFFECTS = ['laser','beam','projectile','neon','ripple','fire','bubble','sphere','explosion'];
+  const PREVIEW_EFFECTS = ['laser','beam','neon','ripple','bubble','sphere'];
 
   function stopDemoLoop() { if (_demoTimer) { clearInterval(_demoTimer); _demoTimer = null; } }
 
   function fireDemoAttack() {
     const top = topPlayers(), horde = hordePlayer();
     if (!top.length) return;
-    const effect   = ALL_EFFECTS[Math.floor(Math.random() * ALL_EFFECTS.length)];
-    const damage   = Math.floor(Math.random() * 70 + 10);
-    const killed   = Math.random() < 0.1;
-    const critical = Math.random() < 0.2;
-    const intensity = 0.3 + Math.random() * 0.7;
-    const useHorde  = horde && Math.random() < 0.3;
+    const effects = isPublicDemo ? PREVIEW_EFFECTS : ALL_EFFECTS;
+    const effect   = effects[Math.floor(Math.random() * effects.length)];
+    const damage   = isPublicDemo ? Math.floor(Math.random() * 34 + 8) : Math.floor(Math.random() * 70 + 10);
+    const killed   = isPublicDemo ? false : Math.random() < 0.1;
+    const critical = Math.random() < (isPublicDemo ? 0.08 : 0.2);
+    const intensity = isPublicDemo ? 0.18 + Math.random() * 0.32 : 0.3 + Math.random() * 0.7;
+    const useHorde  = horde && Math.random() < (isPublicDemo ? 0.12 : 0.3);
     if (useHorde) {
       const ti = Math.floor(Math.random() * top.length);
       fireAttack(HORDE_ID, top[ti].uniqueId, damage, killed, false, effect, { intensity, critical });
     } else {
       const ai = Math.floor(Math.random() * top.length);
-      if (horde && Math.random() < 0.35) {
+      if (horde && Math.random() < (isPublicDemo ? 0.68 : 0.35)) {
         fireAttack(top[ai].uniqueId, HORDE_ID, damage, killed, false, effect, { intensity, critical });
       } else {
         let ti = Math.floor(Math.random() * top.length);
@@ -3271,8 +3322,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     isDemoMode = true;
     statusDiv.textContent = '🟡 DEMO MODE · no server';
     statusDiv.className   = 'demo';
-    fireDemoAttack();
-    _demoTimer = setInterval(fireDemoAttack, 1500);
+    if (isPublicDemo) setTimeout(fireDemoAttack, 900);
+    else fireDemoAttack();
+    _demoTimer = setInterval(fireDemoAttack, isPublicDemo ? 2400 : 1500);
   }
 
   // ═══════════════════════════════════════
