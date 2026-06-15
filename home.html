@@ -10,41 +10,411 @@
   <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
   <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}body{min-height:100vh;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#fff8e6;background:radial-gradient(circle at 20% 4%,rgba(246,201,91,.18),transparent 30%),radial-gradient(circle at 84% 16%,rgba(232,59,95,.15),transparent 28%),linear-gradient(180deg,#050608,#030406);overflow-x:hidden}body:before{content:"";position:fixed;inset:0;background-image:linear-gradient(rgba(246,201,91,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(246,201,91,.035) 1px,transparent 1px);background-size:58px 58px;mask-image:radial-gradient(circle at top,black,transparent 72%);z-index:-1}a{color:inherit;text-decoration:none}.nav-wrap{position:sticky;top:0;z-index:5;padding:18px clamp(16px,4vw,42px) 0}nav{max-width:1180px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 14px;border:1px solid rgba(246,201,91,.22);border-radius:24px;background:rgba(5,7,11,.76);backdrop-filter:blur(20px);box-shadow:0 20px 70px rgba(0,0,0,.32)}.brand{display:flex;align-items:center;gap:12px}.brand img{width:48px;height:48px;border-radius:16px;transform:scale(1.1);transform-origin:center}.brand strong{display:block;text-transform:uppercase;letter-spacing:.08em}.brand span{display:block;color:#a8afbf;font-size:12px;text-transform:uppercase;letter-spacing:.08em}.nav-links{display:flex;align-items:center;gap:10px}.nav-links a{padding:11px 14px;border-radius:999px;color:#a8afbf;font-weight:800;font-size:14px}.nav-links .cta{color:#160d02;background:linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d)}main{max-width:1180px;margin:auto;padding:clamp(56px,8vw,96px) clamp(18px,4vw,42px)}.hero{display:grid;grid-template-columns:minmax(0,.82fr) minmax(460px,1.18fr);gap:clamp(32px,5vw,64px);align-items:center}.kicker{display:inline-flex;margin-bottom:18px;padding:9px 13px;border:1px solid rgba(246,201,91,.28);border-radius:999px;background:rgba(246,201,91,.08);color:#ffdf8a;font-size:12px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}h1{font-size:clamp(46px,7vw,92px);line-height:.92;text-transform:uppercase;margin-bottom:24px}h1 span{display:block;color:transparent;background:linear-gradient(100deg,#fff7d7,#f6c95b,#ff7a48);-webkit-background-clip:text;background-clip:text}.lede{color:#c4ccdb;font-size:clamp(17px,2vw,21px);line-height:1.7;margin-bottom:28px}.actions{display:flex;gap:14px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 24px;border-radius:16px;font-weight:900}.primary{color:#130a02;background:linear-gradient(135deg,#f6c95b,#fff1bd 52%,#ff6a3d)}.secondary{border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.055)}.demo-card{position:relative;border-radius:24px;padding:1px;background:linear-gradient(145deg,rgba(246,201,91,.78),rgba(255,255,255,.14),rgba(232,59,95,.38),rgba(85,231,255,.3));box-shadow:0 34px 92px rgba(0,0,0,.58)}.demo-card:before{content:"";position:absolute;inset:10% -4% -10%;z-index:-1;background:radial-gradient(circle,rgba(85,231,255,.12),transparent 64%);filter:blur(26px)}.demo-inner{position:relative;border-radius:23px;overflow:hidden;background:#03060c;border:1px solid rgba(255,255,255,.09);padding:8px}.demo-top{display:none}.demo-title{display:grid;gap:2px}.demo-title strong{font-size:12px;font-weight:950;letter-spacing:.1em;text-transform:uppercase;color:#ffdf8a}.demo-title span{font-size:11px;font-weight:800;letter-spacing:.04em;color:#a8f4ff}.demo-status{display:inline-flex;align-items:center;gap:7px;min-height:28px;padding:0 10px;border-radius:999px;background:rgba(85,231,255,.1);border:1px solid rgba(85,231,255,.24);color:#9af6ff;font-size:11px;font-weight:950;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}.demo-status:before{content:"";width:7px;height:7px;border-radius:50%;background:#55e7ff;box-shadow:0 0 12px #55e7ff}.frame-wrap{aspect-ratio:16/9;margin:0;border-radius:18px;overflow:hidden;border:1px solid rgba(85,231,255,.18);background:#02040a;box-shadow:inset 0 0 0 1px rgba(246,201,91,.1),0 18px 42px rgba(0,0,0,.34)}.frame-wrap iframe{width:100%;height:100%;border:0;display:block}.demo-bottom{display:none}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:80px}.card{padding:26px;border-radius:24px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.045)}.card h3{margin-bottom:10px}.card p{color:#a8afbf;line-height:1.6}footer{max-width:1180px;margin:auto;padding:30px clamp(18px,4vw,42px);color:#7e8799;border-top:1px solid rgba(255,255,255,.08)}@media(max-width:900px){.hero,.grid{grid-template-columns:1fr}.nav-links a:not(.cta){display:none}.demo-card{max-width:760px}}@media(max-width:520px){.actions .btn{width:100%}.demo-inner{padding:6px}.frame-wrap{border-radius:16px}}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold: #f6c95b;
+      --gold2: #fff0b9;
+      --ember: #ff6a3d;
+      --cyan: #55e7ff;
+      --red: #e83b5f;
+      --ink: #050608;
+      --panel: rgba(255,255,255,.055);
+      --line: rgba(255,255,255,.11);
+      --muted: #a8afbf;
+      --text: #fff8e6;
+    }
+    body {
+      min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 0, rgba(246,201,91,.18), transparent 30%),
+        radial-gradient(circle at 86% 12%, rgba(232,59,95,.14), transparent 30%),
+        radial-gradient(circle at 80% 72%, rgba(85,231,255,.08), transparent 34%),
+        linear-gradient(180deg, #050608 0%, #030406 64%, #020307 100%);
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(246,201,91,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(246,201,91,.035) 1px, transparent 1px);
+      background-size: 58px 58px;
+      mask-image: radial-gradient(circle at top, black, transparent 72%);
+    }
+    a { color: inherit; text-decoration: none; }
+    .nav-wrap { position: sticky; top: 0; z-index: 10; padding: 18px clamp(16px,4vw,42px) 0; }
+    nav {
+      max-width: 1180px;
+      margin: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 12px 14px;
+      border: 1px solid rgba(246,201,91,.22);
+      border-radius: 24px;
+      background: rgba(5,7,11,.78);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 70px rgba(0,0,0,.32);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand img {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      transform: scale(1.1);
+      transform-origin: center;
+    }
+    .brand strong { display: block; text-transform: uppercase; letter-spacing: .08em; }
+    .brand span { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .nav-links { display: flex; align-items: center; gap: 10px; }
+    .nav-links a {
+      padding: 11px 14px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .nav-links .cta {
+      color: #160d02;
+      background: linear-gradient(135deg, var(--gold), var(--gold2) 52%, var(--ember));
+    }
+    main { max-width: 1180px; margin: auto; padding: clamp(44px,7vw,86px) clamp(18px,4vw,42px) 0; }
+    .hero {
+      min-height: calc(100vh - 140px);
+      display: grid;
+      grid-template-columns: minmax(0,.9fr) minmax(500px,1.1fr);
+      gap: clamp(30px,5vw,64px);
+      align-items: center;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
+      padding: 9px 13px;
+      border: 1px solid rgba(246,201,91,.28);
+      border-radius: 999px;
+      background: rgba(246,201,91,.08);
+      color: #ffdf8a;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 14px rgba(85,231,255,.8);
+    }
+    h1 {
+      max-width: 640px;
+      margin-bottom: 24px;
+      font-size: clamp(48px,7.2vw,96px);
+      line-height: .92;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+    h1 span {
+      display: block;
+      color: transparent;
+      background: linear-gradient(100deg, #fff7d7, var(--gold), #ff7a48);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    .lede {
+      max-width: 620px;
+      margin-bottom: 28px;
+      color: #c4ccdb;
+      font-size: clamp(17px,2vw,21px);
+      line-height: 1.7;
+    }
+    .actions { display: flex; gap: 14px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 56px;
+      padding: 0 24px;
+      border-radius: 16px;
+      font-weight: 900;
+    }
+    .primary { color: #130a02; background: linear-gradient(135deg, var(--gold), #fff1bd 52%, var(--ember)); }
+    .secondary { border: 1px solid rgba(255,255,255,.13); background: rgba(255,255,255,.055); }
+    .proof-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    .proof-list span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 999px;
+      background: rgba(255,255,255,.045);
+      color: #dce6f6;
+      font-size: 13px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+    .demo-shell {
+      position: relative;
+      align-self: center;
+      border-radius: 24px;
+      padding: 1px;
+      background: linear-gradient(145deg, rgba(246,201,91,.78), rgba(255,255,255,.14), rgba(232,59,95,.38), rgba(85,231,255,.3));
+      box-shadow: 0 34px 92px rgba(0,0,0,.58);
+    }
+    .demo-shell::before {
+      content: "";
+      position: absolute;
+      inset: 12% -4% -12%;
+      z-index: -1;
+      background: radial-gradient(circle, rgba(85,231,255,.14), transparent 64%);
+      filter: blur(26px);
+    }
+    .demo-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 18px 12px;
+      border-radius: 23px 23px 0 0;
+      background: rgba(4,8,16,.92);
+      border: 1px solid rgba(255,255,255,.08);
+      border-bottom: 0;
+    }
+    .demo-head strong {
+      display: block;
+      color: #ffdf8a;
+      font-size: 13px;
+      font-weight: 950;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .demo-head span {
+      color: #9ff5ff;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .demo-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 30px;
+      padding: 0 11px;
+      border-radius: 999px;
+      background: rgba(85,231,255,.1);
+      border: 1px solid rgba(85,231,255,.24);
+      color: #9af6ff;
+      font-size: 11px;
+      font-weight: 950;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .demo-status::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan);
+    }
+    .frame-wrap {
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      border: 1px solid rgba(85,231,255,.18);
+      border-radius: 0 0 23px 23px;
+      background: #02040a;
+      box-shadow: inset 0 0 0 1px rgba(246,201,91,.1), 0 18px 42px rgba(0,0,0,.34);
+    }
+    .frame-wrap iframe { width: 100%; height: 100%; border: 0; display: block; }
+    .quick-panel {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 34px;
+    }
+    .quick-item {
+      min-height: 112px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,.045);
+    }
+    .quick-item b { display: block; margin-bottom: 8px; color: #fff4d2; font-size: 17px; }
+    .quick-item p { color: var(--muted); line-height: 1.55; font-size: 14px; }
+    .section {
+      padding: clamp(58px,8vw,92px) 0;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    .section-head h2 {
+      max-width: 620px;
+      font-size: clamp(34px,4.5vw,58px);
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .section-head p { max-width: 460px; color: var(--muted); line-height: 1.65; }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    .step {
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.025));
+    }
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      margin-bottom: 16px;
+      border-radius: 50%;
+      color: #130a02;
+      background: linear-gradient(135deg, var(--gold), var(--gold2) 58%, var(--ember));
+      font-weight: 950;
+    }
+    .step h3 { margin-bottom: 10px; font-size: 21px; }
+    .step p { color: var(--muted); line-height: 1.65; }
+    .cta-band {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      gap: 24px;
+      align-items: center;
+      margin-bottom: 72px;
+      padding: 28px;
+      border: 1px solid rgba(246,201,91,.22);
+      border-radius: 8px;
+      background:
+        linear-gradient(90deg, rgba(246,201,91,.12), rgba(85,231,255,.06)),
+        rgba(255,255,255,.035);
+    }
+    .cta-band h2 {
+      margin-bottom: 8px;
+      font-size: clamp(28px,4vw,46px);
+      line-height: 1.05;
+      text-transform: uppercase;
+    }
+    .cta-band p { color: #c4ccdb; line-height: 1.6; }
+    footer {
+      max-width: 1180px;
+      margin: auto;
+      padding: 30px clamp(18px,4vw,42px);
+      color: #7e8799;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    @media (max-width: 980px) {
+      .hero { min-height: auto; grid-template-columns: 1fr; }
+      .demo-shell { max-width: 820px; width: 100%; }
+      .section-head, .cta-band { grid-template-columns: 1fr; }
+      .quick-panel, .steps { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      .nav-links a:not(.cta) { display: none; }
+      .brand span span { display: none; }
+      h1 { font-size: clamp(42px,15vw,68px); }
+      .actions .btn { width: 100%; }
+      .demo-head { padding: 12px; }
+      .demo-head span { display: none; }
+      .proof-list span { white-space: normal; }
+    }
   </style>
 </head>
 <body>
   <div class="nav-wrap">
     <nav>
-      <a class="brand" href="/"><img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo"><span><strong>IntoTheBattle</strong><span>TikTok LIVE arena overlay</span></span></a>
-      <div class="nav-links"><a href="#how">How it works</a><a href="/sponsors">Sponsors</a><a href="/login">Login</a><a class="cta" href="/signup">Create free account</a></div>
+      <a class="brand" href="/">
+        <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo">
+        <span><strong>IntoTheBattle</strong><span>TikTok LIVE arena overlay</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="#how">How it works</a>
+        <a href="/sponsors">Sponsors</a>
+        <a href="/login">Login</a>
+        <a class="cta" href="/signup">Create free account</a>
+      </div>
     </nav>
   </div>
+
   <main>
-    <section class="hero">
+    <section class="hero" aria-labelledby="hero-title">
       <div>
-        <div class="kicker">Built for TikTok LIVE creators</div>
-        <h1>Turn your TikTok LIVE into <span>a battle arena.</span></h1>
-        <p class="lede">IntoTheBattle gives creators a stream-ready overlay, live room controls, and an interactive viewer experience built for OBS and TikTok Studio.</p>
-        <div class="actions"><a class="btn primary" href="/signup">Create free account -></a><a class="btn secondary" href="#how">See how it works</a><a class="btn secondary" href="/sponsors">Sponsor the arena</a></div>
+        <div class="eyebrow">Stream-ready battle overlay</div>
+        <h1 id="hero-title">Turn your TikTok LIVE into <span>a battle arena.</span></h1>
+        <p class="lede">IntoTheBattle gives creators an OBS-ready game screen, dashboard controls, and viewer-powered combat moments that make chat feel playable.</p>
+        <div class="actions">
+          <a class="btn primary" href="/signup">Create free account -></a>
+          <a class="btn secondary" href="#how">See setup flow</a>
+        </div>
+        <div class="proof-list" aria-label="Included features">
+          <span>OBS browser source ready</span>
+          <span>Dashboard controls</span>
+          <span>Free rooms include managed video moments</span>
+        </div>
       </div>
-      <aside class="demo-card" aria-label="Live overlay demo preview">
-        <div class="demo-inner">
-          <div class="demo-top">
-            <div class="demo-title"><strong>Live battle demo</strong><span>Simulated viewer actions</span></div>
-            <span class="demo-status">Running</span>
-          </div>
-          <div class="frame-wrap"><iframe src="/overlay-preview?demo=1&controls=0" title="IntoTheBattle current overlay demo" loading="eager"></iframe></div>
-          <div class="demo-bottom"><span>Real OBS overlay renderer</span><span>Demo mode</span></div>
+
+      <aside class="demo-shell" aria-label="Live overlay demo preview">
+        <div class="demo-head">
+          <div><strong>Live battle demo</strong><span>Real overlay renderer</span></div>
+          <div class="demo-status">Running</div>
+        </div>
+        <div class="frame-wrap">
+          <iframe src="/overlay-preview?demo=1&controls=0" title="IntoTheBattle current overlay demo" loading="eager"></iframe>
         </div>
       </aside>
     </section>
-    <section id="how" class="grid">
-      <article class="card"><h3>Connect your stream</h3><p>Use the creator dashboard to prepare your room and connect your TikTok LIVE session.</p></article>
-      <article class="card"><h3>Add the overlay</h3><p>Use it in OBS as a browser source or in TikTok Studio as a captured overlay window.</p></article>
-      <article class="card"><h3>Let viewers play</h3><p>Viewers interact from the stream while the overlay shows the room state and effects.</p></article>
+
+    <div class="quick-panel" aria-label="Quick value summary">
+      <article class="quick-item"><b>Connect your stream</b><p>Prepare your room and connect your TikTok LIVE session from one dashboard.</p></article>
+      <article class="quick-item"><b>Add the overlay</b><p>Use the signed overlay URL in OBS or capture it into TikTok Studio.</p></article>
+      <article class="quick-item"><b>Let viewers play</b><p>Chat, likes, gifts, and follows become visible action inside the arena.</p></article>
+    </div>
+
+    <section id="how" class="section" aria-labelledby="how-title">
+      <div class="section-head">
+        <h2 id="how-title">A simpler live setup.</h2>
+        <p>Keep the stream focused on the show. IntoTheBattle handles the room state, overlay URL, test controls, and visual moments from the dashboard.</p>
+      </div>
+      <div class="steps">
+        <article class="step"><span class="step-num">1</span><h3>Create your room</h3><p>Sign up, claim your creator room, and open the dashboard when you are ready to go live.</p></article>
+        <article class="step"><span class="step-num">2</span><h3>Add your source</h3><p>Copy the overlay URL into OBS or TikTok Studio and keep it open while your LIVE runs.</p></article>
+        <article class="step"><span class="step-num">3</span><h3>Test the moment</h3><p>Preview attacks, audio, backgrounds, and video breaks before viewers arrive.</p></article>
+      </div>
+    </section>
+
+    <section class="cta-band" aria-label="Create account">
+      <div>
+        <h2>Build the arena before your next LIVE.</h2>
+        <p>Start free, test the overlay, and upgrade only when you want creator-controlled video moments and advanced presentation controls.</p>
+      </div>
+      <a class="btn primary" href="/signup">Start setup -></a>
     </section>
   </main>
-  <footer>© 2026 IntoTheBattle. <a href="/login">Login</a> · <a href="/signup">Create account</a></footer>
+
+  <footer>&copy; 2026 IntoTheBattle. <a href="/login">Login</a> &middot; <a href="/signup">Create account</a></footer>
 </body>
 </html>

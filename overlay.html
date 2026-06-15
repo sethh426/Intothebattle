@@ -1075,6 +1075,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const isSignedOverlay = Boolean(overlayRoomId && overlayToken);
   const isPublicDemo = overlayParams.get('demo') === '1'
     || /^\/overlay-(demo|preview)(?:\.html)?\/?$/i.test(window.location.pathname);
+  function readDemoRatio(name, fallback, min, max) {
+    const value = Number(overlayParams.get(name));
+    const ratio = Number.isFinite(value) ? value : fallback;
+    return Math.max(min, Math.min(max, ratio));
+  }
+  const demoPlayerYRatio = isPublicDemo ? readDemoRatio('demo_player_y', 0.6, 0.36, 0.68) : null;
+  const demoHordeTopRatio = isPublicDemo ? readDemoRatio('demo_horde_y', 0.75, 0.54, 0.82) : null;
 
   if (isSignedOverlay || isPublicDemo) {
     document.body.classList.add('signed-overlay');
@@ -1926,9 +1933,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const baseSpacing = cardW * compactFactor;
     const spacing = Math.max(cardW * 0.94, baseSpacing + layoutGap);
     const totalWidth = total > 1 ? cardW + spacing * (total - 1) : cardW;
+    const baseY = isPublicDemo ? H * demoPlayerYRatio : H * 0.28;
     return {
       x: (W - totalWidth) / 2 + offsetX + index * spacing + cardW / 2,
-      y: H * 0.28 + offsetY + H * 0.16 * (1 - layoutZoom),
+      y: baseY + offsetY + H * 0.16 * (1 - layoutZoom),
     };
   }
 
@@ -1938,7 +1946,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const barW = Math.min(W - pad * 2, W * 0.62 + Math.min(120, H * 0.1));
     const barH = Math.max(58, Math.min(112, H * 0.125 * layoutZoom));
     const centerX = Math.max(pad + barW / 2, Math.min(W - pad - barW / 2, W / 2 + offsetX * 0.45));
-    const topY = Math.max(H * 0.45, Math.min(H - pad - barH, H * 0.56 + offsetY * 0.34));
+    const desiredTopY = isPublicDemo ? H * demoHordeTopRatio : H * 0.56 + offsetY * 0.34;
+    const topY = Math.max(H * 0.45, Math.min(H - pad - barH, desiredTopY));
     return {
       x: centerX,
       y: topY + barH * 0.46,
