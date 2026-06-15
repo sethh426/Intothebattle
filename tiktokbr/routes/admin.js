@@ -457,7 +457,34 @@ function sponsorPreviewHref(creative) {
   return `/overlay-preview?${params.toString()}`;
 }
 
-function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {}) {
+function numberValue(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function formatSponsorDate(value) {
+  if (!value) return 'Never';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function formatCompletionRate(creative) {
+  const impressions = numberValue(creative.impressions);
+  if (!impressions) return '0%';
+  return `${Math.round((numberValue(creative.completions) / impressions) * 100)}%`;
+}
+
+function renderSponsorAdminPage({ message = '', error = '', creatives = [], events = [] } = {}) {
+  const totals = creatives.reduce((acc, creative) => {
+    acc.active += creative.status === 'active' ? 1 : 0;
+    acc.impressions += numberValue(creative.impressions);
+    acc.completions += numberValue(creative.completions);
+    acc.failures += numberValue(creative.failures);
+    return acc;
+  }, { active: 0, impressions: 0, completions: 0, failures: 0 });
+  const completionRate = totals.impressions ? `${Math.round((totals.completions / totals.impressions) * 100)}%` : '0%';
+
   const rows = creatives.map((creative) => {
     const isActive = creative.status === 'active';
     const previewHref = sponsorPreviewHref(creative);
@@ -474,7 +501,16 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {
         <span>${escapeHtml(creative.title || 'Sponsor Spotlight')}</span><br />
         <small>${escapeHtml(creative.filename)}</small>
       </td>
-      <td>${escapeHtml(creative.status || 'active')}</td>
+      <td>
+        <span class="status-pill ${isActive ? 'active' : 'paused'}">${escapeHtml(creative.status || 'active')}</span>
+        <div class="creative-metrics">
+          <span><strong>${numberValue(creative.impressions)}</strong> shown</span>
+          <span><strong>${numberValue(creative.completions)}</strong> complete</span>
+          <span><strong>${numberValue(creative.failures)}</strong> failed</span>
+          <span><strong>${formatCompletionRate(creative)}</strong> rate</span>
+        </div>
+        <small>Last shown: ${escapeHtml(formatSponsorDate(creative.last_shown_at))}</small>
+      </td>
       <td>
         <form method="POST" action="/admin/sponsors/${creative.id}/update">
           <label>Partner</label>
@@ -507,6 +543,12 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {
       </td>
     </tr>`;
   }).join('');
+  const eventRows = events.map(event => `<tr>
+    <td><strong>${escapeHtml(event.event_type)}</strong><br /><small>${escapeHtml(formatSponsorDate(event.created_at))}</small></td>
+    <td>${escapeHtml(event.source || 'creator')}</td>
+    <td>${escapeHtml(event.partner || event.title || event.filename || event.break_id)}</td>
+    <td><small>${escapeHtml(event.detail || '')}</small></td>
+  </tr>`).join('');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -532,6 +574,17 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {
     .success { color: #c6ffc3; }
     .card { background: linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); border: 1px solid rgba(255,255,255,.1); border-radius: 24px; padding: 20px; box-shadow:0 20px 60px rgba(0,0,0,.24); }
     .card h2 { margin:0 0 12px; font-size:22px; }
+    .metrics-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .metric-card { min-width:0; padding:16px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.2); }
+    .metric-card span { display:block; color:#a8afbf; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+    .metric-card strong { display:block; margin-top:6px; color:#fff8e6; font-size:clamp(26px,4vw,42px); line-height:1; }
+    .status-pill { display:inline-flex; align-items:center; min-height:30px; padding:5px 10px; border-radius:999px; font-size:11px; font-weight:900; text-transform:uppercase; border:1px solid rgba(255,255,255,.12); }
+    .status-pill.active { color:#c6ffc3; border-color:rgba(119,240,161,.34); background:rgba(119,240,161,.08); }
+    .status-pill.paused { color:#ffdf8a; border-color:rgba(246,201,91,.34); background:rgba(246,201,91,.08); }
+    .creative-metrics { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0; }
+    .creative-metrics span { padding:8px; border-radius:10px; background:rgba(255,255,255,.045); color:#a8afbf; font-size:11px; }
+    .creative-metrics strong { color:#fff8e6; }
+    .event-table td:first-child { min-width:140px; }
     label { display: block; margin: 10px 0 6px; color: #a8afbf; font-size: 12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
     input, select { width: 100%; min-height:46px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.12); background: #111827; color: #fff8e6; }
     select option, select optgroup { background:#111827; color:#fff8e6; }
@@ -550,7 +603,7 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {
     .test-panel { display:flex; align-items:center; justify-content:space-between; gap:18px; }
     .test-panel p { margin:6px 0 0; color:#a8afbf; line-height:1.5; }
     .test-panel form { min-width:220px; }
-    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.inline-grid{grid-template-columns:1fr} table, thead, tbody, tr, th, td{display:block} th{display:none} td{border-bottom:0} tr{border:1px solid rgba(255,255,255,0.08); border-radius:16px; margin-bottom:14px; overflow:hidden} }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid,.inline-grid{grid-template-columns:1fr} table, thead, tbody, tr, th, td{display:block} th{display:none} td{border-bottom:0} tr{border:1px solid rgba(255,255,255,0.08); border-radius:16px; margin-bottom:14px; overflow:hidden} }
   </style>
 </head>
 <body>
@@ -564,6 +617,12 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
+    <div class="metrics-grid">
+      <div class="metric-card"><span>Active creatives</span><strong>${totals.active}</strong></div>
+      <div class="metric-card"><span>Times shown</span><strong>${totals.impressions}</strong></div>
+      <div class="metric-card"><span>Completed</span><strong>${totals.completions}</strong></div>
+      <div class="metric-card"><span>Completion rate</span><strong>${completionRate}</strong></div>
+    </div>
     <div class="card test-panel">
       <div>
         <h2>Live overlay testing</h2>
@@ -578,6 +637,7 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {
       <form method="POST" action="/admin/sponsors/upload" enctype="multipart/form-data">
         <label>Video file</label>
         <input name="creative" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v" required />
+        <small>Recommended: MP4 H.264/AAC, 1080p, 10-30 seconds. Large files can buffer in OBS.</small>
         <label>Partner</label>
         <input name="partner" placeholder="Brand name" />
         <label>Headline</label>
@@ -601,6 +661,13 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [] } = {
         <tbody>${rows || '<tr><td colspan="4">No platform creatives uploaded yet.</td></tr>'}</tbody>
       </table>
     </div>
+    <div class="card">
+      <h2>Recent playback events</h2>
+      <table class="event-table">
+        <thead><tr><th>Event</th><th>Source</th><th>Creative</th><th>Detail</th></tr></thead>
+        <tbody>${eventRows || '<tr><td colspan="4">No sponsor playback events recorded yet.</td></tr>'}</tbody>
+      </table>
+    </div>
   </div>
 </body>
 </html>`;
@@ -610,11 +677,26 @@ function listPlatformSponsorCreatives() {
   return db.prepare('SELECT * FROM platform_sponsor_creatives ORDER BY uploaded_at DESC, id DESC').all();
 }
 
+function listRecentSponsorPlaybackEvents() {
+  try {
+    return db.prepare(`
+      SELECT events.*, creatives.partner, creatives.title
+      FROM sponsor_playback_events events
+      LEFT JOIN platform_sponsor_creatives creatives ON events.creative_id = creatives.id
+      ORDER BY events.created_at DESC, events.id DESC
+      LIMIT 30
+    `).all();
+  } catch (_err) {
+    return [];
+  }
+}
+
 router.get('/sponsors', requireAdminAuth, (req, res) => {
   res.send(renderSponsorAdminPage({
     message: String(req.query.message || ''),
     error: String(req.query.error || ''),
     creatives: listPlatformSponsorCreatives(),
+    events: listRecentSponsorPlaybackEvents(),
   }));
 });
 

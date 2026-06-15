@@ -93,8 +93,25 @@ CREATE TABLE IF NOT EXISTS platform_sponsor_creatives (
   muted INTEGER DEFAULT 1,
   weight INTEGER DEFAULT 1,
   status TEXT DEFAULT 'active',
+  impressions INTEGER DEFAULT 0,
+  completions INTEGER DEFAULT 0,
+  failures INTEGER DEFAULT 0,
+  last_shown_at TIMESTAMP,
+  last_completed_at TIMESTAMP,
   uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sponsor_playback_events (
+  id SERIAL PRIMARY KEY,
+  break_id TEXT NOT NULL,
+  room_id TEXT,
+  source TEXT DEFAULT 'creator',
+  creative_id INTEGER,
+  filename TEXT,
+  event_type TEXT NOT NULL,
+  detail TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS admin_sessions (

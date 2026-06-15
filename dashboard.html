@@ -111,6 +111,19 @@
     .sponsor-upgrade[hidden] { display:none; }
     .sponsor-locked { opacity:.58; }
     .sponsor-locked input,.sponsor-locked select,.sponsor-locked button { pointer-events:none; }
+    .sponsor-readiness { border:1px solid rgba(85,231,255,.18); border-radius:18px; background:linear-gradient(180deg,rgba(85,231,255,.075),rgba(0,0,0,.16)); padding:14px; margin-bottom:14px; display:grid; gap:12px; }
+    .sponsor-readiness-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .sponsor-readiness-title { color:#fff8e6; font-size:13px; font-weight:900; text-transform:uppercase; }
+    .sponsor-readiness-pill { flex:0 0 auto; min-height:30px; display:inline-flex; align-items:center; padding:5px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.14); color:var(--muted); font-size:11px; font-weight:900; text-transform:uppercase; }
+    .sponsor-readiness-pill.preparing,.sponsor-readiness-pill.ready { color:var(--cyan); border-color:rgba(85,231,255,.34); background:rgba(85,231,255,.09); }
+    .sponsor-readiness-pill.live,.sponsor-readiness-pill.playing,.sponsor-readiness-pill.video_completed { color:var(--gold2); border-color:rgba(246,201,91,.34); background:rgba(246,201,91,.09); }
+    .sponsor-readiness-pill.completed { color:var(--green); border-color:rgba(119,240,161,.34); background:rgba(119,240,161,.09); }
+    .sponsor-readiness-pill.failed,.sponsor-readiness-pill.stopped { color:#ff9aa8; border-color:rgba(232,59,95,.36); background:rgba(232,59,95,.1); }
+    .sponsor-readiness-message { color:var(--muted); font-size:12px; font-weight:800; line-height:1.35; }
+    .sponsor-step-track { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+    .sponsor-step { min-height:34px; display:flex; align-items:center; justify-content:center; padding:6px 8px; border-radius:12px; border:1px solid rgba(255,255,255,.09); background:rgba(255,255,255,.045); color:var(--dim); font-size:10px; font-weight:900; text-transform:uppercase; text-align:center; }
+    .sponsor-step.active { color:#061016; border-color:transparent; background:linear-gradient(135deg,var(--cyan),#b9fbff); box-shadow:0 0 22px rgba(85,231,255,.14); }
+    .sponsor-upload-meta { margin-top:8px; padding:10px 12px; border-radius:14px; background:rgba(255,255,255,.045); color:var(--muted); font-size:12px; font-weight:800; line-height:1.35; }
     .section-title { color:var(--gold2); font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; margin-bottom:12px; }
     .audio-files { display:grid; gap:10px; }
     .audio-row { display:flex; align-items:center; gap:10px; padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.2); }
@@ -203,7 +216,7 @@
         <div class="sponsor-creative">
           <div class="sponsor-fields">
             <div class="section-title">Sponsor creative</div>
-            <div class="form-group"><label class="input-label">Sponsor video</label><input type="file" id="sponsorFileInput" accept="video/mp4,video/webm,video/quicktime,video/x-m4v"><p class="muted" style="margin-top:8px;">MP4 H.264/AAC or WebM, under 100MB.</p></div>
+            <div class="form-group"><label class="input-label">Sponsor video</label><input type="file" id="sponsorFileInput" accept="video/mp4,video/webm,video/quicktime,video/x-m4v"><p class="muted" style="margin-top:8px;">MP4 H.264/AAC or WebM, under 100MB.</p><div class="sponsor-upload-meta" id="sponsorUploadMeta">Choose a video to inspect duration and format before upload.</div></div>
             <div class="form-group"><label class="input-label">Partner</label><input id="sponsorPartnerInput" type="text" maxlength="70" placeholder="Sponsor name"></div>
             <div class="form-group"><label class="input-label">Headline</label><input id="sponsorTitleInput" type="text" maxlength="90" placeholder="Sponsor Spotlight"></div>
             <div class="form-group"><label class="input-label">Subtitle</label><input id="sponsorSubtitleInput" type="text" maxlength="140" placeholder="We will be right back to the battle."></div>
@@ -217,6 +230,19 @@
           </div>
           <div class="sponsor-playback">
             <div class="section-title">Playback</div>
+            <div class="sponsor-readiness" id="sponsorReadiness">
+              <div class="sponsor-readiness-head">
+                <div class="sponsor-readiness-title">Break readiness</div>
+                <span class="sponsor-readiness-pill idle" id="sponsorReadinessPill">Idle</span>
+              </div>
+              <div class="sponsor-readiness-message" id="sponsorReadinessMessage">Send a sponsor screen to see overlay loading and playback status.</div>
+              <div class="sponsor-step-track" aria-label="Sponsor break progress">
+                <span class="sponsor-step" data-sponsor-step="preparing">Preparing</span>
+                <span class="sponsor-step" data-sponsor-step="ready">Ready</span>
+                <span class="sponsor-step" data-sponsor-step="live">Live</span>
+                <span class="sponsor-step" data-sponsor-step="completed">Complete</span>
+              </div>
+            </div>
             <div class="grid" style="gap:12px;">
               <div class="col-6"><label class="input-label">Break length</label><select id="sponsorDurationInput"><option value="10000">10 seconds</option><option value="15000" selected>15 seconds</option><option value="30000">30 seconds</option><option value="60000">60 seconds</option></select></div>
               <div class="col-6"><label class="input-label">Video fit</label><select id="sponsorFitInput"><option value="cover" selected>Cover screen</option><option value="contain">Show full video</option></select></div>
@@ -260,6 +286,8 @@ let audioConfigData = {};
 let sponsorLibraryData = [];
 let selectedSponsorFilename = '';
 let canUseCreatorSponsors = false;
+let activeSponsorBreakId = '';
+let sponsorFileObjectUrl = '';
 const EVENTS = ['attack','gift','kill','respawn','heal','follow'];
 const EVENT_CLASSES = { attack:'event-attack', gift:'event-gift', kill:'event-kill', respawn:'event-respawn', heal:'event-heal', follow:'event-follow' };
 
@@ -273,6 +301,7 @@ socket.on('overlayCount', data => { overlayCount = data.count || data; const chi
 socket.on('gameState', state => { const alive = Object.values(state || {}).filter(p => p.alive).length; text('player-count', alive); text('player-count-copy', alive); });
 socket.on('devModeChanged', data => { const value = data.enabled ? 'ON' : 'OFF'; text('dev-mode-badge', value); text('dev-mode-copy', data.enabled ? 'Testing' : 'Live'); });
 socket.on('audioConfig', cfg => { if (cfg) audioConfigData = cfg; renderAssignTable(); });
+socket.on('sponsorBreakStatus', data => updateSponsorBreakStatus(data || {}));
 socket.on('connect', () => { socket.emit('register', { type: 'dashboard' }); });
 
 let initialLoad = true;
@@ -381,6 +410,73 @@ function sponsorStatsMode() {
   const value = document.getElementById('sponsorStatsModeInput')?.value || 'endcap';
   return ['endcap','delayed','hidden','always'].includes(value) ? value : 'endcap';
 }
+function sponsorStatusLabel(status) {
+  const labels = {
+    idle: 'Idle',
+    preparing: 'Preparing',
+    ready: 'Ready',
+    live: 'Live',
+    playing: 'Playing',
+    video_completed: 'Stats',
+    completed: 'Complete',
+    failed: 'Failed',
+    stopped: 'Stopped'
+  };
+  return labels[status] || status || 'Idle';
+}
+function updateSponsorBreakStatus(data = {}) {
+  const status = String(data.status || 'idle').toLowerCase();
+  if (data.breakId) activeSponsorBreakId = data.breakId;
+  const pill = document.getElementById('sponsorReadinessPill');
+  const message = document.getElementById('sponsorReadinessMessage');
+  if (pill) {
+    pill.className = `sponsor-readiness-pill ${status}`;
+    pill.textContent = sponsorStatusLabel(status);
+  }
+  if (message) {
+    const partner = data.partner ? `${data.partner}: ` : '';
+    const detail = data.message || data.detail || (status === 'idle' ? 'Send a sponsor screen to see overlay loading and playback status.' : '');
+    const idCopy = data.breakId ? ` Break ${String(data.breakId).slice(-8)}.` : '';
+    message.textContent = `${partner}${detail}${idCopy}`;
+  }
+  const order = ['preparing', 'ready', 'live', 'completed'];
+  let activeIndex = -1;
+  if (status === 'preparing') activeIndex = 0;
+  else if (status === 'ready') activeIndex = 1;
+  else if (['live', 'playing', 'video_completed'].includes(status)) activeIndex = 2;
+  else if (['completed', 'failed', 'stopped'].includes(status)) activeIndex = 3;
+  document.querySelectorAll('[data-sponsor-step]').forEach((step, index) => {
+    step.classList.toggle('active', activeIndex >= index);
+  });
+}
+function inspectSponsorFile(file) {
+  const meta = document.getElementById('sponsorUploadMeta');
+  if (sponsorFileObjectUrl) URL.revokeObjectURL(sponsorFileObjectUrl);
+  sponsorFileObjectUrl = '';
+  if (!meta) return;
+  if (!file) {
+    meta.textContent = 'Choose a video to inspect duration and format before upload.';
+    return;
+  }
+  meta.textContent = `${file.name} - ${formatBytes(file.size)}. Reading video metadata...`;
+  sponsorFileObjectUrl = URL.createObjectURL(file);
+  const probe = document.createElement('video');
+  probe.preload = 'metadata';
+  probe.onloadedmetadata = () => {
+    const duration = Number.isFinite(probe.duration) ? `${Math.round(probe.duration)}s` : 'unknown duration';
+    const size = probe.videoWidth && probe.videoHeight ? `${probe.videoWidth}x${probe.videoHeight}` : 'unknown size';
+    const warning = probe.duration > 120 ? ' Keep sponsor breaks under 120s for reliable playback.' : '';
+    meta.textContent = `${file.name} - ${formatBytes(file.size)} - ${duration} - ${size}.${warning}`;
+    URL.revokeObjectURL(sponsorFileObjectUrl);
+    sponsorFileObjectUrl = '';
+  };
+  probe.onerror = () => {
+    meta.textContent = `${file.name} - metadata could not be read. MP4 H.264/AAC is the safest upload format.`;
+    URL.revokeObjectURL(sponsorFileObjectUrl);
+    sponsorFileObjectUrl = '';
+  };
+  probe.src = sponsorFileObjectUrl;
+}
 function currentSponsorPayload(filename = selectedSponsorFilename) {
   const selected = selectedSponsorFile(filename);
   return {
@@ -480,6 +576,7 @@ function uploadSponsorVideo() {
   const input = document.getElementById('sponsorFileInput');
   const file = input && input.files[0];
   if (!file) return toast('Choose a sponsor video first', true);
+  text('sponsorUploadMeta', `Uploading ${file.name} - ${formatBytes(file.size)}...`);
   const fd = new FormData();
   fd.append('sponsor', file);
   fd.append('partner', sponsorInputValue('sponsorPartnerInput', 'Sponsor'));
@@ -493,15 +590,23 @@ function uploadSponsorVideo() {
       setSponsorInputs(d.file);
       renderSponsorLibrary();
       input.value = '';
+      inspectSponsorFile(null);
       toast('Sponsor video uploaded');
     })
     .catch(() => toast('Sponsor upload failed', true));
 }
 function playSponsorScene(filename = selectedSponsorFilename) {
   if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true);
-  apiCall('/api/sponsor/play','POST',currentSponsorPayload(filename)).then(d => { if (d.success) toast('Sponsor screen sent to overlay'); });
+  if (overlayCount <= 0) return toast('Open or refresh the overlay before sending a sponsor screen', true);
+  updateSponsorBreakStatus({ status:'preparing', message:'Waiting for the overlay to load sponsor media...' });
+  apiCall('/api/sponsor/play','POST',currentSponsorPayload(filename)).then(d => {
+    if (d.success) {
+      updateSponsorBreakStatus({ breakId:d.breakId, status:d.status || 'preparing', message:'Preparing video in the overlay before the break starts.' });
+      toast('Sponsor screen is preparing');
+    }
+  });
 }
-function stopSponsorScene() { if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true); apiCall('/api/sponsor/stop','POST').then(d => { if (d.success) toast('Sponsor screen stopped'); }); }
+function stopSponsorScene() { if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true); apiCall('/api/sponsor/stop','POST').then(d => { if (d.success) { updateSponsorBreakStatus({ breakId:activeSponsorBreakId, status:'stopped', message:'Sponsor break stopped.' }); toast('Sponsor screen stopped'); } }); }
 function deleteSponsorVideo(filename) {
   if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true);
   if (!confirm('Delete this sponsor video?')) return;
@@ -546,6 +651,8 @@ function renderAssignTable(){ const tbody=document.getElementById('assignTableBo
 function assignAudio(event, filename){ fetch('/api/audio/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,filename:filename || null})}).then(r=>r.json()).then(d=>{ if(d.success) toast(`Assigned ${event} → ${filename || 'none'}`); else toast('Assignment failed', true); }); }
 function uploadAudioFile(file){ const fd=new FormData(); fd.append('audio',file); fetch('/api/audio/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData.push(d.file); renderAudioLibrary(); renderAssignTable(); toast('Audio uploaded'); } else toast('Upload failed', true); }); }
 const dropZone=document.getElementById('dropZone'); const audioFileInput=document.getElementById('audioFileInput');
+const sponsorFileInput=document.getElementById('sponsorFileInput');
+if (sponsorFileInput) sponsorFileInput.addEventListener('change',()=>inspectSponsorFile(sponsorFileInput.files[0]));
 audioFileInput.addEventListener('change',()=>{ if(audioFileInput.files[0]) uploadAudioFile(audioFileInput.files[0]); });
 dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));

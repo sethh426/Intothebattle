@@ -25,27 +25,31 @@ function getGoogleRedirectUri() {
   return `${base.replace(/\/$/, '')}/auth/google/callback`;
 }
 
-function createOAuthState() {
+function createOAuthState(nextPath = '/dashboard/welcome') {
   return jwt.sign(
-    { purpose: 'google_oauth', nonce: crypto.randomBytes(16).toString('hex') },
+    {
+      purpose: 'google_oauth',
+      nonce: crypto.randomBytes(16).toString('hex'),
+      next: safeRedirectPath(nextPath, '/dashboard/welcome'),
+    },
     process.env.JWT_SECRET,
     { expiresIn: '10m' }
   );
 }
 
-function verifyOAuthState(state) {
-  if (!state) return false;
+function getOAuthStatePayload(state) {
+  if (!state) return null;
   try {
     const payload = jwt.verify(state, process.env.JWT_SECRET);
-    return payload?.purpose === 'google_oauth';
+    return payload?.purpose === 'google_oauth' ? payload : null;
   } catch (_err) {
-    return false;
+    return null;
   }
 }
 
 function getVerifiedStateFromCookie(req) {
   const state = req.cookies?.google_oauth_state;
-  if (!state || !verifyOAuthState(state)) return null;
+  if (!state || !getOAuthStatePayload(state)) return null;
   return state;
 }
 
@@ -548,6 +552,12 @@ function clearSessionCookie(res) {
   res.clearCookie('session_token', getCookieOptions(true));
 }
 
+function safeRedirectPath(value, fallback = '/dashboard') {
+  const text = String(value || '').trim();
+  if (!text || !text.startsWith('/') || text.startsWith('//') || text.includes('\\')) return fallback;
+  return text;
+}
+
 function getUserFromToken(token) {
   if (!token) return null;
   try {
@@ -776,6 +786,7 @@ router.get('/auth/user/register-challenge', (req, res) => {
 router.post('/auth/user/register', express.json(), async (req, res) => {
   const captchaToken = String(req.body.captchaToken || '').trim();
   const captchaAnswer = String(req.body.captchaAnswer || '').trim();
+  const redirectUrl = safeRedirectPath(req.body.next, '/dashboard/welcome');
   if (!verifyRegistrationChallenge(captchaToken, captchaAnswer)) {
     return res.status(400).json({ success: false, error: 'Please complete the registration security check correctly.' });
   }
@@ -789,9 +800,78 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
     return res.status(400).json({ success: false, error: 'Email, password, name, and TikTok username are required.' });
   }
 
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+  const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
   if (existing) {
-    return res.status(409).json({ success: false, error: 'An account with this email already exists.' });
+    const nextQuery = encodeURIComponent(redirectUrl);
+    const loginUrl = `/login?next=${nextQuery}&email=${encodeURIComponent(email)}`;
+    const resetUrl = `/request-password-reset?email=${encodeURIComponent(email)}`;
+    const resendUrl = `/verify-email?email=${encodeURIComponent(email)}`;
+
+    if (existing.email_verified) {
+      return res.status(409).json({
+        success: false,
+        code: 'account_exists',
+        error: 'An account with this email already exists. Sign in to continue, or reset your password if needed.',
+        loginUrl,
+        resetUrl,
+      });
+    }
+
+    if (!existing.password_hash) {
+      return res.status(409).json({
+        success: false,
+        code: 'oauth_account_exists',
+        error: 'This email already has an account. Continue with Google, or use password reset if you added a password later.',
+        loginUrl,
+        resetUrl,
+        resendUrl,
+      });
+    }
+
+    const passwordMatches = await comparePasswordSafe(password, existing.password_hash, 'register-existing-user');
+    if (!passwordMatches) {
+      return res.status(409).json({
+        success: false,
+        code: 'unverified_account_exists',
+        error: 'An unverified account already exists for this email. Sign in with the original password, reset your password, or resend verification.',
+        loginUrl,
+        resetUrl,
+        resendUrl,
+      });
+    }
+
+    const verificationToken = uuidv4();
+    const verificationExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ');
+    const sessionToken = createSessionToken({ userId: existing.id, email });
+    db.prepare(
+      'UPDATE users SET name = ?, tiktok_username = ?, is_active = 1, session_token = ?, last_login = CURRENT_TIMESTAMP, email_verification_token = ?, email_verification_expires = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    ).run(name, tiktokUsername, sessionToken, verificationToken, verificationExpiresAt, existing.id);
+    setSessionCookie(res, sessionToken);
+    const room = ensureUserRoom(existing.id, name);
+
+    let delivery;
+    try {
+      delivery = await sendVerificationEmail({ id: existing.id, email, name }, verificationToken);
+    } catch (err) {
+      console.error('Verification email failed for existing unverified account:', err);
+    }
+
+    const emailSent = Boolean(delivery && !delivery.skipped && delivery.messageId);
+    const response = {
+      success: true,
+      recoveredExisting: true,
+      message: emailSent
+        ? 'We found your pending account and sent a fresh verification email. Taking you to setup...'
+        : 'We found your pending account and signed you in, but the verification email could not be sent. You can continue setup and resend verification from your profile.',
+      roomId: room.room_id || room.roomId,
+      accountId: `ACC-${String(existing.id).padStart(6, '0')}`,
+      emailSent,
+      redirectUrl,
+    };
+    if (!emailSent && process.env.NODE_ENV !== 'production') {
+      response.devVerificationLink = buildEmailUrl('/verify-email', { token: verificationToken, email });
+    }
+    return res.json(response);
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
@@ -833,6 +913,7 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
     roomId,
     accountId,
     emailSent,
+    redirectUrl,
   };
   if (!emailSent && process.env.NODE_ENV !== 'production') {
     response.devVerificationLink = buildEmailUrl('/verify-email', { token: verificationToken, email });
@@ -849,7 +930,7 @@ router.get('/auth/google', (req, res) => {
     return res.status(501).send('Google OAuth is not configured.');
   }
 
-  const state = createOAuthState();
+  const state = createOAuthState(req.query.next);
   res.cookie('google_oauth_state', state, { ...COOKIE_OPTIONS, httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
 
   const params = new URLSearchParams({
@@ -872,6 +953,8 @@ router.get('/auth/google/callback', async (req, res) => {
     if (!code || !state || !cookieState || state !== cookieState) {
       return res.status(400).send('Invalid Google OAuth state.');
     }
+    const statePayload = getOAuthStatePayload(String(state));
+    const redirectUrl = safeRedirectPath(statePayload?.next, '/dashboard/welcome');
 
     const clientId = getGoogleClientId();
     const clientSecret = getGoogleClientSecret();
@@ -935,7 +1018,7 @@ router.get('/auth/google/callback', async (req, res) => {
     await runAsync('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?', [sessionToken, user.id]);
     setSessionCookie(res, sessionToken);
     res.clearCookie('google_oauth_state', { ...COOKIE_OPTIONS, httpOnly: true, sameSite: 'lax' });
-    return res.redirect('/dashboard/welcome');
+    return res.redirect(redirectUrl);
   } catch (err) {
     console.error('Google OAuth callback error:', err);
     return res.status(500).send('Google login failed.');
@@ -945,6 +1028,7 @@ router.get('/auth/google/callback', async (req, res) => {
 router.post('/auth/user/login', express.json(), async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
+  const redirectUrl = safeRedirectPath(req.body.next, '/dashboard');
 
   if (!email || !password) {
     return res.status(400).json({ success: false, error: 'Email and password are required.' });
@@ -968,7 +1052,12 @@ router.post('/auth/user/login', express.json(), async (req, res) => {
   db.prepare('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?').run(sessionToken, user.id);
   setSessionCookie(res, sessionToken);
 
-  return res.json({ success: true, message: 'Logged in successfully.' });
+  return res.json({
+    success: true,
+    message: user.email_verified ? 'Logged in successfully.' : 'Logged in. Please verify your email from your profile when you can.',
+    emailVerified: Boolean(user.email_verified),
+    redirectUrl,
+  });
 });
 
 router.post('/auth/user/logout', (req, res) => {

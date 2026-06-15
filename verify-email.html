@@ -68,6 +68,7 @@
     async function verifyEmail() {
       if (!token || !email) {
         showStatus('Verification details are missing. Enter your email below to resend a verification email.', true);
+        if (email) resendEmailInput.value = email;
         resendSection.style.display = 'block';
         return;
       }

@@ -266,8 +266,8 @@
         <h1>Enter your <span>command center.</span></h1>
         <p>Log in to control your TikTok LIVE battle overlay, open your room, manage sponsor moments, and prepare your stream for OBS or TikTok Studio.</p>
         <div class="hero-links">
-          <a href="/signup" class="primary">Create free account</a>
-          <a href="/register" class="secondary">Create account</a>
+          <a href="/signup" class="primary" id="signupLink">Create free account</a>
+          <a href="/register" class="secondary" id="registerLink">Create account</a>
         </div>
       </div>
       <div class="proof-grid" aria-label="Login page highlights">
@@ -311,6 +311,20 @@
     const loginBtn = document.getElementById('loginBtn');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
+    const signupLink = document.getElementById('signupLink');
+    const registerLink = document.getElementById('registerLink');
+    const googleLoginBtn = document.getElementById('googleLoginBtn');
+    const params = new URLSearchParams(window.location.search);
+    const nextPath = (() => {
+      const value = params.get('next') || '/dashboard';
+      return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : '/dashboard';
+    })();
+    const emailHint = params.get('email');
+    if (emailHint) emailInput.value = emailHint;
+    const nextQuery = nextPath === '/dashboard' ? '' : `?next=${encodeURIComponent(nextPath)}`;
+    if (signupLink) signupLink.href = `/signup${nextQuery}`;
+    if (registerLink) registerLink.href = `/register${nextQuery}`;
+    if (googleLoginBtn) googleLoginBtn.href = `/auth/google${nextQuery}`;
 
     function showStatus(message, isError = false) {
       statusEl.innerHTML = `<div class="notice ${isError ? 'error' : 'success'}">${message}</div>`;
@@ -327,11 +341,11 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email, password, next: nextPath }),
         });
         const json = await res.json();
         if (!res.ok) return showStatus(json.error || 'Login failed.', true);
-        window.location.href = '/dashboard';
+        window.location.href = json.redirectUrl || nextPath;
       } catch (err) {
         showStatus('Login failed. Please try again.', true);
       }

@@ -727,9 +727,30 @@
     const captchaTokenInput = document.getElementById('captchaToken');
     const captchaAnswerInput = document.getElementById('captchaAnswer');
     let selectedChallenge = '';
+    const nextPath = (() => {
+      const value = new URLSearchParams(window.location.search).get('next') || '/dashboard/welcome';
+      return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : '/dashboard/welcome';
+    })();
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
     function showStatus(message, isError = false) {
       statusEl.innerHTML = `<div class="notice ${isError ? 'error' : 'success'}">${message}</div>`;
+    }
+
+    function showAccountRecoveryStatus(json) {
+      const actions = [];
+      if (json.loginUrl) actions.push(`<a class="btn btn-secondary" style="min-height:38px;padding:0 12px;margin-top:12px;font-size:13px;" href="${json.loginUrl}">Sign in</a>`);
+      if (json.resetUrl) actions.push(`<a class="btn btn-secondary" style="min-height:38px;padding:0 12px;margin-top:12px;font-size:13px;" href="${json.resetUrl}">Reset password</a>`);
+      if (json.resendUrl) actions.push(`<a class="btn btn-secondary" style="min-height:38px;padding:0 12px;margin-top:12px;font-size:13px;" href="${json.resendUrl}">Resend verification</a>`);
+      showStatus(`${escapeHtml(json.error || 'Account already exists.')} ${actions.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">${actions.join('')}</div>` : ''}`, true);
     }
 
     function setLoading(isLoading) {
@@ -812,17 +833,19 @@
             password,
             captchaToken,
             captchaAnswer,
+            next: nextPath,
           }),
         });
         const json = await res.json();
         if (!res.ok) {
-          showStatus(json.error || 'Registration failed. Please try again.', true);
+          if (json.code) showAccountRecoveryStatus(json);
+          else showStatus(escapeHtml(json.error || 'Registration failed. Please try again.'), true);
           await loadSecurityChallenge();
           return;
         }
 
-        showStatus('Account created. Taking you to setup…');
-        setTimeout(() => { window.location.href = '/dashboard/welcome'; }, 1100);
+        showStatus(escapeHtml(json.message || 'Account ready. Taking you to setup...'));
+        setTimeout(() => { window.location.href = json.redirectUrl || nextPath; }, 1200);
       } catch (err) {
         showStatus('Registration failed. Please try again.', true);
         await loadSecurityChallenge();

@@ -166,7 +166,23 @@ const PLATFORM_SPONSOR_DIR = path.join(STORAGE_ROOT, 'platform-sponsors');
 const PLATFORM_SPONSOR_ENABLED = process.env.PLATFORM_SPONSOR_ENABLED !== 'false';
 const PLATFORM_SPONSOR_INITIAL_DELAY_MS = Number(process.env.PLATFORM_SPONSOR_INITIAL_DELAY_MS || 8 * 60 * 1000);
 const PLATFORM_SPONSOR_INTERVAL_MS = Number(process.env.PLATFORM_SPONSOR_INTERVAL_MS || 12 * 60 * 1000);
+const PLATFORM_SPONSOR_ACTION_COOLDOWN_MS = Number(process.env.PLATFORM_SPONSOR_ACTION_COOLDOWN_MS || 45000);
+const PLATFORM_SPONSOR_RETRY_DELAY_MS = Number(process.env.PLATFORM_SPONSOR_RETRY_DELAY_MS || 60000);
+const SPONSOR_PREPARE_TIMEOUT_MS = Number(process.env.SPONSOR_PREPARE_TIMEOUT_MS || 8000);
 const platformSponsorTimers = new Map();
+const sponsorBreaks = new Map();
+const BATTLE_ACTION_EVENTS = new Set([
+  'attack',
+  'commentDamage',
+  'giftAttack',
+  'like',
+  'heal',
+  'killEvent',
+  'streakEvent',
+  'giftCelebration',
+  'follow',
+  'socialBoost',
+]);
 
 function getOverlayTokenSecret() {
   return process.env.OVERLAY_TOKEN_SECRET || process.env.JWT_SECRET || '';
@@ -339,10 +355,267 @@ function emitEvent(type, payload = {}) {
 
 function emitRoomEvent(room, type, payload = {}) {
   try {
+    if (room && BATTLE_ACTION_EVENTS.has(type)) {
+      room.lastBattleActionAt = Date.now();
+    }
     room.eventSeq = (room.eventSeq || 0) + 1;
     io.to(room.roomId).emit(type, { ...payload, _ts: Date.now(), _seq: room.eventSeq, _event: type });
   } catch (err) {
     logger.error({ err, type, room: room.roomId }, 'emitRoomEvent failed');
+  }
+}
+
+function createSponsorBreakId(source = 'sponsor') {
+  return `${String(source || 'sponsor').replace(/[^a-z0-9_-]/gi, '').slice(0, 24) || 'sponsor'}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function sanitizeSponsorEventType(value) {
+  const eventType = String(value || '').trim().toLowerCase();
+  return /^[a-z0-9_-]{1,40}$/.test(eventType) ? eventType : 'unknown';
+}
+
+function sponsorBreakStatusPayload(record, status, detail = {}) {
+  return {
+    breakId: record.breakId,
+    status,
+    source: record.source,
+    creativeId: record.creativeId || null,
+    filename: record.filename || null,
+    title: record.payload?.title || '',
+    partner: record.payload?.partner || '',
+    message: detail.message || '',
+    detail: detail.detail || '',
+    startedAt: record.startedAt || null,
+    requestedAt: record.requestedAt || null,
+  };
+}
+
+function emitSponsorBreakStatus(room, record, status, detail = {}) {
+  if (!room || !record) return;
+  emitRoomEvent(room, 'sponsorBreakStatus', sponsorBreakStatusPayload(record, status, detail));
+}
+
+function recordSponsorPlaybackEvent(record, eventType, detail = null) {
+  if (!record?.breakId) return;
+  const normalizedEvent = sanitizeSponsorEventType(eventType);
+  let detailText = '';
+  if (detail != null) {
+    try {
+      detailText = typeof detail === 'string' ? detail : JSON.stringify(detail).slice(0, 1000);
+    } catch (_err) {
+      detailText = String(detail).slice(0, 1000);
+    }
+  }
+
+  try {
+    db.prepare(`
+      INSERT INTO sponsor_playback_events
+        (break_id, room_id, source, creative_id, filename, event_type, detail, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `).run(
+      record.breakId,
+      record.roomId || null,
+      record.source || 'creator',
+      record.creativeId || null,
+      record.filename || null,
+      normalizedEvent,
+      detailText || null
+    );
+  } catch (err) {
+    logger.warn({ err, eventType: normalizedEvent, breakId: record.breakId }, 'Failed to record sponsor playback event');
+  }
+}
+
+function updatePlatformSponsorCreativeMetric(record, metric) {
+  if (!record || record.source !== 'platform' || !record.creativeId) return;
+  try {
+    if (metric === 'started' && !record.impressionRecorded) {
+      record.impressionRecorded = true;
+      db.prepare(`
+        UPDATE platform_sponsor_creatives
+        SET impressions = COALESCE(impressions, 0) + 1,
+            last_shown_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(record.creativeId);
+    } else if (metric === 'completed' && !record.completionRecorded && !record.failureRecorded) {
+      record.completionRecorded = true;
+      db.prepare(`
+        UPDATE platform_sponsor_creatives
+        SET completions = COALESCE(completions, 0) + 1,
+            last_completed_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(record.creativeId);
+    } else if (metric === 'failed' && !record.failureRecorded && !record.completionRecorded) {
+      record.failureRecorded = true;
+      db.prepare(`
+        UPDATE platform_sponsor_creatives
+        SET failures = COALESCE(failures, 0) + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(record.creativeId);
+    }
+  } catch (err) {
+    logger.warn({ err, creativeId: record.creativeId, metric }, 'Failed to update sponsor creative metric');
+  }
+}
+
+function cleanupSponsorBreakLater(breakId) {
+  const record = sponsorBreaks.get(breakId);
+  if (!record) return;
+  if (record.prepareTimer) clearTimeout(record.prepareTimer);
+  if (record.cleanupTimer) clearTimeout(record.cleanupTimer);
+  record.cleanupTimer = setTimeout(() => {
+    const latest = sponsorBreaks.get(breakId);
+    if (latest && latest.cleanupTimer === record.cleanupTimer) sponsorBreaks.delete(breakId);
+  }, 120000);
+  if (typeof record.cleanupTimer.unref === 'function') record.cleanupTimer.unref();
+}
+
+function roomHasActiveSponsorBreak(roomId) {
+  return Array.from(sponsorBreaks.values()).some(record => (
+    record.roomId === roomId && !['completed', 'failed', 'stopped'].includes(record.status)
+  ));
+}
+
+function isRoomInSponsorCooldown(room) {
+  if (!room?.lastBattleActionAt) return false;
+  return Date.now() - room.lastBattleActionAt < PLATFORM_SPONSOR_ACTION_COOLDOWN_MS;
+}
+
+function startPreparedSponsorBreak(room, record, reason = 'ready') {
+  if (!room || !record || !sponsorBreaks.has(record.breakId)) return null;
+  if (record.status === 'live') return record;
+  if (record.prepareTimer) {
+    clearTimeout(record.prepareTimer);
+    record.prepareTimer = null;
+  }
+  record.status = 'live';
+  record.startedAt = Date.now();
+  recordSponsorPlaybackEvent(record, 'started', { reason });
+  updatePlatformSponsorCreativeMetric(record, 'started');
+  emitSponsorBreakStatus(room, record, 'live', { message: reason === 'timeout' ? 'Started after prepare timeout' : 'Video ready, starting break' });
+  emitRoomEvent(room, 'sponsorScene', { ...record.payload, action: 'show', preparedReason: reason });
+  return record;
+}
+
+function startSponsorBreak(room, payload = {}, options = {}) {
+  if (!room?.roomId) return null;
+  const source = payload.source || options.source || 'creator';
+  const breakId = payload.breakId || createSponsorBreakId(source);
+  const scenePayload = {
+    ...payload,
+    action: 'show',
+    source,
+    breakId,
+    statsMode: payload.statsMode || 'endcap',
+    _ts: Date.now(),
+  };
+
+  const record = {
+    breakId,
+    roomId: room.roomId,
+    source,
+    creativeId: scenePayload.creativeId || null,
+    filename: scenePayload.filename || null,
+    payload: scenePayload,
+    requestedAt: Date.now(),
+    status: 'preparing',
+    readySocketIds: new Set(),
+    prepareTimer: null,
+    cleanupTimer: null,
+  };
+
+  sponsorBreaks.set(breakId, record);
+  recordSponsorPlaybackEvent(record, 'requested', { trigger: options.trigger || 'manual' });
+  emitSponsorBreakStatus(room, record, 'preparing', { message: 'Preparing video in overlay' });
+  emitRoomEvent(room, 'sponsorPrepare', { ...scenePayload, action: 'prepare' });
+
+  record.prepareTimer = setTimeout(() => {
+    const latest = sponsorBreaks.get(breakId);
+    if (!latest || latest.status !== 'preparing') return;
+    recordSponsorPlaybackEvent(latest, 'prepare_timeout');
+    startPreparedSponsorBreak(room, latest, 'timeout');
+  }, Math.max(1500, SPONSOR_PREPARE_TIMEOUT_MS));
+  if (typeof record.prepareTimer.unref === 'function') record.prepareTimer.unref();
+  return record;
+}
+
+function stopSponsorBreaksForRoom(room, reason = 'operator_stop') {
+  if (!room?.roomId) return;
+  for (const record of sponsorBreaks.values()) {
+    if (record.roomId !== room.roomId || ['completed', 'failed', 'stopped'].includes(record.status)) continue;
+    if (record.prepareTimer) clearTimeout(record.prepareTimer);
+    record.status = 'stopped';
+    recordSponsorPlaybackEvent(record, 'stopped', { reason });
+    emitSponsorBreakStatus(room, record, 'stopped', { message: 'Break stopped' });
+    cleanupSponsorBreakLater(record.breakId);
+  }
+}
+
+function handleSponsorPlaybackEvent(socket, room, event = {}) {
+  const breakId = String(event.breakId || '').trim();
+  if (!breakId || !room?.roomId) return;
+  const record = sponsorBreaks.get(breakId);
+  if (!record || record.roomId !== room.roomId) return;
+
+  const eventType = sanitizeSponsorEventType(event.status || event.event || event.type);
+  const detail = {
+    socketId: socket.id,
+    clientType: socket.data?.clientType || 'unknown',
+    message: String(event.message || '').slice(0, 240),
+    readyState: event.readyState,
+    currentTime: event.currentTime,
+    duration: event.duration,
+  };
+
+  recordSponsorPlaybackEvent(record, eventType, detail);
+
+  if (eventType === 'ready') {
+    record.readySocketIds.add(socket.id);
+    if (record.status === 'preparing') {
+      record.status = 'ready';
+      emitSponsorBreakStatus(room, record, 'ready', { message: 'Video loaded in overlay' });
+      startPreparedSponsorBreak(room, record, 'ready');
+    }
+    return;
+  }
+
+  if (eventType === 'failed' || eventType === 'error') {
+    updatePlatformSponsorCreativeMetric(record, 'failed');
+    emitSponsorBreakStatus(room, record, 'failed', { message: detail.message || 'Video failed to load' });
+    if (record.status === 'preparing') {
+      startPreparedSponsorBreak(room, record, 'media_failed');
+    }
+    return;
+  }
+
+  if (eventType === 'first_frame' || eventType === 'playing') {
+    if (!record.firstFrameReported) {
+      record.firstFrameReported = true;
+      emitSponsorBreakStatus(room, record, 'playing', { message: 'First frame is on screen' });
+    }
+    return;
+  }
+
+  if (eventType === 'video_completed') {
+    emitSponsorBreakStatus(room, record, 'video_completed', { message: 'Video finished, showing battle stats' });
+    return;
+  }
+
+  if (eventType === 'completed') {
+    record.status = 'completed';
+    updatePlatformSponsorCreativeMetric(record, 'completed');
+    emitSponsorBreakStatus(room, record, 'completed', { message: 'Break completed' });
+    cleanupSponsorBreakLater(record.breakId);
+    return;
+  }
+
+  if (eventType === 'stopped') {
+    record.status = 'stopped';
+    emitSponsorBreakStatus(room, record, 'stopped', { message: 'Break stopped' });
+    cleanupSponsorBreakLater(record.breakId);
   }
 }
 
@@ -355,16 +628,19 @@ function listActivePlatformSponsorCreatives() {
   }
 }
 
-function pickPlatformSponsorCreative() {
+function pickPlatformSponsorCreative(excludeCreativeId = null) {
   const creatives = listActivePlatformSponsorCreatives();
   if (!creatives.length) return null;
-  const totalWeight = creatives.reduce((sum, creative) => sum + Math.max(1, Number(creative.weight) || 1), 0);
+  const eligible = creatives.length > 1 && excludeCreativeId
+    ? creatives.filter(creative => Number(creative.id) !== Number(excludeCreativeId))
+    : creatives;
+  const totalWeight = eligible.reduce((sum, creative) => sum + Math.max(1, Number(creative.weight) || 1), 0);
   let cursor = Math.random() * totalWeight;
-  for (const creative of creatives) {
+  for (const creative of eligible) {
     cursor -= Math.max(1, Number(creative.weight) || 1);
     if (cursor <= 0) return creative;
   }
-  return creatives[0];
+  return eligible[0];
 }
 
 function buildPlatformSponsorPayload(room, creative) {
@@ -372,6 +648,7 @@ function buildPlatformSponsorPayload(room, creative) {
   return {
     action: 'show',
     source: 'platform',
+    filename: creative.filename,
     videoUrl: appendOverlayAuth(`/platform-sponsor/${encodeURIComponent(creative.filename)}`, room.roomId, token, { v: Date.now() }),
     partner: sanitizeSponsorText(creative.partner, 'IntoTheBattle Partner', 70),
     title: sanitizeSponsorText(creative.title, 'Sponsor Spotlight', 90),
@@ -400,11 +677,18 @@ function scheduleNextPlatformSponsor(room, delayMs = PLATFORM_SPONSOR_INTERVAL_M
     if (room.planEntitlements?.canUseCreatorSponsors) return;
 
     if ((room.overlayCount || 0) > 0) {
-      const creative = pickPlatformSponsorCreative();
+      if (roomHasActiveSponsorBreak(room.roomId) || isRoomInSponsorCooldown(room)) {
+        scheduleNextPlatformSponsor(room, PLATFORM_SPONSOR_RETRY_DELAY_MS);
+        return;
+      }
+
+      const creative = pickPlatformSponsorCreative(room.lastPlatformSponsorCreativeId);
       if (creative) {
         const payload = buildPlatformSponsorPayload(room, creative);
-        emitRoomEvent(room, 'sponsorScene', payload);
-        logger.info({ roomId: room.roomId, creativeId: creative.id }, 'Platform sponsor break emitted');
+        startSponsorBreak(room, payload, { trigger: 'platform_timer', source: 'platform' });
+        room.lastPlatformSponsorCreativeId = creative.id;
+        room.lastPlatformSponsorAt = Date.now();
+        logger.info({ roomId: room.roomId, creativeId: creative.id }, 'Platform sponsor break prepared');
       }
     }
 
@@ -431,7 +715,10 @@ setPlatformSponsorTestHandler(({ creativeId, action = 'show' } = {}) => {
     .filter(room => room && (room.overlayCount || 0) > 0 && !room.planEntitlements?.canUseCreatorSponsors);
 
   if (action === 'hide') {
-    liveRooms.forEach(room => emitRoomEvent(room, 'sponsorScene', { action: 'hide', _ts: Date.now() }));
+    liveRooms.forEach(room => {
+      stopSponsorBreaksForRoom(room, 'admin_stop_test');
+      emitRoomEvent(room, 'sponsorScene', { action: 'hide', _ts: Date.now() });
+    });
     logger.info({ roomCount: liveRooms.length }, 'Admin stopped platform sponsor test');
     return { roomCount: liveRooms.length };
   }
@@ -452,9 +739,11 @@ setPlatformSponsorTestHandler(({ creativeId, action = 'show' } = {}) => {
   }
 
   liveRooms.forEach(room => {
-    emitRoomEvent(room, 'sponsorScene', buildPlatformSponsorPayload(room, creative));
+    startSponsorBreak(room, buildPlatformSponsorPayload(room, creative), { trigger: 'admin_live_test', source: 'platform' });
+    room.lastPlatformSponsorCreativeId = creative.id;
+    room.lastPlatformSponsorAt = Date.now();
   });
-  logger.info({ creativeId: creative.id, roomCount: liveRooms.length }, 'Admin emitted platform sponsor test');
+  logger.info({ creativeId: creative.id, roomCount: liveRooms.length }, 'Admin prepared platform sponsor test');
   return { creativeId: creative.id, roomCount: liveRooms.length, title: creative.title };
 });
 
@@ -1144,7 +1433,7 @@ const sponsorUpload = multer({
       cb(null, `sponsor-${Date.now()}-${Math.random().toString(36).slice(2)}${safeExt}`);
     },
   }),
-  limits: { fileSize: 250 * 1024 * 1024 },
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname || '').toLowerCase();
     const ok = ALLOWED_SPONSOR_EXTS.has(ext) && ALLOWED_SPONSOR_MIMES.has(file.mimetype);
@@ -2307,6 +2596,7 @@ function buildSponsorScenePayload(room, body = {}) {
 
   return {
     action: 'show',
+    source: 'creator',
     filename: entry?.filename || null,
     title: sanitizeSponsorText(body.title, entry?.title || entry?.originalName || 'Sponsor Spotlight', 90),
     partner: sanitizeSponsorText(body.partner, entry?.partner || 'Presented By', 70),
@@ -2390,6 +2680,10 @@ io.on('connection', (socket) => {
       emitRoomEvent(room, 'overlayCount', { count: room.overlayCount });
       updateOverlayGauge();
     }
+  });
+
+  socket.on('sponsorPlaybackEvent', (event = {}) => {
+    handleSponsorPlaybackEvent(socket, room, event);
   });
 
   socket.on('layoutUpdate', (settings) => {
@@ -2738,11 +3032,12 @@ app.delete('/api/sponsor/delete/:filename', requireRoom, requireCreatorSponsorAc
 app.post('/api/sponsor/play', requireRoom, requireCreatorSponsorAccess, (req, res) => {
   const payload = buildSponsorScenePayload(req.room, req.body || {});
   if (payload.error) return res.status(404).json({ success: false, error: payload.error });
-  emitRoomEvent(req.room, 'sponsorScene', payload);
-  res.json({ success: true, scene: payload });
+  const record = startSponsorBreak(req.room, payload, { trigger: 'creator_dashboard', source: 'creator' });
+  res.json({ success: true, breakId: record?.breakId || null, status: record?.status || 'preparing', scene: record?.payload || payload });
 });
 
 app.post('/api/sponsor/stop', requireRoom, requireCreatorSponsorAccess, (req, res) => {
+  stopSponsorBreaksForRoom(req.room, 'creator_dashboard_stop');
   emitRoomEvent(req.room, 'sponsorScene', { action: 'hide', _ts: Date.now() });
   res.json({ success: true });
 });

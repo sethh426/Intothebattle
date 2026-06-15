@@ -615,8 +615,8 @@
           </div>
 
           <div class="actions">
-            <a href="/auth/google" class="btn btn-primary">Continue with Google →</a>
-            <a href="/register" class="btn btn-secondary">Create account with email</a>
+            <a href="/auth/google" class="btn btn-primary" id="googleSignupLink">Continue with Google →</a>
+            <a href="/register" class="btn btn-secondary" id="emailSignupLink">Create account with email</a>
           </div>
 
           <p class="microcopy">Your creator room unlocks automatically after signup. Finish setup from the welcome dashboard.</p>
@@ -646,11 +646,23 @@
             </div>
           </div>
 
-          <div class="login-link">Already have an account? <a href="/login">Sign in here</a>.</div>
+          <div class="login-link">Already have an account? <a href="/login" id="loginLink">Sign in here</a>.</div>
         </div>
       </div>
     </section>
   </main>
+  <script>
+    const nextPath = (() => {
+      const value = new URLSearchParams(window.location.search).get('next') || '';
+      return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : '';
+    })();
+    if (nextPath) {
+      const nextQuery = `?next=${encodeURIComponent(nextPath)}`;
+      document.getElementById('googleSignupLink').href = `/auth/google${nextQuery}`;
+      document.getElementById('emailSignupLink').href = `/register${nextQuery}`;
+      document.getElementById('loginLink').href = `/login${nextQuery}`;
+    }
+  </script>
 </body>
 </html>
 
