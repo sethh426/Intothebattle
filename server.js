@@ -21,6 +21,7 @@ import paypalRoutes from './tiktokbr/routes/paypal.js';
 import requireAccess from './tiktokbr/middleware/auth.js';
 import requireDashboardAccess from './tiktokbr/middleware/requireDashboardAccess.js';
 import { getE2EAuthRecord } from './tiktokbr/auth/e2eAuth.js';
+import { getEmailDiagnostics } from './tiktokbr/email/postmarkMailer.js';
 import { setPlatformSponsorTestHandler } from './tiktokbr/platformSponsorTestBus.js';
 import {
   getOrCreateRoom,
@@ -2085,6 +2086,7 @@ app.get('/api/runtime/diagnostics', requireDiagnosticsAccess, (req, res) => {
       diagnosticsTokenPresent: Boolean(process.env.DIAGNOSTICS_TOKEN),
       platformSponsorEnabled: PLATFORM_SPONSOR_ENABLED,
     },
+    email: getEmailDiagnostics(),
     storage,
     database: dbHealth,
   });

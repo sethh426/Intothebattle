@@ -1,29 +1,32 @@
 import '../loadEnv.js';
-import postmark from 'postmark';
+import {
+  getEmailDiagnostics,
+  sendTransactionalEmail,
+} from '../tiktokbr/email/postmarkMailer.js';
 
-const token = process.env.POSTMARK_API_TOKEN;
 const testEmail = process.env.POSTMARK_TEST_EMAIL;
-
-if (!token) {
-  console.error('POSTMARK_API_TOKEN is not set.');
-  process.exit(1);
-}
 
 if (!testEmail) {
   console.error('POSTMARK_TEST_EMAIL is not set.');
   process.exit(1);
 }
 
-const client = new postmark.ServerClient(token);
-
 async function run() {
+  const diagnostics = getEmailDiagnostics();
+  console.log('Email diagnostics:', diagnostics);
+  if (!diagnostics.enabled) {
+    console.error('Postmark email is not enabled. Set POSTMARK_API_TOKEN and make sure EMAIL_DISABLE_SEND is not true.');
+    process.exit(1);
+  }
+
   try {
-    const response = await client.sendEmail({
-      From: process.env.EMAIL_FROM || `Battle Royale <no-reply@${new URL(process.env.APP_BASE_URL || 'http://localhost').hostname}>`,
-      To: testEmail,
-      Subject: 'Postmark connectivity test',
-      HtmlBody: '<p>This is a Postmark connectivity test from Battle Royale LIVE.</p>',
-      MessageStream: 'outbound',
+    const response = await sendTransactionalEmail({
+      to: testEmail,
+      subject: 'IntoTheBattle Postmark connectivity test',
+      tag: 'postmark-test',
+      metadata: { source: 'scripts/test_postmark.js' },
+      htmlBody: '<p>This is a Postmark connectivity test from IntoTheBattle.</p>',
+      textBody: 'This is a Postmark connectivity test from IntoTheBattle.',
     });
     console.log('Postmark API test succeeded:', response);
   } catch (err) {

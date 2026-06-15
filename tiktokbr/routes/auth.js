@@ -3,15 +3,13 @@ import rateLimit from 'express-rate-limit';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import postmark from 'postmark';
 import { v4 as uuidv4 } from 'uuid';
 import db, { getAsync, runAsync } from '../db/db.js';
-
-function getPostmarkClient() {
-  const token = process.env.POSTMARK_API_TOKEN;
-  if (!token) return null;
-  return new postmark.ServerClient(token);
-}
+import {
+  buildEmailUrl,
+  sendPasswordResetEmail,
+  sendVerificationEmail,
+} from '../email/postmarkMailer.js';
 
 function getGoogleClientId() {
   return process.env.GOOGLE_CLIENT_ID;
@@ -560,55 +558,6 @@ function getUserFromToken(token) {
   return db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
 }
 
-async function sendVerificationEmail(user, token) {
-  const client = getPostmarkClient();
-  if (!client) {
-    console.warn('POSTMARK_API_TOKEN not configured; verification email will not be sent.');
-    return null;
-  }
-
-  const baseUrl = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
-  const verifyUrl = `${baseUrl.replace(/\/$/, '')}/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
-  const emailFrom = process.env.EMAIL_FROM || `Battle Royale <no-reply@${new URL(baseUrl).hostname}>`;
-
-  await client.sendEmail({
-    From: emailFrom,
-    To: user.email,
-    Subject: 'Verify your Battle Royale Live email',
-    HtmlBody: `<p>Hello ${escapeHtml(user.name || user.email)},</p>
-               <p>Click the link below to verify your email address for Battle Royale Live:</p>
-               <p><a href="${escapeHtml(verifyUrl)}">Verify your email</a></p>
-               <p>If you did not create an account, you can ignore this message.</p>
-               <p>This link expires in 24 hours.</p>`,
-    MessageStream: 'outbound',
-  });
-  return verifyUrl;
-}
-
-async function sendPasswordResetEmail(user, token) {
-  const client = getPostmarkClient();
-  if (!client) {
-    console.warn('POSTMARK_API_TOKEN not configured; password reset email will not be sent.');
-    return null;
-  }
-
-  const baseUrl = process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
-  const resetUrl = `${baseUrl.replace(/\/$/, '')}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
-  const emailFrom = process.env.EMAIL_FROM || `Battle Royale <no-reply@${new URL(baseUrl).hostname}>`;
-
-  await client.sendEmail({
-    From: emailFrom,
-    To: user.email,
-    Subject: 'Reset your Battle Royale Live password',
-    HtmlBody: `<p>Hello ${escapeHtml(user.name || user.email)},</p>
-               <p>Click the link below to reset your password:</p>
-               <p><a href="${escapeHtml(resetUrl)}">Reset Password</a></p>
-               <p>This link expires in 1 hour.</p>`,
-    MessageStream: 'outbound',
-  });
-  return resetUrl;
-}
-
 router.post('/auth/user/verify-email', express.json(), async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const token = String(req.body.token || '').trim();
@@ -651,11 +600,24 @@ router.post('/auth/user/resend-verification', express.json(), async (req, res) =
     'UPDATE users SET email_verification_token = ?, email_verification_expires = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
   ).run(verificationToken, verificationExpiresAt, user.id);
 
-  await sendVerificationEmail(user, verificationToken).catch((err) => {
+  let delivery;
+  try {
+    delivery = await sendVerificationEmail(user, verificationToken);
+  } catch (err) {
     console.error('Resend verification email failed:', err);
-  });
+    return res.status(502).json({
+      success: false,
+      error: 'Verification email could not be sent. Check Postmark sender, token, and Message Stream settings.',
+    });
+  }
+  if (delivery?.skipped) {
+    return res.status(503).json({
+      success: false,
+      error: 'Email delivery is not configured. Add POSTMARK_API_TOKEN and EMAIL_FROM, then try again.',
+    });
+  }
 
-  return res.json({ success: true, message: 'Verification email resent.' });
+  return res.json({ success: true, message: 'Verification email resent.', messageId: delivery?.messageId || null });
 });
 
 router.post('/auth/user/update-profile', express.json(), async (req, res) => {
@@ -683,11 +645,21 @@ router.post('/auth/user/update-profile', express.json(), async (req, res) => {
       'UPDATE users SET name = ?, tiktok_username = ?, email = ?, email_verified = 0, email_verification_token = ?, email_verification_expires = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
     ).run(name, tiktokUsername, email, verificationToken, verificationExpiresAt, user.id);
 
-    sendVerificationEmail({ id: user.id, email, name }, verificationToken).catch((err) => {
+    let delivery;
+    try {
+      delivery = await sendVerificationEmail({ id: user.id, email, name }, verificationToken);
+    } catch (err) {
       console.error('Verification email failed after profile update:', err);
-    });
+      return res.status(502).json({
+        success: false,
+        error: 'Profile updated, but the verification email could not be sent. Check Postmark configuration and resend from this page.',
+      });
+    }
 
-    return res.json({ success: true, message: 'Profile updated. Please verify your new email address.' });
+    const message = delivery?.skipped
+      ? 'Profile updated, but email delivery is not configured. Add Postmark settings, then resend verification.'
+      : 'Profile updated. Please verify your new email address.';
+    return res.json({ success: true, message, messageId: delivery?.messageId || null });
   }
 
   db.prepare(
@@ -749,11 +721,11 @@ router.post('/auth/user/request-password-reset', express.json(), async (req, res
   db.prepare('UPDATE users SET password_reset_token = ?, password_reset_expires = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
     .run(token, expiresAt, user.id);
 
-  const resetLink = `${process.env.APP_BASE_URL || `http://localhost:${process.env.PORT || 3000}`}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(user.email)}`;
+  const resetLink = buildEmailUrl('/reset-password', { token, email: user.email });
   let returnedLink = null;
   try {
-    const sentUrl = await sendPasswordResetEmail(user, token);
-    if (sentUrl) returnedLink = sentUrl;
+    const delivery = await sendPasswordResetEmail(user, token);
+    if (!delivery?.skipped && delivery?.url) returnedLink = delivery.url;
   } catch (err) {
     console.warn('Password reset email failed', err);
   }
@@ -844,16 +816,29 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
   );
   db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
 
-  sendVerificationEmail(user, verificationToken).catch((err) => {
+  let delivery;
+  try {
+    delivery = await sendVerificationEmail(user, verificationToken);
+  } catch (err) {
     console.error('Verification email failed:', err);
-  });
+  }
 
   const accountId = `ACC-${String(userId).padStart(6, '0')}`;
-  return res.json({
+  const emailSent = Boolean(delivery && !delivery.skipped && delivery.messageId);
+  const response = {
     success: true,
-    message: 'Account created. Check your inbox to verify your email.',
+    message: emailSent
+      ? 'Account created. Check your inbox to verify your email.'
+      : 'Account created, but the verification email could not be sent. Check Postmark settings, then resend it from your profile.',
     roomId,
     accountId,
+    emailSent,
+  };
+  if (!emailSent && process.env.NODE_ENV !== 'production') {
+    response.devVerificationLink = buildEmailUrl('/verify-email', { token: verificationToken, email });
+  }
+  return res.json({
+    ...response,
   });
 });
 

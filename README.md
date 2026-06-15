@@ -131,7 +131,9 @@ PAYPAL_CURRENCY=USD
 PAYPAL_WEBHOOK_ID=
 PAYPAL_PAYMENT_LINK=
 POSTMARK_API_TOKEN=
-EMAIL_FROM=Battle Royale <no-reply@example.com>
+POSTMARK_MESSAGE_STREAM=outbound
+EMAIL_FROM=IntoTheBattle <no-reply@example.com>
+EMAIL_REPLY_TO=support@example.com
 POSTMARK_TEST_EMAIL=
 ```
 
@@ -314,7 +316,9 @@ PAYPAL_MODE=live
 PAYPAL_CURRENCY=USD
 PAYPAL_WEBHOOK_ID=<PayPal webhook id>
 POSTMARK_API_TOKEN=<Postmark token>
-EMAIL_FROM=Battle Royale <no-reply@intothebattle.com>
+POSTMARK_MESSAGE_STREAM=outbound
+EMAIL_FROM=IntoTheBattle <no-reply@intothebattle.com>
+EMAIL_REPLY_TO=support@intothebattle.com
 OVERLAY_TOKEN_SECRET=<long random overlay signing secret>
 ENABLE_ROOM_SCOPED=true
 METRICS_TOKEN=<long random metrics scrape token>
@@ -324,6 +328,14 @@ DIAGNOSTICS_TOKEN=<optional separate diagnostics token>
 `ENABLE_ROOM_SCOPED` defaults to `true` in production when unset. Set it explicitly if your host makes env behavior easier to audit.
 
 `OVERLAY_TOKEN_SECRET` can be added later; until then, overlay URLs are signed with `JWT_SECRET`. `METRICS_TOKEN` can also be added later if you are not scraping `/metrics` yet.
+
+Postmark production setup:
+
+- Use a Postmark Server API token in `POSTMARK_API_TOKEN`.
+- Verify `intothebattle.com` or the exact `no-reply@intothebattle.com` sender signature in Postmark before sending.
+- Keep transactional app emails in the `outbound` Message Stream unless you create a dedicated transactional stream and set `POSTMARK_MESSAGE_STREAM` to that stream ID.
+- Set `POSTMARK_TEST_EMAIL` locally or temporarily on Render when running `npm run test:postmark`.
+- Check `/api/runtime/diagnostics?token=<diagnostics-or-metrics-token>` for the `email` block; it reports whether the token, sender, stream, and base URL are configured without exposing secrets.
 
 Use a managed PostgreSQL service for production. Do not rely on local JSON files or ephemeral app storage for production state.
 
