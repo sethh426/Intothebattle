@@ -17,8 +17,8 @@ jobs:
     name: Check Render production health
     runs-on: ubuntu-latest
     env:
-      RENDER_HEALTH_URL: https://intothebattle.com/healthz
-      RENDER_APP_URL: https://intothebattle.com/
+      RENDER_HEALTH_URLS: "https://www.intothebattle.com/healthz https://intothebattle.com/healthz"
+      RENDER_APP_URLS: "https://www.intothebattle.com/ https://intothebattle.com/"
 
     steps:
       - name: Wait briefly after push deploys
@@ -27,21 +27,30 @@ jobs:
 
       - name: Check Render /healthz
         run: |
-          echo "Checking $RENDER_HEALTH_URL"
-          for i in $(seq 1 30); do
-            if curl -fsS --max-time 10 "$RENDER_HEALTH_URL"; then
-              echo "Render health check passed"
-              exit 0
+          for url in $RENDER_HEALTH_URLS; do
+            echo "Checking $url"
+            passed=0
+            for i in $(seq 1 30); do
+              if curl -fsSL --max-time 10 "$url"; then
+                echo "Render health check passed for $url"
+                passed=1
+                break
+              fi
+              echo "Attempt $i failed for $url; retrying in 10 seconds..."
+              sleep 10
+            done
+            if [ "$passed" -ne 1 ]; then
+              echo "Render health check failed after retries for $url"
+              exit 1
             fi
-            echo "Attempt $i failed; retrying in 10 seconds..."
-            sleep 10
           done
-          echo "Render health check failed after retries"
-          exit 1
 
       - name: Check public homepage responds
         run: |
-          echo "Checking $RENDER_APP_URL"
-          curl -fsS --max-time 15 "$RENDER_APP_URL" >/tmp/home.html
-          test -s /tmp/home.html
-          echo "Homepage responded with $(wc -c </tmp/home.html) bytes"
+          for url in $RENDER_APP_URLS; do
+            echo "Checking $url"
+            output="/tmp/home-$(echo "$url" | tr -c 'A-Za-z0-9' '_').html"
+            curl -fsSL --max-time 15 "$url" >"$output"
+            test -s "$output"
+            echo "Homepage responded with $(wc -c <"$output") bytes for $url"
+          done

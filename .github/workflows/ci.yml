@@ -16,6 +16,8 @@ jobs:
       JWT_SECRET: test_jwt_secret_for_ci_only
       DEV_TEST_MODE: "false"
       SKIP_DB: "true"
+      OVERLAY_TOKEN_SECRET: test_overlay_secret_for_ci_only
+      DIAGNOSTICS_TOKEN: test_diagnostics_secret_for_ci_only
 
     steps:
       - name: Checkout
@@ -24,8 +26,13 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 24
           cache: npm
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
       - name: Install dependencies
         run: npm ci
@@ -78,3 +85,67 @@ jobs:
       - name: Audit production dependencies
         continue-on-error: true
         run: npm audit --audit-level=high
+
+  postgres-migrations:
+    name: Check Postgres migrations
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: intothebattle_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d intothebattle_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    env:
+      NODE_ENV: test
+      API_KEY: test
+      JWT_SECRET: test_jwt_secret_for_ci_only
+      OVERLAY_TOKEN_SECRET: test_overlay_secret_for_ci_only
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/intothebattle_ci
+      DISK_PATH: ${{ runner.temp }}/intothebattle-data
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run database startup migrations
+        run: |
+          mkdir -p "$DISK_PATH"
+          node --input-type=module <<'NODE'
+          import { getDbHealthSnapshot } from './tiktokbr/db/db.js';
+
+          const deadline = Date.now() + 20000;
+          while (Date.now() < deadline) {
+            const health = getDbHealthSnapshot();
+            if (health.initialized) {
+              console.log('Postgres migrations initialized successfully');
+              process.exit(0);
+            }
+            if (health.lastError) {
+              console.log(`Waiting for DB initialization: ${health.lastError}`);
+            }
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+
+          console.error('Postgres migrations did not initialize in time');
+          console.error(JSON.stringify(getDbHealthSnapshot(), null, 2));
+          process.exit(1);
+          NODE
