@@ -121,9 +121,13 @@ body.hide-overlay-controls .panel-wrapper { display:none !important; }
 body.hide-overlay-status #status-badge { display:none !important; }
 body.sponsor-active .damage,
 body.sponsor-active .banner,
+body.sponsor-active .battle-prompt,
 body.sponsor-active .panel-tab,
 body.sponsor-active .layout-panel,
 body.sponsor-active #status-badge { display:none !important; }
+body.battle-return #overlay-container {
+  animation:battleReturnFrame 900ms cubic-bezier(.16,1,.3,1);
+}
 
 /* ── Panel ── */
 .panel-wrapper { position:fixed; top:16px; right:0; display:flex; align-items:flex-start; pointer-events:auto; z-index:30; }
@@ -305,6 +309,43 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 }
 @keyframes bannerIn  { 0%  { opacity:0; transform:translate(-50%,-24px) scale(0.88); } 100% { opacity:1; transform:translate(-50%,0) scale(1); } }
 @keyframes bannerOut { to  { opacity:0; transform:translate(-50%,-16px); } }
+@keyframes battleReturnFrame {
+  0%   { filter:brightness(1.35) saturate(1.25); box-shadow:0 0 0 2px rgba(255,255,255,0.55),0 0 80px rgba(246,201,91,0.35),0 0 150px rgba(85,231,255,0.22); }
+  42%  { filter:brightness(1.12) saturate(1.18); box-shadow:0 0 0 2px rgba(246,201,91,0.55),0 0 72px rgba(246,201,91,0.24),0 0 130px rgba(85,231,255,0.18); }
+  100% { filter:none; }
+}
+
+.battle-prompt {
+  position:absolute; left:50%; bottom:clamp(18px,3.2vw,44px); z-index:11;
+  transform:translate(-50%,18px) scale(.96);
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  max-width:min(84vw,820px); min-height:clamp(34px,4.1vw,54px);
+  padding:clamp(8px,1vw,13px) clamp(18px,2.5vw,34px);
+  border:1px solid rgba(255,255,255,0.16); border-radius:999px;
+  background:
+    linear-gradient(90deg, rgba(246,201,91,0.18), rgba(4,10,20,0.88) 30%, rgba(4,10,20,0.88) 70%, rgba(85,231,255,0.14)),
+    rgba(3,7,14,0.9);
+  box-shadow:0 18px 60px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
+  color:#fff3d7; font-family:'Rajdhani','Segoe UI',sans-serif;
+  font-weight:900; font-size:clamp(15px,2vw,30px); letter-spacing:1.6px; text-transform:uppercase;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  opacity:0; pointer-events:none;
+  transition:opacity 260ms ease,transform 380ms cubic-bezier(.16,1,.3,1);
+}
+.battle-prompt.show { opacity:1; transform:translate(-50%,0) scale(1); }
+.battle-prompt::before {
+  content:""; width:clamp(8px,1vw,13px); height:clamp(8px,1vw,13px);
+  border-radius:50%; background:#f6c95b; box-shadow:0 0 18px #f6c95b;
+  flex:0 0 auto; animation:battlePromptPulse 1.2s ease-in-out infinite;
+}
+.battle-prompt.horde { color:#ffe5df; border-color:rgba(232,59,95,0.42); }
+.battle-prompt.horde::before { background:#e83b5f; box-shadow:0 0 18px #e83b5f; }
+.battle-prompt.return { color:#dffaff; border-color:rgba(85,231,255,0.42); }
+.battle-prompt.return::before { background:#55e7ff; box-shadow:0 0 18px #55e7ff; }
+@keyframes battlePromptPulse {
+  0%,100% { transform:scale(.78); opacity:.7; }
+  50% { transform:scale(1.18); opacity:1; }
+}
 
 .sponsor-scene {
   --sponsor-duration:15000ms;
@@ -801,6 +842,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
 <div id="overlay-container">
   <canvas id="canvas"></canvas>
+  <div id="battlePrompt" class="battle-prompt" aria-hidden="true"></div>
   <div id="sponsorScene" class="sponsor-scene" aria-hidden="true">
     <video id="sponsorVideo" playsinline preload="metadata"></video>
     <div class="sponsor-intro" aria-hidden="true">
@@ -982,6 +1024,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const ctx       = canvas.getContext('2d', { alpha: true });
   const container = document.getElementById('overlay-container');
   const statusDiv = document.getElementById('status-badge');
+  const battlePrompt = document.getElementById('battlePrompt');
   const sponsorScene = document.getElementById('sponsorScene');
   const sponsorVideo = document.getElementById('sponsorVideo');
   const sponsorIntroPartner = document.getElementById('sponsorIntroPartner');
@@ -1050,7 +1093,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const recentAttackKeys = new Map();
   const recentCheerKeys = new Map();
   const lastKnownPositions = new Map();
+  const cardAccents = new Map();
+  const hordePulses = [];
   const visualEventQueue = [];
+  const seenVisualSeqs = new Set();
+  const seenVisualSeqOrder = [];
   let visualEventScheduled = false;
   let pendingGameState = null;
   let gameStateScheduled = false;
@@ -1058,6 +1105,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let stateFetchInFlight = false;
   let registerAcked = false;
   let registerRetryTimer = null;
+  let battlePromptTimer = null;
+  let battlePromptLastShown = 0;
 
   const THEME = Object.freeze({
     gold: '#f6c95b',
@@ -1072,6 +1121,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     line: 'rgba(246,201,91,0.36)',
     lineSoft: 'rgba(255,255,255,0.12)',
   });
+
+  function colorWithAlpha(color, alpha) {
+    const text = String(color || '').trim();
+    const a = Math.max(0, Math.min(1, Number(alpha) || 0));
+    const hex = /^#?([0-9a-f]{6})$/i.exec(text);
+    if (!hex) return text || `rgba(255,255,255,${a})`;
+    const value = hex[1];
+    const r = parseInt(value.slice(0, 2), 16);
+    const g = parseInt(value.slice(2, 4), 16);
+    const b = parseInt(value.slice(4, 6), 16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
 
   const HORDE_ID = '__HORDE__';
   const overlayParams = new URLSearchParams(window.location.search);
@@ -1137,6 +1198,29 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function setSponsorText(el, value, fallback) {
     if (!el) return;
     el.textContent = String(value || fallback || '').slice(0, 140);
+  }
+
+  function showBattlePrompt(message, type = '', duration = 2600, force = false) {
+    if (!battlePrompt || sponsorState !== 'battle') return;
+    const now = Date.now();
+    if (!force && now - battlePromptLastShown < 3600) return;
+    battlePromptLastShown = now;
+    battlePrompt.textContent = String(message || '').slice(0, 72);
+    battlePrompt.className = `battle-prompt ${type || ''}`.trim();
+    battlePrompt.setAttribute('aria-hidden', 'false');
+    void battlePrompt.offsetWidth;
+    battlePrompt.classList.add('show');
+    clearTimeout(battlePromptTimer);
+    battlePromptTimer = setTimeout(() => {
+      battlePrompt.classList.remove('show');
+      battlePrompt.setAttribute('aria-hidden', 'true');
+    }, Math.max(900, duration));
+  }
+
+  function triggerBattleReturn() {
+    document.body.classList.add('battle-return');
+    showBattlePrompt('Back to the battle', 'return', 2200, true);
+    setTimeout(() => document.body.classList.remove('battle-return'), 950);
   }
 
   function clearSponsorTimer() {
@@ -1623,6 +1707,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         sponsorTimer = null;
         startSponsorIntro(next);
       }, 250);
+    } else if (finishedPayload) {
+      triggerBattleReturn();
     }
   }
 
@@ -1961,6 +2047,24 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
   }
 
+  function updateBattlePromptFromState() {
+    if (sponsorState !== 'battle') return;
+    const roster = activePlayers().filter(p => p && p.uniqueId !== HORDE_ID);
+    const alive = roster.filter(isAlive);
+    const horde = hordePlayer();
+    if (!roster.length) {
+      showBattlePrompt('Waiting for fighters', '', 2300);
+      return;
+    }
+    if (horde && horde.hordeCount >= 3) {
+      showBattlePrompt(`${horde.hordeCount} fighters in the horde`, 'horde', 2300);
+      return;
+    }
+    if (alive.length <= 1 && roster.length > 1) {
+      showBattlePrompt('Final fighter standing', '', 2300);
+    }
+  }
+
   function sponsorPlayerName(player) {
     return String(player?.nickname || player?.uniqueId || 'Player').slice(0, 24);
   }
@@ -2112,9 +2216,61 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return { x: layout.x, y: layout.y };
   }
 
+  function getHordeEdgePosition(otherPos) {
+    const layout = getHordeLayout();
+    if (!otherPos) return { x: layout.x, y: layout.y };
+    const left = layout.barX + layout.barH * 0.32;
+    const right = layout.barX + layout.barW - layout.barH * 0.32;
+    const top = layout.barY + layout.barH * 0.28;
+    const bottom = layout.barY + layout.barH * 0.72;
+    const dx = otherPos.x - layout.x;
+    const dy = otherPos.y - layout.y;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      return { x: dx < 0 ? left : right, y: Math.max(top, Math.min(bottom, otherPos.y)) };
+    }
+    return { x: Math.max(left, Math.min(right, otherPos.x)), y: dy < 0 ? top : bottom };
+  }
+
   function rememberPosition(id, pos, scope) {
     if (!id || !pos) return;
     lastKnownPositions.set(String(id).toLowerCase(), { x: pos.x, y: pos.y, scope, ts: Date.now() });
+  }
+
+  function setCardAccent(id, type = 'attack', color = THEME.cyan, duration = 900) {
+    if (!id || id === HORDE_ID) return;
+    cardAccents.set(String(id).toLowerCase(), {
+      type,
+      color,
+      startedAt: Date.now(),
+      until: Date.now() + Math.max(300, duration),
+    });
+  }
+
+  function getCardAccent(player) {
+    const keys = [player?.uniqueId, player?.id, player?.nickname, player?.name]
+      .filter(Boolean)
+      .map(value => String(value).toLowerCase());
+    const now = Date.now();
+    for (const key of keys) {
+      const accent = cardAccents.get(key);
+      if (!accent) continue;
+      if (accent.until <= now) {
+        cardAccents.delete(key);
+        continue;
+      }
+      return { ...accent, progress: clamp01((now - accent.startedAt) / Math.max(1, accent.until - accent.startedAt)) };
+    }
+    return null;
+  }
+
+  function pulseHorde(type = 'attack', color = THEME.red, duration = 900) {
+    hordePulses.push({
+      type,
+      color,
+      startedAt: Date.now(),
+      duration: Math.max(300, duration),
+    });
+    if (hordePulses.length > 8) hordePulses.splice(0, hordePulses.length - 8);
   }
 
   function getCachedPosition(id, scope) {
@@ -2336,7 +2492,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       size -= 1;
     }
     c.font = fontFactory(size);
-    return safeText;
+    if (c.measureText(safeText).width <= maxWidth) return safeText;
+    let fitted = safeText;
+    while (fitted.length > 1 && c.measureText(`${fitted}…`).width > maxWidth) {
+      fitted = fitted.slice(0, -1);
+    }
+    return fitted.length > 1 ? `${fitted}…` : safeText.slice(0, 1);
   }
 
   function drawGlassPanel(x, y, w, h, r, options) {
@@ -2372,11 +2533,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       this.hearts    = Math.max(1, Number(hearts) || 1);
       this.intensity = clamp01(intensity);
       this.rate      = Number(meta.rate) || 0;
+      this.kind      = meta.kind || 'like';
       this.color     = meta.color || '#ff4f8f';
       this.start     = Date.now();
       this.duration  = 1320 + this.intensity * 420;
-      const palette  = [this.color, '#ff4f8f', '#ff8bc2', '#ffd1e3', '#ffd166', '#8fffd2'];
-      const count    = Math.min(16, Math.max(5, 4 + this.hearts * 2 + Math.floor(this.intensity * 6)));
+      const palette  = this.kind === 'heal'
+        ? [this.color, '#8fffd2', '#77f0a1', '#d8ffe9', '#55e7ff']
+        : this.kind === 'follow'
+          ? [this.color, '#55e7ff', '#ffd166', '#f6c95b', '#ffffff']
+          : [this.color, '#ff4f8f', '#ff8bc2', '#ffd1e3', '#ffd166'];
+      const baseCount = this.kind === 'like' ? 3 + this.hearts : 6 + this.hearts * 2;
+      const count    = Math.min(this.kind === 'like' ? 10 : 18, Math.max(4, baseCount + Math.floor(this.intensity * 6)));
 
       this.motes = Array.from({ length: count }, (_, i) => {
         const spread = Math.PI * 2 * (i / count) + Math.random() * 0.45;
@@ -2386,7 +2553,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           orbit: 12 + Math.random() * (26 + this.intensity * 12),
           lift: 38 + Math.random() * (42 + this.intensity * 24),
           drift: (Math.random() - 0.5) * (26 + this.intensity * 18),
-          size: 6.5 + Math.random() * 5.5 + this.intensity * 2,
+          size: (this.kind === 'like' ? 4.8 : 6.5) + Math.random() * (this.kind === 'like' ? 4.5 : 5.5) + this.intensity * 2,
           color: palette[i % palette.length],
           spin: (Math.random() - 0.5) * 0.55,
         };
@@ -2452,7 +2619,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       if (p < 0.78) {
         const labelAlpha = Math.min(1, p / 0.15) * (1 - Math.max(0, p - 0.48) / 0.3);
         const labelY = y - 44 - 20 * lift;
-        const text = `ENERGY +${this.hearts * 5}`;
+        const text = this.kind === 'heal'
+          ? `HEAL +${this.hearts * 5}`
+          : this.kind === 'follow'
+            ? 'NEW FOLLOWER'
+            : `LIKE +${this.hearts}`;
         ctx.save();
         ctx.globalAlpha = Math.max(0, labelAlpha);
         ctx.font = `800 ${Math.max(12, ch() * 0.032)}px 'Rajdhani','Segoe UI',sans-serif`;
@@ -2528,6 +2699,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     draw() {
       ctx.save();
+      this.drawAnchorCues();
       switch (this.type) {
         case 'laser':      this.drawLaser();      break;
         case 'beam':       this.drawBeam();       break;
@@ -2548,6 +2720,33 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         this.particles.forEach(p => p.draw(ctx));
         ctx.restore();
       }
+    }
+
+    drawAnchorCues() {
+      if (this.type === 'static') return;
+      const p = clamp01(this.progress);
+      const sourceAlpha = Math.max(0, 1 - p * 4);
+      const impactT = clamp01((p - 0.68) / 0.32);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      if (sourceAlpha > 0) {
+        ctx.globalAlpha = sourceAlpha * 0.48;
+        ctx.strokeStyle = this.giftBoosted ? THEME.gold : this.color;
+        ctx.lineWidth = 2.5 + this.intensity * 2;
+        ctx.beginPath();
+        ctx.arc(this.from.x, this.from.y, 11 + (1 - sourceAlpha) * 28, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (impactT > 0 && impactT < 1) {
+        const a = Math.sin(impactT * Math.PI);
+        ctx.globalAlpha = a * (this.killingBlow ? 0.74 : 0.46);
+        ctx.strokeStyle = this.killingBlow ? THEME.gold : (this.critical ? '#ffffff' : this.color);
+        ctx.lineWidth = this.killingBlow ? 4.2 : 2.8;
+        ctx.beginPath();
+        ctx.arc(this.to.x, this.to.y, 12 + impactT * (44 + this.intensity * 18), 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
     drawLaser() {
@@ -2786,13 +2985,22 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function fireAttack(attackerId, targetId, damage, killed, special, effect, meta) {
     meta = meta || {};
-    const from = attackerId === HORDE_ID
-      ? (hordePlayer() ? getHordePosition() : null)
-      : getPositionForPlayer(attackerId, meta.attackerScope) || (hordePlayer() ? getHordePosition() : null);
-    const to = targetId === HORDE_ID
-      ? (hordePlayer() ? getHordePosition() : null)
-      : getPositionForPlayer(targetId, meta.targetScope) || (hordePlayer() ? getHordePosition() : null);
+    const horde = hordePlayer();
+    const attackerIsHorde = attackerId === HORDE_ID || meta.attackerScope === 'horde';
+    const targetIsHorde = targetId === HORDE_ID || meta.targetScope === 'horde';
+    const rawFrom = attackerIsHorde
+      ? (horde ? getHordePosition() : null)
+      : getPositionForPlayer(attackerId, meta.attackerScope) || (horde ? getHordeEdgePosition(null) : null);
+    const rawTo = targetIsHorde
+      ? (horde ? getHordePosition() : null)
+      : getPositionForPlayer(targetId, meta.targetScope) || (horde ? getHordeEdgePosition(rawFrom) : null);
+    const from = attackerIsHorde && horde ? getHordeEdgePosition(rawTo) : rawFrom;
+    const to = targetIsHorde && horde ? getHordeEdgePosition(rawFrom) : rawTo;
     if (!from || !to) return false;
+    if (Math.abs(from.x - to.x) < 2 && Math.abs(from.y - to.y) < 2) {
+      from.x -= 24;
+      to.x += 24;
+    }
 
     let type;
     if (effect)      { type = TYPE_MAP[String(effect).toLowerCase()] || String(effect).toLowerCase(); }
@@ -2813,6 +3021,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       color:          meta.laserColor || overlaySettings.laserColor,
       shotSpeed:      meta.shotSpeed  || overlaySettings.shotSpeed,
     }));
+    if (attackerIsHorde) {
+      pulseHorde(killed ? 'kill' : 'attack', killed ? THEME.gold : THEME.red, killed ? 1150 : 850);
+      showBattlePrompt(killed ? 'Horde claimed a fighter' : 'Horde strikes', 'horde', 1900);
+    } else {
+      setCardAccent(attackerId, special ? 'gift' : 'attack', special ? THEME.gold : THEME.cyan, 650);
+    }
+    if (targetIsHorde) {
+      pulseHorde(killed ? 'kill' : 'hit', killed ? THEME.gold : THEME.ember, killed ? 1200 : 820);
+      showBattlePrompt(killed ? 'Horde pressure broken' : 'Horde under fire', 'horde', 1900);
+    } else {
+      setCardAccent(targetId, killed ? 'kill' : 'hit', killed ? THEME.gold : (meta.critical ? THEME.ember : THEME.red), killed ? 1400 : 850);
+    }
     showDamage(to.x, to.y, damage || 0, !!killed, !!meta.critical);
     playSound(killed ? 'kill' : 'attack');
     return true;
@@ -2849,12 +3069,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   // HEART / RESPAWN EFFECTS
   // ═══════════════════════════════════════
   function fireHeartEffect(playerId, hearts, intensity, meta) {
+    meta = meta || {};
     hearts = hearts || 1; intensity = intensity || 0;
     let pos = getPositionForPlayer(playerId);
     if (!pos) { const top = topPlayers(); pos = top.length ? getPlayerPosition(0, top.length) : getHordePosition(); }
-    if (pos) attacks.push(new HeartBloom(pos, hearts, intensity, meta));
+    if (pos) {
+      attacks.push(new HeartBloom(pos, hearts, intensity, meta));
+      if (playerId && playerId !== HORDE_ID) {
+        const type = meta.kind === 'follow' ? 'follow' : meta.kind === 'heal' ? 'heal' : 'like';
+        const color = meta.color || (type === 'heal' ? THEME.green : type === 'follow' ? THEME.cyan : '#ff7ab6');
+        setCardAccent(playerId, type, color, type === 'follow' ? 1400 : 820);
+      }
+    }
+
     rememberCheer(playerId);
-    applyHeal(playerId, hearts * 5);
+    if (meta.kind !== 'follow' && meta.kind !== 'gift') applyHeal(playerId, hearts * 5);
   }
 
   function showSocialBoost(data) {
@@ -2875,6 +3104,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       }));
     }
     attacks.push(atk);
+    setCardAccent(data.uniqueId, 'boost', data.color || THEME.cyan, 1200);
+    showBattlePrompt('Share boost activated', 'return', 1900);
   }
 
   function spawnRespawnEffect(uniqueId) {
@@ -2885,6 +3116,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       atk.particles.push(new Particle(pos.x, pos.y, { speed: 3 + Math.random() * 6, color: '#ffaa00', radius: 2 + Math.random() * 3, decay: 0.022, rise: 1.5 }));
     }
     attacks.push(atk);
+    setCardAccent(uniqueId, 'respawn', THEME.gold, 1400);
+    showBattlePrompt('Fighter returned', 'return', 1800);
     playSound('respawn');
   }
 
@@ -3119,12 +3352,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const barY = plateY + plateH * 0.72;
     const accent = rank === 1 ? THEME.gold : THEME.cyan;
     const pulse = 0.55 + Math.sin(Date.now() / 310 + rank) * 0.45;
+    const cardAccent = getCardAccent(player);
 
     if (nearDeath) {
       const redGlow = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, avatarR * 3.2);
       redGlow.addColorStop(0, `rgba(255,30,30,${0.2 + pulse * 0.12})`);
       redGlow.addColorStop(1, 'rgba(255,30,30,0)');
       ctx.fillStyle = redGlow; ctx.beginPath(); ctx.arc(pos.x, pos.y, avatarR * 3.2, 0, Math.PI * 2); ctx.fill();
+    }
+
+    if (cardAccent) {
+      const accentAlpha = Math.sin((1 - cardAccent.progress) * Math.PI) * (cardAccent.type === 'kill' ? 0.48 : 0.34);
+      const accentRadius = avatarR * (2.9 + cardAccent.progress * 1.1);
+      const accentGlow = ctx.createRadialGradient(pos.x, avatarY, 0, pos.x, avatarY, accentRadius);
+      accentGlow.addColorStop(0, colorWithAlpha(cardAccent.color, accentAlpha));
+      accentGlow.addColorStop(1, colorWithAlpha(cardAccent.color, 0));
+      ctx.fillStyle = accentGlow;
+      ctx.beginPath();
+      ctx.arc(pos.x, avatarY, accentRadius, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     ctx.save();
@@ -3134,7 +3380,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(pos.x, avatarY, avatarR * 2.6, 0, Math.PI * 2); ctx.fill();
 
     ctx.shadowColor = rank === 1 ? 'rgba(246,201,91,0.24)' : 'rgba(85,231,255,0.18)';
-    ctx.shadowBlur = 22;
+    if (cardAccent) {
+      ctx.shadowColor = cardAccent.color;
+      ctx.shadowBlur = cardAccent.type === 'kill' ? 38 : 28;
+    } else {
+      ctx.shadowBlur = 22;
+    }
     drawGlassPanel(plateX, plateY, cardW, plateH, radius, {
       start: 'rgba(7,12,24,0.92)',
       mid: 'rgba(18,25,39,0.74)',
@@ -3209,9 +3460,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.stroke();
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    fitCanvasText(ctx, name, nameMaxW, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(compactDemoCard ? 10 : 14, plateH * (compactDemoCard ? 0.105 : 0.115)), compactDemoCard ? 7 : 10);
-    ctx.lineWidth = compactDemoCard ? 2.6 : 3.5; ctx.strokeStyle = 'rgba(0,0,0,0.82)'; ctx.strokeText(name, pos.x, nameY);
-    ctx.fillStyle = '#ffffff'; ctx.fillText(name, pos.x, nameY);
+    const fittedName = fitCanvasText(ctx, name, nameMaxW, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(compactDemoCard ? 10 : 14, plateH * (compactDemoCard ? 0.105 : 0.115)), compactDemoCard ? 7 : 10);
+    ctx.lineWidth = compactDemoCard ? 2.6 : 3.5; ctx.strokeStyle = 'rgba(0,0,0,0.82)'; ctx.strokeText(fittedName, pos.x, nameY);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(fittedName, pos.x, nameY);
 
     ctx.fillStyle = 'rgba(0,0,0,0.56)';
     roundedRectPath(ctx, barX, barY, barW, barH, barH / 2);
@@ -3231,11 +3482,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     const hpText = `${Math.round(hp)} / ${Math.round(maxHp)} HP`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    fitCanvasText(ctx, hpText, barW * 0.88, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10, plateH * 0.085), 8);
+    const fittedHpText = fitCanvasText(ctx, hpText, barW * 0.88, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10, plateH * 0.085), 8);
     ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.lineWidth = 2.5;
-    ctx.strokeText(hpText, pos.x, barY + barH + plateH * 0.105);
+    ctx.strokeText(fittedHpText, pos.x, barY + barH + plateH * 0.105);
     ctx.fillStyle = '#dce9ff';
-    ctx.fillText(hpText, pos.x, barY + barH + plateH * 0.105);
+    ctx.fillText(fittedHpText, pos.x, barY + barH + plateH * 0.105);
 
     if (player.kills > 0) {
       const badgeW = compactDemoCard ? Math.max(24, Math.min(34, cardW * 0.42)) : Math.max(44, cardW * 0.2);
@@ -3269,6 +3520,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const trackY = barY + barH * 0.5;
     const trackW = Math.max(80, barX + barW - trackX - barH * 0.24);
     const trackH = Math.max(14, barH * 0.24);
+    const compactHorde = barW < 580;
 
     ctx.save();
     ctx.globalCompositeOperation = 'source-over';
@@ -3288,6 +3540,31 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.lineWidth = 2;
     roundedRectPath(ctx, barX + 1, barY + 1, barW - 2, barH - 2, radius - 1);
     ctx.stroke();
+
+    for (let i = hordePulses.length - 1; i >= 0; i--) {
+      const item = hordePulses[i];
+      const progress = clamp01((Date.now() - item.startedAt) / item.duration);
+      if (progress >= 1) {
+        hordePulses.splice(i, 1);
+        continue;
+      }
+      const alpha = Math.sin(progress * Math.PI) * (item.type === 'kill' ? 0.48 : 0.34);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = item.color || THEME.red;
+      ctx.lineWidth = Math.max(2, barH * (0.08 + progress * 0.08));
+      roundedRectPath(
+        ctx,
+        barX - progress * barH * 0.32,
+        barY - progress * barH * 0.2,
+        barW + progress * barH * 0.64,
+        barH + progress * barH * 0.4,
+        radius + progress * barH * 0.18
+      );
+      ctx.stroke();
+      ctx.restore();
+    }
 
     const topRail = ctx.createLinearGradient(barX, 0, barX + barW, 0);
     topRail.addColorStop(0, 'rgba(232,59,95,0.98)');
@@ -3318,17 +3595,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.fillText('HORDE', barX + 12 + (badgeW - 20) / 2, barY + barH * 0.43);
     ctx.font = `800 ${Math.max(10, barH * 0.14)}px 'Rajdhani','Segoe UI',sans-serif`;
     ctx.fillStyle = '#ffe0bf';
-    ctx.fillText(`${horde.hordeCount} IN RESERVE`, barX + 12 + (badgeW - 20) / 2, barY + barH * 0.64);
+    const reserveText = fitCanvasText(ctx, `${horde.hordeCount} IN RESERVE`, badgeW - 34, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10, barH * 0.14), 8);
+    ctx.fillText(reserveText, barX + 12 + (badgeW - 20) / 2, barY + barH * 0.64);
     ctx.shadowBlur = 0;
 
-    ctx.font = `900 ${Math.max(13, barH * 0.19)}px 'Rajdhani','Segoe UI',sans-serif`;
+    const titleFontMax = Math.max(11, barH * (compactHorde ? 0.15 : 0.19));
+    const titleMaxW = trackW * (compactHorde ? 0.42 : 0.52);
+    const hordeTitle = fitCanvasText(ctx, 'HORDE PRESSURE', titleMaxW, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, titleFontMax, 8);
     ctx.textAlign = 'left';
     ctx.fillStyle = '#fff3d7';
-    ctx.fillText('HORDE PRESSURE', trackX, barY + barH * 0.31);
-    ctx.font = `700 ${Math.max(12, barH * 0.16)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.fillText(hordeTitle, trackX, barY + barH * (compactHorde ? 0.29 : 0.31));
+    const hpFontMax = Math.max(10, barH * (compactHorde ? 0.13 : 0.16));
+    const hordeHpText = fitCanvasText(ctx, `${Math.round(horde.hp)} / ${Math.round(horde.maxHp)} HP`, trackW * (compactHorde ? 0.34 : 0.42), size => `700 ${size}px 'Rajdhani','Segoe UI',sans-serif`, hpFontMax, 8);
     ctx.textAlign = 'right';
     ctx.fillStyle = '#ffd9a8';
-    ctx.fillText(`${Math.round(horde.hp)} / ${Math.round(horde.maxHp)} HP`, barX + barW - barH * 0.22, barY + barH * 0.31);
+    ctx.fillText(hordeHpText, barX + barW - barH * 0.22, barY + barH * (compactHorde ? 0.29 : 0.31));
 
     ctx.fillStyle = 'rgba(0,0,0,0.58)';
     roundedRectPath(ctx, trackX, trackY, trackW, trackH, trackH / 2);
@@ -3470,6 +3751,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     isDemoMode = true;
     statusDiv.textContent = '🟡 DEMO MODE · no server';
     statusDiv.className   = 'demo';
+    showBattlePrompt('Demo battle preview', '', 2200, true);
     if (isPublicDemo) setTimeout(fireDemoAttack, 900);
     else fireDemoAttack();
     _demoTimer = setInterval(fireDemoAttack, isPublicDemo ? 2400 : 1500);
@@ -3496,6 +3778,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     isDemoMode = false;
     stopDemoLoop();
     if (sponsorState !== 'battle') renderSponsorStats(true);
+    updateBattlePromptFromState();
     if (!Object.keys(players).length && !stateFetchInFlight) {
       stateFetchInFlight = true;
       fetch(withOverlayAuth('/state'))
@@ -3524,6 +3807,27 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return Number.isFinite(seq) && seq > 0 ? seq : 0;
   }
 
+  function visualEventPriority(type, data = {}) {
+    if (data.killed || data.killingBlow) return 100;
+    if (type === 'killEvent' || type === 'streakEvent') return 95;
+    if (type === 'giftAttack' || type === 'giftCelebration') return 88;
+    if (type === 'attack' || type === 'commentDamage') return data.special ? 82 : 70;
+    if (type === 'socialBoost' || type === 'follow' || type === 'respawn') return 58;
+    if (type === 'heal') return 38;
+    if (type === 'like') return 24;
+    return 40;
+  }
+
+  function rememberVisualSeq(seq) {
+    if (!seq) return;
+    seenVisualSeqs.add(seq);
+    seenVisualSeqOrder.push(seq);
+    if (seenVisualSeqOrder.length > 240) {
+      const old = seenVisualSeqOrder.splice(0, seenVisualSeqOrder.length - 240);
+      old.forEach(value => seenVisualSeqs.delete(value));
+    }
+  }
+
   function mergeVisualPayload(previous, next) {
     const merged = { ...previous, ...next };
     const previousHearts = Number(previous.hearts) || 0;
@@ -3547,6 +3851,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const seq = eventSeq(data);
     const now = Date.now();
     const mergeKey = options.mergeKey ? options.mergeKey(data) : '';
+    const priority = options.priority != null ? Number(options.priority) : visualEventPriority(type, data);
+    if (seq && seenVisualSeqs.has(seq)) return;
 
     if (mergeKey) {
       for (let i = visualEventQueue.length - 1; i >= 0; i--) {
@@ -3554,6 +3860,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         if (queued.type === type && queued.mergeKey === mergeKey && now - queued.queuedAt < 320) {
           queued.data = mergeVisualPayload(queued.data, data);
           queued.seq = Math.max(queued.seq || 0, seq || 0);
+          queued.priority = Math.max(queued.priority || 0, priority || 0);
           queued.queuedAt = now;
           scheduleVisualEvents();
           return;
@@ -3561,23 +3868,29 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       }
     }
 
-    visualEventQueue.push({ type, data, handler, seq, queuedAt: now, mergeKey });
-    if (visualEventQueue.length > 96) visualEventQueue.splice(0, visualEventQueue.length - 96);
+    visualEventQueue.push({ type, data, handler, seq, queuedAt: now, mergeKey, priority });
+    if (visualEventQueue.length > 96) {
+      visualEventQueue.sort((a, b) => (a.priority || 0) - (b.priority || 0) || a.queuedAt - b.queuedAt);
+      visualEventQueue.splice(0, visualEventQueue.length - 96);
+    }
     scheduleVisualEvents();
   }
 
   function processVisualEvents() {
     visualEventScheduled = false;
     visualEventQueue.sort((a, b) => {
+      const priorityDiff = (b.priority || 0) - (a.priority || 0);
+      if (priorityDiff) return priorityDiff;
       if (a.seq && b.seq && a.seq !== b.seq) return a.seq - b.seq;
       return a.queuedAt - b.queuedAt;
     });
 
     let processed = 0;
-    while (visualEventQueue.length && processed < 7) {
+    while (visualEventQueue.length && processed < 9) {
       const queued = visualEventQueue.shift();
       if (queued.seq && queued.seq <= lastVisualEventSeq) continue;
-      if (queued.seq) lastVisualEventSeq = queued.seq;
+      if (queued.seq && seenVisualSeqs.has(queued.seq)) continue;
+      rememberVisualSeq(queued.seq);
       try {
         queued.handler(queued.data);
       } catch (err) {
@@ -3614,7 +3927,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function handleLikeEvent(data) {
     if (!data) return;
-    fireHeartEffect(data.uniqueId, data.hearts || 1, data.intensity || 0, data);
+    const hearts = Math.max(1, Math.min(3, Number(data.hearts) || 1));
+    fireHeartEffect(data.uniqueId, hearts, Math.min(0.42, Number(data.intensity) || 0.16), {
+      ...data,
+      kind: 'like',
+      color: data.color || '#ff78b2',
+    });
     playSound('heal');
   }
 
@@ -3623,7 +3941,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     setTimeout(() => {
       if (hasRecentCheer(data.uniqueId)) return;
       const hearts = Math.max(1, Math.min(3, Math.round((Number(data.amount) || 5) / 10)));
-      fireHeartEffect(data.uniqueId, hearts, 0.35, { color: data.color || '#8fffd2' });
+      fireHeartEffect(data.uniqueId, hearts, 0.35, { ...data, kind: 'heal', color: data.color || '#8fffd2' });
       playSound('heal');
     }, 140);
   }
@@ -3634,7 +3952,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       intensity: 0.95, critical: true, streak: data.killerStreak || 0, remainingHpPct: 0,
       attackerScope: data.attackerScope, targetScope: data.targetScope,
     });
+    setCardAccent(data.killer, 'kill', THEME.gold, 1500);
+    setCardAccent(data.victim, 'hit', THEME.red, 1200);
     showBanner('kill', `${data.killerNick || data.killer} 💀 ${data.victimNick || data.victim}<span style="font-size:0.68em;opacity:0.8"> (${data.killerKills} kills)</span>`);
+    showBattlePrompt('Knockout confirmed', '', 1700);
     playSound('kill');
   }
 
@@ -3642,19 +3963,27 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const name = data.nickname || data.killerNick || '???';
     const streak = data.streak || data.streakCount || 0;
     showBanner('streak', `🔥 ${name} – ${data.label || streak + ' KILL STREAK'}!`);
+    showBattlePrompt('Hot streak in the arena', '', 1800);
   }
 
   function handleGiftCelebration(data) {
     if (!data) return;
     const isLegend = data.tier === 'legendary';
     showBanner(isLegend ? 'legendary' : 'gift', `${data.giftLabel || '🎁'} <strong>${data.nickname}</strong> sent <strong>${data.giftName || 'a gift'}</strong> · ${data.diamonds} 💎 · ${(data.tier || 'common').toUpperCase()}`, isLegend ? 4500 : 3200);
+    const id = data.uniqueId || data.userId || data.nickname;
+    if (id) {
+      setCardAccent(id, 'gift', isLegend ? THEME.gold : '#ff8bc2', isLegend ? 1800 : 1200);
+      fireHeartEffect(id, isLegend ? 4 : 2, isLegend ? 0.8 : 0.45, { kind: 'gift', color: isLegend ? THEME.gold : '#ff8bc2' });
+    }
+    showBattlePrompt(isLegend ? 'Legendary boost' : 'Power boost', isLegend ? 'return' : '', isLegend ? 2400 : 1800);
+    playSound('gift');
   }
 
   function handleFollowEvent(data) {
     if (!data) return;
     showBanner('gift', `NEW FOLLOWER <strong>${escapeHtml(data.nickname || data.uniqueId || 'viewer')}</strong>`, 2400);
-    const pos = getPositionForPlayer(data.uniqueId);
-    if (pos) attacks.push(new HeartBloom(pos, 2, 0.45, data));
+    fireHeartEffect(data.uniqueId, 2, 0.55, { ...data, kind: 'follow', color: data.color || THEME.cyan });
+    showBattlePrompt('New fighter joined the crowd', 'return', 1900);
   }
 
   function registerOverlaySocket() {
