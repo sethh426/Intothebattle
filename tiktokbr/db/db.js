@@ -309,30 +309,72 @@ async function initDb() {
         id SERIAL PRIMARY KEY,
         filename TEXT UNIQUE NOT NULL,
         original_name TEXT,
+        campaign_name TEXT DEFAULT 'Default Campaign',
         partner TEXT,
         title TEXT,
         subtitle TEXT,
         duration_ms INTEGER DEFAULT 15000,
+        duration_seconds REAL,
+        width INTEGER,
+        height INTEGER,
+        file_size BIGINT DEFAULT 0,
+        mime_type TEXT,
+        video_codec TEXT,
+        audio_codec TEXT,
+        aspect_ratio TEXT,
+        thumbnail_data TEXT,
+        quality_warnings TEXT,
+        normalized INTEGER DEFAULT 0,
+        processing_status TEXT DEFAULT 'ready',
+        processing_message TEXT,
         stats_mode TEXT DEFAULT 'endcap',
         fit TEXT DEFAULT 'cover',
         muted INTEGER DEFAULT 1,
         weight INTEGER DEFAULT 1,
+        cooldown_seconds INTEGER DEFAULT 600,
         status TEXT DEFAULT 'active',
+        readiness_status TEXT DEFAULT 'ready',
         impressions INTEGER DEFAULT 0,
         completions INTEGER DEFAULT 0,
         failures INTEGER DEFAULT 0,
         last_shown_at TIMESTAMP,
         last_completed_at TIMESTAMP,
+        last_tested_at TIMESTAMP,
+        last_failed_at TIMESTAMP,
+        processed_at TIMESTAMP,
+        active_starts_at TIMESTAMP,
+        active_ends_at TIMESTAMP,
         uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
+    await safeExec("ALTER TABLE platform_sponsor_creatives ADD COLUMN campaign_name TEXT DEFAULT 'Default Campaign'");
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN duration_seconds REAL');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN width INTEGER');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN height INTEGER');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN file_size BIGINT DEFAULT 0');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN mime_type TEXT');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN video_codec TEXT');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN audio_codec TEXT');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN aspect_ratio TEXT');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN thumbnail_data TEXT');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN quality_warnings TEXT');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN normalized INTEGER DEFAULT 0');
+    await safeExec("ALTER TABLE platform_sponsor_creatives ADD COLUMN processing_status TEXT DEFAULT 'ready'");
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN processing_message TEXT');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN cooldown_seconds INTEGER DEFAULT 600');
+    await safeExec("ALTER TABLE platform_sponsor_creatives ADD COLUMN readiness_status TEXT DEFAULT 'ready'");
     await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN impressions INTEGER DEFAULT 0');
     await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN completions INTEGER DEFAULT 0');
     await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN failures INTEGER DEFAULT 0');
     await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN last_shown_at TIMESTAMP');
     await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN last_completed_at TIMESTAMP');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN last_tested_at TIMESTAMP');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN last_failed_at TIMESTAMP');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN processed_at TIMESTAMP');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN active_starts_at TIMESTAMP');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN active_ends_at TIMESTAMP');
 
     await safeExec(`
       CREATE TABLE IF NOT EXISTS sponsor_playback_events (

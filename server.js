@@ -23,6 +23,7 @@ import requireDashboardAccess from './tiktokbr/middleware/requireDashboardAccess
 import { getE2EAuthRecord } from './tiktokbr/auth/e2eAuth.js';
 import { getEmailDiagnostics, sendTransactionalEmail } from './tiktokbr/email/postmarkMailer.js';
 import { setPlatformSponsorTestHandler } from './tiktokbr/platformSponsorTestBus.js';
+import { processSponsorUpload } from './tiktokbr/sponsorMediaProcessor.js';
 import {
   getOrCreateRoom,
   getRoom,
@@ -461,6 +462,40 @@ function updatePlatformSponsorCreativeMetric(record, metric) {
   }
 }
 
+function updatePlatformSponsorCreativeReadiness(record, readinessStatus) {
+  if (!record || record.source !== 'platform' || !record.creativeId) return;
+  const status = ['ready', 'tested', 'failed'].includes(readinessStatus) ? readinessStatus : 'ready';
+  const timestampColumn = status === 'tested'
+    ? ', last_tested_at = CURRENT_TIMESTAMP'
+    : status === 'failed'
+      ? ', last_failed_at = CURRENT_TIMESTAMP'
+      : '';
+  try {
+    db.prepare(`
+      UPDATE platform_sponsor_creatives
+      SET readiness_status = ?,
+          updated_at = CURRENT_TIMESTAMP
+          ${timestampColumn}
+      WHERE id = ?
+    `).run(status, record.creativeId);
+  } catch (err) {
+    logger.warn({ err, creativeId: record.creativeId, readinessStatus: status }, 'Failed to update sponsor creative readiness');
+  }
+}
+
+function updateRoomSponsorCreativeStatus(room, filename, patch = {}) {
+  if (!room?.roomId || !filename) return;
+  try {
+    loadRoomSponsorConfig(room);
+    const item = (room.sponsorLibrary || []).find(entry => entry.filename === filename);
+    if (!item) return;
+    Object.assign(item, patch, { updatedAt: new Date().toISOString() });
+    saveRoomSponsorConfig(room);
+  } catch (err) {
+    logger.warn({ err, roomId: room.roomId, filename }, 'Failed to update creator sponsor creative status');
+  }
+}
+
 function cleanupSponsorBreakLater(breakId) {
   const record = sponsorBreaks.get(breakId);
   if (!record) return;
@@ -536,6 +571,21 @@ function startSponsorBreak(room, payload = {}, options = {}) {
     const latest = sponsorBreaks.get(breakId);
     if (!latest || latest.status !== 'preparing') return;
     recordSponsorPlaybackEvent(latest, 'prepare_timeout');
+    if (latest.payload?.videoUrl) {
+      latest.status = 'failed';
+      updatePlatformSponsorCreativeMetric(latest, 'failed');
+      updatePlatformSponsorCreativeReadiness(latest, 'failed');
+      if (latest.source === 'creator') {
+        updateRoomSponsorCreativeStatus(room, latest.filename, {
+          readinessStatus: 'failed',
+          lastFailedAt: new Date().toISOString(),
+          playbackMessage: 'Overlay did not confirm video readiness before timeout.',
+        });
+      }
+      emitSponsorBreakStatus(room, latest, 'failed', { message: 'Overlay did not confirm video readiness before timeout' });
+      cleanupSponsorBreakLater(latest.breakId);
+      return;
+    }
     startPreparedSponsorBreak(room, latest, 'timeout');
   }, Math.max(1500, SPONSOR_PREPARE_TIMEOUT_MS));
   if (typeof record.prepareTimer.unref === 'function') record.prepareTimer.unref();
@@ -574,6 +624,14 @@ function handleSponsorPlaybackEvent(socket, room, event = {}) {
 
   if (eventType === 'ready') {
     record.readySocketIds.add(socket.id);
+    updatePlatformSponsorCreativeReadiness(record, 'ready');
+    if (record.source === 'creator') {
+      updateRoomSponsorCreativeStatus(room, record.filename, {
+        readinessStatus: 'ready',
+        lastReadyAt: new Date().toISOString(),
+        playbackMessage: detail.message || 'Decoded in overlay',
+      });
+    }
     if (record.status === 'preparing') {
       record.status = 'ready';
       emitSponsorBreakStatus(room, record, 'ready', { message: 'Video loaded in overlay' });
@@ -583,17 +641,32 @@ function handleSponsorPlaybackEvent(socket, room, event = {}) {
   }
 
   if (eventType === 'failed' || eventType === 'error') {
+    record.status = 'failed';
     updatePlatformSponsorCreativeMetric(record, 'failed');
-    emitSponsorBreakStatus(room, record, 'failed', { message: detail.message || 'Video failed to load' });
-    if (record.status === 'preparing') {
-      startPreparedSponsorBreak(room, record, 'media_failed');
+    updatePlatformSponsorCreativeReadiness(record, 'failed');
+    if (record.source === 'creator') {
+      updateRoomSponsorCreativeStatus(room, record.filename, {
+        readinessStatus: 'failed',
+        lastFailedAt: new Date().toISOString(),
+        playbackMessage: detail.message || 'Video failed to load',
+      });
     }
+    emitSponsorBreakStatus(room, record, 'failed', { message: detail.message || 'Video failed to load' });
+    cleanupSponsorBreakLater(record.breakId);
     return;
   }
 
   if (eventType === 'first_frame' || eventType === 'playing') {
     if (!record.firstFrameReported) {
       record.firstFrameReported = true;
+      updatePlatformSponsorCreativeReadiness(record, 'tested');
+      if (record.source === 'creator') {
+        updateRoomSponsorCreativeStatus(room, record.filename, {
+          readinessStatus: 'tested',
+          lastTestedAt: new Date().toISOString(),
+          playbackMessage: 'First frame confirmed in overlay',
+        });
+      }
       emitSponsorBreakStatus(room, record, 'playing', { message: 'First frame is on screen' });
     }
     return;
@@ -621,7 +694,19 @@ function handleSponsorPlaybackEvent(socket, room, event = {}) {
 
 function listActivePlatformSponsorCreatives() {
   try {
-    return db.prepare("SELECT * FROM platform_sponsor_creatives WHERE status = 'active' ORDER BY uploaded_at DESC, id DESC").all();
+    return db.prepare(`
+      SELECT *
+      FROM platform_sponsor_creatives
+      WHERE status = 'active'
+        AND COALESCE(readiness_status, 'ready') IN ('ready', 'tested')
+        AND (active_starts_at IS NULL OR active_starts_at <= CURRENT_TIMESTAMP)
+        AND (active_ends_at IS NULL OR active_ends_at >= CURRENT_TIMESTAMP)
+        AND (
+          last_shown_at IS NULL
+          OR last_shown_at <= CURRENT_TIMESTAMP - ((COALESCE(cooldown_seconds, 600))::text || ' seconds')::interval
+        )
+      ORDER BY uploaded_at DESC, id DESC
+    `).all();
   } catch (err) {
     logger.error({ err }, 'Failed to load platform sponsor creatives');
     return [];
@@ -651,8 +736,9 @@ function buildPlatformSponsorPayload(room, creative) {
     filename: creative.filename,
     videoUrl: appendOverlayAuth(`/platform-sponsor/${encodeURIComponent(creative.filename)}`, room.roomId, token, { v: Date.now() }),
     partner: sanitizeSponsorText(creative.partner, 'IntoTheBattle Partner', 70),
-    title: sanitizeSponsorText(creative.title, 'Sponsor Spotlight', 90),
-    subtitle: sanitizeSponsorText(creative.subtitle, 'We will be right back to the battle.', 140),
+    kicker: 'Arena Spotlight',
+    title: sanitizeSponsorText(creative.title, 'Power Moment', 90),
+    subtitle: sanitizeSponsorText(creative.subtitle, 'Stay locked in. The next fight is loading.', 140),
     durationMs: parseSponsorDuration(creative.duration_ms),
     muted: Number(creative.muted) !== 0,
     fit: creative.fit === 'contain' ? 'contain' : 'cover',
@@ -2598,9 +2684,10 @@ function buildSponsorScenePayload(room, body = {}) {
     action: 'show',
     source: 'creator',
     filename: entry?.filename || null,
-    title: sanitizeSponsorText(body.title, entry?.title || entry?.originalName || 'Sponsor Spotlight', 90),
+    title: sanitizeSponsorText(body.title, entry?.title || entry?.originalName || 'Power Moment', 90),
     partner: sanitizeSponsorText(body.partner, entry?.partner || 'Presented By', 70),
-    subtitle: sanitizeSponsorText(body.subtitle, 'We will be right back to the battle.', 140),
+    kicker: 'Arena Spotlight',
+    subtitle: sanitizeSponsorText(body.subtitle, entry?.subtitle || 'Stay locked in. The next fight is loading.', 140),
     durationMs: parseSponsorDuration(body.durationMs),
     muted: parseSponsorMuted(body.muted),
     fit: ['cover', 'contain'].includes(body.fit) ? body.fit : 'cover',
@@ -2992,24 +3079,50 @@ app.get('/api/sponsors', requireRoom, requireCreatorSponsorAccess, (req, res) =>
 
 app.post('/api/sponsor/upload', requireRoom, requireCreatorSponsorAccess, (req, res) => {
   res.type('application/json');
-  sponsorUpload.single('sponsor')(req, res, (err) => {
+  sponsorUpload.single('sponsor')(req, res, async (err) => {
     if (err) return res.status(400).json({ success: false, error: err.message });
     if (!req.file) return res.status(400).json({ success: false, error: 'No sponsor video uploaded.' });
 
-    loadRoomSponsorConfig(req.room);
-    const entry = {
-      filename: req.file.filename,
-      originalName: req.file.originalname,
-      title: sanitizeSponsorText(req.body?.title, path.basename(req.file.originalname, path.extname(req.file.originalname)), 90),
-      partner: sanitizeSponsorText(req.body?.partner, 'Sponsor', 70),
-      subtitle: sanitizeSponsorText(req.body?.subtitle, 'We will be right back to the battle.', 140),
-      size: req.file.size,
-      uploadedAt: new Date().toISOString(),
-    };
-    req.room.sponsorLibrary.push(entry);
-    saveRoomSponsorConfig(req.room);
-    console.log(`Sponsor media uploaded for room ${req.room.roomId}: ${req.file.originalname} -> ${req.file.filename}`);
-    res.json({ success: true, file: entry });
+    let mediaMeta;
+    try {
+      loadRoomSponsorConfig(req.room);
+      const { sponsorDir } = getRoomPaths(req.room.roomId);
+      mediaMeta = await processSponsorUpload({ file: req.file, body: req.body || {}, targetDir: sponsorDir });
+      const entry = {
+        filename: mediaMeta.filename,
+        originalName: req.file.originalname,
+        originalFilename: mediaMeta.originalFilename,
+        title: sanitizeSponsorText(req.body?.title, path.basename(req.file.originalname, path.extname(req.file.originalname)) || 'Power Moment', 90),
+        partner: sanitizeSponsorText(req.body?.partner, 'Sponsor', 70),
+        subtitle: sanitizeSponsorText(req.body?.subtitle, 'Stay locked in. The next fight is loading.', 140),
+        size: mediaMeta.fileSize,
+        mimeType: mediaMeta.mimeType,
+        durationSeconds: mediaMeta.durationSeconds,
+        width: mediaMeta.width,
+        height: mediaMeta.height,
+        aspectRatio: mediaMeta.aspectRatio,
+        videoCodec: mediaMeta.videoCodec,
+        audioCodec: mediaMeta.audioCodec,
+        thumbnailData: mediaMeta.thumbnailData,
+        qualityWarnings: mediaMeta.qualityWarnings,
+        normalized: mediaMeta.normalized,
+        processingStatus: mediaMeta.processingStatus,
+        processingMessage: mediaMeta.processingMessage,
+        readinessStatus: 'ready',
+        playbackMessage: mediaMeta.qualityWarnings.length ? mediaMeta.qualityWarnings.join(' ') : 'Ready for overlay test.',
+        processedAt: mediaMeta.processedAt,
+        uploadedAt: new Date().toISOString(),
+      };
+      req.room.sponsorLibrary.push(entry);
+      saveRoomSponsorConfig(req.room);
+      console.log(`Sponsor media uploaded for room ${req.room.roomId}: ${req.file.originalname} -> ${entry.filename}`);
+      res.json({ success: true, file: entry });
+    } catch (uploadErr) {
+      try { if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (_cleanupErr) {}
+      try { if (mediaMeta?.filepath && fs.existsSync(mediaMeta.filepath)) fs.unlinkSync(mediaMeta.filepath); } catch (_cleanupErr) {}
+      logger.warn({ err: uploadErr, roomId: req.room?.roomId }, 'Sponsor media processing failed');
+      res.status(500).json({ success: false, error: uploadErr.message || 'Sponsor video processing failed.' });
+    }
   });
 });
 

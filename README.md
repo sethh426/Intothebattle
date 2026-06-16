@@ -155,6 +155,18 @@ DIAGNOSTICS_TOKEN=
 
 `DIAGNOSTICS_TOKEN` is optional. If it is unset, `/api/runtime/diagnostics` accepts `METRICS_TOKEN`.
 
+Sponsor video uploads can use FFmpeg/ffprobe when those tools are installed on the server:
+
+```text
+FFMPEG_PATH=ffmpeg
+FFPROBE_PATH=ffprobe
+SPONSOR_TRANSCODE_ENABLED=true
+SPONSOR_TRANSCODE_PRESET=veryfast
+SPONSOR_TRANSCODE_CRF=23
+```
+
+With those tools available, uploaded sponsor videos are normalized to MP4 H.264/AAC at 16:9 720p, probed for duration/codec/resolution, and given server-side thumbnails. If FFmpeg is missing, uploads still work, but the dashboard/admin pages will mark them as original uploads and show format warnings.
+
 ### Run locally with Node
 
 ```bash

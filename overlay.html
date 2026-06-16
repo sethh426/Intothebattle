@@ -349,7 +349,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   filter:saturate(1.08) contrast(1.08);
   transition:opacity 520ms ease,transform 900ms cubic-bezier(.16,1,.3,1),filter 520ms ease;
 }
-.sponsor-scene.live.video-ready video { opacity:.82; transform:scale(1); }
+.sponsor-scene.live.video-ready video { opacity:.96; transform:scale(1); }
 .sponsor-scene.live.stats-visible.video-ready video {
   opacity:.74;
   filter:saturate(1) contrast(1.02) brightness(.92);
@@ -456,7 +456,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   background:
     linear-gradient(90deg, rgba(1,4,10,.82), rgba(1,4,10,.26) 45%, rgba(1,4,10,.6)),
     linear-gradient(0deg, rgba(0,0,0,.66), transparent 34%, rgba(0,0,0,.5));
+  opacity:1; transition:opacity 420ms ease;
 }
+.sponsor-scene.live.video-ready .sponsor-scrim { opacity:.22; }
+.sponsor-scene.live.stats-visible.video-ready .sponsor-scrim { opacity:.82; }
 .sponsor-frame {
   position:relative; width:min(86%,1180px); min-height:52%;
   display:flex; flex-direction:column; justify-content:flex-end; gap:18px;
@@ -815,7 +818,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         <span></span><span></span><span></span><span></span>
       </div>
       <div class="sponsor-intro-copy">
-        <div class="sponsor-intro-title">SPONSOR BREAK</div>
+        <div class="sponsor-intro-title">POWER MOMENT</div>
         <div class="sponsor-intro-partner" id="sponsorIntroPartner">Presented by IntoTheBattle</div>
       </div>
     </div>
@@ -823,9 +826,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       <div class="sponsor-scrim"></div>
       <div class="sponsor-brand" id="sponsorBrand">IntoTheBattle</div>
       <div class="sponsor-frame">
-        <div class="sponsor-kicker" id="sponsorKicker">Sponsor Spotlight</div>
-        <div class="sponsor-title" id="sponsorTitle">Presented By Our Sponsor</div>
-        <div class="sponsor-subtitle" id="sponsorSubtitle">We will be right back to the battle.</div>
+        <div class="sponsor-kicker" id="sponsorKicker">Arena Spotlight</div>
+        <div class="sponsor-title" id="sponsorTitle">Power Moment</div>
+        <div class="sponsor-subtitle" id="sponsorSubtitle">Stay locked in. The next fight is loading.</div>
       </div>
       <div class="sponsor-live-stats" id="sponsorLiveStats" aria-label="Live battle stats">
         <div class="sponsor-stats-head"><span>Live Battle</span><span id="sponsorStatPulse">Updating</span></div>
@@ -849,7 +852,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         </div>
         <div class="sponsor-leaderboard" id="sponsorLeaderboard"></div>
       </div>
-      <div class="sponsor-media-status" id="sponsorMediaStatus">Preparing sponsor media</div>
+      <div class="sponsor-media-status" id="sponsorMediaStatus">Preparing arena media</div>
       <div class="sponsor-return-hint">BACK TO THE BATTLE SOON</div>
       <div class="sponsor-progress"><span id="sponsorProgress"></span></div>
     </div>
@@ -1211,7 +1214,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       showAt = startedByVideo ? Math.min(7000, Math.max(3200, duration * 0.45)) : 700;
     } else {
       const endcapLength = Math.min(5200, Math.max(3200, duration * 0.28));
-      showAt = startedByVideo ? Math.max(900, duration - endcapLength) : 700;
+      showAt = startedByVideo ? Math.max(900, duration - endcapLength) : Math.min(Math.max(3600, duration * 0.58), Math.max(0, duration - endcapLength));
     }
     showAt = Math.min(showAt, Math.max(0, duration - 1200));
     scheduleSponsorStatsTimer(() => {
@@ -1253,9 +1256,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       filename,
       videoUrl,
       partner: String(payload.partner || 'IntoTheBattle').slice(0, 70),
-      kicker: String(payload.kicker || 'Sponsor Spotlight').slice(0, 70),
-      title: String(payload.title || 'Presented By Our Sponsor').slice(0, 90),
-      subtitle: String(payload.subtitle || 'We will be right back to the battle.').slice(0, 140),
+      kicker: String(payload.kicker || 'Arena Spotlight').slice(0, 70),
+      title: String(payload.title || 'Power Moment').slice(0, 90),
+      subtitle: String(payload.subtitle || 'Stay locked in. The next fight is loading.').slice(0, 140),
       durationMs: Number.isFinite(duration) ? Math.max(5000, Math.min(120000, Math.round(duration))) : 15000,
       muted: payload.muted !== false,
       fit: payload.fit === 'contain' ? 'contain' : 'cover',
@@ -1306,7 +1309,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     setSponsorText(sponsorMediaStatus, message || '', '');
   }
 
-  function sponsorVideoErrorMessage(prefix = 'Sponsor media could not play') {
+  function sponsorVideoErrorMessage(prefix = 'Arena media could not play') {
     if (!sponsorVideo?.error?.code) return prefix;
     const labels = {
       1: 'aborted',
@@ -1348,9 +1351,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       return Promise.resolve(false);
     }
 
-    setSponsorMediaStatus('Preparing sponsor media', 'video-loading');
+    setSponsorMediaStatus('Preparing arena media', 'video-loading');
     resetSponsorVideo(true, false);
-    setSponsorMediaStatus('Preparing sponsor media', 'video-loading');
+    setSponsorMediaStatus('Preparing arena media', 'video-loading');
 
     return new Promise(resolve => {
       let settled = false;
@@ -1370,15 +1373,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       sponsorVideo.onloadeddata = () => done(true, '', 'video-ready');
       sponsorVideo.oncanplay = () => done(true, '', 'video-ready');
       sponsorVideo.oncanplaythrough = () => done(true, '', 'video-ready');
-      sponsorVideo.onerror = () => done(false, sponsorVideoErrorMessage('Sponsor media could not preload'), 'video-error');
-      sponsorVideo.onstalled = () => setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
-      sponsorVideo.onwaiting = () => setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
+      sponsorVideo.onerror = () => done(false, sponsorVideoErrorMessage('Arena media could not preload'), 'video-error');
+      sponsorVideo.onstalled = () => setSponsorMediaStatus('Buffering arena media', 'video-loading');
+      sponsorVideo.onwaiting = () => setSponsorMediaStatus('Buffering arena media', 'video-loading');
 
       try {
         sponsorVideo.load();
         if (sponsorVideo.readyState >= 2) done(true, '', 'video-ready');
       } catch (_err) {
-        done(false, 'Sponsor media could not load', 'video-error');
+        done(false, 'Arena media could not load', 'video-error');
       }
     });
   }
@@ -1424,7 +1427,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           sponsorVideo &&
           sponsorVideo.readyState >= 2
         ) {
-          notifyPlaying('Sponsor media started after ready-state fallback');
+          notifyPlaying('Arena media started after ready-state fallback');
         }
       }, delay);
     };
@@ -1434,7 +1437,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       setSponsorMediaStatus('', 'video-ready');
       scheduleReadyFallback(1400);
     } else {
-      setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
+      setSponsorMediaStatus('Buffering arena media', 'video-loading');
     }
 
     sponsorVideo.onloadeddata = () => {
@@ -1450,10 +1453,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       scheduleReadyFallback(700);
     };
     sponsorVideo.onplaying = () => notifyPlaying();
-    sponsorVideo.onwaiting = () => setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
-    sponsorVideo.onstalled = () => setSponsorMediaStatus('Buffering sponsor media', 'video-loading');
+    sponsorVideo.onwaiting = () => setSponsorMediaStatus('Buffering arena media', 'video-loading');
+    sponsorVideo.onstalled = () => setSponsorMediaStatus('Buffering arena media', 'video-loading');
     sponsorVideo.onerror = () => {
-      failPlayback(sponsorVideoErrorMessage('Sponsor media could not play'));
+      failPlayback(sponsorVideoErrorMessage('Arena media could not play'));
     };
     sponsorVideo.onended = () => {
       clearReadyFallback();
@@ -1575,12 +1578,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function prepareSponsorScene(payload = {}) {
     const scenePayload = normalizeSponsorPayload(payload);
     if (sponsorState !== 'battle') {
-      reportSponsorPlayback(scenePayload, 'failed', 'Overlay is already running a sponsor break');
+      reportSponsorPlayback(scenePayload, 'failed', 'Overlay is already running an arena moment');
       return Promise.resolve(false);
     }
 
     preparedSponsorPayload = scenePayload;
-    reportSponsorPlayback(scenePayload, 'preparing', 'Preparing sponsor media');
+    reportSponsorPlayback(scenePayload, 'preparing', 'Preparing arena media');
 
     if (!scenePayload.videoUrl) {
       reportSponsorPlayback(scenePayload, 'ready', 'No video media attached');
@@ -1592,7 +1595,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       reportSponsorPlayback(
         scenePayload,
         ready ? 'ready' : 'failed',
-        ready ? 'Sponsor media is ready' : 'Sponsor media could not preload'
+        ready ? 'Arena media is ready' : 'Arena media could not preload'
       );
       return ready;
     });
@@ -1632,7 +1635,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       resetSponsorVideo(true);
     } else {
       resetSponsorTimingClasses();
-      setSponsorMediaStatus(sponsorVideo.readyState >= 2 ? '' : 'Buffering sponsor media', sponsorVideo.readyState >= 2 ? 'video-ready' : 'video-loading');
+      setSponsorMediaStatus(sponsorVideo.readyState >= 2 ? '' : 'Buffering arena media', sponsorVideo.readyState >= 2 ? 'video-ready' : 'video-loading');
     }
     setSponsorText(sponsorIntroPartner, `Presented by ${payload.partner}`, 'Presented by IntoTheBattle');
 
@@ -1659,12 +1662,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     clearSponsorTimer();
     sponsorState = 'live';
     sponsorFinishStatus = 'completed';
-    reportSponsorPlayback(payload, 'live', 'Sponsor break is live');
+    reportSponsorPlayback(payload, 'live', 'Power moment is live');
 
     setSponsorText(sponsorBrand, payload.partner, 'IntoTheBattle');
-    setSponsorText(sponsorKicker, payload.kicker, 'Sponsor Spotlight');
-    setSponsorText(sponsorTitle, payload.title, 'Presented By Our Sponsor');
-    setSponsorText(sponsorSubtitle, payload.subtitle, 'We will be right back to the battle.');
+    setSponsorText(sponsorKicker, payload.kicker, 'Arena Spotlight');
+    setSponsorText(sponsorTitle, payload.title, 'Power Moment');
+    setSponsorText(sponsorSubtitle, payload.subtitle, 'Stay locked in. The next fight is loading.');
     renderSponsorStats(true);
     setSponsorSceneState('live');
 
@@ -1680,16 +1683,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           const readyEnough = Boolean(sponsorVideo && sponsorVideo.readyState >= 2);
           if (readyEnough) {
             setSponsorMediaStatus('', 'video-ready');
-            reportSponsorPlayback(payload, 'first_frame', 'Sponsor media started after live fallback');
+            reportSponsorPlayback(payload, 'first_frame', 'Arena media started after live fallback');
           } else {
-            setSponsorMediaStatus('Sponsor media is still loading', 'video-loading');
-            reportSponsorPlayback(payload, 'fallback_started', 'Sponsor media was not ready before live fallback');
+            setSponsorMediaStatus('Arena media is still loading', 'video-loading');
+            reportSponsorPlayback(payload, 'fallback_started', 'Arena media was not ready before live fallback');
           }
           startSponsorClock(payload, payload.durationMs, readyEnough);
         }
       }, 6500);
     } else {
-      reportSponsorPlayback(payload, 'fallback_started', 'Sponsor break started without video media');
+      reportSponsorPlayback(payload, 'fallback_started', 'Power moment started without video media');
       startSponsorClock(payload, payload.durationMs, false);
     }
   }
@@ -3783,9 +3786,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       showSponsorScene({
         filename: sponsorPreviewSource === 'platform' ? '' : sponsorPreviewFilename,
         videoUrl: sponsorPreviewVideoUrl,
-        title: overlayParams.get('sponsor_title') || 'Sponsor Spotlight',
+        title: overlayParams.get('sponsor_title') || 'Power Moment',
         partner: overlayParams.get('sponsor_partner') || 'IntoTheBattle Partner',
-        subtitle: overlayParams.get('sponsor_subtitle') || 'Thanks for powering tonight\'s arena.',
+        subtitle: overlayParams.get('sponsor_subtitle') || 'Stay locked in. The next fight is loading.',
         durationMs: Number(overlayParams.get('sponsor_duration')) || 15000,
         muted: overlayParams.get('sponsor_muted') !== '0',
         fit: overlayParams.get('sponsor_fit') || 'cover',

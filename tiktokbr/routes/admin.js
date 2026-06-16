@@ -8,6 +8,7 @@ import bcrypt from 'bcryptjs';
 import multer from 'multer';
 import db from '../db/db.js';
 import { triggerPlatformSponsorTest } from '../platformSponsorTestBus.js';
+import { processSponsorUpload, getSponsorMediaToolStatus } from '../sponsorMediaProcessor.js';
 
 const router = express.Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -29,6 +30,12 @@ function ensureDir(dir) {
 function isSafePath(baseDir, targetPath) {
   const relative = path.relative(path.resolve(baseDir), path.resolve(targetPath));
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function deleteSponsorUploadFile(filepath) {
+  try {
+    if (filepath && isSafePath(PLATFORM_SPONSOR_DIR, filepath) && fs.existsSync(filepath)) fs.unlinkSync(filepath);
+  } catch (_err) {}
 }
 
 function escapeHtml(value) {
@@ -55,6 +62,11 @@ function parseDurationMs(value) {
 function parseWeight(value) {
   const weight = Number(value);
   return Number.isFinite(weight) ? Math.max(1, Math.min(20, Math.round(weight))) : 1;
+}
+
+function parseCooldownSeconds(value) {
+  const seconds = Number(value);
+  return Number.isFinite(seconds) ? Math.max(60, Math.min(86400, Math.round(seconds))) : 600;
 }
 
 const sponsorUpload = multer({
@@ -447,8 +459,8 @@ function sponsorPreviewHref(creative) {
     sponsor_source: 'platform',
     sponsor_video: creative.filename || '',
     sponsor_partner: creative.partner || 'IntoTheBattle Partner',
-    sponsor_title: creative.title || 'Sponsor Spotlight',
-    sponsor_subtitle: creative.subtitle || 'We will be right back to the battle.',
+    sponsor_title: creative.title || 'Power Moment',
+    sponsor_subtitle: creative.subtitle || 'Stay locked in. The next fight is loading.',
     sponsor_duration: String(parseDurationMs(creative.duration_ms)),
     sponsor_muted: Number(creative.muted) === 0 ? '0' : '1',
     sponsor_fit: parseFit(creative.fit),
@@ -469,6 +481,30 @@ function formatSponsorDate(value) {
   return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
+function parseDateTimeLocal(value) {
+  const text = String(value || '').trim();
+  if (!text) return null;
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function formatDateTimeInput(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const offsetMs = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
+function readinessLabel(value) {
+  const status = String(value || 'ready').toLowerCase();
+  if (status === 'tested') return 'Tested';
+  if (status === 'failed') return 'Failed';
+  if (status === 'processing') return 'Processing';
+  return 'Ready';
+}
+
 function formatCompletionRate(creative) {
   const impressions = numberValue(creative.impressions);
   if (!impressions) return '0%';
@@ -476,6 +512,7 @@ function formatCompletionRate(creative) {
 }
 
 function renderSponsorAdminPage({ message = '', error = '', creatives = [], events = [] } = {}) {
+  const mediaTools = getSponsorMediaToolStatus();
   const totals = creatives.reduce((acc, creative) => {
     acc.active += creative.status === 'active' ? 1 : 0;
     acc.impressions += numberValue(creative.impressions);
@@ -487,7 +524,24 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
 
   const rows = creatives.map((creative) => {
     const isActive = creative.status === 'active';
+    const isNormalized = Number(creative.normalized) === 1 || creative.normalized === true;
+    const processingStatus = String(creative.processing_status || '').toLowerCase();
+    const processingLabel = isNormalized ? 'Normalized' : (processingStatus && processingStatus !== 'ready' ? creative.processing_status : 'Original');
     const previewHref = sponsorPreviewHref(creative);
+    const readiness = String(creative.readiness_status || 'ready').toLowerCase();
+    const thumbnail = creative.thumbnail_data
+      ? `<img class="creative-thumb" src="${escapeAttr(creative.thumbnail_data)}" alt="" />`
+      : '<div class="creative-thumb empty">No thumbnail</div>';
+    const metadata = [
+      creative.duration_seconds ? `${Math.round(Number(creative.duration_seconds))}s` : '',
+      creative.width && creative.height ? `${creative.width}x${creative.height}` : '',
+      creative.mime_type || '',
+      creative.video_codec ? `v:${creative.video_codec}` : '',
+      creative.audio_codec ? `a:${creative.audio_codec}` : '',
+      creative.file_size ? `${Math.round(Number(creative.file_size) / 1024 / 1024)}MB` : '',
+      creative.aspect_ratio || '',
+    ].filter(Boolean).join(' - ');
+    const warnings = String(creative.quality_warnings || '').trim();
     const statsOptions = ['endcap', 'delayed', 'hidden', 'always']
       .map(mode => `<option value="${mode}" ${creative.stats_mode === mode ? 'selected' : ''}>${escapeHtml(mode)}</option>`)
       .join('');
@@ -497,12 +551,21 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
 
     return `<tr>
       <td>
-        <strong>${escapeHtml(creative.partner || 'Partner')}</strong><br />
-        <span>${escapeHtml(creative.title || 'Sponsor Spotlight')}</span><br />
-        <small>${escapeHtml(creative.filename)}</small>
+        <div class="creative-card-head">
+          ${thumbnail}
+          <div>
+            <span class="campaign-name">${escapeHtml(creative.campaign_name || 'Default Campaign')}</span><br />
+            <strong>${escapeHtml(creative.partner || 'Partner')}</strong><br />
+            <span>${escapeHtml(creative.title || 'Power Moment')}</span><br />
+            <small>${escapeHtml(metadata || creative.filename)}</small>
+          </div>
+        </div>
+        ${warnings ? `<div class="warning-note">${escapeHtml(warnings)}</div>` : ''}
       </td>
       <td>
         <span class="status-pill ${isActive ? 'active' : 'paused'}">${escapeHtml(creative.status || 'active')}</span>
+        <span class="status-pill readiness ${escapeAttr(readiness)}">${escapeHtml(readinessLabel(readiness))}</span>
+        <span class="status-pill processing">${escapeHtml(processingLabel)}</span>
         <div class="creative-metrics">
           <span><strong>${numberValue(creative.impressions)}</strong> shown</span>
           <span><strong>${numberValue(creative.completions)}</strong> complete</span>
@@ -510,9 +573,13 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
           <span><strong>${formatCompletionRate(creative)}</strong> rate</span>
         </div>
         <small>Last shown: ${escapeHtml(formatSponsorDate(creative.last_shown_at))}</small>
+        <small>Last tested: ${escapeHtml(formatSponsorDate(creative.last_tested_at))}</small>
+        ${creative.processing_message ? `<small>${escapeHtml(creative.processing_message)}</small>` : ''}
       </td>
       <td>
         <form method="POST" action="/admin/sponsors/${creative.id}/update">
+          <label>Campaign</label>
+          <input name="campaign_name" value="${escapeAttr(creative.campaign_name || 'Default Campaign')}" />
           <label>Partner</label>
           <input name="partner" value="${escapeAttr(creative.partner || '')}" />
           <label>Headline</label>
@@ -522,8 +589,13 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
           <div class="inline-grid">
             <span><label>Duration</label><input name="duration_ms" type="number" min="5000" max="120000" step="1000" value="${escapeAttr(creative.duration_ms || 15000)}" /></span>
             <span><label>Weight</label><input name="weight" type="number" min="1" max="20" value="${escapeAttr(creative.weight || 1)}" /></span>
+            <span><label>Cooldown</label><input name="cooldown_seconds" type="number" min="60" max="86400" step="60" value="${escapeAttr(creative.cooldown_seconds || 600)}" /></span>
             <span><label>Stats</label><select name="stats_mode">${statsOptions}</select></span>
             <span><label>Fit</label><select name="fit">${fitOptions}</select></span>
+          </div>
+          <div class="inline-grid two">
+            <span><label>Starts</label><input name="active_starts_at" type="datetime-local" value="${escapeAttr(formatDateTimeInput(creative.active_starts_at))}" /></span>
+            <span><label>Ends</label><input name="active_ends_at" type="datetime-local" value="${escapeAttr(formatDateTimeInput(creative.active_ends_at))}" /></span>
           </div>
           <label><input name="muted" type="checkbox" value="1" ${creative.muted ? 'checked' : ''} /> Muted autoplay</label>
           <button type="submit">Save Creative</button>
@@ -581,6 +653,15 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
     .status-pill { display:inline-flex; align-items:center; min-height:30px; padding:5px 10px; border-radius:999px; font-size:11px; font-weight:900; text-transform:uppercase; border:1px solid rgba(255,255,255,.12); }
     .status-pill.active { color:#c6ffc3; border-color:rgba(119,240,161,.34); background:rgba(119,240,161,.08); }
     .status-pill.paused { color:#ffdf8a; border-color:rgba(246,201,91,.34); background:rgba(246,201,91,.08); }
+    .status-pill.readiness { margin-left:6px; color:#9fefff; border-color:rgba(85,231,255,.32); background:rgba(85,231,255,.08); }
+    .status-pill.readiness.tested { color:#c6ffc3; border-color:rgba(119,240,161,.34); background:rgba(119,240,161,.08); }
+    .status-pill.readiness.failed { color:#ffb6b6; border-color:rgba(232,59,95,.36); background:rgba(232,59,95,.1); }
+    .status-pill.processing { margin-left:6px; color:#ffdf8a; border-color:rgba(246,201,91,.3); background:rgba(246,201,91,.08); }
+    .creative-card-head { display:grid; grid-template-columns:120px minmax(0,1fr); gap:14px; align-items:start; }
+    .creative-thumb { width:120px; aspect-ratio:16/9; border-radius:12px; object-fit:cover; border:1px solid rgba(255,255,255,.12); background:#050810; }
+    .creative-thumb.empty { display:grid; place-items:center; color:#677083; font-size:11px; font-weight:900; text-align:center; text-transform:uppercase; }
+    .campaign-name { color:#ffdf8a; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+    .warning-note { margin-top:10px; padding:9px 10px; border-radius:12px; color:#ffdf8a; background:rgba(246,201,91,.08); border:1px solid rgba(246,201,91,.18); font-size:12px; line-height:1.4; }
     .creative-metrics { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0; }
     .creative-metrics span { padding:8px; border-radius:10px; background:rgba(255,255,255,.045); color:#a8afbf; font-size:11px; }
     .creative-metrics strong { color:#fff8e6; }
@@ -600,10 +681,15 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
     th { background: rgba(246,201,91,0.09); color:#ffdf8a; text-align: left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     small { color:#9fb2d7; word-break: break-all; }
     .inline-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .inline-grid.two { grid-template-columns: repeat(2, 1fr); margin-top:10px; }
+    .media-probe { margin-top:10px; padding:12px; border-radius:14px; border:1px solid rgba(85,231,255,.18); background:rgba(85,231,255,.06); color:#a8afbf; font-size:13px; line-height:1.45; }
+    .media-probe.ready { color:#c6ffc3; border-color:rgba(119,240,161,.28); background:rgba(119,240,161,.07); }
+    .media-probe.warn { color:#ffdf8a; border-color:rgba(246,201,91,.28); background:rgba(246,201,91,.08); }
+    .media-probe.failed { color:#ffb6b6; border-color:rgba(232,59,95,.36); background:rgba(232,59,95,.1); }
     .test-panel { display:flex; align-items:center; justify-content:space-between; gap:18px; }
     .test-panel p { margin:6px 0 0; color:#a8afbf; line-height:1.5; }
     .test-panel form { min-width:220px; }
-    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid,.inline-grid{grid-template-columns:1fr} table, thead, tbody, tr, th, td{display:block} th{display:none} td{border-bottom:0} tr{border:1px solid rgba(255,255,255,0.08); border-radius:16px; margin-bottom:14px; overflow:hidden} }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid,.inline-grid,.inline-grid.two,.creative-card-head{grid-template-columns:1fr}.creative-thumb{width:100%;max-width:320px} table, thead, tbody, tr, th, td{display:block} th{display:none} td{border-bottom:0} tr{border:1px solid rgba(255,255,255,0.08); border-radius:16px; margin-bottom:14px; overflow:hidden} }
   </style>
 </head>
 <body>
@@ -627,6 +713,7 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
       <div>
         <h2>Live overlay testing</h2>
         <p>Preview opens the selected creative in the actual overlay without needing a live room. Run Live sends that creative to every connected free-account overlay for a real broadcast test.</p>
+        <p>Server media tools: FFmpeg ${mediaTools.ffmpegAvailable ? 'available' : 'missing'}, ffprobe ${mediaTools.ffprobeAvailable ? 'available' : 'missing'}. ${mediaTools.ffmpegAvailable ? 'Uploads will be normalized when processing is enabled.' : 'Uploads will keep their original file until FFmpeg is installed or configured.'}</p>
       </div>
       <form method="POST" action="/admin/sponsors/stop-test">
         <button type="submit" class="secondary">Stop Live Test</button>
@@ -636,19 +723,31 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
       <h2>Upload platform creative</h2>
       <form method="POST" action="/admin/sponsors/upload" enctype="multipart/form-data">
         <label>Video file</label>
-        <input name="creative" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v" required />
+        <input id="creativeFileInput" name="creative" type="file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v" required />
+        <input id="creativeDurationSeconds" name="durationSeconds" type="hidden" />
+        <input id="creativeWidth" name="width" type="hidden" />
+        <input id="creativeHeight" name="height" type="hidden" />
+        <input id="creativeThumbnailData" name="thumbnailData" type="hidden" />
+        <div class="media-probe" id="creativeMediaProbe">Choose a video to inspect duration, resolution, and thumbnail before upload.</div>
         <small>Recommended: MP4 H.264/AAC, 1080p, 10-30 seconds. Large files can buffer in OBS.</small>
+        <label>Campaign</label>
+        <input name="campaign_name" placeholder="Launch week campaign" />
         <label>Partner</label>
         <input name="partner" placeholder="Brand name" />
         <label>Headline</label>
-        <input name="title" placeholder="Sponsor Spotlight" />
+        <input name="title" placeholder="Power Moment" />
         <label>Subtitle</label>
-        <input name="subtitle" placeholder="We will be right back to the battle." />
+        <input name="subtitle" placeholder="Stay locked in. The next fight is loading." />
         <div class="inline-grid">
           <span><label>Duration</label><input name="duration_ms" type="number" min="5000" max="120000" step="1000" value="15000" /></span>
           <span><label>Weight</label><input name="weight" type="number" min="1" max="20" value="1" /></span>
+          <span><label>Cooldown</label><input name="cooldown_seconds" type="number" min="60" max="86400" step="60" value="600" /></span>
           <span><label>Stats</label><select name="stats_mode"><option value="endcap">endcap</option><option value="delayed">delayed</option><option value="hidden">hidden</option><option value="always">always</option></select></span>
           <span><label>Fit</label><select name="fit"><option value="cover">cover</option><option value="contain">contain</option></select></span>
+        </div>
+        <div class="inline-grid two">
+          <span><label>Starts</label><input name="active_starts_at" type="datetime-local" /></span>
+          <span><label>Ends</label><input name="active_ends_at" type="datetime-local" /></span>
         </div>
         <label><input name="muted" type="checkbox" value="1" checked /> Muted autoplay</label>
         <button type="submit">Upload Creative</button>
@@ -669,6 +768,77 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
       </table>
     </div>
   </div>
+  <script>
+    const fileInput = document.getElementById('creativeFileInput');
+    const probeBox = document.getElementById('creativeMediaProbe');
+    const durationInput = document.getElementById('creativeDurationSeconds');
+    const widthInput = document.getElementById('creativeWidth');
+    const heightInput = document.getElementById('creativeHeight');
+    const thumbnailInput = document.getElementById('creativeThumbnailData');
+    function setProbe(message, className = '') {
+      if (!probeBox) return;
+      probeBox.className = 'media-probe' + (className ? ' ' + className : '');
+      probeBox.textContent = message;
+    }
+    function clearProbeFields() {
+      if (durationInput) durationInput.value = '';
+      if (widthInput) widthInput.value = '';
+      if (heightInput) heightInput.value = '';
+      if (thumbnailInput) thumbnailInput.value = '';
+    }
+    function formatBytes(bytes) {
+      if (!bytes) return '0 MB';
+      return bytes >= 1024 * 1024 ? (bytes / 1024 / 1024).toFixed(1) + ' MB' : (bytes / 1024).toFixed(1) + ' KB';
+    }
+    function captureThumbnail(video) {
+      try {
+        const canvas = document.createElement('canvas');
+        const ratio = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : 16 / 9;
+        canvas.width = 320;
+        canvas.height = Math.round(canvas.width / ratio);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        if (thumbnailInput) thumbnailInput.value = canvas.toDataURL('image/jpeg', 0.72);
+      } catch (_err) {}
+    }
+    fileInput?.addEventListener('change', () => {
+      clearProbeFields();
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) return setProbe('Choose a video to inspect duration, resolution, and thumbnail before upload.');
+      const objectUrl = URL.createObjectURL(file);
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      video.playsInline = true;
+      setProbe('Processing local video metadata...', '');
+      video.onloadedmetadata = () => {
+        if (durationInput) durationInput.value = Number.isFinite(video.duration) ? String(video.duration) : '';
+        if (widthInput) widthInput.value = video.videoWidth || '';
+        if (heightInput) heightInput.value = video.videoHeight || '';
+        const warnings = [];
+        if (file.type && file.type !== 'video/mp4') warnings.push('MP4 H.264/AAC is safest for OBS.');
+        if (video.duration > 30) warnings.push('10-30 seconds usually performs best.');
+        if (video.videoWidth && video.videoHeight && Math.abs((video.videoWidth / video.videoHeight) - (16 / 9)) > 0.08) warnings.push('16:9 is recommended.');
+        if (video.videoWidth < 1280 || video.videoHeight < 720) warnings.push('720p or 1080p is recommended.');
+        const meta = Math.round(video.duration || 0) + 's - ' + (video.videoWidth || '?') + 'x' + (video.videoHeight || '?') + ' - ' + formatBytes(file.size);
+        setProbe(meta + (warnings.length ? ' - ' + warnings.join(' ') : ' - Ready for upload.'), warnings.length ? 'warn' : 'ready');
+        try {
+          video.currentTime = Math.min(0.35, Math.max(0, (video.duration || 1) / 8));
+        } catch (_err) {
+          URL.revokeObjectURL(objectUrl);
+        }
+      };
+      video.onseeked = () => {
+        captureThumbnail(video);
+        URL.revokeObjectURL(objectUrl);
+      };
+      video.onerror = () => {
+        setProbe('Video metadata could not be read. MP4 H.264/AAC is recommended before this reaches OBS.', 'failed');
+        URL.revokeObjectURL(objectUrl);
+      };
+      video.src = objectUrl;
+    });
+  </script>
 </body>
 </html>`;
 }
@@ -701,33 +871,58 @@ router.get('/sponsors', requireAdminAuth, (req, res) => {
 });
 
 router.post('/sponsors/upload', requireAdminAuth, (req, res) => {
-  sponsorUpload.single('creative')(req, res, (err) => {
+  sponsorUpload.single('creative')(req, res, async (err) => {
     if (err) return res.redirect(`/admin/sponsors?error=${encodeURIComponent(err.message || 'Upload failed')}`);
     if (!req.file) return res.redirect(`/admin/sponsors?error=${encodeURIComponent('Choose a video file')}`);
 
+    let mediaMeta;
     try {
+      mediaMeta = await processSponsorUpload({ file: req.file, body: req.body || {}, targetDir: PLATFORM_SPONSOR_DIR });
       db.prepare(`
         INSERT INTO platform_sponsor_creatives
-          (filename, original_name, partner, title, subtitle, duration_ms, stats_mode, fit, muted, weight, status, uploaded_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          (
+            filename, original_name, campaign_name, partner, title, subtitle,
+            duration_ms, duration_seconds, width, height, file_size, mime_type,
+            video_codec, audio_codec, aspect_ratio, thumbnail_data, quality_warnings,
+            normalized, processing_status, processing_message, stats_mode, fit,
+            muted, weight, cooldown_seconds, status, readiness_status, processed_at,
+            active_starts_at, active_ends_at, uploaded_at, updated_at
+          )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 'ready', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `).run(
-        req.file.filename,
+        mediaMeta.filename,
         req.file.originalname,
+        sanitizeSponsorText(req.body.campaign_name, 'Default Campaign', 90),
         sanitizeSponsorText(req.body.partner, 'Partner', 70),
-        sanitizeSponsorText(req.body.title, 'Sponsor Spotlight', 90),
-        sanitizeSponsorText(req.body.subtitle, 'We will be right back to the battle.', 140),
+        sanitizeSponsorText(req.body.title, 'Power Moment', 90),
+        sanitizeSponsorText(req.body.subtitle, 'Stay locked in. The next fight is loading.', 140),
         parseDurationMs(req.body.duration_ms),
+        mediaMeta.durationSeconds,
+        mediaMeta.width,
+        mediaMeta.height,
+        mediaMeta.fileSize,
+        mediaMeta.mimeType,
+        mediaMeta.videoCodec,
+        mediaMeta.audioCodec,
+        mediaMeta.aspectRatio,
+        mediaMeta.thumbnailData,
+        mediaMeta.qualityWarnings.join(' '),
+        mediaMeta.normalized ? 1 : 0,
+        mediaMeta.processingStatus,
+        mediaMeta.processingMessage,
         parseStatsMode(req.body.stats_mode),
         parseFit(req.body.fit),
         req.body.muted === '1' ? 1 : 0,
-        parseWeight(req.body.weight)
+        parseWeight(req.body.weight),
+        parseCooldownSeconds(req.body.cooldown_seconds),
+        mediaMeta.processedAt ? mediaMeta.processedAt.slice(0, 19).replace('T', ' ') : null,
+        parseDateTimeLocal(req.body.active_starts_at),
+        parseDateTimeLocal(req.body.active_ends_at)
       );
       return res.redirect('/admin/sponsors?message=Creative%20uploaded');
     } catch (insertErr) {
-      try {
-        const filepath = path.join(PLATFORM_SPONSOR_DIR, req.file.filename);
-        if (isSafePath(PLATFORM_SPONSOR_DIR, filepath) && fs.existsSync(filepath)) fs.unlinkSync(filepath);
-      } catch (_) {}
+      deleteSponsorUploadFile(req.file.path);
+      deleteSponsorUploadFile(mediaMeta?.filepath);
       return res.redirect(`/admin/sponsors?error=${encodeURIComponent(insertErr.message || 'Creative save failed')}`);
     }
   });
@@ -739,17 +934,33 @@ router.post('/sponsors/:id/update', requireAdminAuth, (req, res) => {
 
   db.prepare(`
     UPDATE platform_sponsor_creatives
-    SET partner = ?, title = ?, subtitle = ?, duration_ms = ?, stats_mode = ?, fit = ?, muted = ?, weight = ?, updated_at = CURRENT_TIMESTAMP
+    SET campaign_name = ?,
+        partner = ?,
+        title = ?,
+        subtitle = ?,
+        duration_ms = ?,
+        stats_mode = ?,
+        fit = ?,
+        muted = ?,
+        weight = ?,
+        cooldown_seconds = ?,
+        active_starts_at = ?,
+        active_ends_at = ?,
+        updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(
+    sanitizeSponsorText(req.body.campaign_name, 'Default Campaign', 90),
     sanitizeSponsorText(req.body.partner, 'Partner', 70),
-    sanitizeSponsorText(req.body.title, 'Sponsor Spotlight', 90),
-    sanitizeSponsorText(req.body.subtitle, 'We will be right back to the battle.', 140),
+    sanitizeSponsorText(req.body.title, 'Power Moment', 90),
+    sanitizeSponsorText(req.body.subtitle, 'Stay locked in. The next fight is loading.', 140),
     parseDurationMs(req.body.duration_ms),
     parseStatsMode(req.body.stats_mode),
     parseFit(req.body.fit),
     req.body.muted === '1' ? 1 : 0,
     parseWeight(req.body.weight),
+    parseCooldownSeconds(req.body.cooldown_seconds),
+    parseDateTimeLocal(req.body.active_starts_at),
+    parseDateTimeLocal(req.body.active_ends_at),
     id
   );
   res.redirect('/admin/sponsors?message=Creative%20saved');
