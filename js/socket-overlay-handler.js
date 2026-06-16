@@ -255,11 +255,11 @@ function initSocketOverlay(game) {
       if (!scene.playSponsorBreak) return;
       scene.playSponsorBreak({
         partner: 'IntoTheBattle',
-        kicker: 'Sponsor Break',
-        title: 'Presented By Our Sponsor',
-        subtitle: 'We will be right back to the battle.',
+        kicker: 'Arena Spotlight',
+        title: 'Power Moment',
+        subtitle: 'Stay locked in. The next fight is loading.',
         durationMs: 8000,
-        fit: 'cover',
+        fit: 'contain',
         muted: true,
         ...payload,
       });
@@ -293,12 +293,12 @@ function initSocketOverlay(game) {
     const payload = {
       filename,
       videoUrl: filename ? withOverlayAuth(`/sponsor/${encodeURIComponent(filename)}`, { v: Date.now() }) : '',
-      title: overlayParams.get('sponsor_title') || 'Sponsor Spotlight',
+      title: overlayParams.get('sponsor_title') || 'Power Moment',
       partner: overlayParams.get('sponsor_partner') || 'IntoTheBattle Partner',
-      subtitle: overlayParams.get('sponsor_subtitle') || 'Thanks for powering tonight\'s arena.',
+      subtitle: overlayParams.get('sponsor_subtitle') || 'Stay locked in. The next fight is loading.',
       durationMs: Number(overlayParams.get('sponsor_duration')) || 15000,
       muted: overlayParams.get('sponsor_muted') !== '0',
-      fit: overlayParams.get('sponsor_fit') || 'cover',
+      fit: overlayParams.get('sponsor_fit') || 'contain',
     };
     setTimeout(() => scene.playSponsorBreak(payload), 600);
   }

@@ -165,13 +165,13 @@ test('signed overlay sponsor preview renders transitioned ad scene', async ({ pa
     overlay_token: overlayToken,
     sponsor_preview: '1',
     sponsor_partner: 'Arcade Forge',
-    sponsor_title: 'Tonight\'s Arena Sponsor',
-    sponsor_subtitle: 'Premium sponsor screen preview for stream breaks.',
+    sponsor_title: 'Tonight\'s Arena Spotlight',
+    sponsor_subtitle: 'Premium arena screen preview for stream breaks.',
     sponsor_duration: '15000',
   });
   await page.goto(`${baseUrl}/overlay?${params.toString()}`, { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#sponsorScene')).toHaveClass(/active/, { timeout: 3000 });
-  await expect(page.getByText('Tonight\'s Arena Sponsor')).toBeVisible();
+  await expect(page.getByText('Tonight\'s Arena Spotlight')).toBeVisible();
   await expect(page.locator('.panel-wrapper')).toBeHidden();
   await expect(page.locator('#status-badge')).toBeHidden();
   await expectNoHorizontalOverflow(page);

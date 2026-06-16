@@ -730,7 +730,7 @@ function buildPlatformSponsorPayload(room, creative) {
     subtitle: sanitizeSponsorText(creative.subtitle, 'Stay locked in. The next fight is loading.', 140),
     durationMs: parseSponsorDuration(creative.duration_ms),
     muted: Number(creative.muted) !== 0,
-    fit: creative.fit === 'contain' ? 'contain' : 'cover',
+    fit: creative.fit === 'cover' ? 'cover' : 'contain',
     statsMode: parseSponsorStatsMode(creative.stats_mode),
     creativeId: creative.id,
   };
@@ -2770,7 +2770,7 @@ function buildSponsorScenePayload(room, body = {}) {
     subtitle: sanitizeSponsorText(body.subtitle, entry?.subtitle || 'Stay locked in. The next fight is loading.', 140),
     durationMs: parseSponsorDuration(body.durationMs),
     muted: parseSponsorMuted(body.muted),
-    fit: ['cover', 'contain'].includes(body.fit) ? body.fit : 'cover',
+    fit: ['cover', 'contain'].includes(body.fit) ? body.fit : 'contain',
     statsMode: parseSponsorStatsMode(body.statsMode),
     theme: ['arena', 'premium', 'minimal'].includes(body.theme) ? body.theme : 'arena',
     _ts: Date.now(),

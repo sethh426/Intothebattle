@@ -27,6 +27,7 @@ class OverlayScene extends Phaser.Scene {
     this.sponsorTimer = null;
     this.sponsorProgressTween = null;
     this.sponsorVideo = null;
+    this.sponsorClockStarted = false;
     this.sponsorAudioContext = null;
   }
 
@@ -535,12 +536,12 @@ class OverlayScene extends Phaser.Scene {
     return {
       action: payload.action || 'show',
       partner: String(payload.partner || 'IntoTheBattle').slice(0, 70),
-      kicker: String(payload.kicker || 'Sponsor Break').slice(0, 70),
-      title: String(payload.title || 'Presented By Our Sponsor').slice(0, 90),
-      subtitle: String(payload.subtitle || 'We will be right back to the battle.').slice(0, 140),
+      kicker: /sponsor/i.test(String(payload.kicker || '')) ? 'Arena Spotlight' : String(payload.kicker || 'Arena Spotlight').slice(0, 70),
+      title: /sponsor/i.test(String(payload.title || '')) || /presented by/i.test(String(payload.title || '')) ? 'Power Moment' : String(payload.title || 'Power Moment').slice(0, 90),
+      subtitle: String(payload.subtitle || 'Stay locked in. The next fight is loading.').slice(0, 140),
       filename,
       videoUrl,
-      fit: payload.fit === 'contain' ? 'contain' : 'cover',
+      fit: payload.fit === 'cover' ? 'cover' : 'contain',
       muted: payload.muted !== false,
       durationMs: Number.isFinite(duration) ? Math.max(5000, Math.min(120000, duration)) : 15000,
     };
@@ -607,13 +608,13 @@ class OverlayScene extends Phaser.Scene {
       const color = i % 3 === 0 ? 0xf6c95b : 0x55e7ff;
       sparks.push(this.add.circle(x, y, 2 + Math.random() * 3, color, 0).setBlendMode(Phaser.BlendModes.ADD));
     }
-    const title = this.add.text(w / 2, h * 0.5, 'SPONSOR BREAK', {
+    const title = this.add.text(w / 2, h * 0.5, 'POWER MOMENT', {
       font: '900 74px Exo 2',
       fill: '#fff8e6',
       align: 'center',
       shadow: { offsetX: 0, offsetY: 0, color: '#ff6a3d', blur: 24, fill: true }
     }).setOrigin(0.5).setAlpha(0).setScale(0.88);
-    const partner = this.add.text(w / 2, h * 0.62, `PRESENTED BY ${payload.partner.toUpperCase()}`, {
+    const partner = this.add.text(w / 2, h * 0.62, `FEATURING ${payload.partner.toUpperCase()}`, {
       font: '800 28px Rajdhani',
       fill: '#d7f5ff',
       align: 'center',
@@ -661,6 +662,7 @@ class OverlayScene extends Phaser.Scene {
     const w = this.scale.width;
     const h = this.scale.height;
     this.sponsorState = 'live';
+    this.sponsorClockStarted = false;
     this.prepareSponsorLayer();
 
     const bg = this.add.rectangle(w / 2, h / 2, w, h, 0x03060c, 0.94).setOrigin(0.5);
@@ -701,7 +703,9 @@ class OverlayScene extends Phaser.Scene {
     }).setOrigin(1, 0.5).setAlpha(0);
 
     this.sponsorLayer.add([bg]);
-    const video = this.createSponsorVideo(payload, w, h);
+    const video = this.createSponsorVideo(payload, w, h, {
+      onFirstFrame: () => this.startSponsorSceneClock(payload, progress, trackWidth, payload.durationMs),
+    });
     if (video) this.sponsorLayer.add(video);
     this.sponsorLayer.add([scrim, leftPanel, brand, kicker, title, subtitle, progressBg, progress, returnHint]);
 
@@ -710,14 +714,20 @@ class OverlayScene extends Phaser.Scene {
     this.tweens.add({ targets: leftPanel, x: w * 0.22, alpha: 0.84, duration: 620, ease: 'Cubic.easeOut' });
     this.tweens.add({ targets: [brand, kicker, title, subtitle, returnHint], alpha: 1, duration: 420, delay: 180, ease: 'Quad.easeOut' });
     this.tweens.add({ targets: title, x: title.x + 14, duration: payload.durationMs, ease: 'Linear' });
+    if (!video) this.startSponsorSceneClock(payload, progress, trackWidth, payload.durationMs);
+  }
+
+  startSponsorSceneClock(payload, progress, trackWidth, durationMs) {
+    if (this.sponsorClockStarted || this.sponsorState !== 'live') return;
+    this.sponsorClockStarted = true;
     this.sponsorProgressTween = this.tweens.add({
       targets: progress,
       width: trackWidth,
-      duration: payload.durationMs,
+      duration: durationMs,
       ease: 'Linear'
     });
 
-    this.setSponsorTimer(() => this.startSponsorOutro(payload), payload.durationMs);
+    this.setSponsorTimer(() => this.startSponsorOutro(payload), durationMs);
   }
 
   startSponsorOutro(payload = {}, forced = false) {
@@ -752,7 +762,7 @@ class OverlayScene extends Phaser.Scene {
     });
   }
 
-  createSponsorVideo(payload, width, height) {
+  createSponsorVideo(payload, width, height, hooks = {}) {
     if (!payload.videoUrl || typeof this.add.video !== 'function') return null;
     try {
       const video = this.add.video(width / 2, height / 2);
@@ -761,8 +771,9 @@ class OverlayScene extends Phaser.Scene {
       video.setDisplaySize(width, height);
       video.loadURL(payload.videoUrl, payload.muted, 'anonymous');
       video.once('play', () => {
-        this.tweens.add({ targets: video, alpha: payload.fit === 'contain' ? 1 : 0.82, duration: 450, ease: 'Quad.easeOut' });
+        this.tweens.add({ targets: video, alpha: payload.fit === 'contain' ? 1 : 0.92, duration: 450, ease: 'Quad.easeOut' });
         this.fitSponsorVideo(video, payload.fit, width, height);
+        hooks.onFirstFrame?.();
       });
       video.once('loadeddata', () => this.fitSponsorVideo(video, payload.fit, width, height));
       video.once('complete', () => {
@@ -788,6 +799,7 @@ class OverlayScene extends Phaser.Scene {
 
   prepareSponsorLayer() {
     this.clearSponsorTimer();
+    this.sponsorClockStarted = false;
     if (this.sponsorProgressTween) {
       this.sponsorProgressTween.stop();
       this.sponsorProgressTween = null;

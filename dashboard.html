@@ -283,7 +283,7 @@
             </div>
             <div class="grid" style="gap:12px;">
               <div class="col-6"><label class="input-label">Break length</label><select id="sponsorDurationInput"><option value="10000">10 seconds</option><option value="15000" selected>15 seconds</option><option value="30000">30 seconds</option><option value="60000">60 seconds</option></select></div>
-              <div class="col-6"><label class="input-label">Video fit</label><select id="sponsorFitInput"><option value="cover" selected>Cover screen</option><option value="contain">Show full video</option></select></div>
+              <div class="col-6"><label class="input-label">Video fit</label><select id="sponsorFitInput"><option value="contain" selected>Show full video</option><option value="cover">Fill screen</option></select></div>
               <div class="col-6"><label class="input-label">Audio</label><select id="sponsorMutedInput"><option value="true" selected>Muted autoplay</option><option value="false">Try video audio</option></select></div>
               <div class="col-6"><label class="input-label">Battle stats</label><select id="sponsorStatsModeInput"><option value="endcap" selected>End-cap stats</option><option value="delayed">After video starts</option><option value="hidden">Hide during video</option><option value="always">Always show</option></select></div>
             </div>
@@ -769,7 +769,7 @@ function currentSponsorPayload(filename = selectedSponsorFilename) {
     subtitle: sponsorInputValue('sponsorSubtitleInput', selected?.subtitle || 'Stay locked in. The next fight is loading.'),
     durationMs: Number(document.getElementById('sponsorDurationInput')?.value || 15000),
     muted: document.getElementById('sponsorMutedInput')?.value !== 'false',
-    fit: document.getElementById('sponsorFitInput')?.value || 'cover',
+    fit: document.getElementById('sponsorFitInput')?.value || 'contain',
     statsMode: sponsorStatsMode(),
   };
 }

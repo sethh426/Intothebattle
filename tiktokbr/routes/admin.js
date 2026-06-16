@@ -476,7 +476,7 @@ function parseStatsMode(value) {
 }
 
 function parseFit(value) {
-  return value === 'contain' ? 'contain' : 'cover';
+  return value === 'cover' ? 'cover' : 'contain';
 }
 
 function sponsorPreviewHref(creative) {
@@ -582,7 +582,7 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
     const statsOptions = ['endcap', 'delayed', 'hidden', 'always']
       .map(mode => `<option value="${mode}" ${creative.stats_mode === mode ? 'selected' : ''}>${escapeHtml(mode)}</option>`)
       .join('');
-    const fitOptions = ['cover', 'contain']
+    const fitOptions = ['contain', 'cover']
       .map(fit => `<option value="${fit}" ${creative.fit === fit ? 'selected' : ''}>${escapeHtml(fit)}</option>`)
       .join('');
 
@@ -781,7 +781,7 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
           <span><label>Weight</label><input name="weight" type="number" min="1" max="20" value="1" /></span>
           <span><label>Cooldown</label><input name="cooldown_seconds" type="number" min="60" max="86400" step="60" value="600" /></span>
           <span><label>Stats</label><select name="stats_mode"><option value="endcap">endcap</option><option value="delayed">delayed</option><option value="hidden">hidden</option><option value="always">always</option></select></span>
-          <span><label>Fit</label><select name="fit"><option value="cover">cover</option><option value="contain">contain</option></select></span>
+          <span><label>Fit</label><select name="fit"><option value="contain">contain</option><option value="cover">cover</option></select></span>
         </div>
         <div class="inline-grid two">
           <span><label>Starts</label><input name="active_starts_at" type="datetime-local" /></span>

@@ -385,20 +385,20 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   animation:sponsorGridDrift 4s linear infinite;
 }
 .sponsor-scene video {
-  position:absolute; inset:0; width:100%; height:100%; object-fit:cover;
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center center;
   opacity:0; transform:scale(1.045);
-  filter:saturate(1.08) contrast(1.08);
+  filter:saturate(1.08) contrast(1.08); background:#02040a;
   transition:opacity 520ms ease,transform 900ms cubic-bezier(.16,1,.3,1),filter 520ms ease;
 }
-.sponsor-scene.live.video-ready video { opacity:.96; transform:scale(1); }
+.sponsor-scene.live.video-ready video { opacity:1; transform:scale(1.005); }
 .sponsor-scene.live.stats-visible.video-ready video {
-  opacity:.74;
-  filter:saturate(1) contrast(1.02) brightness(.92);
+  opacity:.34;
+  filter:saturate(.92) contrast(1.04) brightness(.72) blur(1.5px);
 }
 .sponsor-scene.outro video,
 .sponsor-scene.intro video { opacity:0; }
 .sponsor-scene.contain.live.video-ready video { object-fit:contain; opacity:1; background:#02040a; filter:none; }
-.sponsor-scene.contain.live.stats-visible.video-ready video { opacity:.82; filter:saturate(1) contrast(1.02) brightness(.92); }
+.sponsor-scene.contain.live.stats-visible.video-ready video { opacity:.32; filter:saturate(.92) contrast(1.04) brightness(.72) blur(1.5px); }
 
 .sponsor-intro,
 .sponsor-live,
@@ -495,37 +495,66 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .sponsor-scrim {
   position:absolute; inset:0;
   background:
-    linear-gradient(90deg, rgba(1,4,10,.82), rgba(1,4,10,.26) 45%, rgba(1,4,10,.6)),
+    linear-gradient(90deg, rgba(1,4,10,.62), rgba(1,4,10,.08) 45%, rgba(1,4,10,.46)),
     linear-gradient(0deg, rgba(0,0,0,.66), transparent 34%, rgba(0,0,0,.5));
   opacity:1; transition:opacity 420ms ease;
 }
-.sponsor-scene.live.video-ready .sponsor-scrim { opacity:.22; }
-.sponsor-scene.live.stats-visible.video-ready .sponsor-scrim { opacity:.82; }
+.sponsor-scene.live.video-ready .sponsor-scrim { opacity:.14; }
+.sponsor-scene.live.stats-visible.video-ready .sponsor-scrim { opacity:.88; }
+.sponsor-video-chrome {
+  position:absolute; inset:28px; z-index:1; pointer-events:none; border-radius:12px;
+  opacity:0; border:1px solid rgba(255,223,138,.22);
+  box-shadow:inset 0 0 0 1px rgba(85,231,255,.16),0 0 38px rgba(85,231,255,.08),0 0 68px rgba(246,201,91,.06);
+  transition:opacity 480ms ease,transform 760ms cubic-bezier(.16,1,.3,1);
+}
+.sponsor-video-chrome::before {
+  content:""; position:absolute; inset:-1px; border-radius:13px; padding:1px;
+  background:linear-gradient(90deg,rgba(255,223,138,.88),rgba(85,231,255,.9),rgba(255,68,110,.55),rgba(255,223,138,.88));
+  background-size:240% 100%;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+  animation:sponsorChromeBorder 5.2s linear infinite;
+}
+.sponsor-video-chrome::after {
+  content:""; position:absolute; inset:14px; border-radius:8px;
+  border:1px solid rgba(255,255,255,.08);
+}
+.sponsor-scene.live .sponsor-video-chrome { animation:sponsorChromeIn 760ms 120ms cubic-bezier(.16,1,.3,1) both; }
+.sponsor-scene.live.video-ready .sponsor-video-chrome { opacity:.94; }
+.sponsor-scene.live.stats-visible .sponsor-video-chrome { opacity:.28; }
 .sponsor-frame {
-  position:relative; width:min(86%,1180px); min-height:52%;
+  position:absolute; left:60px; bottom:86px; z-index:2; width:min(64%,820px); min-height:auto;
   display:flex; flex-direction:column; justify-content:flex-end; gap:18px;
-  padding:76px; text-shadow:0 4px 24px rgba(0,0,0,.86);
+  padding:0; text-shadow:0 4px 24px rgba(0,0,0,.86);
+  opacity:.94; transform:translateY(0);
+  transition:opacity 420ms ease,transform 520ms cubic-bezier(.16,1,.3,1);
 }
 .sponsor-kicker {
   width:max-content; max-width:100%; padding:8px 15px; border:1px solid rgba(246,201,91,.54);
   background:rgba(246,201,91,.12); color:#ffdf8a; border-radius:999px;
-  font:800 18px 'Rajdhani',sans-serif; letter-spacing:0; text-transform:uppercase;
+  font:800 17px 'Rajdhani',sans-serif; letter-spacing:0; text-transform:uppercase;
 }
 .sponsor-title {
-  max-width:980px; font:900 84px 'Exo 2','Segoe UI',sans-serif;
-  line-height:.92; letter-spacing:0; color:#fff8e6;
+  max-width:820px; font:900 58px 'Exo 2','Segoe UI',sans-serif;
+  line-height:.94; letter-spacing:0; color:#fff8e6;
 }
 .sponsor-subtitle {
-  max-width:780px; font:700 32px 'Rajdhani','Segoe UI',sans-serif;
+  max-width:720px; font:800 26px 'Rajdhani','Segoe UI',sans-serif;
   line-height:1.05; color:#d7f5ff; letter-spacing:0;
 }
 .sponsor-brand {
-  position:absolute; top:42px; right:64px;
-  font:900 26px 'Exo 2','Segoe UI',sans-serif; color:#ffffff;
+  position:absolute; top:42px; right:64px; z-index:2;
+  padding:10px 16px; border-radius:999px; border:1px solid rgba(122,252,255,.24);
+  background:rgba(3,7,14,.54); box-shadow:0 16px 42px rgba(0,0,0,.22);
+  font:900 24px 'Exo 2','Segoe UI',sans-serif; color:#ffffff;
   letter-spacing:0; text-transform:uppercase;
 }
+.sponsor-scene.live.stats-visible .sponsor-frame {
+  opacity:0; transform:translateY(18px); pointer-events:none;
+}
 .sponsor-progress {
-  position:absolute; left:76px; right:76px; bottom:40px;
+  position:absolute; left:76px; right:76px; bottom:40px; z-index:4;
   height:5px; border-radius:999px; background:rgba(255,255,255,.16); overflow:hidden;
 }
 .sponsor-progress span {
@@ -533,14 +562,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   background:linear-gradient(90deg,#ffdf8a,#55e7ff);
 }
 .sponsor-return-hint {
-  position:absolute; right:76px; bottom:55px;
+  position:absolute; right:76px; bottom:55px; z-index:4;
   padding:6px 12px; border-radius:999px; background:rgba(0,0,0,.34);
   border:1px solid rgba(85,231,255,.18);
   font:900 24px 'Rajdhani','Segoe UI',sans-serif; color:#9fefff;
   letter-spacing:0; text-transform:uppercase; opacity:0;
 }
 .sponsor-live-stats {
-  position:absolute; left:60px; right:60px; bottom:76px; width:auto;
+  position:absolute; left:60px; right:60px; bottom:76px; z-index:5; width:auto;
   padding:24px 26px 22px; border:1px solid rgba(122,252,255,.36); border-radius:8px;
   overflow:hidden; isolation:isolate;
   background:
@@ -671,10 +700,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   font:900 29px 'Rajdhani','Segoe UI',sans-serif; line-height:1.26; color:#9fefff; white-space:nowrap;
 }
 .sponsor-media-status {
-  position:absolute; left:76px; bottom:55px; max-width:min(720px,48%);
-  padding:6px 12px; border-radius:999px; background:rgba(0,0,0,.34);
-  border:1px solid rgba(255,223,138,.18);
-  font:900 22px 'Rajdhani','Segoe UI',sans-serif; color:#ffdf8a;
+  position:absolute; left:50%; top:50%; bottom:auto; z-index:6; max-width:min(760px,70%);
+  transform:translate(-50%,-50%);
+  padding:10px 18px; border-radius:999px; background:rgba(0,0,0,.48);
+  border:1px solid rgba(255,223,138,.26);
+  font:900 24px 'Rajdhani','Segoe UI',sans-serif; color:#ffdf8a;
   letter-spacing:0; text-transform:uppercase; opacity:0;
   text-shadow:0 2px 16px rgba(0,0,0,.86);
   transition:opacity 240ms ease;
@@ -711,7 +741,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .sponsor-outro-title { font-size:52px; }
   .sponsor-intro-partner,
   .sponsor-subtitle { font-size:24px; }
-  .sponsor-frame { padding:48px; width:92%; }
+  .sponsor-frame { left:34px; right:34px; bottom:72px; width:auto; }
   .sponsor-brand { top:28px; right:34px; font-size:20px; }
   .sponsor-live-stats { left:34px; right:34px; bottom:64px; padding:16px; }
   .sponsor-stats-head { font-size:24px; }
@@ -728,7 +758,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .sponsor-leader-meta { font-size:18px; }
   .sponsor-progress { left:48px; right:48px; bottom:28px; }
   .sponsor-return-hint { right:48px; bottom:44px; font-size:15px; }
-  .sponsor-media-status { left:48px; bottom:44px; max-width:52%; }
+  .sponsor-media-status { max-width:74%; }
 }
 @media (max-width:560px) {
   .sponsor-intro-title,
@@ -737,7 +767,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .sponsor-intro-partner,
   .sponsor-subtitle { font-size:18px; }
   .sponsor-kicker { font-size:14px; }
-  .sponsor-frame { padding:30px; width:96%; gap:12px; }
+  .sponsor-frame { left:24px; right:24px; bottom:58px; width:auto; gap:12px; }
   .sponsor-brand { top:20px; right:24px; font-size:16px; }
   .sponsor-live-stats { display:none; }
   .sponsor-progress { left:30px; right:30px; bottom:22px; }
@@ -785,6 +815,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 @keyframes sponsorLiveCopy {
   0% { opacity:0; transform:translateX(-18px); }
   100% { opacity:1; transform:translateX(0); }
+}
+@keyframes sponsorChromeIn {
+  0% { opacity:0; transform:scale(.988); filter:blur(8px); }
+  100% { opacity:.94; transform:scale(1); filter:blur(0); }
+}
+@keyframes sponsorChromeBorder {
+  to { background-position:240% 0; }
 }
 @keyframes sponsorStatsIn {
   0% { opacity:0; transform:translateY(28px) scale(.985); filter:blur(10px); }
@@ -861,11 +898,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       </div>
       <div class="sponsor-intro-copy">
         <div class="sponsor-intro-title">POWER MOMENT</div>
-        <div class="sponsor-intro-partner" id="sponsorIntroPartner">Presented by IntoTheBattle</div>
+        <div class="sponsor-intro-partner" id="sponsorIntroPartner">Featuring IntoTheBattle</div>
       </div>
     </div>
     <div class="sponsor-live" aria-hidden="true">
       <div class="sponsor-scrim"></div>
+      <div class="sponsor-video-chrome" aria-hidden="true"></div>
       <div class="sponsor-brand" id="sponsorBrand">IntoTheBattle</div>
       <div class="sponsor-frame">
         <div class="sponsor-kicker" id="sponsorKicker">Arena Spotlight</div>
@@ -1312,7 +1350,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function startSponsorClock(payload, liveDurationMs, startedByVideo) {
     if (!sponsorScene || sponsorState !== 'live' || activeSponsorPayload !== payload || sponsorTimer) return;
     clearSponsorVideoStartTimer();
-    const duration = Math.max(1000, liveDurationMs || payload.durationMs || 15000);
+    const duration = resolveSponsorLiveDuration({ ...payload, durationMs: liveDurationMs || payload.durationMs }, startedByVideo);
     sponsorScene.style.setProperty('--sponsor-duration', `${duration}ms`);
     void sponsorProgress?.offsetWidth;
     sponsorScene.classList.add('clock-running');
@@ -1328,6 +1366,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const filename = payload.filename ? String(payload.filename) : '';
     let videoUrl = payload.videoUrl || payload.url || payload.src || '';
     const statsMode = ['endcap', 'delayed', 'hidden', 'always'].includes(payload.statsMode) ? payload.statsMode : 'endcap';
+    const fit = ['cover', 'contain', 'auto'].includes(payload.fit) ? payload.fit : 'auto';
     if (!videoUrl && filename) {
       videoUrl = withOverlayAuth(`/sponsor/${encodeURIComponent(filename)}`, { v: payload._ts || Date.now() });
     }
@@ -1340,12 +1379,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       filename,
       videoUrl,
       partner: String(payload.partner || 'IntoTheBattle').slice(0, 70),
-      kicker: String(payload.kicker || 'Arena Spotlight').slice(0, 70),
-      title: String(payload.title || 'Power Moment').slice(0, 90),
+      kicker: sponsorCleanKicker(payload.kicker),
+      title: sponsorCleanTitle(payload.title),
       subtitle: String(payload.subtitle || 'Stay locked in. The next fight is loading.').slice(0, 140),
       durationMs: Number.isFinite(duration) ? Math.max(5000, Math.min(120000, Math.round(duration))) : 15000,
       muted: payload.muted !== false,
-      fit: payload.fit === 'contain' ? 'contain' : 'cover',
+      fit,
       statsMode,
       _ts: payload._ts || Date.now(),
     };
@@ -1371,6 +1410,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
     if (sponsorScene) {
       sponsorScene.classList.remove('video-ready', 'video-loading', 'video-error');
+      delete sponsorScene.dataset.videoFit;
     }
     resetSponsorTimingClasses();
     setSponsorText(sponsorMediaStatus, '', '');
@@ -1403,6 +1443,48 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
     const label = labels[sponsorVideo.error.code] || `code ${sponsorVideo.error.code}`;
     return `${prefix} (${label})`;
+  }
+
+  function sponsorCleanKicker(value) {
+    const text = String(value || 'Arena Spotlight').slice(0, 70).trim();
+    return /sponsor/i.test(text) ? 'Arena Spotlight' : (text || 'Arena Spotlight');
+  }
+
+  function sponsorCleanTitle(value) {
+    const text = String(value || 'Power Moment').slice(0, 90).trim();
+    return /sponsor/i.test(text) || /presented by/i.test(text) ? 'Power Moment' : (text || 'Power Moment');
+  }
+
+  function applySponsorVideoFit(payload = {}) {
+    if (!sponsorScene || !sponsorVideo) return;
+    const requestedFit = ['cover', 'contain', 'auto'].includes(payload.fit) ? payload.fit : 'auto';
+    let resolvedFit = requestedFit;
+    if (resolvedFit === 'auto') {
+      const mediaWidth = Number(sponsorVideo.videoWidth) || 16;
+      const mediaHeight = Number(sponsorVideo.videoHeight) || 9;
+      const ratio = mediaWidth / Math.max(1, mediaHeight);
+      resolvedFit = ratio < 1.45 || ratio > 2.05 ? 'contain' : 'cover';
+    }
+    sponsorScene.classList.toggle('contain', resolvedFit === 'contain');
+    sponsorScene.dataset.videoFit = resolvedFit;
+  }
+
+  function sponsorMediaDurationMs() {
+    if (!sponsorVideo || !Number.isFinite(sponsorVideo.duration) || sponsorVideo.duration <= 0) return 0;
+    return Math.round(sponsorVideo.duration * 1000);
+  }
+
+  function sponsorEndcapDurationMs(baseDuration) {
+    return Math.min(5600, Math.max(3400, Math.round((baseDuration || 15000) * 0.26)));
+  }
+
+  function resolveSponsorLiveDuration(payload, startedByVideo) {
+    const requested = Math.max(1000, Number(payload.durationMs) || 15000);
+    if (!startedByVideo) return requested;
+    const mediaMs = sponsorMediaDurationMs();
+    if (mediaMs <= 1200) return requested;
+    const endcapMs = (payload.statsMode || 'endcap') === 'endcap' ? sponsorEndcapDurationMs(requested) : 0;
+    return Math.min(120000, Math.max(requested, mediaMs + endcapMs));
   }
 
   function reportSponsorPlayback(payload, status, message = '') {
@@ -1454,6 +1536,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       sponsorVideo.muted = payload.muted;
       sponsorVideo.loop = false;
       sponsorVideo.src = payload.videoUrl;
+      sponsorVideo.onloadedmetadata = () => applySponsorVideoFit(payload);
       sponsorVideo.onloadeddata = () => done(true, '', 'video-ready');
       sponsorVideo.oncanplay = () => done(true, '', 'video-ready');
       sponsorVideo.oncanplaythrough = () => done(true, '', 'video-ready');
@@ -1479,6 +1562,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     let playingNotified = false;
     let readyFallbackTimer = null;
+    let firstFrameFallbackTimer = null;
+    const clearFirstFrameFallback = () => {
+      if (firstFrameFallbackTimer) {
+        clearTimeout(firstFrameFallbackTimer);
+        firstFrameFallbackTimer = null;
+      }
+    };
     const clearReadyFallback = () => {
       if (readyFallbackTimer) {
         clearTimeout(readyFallbackTimer);
@@ -1489,12 +1579,35 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       if (playingNotified) return;
       playingNotified = true;
       clearReadyFallback();
+      clearFirstFrameFallback();
+      applySponsorVideoFit(payload);
       setSponsorMediaStatus('', 'video-ready');
       reportSponsorPlayback(payload, 'first_frame', message);
       hooks.onPlaying?.();
     };
+    const requestFirstFrame = (message = 'Arena media first frame displayed') => {
+      if (playingNotified) return;
+      clearFirstFrameFallback();
+      if (sponsorVideo && typeof sponsorVideo.requestVideoFrameCallback === 'function') {
+        sponsorVideo.requestVideoFrameCallback(() => {
+          if (sponsorState === 'live' && activeSponsorPayload === payload) notifyPlaying(message);
+        });
+        firstFrameFallbackTimer = setTimeout(() => {
+          firstFrameFallbackTimer = null;
+          if (!playingNotified && sponsorVideo && sponsorVideo.readyState >= 2) {
+            notifyPlaying('Arena media frame confirmed by ready-state fallback');
+          }
+        }, 1100);
+        return;
+      }
+      firstFrameFallbackTimer = setTimeout(() => {
+        firstFrameFallbackTimer = null;
+        notifyPlaying(message);
+      }, 180);
+    };
     const failPlayback = (message) => {
       clearReadyFallback();
+      clearFirstFrameFallback();
       setSponsorMediaStatus(message, 'video-error');
       reportSponsorPlayback(payload, 'failed', message);
       hooks.onError?.();
@@ -1511,12 +1624,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           sponsorVideo &&
           sponsorVideo.readyState >= 2
         ) {
-          notifyPlaying('Arena media started after ready-state fallback');
+          requestFirstFrame('Arena media started after ready-state fallback');
         }
       }, delay);
     };
 
     sponsorVideo.muted = payload.muted !== false;
+    applySponsorVideoFit(payload);
     if (sponsorVideo.readyState >= 2) {
       setSponsorMediaStatus('', 'video-ready');
       scheduleReadyFallback(1400);
@@ -1525,10 +1639,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     sponsorVideo.onloadeddata = () => {
+      applySponsorVideoFit(payload);
       setSponsorMediaStatus('', 'video-ready');
       scheduleReadyFallback(1000);
     };
     sponsorVideo.oncanplay = () => {
+      applySponsorVideoFit(payload);
       setSponsorMediaStatus('', 'video-ready');
       scheduleReadyFallback(900);
     };
@@ -1536,7 +1652,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       setSponsorMediaStatus('', 'video-ready');
       scheduleReadyFallback(700);
     };
-    sponsorVideo.onplaying = () => notifyPlaying();
+    sponsorVideo.onloadedmetadata = () => applySponsorVideoFit(payload);
+    sponsorVideo.onplaying = () => requestFirstFrame();
     sponsorVideo.onwaiting = () => setSponsorMediaStatus('Buffering arena media', 'video-loading');
     sponsorVideo.onstalled = () => setSponsorMediaStatus('Buffering arena media', 'video-loading');
     sponsorVideo.onerror = () => {
@@ -1544,6 +1661,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
     sponsorVideo.onended = () => {
       clearReadyFallback();
+      clearFirstFrameFallback();
       if (sponsorState === 'live' && activeSponsorPayload === payload) {
         reportSponsorPlayback(payload, 'video_completed');
         if ((payload.statsMode || 'endcap') === 'endcap' && sponsorTimer) {
@@ -1560,22 +1678,22 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     const playAttempt = sponsorVideo.play();
     if (playAttempt && typeof playAttempt.then === 'function') {
-      playAttempt.then(notifyPlaying).catch(() => {
+      playAttempt.then(() => requestFirstFrame()).catch(() => {
         clearReadyFallback();
         sponsorVideo.muted = true;
         const mutedAttempt = sponsorVideo.play();
         if (mutedAttempt && typeof mutedAttempt.then === 'function') {
           scheduleReadyFallback(1400);
-          mutedAttempt.then(notifyPlaying).catch(() => {
+          mutedAttempt.then(() => requestFirstFrame('Arena media first frame displayed after muted retry')).catch(() => {
             failPlayback('Browser blocked sponsor media playback');
           });
         } else {
-          setTimeout(notifyPlaying, 120);
+          setTimeout(() => requestFirstFrame('Arena media first frame displayed after muted retry'), 120);
         }
       });
     } else {
       scheduleReadyFallback(900);
-      setTimeout(notifyPlaying, 120);
+      setTimeout(() => requestFirstFrame(), 120);
     }
   }
 
@@ -1723,10 +1841,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       resetSponsorTimingClasses();
       setSponsorMediaStatus(sponsorVideo.readyState >= 2 ? '' : 'Buffering arena media', sponsorVideo.readyState >= 2 ? 'video-ready' : 'video-loading');
     }
-    setSponsorText(sponsorIntroPartner, `Presented by ${payload.partner}`, 'Presented by IntoTheBattle');
+    setSponsorText(sponsorIntroPartner, `Featuring ${payload.partner}`, 'Featuring IntoTheBattle');
 
     sponsorScene.style.setProperty('--sponsor-duration', `${payload.durationMs}ms`);
     sponsorScene.classList.toggle('contain', payload.fit === 'contain');
+    sponsorScene.dataset.videoFit = payload.fit || 'auto';
     sponsorScene.classList.add('active');
     sponsorScene.setAttribute('aria-hidden', 'false');
     document.body.classList.add('sponsor-active');
@@ -4120,7 +4239,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         subtitle: overlayParams.get('sponsor_subtitle') || 'Stay locked in. The next fight is loading.',
         durationMs: Number(overlayParams.get('sponsor_duration')) || 15000,
         muted: overlayParams.get('sponsor_muted') !== '0',
-        fit: overlayParams.get('sponsor_fit') || 'cover',
+        fit: overlayParams.get('sponsor_fit') || 'contain',
         statsMode: overlayParams.get('sponsor_stats') || 'endcap',
         _ts: Date.now(),
       });
