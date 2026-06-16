@@ -2,6 +2,10 @@ import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db/db.js';
 import jwt from 'jsonwebtoken';
+import {
+  localStatusForPayPalWebhookEvent,
+  normalizePayPalSubscriptionStatus,
+} from '../services/billingPolicy.js';
 
 const router = express.Router();
 
@@ -109,13 +113,7 @@ function ensureUserRoom(user) {
 }
 
 function mapPayPalStatus(status) {
-  const normalized = String(status || '').toUpperCase();
-  if (normalized === 'ACTIVE') return 'active';
-  if (normalized === 'APPROVED' || normalized === 'APPROVAL_PENDING') return 'pending';
-  if (normalized === 'SUSPENDED') return 'suspended';
-  if (normalized === 'CANCELLED') return 'cancelled';
-  if (normalized === 'EXPIRED') return 'expired';
-  return normalized ? normalized.toLowerCase() : 'unknown';
+  return normalizePayPalSubscriptionStatus(status);
 }
 
 async function getPayPalAccessToken() {
@@ -265,20 +263,8 @@ router.post('/api/paypal/webhook', express.json(), async (req, res) => {
       }
 
       const user = findUserByEmail(email);
-      const startedAt = formatDateForSql(subscription?.create_time);
-      const nextBilling = formatDateForSql(subscription?.billing_info?.next_billing_time || subscription?.billing_info?.next_billing_time);
-      const planType = 'Creator Pro';
-
       if (user) {
-        createOrUpdateSubscription(user.id, subId, planType, 'active', startedAt, nextBilling, null);
-        const existingRoom = db.prepare('SELECT room_id FROM user_rooms WHERE user_id = ? ORDER BY id LIMIT 1').get(user.id);
-        if (!existingRoom) {
-          const roomId = uuidv4().replace(/-/g, '').slice(0, 10);
-          db.prepare(
-            'INSERT INTO user_rooms (user_id, room_id, room_name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
-          ).run(user.id, roomId, `${user.name || 'Creator'}'s room`);
-          db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
-        }
+        activateUserSubscription(user, subscription);
         console.log(`✅ Linked PayPal subscription ${subId} to existing user ${email}`);
         return res.json({ success: true });
       }
@@ -296,10 +282,11 @@ router.post('/api/paypal/webhook', express.json(), async (req, res) => {
     ) {
       const subId = req.body.resource?.id;
       if (subId) {
+        const localStatus = localStatusForPayPalWebhookEvent(eventType, req.body.resource?.status);
         const subscription = db.prepare('SELECT * FROM subscriptions WHERE paypal_subscription_id = ?').get(subId);
         if (subscription) {
-          db.prepare('UPDATE subscriptions SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run('cancelled', subscription.id);
-          console.log(`🚫 Suspended/Cancelled user subscription ${subId}`);
+          db.prepare('UPDATE subscriptions SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(localStatus, subscription.id);
+          console.log(`🚫 Updated user subscription ${subId} to ${localStatus}`);
         }
         db.prepare('UPDATE access_codes SET is_revoked = 1 WHERE paypal_subscription_id = ?').run(subId);
         console.log(`🚫 Revoked code for subscription ${subId}`);

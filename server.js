@@ -25,6 +25,12 @@ import { getEmailDiagnostics, sendTransactionalEmail } from './tiktokbr/email/po
 import { setPlatformSponsorTestHandler } from './tiktokbr/platformSponsorTestBus.js';
 import { processSponsorUpload } from './tiktokbr/sponsorMediaProcessor.js';
 import {
+  buildPlanEntitlements as buildSharedPlanEntitlements,
+  isPaidAccessCode as isSharedPaidAccessCode,
+  isPaidAuthRecord,
+} from './tiktokbr/services/entitlements.js';
+import { getStorageUsage } from './tiktokbr/services/storagePolicy.js';
+import {
   getOrCreateRoom,
   getRoom,
   getAllRooms,
@@ -81,8 +87,6 @@ function getUserRoomId(userId) {
   }
 }
 
-const PAID_ACCESS_CODE_TYPES = new Set(['paid', 'pro', 'creator-pro', 'creator_pro', 'subscriber']);
-
 function getLatestUserSubscription(userId) {
   try {
     return db.prepare('SELECT * FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1').get(userId);
@@ -92,35 +96,16 @@ function getLatestUserSubscription(userId) {
   }
 }
 
-function isActiveSubscription(subscription) {
-  return String(subscription?.status || '').toLowerCase() === 'active';
-}
-
 function isPaidAccessCode(row) {
-  if (!row || row.is_revoked) return false;
-  const codeType = String(row.code_type || '').toLowerCase();
-  const subscriptionStatus = String(row.subscription_status || '').toLowerCase();
-  return !row.is_promo && Boolean(
-    row.paypal_subscription_id ||
-    PAID_ACCESS_CODE_TYPES.has(codeType) ||
-    subscriptionStatus === 'active'
-  );
+  return isSharedPaidAccessCode(row);
 }
 
 function isPaidAuth(auth) {
-  if (!auth) return false;
-  if (auth.type === 'code') return isPaidAccessCode(auth.record);
-  return isActiveSubscription(getLatestUserSubscription(auth.record?.id));
+  return isPaidAuthRecord(auth, { getLatestUserSubscription });
 }
 
 function buildPlanEntitlements(auth) {
-  const paid = isPaidAuth(auth);
-  return {
-    tier: paid ? 'paid' : 'free',
-    planName: paid ? 'Creator Pro' : 'Free',
-    canUseCreatorSponsors: paid,
-    platformSponsorManaged: !paid,
-  };
+  return buildSharedPlanEntitlements(auth, { getLatestUserSubscription });
 }
 
 function logAuthInfo(req, extras = {}) {
@@ -257,7 +242,7 @@ function validateRuntimeConfiguration() {
   }
 }
 
-function checkWritableStorage() {
+function checkWritableStorage(options = {}) {
   const requiredDirs = [
     STORAGE_ROOT,
     path.join(STORAGE_ROOT, 'backgrounds'),
@@ -286,6 +271,9 @@ function checkWritableStorage() {
   } catch (err) {
     result.ok = false;
     result.error = err?.message || String(err);
+  }
+  if (options.includeUsage) {
+    result.usage = getStorageUsage(STORAGE_ROOT);
   }
   return result;
 }
@@ -2451,7 +2439,7 @@ app.get('/metrics', requireMetricsAccess, async (_req, res) => {
 });
 
 app.get('/api/runtime/diagnostics', requireDiagnosticsAccess, (req, res) => {
-  const storage = checkWritableStorage();
+  const storage = checkWritableStorage({ includeUsage: true });
   const dbHealth = getDbHealthSnapshot();
   const ok = storage.ok && (dbHealth.mode === 'stub' || dbHealth.initialized);
 

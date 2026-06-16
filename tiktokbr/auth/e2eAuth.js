@@ -20,6 +20,7 @@ export function getE2EAuthRecord(token) {
       trial_started: '2026-01-01 00:00:00',
       trial_days: 36500,
       subscription_status: 'active',
+      code_type: 'paid',
     },
   };
 }

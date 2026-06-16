@@ -69,7 +69,30 @@ sequenceDiagram
 - Storage: persistent disk paths for background, audio, creator sponsor media, and platform sponsor media.
 - Observability: `/healthz`, protected metrics, protected diagnostics, CI smoke and visual tests.
 
-## Fixed In This Pass
+## Business Logic Backbone
+
+```mermaid
+flowchart TD
+  Session["Session Token"] --> AuthRecord["Auth Record"]
+  AuthRecord --> Entitlements["Entitlement Policy"]
+  Entitlements --> Free["Free: platform-managed brand moments"]
+  Entitlements --> Paid["Creator Pro: creator sponsor controls"]
+
+  PayPal["PayPal Return / Webhook"] --> BillingPolicy["Billing Status Policy"]
+  BillingPolicy --> Subscription["subscriptions table"]
+  Subscription --> Entitlements
+
+  Uploads["Backgrounds / Audio / Sponsor Media"] --> Disk["Persistent Disk"]
+  Disk --> Diagnostics["Runtime Storage Diagnostics"]
+```
+
+- Entitlements now live in one shared service so dashboard, overlay, and sponsor controls agree on free vs paid.
+- A plain active trial/access code no longer counts as paid unless it has a PayPal subscription or an explicit paid code type/status.
+- PayPal status normalization now preserves `pending`, `active`, `suspended`, `cancelled`, and `expired`.
+- Runtime diagnostics can report persistent disk usage by top-level media folder.
+- Logic smoke tests now cover free/paid rules and PayPal lifecycle normalization.
+
+## Recent Stabilization Passes
 
 - Removed broad `express.static(__dirname)` root serving so source files and package metadata are no longer public assets.
 - Added explicit public asset routes for logos, robots, sitemap, and `/js/*`.
@@ -90,7 +113,7 @@ sequenceDiagram
 5. Finish sponsor platform reporting with exportable campaign summaries: impressions, first frames, completions, failures, and completion rate.
 6. Add media lifecycle states to disk cleanup: uploaded, normalized, active, archived, deleted.
 7. Add a full authenticated signup, checkout, email verification, and dashboard journey test with mocked Postmark and mocked PayPal.
-8. Add Render disk usage diagnostics and admin warnings before uploads can exhaust storage.
+8. Add admin-facing disk usage warnings before uploads can exhaust storage.
 9. Create a canonical design system file for shared colors, buttons, forms, cards, and page layout.
 10. Plan a Phaser or modular renderer migration only after the current overlay is stable under real traffic.
 
@@ -102,6 +125,7 @@ The app should not be called complete until these gates pass on every release:
 - `node --check server.js`
 - `npm run audit:stability`
 - `npm run validate:schemas`
+- `npm run test:logic`
 - `npm run test:http`
 - `npm run test:socket`
 - `npm run test:e2e`
