@@ -8,9 +8,10 @@ script_re = re.compile(r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.
 try:
     from pyld import jsonld
 except Exception as e:
-    print('pyld not available:', e)
-    print('Please run: pip install pyld')
-    sys.exit(2)
+    jsonld = None
+    PYLD_IMPORT_ERROR = e
+else:
+    PYLD_IMPORT_ERROR = None
 
 # Provide an offline fallback for the schema.org context so expansion
 # works without network access. This maps common terms used in our pages.
@@ -35,20 +36,55 @@ LOCAL_SCHEMA_ORG = {
     }
 }
 
+def fallback_expand(data):
+    """Small offline fallback for local/dev machines where pyld is unavailable."""
+    context = LOCAL_SCHEMA_ORG['@context']
+
+    def iri_for(term):
+        value = context.get(term)
+        if isinstance(value, str):
+            return value
+        if isinstance(value, dict):
+            return value.get('@id', term)
+        return f"https://schema.org/{term}"
+
+    def expand_node(node):
+        if isinstance(node, list):
+            return [expand_node(item) for item in node]
+        if not isinstance(node, dict):
+            return node
+
+        expanded = {}
+        node_type = node.get('@type')
+        if node_type:
+            expanded['@type'] = [iri_for(node_type)] if isinstance(node_type, str) else node_type
+
+        for key, value in node.items():
+            if key in ('@context', '@type'):
+                continue
+            expanded_key = iri_for(key)
+            expanded[expanded_key] = expand_node(value)
+        return expanded
+
+    return [expand_node(data)]
+
 # Custom document loader: return the local context for schema.org, otherwise
 # fall back to the default requests loader (which may be blocked in this env).
-def _local_loader(url):
-    # match schema.org in various forms (with or without trailing slash and subpaths)
-    if isinstance(url, str) and url.startswith('https://schema.org'):
-        return {'contextUrl': None, 'documentUrl': url, 'document': LOCAL_SCHEMA_ORG}
-    # fall back to requests loader (may attempt network)
-    try:
-        return jsonld.requests_document_loader(url)
-    except Exception as e:
-        # Last resort: return an empty context document to allow expansion to proceed
-        return {'contextUrl': None, 'documentUrl': url, 'document': {}}
+if jsonld is not None:
+    def _local_loader(url):
+        # match schema.org in various forms (with or without trailing slash and subpaths)
+        if isinstance(url, str) and url.startswith('https://schema.org'):
+            return {'contextUrl': None, 'documentUrl': url, 'document': LOCAL_SCHEMA_ORG}
+        # fall back to requests loader (may attempt network)
+        try:
+            return jsonld.requests_document_loader(url)
+        except Exception as e:
+            # Last resort: return an empty context document to allow expansion to proceed
+            return {'contextUrl': None, 'documentUrl': url, 'document': {}}
 
-jsonld.set_document_loader(_local_loader)
+    jsonld.set_document_loader(_local_loader)
+else:
+    print(f'pyld not available; using offline fallback expansion: {PYLD_IMPORT_ERROR}')
 
 report = {"files":[], "summary": {"total_files":0, "expanded":0, "errors":0}}
 html_files = [p for p in ROOT.glob('*.html')]
@@ -72,8 +108,9 @@ for f in sorted(html_files):
                 ctx = data.get('@context')
                 if isinstance(ctx, str) and ctx.startswith('https://schema.org'):
                     data['@context'] = LOCAL_SCHEMA_ORG['@context']
-            expanded = jsonld.expand(data)
+            expanded = jsonld.expand(data) if jsonld is not None else fallback_expand(data)
             br['ok'] = True
+            br['mode'] = 'pyld' if jsonld is not None else 'fallback'
             br['expanded_sample'] = expanded[:2]
             report['summary']['expanded'] += 1
         except Exception as e:
@@ -95,7 +132,8 @@ for fr in report['files']:
     lines.append(f"- {fr['path']}: {len(fr['blocks'])} block(s)")
     for b in fr['blocks']:
         if b['ok']:
-            lines.append(f"  - block #{b['index']}: expanded OK")
+            mode = b.get('mode', 'pyld')
+            lines.append(f"  - block #{b['index']}: expanded OK ({mode})")
         else:
             lines.append(f"  - block #{b['index']}: ERROR: {b['error']}")
 

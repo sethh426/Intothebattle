@@ -10,79 +10,7 @@
     },
     {
       "path": "home.html",
-      "blocks": [
-        {
-          "index": 1,
-          "ok": true,
-          "error": null,
-          "expanded_sample": [
-            {
-              "@type": [
-                "https://schema.org/SoftwareApplication"
-              ],
-              "https://schema.org/applicationCategory": [
-                {
-                  "@value": "MultimediaApplication"
-                }
-              ],
-              "https://schema.org/creator": [
-                {
-                  "@type": [
-                    "https://schema.org/Organization"
-                  ],
-                  "https://schema.org/name": [
-                    {
-                      "@value": "IntoTheBattle"
-                    }
-                  ]
-                }
-              ],
-              "https://schema.org/description": [
-                {
-                  "@value": "A TikTok LIVE interactive battle overlay platform for creators, streamers, and live audience engagement."
-                }
-              ],
-              "https://schema.org/name": [
-                {
-                  "@value": "IntoTheBattle"
-                }
-              ],
-              "https://schema.org/offers": [
-                {
-                  "@type": [
-                    "https://schema.org/Offer"
-                  ],
-                  "https://schema.org/description": [
-                    {
-                      "@value": "Free trial available"
-                    }
-                  ],
-                  "https://schema.org/price": [
-                    {
-                      "@value": "0"
-                    }
-                  ],
-                  "https://schema.org/priceCurrency": [
-                    {
-                      "@value": "USD"
-                    }
-                  ]
-                }
-              ],
-              "https://schema.org/operatingSystem": [
-                {
-                  "@value": "Web"
-                }
-              ],
-              "https://schema.org/url": [
-                {
-                  "@value": "https://intothebattle.com/"
-                }
-              ]
-            }
-          ]
-        }
-      ]
+      "blocks": []
     },
     {
       "path": "login.html",
@@ -91,26 +19,50 @@
           "index": 1,
           "ok": true,
           "error": null,
+          "mode": "fallback",
           "expanded_sample": [
             {
               "@type": [
                 "https://schema.org/WebPage"
               ],
-              "https://schema.org/description": [
-                {
-                  "@value": "Log in to your IntoTheBattle account or use a legacy access code to enter your overlay room."
-                }
+              "https://schema.org/name": "IntoTheBattle Login",
+              "https://schema.org/url": "https://intothebattle.com/login",
+              "https://schema.org/description": "Log into IntoTheBattle to access your TikTok LIVE battle overlay, creator dashboard, and stream management tools.",
+              "https://schema.org/isPartOf": {
+                "@type": [
+                  "https://schema.org/WebSite"
+                ],
+                "https://schema.org/name": "IntoTheBattle",
+                "https://schema.org/url": "https://intothebattle.com/"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "path": "overlay-legacy.html",
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "mode": "fallback",
+          "expanded_sample": [
+            {
+              "@type": [
+                "https://schema.org/WebPage"
               ],
-              "https://schema.org/name": [
-                {
-                  "@value": "Login - IntoTheBattle"
-                }
-              ],
-              "https://schema.org/url": [
-                {
-                  "@value": "https://intothebattle.com/login"
-                }
-              ]
+              "https://schema.org/name": "IntoTheBattle Battle Royale Overlay",
+              "https://schema.org/url": "https://intothebattle.com/overlay",
+              "https://schema.org/description": "Interactive TikTok LIVE battle overlay with real-time combat effects and viewer engagement features.",
+              "https://schema.org/isPartOf": {
+                "@type": [
+                  "https://schema.org/WebSite"
+                ],
+                "https://schema.org/name": "IntoTheBattle",
+                "https://schema.org/url": "https://intothebattle.com/"
+              }
             }
           ]
         }
@@ -122,7 +74,31 @@
     },
     {
       "path": "overlay.html",
-      "blocks": []
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "mode": "fallback",
+          "expanded_sample": [
+            {
+              "@type": [
+                "https://schema.org/WebPage"
+              ],
+              "https://schema.org/name": "IntoTheBattle Battle Royale Overlay",
+              "https://schema.org/url": "https://intothebattle.com/overlay",
+              "https://schema.org/description": "Interactive TikTok LIVE battle overlay with real-time combat effects and viewer engagement features.",
+              "https://schema.org/isPartOf": {
+                "@type": [
+                  "https://schema.org/WebSite"
+                ],
+                "https://schema.org/name": "IntoTheBattle",
+                "https://schema.org/url": "https://intothebattle.com/"
+              }
+            }
+          ]
+        }
+      ]
     },
     {
       "path": "paywall.html",
@@ -139,26 +115,22 @@
           "index": 1,
           "ok": true,
           "error": null,
+          "mode": "fallback",
           "expanded_sample": [
             {
               "@type": [
                 "https://schema.org/WebPage"
               ],
-              "https://schema.org/description": [
-                {
-                  "@value": "Register for IntoTheBattle and control your TikTok LIVE battle room, overlay effects, and subscription access."
-                }
-              ],
-              "https://schema.org/name": [
-                {
-                  "@value": "Register - IntoTheBattle"
-                }
-              ],
-              "https://schema.org/url": [
-                {
-                  "@value": "https://intothebattle.com/register"
-                }
-              ]
+              "https://schema.org/name": "IntoTheBattle Email Registration",
+              "https://schema.org/url": "https://intothebattle.com/register",
+              "https://schema.org/description": "Create your IntoTheBattle account with email and continue setting up your TikTok LIVE battle overlay.",
+              "https://schema.org/isPartOf": {
+                "@type": [
+                  "https://schema.org/WebSite"
+                ],
+                "https://schema.org/name": "IntoTheBattle",
+                "https://schema.org/url": "https://intothebattle.com/"
+              }
             }
           ]
         }
@@ -179,87 +151,58 @@
           "index": 1,
           "ok": true,
           "error": null,
+          "mode": "fallback",
           "expanded_sample": [
             {
               "@type": [
-                "https://schema.org/FAQPage"
+                "https://schema.org/WebPage"
               ],
-              "https://schema.org/mainEntity": [
-                {
-                  "@type": [
-                    "https://schema.org/Question"
-                  ],
-                  "https://schema.org/acceptedAnswer": [
-                    {
-                      "@type": [
-                        "https://schema.org/Answer"
-                      ],
-                      "https://schema.org/text": [
-                        {
-                          "@value": "A 14-day trial including overlay access, dashboard controls, and room configuration."
-                        }
-                      ]
-                    }
-                  ],
-                  "https://schema.org/name": [
-                    {
-                      "@value": "What does the free trial include?"
-                    }
-                  ]
-                },
-                {
-                  "@type": [
-                    "https://schema.org/Question"
-                  ],
-                  "https://schema.org/acceptedAnswer": [
-                    {
-                      "@type": [
-                        "https://schema.org/Answer"
-                      ],
-                      "https://schema.org/text": [
-                        {
-                          "@value": "No — the trial does not require a credit card to start."
-                        }
-                      ]
-                    }
-                  ],
-                  "https://schema.org/name": [
-                    {
-                      "@value": "Is a credit card required?"
-                    }
-                  ]
-                },
-                {
-                  "@type": [
-                    "https://schema.org/Question"
-                  ],
-                  "https://schema.org/acceptedAnswer": [
-                    {
-                      "@type": [
-                        "https://schema.org/Answer"
-                      ],
-                      "https://schema.org/text": [
-                        {
-                          "@value": "Use the Google button to sign up instantly, or click the email signup link to register with your email."
-                        }
-                      ]
-                    }
-                  ],
-                  "https://schema.org/name": [
-                    {
-                      "@value": "How do I sign up?"
-                    }
-                  ]
-                }
-              ]
+              "https://schema.org/name": "IntoTheBattle Free Account Signup",
+              "https://schema.org/url": "https://intothebattle.com/signup",
+              "https://schema.org/description": "Create your free IntoTheBattle account for the interactive TikTok LIVE battle overlay platform.",
+              "https://schema.org/isPartOf": {
+                "@type": [
+                  "https://schema.org/WebSite"
+                ],
+                "https://schema.org/name": "IntoTheBattle",
+                "https://schema.org/url": "https://intothebattle.com/"
+              }
             }
           ]
         }
       ]
     },
     {
-      "path": "stats.html",
+      "path": "sponsors.html",
       "blocks": []
+    },
+    {
+      "path": "stats.html",
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "mode": "fallback",
+          "expanded_sample": [
+            {
+              "@type": [
+                "https://schema.org/WebPage"
+              ],
+              "https://schema.org/name": "IntoTheBattle Battle Leaderboard",
+              "https://schema.org/url": "https://intothebattle.com/stats",
+              "https://schema.org/description": "Real-time battle leaderboards and live statistics from TikTok LIVE streams on IntoTheBattle.",
+              "https://schema.org/isPartOf": {
+                "@type": [
+                  "https://schema.org/WebSite"
+                ],
+                "https://schema.org/name": "IntoTheBattle",
+                "https://schema.org/url": "https://intothebattle.com/"
+              }
+            }
+          ]
+        }
+      ]
     },
     {
       "path": "theme-samples.html",
@@ -271,8 +214,8 @@
     }
   ],
   "summary": {
-    "total_files": 15,
-    "expanded": 4,
+    "total_files": 17,
+    "expanded": 6,
     "errors": 0
   }
 }

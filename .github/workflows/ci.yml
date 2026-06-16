@@ -43,6 +43,9 @@ jobs:
       - name: Stability audit and syntax check
         run: npm run audit:stability
 
+      - name: Business logic smoke tests
+        run: npm run test:logic
+
       - name: Start server and check /healthz
         run: |
           PORT=3000 nohup node server.js >server.log 2>&1 &
