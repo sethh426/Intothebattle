@@ -16,6 +16,9 @@
     "test:e2e:install": "playwright install chromium",
     "test:postmark": "node scripts/test_postmark.js",
     "test:all": "npm run validate:schemas && npm run audit:stability && npm run test:logic && npm run test:http && npm run test:socket && npm run test:e2e",
+    "launch:check": "node scripts/launch_readiness_check.js --strict",
+    "launch:check:local": "node scripts/launch_readiness_check.js",
+    "launch:check:remote": "node scripts/launch_readiness_check.js --strict --url https://intothebattle.com",
     "validate:schema": "python tools/validate_schema.py",
     "validate:schema-expand": "python tools/validate_schema_expand.py",
     "validate:schemas": "npm run validate:schema && npm run validate:schema-expand"

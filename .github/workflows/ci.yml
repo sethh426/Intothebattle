@@ -18,6 +18,18 @@ jobs:
       SKIP_DB: "true"
       OVERLAY_TOKEN_SECRET: test_overlay_secret_for_ci_only
       DIAGNOSTICS_TOKEN: test_diagnostics_secret_for_ci_only
+      APP_BASE_URL: https://intothebattle.test
+      POSTMARK_API_TOKEN: postmark_ci_token
+      POSTMARK_MESSAGE_STREAM: outbound
+      EMAIL_FROM: "IntoTheBattle <no-reply@intothebattle.test>"
+      PAYPAL_CLIENT_ID: paypal_ci_client
+      PAYPAL_CLIENT_SECRET: paypal_ci_secret
+      PAYPAL_MODE: live
+      PAYPAL_PLAN_ID: P-CIPLAN
+      PAYPAL_WEBHOOK_ID: WH-CI
+      GOOGLE_CLIENT_ID: google_ci_client
+      GOOGLE_CLIENT_SECRET: google_ci_secret
+      GOOGLE_OAUTH_REDIRECT_URI: https://intothebattle.test/auth/google/callback
 
     steps:
       - name: Checkout
@@ -45,6 +57,9 @@ jobs:
 
       - name: Business logic smoke tests
         run: npm run test:logic
+
+      - name: Launch readiness script sanity check
+        run: npm run launch:check:local
 
       - name: Start server and check /healthz
         run: |

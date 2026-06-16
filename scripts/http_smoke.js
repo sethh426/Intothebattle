@@ -27,7 +27,19 @@ const server = spawn(process.execPath, ['server.js'], {
     DEV_TEST_MODE: 'false',
     DISK_PATH: diskPath,
     METRICS_TOKEN: metricsToken,
-    APP_BASE_URL: baseUrl,
+    DIAGNOSTICS_TOKEN: metricsToken,
+    APP_BASE_URL: 'https://intothebattle.test',
+    POSTMARK_API_TOKEN: 'postmark-smoke-token',
+    POSTMARK_MESSAGE_STREAM: 'outbound',
+    EMAIL_FROM: 'IntoTheBattle <no-reply@intothebattle.test>',
+    PAYPAL_CLIENT_ID: 'paypal-smoke-client',
+    PAYPAL_CLIENT_SECRET: 'paypal-smoke-secret',
+    PAYPAL_MODE: 'live',
+    PAYPAL_PLAN_ID: 'P-SMOKEPLAN',
+    PAYPAL_WEBHOOK_ID: 'WH-SMOKE',
+    GOOGLE_CLIENT_ID: 'google-smoke-client',
+    GOOGLE_CLIENT_SECRET: 'google-smoke-secret',
+    GOOGLE_OAUTH_REDIRECT_URI: 'https://intothebattle.test/auth/google/callback',
     LOG_LEVEL: 'error',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
@@ -110,6 +122,11 @@ try {
   assert(diagnosticsBody.ok === true, 'diagnostics should report ok');
   assert(diagnosticsBody.storage?.ok === true, 'diagnostics storage check should report ok');
   assert(diagnosticsBody.database?.mode === 'stub', 'diagnostics should report stub database in smoke mode');
+  await expectStatus('/api/runtime/launch-readiness', 401);
+  const readiness = await expectStatus(`/api/runtime/launch-readiness?token=${encodeURIComponent(metricsToken)}`, 200);
+  const readinessBody = await readiness.json();
+  assert(readinessBody.ok === true, 'launch readiness should have no hard failures in smoke mode');
+  assert(readinessBody.checks?.some(check => check.id === 'storage-writable' && check.status === 'pass'), 'launch readiness should include storage check');
 
   await expectStatus(`/overlay?room_id=${roomId}`, 401);
   await expectStatus(`/overlay?room_id=${roomId}&overlay_token=bad`, 401);

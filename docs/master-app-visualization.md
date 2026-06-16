@@ -67,7 +67,7 @@ sequenceDiagram
 - Billing: PayPal config, subscription activation, webhook, success/cancel/error return pages.
 - Email: Postmark verification, resend, password reset, runtime email diagnostic endpoint.
 - Storage: persistent disk paths for background, audio, creator sponsor media, and platform sponsor media.
-- Observability: `/healthz`, protected metrics, protected diagnostics, CI smoke and visual tests.
+- Observability: `/healthz`, protected metrics, protected diagnostics, launch readiness checks, CI smoke and visual tests.
 
 ## Business Logic Backbone
 
@@ -90,6 +90,7 @@ flowchart TD
 - A plain active trial/access code no longer counts as paid unless it has a PayPal subscription or an explicit paid code type/status.
 - PayPal status normalization now preserves `pending`, `active`, `suspended`, `cancelled`, and `expired`.
 - Runtime diagnostics can report persistent disk usage by top-level media folder.
+- Launch readiness checks now summarize production blockers across runtime config, database, email, payments, OAuth, storage, overlay signing, and media tooling.
 - Logic smoke tests now cover free/paid rules and PayPal lifecycle normalization.
 
 ## Recent Stabilization Passes
@@ -113,7 +114,7 @@ flowchart TD
 5. Finish sponsor platform reporting with exportable campaign summaries: impressions, first frames, completions, failures, and completion rate.
 6. Add media lifecycle states to disk cleanup: uploaded, normalized, active, archived, deleted.
 7. Add a full authenticated signup, checkout, email verification, and dashboard journey test with mocked Postmark and mocked PayPal.
-8. Add admin-facing disk usage warnings before uploads can exhaust storage.
+8. Add automated archived/deleted media cleanup rules once sponsor campaigns begin rotating real inventory.
 9. Create a canonical design system file for shared colors, buttons, forms, cards, and page layout.
 10. Plan a Phaser or modular renderer migration only after the current overlay is stable under real traffic.
 
@@ -129,7 +130,8 @@ The app should not be called complete until these gates pass on every release:
 - `npm run test:http`
 - `npm run test:socket`
 - `npm run test:e2e`
+- `npm run launch:check` in the target environment
 - Render deploy reaches live
 - Production `/healthz` returns `200 ok`
-- Production diagnostics show storage writable, database initialized, email enabled, and room-scoped overlays enabled
+- Production launch readiness reports no hard failures
 - Manual live smoke confirms Google login, email verification, PayPal subscription activation, dashboard upload flows, overlay connection, and sponsor video playback

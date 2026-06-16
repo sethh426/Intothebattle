@@ -23,13 +23,14 @@ import requireDashboardAccess from './tiktokbr/middleware/requireDashboardAccess
 import { getE2EAuthRecord } from './tiktokbr/auth/e2eAuth.js';
 import { getEmailDiagnostics, sendTransactionalEmail } from './tiktokbr/email/postmarkMailer.js';
 import { setPlatformSponsorTestHandler } from './tiktokbr/platformSponsorTestBus.js';
-import { processSponsorUpload } from './tiktokbr/sponsorMediaProcessor.js';
+import { getSponsorMediaToolStatus, processSponsorUpload } from './tiktokbr/sponsorMediaProcessor.js';
 import {
   buildPlanEntitlements as buildSharedPlanEntitlements,
   isPaidAccessCode as isSharedPaidAccessCode,
   isPaidAuthRecord,
 } from './tiktokbr/services/entitlements.js';
-import { getStorageUsage } from './tiktokbr/services/storagePolicy.js';
+import { buildLaunchReadinessReport } from './tiktokbr/services/launchReadiness.js';
+import { buildUploadDecision, getStorageUsage, uploadLimitBytes } from './tiktokbr/services/storagePolicy.js';
 import {
   getOrCreateRoom,
   getRoom,
@@ -1424,6 +1425,7 @@ function loadSponsorConfig() {
 
 const ALLOWED_BACKGROUND_EXTS  = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
 const ALLOWED_BACKGROUND_MIMES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+const BACKGROUND_UPLOAD_MAX_BYTES = uploadLimitBytes('BACKGROUND_UPLOAD_MAX_MB', 10 * 1024 * 1024);
 
 const upload = multer({
   storage: multer.diskStorage({
@@ -1439,7 +1441,7 @@ const upload = multer({
       cb(null, `background-${Date.now()}-${Math.random().toString(36).slice(2)}${safeExt}`);
     },
   }),
-  limits:     { fileSize: 10 * 1024 * 1024 },
+  limits:     { fileSize: BACKGROUND_UPLOAD_MAX_BYTES },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname || '').toLowerCase();
     const ok  = ALLOWED_BACKGROUND_EXTS.has(ext) && ALLOWED_BACKGROUND_MIMES.has(file.mimetype);
@@ -1454,6 +1456,7 @@ const ALLOWED_AUDIO_MIMES = new Set([
   'audio/ogg', 'audio/webm', 'audio/aac',
   'audio/flac', 'audio/x-flac', 'video/webm',
 ]);
+const AUDIO_UPLOAD_MAX_BYTES = uploadLimitBytes('AUDIO_UPLOAD_MAX_MB', 20 * 1024 * 1024);
 
 const audioUpload = multer({
   storage: multer.diskStorage({
@@ -1469,7 +1472,7 @@ const audioUpload = multer({
       cb(null, `audio-${Date.now()}-${Math.random().toString(36).slice(2)}${safeExt}`);
     },
   }),
-  limits:     { fileSize: 20 * 1024 * 1024 },
+  limits:     { fileSize: AUDIO_UPLOAD_MAX_BYTES },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname || '').toLowerCase();
     const ok  = ALLOWED_AUDIO_EXTS.has(ext) && ALLOWED_AUDIO_MIMES.has(file.mimetype);
@@ -1485,6 +1488,7 @@ const ALLOWED_SPONSOR_MIMES = new Set([
   'video/x-m4v',
   'application/octet-stream',
 ]);
+const SPONSOR_UPLOAD_MAX_BYTES = uploadLimitBytes('SPONSOR_UPLOAD_MAX_MB', 100 * 1024 * 1024);
 
 const SPONSOR_CONTENT_TYPES = new Map([
   ['.mp4', 'video/mp4'],
@@ -1507,13 +1511,71 @@ const sponsorUpload = multer({
       cb(null, `sponsor-${Date.now()}-${Math.random().toString(36).slice(2)}${safeExt}`);
     },
   }),
-  limits: { fileSize: 100 * 1024 * 1024 },
+  limits: { fileSize: SPONSOR_UPLOAD_MAX_BYTES },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname || '').toLowerCase();
     const ok = ALLOWED_SPONSOR_EXTS.has(ext) && ALLOWED_SPONSOR_MIMES.has(file.mimetype);
     ok ? cb(null, true) : cb(new Error('Invalid sponsor media type. Upload MP4, WEBM, M4V, or MOV video.'));
   },
 });
+
+function uploadErrorMessage(err, label = 'Upload') {
+  if (err?.code === 'LIMIT_FILE_SIZE') return `${label} is too large. Reduce the file size and try again.`;
+  if (/no space left|ENOSPC/i.test(err?.message || '')) return 'Server storage is full. Delete old media or increase the Render disk before uploading.';
+  return err?.message || `${label} failed.`;
+}
+
+function contentLengthBytes(req) {
+  const value = Number(req.get('content-length'));
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function storageRootForUpload(req, category) {
+  if (category === 'background' && req?.room) return getRoomPaths(req.room.roomId).backgroundDir;
+  if (category === 'audio' && req?.room) return getRoomPaths(req.room.roomId).audioDir;
+  if (category === 'sponsor' && req?.room) return getRoomPaths(req.room.roomId).sponsorDir;
+  return STORAGE_ROOT;
+}
+
+function uploadCapacityErrorPayload(decision) {
+  return {
+    success: false,
+    error: decision.message || 'Storage capacity is too low for this upload.',
+    reason: decision.reason || 'storage_capacity',
+    storage: {
+      incomingBytes: decision.incomingBytes,
+      humanIncoming: decision.humanIncoming,
+      used: decision.usage?.humanBytes || null,
+      available: decision.usage?.capacity?.humanAvailable || null,
+      configuredLimit: decision.usage?.humanConfiguredLimit || null,
+    },
+  };
+}
+
+function rejectUploadRequestIfStorageLow(req, res, category) {
+  const incomingBytes = contentLengthBytes(req);
+  if (!incomingBytes) return false;
+  const decision = buildUploadDecision(storageRootForUpload(req, category), incomingBytes, { category });
+  if (decision.ok) return false;
+  res.status(507).json(uploadCapacityErrorPayload(decision));
+  return true;
+}
+
+function cleanupUploadedFile(file) {
+  try {
+    if (file?.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+  } catch (_err) {}
+}
+
+function rejectUploadedFileIfStorageLow(req, res, file, category) {
+  const incomingBytes = Number(file?.size || 0);
+  if (!incomingBytes) return false;
+  const decision = buildUploadDecision(storageRootForUpload(req, category), incomingBytes, { category, alreadyWritten: true });
+  if (decision.ok) return false;
+  cleanupUploadedFile(file);
+  res.status(507).json(uploadCapacityErrorPayload(decision));
+  return true;
+}
 
 function randomColor() {
   const palette = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF6BB5','#C77DFF','#00C9A7','#FF9F43'];
@@ -2473,6 +2535,18 @@ app.get('/api/runtime/diagnostics', requireDiagnosticsAccess, (req, res) => {
   });
 });
 
+app.get('/api/runtime/launch-readiness', requireDiagnosticsAccess, (_req, res) => {
+  const storage = checkWritableStorage({ includeUsage: true });
+  const report = buildLaunchReadinessReport({
+    env: process.env,
+    storage,
+    database: getDbHealthSnapshot(),
+    email: getEmailDiagnostics(),
+    sponsorTools: getSponsorMediaToolStatus(),
+  });
+  res.status(report.ok ? 200 : 503).json(report);
+});
+
 app.post('/api/runtime/email-test', requireDiagnosticsAccess, async (req, res) => {
   const to = String(req.body?.to || process.env.POSTMARK_TEST_EMAIL || '').trim();
   if (!to) {
@@ -2958,10 +3032,12 @@ app.post('/api/players/clear', requireRoom, (req, res) => {
 
 app.post('/api/background/upload', requireRoom, (req, res) => {
   res.type('application/json');
+  if (rejectUploadRequestIfStorageLow(req, res, 'background')) return;
   upload.single('background')(req, res, (err) => {
     try {
-      if (err)       return res.status(400).json({ success: false, error: err.message || 'Background upload failed' });
+      if (err)       return res.status(err?.code === 'LIMIT_FILE_SIZE' ? 413 : 400).json({ success: false, error: uploadErrorMessage(err, 'Background image') });
       if (!req.file) return res.status(400).json({ success: false, error: 'No background image was uploaded.' });
+      if (rejectUploadedFileIfStorageLow(req, res, req.file, 'background')) return;
       deleteRoomBackgroundFile(req.room);
       saveRoomBackgroundMeta(req.room, req.file);
       const background = buildBackgroundPayload(req.room, { v: Date.now() });
@@ -3021,9 +3097,11 @@ app.get('/api/audio', requireRoom, (req, res) => {
 
 app.post('/api/audio/upload', requireRoom, (req, res) => {
   res.type('application/json');
+  if (rejectUploadRequestIfStorageLow(req, res, 'audio')) return;
   audioUpload.single('audio')(req, res, (err) => {
-    if (err)       return res.status(400).json({ success: false, error: err.message });
+    if (err)       return res.status(err?.code === 'LIMIT_FILE_SIZE' ? 413 : 400).json({ success: false, error: uploadErrorMessage(err, 'Audio file') });
     if (!req.file) return res.status(400).json({ success: false, error: 'No audio file uploaded.' });
+    if (rejectUploadedFileIfStorageLow(req, res, req.file, 'audio')) return;
     const entry = {
       filename:     req.file.filename,
       originalName: req.file.originalname,
@@ -3085,15 +3163,18 @@ app.get('/api/sponsors', requireRoom, requireCreatorSponsorAccess, (req, res) =>
 
 app.post('/api/sponsor/upload', requireRoom, requireCreatorSponsorAccess, (req, res) => {
   res.type('application/json');
+  if (rejectUploadRequestIfStorageLow(req, res, 'sponsor')) return;
   sponsorUpload.single('sponsor')(req, res, async (err) => {
-    if (err) return res.status(400).json({ success: false, error: err.message });
+    if (err) return res.status(err?.code === 'LIMIT_FILE_SIZE' ? 413 : 400).json({ success: false, error: uploadErrorMessage(err, 'Sponsor video') });
     if (!req.file) return res.status(400).json({ success: false, error: 'No sponsor video uploaded.' });
+    if (rejectUploadedFileIfStorageLow(req, res, req.file, 'sponsor')) return;
 
     let mediaMeta;
     try {
       loadRoomSponsorConfig(req.room);
       const { sponsorDir } = getRoomPaths(req.room.roomId);
       mediaMeta = await processSponsorUpload({ file: req.file, body: req.body || {}, targetDir: sponsorDir });
+      if (rejectUploadedFileIfStorageLow(req, res, { path: mediaMeta.filepath, size: mediaMeta.fileSize }, 'sponsor')) return;
       const entry = {
         filename: mediaMeta.filename,
         originalName: req.file.originalname,

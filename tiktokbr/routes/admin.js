@@ -9,6 +9,7 @@ import multer from 'multer';
 import db from '../db/db.js';
 import { triggerPlatformSponsorTest } from '../platformSponsorTestBus.js';
 import { processSponsorUpload, getSponsorMediaToolStatus } from '../sponsorMediaProcessor.js';
+import { buildUploadDecision, storageRiskSummary, uploadLimitBytes } from '../services/storagePolicy.js';
 
 const router = express.Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -22,6 +23,7 @@ const MAX_BCRYPT_ROUNDS = Number(process.env.MAX_BCRYPT_ROUNDS || 14);
 const SPONSOR_MEDIA_EXTS = new Set(['.mp4', '.webm', '.m4v', '.mov']);
 const SPONSOR_MEDIA_MIMES = new Set(['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v']);
 const PLATFORM_SPONSOR_DIR = path.join(process.env.DISK_PATH || path.resolve(__dirname, '..', '..'), 'platform-sponsors');
+const PLATFORM_SPONSOR_UPLOAD_MAX_BYTES = uploadLimitBytes('PLATFORM_SPONSOR_UPLOAD_MAX_MB', 100 * 1024 * 1024);
 
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -36,6 +38,31 @@ function deleteSponsorUploadFile(filepath) {
   try {
     if (filepath && isSafePath(PLATFORM_SPONSOR_DIR, filepath) && fs.existsSync(filepath)) fs.unlinkSync(filepath);
   } catch (_err) {}
+}
+
+function contentLengthBytes(req) {
+  const value = Number(req.get('content-length'));
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function uploadCapacityRedirect(req) {
+  try {
+    ensureDir(PLATFORM_SPONSOR_DIR);
+  } catch (err) {
+    return `/admin/sponsors?error=${encodeURIComponent(err?.message || 'Platform sponsor storage is not writable.')}`;
+  }
+  const incomingBytes = contentLengthBytes(req);
+  if (!incomingBytes) return '';
+  const decision = buildUploadDecision(PLATFORM_SPONSOR_DIR, incomingBytes, { category: 'platform-sponsor' });
+  if (decision.ok) return '';
+  return `/admin/sponsors?error=${encodeURIComponent(decision.message || 'Storage capacity is too low for this upload.')}`;
+}
+
+function uploadedFileCapacityRedirect(filepath, size) {
+  const decision = buildUploadDecision(PLATFORM_SPONSOR_DIR, Number(size || 0), { category: 'platform-sponsor', alreadyWritten: true });
+  if (decision.ok) return '';
+  deleteSponsorUploadFile(filepath);
+  return `/admin/sponsors?error=${encodeURIComponent(decision.message || 'Storage capacity is too low for this upload.')}`;
 }
 
 function escapeHtml(value) {
@@ -81,7 +108,7 @@ const sponsorUpload = multer({
       cb(null, `platform-sponsor-${Date.now()}-${Math.random().toString(36).slice(2)}${safeExt}`);
     },
   }),
-  limits: { fileSize: 250 * 1024 * 1024 },
+  limits: { fileSize: PLATFORM_SPONSOR_UPLOAD_MAX_BYTES },
   fileFilter: (_req, file, cb) => {
     const ext = path.extname(file.originalname || '').toLowerCase();
     const ok = SPONSOR_MEDIA_EXTS.has(ext) && SPONSOR_MEDIA_MIMES.has(file.mimetype);
@@ -511,8 +538,18 @@ function formatCompletionRate(creative) {
   return `${Math.round((numberValue(creative.completions) / impressions) * 100)}%`;
 }
 
-function renderSponsorAdminPage({ message = '', error = '', creatives = [], events = [] } = {}) {
+function renderSponsorAdminPage({ message = '', error = '', creatives = [], events = [], storageRisk = null } = {}) {
   const mediaTools = getSponsorMediaToolStatus();
+  const risk = storageRisk || storageRiskSummary(PLATFORM_SPONSOR_DIR);
+  const storageWarnings = [...(risk.warnings || []), ...(risk.failures || [])];
+  const storageUsage = risk.usage || {};
+  const storagePanel = `<div class="card">
+      <h2>Media storage</h2>
+      <p>Used ${escapeHtml(storageUsage.humanBytes || 'unknown')}${storageUsage.capacity?.humanAvailable ? `, ${escapeHtml(storageUsage.capacity.humanAvailable)} available` : ''}${storageUsage.humanConfiguredLimit ? `, limit ${escapeHtml(storageUsage.humanConfiguredLimit)}` : ''}.</p>
+      ${storageWarnings.length
+        ? `<div class="warning-note">${storageWarnings.map(warning => escapeHtml(warning)).join('<br />')}</div>`
+        : '<div class="media-probe ready">Storage looks ready for platform creative uploads.</div>'}
+    </div>`;
   const totals = creatives.reduce((acc, creative) => {
     acc.active += creative.status === 'active' ? 1 : 0;
     acc.impressions += numberValue(creative.impressions);
@@ -719,6 +756,7 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
         <button type="submit" class="secondary">Stop Live Test</button>
       </form>
     </div>
+    ${storagePanel}
     <div class="card">
       <h2>Upload platform creative</h2>
       <form method="POST" action="/admin/sponsors/upload" enctype="multipart/form-data">
@@ -862,22 +900,33 @@ function listRecentSponsorPlaybackEvents() {
 }
 
 router.get('/sponsors', requireAdminAuth, (req, res) => {
+  try { ensureDir(PLATFORM_SPONSOR_DIR); } catch (_err) {}
   res.send(renderSponsorAdminPage({
     message: String(req.query.message || ''),
     error: String(req.query.error || ''),
     creatives: listPlatformSponsorCreatives(),
     events: listRecentSponsorPlaybackEvents(),
+    storageRisk: storageRiskSummary(PLATFORM_SPONSOR_DIR),
   }));
 });
 
 router.post('/sponsors/upload', requireAdminAuth, (req, res) => {
+  const capacityRedirect = uploadCapacityRedirect(req);
+  if (capacityRedirect) return res.redirect(capacityRedirect);
   sponsorUpload.single('creative')(req, res, async (err) => {
-    if (err) return res.redirect(`/admin/sponsors?error=${encodeURIComponent(err.message || 'Upload failed')}`);
+    if (err) {
+      const message = err?.code === 'LIMIT_FILE_SIZE'
+        ? `Creative is too large. Maximum platform upload size is ${Math.round(PLATFORM_SPONSOR_UPLOAD_MAX_BYTES / 1024 / 1024)}MB.`
+        : err.message || 'Upload failed';
+      return res.redirect(`/admin/sponsors?error=${encodeURIComponent(message)}`);
+    }
     if (!req.file) return res.redirect(`/admin/sponsors?error=${encodeURIComponent('Choose a video file')}`);
 
     let mediaMeta;
     try {
       mediaMeta = await processSponsorUpload({ file: req.file, body: req.body || {}, targetDir: PLATFORM_SPONSOR_DIR });
+      const postWriteCapacityRedirect = uploadedFileCapacityRedirect(mediaMeta.filepath, mediaMeta.fileSize);
+      if (postWriteCapacityRedirect) return res.redirect(postWriteCapacityRedirect);
       db.prepare(`
         INSERT INTO platform_sponsor_creatives
           (
