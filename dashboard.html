@@ -24,7 +24,7 @@
     a { color:inherit; text-decoration:none; }
     button,input,select { font-family:inherit; }
     .shell { max-width:1500px; margin:0 auto; display:grid; gap:20px; }
-    .topbar { display:flex; justify-content:space-between; align-items:center; gap:18px; padding:14px; border:1px solid var(--line); border-radius:26px; background:rgba(5,7,11,.76); backdrop-filter:blur(22px); box-shadow:var(--shadow); }
+    .topbar { position:sticky; top:12px; z-index:30; display:flex; justify-content:space-between; align-items:center; gap:18px; padding:14px; border:1px solid var(--line); border-radius:26px; background:rgba(5,7,11,.86); backdrop-filter:blur(22px); box-shadow:var(--shadow); }
     .brand { display:flex; align-items:center; gap:14px; min-width:0; }
     .brand-logo { width:58px; height:58px; border-radius:18px; display:grid; place-items:center; overflow:hidden; border:1px solid rgba(246,201,91,.38); background:rgba(246,201,91,.08); box-shadow:0 0 42px rgba(246,201,91,.18); }
     .brand-logo img { width:100%; height:auto; transform:scale(1.1); transform-origin:center; display:block; }
@@ -33,17 +33,19 @@
     .top-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
     .chip,.status-chip,.subscription-chip { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:40px; padding:9px 13px; border-radius:999px; border:1px solid var(--line2); background:rgba(255,255,255,.05); color:var(--muted); font-size:13px; font-weight:900; white-space:nowrap; }
     .chip.live { color:var(--green); border-color:rgba(119,240,161,.25); background:rgba(119,240,161,.08); }
+    .chip.idle { color:var(--gold2); border-color:rgba(246,201,91,.28); background:rgba(246,201,91,.08); }
+    .chip.offline { color:#ff9aa8; border-color:rgba(232,59,95,.28); background:rgba(232,59,95,.1); }
     .dot,.pulse-dot { width:8px; height:8px; border-radius:99px; background:currentColor; box-shadow:0 0 16px currentColor; }
     .subscription-chip { cursor:pointer; }
     .subscription-chip.active { color:var(--green); border-color:rgba(119,240,161,.25); background:rgba(119,240,161,.08); }
     .subscription-chip.free { color:var(--gold2); border-color:rgba(246,201,91,.28); background:rgba(246,201,91,.08); }
     .subscription-chip.attention { color:#ff9aa8; border-color:rgba(232,59,95,.28); background:rgba(232,59,95,.1); }
-    .hero { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(340px,.7fr); gap:20px; align-items:stretch; }
+    .hero { display:grid; grid-template-columns:minmax(0,1.08fr) minmax(380px,.92fr); gap:20px; align-items:stretch; }
     .hero-card,.card { position:relative; overflow:hidden; border:1px solid var(--line2); border-radius:28px; background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); box-shadow:0 24px 80px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08); }
     .hero-card { padding:30px; border-color:var(--line); background:radial-gradient(circle at top left,rgba(246,201,91,.14),transparent 30%),linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.025)); }
     .kicker { display:inline-flex; gap:9px; align-items:center; width:fit-content; margin-bottom:18px; padding:8px 12px; border-radius:999px; border:1px solid rgba(246,201,91,.3); color:var(--gold2); background:rgba(246,201,91,.08); font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; }
     .kicker::before { content:''; width:8px; height:8px; border-radius:99px; background:var(--green); box-shadow:0 0 14px rgba(119,240,161,.9); }
-    .hero h2 { font-family:'Black Ops One','Rajdhani',sans-serif; font-size:clamp(34px,4vw,58px); line-height:1; text-transform:uppercase; max-width:820px; margin-bottom:16px; }
+    .hero h2 { font-family:'Black Ops One','Rajdhani',sans-serif; font-size:clamp(32px,3.2vw,50px); line-height:1; text-transform:uppercase; max-width:820px; margin-bottom:16px; }
     .hero h2 span { color:transparent; background:linear-gradient(100deg,#fff7d7,var(--gold),var(--ember)); -webkit-background-clip:text; background-clip:text; }
     .hero p { color:#c7cedd; line-height:1.7; max-width:760px; }
     .launch-row { display:flex; flex-wrap:wrap; gap:12px; margin-top:22px; }
@@ -55,13 +57,30 @@
     .btn-danger { color:#fff; background:var(--red); }
     .btn-warning { color:#170c02; background:var(--gold); }
     .btn-purple { color:#071009; background:var(--cyan); }
-    .quick-panel { padding:24px; display:grid; gap:14px; }
-    .quick-stat { display:flex; justify-content:space-between; gap:14px; padding:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.2); border-radius:18px; }
-    .quick-stat span { color:var(--muted); font-size:13px; }
-    .quick-stat strong { color:#fff; }
+    .ops-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:24px; }
+    .ops-stat { min-width:0; padding:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.22); border-radius:18px; }
+    .ops-stat span { display:block; color:var(--muted); font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+    .ops-stat strong { display:block; margin-top:6px; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .readiness-panel { padding:24px; display:grid; align-content:start; gap:14px; }
+    .readiness-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+    .readiness-score { min-width:70px; text-align:center; padding:10px 12px; border-radius:18px; color:#071009; background:linear-gradient(135deg,var(--gold),#fff0b9); font-weight:900; }
+    .readiness-list { display:grid; gap:10px; }
+    .readiness-item { display:grid; grid-template-columns:1fr auto; gap:10px; align-items:center; padding:12px 14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.2); border-radius:16px; }
+    .readiness-item > div { min-width:0; display:grid; gap:4px; }
+    .readiness-item strong { display:block; font-size:13px; line-height:1.15; }
+    .readiness-item span { display:block; color:var(--muted); font-size:12px; font-weight:800; line-height:1.25; }
+    .readiness-pill { min-height:28px; display:inline-flex; align-items:center; justify-content:center; padding:5px 9px; border-radius:999px; border:1px solid rgba(255,255,255,.12); color:var(--muted); font-size:10px; font-weight:900; text-transform:uppercase; white-space:nowrap; }
+    .readiness-pill.ready { color:var(--green); border-color:rgba(119,240,161,.32); background:rgba(119,240,161,.08); }
+    .readiness-pill.warn { color:var(--gold2); border-color:rgba(246,201,91,.32); background:rgba(246,201,91,.08); }
+    .readiness-pill.blocked { color:#ff9aa8; border-color:rgba(232,59,95,.32); background:rgba(232,59,95,.1); }
+    .copy-field { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; margin:14px 0; }
+    .copy-field input { min-width:0; font-size:12px; color:#dfe8f8; }
     .grid { display:grid; grid-template-columns:repeat(12,1fr); gap:20px; }
     .col-12{grid-column:span 12}.col-8{grid-column:span 8}.col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}
     .card { padding:24px; }
+    #audioManagerCard { order:2; }
+    #toolsRail { order:3; }
+    #creatorSponsorCard { order:4; }
     .card-head { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; margin-bottom:18px; }
     .card-title { color:var(--gold2); font-size:12px; text-transform:uppercase; letter-spacing:.14em; font-weight:900; }
     .card-head h3 { margin-top:6px; font-size:24px; line-height:1.1; }
@@ -146,8 +165,8 @@
     .footer { display:flex; flex-wrap:wrap; gap:12px; margin:4px 0 28px; }
     .footer-btn { display:inline-flex; min-height:46px; align-items:center; justify-content:center; padding:0 16px; border-radius:15px; font-weight:900; cursor:pointer; border:1px solid var(--line2); background:rgba(255,255,255,.06); color:#fff; }
     .footer-btn.primary { color:#170c02; background:linear-gradient(135deg,var(--gold),#fff0b9 52%,var(--ember)); border:0; }
-    @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,.sponsor-layout,.sponsor-upgrade{grid-template-columns:1fr}}
-    @media(max-width:700px){body{padding:12px}.topbar{align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.btn{width:100%}}
+    @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,.sponsor-layout,.sponsor-upgrade,.ops-strip{grid-template-columns:1fr}#audioManagerCard,#toolsRail,#creatorSponsorCard{order:initial}}
+    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}}
   </style>
 </head>
 <body>
@@ -159,7 +178,7 @@
       <div class="brand-text"><h1>IntoTheBattle Command Center</h1><p>Creator overlay control room</p></div>
     </div>
     <div class="top-actions">
-      <div class="chip live"><span class="dot"></span>Live System</div>
+      <div class="chip idle" id="socket-chip"><span class="dot"></span><span id="socket-label">Connecting</span></div>
       <button type="button" class="subscription-chip" id="subscription-chip" onclick="openBillingStatus()">Checking plan</button>
       <button class="btn btn-secondary" onclick="window.location.href='/profile'">Account</button>
     </div>
@@ -167,41 +186,54 @@
 
   <section class="hero">
     <div class="hero-card">
-      <div class="kicker">Creator dashboard</div>
-      <h2>Run the arena like a <span>premium live show.</span></h2>
-      <p>Connect TikTok LIVE, open your browser-source overlay, control visuals, trigger sponsor moments, and tune audio from one simplified command center.</p>
+      <div class="kicker">Creator command center</div>
+      <h2>Stream room <span id="room-id-title">loading</span></h2>
+      <p id="dashboard-summary">Checking stream, overlay, and media readiness.</p>
       <div class="launch-row">
         <button class="btn btn-primary" onclick="openOverlay()">Open Overlay</button>
         <button class="btn btn-secondary" onclick="copyOverlayUrl()">Copy Overlay URL</button>
         <button class="btn btn-secondary" onclick="window.open('/stats','_blank')">View Stats</button>
       </div>
+      <div class="ops-strip">
+        <div class="ops-stat"><span>Room</span><strong id="room-id-copy">Loading</strong></div>
+        <div class="ops-stat"><span>Overlay source</span><strong id="overlay-url-state">Loading URL</strong></div>
+        <div class="ops-stat"><span>Plan</span><strong id="plan-label-copy">Checking</strong></div>
+      </div>
     </div>
-    <aside class="hero-card quick-panel">
-      <div class="quick-stat"><span>TikTok connection</span><strong id="tiktok-label-copy">Disconnected</strong></div>
-      <div class="quick-stat"><span>Overlay status</span><strong id="overlay-label-copy">No overlay connected</strong></div>
-      <div class="quick-stat"><span>Active players</span><strong id="player-count-copy">—</strong></div>
-      <div class="quick-stat"><span>Room mode</span><strong id="dev-mode-copy">Live</strong></div>
+    <aside class="hero-card readiness-panel">
+      <div class="readiness-head">
+        <div><div class="card-title">Launch readiness</div><h3 id="readiness-title">Checking room</h3><p class="muted" id="readiness-summary">Connection status is loading.</p></div>
+        <div class="readiness-score" id="readiness-score">0/5</div>
+      </div>
+      <div class="readiness-list" id="readiness-list">
+        <div class="readiness-item"><div><strong>TikTok LIVE</strong><span>Checking</span></div><b class="readiness-pill warn">Wait</b></div>
+        <div class="readiness-item"><div><strong>Overlay</strong><span>Checking</span></div><b class="readiness-pill warn">Wait</b></div>
+        <div class="readiness-item"><div><strong>Scene media</strong><span>Checking</span></div><b class="readiness-pill warn">Wait</b></div>
+        <div class="readiness-item"><div><strong>Audio</strong><span>Checking</span></div><b class="readiness-pill warn">Wait</b></div>
+        <div class="readiness-item"><div><strong>Brand moments</strong><span>Checking</span></div><b class="readiness-pill warn">Wait</b></div>
+      </div>
     </aside>
   </section>
 
   <section class="grid">
-    <article class="card col-4">
+    <article class="card col-4" id="connectCard">
       <div class="card-head"><div><div class="card-title">Step 1</div><h3>Connect TikTok LIVE</h3></div><span class="card-badge">Stream input</span></div>
       <div class="status-chip offline" id="tiktok-chip"><span class="pulse-dot"></span><span id="tiktok-label">Disconnected</span></div>
       <div class="form-group"><label class="input-label">TikTok username</label><input type="text" id="username" placeholder="@yourusername" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
       <div class="btn-row"><button class="btn btn-success" style="flex:1" onclick="connect()">Connect</button><button class="btn btn-danger" onclick="resetTikTok()">Disconnect</button></div>
     </article>
 
-    <article class="card col-4">
+    <article class="card col-4" id="overlayCard">
       <div class="card-head"><div><div class="card-title">Step 2</div><h3>Overlay launch</h3></div><span class="card-badge">OBS / TikTok Studio</span></div>
       <div class="status-chip offline" id="overlay-chip"><span class="pulse-dot"></span><span id="overlay-label">No overlay connected</span></div>
       <div class="stat-box"><span class="stat-label">Active players</span><span class="stat-value" id="player-count">—</span></div>
       <div class="stat-box"><span class="stat-label">Dev mode</span><span class="stat-value" id="dev-mode-badge">OFF</span></div>
+      <div class="copy-field"><input type="text" id="overlayUrlField" readonly value="Loading signed overlay URL"><button class="btn btn-secondary" onclick="copyOverlayUrl()">Copy</button></div>
       <div class="divider"></div>
       <div class="btn-row"><button class="btn btn-primary" onclick="openOverlay()">Open Overlay</button><button class="btn btn-secondary" onclick="reloadOverlay()">Reload</button></div>
     </article>
 
-    <article class="card col-4">
+    <article class="card col-4" id="sceneCard">
       <div class="card-head"><div><div class="card-title">Step 3</div><h3>Visual polish</h3></div><span class="card-badge">Look & feel</span></div>
       <div class="form-group"><label class="input-label">Background</label><input type="file" id="bgUpload" accept="image/jpeg,image/png,image/gif,image/webp"></div>
       <div class="btn-row"><button class="btn btn-primary" onclick="uploadBackground()">Upload</button><button class="btn btn-warning" onclick="clearBackground()">Clear</button></div>
@@ -264,14 +296,14 @@
       </div>
     </article>
 
-    <article class="card col-8">
+    <article class="card col-8" id="audioManagerCard">
       <div class="card-head"><div><div class="card-title">Audio manager</div><h3>Sound library</h3><p class="muted">Upload sounds and assign them to live overlay events.</p></div><span class="card-badge" id="audioCountBadge">0 Sounds Loaded</span></div>
       <div class="drop-zone" id="dropZone"><input type="file" id="audioFileInput" accept="audio/*"><div class="drop-icon">🎵</div><div class="drop-title">Drop audio files here</div><div class="drop-sub">MP3 • WAV • OGG • AAC • FLAC • WEBM</div></div>
       <button class="btn btn-primary" style="width:100%;margin-bottom:18px" onclick="document.getElementById('audioFileInput').click()">Browse Audio Files</button>
       <div class="audio-layout"><div><div class="section-title">Uploaded sounds</div><div class="audio-files" id="audioLibrary"><p class="muted">No audio uploaded yet.</p></div></div><div><div class="section-title">Event assignments</div><table class="assign-table"><tbody id="assignTableBody"></tbody></table></div></div>
     </article>
 
-    <aside class="col-4" style="display:grid;gap:20px;">
+    <aside class="col-4" id="toolsRail" style="display:grid;gap:20px;">
       <details class="tool" open><summary>Live testing controls</summary><div class="tool-body"><p class="muted" style="margin-bottom:14px;">Use these during setup only. They trigger test overlay events.</p><div class="btn-row"><button class="btn btn-success" onclick="testOverlayAttack()">Attack</button><button class="btn btn-warning" onclick="testOverlayGift()">Gift</button><button class="btn btn-purple" onclick="testOverlayHeal()">Heal</button><button class="btn btn-danger" onclick="testOverlayKill()">Kill</button><button class="btn btn-primary" onclick="testStreak()">Streak</button></div></div></details>
       <details class="tool"><summary>Maintenance</summary><div class="tool-body"><div class="btn-row"><button class="btn btn-secondary" onclick="clearPlayers()">Clear Players</button><button class="btn btn-secondary" onclick="toggleDevMode()">Toggle Dev Mode</button><button class="btn btn-secondary" onclick="window.open('/api/status','_blank')">Raw JSON</button></div></div></details>
     </aside>
@@ -295,6 +327,17 @@ let canUseCreatorSponsors = false;
 let activeSponsorBreakId = '';
 let sponsorFileObjectUrl = '';
 let sponsorUploadProbe = null;
+const dashboardState = {
+  socketConnected: false,
+  tiktokConnected: false,
+  overlayConnected: false,
+  playerCount: 0,
+  backgroundReady: false,
+  audioCount: 0,
+  sponsorCount: 0,
+  devTestMode: false,
+  planLabel: 'Checking',
+};
 const EVENTS = ['attack','gift','kill','respawn','heal','follow'];
 const EVENT_CLASSES = { attack:'event-attack', gift:'event-gift', kill:'event-kill', respawn:'event-respawn', heal:'event-heal', follow:'event-follow' };
 
@@ -320,17 +363,141 @@ function sponsorQualityWarnings(file, meta = {}) {
   if (meta.width && meta.height && (meta.width < 1280 || meta.height < 720)) warnings.push('720p or 1080p is recommended.');
   return warnings;
 }
-async function apiCall(endpoint, method = 'POST', body = null) { const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' }; if (body) opts.body = JSON.stringify(body); const res = await fetch(endpoint, opts); const json = await res.json().catch(() => ({})); if (!res.ok) toast(json.error || 'Request failed', true); return json; }
+function setSocketStatus(status) {
+  dashboardState.socketConnected = status === 'connected';
+  const chip = document.getElementById('socket-chip');
+  const label = document.getElementById('socket-label');
+  if (!chip || !label) return;
+  if (status === 'connected') {
+    chip.className = 'chip live';
+    label.textContent = 'Dashboard online';
+  } else if (status === 'error') {
+    chip.className = 'chip offline';
+    label.textContent = 'Server issue';
+  } else {
+    chip.className = 'chip idle';
+    label.textContent = 'Connecting';
+  }
+  updateReadinessChecklist();
+}
+function setOverlayCount(count) {
+  overlayCount = Number(count || 0);
+  dashboardState.overlayConnected = overlayCount > 0;
+  const chip = document.getElementById('overlay-chip');
+  const label = document.getElementById('overlay-label');
+  if (!chip || !label) return;
+  if (overlayCount > 0) {
+    chip.className = 'status-chip online';
+    label.textContent = `Connected (${overlayCount} source${overlayCount > 1 ? 's' : ''})`;
+  } else {
+    chip.className = 'status-chip offline';
+    label.textContent = 'No overlay connected';
+  }
+  updateReadinessChecklist();
+}
+function setOverlayUrl(url) {
+  currentOverlayUrl = url || currentOverlayUrl || null;
+  const field = document.getElementById('overlayUrlField');
+  const label = document.getElementById('overlay-url-state');
+  const display = currentOverlayUrl ? 'Signed URL ready' : 'URL unavailable';
+  if (field) field.value = currentOverlayUrl || 'Signed overlay URL unavailable';
+  if (label) label.textContent = display;
+}
+function setRoomLabel(roomId) {
+  currentRoomId = roomId || currentRoomId || null;
+  const value = currentRoomId || 'Loading';
+  text('room-id-title', value);
+  text('room-id-copy', value);
+}
+function readinessItem(title, detail, status, label) {
+  return `<div class="readiness-item"><div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(detail)}</span></div><b class="readiness-pill ${status}">${escapeHtml(label)}</b></div>`;
+}
+function updateReadinessChecklist() {
+  const items = [
+    {
+      title: 'TikTok LIVE',
+      ready: dashboardState.tiktokConnected,
+      detail: dashboardState.tiktokConnected ? 'Stream connected' : 'Disconnected',
+      status: dashboardState.tiktokConnected ? 'ready' : 'blocked',
+      label: dashboardState.tiktokConnected ? 'Ready' : 'Needed',
+    },
+    {
+      title: 'Overlay',
+      ready: dashboardState.overlayConnected,
+      detail: dashboardState.overlayConnected ? `${overlayCount} source${overlayCount > 1 ? 's' : ''} connected` : 'No browser source',
+      status: dashboardState.overlayConnected ? 'ready' : 'blocked',
+      label: dashboardState.overlayConnected ? 'Ready' : 'Needed',
+    },
+    {
+      title: 'Scene media',
+      ready: dashboardState.backgroundReady,
+      detail: dashboardState.backgroundReady ? 'Background set' : 'Default scene',
+      status: dashboardState.backgroundReady ? 'ready' : 'warn',
+      label: dashboardState.backgroundReady ? 'Ready' : 'Optional',
+    },
+    {
+      title: 'Audio',
+      ready: dashboardState.audioCount > 0,
+      detail: dashboardState.audioCount ? `${dashboardState.audioCount} sound${dashboardState.audioCount !== 1 ? 's' : ''} loaded` : 'No sounds loaded',
+      status: dashboardState.audioCount ? 'ready' : 'warn',
+      label: dashboardState.audioCount ? 'Ready' : 'Optional',
+    },
+    {
+      title: 'Brand moments',
+      ready: !canUseCreatorSponsors || dashboardState.sponsorCount > 0,
+      detail: canUseCreatorSponsors ? (dashboardState.sponsorCount ? `${dashboardState.sponsorCount} creative${dashboardState.sponsorCount !== 1 ? 's' : ''} ready` : 'No creator videos') : 'Platform-managed',
+      status: (!canUseCreatorSponsors || dashboardState.sponsorCount > 0) ? 'ready' : 'warn',
+      label: canUseCreatorSponsors && dashboardState.sponsorCount === 0 ? 'Optional' : 'Ready',
+    },
+  ];
+  const readyCount = items.filter(item => item.status !== 'blocked').length;
+  const blockers = items.filter(item => item.status === 'blocked').length;
+  text('readiness-score', `${readyCount}/${items.length}`);
+  text('readiness-title', blockers ? 'Needs attention' : 'Ready to run');
+  text('readiness-summary', blockers ? 'Connect TikTok and open the overlay source.' : 'Core stream systems are online.');
+  text('dashboard-summary', blockers ? 'Finish the required connections before going live.' : `Room ${currentRoomId || ''} is ready for live control.`);
+  const list = document.getElementById('readiness-list');
+  if (list) list.innerHTML = items.map(item => readinessItem(item.title, item.detail, item.status, item.label)).join('');
+}
+async function apiCall(endpoint, method = 'POST', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(endpoint, opts);
+  if (res.status === 401) {
+    window.location.href = '/login';
+    return { success: false, error: 'Unauthorized' };
+  }
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) toast(json.error || 'Request failed', true);
+  return json;
+}
 
-socket.on('overlayCount', data => { overlayCount = data.count || data; const chip = document.getElementById('overlay-chip'); const label = document.getElementById('overlay-label'); if (overlayCount > 0) { chip.className = 'status-chip online'; label.textContent = `Connected (${overlayCount} source${overlayCount > 1 ? 's' : ''})`; text('overlay-label-copy', label.textContent); } else { chip.className = 'status-chip offline'; label.textContent = 'No overlay connected'; text('overlay-label-copy', 'No overlay connected'); }});
-socket.on('gameState', state => { const alive = Object.values(state || {}).filter(p => p.alive).length; text('player-count', alive); text('player-count-copy', alive); });
-socket.on('devModeChanged', data => { const value = data.enabled ? 'ON' : 'OFF'; text('dev-mode-badge', value); text('dev-mode-copy', data.enabled ? 'Testing' : 'Live'); });
+socket.on('overlayCount', data => setOverlayCount(data?.count ?? data));
+socket.on('gameState', state => { const alive = Object.values(state || {}).filter(p => p.alive).length; dashboardState.playerCount = alive; text('player-count', alive); });
+socket.on('devModeChanged', data => { dashboardState.devTestMode = !!data.enabled; const value = data.enabled ? 'ON' : 'OFF'; text('dev-mode-badge', value); updateReadinessChecklist(); });
 socket.on('audioConfig', cfg => { if (cfg) audioConfigData = cfg; renderAssignTable(); });
 socket.on('sponsorBreakStatus', data => updateSponsorBreakStatus(data || {}));
-socket.on('connect', () => { socket.emit('register', { type: 'dashboard' }); });
+socket.on('connect', () => { setSocketStatus('connected'); socket.emit('register', { type: 'dashboard' }); });
+socket.on('disconnect', () => setSocketStatus('connecting'));
+socket.on('connect_error', () => setSocketStatus('error'));
 
 let initialLoad = true;
-function setTikTokStatus(state, username) { const chip = document.getElementById('tiktok-chip'); const label = document.getElementById('tiktok-label'); if (state === 'connected') { chip.className = 'status-chip online'; label.textContent = `Connected to @${username}`; } else if (state === 'connecting') { chip.className = 'status-chip idle'; label.textContent = 'Connecting...'; } else { chip.className = 'status-chip offline'; label.textContent = 'Disconnected'; } text('tiktok-label-copy', label.textContent); }
+function setTikTokStatus(state, username) {
+  const chip = document.getElementById('tiktok-chip');
+  const label = document.getElementById('tiktok-label');
+  dashboardState.tiktokConnected = state === 'connected';
+  if (state === 'connected') {
+    chip.className = 'status-chip online';
+    label.textContent = `Connected to @${username}`;
+  } else if (state === 'connecting') {
+    chip.className = 'status-chip idle';
+    label.textContent = 'Connecting...';
+  } else {
+    chip.className = 'status-chip offline';
+    label.textContent = 'Disconnected';
+  }
+  updateReadinessChecklist();
+}
 function setSponsorControlsAvailability(enabled) {
   canUseCreatorSponsors = !!enabled;
   const card = document.getElementById('creatorSponsorCard');
@@ -370,8 +537,11 @@ function setSubscriptionChip(data) {
     className += ' free';
     setSponsorControlsAvailability(false);
   }
+  dashboardState.planLabel = label;
+  text('plan-label-copy', label);
   chip.textContent = label;
   chip.className = className;
+  updateReadinessChecklist();
 }
 async function fetchSubscriptionStatus() { try { const res = await fetch('/api/subscription/status', { credentials: 'same-origin' }); if (!res.ok) return setSubscriptionChip(null); setSubscriptionChip(await res.json()); } catch (_) { setSubscriptionChip(null); } }
 function openBillingStatus() { if (subscriptionStatusData && subscriptionStatusData.actionRequired) window.location.href = subscriptionStatusData.paywallUrl || '/paywall'; else window.location.href = '/profile'; }
@@ -392,12 +562,15 @@ function updateBackgroundPreview(filename, label = filename, url = '') {
   const empty = document.getElementById('backgroundPreviewEmpty');
   if (!wrap || !image || !empty) return;
   if (!filename) {
+    dashboardState.backgroundReady = false;
     wrap.classList.add('empty');
     image.removeAttribute('src');
     empty.textContent = 'No background preview loaded';
     text('bgStatus', 'No background set');
+    updateReadinessChecklist();
     return;
   }
+  dashboardState.backgroundReady = true;
   wrap.classList.remove('empty');
   empty.textContent = '';
   image.onload = () => {
@@ -405,17 +578,55 @@ function updateBackgroundPreview(filename, label = filename, url = '') {
     empty.textContent = '';
   };
   image.onerror = () => {
+    dashboardState.backgroundReady = false;
     wrap.classList.add('empty');
     image.removeAttribute('src');
     empty.textContent = 'Background image could not be loaded';
     text('bgStatus', `Background unavailable: ${label || filename}`);
+    updateReadinessChecklist();
   };
   image.src = cacheBustAssetUrl(url || `/background/${encodeURIComponent(filename)}`);
   text('bgStatus', `Background set: ${label || filename}`);
+  updateReadinessChecklist();
 }
-async function fetchStatus() { try { const res = await fetch('/api/status', { credentials: 'same-origin' }); const data = await res.json(); currentRoomId = data.roomId || null; currentOverlayUrl = data.overlayUrl || null; if (initialLoad) { document.getElementById('username').value = data.username || ''; initialLoad = false; } updateBackgroundPreview(data.background?.filename || '', data.background?.originalName || data.background?.filename || '', data.background?.url || ''); setTikTokStatus(data.connected ? 'connected' : 'disconnected', data.username); const devValue = data.devTestMode ? 'ON' : 'OFF'; text('dev-mode-badge', devValue); text('dev-mode-copy', data.devTestMode ? 'Testing' : 'Live'); if (data.overlayCount !== undefined) socket.emit('register', { type: 'dashboard' }); } catch (e) { console.warn(e); } }
-function openOverlay() { window.open(currentOverlayUrl || '/overlay', '_blank'); }
-function copyOverlayUrl() { const url = currentOverlayUrl || `${window.location.origin}/overlay`; navigator.clipboard?.writeText(url).then(() => toast('Overlay URL copied')).catch(() => toast('Copy failed', true)); }
+async function fetchStatus() {
+  try {
+    const res = await fetch('/api/status', { credentials: 'same-origin' });
+    if (res.status === 401) {
+      window.location.href = '/login';
+      return;
+    }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Unable to load dashboard status');
+    setRoomLabel(data.roomId || null);
+    setOverlayUrl(data.overlayUrl || null);
+    if (initialLoad) {
+      document.getElementById('username').value = data.username || '';
+      initialLoad = false;
+    }
+    dashboardState.playerCount = Number(data.playerCount || 0);
+    dashboardState.devTestMode = !!data.devTestMode;
+    text('player-count', dashboardState.playerCount);
+    updateBackgroundPreview(data.background?.filename || '', data.background?.originalName || data.background?.filename || '', data.background?.url || '');
+    setTikTokStatus(data.connected ? 'connected' : 'disconnected', data.username);
+    const devValue = data.devTestMode ? 'ON' : 'OFF';
+    text('dev-mode-badge', devValue);
+    if (data.overlayCount !== undefined) setOverlayCount(data.overlayCount);
+    socket.emit('register', { type: 'dashboard' });
+    updateReadinessChecklist();
+  } catch (_err) {
+    text('dashboard-summary', 'Dashboard status is temporarily unavailable.');
+    setSocketStatus(socket.connected ? 'connected' : 'error');
+  }
+}
+function openOverlay() {
+  if (!currentOverlayUrl) toast('Overlay URL is still loading', true);
+  window.open(currentOverlayUrl || '/overlay', '_blank');
+}
+function copyOverlayUrl() {
+  const url = currentOverlayUrl || `${window.location.origin}/overlay`;
+  navigator.clipboard?.writeText(url).then(() => toast(currentOverlayUrl ? 'Overlay URL copied' : 'Fallback overlay URL copied')).catch(() => toast('Copy failed', true));
+}
 
 const usernameInput = document.getElementById('username');
 if (usernameInput) usernameInput.addEventListener('input', event => { const input = event.target; const start = input.selectionStart; const end = input.selectionEnd; const normalized = input.value.toLowerCase(); if (normalized !== input.value) { input.value = normalized; if (typeof start === 'number' && typeof end === 'number') input.setSelectionRange(start, end); } });
@@ -595,10 +806,12 @@ function renderSponsorLibrary() {
   const badge = document.getElementById('sponsorCountBadge');
   if (!container) return;
   container.innerHTML = '';
+  dashboardState.sponsorCount = canUseCreatorSponsors ? sponsorLibraryData.length : 0;
   if (!canUseCreatorSponsors) {
     if (badge) badge.textContent = 'Pro Feature';
     container.innerHTML = '<p class="muted">Creator Pro unlocks the sponsor video library, previews, and manual break controls.</p>';
     updateSponsorSelectedSummary();
+    updateReadinessChecklist();
     return;
   }
   if (badge) badge.textContent = `${sponsorLibraryData.length} Video${sponsorLibraryData.length !== 1 ? 's' : ''}`;
@@ -606,6 +819,7 @@ function renderSponsorLibrary() {
     container.innerHTML = '<p class="muted">No videos uploaded yet.</p>';
     selectedSponsorFilename = '';
     updateSponsorSelectedSummary();
+    updateReadinessChecklist();
     return;
   }
   if (!selectedSponsorFilename || !sponsorLibraryData.some(f => f.filename === selectedSponsorFilename)) setSponsorInputs(sponsorLibraryData[0]);
@@ -666,6 +880,7 @@ function renderSponsorLibrary() {
     container.appendChild(row);
   });
   updateSponsorSelectedSummary();
+  updateReadinessChecklist();
 }
 function uploadSponsorVideo() {
   if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true);
@@ -748,7 +963,25 @@ function loadSponsors() {
 
 let previewAudio = null;
 function playPreview(filename,label){ if(previewAudio){ previewAudio.pause(); previewAudio=null; } const a=new Audio('/audio/'+filename); a.currentTime=0; a.play().catch(()=>{}); previewAudio=a; a.onended=()=>{ previewAudio=null; }; toast('Playing: '+label); }
-function renderAudioLibrary(){ const container=document.getElementById('audioLibrary'); container.innerHTML=''; document.getElementById('audioCountBadge').textContent=`${audioLibraryData.length} Sound${audioLibraryData.length !== 1 ? 's' : ''}`; if(!audioLibraryData.length){ container.innerHTML='<p class="muted">No audio uploaded yet.</p>'; return; } audioLibraryData.forEach(file=>{ const row=document.createElement('div'); row.className='audio-row'; row.innerHTML=`<div>🎵</div><div class="audio-name">${escapeHtml(file.originalName)}</div><div class="audio-size">${formatBytes(file.size)}</div><div style="display:flex;gap:8px;"><button class="btn btn-secondary" onclick="playPreview('${file.filename}','${escapeHtml(file.originalName)}')">Play</button><a class="btn btn-secondary" href="/audio/${file.filename}" download>⬇</a></div>`; container.appendChild(row); }); }
+function renderAudioLibrary() {
+  const container = document.getElementById('audioLibrary');
+  if (!container) return;
+  container.innerHTML = '';
+  dashboardState.audioCount = audioLibraryData.length;
+  document.getElementById('audioCountBadge').textContent = `${audioLibraryData.length} Sound${audioLibraryData.length !== 1 ? 's' : ''}`;
+  if (!audioLibraryData.length) {
+    container.innerHTML = '<p class="muted">No audio uploaded yet.</p>';
+    updateReadinessChecklist();
+    return;
+  }
+  audioLibraryData.forEach(file => {
+    const row = document.createElement('div');
+    row.className = 'audio-row';
+    row.innerHTML = `<div>🎵</div><div class="audio-name">${escapeHtml(file.originalName)}</div><div class="audio-size">${formatBytes(file.size)}</div><div style="display:flex;gap:8px;"><button class="btn btn-secondary" onclick="playPreview('${file.filename}','${escapeHtml(file.originalName)}')">Play</button><a class="btn btn-secondary" href="/audio/${file.filename}" download>Download</a></div>`;
+    container.appendChild(row);
+  });
+  updateReadinessChecklist();
+}
 function renderAssignTable(){ const tbody=document.getElementById('assignTableBody'); tbody.innerHTML=''; EVENTS.forEach(event=>{ const currentFile=audioConfigData[event] || ''; const tr=document.createElement('tr'); let options='<option value="">— None —</option>'; audioLibraryData.forEach(f=>{ options += `<option value="${f.filename}" ${currentFile===f.filename?'selected':''}>${escapeHtml(f.originalName)}</option>`; }); tr.innerHTML=`<td><span class="event-pill ${EVENT_CLASSES[event]}">${event}</span></td><td style="padding-left:14px"><select data-event="${event}" onchange="assignAudio('${event}', this.value)">${options}</select></td>`; tbody.appendChild(tr); }); }
 function assignAudio(event, filename){ fetch('/api/audio/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,filename:filename || null})}).then(r=>r.json()).then(d=>{ if(d.success) toast(`Assigned ${event} → ${filename || 'none'}`); else toast('Assignment failed', true); }); }
 function uploadAudioFile(file){ const fd=new FormData(); fd.append('audio',file); fetch('/api/audio/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData.push(d.file); renderAudioLibrary(); renderAssignTable(); toast('Audio uploaded'); } else toast('Upload failed', true); }); }
