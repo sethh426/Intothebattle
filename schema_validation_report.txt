@@ -1,31 +1,24 @@
-Schema validation summary: files scanned: 17, files with JSON-LD: 12, blocks: 13, errors: 0, warnings: 0
-- dashboard-welcome.html: 1 JSON-LD block(s)
-  - block #1: OK
-- dashboard.html: 1 JSON-LD block(s)
-  - block #1: OK
+Schema validation summary: files scanned: 17, files with JSON-LD: 6, blocks: 6, errors: 0, warnings: 0
+- dashboard-welcome.html: no JSON-LD blocks found
+- dashboard.html: no JSON-LD blocks found
 - home.html: no JSON-LD blocks found
-- login.html: 2 JSON-LD block(s)
+- login.html: 1 JSON-LD block(s)
   - block #1: OK
-  - block #2: OK
-- overlay-demo.html: no JSON-LD blocks found
 - overlay-legacy.html: 1 JSON-LD block(s)
   - block #1: OK
 - overlay-phaser.html: no JSON-LD blocks found
-- overlay.html: no JSON-LD blocks found
-- paywall.html: 1 JSON-LD block(s)
+- overlay.html: 1 JSON-LD block(s)
   - block #1: OK
-- profile.html: 1 JSON-LD block(s)
-  - block #1: OK
+- paywall.html: no JSON-LD blocks found
+- profile.html: no JSON-LD blocks found
 - register.html: 1 JSON-LD block(s)
   - block #1: OK
-- request-password-reset.html: 1 JSON-LD block(s)
-  - block #1: OK
-- reset-password.html: 1 JSON-LD block(s)
-  - block #1: OK
+- request-password-reset.html: no JSON-LD blocks found
+- reset-password.html: no JSON-LD blocks found
 - signup.html: 1 JSON-LD block(s)
   - block #1: OK
+- sponsors.html: no JSON-LD blocks found
 - stats.html: 1 JSON-LD block(s)
   - block #1: OK
 - theme-samples.html: no JSON-LD blocks found
-- verify-email.html: 1 JSON-LD block(s)
-  - block #1: OK
+- verify-email.html: no JSON-LD blocks found

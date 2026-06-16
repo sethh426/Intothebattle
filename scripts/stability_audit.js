@@ -20,8 +20,22 @@ function addWarning(message) { warnings.push(message); }
 function addNote(message) { notes.push(message); }
 
 function walk(dir, results = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'test-results' || entry.name === 'playwright-report') continue;
+  let entries = [];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (err) {
+    addWarning(`Skipping unreadable directory during syntax walk: ${path.relative(root, dir) || dir} (${err.code || err.message})`);
+    return results;
+  }
+
+  for (const entry of entries) {
+    if (
+      entry.name === 'node_modules' ||
+      entry.name === '.git' ||
+      entry.name === 'test-results' ||
+      entry.name === 'playwright-report' ||
+      entry.name.startsWith('.tmp-')
+    ) continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) walk(full, results);
     else if (entry.isFile() && entry.name.endsWith('.js')) results.push(full);
@@ -69,7 +83,7 @@ function checkServerRiskSignals() {
   const server = readText('server.js');
 
   if (server.includes('app.use(express.static(__dirname))')) {
-    addWarning('server.js still serves the repository root with express.static(__dirname). Prefer explicit /js, /assets, /audio, and public page routes before public beta.');
+    addError('server.js serves the repository root with express.static(__dirname). Use explicit public asset routes only.');
   }
 
   if (/req\.query\.token|query\.token/.test(server)) {
@@ -80,7 +94,7 @@ function checkServerRiskSignals() {
     addWarning('Legacy dashboard password/cookie auth code is still present. Confirm it is required or remove it.');
   }
 
-  if (server.includes('JSON.parse(fs.readFileSync')) || (server.includes('readFileSync') && server.includes('playerStatsFile'))) {
+  if (server.includes('JSON.parse(fs.readFileSync') || (server.includes('readFileSync') && server.includes('playerStatsFile'))) {
     addWarning('Legacy JSON migration/read path still exists. Keep it temporary and remove after migration is complete.');
   }
 

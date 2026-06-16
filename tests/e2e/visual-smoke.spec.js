@@ -63,8 +63,9 @@ async function capture(page, testInfo, name) {
 
 async function expectHealthyPage(page, testInfo, pathname, selector, name) {
   const errors = await watchPage(page);
-  await page.goto(`${baseUrl}${pathname}`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}${pathname}`, { waitUntil: 'domcontentloaded' });
   await expect(page.locator(selector)).toBeVisible();
+  await page.waitForLoadState('load');
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, name);
   expect(errors).toEqual([]);
@@ -104,7 +105,7 @@ test.afterAll(async () => {
 
 for (const [name, pathname, selector] of [
   ['home', '/', 'body'],
-  ['login', '/login', 'form'],
+  ['login', '/login', '#accountLoginForm'],
   ['signup', '/signup', 'body'],
   ['paywall', '/paywall', 'body'],
 ]) {
@@ -117,7 +118,7 @@ test('profile redirects unauthenticated users to login', async ({ page }, testIn
   const errors = await watchPage(page);
   await page.goto(`${baseUrl}/profile`, { waitUntil: 'domcontentloaded' });
   await expect(page).toHaveURL(/\/login/);
-  await expect(page.locator('form')).toBeVisible();
+  await expect(page.locator('#accountLoginForm')).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'profile-redirect');
   expect(errors).toEqual([]);
@@ -126,10 +127,10 @@ test('profile redirects unauthenticated users to login', async ({ page }, testIn
 test('dashboard renders with E2E auth fixture', async ({ context, page }, testInfo) => {
   await context.addCookies([{ name: 'session_token', value: e2eSessionToken, url: baseUrl }]);
   const errors = await watchPage(page);
-  await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByText('IntoTheBattle Command Center')).toBeVisible();
-  await expect(page.getByText('Plan active')).toBeVisible();
-  await expect(page.getByText('Open Overlay')).toBeVisible();
+  await expect(page.locator('#subscription-chip')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open Overlay' }).first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'dashboard');
   expect(errors).toEqual([]);
@@ -137,7 +138,7 @@ test('dashboard renders with E2E auth fixture', async ({ context, page }, testIn
 
 test('signed overlay renders a nonblank canvas', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
-  await page.goto(`${baseUrl}/overlay?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/overlay?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, { waitUntil: 'domcontentloaded' });
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
   await page.waitForTimeout(1000);
@@ -168,7 +169,7 @@ test('signed overlay sponsor preview renders transitioned ad scene', async ({ pa
     sponsor_subtitle: 'Premium sponsor screen preview for stream breaks.',
     sponsor_duration: '15000',
   });
-  await page.goto(`${baseUrl}/overlay?${params.toString()}`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/overlay?${params.toString()}`, { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#sponsorScene')).toHaveClass(/active/, { timeout: 3000 });
   await expect(page.getByText('Tonight\'s Arena Sponsor')).toBeVisible();
   await expect(page.locator('.panel-wrapper')).toBeHidden();

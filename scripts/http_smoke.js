@@ -78,6 +78,9 @@ try {
   for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/overlay-preview']) {
     await expectStatus(pathname, 200);
   }
+  for (const pathname of ['/intothebattlelogo_logo_only.svg', '/logo.svg', '/robots.txt', '/sitemap.xml', '/js/overlay-scene.js']) {
+    await expectStatus(pathname, 200);
+  }
 
   const dashboard = await expectStatus('/dashboard', 302);
   assert((dashboard.headers.get('location') || '').startsWith('/login'), '/dashboard should redirect to /login');
@@ -88,8 +91,17 @@ try {
   const profileHtml = await expectStatus('/profile.html', 302);
   assert((profileHtml.headers.get('location') || '').startsWith('/profile'), '/profile.html should redirect to /profile');
 
+  await expectStatus('/server.js', 404);
+  await expectStatus('/package.json', 404);
+  await expectStatus('/package-lock.json', 404);
+  await expectStatus('/overlay-legacy.html', 404);
+
   await expectStatus('/api/status', 401);
   await expectStatus('/api/subscription/status', 401);
+  const paypalConfig = await expectStatus('/api/paypal/config', 200);
+  const paypalConfigBody = await paypalConfig.json();
+  assert(paypalConfigBody.authenticated === false, 'unauthenticated paypal config should return safe login prompt');
+  assert(!paypalConfigBody.clientId, 'unauthenticated paypal config should not expose client id');
   await expectStatus('/metrics', 401);
   await expectStatus(`/metrics?token=${encodeURIComponent(metricsToken)}`, 200);
   await expectStatus('/api/runtime/diagnostics', 401);

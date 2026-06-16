@@ -344,8 +344,10 @@ router.post('/api/paypal/webhook', express.json(), async (req, res) => {
 router.get('/api/paypal/config', (req, res) => {
   const user = getSessionUser(req);
   if (!user) {
-    return res.status(401).json({
+    return res.json({
       success: false,
+      authenticated: false,
+      configured: false,
       error: 'Log in before upgrading to Creator Pro.',
       loginUrl: '/login?next=/paywall',
     });
@@ -356,6 +358,7 @@ router.get('/api/paypal/config', (req, res) => {
   const configured = Boolean(clientId && planId);
   return res.json({
     success: true,
+    authenticated: true,
     configured,
     mode: paypalMode(),
     sdkUrl: paypalSdkBaseUrl(),

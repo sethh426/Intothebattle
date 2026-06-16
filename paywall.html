@@ -123,7 +123,7 @@
       try {
         const configRes = await fetch('/api/paypal/config', { credentials: 'same-origin' });
         const config = await configRes.json().catch(() => ({}));
-        if (!configRes.ok) {
+        if (!configRes.ok || config.authenticated === false) {
           paypalButtonsEl.classList.add('hidden');
           fallbackPayPal.textContent = 'Log in to upgrade';
           fallbackPayPal.onclick = () => { window.location.href = config.loginUrl || '/login?next=/paywall'; };

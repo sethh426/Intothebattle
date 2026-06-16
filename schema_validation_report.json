@@ -2,27 +2,11 @@
   "files": [
     {
       "path": "dashboard-welcome.html",
-      "blocks": [
-        {
-          "index": 1,
-          "raw": "{\n      \"@context\": \"https://schema.org\",\n      \"@type\": \"WebPage\",\n      \"name\": \"Welcome to IntoTheBattle\",\n      \"url\": \"https://intothebattle.com/dashboard-welcome\",\n      \"description\": \"Welcome and onboarding guide for IntoTheBattle interactive TikTok LIVE battle overlay platform.\",\n      \"isPartOf\": {\n        \"@type\": \"WebSite\",\n        \"name\": \"IntoTheBattle\",\n        \"url\": \"https://intothebattle.com/\"\n      }\n    }",
-          "ok": true,
-          "errors": [],
-          "warnings": []
-        }
-      ]
+      "blocks": []
     },
     {
       "path": "dashboard.html",
-      "blocks": [
-        {
-          "index": 1,
-          "raw": "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"WebApplication\",\n  \"name\": \"IntoTheBattle Creator Dashboard\",\n  \"url\": \"https://intothebattle.com/dashboard\",\n  \"description\": \"Creator dashboard for managing TikTok LIVE battle overlay with real-time controls and stream management.\",\n  \"applicationCategory\": \"Productivity\"\n}",
-          "ok": true,
-          "errors": [],
-          "warnings": []
-        }
-      ]
+      "blocks": []
     },
     {
       "path": "home.html",
@@ -37,19 +21,8 @@
           "ok": true,
           "errors": [],
           "warnings": []
-        },
-        {
-          "index": 2,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\",\n    \"name\": \"Login - IntoTheBattle\",\n    \"url\": \"https://intothebattle.com/login\",\n    \"description\": \"Log in to your IntoTheBattle account or use a legacy access code to enter your overlay room.\"\n  }",
-          "ok": true,
-          "errors": [],
-          "warnings": []
         }
       ]
-    },
-    {
-      "path": "overlay-demo.html",
-      "blocks": []
     },
     {
       "path": "overlay-legacy.html",
@@ -69,31 +42,23 @@
     },
     {
       "path": "overlay.html",
-      "blocks": []
+      "blocks": [
+        {
+          "index": 1,
+          "raw": "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"WebPage\",\n  \"name\": \"IntoTheBattle Battle Royale Overlay\",\n  \"url\": \"https://intothebattle.com/overlay\",\n  \"description\": \"Interactive TikTok LIVE battle overlay with real-time combat effects and viewer engagement features.\",\n  \"isPartOf\": {\n    \"@type\": \"WebSite\",\n    \"name\": \"IntoTheBattle\",\n    \"url\": \"https://intothebattle.com/\"\n  }\n}",
+          "ok": true,
+          "errors": [],
+          "warnings": []
+        }
+      ]
     },
     {
       "path": "paywall.html",
-      "blocks": [
-        {
-          "index": 1,
-          "raw": "{\n      \"@context\": \"https://schema.org\",\n      \"@type\": \"WebPage\",\n      \"@name\": \"IntoTheBattle Premium Subscription\",\n      \"url\": \"https://intothebattle.com/paywall\",\n      \"description\": \"Premium subscription plans for IntoTheBattle with advanced features for TikTok LIVE creators.\",\n      \"isPartOf\": {\n        \"@type\": \"WebSite\",\n        \"name\": \"IntoTheBattle\",\n        \"url\": \"https://intothebattle.com/\"\n      }\n    }",
-          "ok": true,
-          "errors": [],
-          "warnings": []
-        }
-      ]
+      "blocks": []
     },
     {
       "path": "profile.html",
-      "blocks": [
-        {
-          "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\",\n    \"name\": \"IntoTheBattle Account Profile\",\n    \"url\": \"https://intothebattle.com/profile\",\n    \"description\": \"Manage your IntoTheBattle account profile, rooms, subscription, and overlay settings.\",\n    \"isPartOf\": {\n      \"@type\": \"WebSite\",\n      \"name\": \"IntoTheBattle\",\n      \"url\": \"https://intothebattle.com/\"\n    }\n  }",
-          "ok": true,
-          "errors": [],
-          "warnings": []
-        }
-      ]
+      "blocks": []
     },
     {
       "path": "register.html",
@@ -109,39 +74,27 @@
     },
     {
       "path": "request-password-reset.html",
-      "blocks": [
-        {
-          "index": 1,
-          "raw": "{\n      \"@context\": \"https://schema.org\",\n      \"@type\": \"WebPage\",\n      \"name\": \"IntoTheBattle Password Reset\",\n      \"url\": \"https://intothebattle.com/request-password-reset\",\n      \"description\": \"Request a secure password reset link to regain access to your IntoTheBattle account.\",\n      \"isPartOf\": {\n        \"@type\": \"WebSite\",\n        \"name\": \"IntoTheBattle\",\n        \"url\": \"https://intothebattle.com/\"\n      }\n    }",
-          "ok": true,
-          "errors": [],
-          "warnings": []
-        }
-      ]
+      "blocks": []
     },
     {
       "path": "reset-password.html",
-      "blocks": [
-        {
-          "index": 1,
-          "raw": "{\n      \"@context\": \"https://schema.org\",\n      \"@type\": \"WebPage\",\n      \"name\": \"IntoTheBattle Password Reset\",\n      \"url\": \"https://intothebattle.com/reset-password\",\n      \"description\": \"Securely reset your IntoTheBattle password using your reset token and new password.\",\n      \"isPartOf\": {\n        \"@type\": \"WebSite\",\n        \"name\": \"IntoTheBattle\",\n        \"url\": \"https://intothebattle.com/\"\n      }\n    }",
-          "ok": true,
-          "errors": [],
-          "warnings": []
-        }
-      ]
+      "blocks": []
     },
     {
       "path": "signup.html",
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\",\n    \"name\": \"IntoTheBattle 7-Day Trial Signup\",\n    \"url\": \"https://intothebattle.com/signup\",\n    \"description\": \"Start your 7-day trial of IntoTheBattle, the interactive TikTok LIVE battle overlay platform.\",\n    \"isPartOf\": {\n      \"@type\": \"WebSite\",\n      \"name\": \"IntoTheBattle\",\n      \"url\": \"https://intothebattle.com/\"\n    }\n  }",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\",\n    \"name\": \"IntoTheBattle Free Account Signup\",\n    \"url\": \"https://intothebattle.com/signup\",\n    \"description\": \"Create your free IntoTheBattle account for the interactive TikTok LIVE battle overlay platform.\",\n    \"isPartOf\": {\n      \"@type\": \"WebSite\",\n      \"name\": \"IntoTheBattle\",\n      \"url\": \"https://intothebattle.com/\"\n    }\n  }",
           "ok": true,
           "errors": [],
           "warnings": []
         }
       ]
+    },
+    {
+      "path": "sponsors.html",
+      "blocks": []
     },
     {
       "path": "stats.html",
@@ -161,21 +114,13 @@
     },
     {
       "path": "verify-email.html",
-      "blocks": [
-        {
-          "index": 1,
-          "raw": "{\n      \"@context\": \"https://schema.org\",\n      \"@type\": \"WebPage\",\n      \"name\": \"Email Verification - IntoTheBattle\",\n      \"url\": \"https://intothebattle.com/verify-email\",\n      \"description\": \"Verify your email address to complete your IntoTheBattle account setup.\",\n      \"isPartOf\": {\n        \"@type\": \"WebSite\",\n        \"name\": \"IntoTheBattle\",\n        \"url\": \"https://intothebattle.com/\"\n      }\n    }",
-          "ok": true,
-          "errors": [],
-          "warnings": []
-        }
-      ]
+      "blocks": []
     }
   ],
   "summary": {
     "total_files": 17,
-    "files_with_jsonld": 12,
-    "total_blocks": 13,
+    "files_with_jsonld": 6,
+    "total_blocks": 6,
     "errors": 0,
     "warnings": 0
   }

@@ -22,7 +22,7 @@
   "dependencies": {
     "@sentry/node": "^8.15.0",
     "@socket.io/redis-adapter": "^7.1.0",
-    "@tiktool/live": "latest",
+    "@tiktool/live": "2.7.1",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
     "dotenv": "^17.4.2",

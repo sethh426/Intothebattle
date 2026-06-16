@@ -286,9 +286,11 @@
 
       <div class="form-divider"></div>
 
-      <div class="form-group"><label for="email">Email</label><input id="email" type="email" autocomplete="username" /></div>
-      <div class="form-group"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" /></div>
-      <button id="loginBtn" type="button">Login</button>
+      <form id="accountLoginForm" novalidate>
+        <div class="form-group"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required /></div>
+        <div class="form-group"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required /></div>
+        <button id="loginBtn" type="submit">Login</button>
+      </form>
       <a href="/request-password-reset" class="inline-link">Forgot password?</a>
 
       <div class="form-divider"></div>
@@ -308,6 +310,7 @@
 
   <script>
     const statusEl = document.getElementById('accountStatus');
+    const accountLoginForm = document.getElementById('accountLoginForm');
     const loginBtn = document.getElementById('loginBtn');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
@@ -330,7 +333,8 @@
       statusEl.innerHTML = `<div class="notice ${isError ? 'error' : 'success'}">${message}</div>`;
     }
 
-    loginBtn.addEventListener('click', async () => {
+    accountLoginForm.addEventListener('submit', async event => {
+      event.preventDefault();
       statusEl.innerHTML = '';
       const email = emailInput.value.trim();
       const password = passwordInput.value;

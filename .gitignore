@@ -7,3 +7,4 @@ tiktokbr/*.db*
 data/
 playwright-report/
 test-results/
+.tmp-*

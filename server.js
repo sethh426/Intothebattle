@@ -2393,7 +2393,25 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.static(__dirname));
+const publicAssetFiles = new Map([
+  ['/logo.svg', 'logo.svg'],
+  ['/intothebattlelogo_logo_only.svg', 'intothebattlelogo_logo_only.svg'],
+  ['/robots.txt', 'robots.txt'],
+  ['/sitemap.xml', 'sitemap.xml'],
+]);
+
+app.get([...publicAssetFiles.keys()], (req, res) => {
+  const file = publicAssetFiles.get(req.path);
+  return res.sendFile(path.join(__dirname, file));
+});
+
+app.use('/js', express.static(path.join(__dirname, 'js'), {
+  dotfiles: 'deny',
+  etag: true,
+  fallthrough: false,
+  index: false,
+  maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
+}));
 
 function requireMetricsAccess(req, res, next) {
   if (process.env.NODE_ENV !== 'production') return next();
