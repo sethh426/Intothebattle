@@ -3790,8 +3790,11 @@ app.use((req, res) => {
   const logFn = quiet404Paths.has(req.path) ? logger.debug.bind(logger) : logger.warn.bind(logger);
 
   logFn({ method: req.method, path: req.path, query: req.query }, 'Route not found');
+  if (req.path.startsWith('/api/')) {
+    return res.status(404).json({ error: 'Not found' });
+  }
   if (req.accepts('html')) {
-    return res.status(404).send('<h1>404 Not Found</h1><p>The requested resource was not found on the server.</p>');
+    return res.status(404).sendFile(path.join(__dirname, '404.html'));
   }
   if (req.accepts('json')) {
     return res.status(404).json({ error: 'Not found' });
