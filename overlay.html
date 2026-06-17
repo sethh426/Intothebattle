@@ -283,32 +283,131 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 }
 
 .banner {
+  --banner-accent:#7afcff;
+  --banner-accent-rgb:122,252,255;
+  --banner-accent-soft:rgba(122,252,255,0.18);
+  --banner-duration:3200ms;
   position:fixed; left:50%; top:58%; transform:translate(-50%,0); z-index:10000; pointer-events:none;
-  font-family:'Rajdhani',sans-serif; font-weight:900; text-align:center;
-  display:flex; align-items:center; justify-content:center; min-height:clamp(34px,4.2vw,58px);
-  padding:clamp(7px,1vw,13px) clamp(18px,2.2vw,34px);
-  overflow:hidden; white-space:nowrap; text-overflow:ellipsis; box-sizing:border-box;
+  min-height:58px; max-height:72px; padding:0 14px; box-sizing:border-box; overflow:hidden;
+  display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:10px;
+  font-family:'Rajdhani','Segoe UI',sans-serif; color:#f8fbff;
   background:
-    linear-gradient(90deg, rgba(255,44,68,0.2), rgba(6,14,28,0.88) 28%, rgba(6,14,28,0.88) 72%, rgba(122,252,255,0.16)),
-    rgba(5,10,19,0.88);
-  border:1px solid rgba(255,255,255,0.14); border-radius:12px;
-  box-shadow:0 14px 36px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
-  animation:bannerIn 0.35s cubic-bezier(0.2,1.4,0.4,1),bannerOut 0.5s ease-in 2.6s forwards;
+    linear-gradient(90deg, rgba(2,7,14,0.98), rgba(5,16,31,0.94) 34%, rgba(3,9,18,0.96)),
+    radial-gradient(circle at 12% 50%, var(--banner-accent-soft), transparent 40%);
+  border:1px solid rgba(var(--banner-accent-rgb),0.48);
+  border-radius:7px;
+  clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);
+  box-shadow:
+    0 16px 44px rgba(0,0,0,0.58),
+    0 0 34px rgba(var(--banner-accent-rgb),0.2),
+    inset 0 1px 0 rgba(255,255,255,0.13),
+    inset 0 -1px 0 rgba(0,0,0,0.45);
+  animation:cyberBannerIn 260ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 820ms 160ms ease-out;
 }
-.banner-content {
+.banner::before {
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:.54;
+  background:
+    linear-gradient(90deg, transparent 0 8%, rgba(var(--banner-accent-rgb),0.42) 12%, transparent 18%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 5px);
+  transform:translateX(-115%);
+  animation:cyberBannerSweep 900ms 90ms cubic-bezier(.16,1,.3,1) both;
+}
+.banner::after {
+  content:""; position:absolute; inset:5px; pointer-events:none;
+  border:1px solid rgba(255,255,255,0.08);
+  clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+}
+.banner.closing { animation:cyberBannerOut 220ms ease-in forwards; }
+.banner-signal {
+  position:relative; width:48px; height:42px; display:grid; place-items:center; flex:0 0 auto;
+  color:var(--banner-accent); border-right:1px solid rgba(255,255,255,0.1);
+}
+.banner-code {
+  position:relative; z-index:1; min-width:36px; padding:4px 5px; text-align:center;
+  border:1px solid rgba(var(--banner-accent-rgb),0.34);
+  background:rgba(0,0,0,0.24);
+  box-shadow:inset 0 0 18px rgba(var(--banner-accent-rgb),0.14);
+  font-size:11px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase;
+}
+.banner-pulse {
+  position:absolute; width:34px; height:34px; border:1px solid rgba(var(--banner-accent-rgb),0.38);
+  transform:rotate(45deg); opacity:.82; animation:cyberSignalPulse 920ms ease-in-out infinite;
+}
+.banner-copy { min-width:0; position:relative; z-index:1; display:grid; gap:1px; }
+.banner-kicker {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:var(--banner-accent); font-size:11px; line-height:1; font-weight:900; letter-spacing:1.8px; text-transform:uppercase;
+  text-shadow:0 0 12px rgba(var(--banner-accent-rgb),0.48);
 }
-.banner-content strong { margin:0 0.16em; }
-.banner.kill      { font-size:clamp(18px,2vw,32px);   color:#ffcc44; text-shadow:0 0 30px rgba(255,200,0,0.9),0 0 80px rgba(255,100,0,0.6); letter-spacing:2px; }
-.banner.streak    { font-size:clamp(20px,2.2vw,36px); color:#ff44aa; text-shadow:0 0 40px rgba(255,68,170,0.9),0 0 80px rgba(255,0,100,0.4); letter-spacing:3px; }
-.banner.gift      { font-size:clamp(14px,1.8vw,26px); color:#fff; text-shadow:0 0 20px rgba(255,255,255,0.8); }
-.banner.legendary { font-size:clamp(22px,2.5vw,40px); color:#FFD700; text-shadow:0 0 40px rgba(255,215,0,1),0 0 100px rgba(255,140,0,0.8); letter-spacing:4px; animation:bannerIn 0.35s cubic-bezier(0.2,1.4,0.4,1),legendaryPulse 0.5s ease-in-out infinite alternate,bannerOut 0.5s ease-in 3.5s forwards; }
-@keyframes legendaryPulse {
-  from { text-shadow:0 0 40px rgba(255,215,0,1),0 0 100px rgba(255,140,0,0.8); }
-  to   { text-shadow:0 0 70px rgba(255,215,0,1),0 0 160px rgba(255,200,0,1);   }
+.banner-title {
+  display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:#fff; font-size:19px; line-height:1.08; font-weight:900; letter-spacing:.9px; text-transform:uppercase;
+  text-shadow:0 0 18px rgba(255,255,255,0.28);
 }
-@keyframes bannerIn  { 0%  { opacity:0; transform:translate(-50%,-24px) scale(0.88); } 100% { opacity:1; transform:translate(-50%,0) scale(1); } }
-@keyframes bannerOut { to  { opacity:0; transform:translate(-50%,-16px); } }
+.banner-title strong { color:var(--banner-accent); font-weight:900; }
+.banner-meta {
+  display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:#aeb8c9; font-size:11px; line-height:1.05; font-weight:800; letter-spacing:.8px; text-transform:uppercase;
+}
+.banner-meter {
+  position:relative; z-index:1; width:7px; height:42px; border:1px solid rgba(255,255,255,0.12);
+  background:rgba(255,255,255,0.05); overflow:hidden; align-self:center;
+}
+.banner-meter-fill {
+  position:absolute; left:0; right:0; bottom:0; height:var(--banner-charge,70%);
+  background:linear-gradient(180deg, #fff, var(--banner-accent));
+  box-shadow:0 0 16px var(--banner-accent);
+  transform-origin:bottom center;
+  animation:cyberMeterDrain var(--banner-duration) linear forwards;
+}
+.banner.kill { --banner-accent:#ffd45d; --banner-accent-rgb:255,212,93; --banner-accent-soft:rgba(255,84,54,0.2); }
+.banner.streak { --banner-accent:#ff4eb8; --banner-accent-rgb:255,78,184; --banner-accent-soft:rgba(255,78,184,0.18); }
+.banner.gift { --banner-accent:#7afcff; --banner-accent-rgb:122,252,255; --banner-accent-soft:rgba(122,252,255,0.16); }
+.banner.special { --banner-accent:#9dff8b; --banner-accent-rgb:157,255,139; --banner-accent-soft:rgba(157,255,139,0.15); }
+.banner.follow { --banner-accent:#6dffcb; --banner-accent-rgb:109,255,203; --banner-accent-soft:rgba(109,255,203,0.15); }
+.banner.legendary {
+  --banner-accent:#ffe36f; --banner-accent-rgb:255,227,111; --banner-accent-soft:rgba(255,174,41,0.24);
+  box-shadow:
+    0 18px 54px rgba(0,0,0,0.62),
+    0 0 44px rgba(255,227,111,0.28),
+    0 0 86px rgba(255,84,54,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.18);
+}
+.banner.legendary .banner-title { font-size:21px; text-shadow:0 0 26px rgba(255,227,111,0.42); }
+@keyframes cyberBannerIn {
+  0% { opacity:0; transform:translate(-50%,-14px) scaleX(.72); filter:blur(5px) brightness(1.45); }
+  62% { opacity:1; transform:translate(-50%,2px) scaleX(1.025); filter:blur(0) brightness(1.1); }
+  100% { opacity:1; transform:translate(-50%,0) scaleX(1); filter:none; }
+}
+@keyframes cyberBannerOut {
+  to { opacity:0; transform:translate(-50%,-12px) scaleX(.82); filter:blur(4px); }
+}
+@keyframes cyberBannerSweep {
+  0% { transform:translateX(-115%); }
+  100% { transform:translateX(118%); }
+}
+@keyframes cyberBannerPulse {
+  0% { box-shadow:0 0 0 rgba(255,255,255,0),0 0 0 rgba(var(--banner-accent-rgb),0); }
+  55% { box-shadow:0 0 0 2px rgba(var(--banner-accent-rgb),0.22),0 0 52px rgba(var(--banner-accent-rgb),0.28); }
+  100% { box-shadow:0 16px 44px rgba(0,0,0,0.58),0 0 34px rgba(var(--banner-accent-rgb),0.2); }
+}
+@keyframes cyberSignalPulse {
+  0%,100% { transform:rotate(45deg) scale(.78); opacity:.42; }
+  50% { transform:rotate(45deg) scale(1.12); opacity:.96; }
+}
+@keyframes cyberMeterDrain {
+  to { transform:scaleY(.08); opacity:.62; }
+}
+@media(max-width:720px) {
+  .banner { min-height:52px; max-height:64px; padding:0 10px; gap:8px; }
+  .banner-signal { width:38px; height:36px; }
+  .banner-code { min-width:30px; font-size:9px; letter-spacing:.8px; }
+  .banner-pulse { width:28px; height:28px; }
+  .banner-kicker { font-size:9px; letter-spacing:1.2px; }
+  .banner-title,.banner.legendary .banner-title { font-size:14px; letter-spacing:.5px; }
+  .banner-meta { font-size:9px; }
+  .banner-meter { height:36px; }
+}
 @keyframes battleReturnFrame {
   0%   { filter:brightness(1.35) saturate(1.25); box-shadow:0 0 0 2px rgba(255,255,255,0.55),0 0 80px rgba(246,201,91,0.35),0 0 150px rgba(85,231,255,0.22); }
   42%  { filter:brightness(1.12) saturate(1.18); box-shadow:0 0 0 2px rgba(246,201,91,0.55),0 0 72px rgba(246,201,91,0.24),0 0 130px rgba(85,231,255,0.18); }
@@ -712,6 +811,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .sponsor-scene.live.video-loading .sponsor-media-status,
 .sponsor-scene.live.video-error .sponsor-media-status { opacity:.88; }
 .sponsor-scene.live.clock-running .sponsor-progress span { animation:sponsorProgress var(--sponsor-duration) linear forwards; }
+.sponsor-scene.live.clock-paused .sponsor-progress span { animation-play-state:paused; }
 .sponsor-scene.live .sponsor-brand,
 .sponsor-scene.live .sponsor-kicker,
 .sponsor-scene.live .sponsor-title,
@@ -1117,6 +1217,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let _demoTimer      = null;
   let sponsorTimer    = null;
   let sponsorVideoStartTimer = null;
+  let sponsorStallTimer = null;
+  let sponsorClockDeadline = 0;
+  let sponsorClockRemainingMs = 0;
+  let sponsorClockPaused = false;
   let sponsorStatsTimers = [];
   let sponsorState    = 'battle';
   let sponsorQueue    = [];
@@ -1268,6 +1372,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
   }
 
+  function clearSponsorStallTimer() {
+    if (sponsorStallTimer) {
+      clearTimeout(sponsorStallTimer);
+      sponsorStallTimer = null;
+    }
+  }
+
   function clearSponsorVideoStartTimer() {
     if (sponsorVideoStartTimer) {
       clearTimeout(sponsorVideoStartTimer);
@@ -1278,6 +1389,28 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function clearSponsorStatsTimers() {
     sponsorStatsTimers.forEach(timer => clearTimeout(timer));
     sponsorStatsTimers = [];
+  }
+
+  function pauseSponsorClockForBuffering(payload) {
+    if (!sponsorScene || sponsorState !== 'live' || activeSponsorPayload !== payload || !sponsorTimer || sponsorClockPaused) return;
+    sponsorClockRemainingMs = Math.max(1000, sponsorClockDeadline - Date.now());
+    clearSponsorTimer();
+    sponsorClockPaused = true;
+    sponsorScene.classList.add('clock-paused');
+  }
+
+  function resumeSponsorClockAfterBuffering(payload) {
+    if (!sponsorScene || sponsorState !== 'live' || activeSponsorPayload !== payload) return;
+    clearSponsorStallTimer();
+    if (!sponsorClockPaused) return;
+    sponsorClockPaused = false;
+    sponsorScene.classList.remove('clock-paused');
+    const remaining = Math.max(1000, sponsorClockRemainingMs || 1000);
+    sponsorClockDeadline = Date.now() + remaining;
+    sponsorTimer = setTimeout(() => {
+      sponsorTimer = null;
+      startSponsorOutro(payload);
+    }, remaining);
   }
 
   function scheduleSponsorStatsTimer(callback, delayMs) {
@@ -1316,9 +1449,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function resetSponsorTimingClasses() {
     clearSponsorVideoStartTimer();
+    clearSponsorStallTimer();
     clearSponsorStatsTimers();
+    sponsorClockDeadline = 0;
+    sponsorClockRemainingMs = 0;
+    sponsorClockPaused = false;
     if (sponsorScene) {
-      sponsorScene.classList.remove('clock-running', 'stats-visible');
+      sponsorScene.classList.remove('clock-running', 'clock-paused', 'stats-visible');
     }
   }
 
@@ -1327,6 +1464,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     setSponsorStatsVisible(false);
     const mode = payload.statsMode || 'endcap';
     if (mode === 'hidden') return;
+    if (mode === 'endcap' && startedByVideo) return;
 
     const duration = Math.max(1000, liveDurationMs || payload.durationMs || 15000);
     let showAt = 0;
@@ -1353,7 +1491,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const duration = resolveSponsorLiveDuration({ ...payload, durationMs: liveDurationMs || payload.durationMs }, startedByVideo);
     sponsorScene.style.setProperty('--sponsor-duration', `${duration}ms`);
     void sponsorProgress?.offsetWidth;
+    sponsorClockPaused = false;
+    sponsorClockRemainingMs = duration;
+    sponsorClockDeadline = Date.now() + duration;
     sponsorScene.classList.add('clock-running');
+    sponsorScene.classList.remove('clock-paused');
     scheduleSponsorStats(payload, duration, startedByVideo);
     sponsorTimer = setTimeout(() => {
       sponsorTimer = null;
@@ -1383,6 +1525,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       title: sponsorCleanTitle(payload.title),
       subtitle: String(payload.subtitle || 'Stay locked in. The next fight is loading.').slice(0, 140),
       durationMs: Number.isFinite(duration) ? Math.max(5000, Math.min(120000, Math.round(duration))) : 15000,
+      mediaDurationMs: Number.isFinite(Number(payload.mediaDurationMs)) ? Math.max(0, Math.round(Number(payload.mediaDurationMs))) : null,
+      mediaWidth: Number.isFinite(Number(payload.mediaWidth)) ? Math.max(0, Math.round(Number(payload.mediaWidth))) : null,
+      mediaHeight: Number.isFinite(Number(payload.mediaHeight)) ? Math.max(0, Math.round(Number(payload.mediaHeight))) : null,
+      processingStatus: String(payload.processingStatus || ''),
+      readinessStatus: String(payload.readinessStatus || ''),
       muted: payload.muted !== false,
       fit,
       statsMode,
@@ -1460,8 +1607,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const requestedFit = ['cover', 'contain', 'auto'].includes(payload.fit) ? payload.fit : 'auto';
     let resolvedFit = requestedFit;
     if (resolvedFit === 'auto') {
-      const mediaWidth = Number(sponsorVideo.videoWidth) || 16;
-      const mediaHeight = Number(sponsorVideo.videoHeight) || 9;
+      const mediaWidth = Number(payload.mediaWidth) || Number(sponsorVideo.videoWidth) || 16;
+      const mediaHeight = Number(payload.mediaHeight) || Number(sponsorVideo.videoHeight) || 9;
       const ratio = mediaWidth / Math.max(1, mediaHeight);
       resolvedFit = ratio < 1.45 || ratio > 2.05 ? 'contain' : 'cover';
     }
@@ -1470,6 +1617,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function sponsorMediaDurationMs() {
+    if (activeSponsorPayload?.mediaDurationMs && Number.isFinite(Number(activeSponsorPayload.mediaDurationMs))) {
+      return Math.round(Number(activeSponsorPayload.mediaDurationMs));
+    }
     if (!sponsorVideo || !Number.isFinite(sponsorVideo.duration) || sponsorVideo.duration <= 0) return 0;
     return Math.round(sponsorVideo.duration * 1000);
   }
@@ -1628,6 +1778,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         }
       }, delay);
     };
+    const handleRecovered = () => {
+      applySponsorVideoFit(payload);
+      setSponsorMediaStatus('', 'video-ready');
+      resumeSponsorClockAfterBuffering(payload);
+    };
+    const handleBuffering = () => {
+      setSponsorMediaStatus('Buffering arena media', 'video-loading');
+      pauseSponsorClockForBuffering(payload);
+      clearSponsorStallTimer();
+      sponsorStallTimer = setTimeout(() => {
+        sponsorStallTimer = null;
+        if (sponsorState !== 'live' || activeSponsorPayload !== payload) return;
+        failPlayback('Arena media stalled during playback');
+      }, 7000);
+    };
 
     sponsorVideo.muted = payload.muted !== false;
     applySponsorVideoFit(payload);
@@ -1639,29 +1804,31 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     sponsorVideo.onloadeddata = () => {
-      applySponsorVideoFit(payload);
-      setSponsorMediaStatus('', 'video-ready');
+      handleRecovered();
       scheduleReadyFallback(1000);
     };
     sponsorVideo.oncanplay = () => {
-      applySponsorVideoFit(payload);
-      setSponsorMediaStatus('', 'video-ready');
+      handleRecovered();
       scheduleReadyFallback(900);
     };
     sponsorVideo.oncanplaythrough = () => {
-      setSponsorMediaStatus('', 'video-ready');
+      handleRecovered();
       scheduleReadyFallback(700);
     };
     sponsorVideo.onloadedmetadata = () => applySponsorVideoFit(payload);
-    sponsorVideo.onplaying = () => requestFirstFrame();
-    sponsorVideo.onwaiting = () => setSponsorMediaStatus('Buffering arena media', 'video-loading');
-    sponsorVideo.onstalled = () => setSponsorMediaStatus('Buffering arena media', 'video-loading');
+    sponsorVideo.onplaying = () => {
+      handleRecovered();
+      requestFirstFrame();
+    };
+    sponsorVideo.onwaiting = handleBuffering;
+    sponsorVideo.onstalled = handleBuffering;
     sponsorVideo.onerror = () => {
       failPlayback(sponsorVideoErrorMessage('Arena media could not play'));
     };
     sponsorVideo.onended = () => {
       clearReadyFallback();
       clearFirstFrameFallback();
+      clearSponsorStallTimer();
       if (sponsorState === 'live' && activeSponsorPayload === payload) {
         reportSponsorPlayback(payload, 'video_completed');
         if ((payload.statsMode || 'endcap') === 'endcap' && sponsorTimer) {
@@ -1810,7 +1977,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     resetSponsorTimingClasses();
     resetSponsorVideo(true);
     if (sponsorScene) {
-      sponsorScene.classList.remove('active', 'intro', 'live', 'outro', 'contain', 'clock-running', 'stats-visible');
+      sponsorScene.classList.remove('active', 'intro', 'live', 'outro', 'contain', 'clock-running', 'clock-paused', 'stats-visible');
       sponsorScene.setAttribute('aria-hidden', 'true');
     }
     document.body.classList.remove('sponsor-active');
@@ -1879,7 +2046,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (payload.videoUrl) {
       playPreparedSponsorVideo(payload, {
         onPlaying: () => startSponsorClock(payload, payload.durationMs, true),
-        onError: () => startSponsorClock(payload, payload.durationMs, false),
+        onError: () => startSponsorOutro(payload, true, 'failed'),
         onUnavailable: () => startSponsorClock(payload, payload.durationMs, false),
       });
       sponsorVideoStartTimer = setTimeout(() => {
@@ -1902,12 +2069,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
   }
 
-  function startSponsorOutro(payload = {}, forced = false) {
+  function startSponsorOutro(payload = {}, forced = false, finishStatus = '') {
     if (!sponsorScene || sponsorState === 'battle') return;
     clearSponsorTimer();
     resetSponsorTimingClasses();
     sponsorState = 'outro';
-    sponsorFinishStatus = forced ? 'stopped' : 'completed';
+    sponsorFinishStatus = finishStatus || (forced ? 'stopped' : 'completed');
     setSponsorText(sponsorOutroTitle, forced ? 'RETURNING TO BATTLE' : 'BACK TO THE BATTLE', 'BACK TO THE BATTLE');
     resetSponsorVideo(false);
     setSponsorSceneState('outro');
@@ -2444,16 +2611,157 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   // ═══════════════════════════════════════
   // DOM HELPERS
   // ═══════════════════════════════════════
-  function showBanner(cls, html, dur) {
-    dur = dur || 3200;
+  const BANNER_CONFIG = {
+    kill: { code: 'KO', kicker: 'Knockout confirmed', duration: 3200, priority: 70, charge: 72 },
+    streak: { code: 'HOT', kicker: 'Heat level rising', duration: 3600, priority: 82, charge: 84 },
+    gift: { code: 'PWR', kicker: 'Boost signal', duration: 3000, priority: 58, charge: 64 },
+    special: { code: 'CMD', kicker: 'Special strike', duration: 2400, priority: 54, charge: 58 },
+    follow: { code: 'NEW', kicker: 'Crowd signal', duration: 2400, priority: 38, charge: 46 },
+    legendary: { code: 'MAX', kicker: 'Legendary moment', duration: 4400, priority: 96, charge: 100 },
+  };
+  const bannerQueue = [];
+  const recentBannerSignatures = new Map();
+  const bannerMomentum = { killer: '', lastKillAt: 0, chain: 0 };
+  let activeBanner = null;
+  let activeBannerTimer = null;
+
+  function clampBannerNumber(value, min, max, fallback) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return fallback;
+    return Math.max(min, Math.min(max, num));
+  }
+
+  function stripBannerHtml(html) {
+    const temp = document.createElement('div');
+    temp.innerHTML = String(html || '');
+    return temp.textContent || temp.innerText || '';
+  }
+
+  function cleanupRecentBannerSignatures(now) {
+    for (const [key, ts] of recentBannerSignatures) {
+      if (now - ts > 1800) recentBannerSignatures.delete(key);
+    }
+  }
+
+  function normalizeBannerPayload(type, content, durationMs, options) {
+    const cls = BANNER_CONFIG[type] ? type : 'gift';
+    const config = BANNER_CONFIG[cls];
+    const objectContent = content && typeof content === 'object' && !Array.isArray(content) ? content : null;
+    const titleHtml = objectContent
+      ? escapeHtml(objectContent.title || objectContent.titleText || '')
+      : String(content || '');
+    const metaHtml = objectContent && objectContent.meta ? escapeHtml(objectContent.meta) : '';
+    const kickerHtml = escapeHtml((objectContent && objectContent.kicker) || (options && options.kicker) || config.kicker);
+    const codeHtml = escapeHtml((objectContent && objectContent.code) || (options && options.code) || config.code);
+    const duration = clampBannerNumber(
+      durationMs || (objectContent && objectContent.durationMs) || (options && options.durationMs),
+      1400,
+      5200,
+      config.duration
+    );
+    const priority = clampBannerNumber(
+      (objectContent && objectContent.priority) || (options && options.priority),
+      1,
+      100,
+      config.priority
+    );
+    const charge = clampBannerNumber(
+      (objectContent && objectContent.charge) || (options && options.charge),
+      12,
+      100,
+      config.charge
+    );
+    const signature = `${cls}|${stripBannerHtml(titleHtml)}|${stripBannerHtml(metaHtml)}`.toLowerCase();
+
+    return {
+      cls,
+      codeHtml,
+      kickerHtml,
+      titleHtml: titleHtml || escapeHtml(config.kicker),
+      metaHtml,
+      duration,
+      priority,
+      charge,
+      signature,
+      createdAt: Date.now(),
+      el: null,
+    };
+  }
+
+  function shouldDropBanner(item) {
+    const now = Date.now();
+    cleanupRecentBannerSignatures(now);
+    const last = recentBannerSignatures.get(item.signature);
+    if (last && now - last < 900) return true;
+    recentBannerSignatures.set(item.signature, now);
+    return false;
+  }
+
+  function closeActiveBanner(renderNext = true) {
+    if (!activeBanner) {
+      if (renderNext) renderNextBanner();
+      return;
+    }
+    if (activeBannerTimer) {
+      clearTimeout(activeBannerTimer);
+      activeBannerTimer = null;
+    }
+    const closing = activeBanner;
+    activeBanner = null;
+    if (closing.el) {
+      closing.el.classList.add('closing');
+      setTimeout(() => closing.el && closing.el.remove(), 240);
+    }
+    if (renderNext) setTimeout(renderNextBanner, 210);
+  }
+
+  function renderBannerItem(item) {
     const el = document.createElement('div');
-    el.className = 'banner ' + cls;
-    el.innerHTML = `<span class="banner-content">${html}</span>`;
+    item.el = el;
+    activeBanner = item;
+    el.className = `banner ${item.cls}`;
+    el.style.setProperty('--banner-duration', `${item.duration}ms`);
+    el.style.setProperty('--banner-charge', `${item.charge}%`);
+    el.innerHTML = `
+      <span class="banner-signal" aria-hidden="true">
+        <span class="banner-pulse"></span>
+        <span class="banner-code">${item.codeHtml}</span>
+      </span>
+      <span class="banner-copy">
+        <span class="banner-kicker">${item.kickerHtml}</span>
+        <span class="banner-title">${item.titleHtml}</span>
+        ${item.metaHtml ? `<span class="banner-meta">${item.metaHtml}</span>` : ''}
+      </span>
+      <span class="banner-meter" aria-hidden="true"><span class="banner-meter-fill"></span></span>
+    `;
     el.style.visibility = 'hidden';
     document.body.appendChild(el);
     placeBannerAboveHorde(el);
     el.style.visibility = '';
-    setTimeout(() => el.remove(), dur);
+    activeBannerTimer = setTimeout(() => closeActiveBanner(true), item.duration);
+  }
+
+  function renderNextBanner() {
+    if (activeBanner || !bannerQueue.length) return;
+    bannerQueue.sort((a, b) => (b.priority - a.priority) || (a.createdAt - b.createdAt));
+    renderBannerItem(bannerQueue.shift());
+  }
+
+  function enqueueBanner(item) {
+    if (shouldDropBanner(item)) return;
+    if (activeBanner && item.priority >= activeBanner.priority + 18) {
+      bannerQueue.unshift(item);
+      closeActiveBanner(true);
+      return;
+    }
+    bannerQueue.push(item);
+    bannerQueue.sort((a, b) => (b.priority - a.priority) || (a.createdAt - b.createdAt));
+    while (bannerQueue.length > 4) bannerQueue.pop();
+    renderNextBanner();
+  }
+
+  function showBanner(cls, content, dur, options = {}) {
+    enqueueBanner(normalizeBannerPayload(cls, content, dur, options));
   }
 
   function placeBannerAboveHorde(el) {
@@ -3178,7 +3486,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       if (fired) {
         rememberAttack(attackerId, targetId, effect);
         if (data.special) {
-          showBanner('gift', `${escapeHtml(data.attackerNick || attackerId)} used <strong>${escapeHtml(data.commandDescription || effect || 'special attack')}</strong>`, 1800);
+          showBanner('special', {
+            code: 'CMD',
+            kicker: 'Special strike',
+            title: `${data.attackerNick || attackerId} activated ${data.commandDescription || effect || 'special attack'}`,
+            meta: 'Viewer command converted to damage',
+            charge: 62,
+            priority: 56,
+          }, 2400);
         }
       }
     }, 90);
@@ -3207,8 +3522,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function showSocialBoost(data) {
     if (!data) return;
-    const name = escapeHtml(data.nickname || data.uniqueId || 'viewer');
-    showBanner('gift', `SHARE BOOST <strong>${name}</strong>`, 2200);
+    const name = data.nickname || data.uniqueId || 'viewer';
+    showBanner('special', {
+      code: 'AMP',
+      kicker: 'Signal amplified',
+      title: `${name} triggered a share boost`,
+      meta: 'Crowd reach increased',
+      charge: 58,
+      priority: 52,
+    }, 2600);
     const pos = getPositionForPlayer(data.uniqueId);
     if (!pos) return;
     const atk = new Attack(pos, pos, 'static');
@@ -4065,6 +4387,20 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }, 140);
   }
 
+  function recordKillBannerMomentum(killerId, streak) {
+    const now = Date.now();
+    const normalizedKiller = String(killerId || '').toLowerCase();
+    const chainWindowMs = 12000;
+    if (normalizedKiller && bannerMomentum.killer === normalizedKiller && now - bannerMomentum.lastKillAt < chainWindowMs) {
+      bannerMomentum.chain += 1;
+    } else {
+      bannerMomentum.killer = normalizedKiller;
+      bannerMomentum.chain = 1;
+    }
+    bannerMomentum.lastKillAt = now;
+    return Math.max(bannerMomentum.chain, Number(streak) || 0);
+  }
+
   function handleKillEvent(data) {
     if (!data) return;
     fireAttack(data.killer, data.victim, data.damage, true, false, data.effect || 'explosion', {
@@ -4073,7 +4409,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     });
     setCardAccent(data.killer, 'kill', THEME.gold, 1500);
     setCardAccent(data.victim, 'hit', THEME.red, 1200);
-    showBanner('kill', `${data.killerNick || data.killer} 💀 ${data.victimNick || data.victim}<span style="font-size:0.68em;opacity:0.8"> (${data.killerKills} kills)</span>`);
+    const killerName = data.killerNick || data.killer || 'Fighter';
+    const victimName = data.victimNick || data.victim || 'Opponent';
+    const kills = Number(data.killerKills) || 0;
+    const streak = Number(data.killerStreak) || 0;
+    const momentum = recordKillBannerMomentum(data.killer || killerName, streak);
+    const highImpact = streak >= 5 || momentum >= 4;
+    const meta = [
+      `${kills} total kills`,
+      streak > 1 ? `streak x${streak}` : '',
+      momentum > 1 ? `momentum x${momentum}` : '',
+    ].filter(Boolean).join(' | ');
+    showBanner(highImpact ? 'legendary' : 'kill', {
+      code: highImpact ? `X${Math.max(streak, momentum)}` : 'KO',
+      kicker: streak >= 3 ? 'Knockout chain' : 'Knockout confirmed',
+      title: `${killerName} eliminated ${victimName}`,
+      meta,
+      charge: Math.min(100, 58 + streak * 7 + momentum * 5),
+      priority: highImpact ? 96 : 76,
+    }, highImpact ? 4200 : 3300);
     showBattlePrompt('Knockout confirmed', '', 1700);
     playSound('kill');
   }
@@ -4081,14 +4435,30 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function handleStreakEvent(data) {
     const name = data.nickname || data.killerNick || '???';
     const streak = data.streak || data.streakCount || 0;
-    showBanner('streak', `🔥 ${name} – ${data.label || streak + ' KILL STREAK'}!`);
+    const level = Number(streak) || 0;
+    showBanner(level >= 10 ? 'legendary' : 'streak', {
+      code: level >= 10 ? 'MAX' : `X${level || 1}`,
+      kicker: level >= 10 ? 'Arena takeover' : 'Heat level rising',
+      title: `${name} is ${data.label || `${level} kill streak`}`,
+      meta: `Chain x${level || 1} | pressure rising`,
+      charge: Math.min(100, 62 + level * 5),
+      priority: level >= 10 ? 98 : 86,
+    }, level >= 10 ? 4600 : 3700);
     showBattlePrompt('Hot streak in the arena', '', 1800);
   }
 
   function handleGiftCelebration(data) {
     if (!data) return;
     const isLegend = data.tier === 'legendary';
-    showBanner(isLegend ? 'legendary' : 'gift', `${data.giftLabel || '🎁'} <strong>${data.nickname}</strong> sent <strong>${data.giftName || 'a gift'}</strong> · ${data.diamonds} 💎 · ${(data.tier || 'common').toUpperCase()}`, isLegend ? 4500 : 3200);
+    const diamonds = Number(data.diamonds) || 0;
+    showBanner(isLegend ? 'legendary' : 'gift', {
+      code: isLegend ? 'MAX' : 'PWR',
+      kicker: isLegend ? 'Legendary drop' : 'Boost signal',
+      title: `${data.nickname || 'Viewer'} sent ${data.giftName || 'a gift'}`,
+      meta: `${diamonds} diamonds | ${(data.tier || 'common').toUpperCase()} power`,
+      charge: isLegend ? 100 : Math.min(92, 48 + Math.round(diamonds / 20)),
+      priority: isLegend ? 98 : 62,
+    }, isLegend ? 4600 : 3200);
     const id = data.uniqueId || data.userId || data.nickname;
     if (id) {
       setCardAccent(id, 'gift', isLegend ? THEME.gold : '#ff8bc2', isLegend ? 1800 : 1200);
@@ -4100,7 +4470,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function handleFollowEvent(data) {
     if (!data) return;
-    showBanner('gift', `NEW FOLLOWER <strong>${escapeHtml(data.nickname || data.uniqueId || 'viewer')}</strong>`, 2400);
+    showBanner('follow', {
+      code: 'NEW',
+      kicker: 'Crowd signal',
+      title: `${data.nickname || data.uniqueId || 'Viewer'} joined the arena`,
+      meta: 'Audience energy increased',
+      charge: 48,
+      priority: 40,
+    }, 2600);
     fireHeartEffect(data.uniqueId, 2, 0.55, { ...data, kind: 'follow', color: data.color || THEME.cyan });
     showBattlePrompt('New fighter joined the crowd', 'return', 1900);
   }
@@ -4244,6 +4621,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         _ts: Date.now(),
       });
     }, 500);
+  }
+  if (overlayParams.get('banner_preview') === '1') {
+    setTimeout(() => {
+      showBanner('legendary', {
+        code: overlayParams.get('banner_code') || 'X7',
+        kicker: overlayParams.get('banner_kicker') || 'Arena takeover',
+        title: overlayParams.get('banner_title') || 'NeonAce eliminated ShadowByte',
+        meta: overlayParams.get('banner_meta') || '7 total kills | streak x5 | momentum x4',
+        charge: 100,
+        priority: 98,
+      }, 4600);
+    }, 900);
   }
   requestAnimationFrame(draw);
 

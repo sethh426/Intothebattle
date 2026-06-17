@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   buildPlanEntitlements,
+  isBetaTesterAccessCode,
   isPaidAccessCode,
   isPaidAuthRecord,
 } from '../tiktokbr/services/entitlements.js';
@@ -62,6 +63,29 @@ function testEntitlements() {
     planName: 'Free',
     canUseCreatorSponsors: false,
     platformSponsorManaged: true,
+    betaTester: false,
+  });
+
+  assert.equal(
+    isBetaTesterAccessCode({
+      code_type: 'beta-tester',
+      is_revoked: 0,
+      is_promo: 0,
+    }),
+    true,
+    'beta-tester access-code types should be recognized'
+  );
+
+  const betaPlan = buildPlanEntitlements({
+    type: 'code',
+    record: { subscription_status: 'active', code_type: 'beta-tester' },
+  });
+  assert.deepEqual(betaPlan, {
+    tier: 'beta',
+    planName: 'Beta Tester',
+    canUseCreatorSponsors: true,
+    platformSponsorManaged: false,
+    betaTester: true,
   });
 
   const paidAuth = { type: 'user', record: { id: 7 } };

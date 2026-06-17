@@ -11,7 +11,14 @@ CREATE TABLE IF NOT EXISTS access_codes (
   fingerprint TEXT,
   session_token TEXT,
   last_seen TIMESTAMP,
-  paypal_subscription_id TEXT
+  paypal_subscription_id TEXT,
+  user_id INTEGER,
+  code_type TEXT DEFAULT 'trial',
+  trial_started TIMESTAMP,
+  trial_days INTEGER DEFAULT 14,
+  subscription_status TEXT DEFAULT 'active',
+  streamer_name TEXT,
+  tiktok_username TEXT
 );
 
 CREATE TABLE IF NOT EXISTS room_settings (

@@ -12,6 +12,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=DM+Sans:wght@400;500;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
+  <script type="module" src="/js/clarity-loader.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -141,7 +142,7 @@
     .sponsor-readiness-title { color:#fff8e6; font-size:13px; font-weight:900; text-transform:uppercase; }
     .sponsor-readiness-pill { flex:0 0 auto; min-height:30px; display:inline-flex; align-items:center; padding:5px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.14); color:var(--muted); font-size:11px; font-weight:900; text-transform:uppercase; }
     .sponsor-readiness-pill.preparing,.sponsor-readiness-pill.ready { color:var(--cyan); border-color:rgba(85,231,255,.34); background:rgba(85,231,255,.09); }
-    .sponsor-readiness-pill.live,.sponsor-readiness-pill.playing,.sponsor-readiness-pill.video_completed { color:var(--gold2); border-color:rgba(246,201,91,.34); background:rgba(246,201,91,.09); }
+    .sponsor-readiness-pill.starting,.sponsor-readiness-pill.live,.sponsor-readiness-pill.playing,.sponsor-readiness-pill.video_completed { color:var(--gold2); border-color:rgba(246,201,91,.34); background:rgba(246,201,91,.09); }
     .sponsor-readiness-pill.completed { color:var(--green); border-color:rgba(119,240,161,.34); background:rgba(119,240,161,.09); }
     .sponsor-readiness-pill.failed,.sponsor-readiness-pill.stopped { color:#ff9aa8; border-color:rgba(232,59,95,.36); background:rgba(232,59,95,.1); }
     .sponsor-readiness-message { color:var(--muted); font-size:12px; font-weight:800; line-height:1.35; }
@@ -642,6 +643,15 @@ function testOverlayAttack(){ runOverlayTest('attack'); } function testOverlayGi
 
 function sponsorInputValue(id, fallback = '') { const el = document.getElementById(id); return (el && el.value.trim()) || fallback; }
 function selectedSponsorFile(filename = selectedSponsorFilename) { return sponsorLibraryData.find(file => file.filename === filename) || null; }
+function sponsorPlaybackIssue(file) {
+  if (!file) return 'Select a video creative first.';
+  const processingStatus = String(file.processingStatus || '').toLowerCase();
+  const readinessStatus = String(file.readinessStatus || '').toLowerCase();
+  if (['processing', 'queued'].includes(processingStatus)) return 'This video is still processing.';
+  if (processingStatus === 'failed') return file.processingMessage || 'This video failed processing.';
+  if (readinessStatus === 'failed') return file.playbackMessage || 'This video failed its last overlay test.';
+  return '';
+}
 function sponsorStatsMode() {
   const value = document.getElementById('sponsorStatsModeInput')?.value || 'endcap';
   return ['endcap','delayed','hidden','always'].includes(value) ? value : 'endcap';
@@ -651,6 +661,7 @@ function sponsorStatusLabel(status) {
     idle: 'Idle',
     preparing: 'Preparing',
     ready: 'Ready',
+    starting: 'Starting',
     live: 'Live',
     playing: 'Playing',
     video_completed: 'Stats',
@@ -695,7 +706,7 @@ function updateSponsorBreakStatus(data = {}) {
   let activeIndex = -1;
   if (status === 'preparing') activeIndex = 0;
   else if (status === 'ready') activeIndex = 1;
-  else if (['live', 'playing', 'video_completed'].includes(status)) activeIndex = 2;
+  else if (['starting', 'live', 'playing', 'video_completed'].includes(status)) activeIndex = 2;
   else if (['completed', 'failed', 'stopped'].includes(status)) activeIndex = 3;
   document.querySelectorAll('[data-sponsor-step]').forEach((step, index) => {
     step.classList.toggle('active', activeIndex >= index);
@@ -870,6 +881,9 @@ function renderSponsorLibrary() {
     const playBtn = document.createElement('button');
     playBtn.className = 'btn btn-success';
     playBtn.textContent = 'Play';
+    const playbackIssue = sponsorPlaybackIssue(file);
+    playBtn.disabled = Boolean(playbackIssue);
+    if (playbackIssue) playBtn.title = playbackIssue;
     playBtn.onclick = () => { setSponsorInputs(file); renderSponsorLibrary(); playSponsorScene(file.filename); };
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'btn btn-danger';
@@ -883,7 +897,7 @@ function renderSponsorLibrary() {
   updateReadinessChecklist();
 }
 function uploadSponsorVideo() {
-  if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true);
+  if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro or beta tester access', true);
   const input = document.getElementById('sponsorFileInput');
   const file = input && input.files[0];
   if (!file) return toast('Choose a sponsor video first', true);
@@ -913,8 +927,11 @@ function uploadSponsorVideo() {
     .catch(() => toast('Sponsor upload failed', true));
 }
 function playSponsorScene(filename = selectedSponsorFilename) {
-  if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true);
+  if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro or beta tester access', true);
   if (overlayCount <= 0) return toast('Open or refresh the overlay before sending a power moment', true);
+  const selected = selectedSponsorFile(filename);
+  const playbackIssue = sponsorPlaybackIssue(selected);
+  if (playbackIssue) return toast(playbackIssue, true);
   updateSponsorBreakStatus({ status:'preparing', message:'Waiting for the overlay to load sponsor media...' });
   apiCall('/api/sponsor/play','POST',currentSponsorPayload(filename)).then(d => {
     if (d.success) {
@@ -923,9 +940,9 @@ function playSponsorScene(filename = selectedSponsorFilename) {
     }
   });
 }
-function stopSponsorScene() { if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true); apiCall('/api/sponsor/stop','POST').then(d => { if (d.success) { updateSponsorBreakStatus({ breakId:activeSponsorBreakId, status:'stopped', message:'Power moment stopped.' }); toast('Power moment stopped'); } }); }
+function stopSponsorScene() { if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro or beta tester access', true); apiCall('/api/sponsor/stop','POST').then(d => { if (d.success) { updateSponsorBreakStatus({ breakId:activeSponsorBreakId, status:'stopped', message:'Power moment stopped.' }); toast('Power moment stopped'); } }); }
 function deleteSponsorVideo(filename) {
-  if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true);
+  if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro or beta tester access', true);
   if (!confirm('Delete this sponsor video?')) return;
   fetch('/api/sponsor/delete/' + encodeURIComponent(filename), { method:'DELETE', credentials:'same-origin' })
     .then(r => r.json())
@@ -939,7 +956,7 @@ function deleteSponsorVideo(filename) {
     .catch(() => toast('Delete failed', true));
 }
 function openSponsorPreview() {
-  if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro', true);
+  if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro or beta tester access', true);
   const payload = currentSponsorPayload();
   const overlayUrl = new URL(currentOverlayUrl || '/overlay', window.location.origin);
   overlayUrl.searchParams.set('sponsor_preview','1');

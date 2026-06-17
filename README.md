@@ -147,9 +147,12 @@ LOG_LEVEL=info
 DEV_TEST_MODE=false
 DISK_PATH=/var/data
 TRUST_PROXY_HOPS=1
+CLARITY_PROJECT_ID=
 METRICS_TOKEN=replace_with_a_metrics_scrape_token
 DIAGNOSTICS_TOKEN=
 ```
+
+`CLARITY_PROJECT_ID` enables Microsoft Clarity only in production. Leave it blank to disable browser analytics.
 
 `METRICS_TOKEN` is only needed if Prometheus or another monitor scrapes `/metrics`. In production, `/metrics` returns 404 when no token is configured.
 
@@ -322,6 +325,7 @@ SENTRY_DSN=<optional Sentry DSN>
 LOG_LEVEL=info
 DISK_PATH=/var/data
 TRUST_PROXY_HOPS=1
+CLARITY_PROJECT_ID=x82yl0ggk3
 PAYPAL_CLIENT_ID=<PayPal client id>
 PAYPAL_CLIENT_SECRET=<PayPal client secret>
 PAYPAL_PLAN_ID=<PayPal subscription plan id>

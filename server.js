@@ -26,6 +26,7 @@ import { setPlatformSponsorTestHandler } from './tiktokbr/platformSponsorTestBus
 import { getSponsorMediaToolStatus, processSponsorUpload } from './tiktokbr/sponsorMediaProcessor.js';
 import {
   buildPlanEntitlements as buildSharedPlanEntitlements,
+  isBetaTesterAccessCode,
   isPaidAccessCode as isSharedPaidAccessCode,
   isPaidAuthRecord,
 } from './tiktokbr/services/entitlements.js';
@@ -510,16 +511,15 @@ function isRoomInSponsorCooldown(room) {
 
 function startPreparedSponsorBreak(room, record, reason = 'ready') {
   if (!room || !record || !sponsorBreaks.has(record.breakId)) return null;
-  if (record.status === 'live') return record;
+  if (record.status === 'starting' || record.status === 'playing') return record;
   if (record.prepareTimer) {
     clearTimeout(record.prepareTimer);
     record.prepareTimer = null;
   }
-  record.status = 'live';
-  record.startedAt = Date.now();
-  recordSponsorPlaybackEvent(record, 'started', { reason });
-  updatePlatformSponsorCreativeMetric(record, 'started');
-  emitSponsorBreakStatus(room, record, 'live', { message: reason === 'timeout' ? 'Started after prepare timeout' : 'Video ready, starting break' });
+  record.status = 'starting';
+  record.startingAt = Date.now();
+  recordSponsorPlaybackEvent(record, 'start_requested', { reason });
+  emitSponsorBreakStatus(room, record, 'starting', { message: reason === 'timeout' ? 'Started after prepare timeout' : 'Video ready, starting break' });
   emitRoomEvent(room, 'sponsorScene', { ...record.payload, action: 'show', preparedReason: reason });
   return record;
 }
@@ -645,23 +645,29 @@ function handleSponsorPlaybackEvent(socket, room, event = {}) {
     return;
   }
 
-  if (eventType === 'first_frame' || eventType === 'playing') {
+  if (eventType === 'first_frame' || eventType === 'playing' || eventType === 'fallback_started') {
     if (!record.firstFrameReported) {
       record.firstFrameReported = true;
+      record.status = 'playing';
+      record.startedAt = Date.now();
+      updatePlatformSponsorCreativeMetric(record, 'started');
       updatePlatformSponsorCreativeReadiness(record, 'tested');
       if (record.source === 'creator') {
         updateRoomSponsorCreativeStatus(room, record.filename, {
           readinessStatus: 'tested',
           lastTestedAt: new Date().toISOString(),
-          playbackMessage: 'First frame confirmed in overlay',
+          playbackMessage: eventType === 'fallback_started' ? 'Break started without video media' : 'First frame confirmed in overlay',
         });
       }
-      emitSponsorBreakStatus(room, record, 'playing', { message: 'First frame is on screen' });
+      emitSponsorBreakStatus(room, record, 'playing', {
+        message: eventType === 'fallback_started' ? 'Break started without video media' : 'First frame is on screen',
+      });
     }
     return;
   }
 
   if (eventType === 'video_completed') {
+    record.status = 'stats';
     emitSponsorBreakStatus(room, record, 'video_completed', { message: 'Video finished, showing battle stats' });
     return;
   }
@@ -2248,12 +2254,13 @@ function requireRoom(req, res, next) {
 
 function requireCreatorSponsorAccess(req, res, next) {
   const auth = req.auth || getAuthRecord(req.cookies?.session_token);
-  if (!isPaidAuth(auth)) {
+  const plan = buildPlanEntitlements(auth);
+  if (!plan.canUseCreatorSponsors) {
     return res.status(403).json({
       success: false,
-      error: 'Creator sponsor controls require Creator Pro.',
+      error: 'Creator sponsor controls require Creator Pro or beta tester access.',
       upgradeUrl: '/paywall?reason=creator_sponsors',
-      plan: buildPlanEntitlements(auth),
+      plan,
     });
   }
   next();
@@ -2305,8 +2312,10 @@ function buildAccessCodeSubscriptionStatus(row, now = new Date()) {
   const expiresAt = parseDate(row.expires_at);
   const rawStatus = String(row.subscription_status || 'active').toLowerCase();
   const paid = isPaidAccessCode(row);
+  const beta = isBetaTesterAccessCode(row);
+  const creatorSponsors = (paid || beta);
 
-  let status = paid ? 'active' : 'free';
+  let status = paid ? 'active' : beta ? 'beta' : 'free';
   let reason = null;
   let accessAllowed = true;
 
@@ -2319,23 +2328,24 @@ function buildAccessCodeSubscriptionStatus(row, now = new Date()) {
     reason = 'expired';
     accessAllowed = false;
   } else if (['cancelled', 'suspended', 'expired', 'revoked'].includes(rawStatus)) {
-    status = 'free';
+    status = beta ? 'beta' : 'free';
   }
 
   return {
     type: 'code',
     status,
-    tier: paid && accessAllowed ? 'paid' : 'free',
-    planName: paid && accessAllowed ? 'Creator Pro' : 'Free',
-    canUseCreatorSponsors: paid && accessAllowed,
-    platformSponsorManaged: !(paid && accessAllowed),
+    tier: paid && accessAllowed ? 'paid' : beta && accessAllowed ? 'beta' : 'free',
+    planName: paid && accessAllowed ? 'Creator Pro' : beta && accessAllowed ? 'Beta Tester' : 'Free',
+    canUseCreatorSponsors: creatorSponsors && accessAllowed,
+    platformSponsorManaged: !(creatorSponsors && accessAllowed),
+    betaTester: beta && accessAllowed,
     reason,
     accessAllowed,
     actionRequired: !accessAllowed,
     paywallUrl: accessAllowed ? null : paywallUrl(reason),
     subscription: {
       status: rawStatus,
-      planType: paid ? 'Creator Pro' : 'Free',
+      planType: paid ? 'Creator Pro' : beta ? 'Beta Tester' : 'Free',
       paypalSubscriptionId: row.paypal_subscription_id || null,
       startedAt: null,
       nextBillingDate: null,
@@ -2462,6 +2472,25 @@ app.use('/js', express.static(path.join(__dirname, 'js'), {
   index: false,
   maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
 }));
+
+app.use('/vendor/microsoft-clarity', express.static(path.join(__dirname, 'node_modules', '@microsoft', 'clarity'), {
+  dotfiles: 'deny',
+  etag: true,
+  fallthrough: false,
+  index: false,
+  maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
+}));
+
+app.get('/api/public-config', (_req, res) => {
+  const clarityProjectId = String(process.env.CLARITY_PROJECT_ID || '').trim();
+  res.set('Cache-Control', process.env.NODE_ENV === 'production' ? 'public, max-age=300' : 'no-store');
+  res.json({
+    clarity: {
+      enabled: Boolean(clarityProjectId && process.env.NODE_ENV === 'production'),
+      projectId: clarityProjectId || null,
+    },
+  });
+});
 
 function requireMetricsAccess(req, res, next) {
   if (process.env.NODE_ENV !== 'production') return next();
@@ -2677,6 +2706,18 @@ function parseSponsorStatsMode(value) {
   return ['endcap', 'delayed', 'hidden', 'always'].includes(value) ? value : 'endcap';
 }
 
+function sponsorCreativePlaybackIssue(entry) {
+  if (!entry) return null;
+  const processingStatus = String(entry.processingStatus || entry.processing_status || '').trim().toLowerCase();
+  const readinessStatus = String(entry.readinessStatus || entry.readiness_status || '').trim().toLowerCase();
+
+  if (['processing', 'queued'].includes(processingStatus)) return 'Sponsor media is still processing.';
+  if (processingStatus === 'failed') return entry.processingMessage || entry.processing_message || 'Sponsor media processing failed.';
+  if (readinessStatus === 'failed') return entry.playbackMessage || entry.playback_message || 'Sponsor media failed its last overlay test.';
+
+  return null;
+}
+
 function sponsorContentType(filename) {
   return SPONSOR_CONTENT_TYPES.get(path.extname(filename || '').toLowerCase()) || 'application/octet-stream';
 }
@@ -2759,6 +2800,8 @@ function buildSponsorScenePayload(room, body = {}) {
   const filename = body.filename ? path.basename(String(body.filename)) : '';
   const entry = filename ? room.sponsorLibrary.find(item => item.filename === filename) : null;
   if (filename && !entry) return { error: 'Sponsor media not found' };
+  const playbackIssue = entry ? sponsorCreativePlaybackIssue(entry) : null;
+  if (playbackIssue) return { error: playbackIssue, status: 409 };
 
   return {
     action: 'show',
@@ -2769,6 +2812,11 @@ function buildSponsorScenePayload(room, body = {}) {
     kicker: 'Arena Spotlight',
     subtitle: sanitizeSponsorText(body.subtitle, entry?.subtitle || 'Stay locked in. The next fight is loading.', 140),
     durationMs: parseSponsorDuration(body.durationMs),
+    mediaDurationMs: entry?.durationSeconds ? Math.round(Number(entry.durationSeconds) * 1000) : null,
+    mediaWidth: entry?.width || null,
+    mediaHeight: entry?.height || null,
+    processingStatus: entry?.processingStatus || null,
+    readinessStatus: entry?.readinessStatus || null,
     muted: parseSponsorMuted(body.muted),
     fit: ['cover', 'contain'].includes(body.fit) ? body.fit : 'contain',
     statsMode: parseSponsorStatsMode(body.statsMode),
@@ -3231,7 +3279,7 @@ app.delete('/api/sponsor/delete/:filename', requireRoom, requireCreatorSponsorAc
 
 app.post('/api/sponsor/play', requireRoom, requireCreatorSponsorAccess, (req, res) => {
   const payload = buildSponsorScenePayload(req.room, req.body || {});
-  if (payload.error) return res.status(404).json({ success: false, error: payload.error });
+  if (payload.error) return res.status(payload.status || 404).json({ success: false, error: payload.error });
   const record = startSponsorBreak(req.room, payload, { trigger: 'creator_dashboard', source: 'creator' });
   res.json({ success: true, breakId: record?.breakId || null, status: record?.status || 'preparing', scene: record?.payload || payload });
 });

@@ -466,7 +466,9 @@ async function initDb() {
     try {
       for (let i = 1; i <= 25; i++) {
         await client.query(
-          `INSERT INTO access_codes (code, email, expires_at, trial_started, subscription_status) VALUES ($1, $2, '2099-12-31 23:59:59', CURRENT_TIMESTAMP, 'active') ON CONFLICT (code) DO NOTHING`,
+          `INSERT INTO access_codes (code, email, expires_at, trial_started, subscription_status, code_type)
+           VALUES ($1, $2, '2099-12-31 23:59:59', CURRENT_TIMESTAMP, 'active', 'beta-tester')
+           ON CONFLICT (code) DO UPDATE SET code_type = COALESCE(NULLIF(access_codes.code_type, ''), 'beta-tester')`,
           [`Betatester${i}`, `betatester${i}@tiktokbr.com`]
         );
       }

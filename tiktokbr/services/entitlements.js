@@ -17,6 +17,14 @@ export const PAID_ACCESS_CODE_STATUSES = new Set([
   'subscriber',
 ]);
 
+export const BETA_ACCESS_CODE_TYPES = new Set([
+  'beta',
+  'beta-tester',
+  'betatester',
+  'tester',
+  'founder-beta',
+]);
+
 export const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active']);
 
 function normalizeValue(value, fallback = '') {
@@ -62,6 +70,20 @@ export function isPaidAccessCode(row) {
   );
 }
 
+export function isBetaTesterAccessCode(row) {
+  if (!row || isRevokedRecord(row) || isPromoAccessCode(row)) return false;
+
+  const codeType = normalizeCodeType(row.code_type);
+  const code = normalizeValue(row.code);
+  const email = normalizeValue(row.email);
+
+  return Boolean(
+    BETA_ACCESS_CODE_TYPES.has(codeType) ||
+    code.startsWith('betatester') ||
+    email.startsWith('betatester')
+  );
+}
+
 export function isActiveSubscription(subscription) {
   return ACTIVE_SUBSCRIPTION_STATUSES.has(normalizeSubscriptionStatus(subscription?.status));
 }
@@ -79,10 +101,13 @@ export function isPaidAuthRecord(auth, options = {}) {
 
 export function buildPlanEntitlements(auth, options = {}) {
   const paid = isPaidAuthRecord(auth, options);
+  const beta = auth?.type === 'code' ? isBetaTesterAccessCode(auth.record) : false;
+  const creatorSponsors = paid || beta;
   return {
-    tier: paid ? 'paid' : 'free',
-    planName: paid ? 'Creator Pro' : 'Free',
-    canUseCreatorSponsors: paid,
-    platformSponsorManaged: !paid,
+    tier: paid ? 'paid' : beta ? 'beta' : 'free',
+    planName: paid ? 'Creator Pro' : beta ? 'Beta Tester' : 'Free',
+    canUseCreatorSponsors: creatorSponsors,
+    platformSponsorManaged: !creatorSponsors,
+    betaTester: beta,
   };
 }
