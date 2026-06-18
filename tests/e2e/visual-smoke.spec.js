@@ -106,7 +106,7 @@ test.afterAll(async () => {
 for (const [name, pathname, selector] of [
   ['home', '/', 'body'],
   ['login', '/login', '#accountLoginForm'],
-  ['signup', '/signup', 'body'],
+  ['signup', '/signup', '#googleSignupLink'],
   ['paywall', '/paywall', 'body'],
 ]) {
   test(`${name} renders without local browser errors`, async ({ page }, testInfo) => {

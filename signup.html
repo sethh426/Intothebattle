@@ -283,6 +283,38 @@
       margin-bottom: 26px;
     }
 
+    .outcome-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      max-width: 680px;
+      margin: 0 0 26px;
+    }
+    .outcome-item {
+      min-height: 98px;
+      padding: 15px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, .09);
+      background: rgba(255, 255, 255, .045);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+    }
+    .outcome-item b {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--gold-2);
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 21px;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .outcome-item span {
+      display: block;
+      color: #c7cedd;
+      font-size: 13px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+
     .trust-chips {
       display: flex;
       flex-wrap: wrap;
@@ -303,6 +335,16 @@
       background: rgba(255, 255, 255, .045);
     }
     .trust-chips span::before { content: '✦'; color: var(--gold); }
+
+    .trust-chips span::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 99px;
+      background: var(--gold);
+      box-shadow: 0 0 12px rgba(246, 201, 91, .7);
+      flex: 0 0 auto;
+    }
 
     .battle-preview {
       max-width: 720px;
@@ -423,7 +465,32 @@
       max-width: 430px;
       margin: 0 auto;
     }
-    .actions { display: grid; gap: 12px; margin: 24px 0 18px; }
+    .recommended-path {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 24px 0 12px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(119, 240, 161, .2);
+      background: rgba(119, 240, 161, .07);
+      color: #dfffea;
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+    .recommended-path span {
+      flex: 0 0 auto;
+      padding: 6px 9px;
+      border-radius: 999px;
+      color: #06130b;
+      background: var(--green);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .actions { display: grid; gap: 12px; margin: 0 0 18px; }
     .btn {
       display: inline-flex;
       align-items: center;
@@ -456,6 +523,47 @@
       text-align: center;
       line-height: 1.55;
       margin-bottom: 22px;
+    }
+    .setup-path {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 18px;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid rgba(85, 231, 255, .16);
+      background: rgba(85, 231, 255, .055);
+    }
+    .setup-path strong {
+      color: #effbff;
+      font-size: 14px;
+    }
+    .setup-path ol {
+      display: grid;
+      gap: 8px;
+      list-style: none;
+      counter-reset: setup;
+    }
+    .setup-path li {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr);
+      gap: 9px;
+      align-items: center;
+      color: #cbd3e2;
+      font-size: 13px;
+      line-height: 1.35;
+      font-weight: 800;
+    }
+    .setup-path li::before {
+      counter-increment: setup;
+      content: counter(setup);
+      display: grid;
+      place-items: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      color: #061016;
+      background: linear-gradient(135deg, var(--cyan), #b9fbff);
+      font-weight: 900;
     }
     .access-panel {
       display: grid;
@@ -518,6 +626,16 @@
       color: var(--cyan);
       margin-right: 7px;
     }
+    .plan-column li::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      margin-right: 8px;
+      border-radius: 99px;
+      background: var(--cyan);
+      vertical-align: 2px;
+    }
     .login-link {
       margin-top: 22px;
       padding-top: 18px;
@@ -542,7 +660,7 @@
     @media (max-width: 980px) {
       .signup-shell { grid-template-columns: 1fr; padding-top: 34px; }
       .hero-copy { text-align: center; }
-      .kicker, .lede, .battle-preview { margin-left: auto; margin-right: auto; }
+      .kicker, .lede, .outcome-grid, .battle-preview { margin-left: auto; margin-right: auto; }
       .trust-chips { justify-content: center; margin-left: auto; margin-right: auto; }
     }
     @media (max-width: 620px) {
@@ -552,7 +670,9 @@
       .brand-mark { width: 42px; height: 42px; }
       .signup-shell { width: min(100% - 24px, var(--max)); padding-top: 24px; }
       .hero-copy h1 { font-size: clamp(38px, 12vw, 58px); }
+      .outcome-grid { grid-template-columns: 1fr; }
       .trust-chips span { width: 100%; justify-content: center; }
+      .recommended-path { align-items: flex-start; flex-direction: column; }
       .plan-compare { grid-template-columns: 1fr; }
       .signup-card { padding: 24px; }
       .card-logo { width: 70px; height: 70px; border-radius: 22px; }
@@ -577,20 +697,25 @@
       <div class="nav-links">
         <a class="nav-link" href="/">Home</a>
         <a class="nav-link" href="/login">Login</a>
-        <a class="nav-cta" href="/auth/google">Start with Google</a>
+        <a class="nav-cta" href="/auth/google" data-conversion-event="signup_nav_google" data-conversion-choice="google">Start free</a>
       </div>
     </nav>
   </div>
 
   <main class="signup-shell">
     <section class="hero-copy" aria-labelledby="signup-title">
-      <div class="kicker">Free creator access</div>
-      <h1 id="signup-title">Launch your live battle arena.</h1>
-      <p class="lede">Turn chat, likes, follows, and gifts into real-time combat your viewers can influence. Build your room, add the overlay, and make your next LIVE feel playable.</p>
+      <div class="kicker">Free room setup. No card.</div>
+      <h1 id="signup-title">Make viewers play, not just watch.</h1>
+      <p class="lede">Create a room, get your signed overlay URL, and test viewer-powered attacks before your next TikTok LIVE. You should know in minutes whether this belongs in your stream.</p>
+      <div class="outcome-grid" aria-label="Signup outcomes">
+        <div class="outcome-item"><b>Room</b><span>Your creator room is created after signup.</span></div>
+        <div class="outcome-item"><b>Overlay</b><span>Copy the OBS or TikTok Studio source from the dashboard.</span></div>
+        <div class="outcome-item"><b>Proof</b><span>Run test attacks before you go live.</span></div>
+      </div>
       <div class="trust-chips" aria-label="Account highlights">
-        <span>Free creator account</span>
+        <span>Start free today</span>
         <span>No credit card required</span>
-        <span>OBS + TikTok Studio ready</span>
+        <span>Upgrade only for creator-controlled video moments</span>
       </div>
 
       <div class="battle-preview" aria-label="Live battle demo preview">
@@ -610,9 +735,14 @@
             <a class="card-logo" href="/" aria-label="IntoTheBattle home">
               <img src="/intothebattlelogo_logo_only.svg" style="transform:scale(1.1);transform-origin:center;" alt="IntoTheBattle logo" />
             </a>
-            <div class="eyebrow">Creator beta access</div>
-            <h2 class="card-title">Enter the arena</h2>
-            <p class="card-sub">Choose the fastest path and continue into setup for your creator room.</p>
+            <div class="eyebrow">Best first step</div>
+            <h2 class="card-title">Create your room</h2>
+            <p class="card-sub">Use Google for the fastest setup. Email is available if you prefer a password-based account.</p>
+          </div>
+
+          <div class="recommended-path">
+            <strong>Recommended: start with Google and land on the welcome dashboard.</strong>
+            <span>Fastest</span>
           </div>
 
           <div class="actions">
@@ -620,22 +750,31 @@
             <a href="/register" class="btn btn-secondary" id="emailSignupLink">Create account with email</a>
           </div>
 
-          <p class="microcopy">Your creator room unlocks automatically after signup. Finish setup from the welcome dashboard.</p>
+          <p class="microcopy">No card. No paid wall before setup. Build the room first, then decide what you need.</p>
+
+          <div class="setup-path" aria-label="What happens after signup">
+            <strong>After you click, the path is simple:</strong>
+            <ol>
+              <li>Create your account.</li>
+              <li>Open the welcome dashboard.</li>
+              <li>Copy the overlay URL and test the battle.</li>
+            </ol>
+          </div>
 
           <div class="access-panel">
-            <strong>Choose the account that fits your stream.</strong>
+            <strong>What is included?</strong>
             <div class="plan-compare">
               <div class="plan-column">
-                <b>Free <span>Start</span></b>
+                <b>Free <span>Launch</span></b>
                 <ul>
                   <li>Battle overlay and room setup</li>
                   <li>Dashboard controls</li>
                   <li>Viewer actions and effects</li>
-                  <li>Platform video moments included</li>
+                  <li>Managed video moments included</li>
                 </ul>
               </div>
               <div class="plan-column pro">
-                <b>Creator Pro <span>Upgrade</span></b>
+                <b>Creator Pro <span>Control</span></b>
                 <ul>
                   <li>$12/month plus applicable tax</li>
                   <li>Upload your own video moments</li>
@@ -653,16 +792,69 @@
     </section>
   </main>
   <script>
+    const googleSignupLink = document.getElementById('googleSignupLink');
+    const emailSignupLink = document.getElementById('emailSignupLink');
+    const loginLink = document.getElementById('loginLink');
+    const navSignupLink = document.querySelector('.nav-cta');
+    const previewFrame = document.querySelector('.battle-preview');
+
+    if (googleSignupLink) googleSignupLink.textContent = 'Start free with Google ->';
+    if (emailSignupLink) emailSignupLink.textContent = 'Use email instead';
+
+    function trackSignupEvent(name, tags = {}, upgrade = false) {
+      if (typeof window.intothebattleTrack === 'function') {
+        window.intothebattleTrack(name, {
+          tags: { signup_page: 'room_proof_v2', ...tags },
+          upgrade,
+        });
+      } else {
+        window.__intothebattlePendingEvents = window.__intothebattlePendingEvents || [];
+        window.__intothebattlePendingEvents.push({
+          eventName: name,
+          tags: { signup_page: 'room_proof_v2', ...tags },
+          upgrade,
+        });
+      }
+    }
+
     const nextPath = (() => {
       const value = new URLSearchParams(window.location.search).get('next') || '';
       return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : '';
     })();
     if (nextPath) {
       const nextQuery = `?next=${encodeURIComponent(nextPath)}`;
-      document.getElementById('googleSignupLink').href = `/auth/google${nextQuery}`;
-      document.getElementById('emailSignupLink').href = `/register${nextQuery}`;
-      document.getElementById('loginLink').href = `/login${nextQuery}`;
+      if (googleSignupLink) googleSignupLink.href = `/auth/google${nextQuery}`;
+      if (emailSignupLink) emailSignupLink.href = `/register${nextQuery}`;
+      if (loginLink) loginLink.href = `/login${nextQuery}`;
+      if (navSignupLink) navSignupLink.href = `/auth/google${nextQuery}`;
     }
+
+    [
+      [googleSignupLink, 'signup_google_click', 'google', true],
+      [emailSignupLink, 'signup_email_click', 'email', true],
+      [navSignupLink, 'signup_nav_google_click', 'nav_google', true],
+      [loginLink, 'signup_login_click', 'login', false],
+    ].forEach(([element, eventName, choice, upgrade]) => {
+      if (!element) return;
+      element.dataset.conversionEvent = eventName;
+      element.dataset.conversionChoice = choice;
+      element.addEventListener('click', () => {
+        trackSignupEvent(eventName, { signup_choice: choice }, upgrade);
+      });
+    });
+
+    let previewTracked = false;
+    function trackPreviewInterest() {
+      if (previewTracked) return;
+      previewTracked = true;
+      trackSignupEvent('signup_demo_preview_interest', { signup_choice: 'demo_preview' });
+    }
+    if (previewFrame) {
+      previewFrame.addEventListener('pointerenter', trackPreviewInterest, { once: true });
+      previewFrame.addEventListener('focusin', trackPreviewInterest, { once: true });
+    }
+
+    trackSignupEvent('signup_page_view');
   </script>
 </body>
 </html>

@@ -1,4 +1,37 @@
 let clarityInitialized = false;
+let clarityClient = null;
+const pendingEvents = window.__intothebattlePendingEvents || [];
+window.__intothebattlePendingEvents = pendingEvents;
+
+window.intothebattleTrack = function intothebattleTrack(eventName, options = {}) {
+  const safeName = String(eventName || '').trim().replace(/[^a-z0-9_-]/gi, '_').slice(0, 80);
+  if (!safeName) return;
+  const payload = {
+    eventName: safeName,
+    tags: options && typeof options === 'object' ? options.tags || {} : {},
+    upgrade: Boolean(options && options.upgrade),
+  };
+
+  if (!clarityInitialized || !clarityClient) {
+    pendingEvents.push(payload);
+    if (pendingEvents.length > 25) pendingEvents.shift();
+    return;
+  }
+
+  try {
+    if (typeof clarityClient.event === 'function') clarityClient.event(payload.eventName);
+    if (typeof clarityClient.setTag === 'function') {
+      Object.entries(payload.tags).forEach(([key, value]) => {
+        clarityClient.setTag(String(key).slice(0, 60), String(value).slice(0, 120));
+      });
+    }
+    if (payload.upgrade && typeof clarityClient.upgrade === 'function') {
+      clarityClient.upgrade(payload.eventName);
+    }
+  } catch (_err) {
+    // Tracking must never block the app.
+  }
+};
 
 function trackingBlockedByBrowser() {
   const dnt = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
@@ -28,10 +61,16 @@ async function initClarity() {
 
     Clarity.init(clarity.projectId);
     clarityInitialized = true;
+    clarityClient = Clarity;
 
     if (typeof Clarity.setTag === 'function') {
       Clarity.setTag('app', 'intothebattle');
       Clarity.setTag('path', window.location.pathname);
+    }
+
+    while (pendingEvents.length) {
+      const event = pendingEvents.shift();
+      window.intothebattleTrack(event.eventName, event);
     }
   } catch (_err) {
     // Analytics must never block the app.
