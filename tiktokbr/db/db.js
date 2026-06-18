@@ -324,6 +324,10 @@ async function initDb() {
         aspect_ratio TEXT,
         thumbnail_data TEXT,
         quality_warnings TEXT,
+        quality_status TEXT DEFAULT 'ready',
+        quality_score INTEGER DEFAULT 100,
+        quality_blockers TEXT,
+        quality_recommendations TEXT,
         normalized INTEGER DEFAULT 0,
         processing_status TEXT DEFAULT 'ready',
         processing_message TEXT,
@@ -360,6 +364,10 @@ async function initDb() {
     await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN aspect_ratio TEXT');
     await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN thumbnail_data TEXT');
     await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN quality_warnings TEXT');
+    await safeExec("ALTER TABLE platform_sponsor_creatives ADD COLUMN quality_status TEXT DEFAULT 'ready'");
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN quality_score INTEGER DEFAULT 100');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN quality_blockers TEXT');
+    await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN quality_recommendations TEXT');
     await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN normalized INTEGER DEFAULT 0');
     await safeExec("ALTER TABLE platform_sponsor_creatives ADD COLUMN processing_status TEXT DEFAULT 'ready'");
     await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN processing_message TEXT');

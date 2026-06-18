@@ -166,9 +166,15 @@ FFPROBE_PATH=ffprobe
 SPONSOR_TRANSCODE_ENABLED=true
 SPONSOR_TRANSCODE_PRESET=veryfast
 SPONSOR_TRANSCODE_CRF=23
+SPONSOR_STRICT_MEDIA_GATE=true
+SPONSOR_VIDEO_MAX_SECONDS=120
+SPONSOR_VIDEO_RECOMMENDED_MAX_SECONDS=30
+SPONSOR_VIDEO_MAX_MB=100
+SPONSOR_VIDEO_MIN_WIDTH=1280
+SPONSOR_VIDEO_MIN_HEIGHT=720
 ```
 
-With those tools available, uploaded sponsor videos are normalized to MP4 H.264/AAC at 16:9 720p, probed for duration/codec/resolution, and given server-side thumbnails. If FFmpeg is missing, uploads still work, but the dashboard/admin pages will mark them as original uploads and show format warnings.
+With those tools available, uploaded sponsor videos are normalized to MP4 H.264/AAC at 16:9 720p, probed for duration/codec/resolution, and given server-side thumbnails. In production, the media gate blocks empty files, oversized videos, videos longer than the configured max, very low-resolution uploads, and unsafe formats that cannot be normalized before OBS sees them. Non-ideal but playable files stay usable with dashboard/admin quality warnings and recommendations.
 
 ### Run locally with Node
 

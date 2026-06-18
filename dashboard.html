@@ -127,11 +127,15 @@
     .sponsor-row-actions .btn { min-height:38px; padding:0 12px; }
     .sponsor-status-pill { display:inline-flex; align-items:center; min-height:30px; padding:5px 9px; border-radius:999px; border:1px solid rgba(246,201,91,.22); color:var(--gold2); background:rgba(246,201,91,.08); font-size:11px; font-weight:900; text-transform:uppercase; }
     .sponsor-status-pill.ready,.sponsor-status-pill.processing { color:var(--cyan); border-color:rgba(85,231,255,.32); background:rgba(85,231,255,.08); }
+    .sponsor-status-pill.warn { color:var(--gold2); border-color:rgba(246,201,91,.34); background:rgba(246,201,91,.08); }
+    .sponsor-status-pill.blocked { color:#ff9aa8; border-color:rgba(232,59,95,.36); background:rgba(232,59,95,.1); }
     .sponsor-status-pill.tested { color:var(--green); border-color:rgba(119,240,161,.34); background:rgba(119,240,161,.08); }
     .sponsor-status-pill.failed { color:#ff9aa8; border-color:rgba(232,59,95,.36); background:rgba(232,59,95,.1); }
     .sponsor-thumb { width:96px; aspect-ratio:16/9; object-fit:cover; flex:0 0 96px; border-radius:10px; border:1px solid rgba(255,255,255,.1); background:#050810; }
     .sponsor-thumb.empty { display:grid; place-items:center; color:var(--dim); font-size:10px; font-weight:900; text-transform:uppercase; text-align:center; }
     .sponsor-warning { margin-top:7px; color:var(--gold2); font-size:11px; font-weight:800; line-height:1.35; }
+    .sponsor-warning.failed { color:#ff9aa8; }
+    .sponsor-warning.recommend { color:var(--cyan); }
     .sponsor-upgrade { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; align-items:center; margin-bottom:18px; padding:18px; border-radius:22px; border:1px solid rgba(246,201,91,.28); background:rgba(246,201,91,.075); }
     .sponsor-upgrade strong { display:block; color:#fff8e6; margin-bottom:5px; }
     .sponsor-upgrade[hidden] { display:none; }
@@ -150,6 +154,9 @@
     .sponsor-step { min-height:34px; display:flex; align-items:center; justify-content:center; padding:6px 8px; border-radius:12px; border:1px solid rgba(255,255,255,.09); background:rgba(255,255,255,.045); color:var(--dim); font-size:10px; font-weight:900; text-transform:uppercase; text-align:center; }
     .sponsor-step.active { color:#061016; border-color:transparent; background:linear-gradient(135deg,var(--cyan),#b9fbff); box-shadow:0 0 22px rgba(85,231,255,.14); }
     .sponsor-upload-meta { margin-top:8px; padding:10px 12px; border-radius:14px; background:rgba(255,255,255,.045); color:var(--muted); font-size:12px; font-weight:800; line-height:1.35; }
+    .sponsor-upload-meta.ready { color:var(--green); background:rgba(119,240,161,.07); border:1px solid rgba(119,240,161,.22); }
+    .sponsor-upload-meta.warn { color:var(--gold2); background:rgba(246,201,91,.08); border:1px solid rgba(246,201,91,.24); }
+    .sponsor-upload-meta.failed { color:#ff9aa8; background:rgba(232,59,95,.1); border:1px solid rgba(232,59,95,.32); }
     .section-title { color:var(--gold2); font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; margin-bottom:12px; }
     .audio-files { display:grid; gap:10px; }
     .audio-row { display:flex; align-items:center; gap:10px; padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.2); }
@@ -342,6 +349,8 @@ const dashboardState = {
 };
 const EVENTS = ['attack','gift','kill','respawn','heal','follow'];
 const EVENT_CLASSES = { attack:'event-attack', gift:'event-gift', kill:'event-kill', respawn:'event-respawn', heal:'event-heal', follow:'event-follow' };
+const SPONSOR_CLIENT_MAX_BYTES = 100 * 1024 * 1024;
+const SPONSOR_CLIENT_MAX_SECONDS = 120;
 
 function text(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
 function toast(msg, isError = false) { const el = document.getElementById('toast'); el.textContent = msg; el.style.borderColor = isError ? 'rgba(232,59,95,.5)' : 'rgba(246,201,91,.35)'; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3000); }
@@ -356,14 +365,27 @@ function sponsorReadinessLabel(value) {
   if (status === 'uploading') return 'Uploading';
   return 'Ready';
 }
-function sponsorQualityWarnings(file, meta = {}) {
+function sponsorQualityCheck(file, meta = {}) {
+  const blockers = [];
   const warnings = [];
+  const type = String(file?.type || '').toLowerCase();
+  const name = String(file?.name || '').toLowerCase();
+  const supportedExt = /\.(mp4|m4v|webm|mov)$/.test(name);
+  if (type && !type.startsWith('video/') && !supportedExt) blockers.push('Upload a video file.');
+  if (file?.size > SPONSOR_CLIENT_MAX_BYTES) blockers.push('Keep sponsor videos under 100MB.');
+  if (meta.durationSeconds > SPONSOR_CLIENT_MAX_SECONDS) blockers.push('Keep moments under 120 seconds.');
+  if (!supportedExt && type && !['video/mp4','video/webm','video/quicktime','video/x-m4v'].includes(type)) blockers.push('Use MP4, M4V, WebM, or MOV.');
   if (file?.type && file.type !== 'video/mp4') warnings.push('MP4 H.264/AAC is safest for OBS.');
-  if (meta.durationSeconds > 30) warnings.push('10-30 seconds usually performs best.');
-  if (meta.durationSeconds > 120) warnings.push('Keep moments under 120 seconds.');
+  if (meta.durationSeconds > 30 && meta.durationSeconds <= SPONSOR_CLIENT_MAX_SECONDS) warnings.push('10-30 seconds usually performs best.');
   if (meta.width && meta.height && Math.abs((meta.width / meta.height) - (16 / 9)) > 0.08) warnings.push('16:9 is recommended.');
   if (meta.width && meta.height && (meta.width < 1280 || meta.height < 720)) warnings.push('720p or 1080p is recommended.');
-  return warnings;
+  return { blockers, warnings };
+}
+function setSponsorUploadMeta(message, state = '') {
+  const meta = document.getElementById('sponsorUploadMeta');
+  if (!meta) return;
+  meta.className = 'sponsor-upload-meta' + (state ? ` ${state}` : '');
+  meta.textContent = message;
 }
 function setSocketStatus(status) {
   dashboardState.socketConnected = status === 'connected';
@@ -724,10 +746,10 @@ function inspectSponsorFile(file) {
   sponsorUploadProbe = null;
   if (!meta) return;
   if (!file) {
-    meta.textContent = 'Choose a video to inspect duration and format before upload.';
+    setSponsorUploadMeta('Choose a video to inspect duration and format before upload.');
     return;
   }
-  meta.textContent = `${file.name} - ${formatBytes(file.size)}. Processing local video metadata...`;
+  setSponsorUploadMeta(`${file.name} - ${formatBytes(file.size)}. Processing local video metadata...`);
   sponsorFileObjectUrl = URL.createObjectURL(file);
   const probe = document.createElement('video');
   probe.preload = 'metadata';
@@ -740,10 +762,12 @@ function inspectSponsorFile(file) {
       height: probe.videoHeight || null,
       thumbnailData: '',
     };
-    const warnings = sponsorQualityWarnings(file, metadata);
-    sponsorUploadProbe = { ...metadata, warnings };
+    const quality = sponsorQualityCheck(file, metadata);
+    sponsorUploadProbe = { ...metadata, ...quality };
     const dimensions = metadata.width && metadata.height ? `${metadata.width}x${metadata.height}` : 'unknown size';
-    meta.textContent = `${file.name} - ${formatBytes(file.size)} - ${formatDuration(metadata.durationSeconds)} - ${dimensions}${warnings.length ? `. ${warnings.join(' ')}` : '. Ready for upload.'}`;
+    const messages = [...quality.blockers, ...quality.warnings];
+    const state = quality.blockers.length ? 'failed' : quality.warnings.length ? 'warn' : 'ready';
+    setSponsorUploadMeta(`${file.name} - ${formatBytes(file.size)} - ${formatDuration(metadata.durationSeconds)} - ${dimensions}${messages.length ? `. ${messages.join(' ')}` : '. Ready for upload.'}`, state);
   };
   const captureThumbnail = () => {
     if (!sponsorUploadProbe) finishProbe();
@@ -769,8 +793,8 @@ function inspectSponsorFile(file) {
   };
   probe.onseeked = captureThumbnail;
   probe.onerror = () => {
-    sponsorUploadProbe = { durationSeconds: null, width: null, height: null, thumbnailData: '', warnings: ['Metadata could not be read. MP4 H.264/AAC is recommended.'] };
-    meta.textContent = `${file.name} - metadata could not be read. MP4 H.264/AAC is the safest upload format.`;
+    sponsorUploadProbe = { durationSeconds: null, width: null, height: null, thumbnailData: '', blockers: ['Metadata could not be read. Try MP4 H.264/AAC before uploading.'], warnings: [] };
+    setSponsorUploadMeta(`${file.name} - metadata could not be read. Try MP4 H.264/AAC before uploading.`, 'failed');
     URL.revokeObjectURL(sponsorFileObjectUrl);
     sponsorFileObjectUrl = '';
   };
@@ -865,11 +889,29 @@ function renderSponsorLibrary() {
     status.className = `sponsor-status-pill ${String(file.readinessStatus || 'ready').toLowerCase()}`;
     status.textContent = sponsorReadinessLabel(file.readinessStatus);
     main.append(name, size, status);
+    if (file.qualityGateStatus) {
+      const quality = document.createElement('div');
+      quality.className = `sponsor-status-pill ${String(file.qualityGateStatus || 'ready').toLowerCase()}`;
+      quality.textContent = `Quality ${file.qualityGateScore != null ? file.qualityGateScore : file.qualityGateStatus}`;
+      main.appendChild(quality);
+    }
+    if (Array.isArray(file.qualityGateBlockers) && file.qualityGateBlockers.length) {
+      const blocked = document.createElement('div');
+      blocked.className = 'sponsor-warning failed';
+      blocked.textContent = file.qualityGateBlockers.join(' ');
+      main.appendChild(blocked);
+    }
     if (Array.isArray(file.qualityWarnings) && file.qualityWarnings.length) {
       const warning = document.createElement('div');
       warning.className = 'sponsor-warning';
       warning.textContent = file.qualityWarnings.join(' ');
       main.appendChild(warning);
+    }
+    if (Array.isArray(file.qualityRecommendations) && file.qualityRecommendations.length) {
+      const recommend = document.createElement('div');
+      recommend.className = 'sponsor-warning recommend';
+      recommend.textContent = file.qualityRecommendations.join(' ');
+      main.appendChild(recommend);
     }
     if (file.processingMessage) {
       const processing = document.createElement('div');
@@ -906,7 +948,9 @@ function uploadSponsorVideo() {
   const input = document.getElementById('sponsorFileInput');
   const file = input && input.files[0];
   if (!file) return toast('Choose a sponsor video first', true);
-  text('sponsorUploadMeta', `Uploading and checking ${file.name} - ${formatBytes(file.size)}...`);
+  if (!sponsorUploadProbe) return toast('Video is still being inspected. Try again in a moment.', true);
+  if (Array.isArray(sponsorUploadProbe.blockers) && sponsorUploadProbe.blockers.length) return toast(sponsorUploadProbe.blockers[0], true);
+  setSponsorUploadMeta(`Uploading and checking ${file.name} - ${formatBytes(file.size)}...`);
   const fd = new FormData();
   fd.append('sponsor', file);
   fd.append('partner', sponsorInputValue('sponsorPartnerInput', 'Sponsor'));
@@ -921,7 +965,11 @@ function uploadSponsorVideo() {
   fetch('/api/sponsor/upload', { method:'POST', credentials:'same-origin', body:fd })
     .then(r => r.json())
     .then(d => {
-      if (!d.success) return toast(d.error || 'Sponsor upload failed', true);
+      if (!d.success) {
+        const blockers = d.qualityGate?.blockers || [];
+        setSponsorUploadMeta(blockers.length ? blockers.join(' ') : (d.error || 'Sponsor upload failed'), 'failed');
+        return toast(d.error || 'Sponsor upload failed', true);
+      }
       sponsorLibraryData = [d.file, ...sponsorLibraryData.filter(item => item.filename !== d.file.filename)];
       setSponsorInputs(d.file);
       renderSponsorLibrary();

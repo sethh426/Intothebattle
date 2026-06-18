@@ -90,6 +90,8 @@ export function buildLaunchReadinessReport({
   if (sponsorTools) {
     addCheck(checks, 'media', 'ffprobe-available', 'ffprobe is available for video metadata', Boolean(sponsorTools.ffprobeAvailable), sponsorTools.ffprobe || 'missing', 'Install FFmpeg/ffprobe or configure FFPROBE_PATH.', 'warn');
     addCheck(checks, 'media', 'ffmpeg-available', 'FFmpeg is available for video normalization', Boolean(sponsorTools.ffmpegAvailable), sponsorTools.ffmpeg || 'missing', 'Install FFmpeg or configure FFMPEG_PATH.', 'warn');
+    const strictMediaGate = env.SPONSOR_STRICT_MEDIA_GATE == null ? production : String(env.SPONSOR_STRICT_MEDIA_GATE).toLowerCase() !== 'false';
+    addCheck(checks, 'media', 'sponsor-media-gate', 'Sponsor video quality gate is enabled', strictMediaGate, `SPONSOR_STRICT_MEDIA_GATE=${env.SPONSOR_STRICT_MEDIA_GATE || (production ? 'default true' : 'default relaxed')}`, 'Keep SPONSOR_STRICT_MEDIA_GATE=true for production sponsor playback.', production ? 'fail' : 'warn');
   }
 
   const failures = checks.filter(check => check.status === 'fail');

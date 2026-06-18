@@ -11,6 +11,8 @@ import {
   localStatusForPayPalWebhookEvent,
   normalizePayPalSubscriptionStatus,
 } from '../tiktokbr/services/billingPolicy.js';
+import { buildLaunchReadinessReport } from '../tiktokbr/services/launchReadiness.js';
+import { evaluateSponsorMediaQuality } from '../tiktokbr/sponsorMediaProcessor.js';
 
 function testEntitlements() {
   assert.equal(
@@ -119,6 +121,70 @@ function testBillingPolicy() {
   assert.equal(isSubscriptionAccessBlocked('pending'), false);
 }
 
+function testSponsorMediaQualityGate() {
+  const tools = { ffmpegAvailable: false, ffprobeAvailable: true };
+  const goodMp4 = evaluateSponsorMediaQuality({
+    file: { filename: 'brand.mp4', size: 8 * 1024 * 1024, mimetype: 'video/mp4' },
+    metadata: {
+      filename: 'brand.mp4',
+      fileSize: 8 * 1024 * 1024,
+      mimeType: 'video/mp4',
+      durationSeconds: 20,
+      width: 1920,
+      height: 1080,
+      videoCodec: 'h264',
+      audioCodec: 'aac',
+    },
+    tools,
+    strict: true,
+  });
+  assert.equal(goodMp4.status, 'ready', 'OBS-safe MP4 creative should pass quality gate');
+
+  const tooLong = evaluateSponsorMediaQuality({
+    file: { filename: 'long.mp4', size: 8 * 1024 * 1024, mimetype: 'video/mp4' },
+    metadata: { filename: 'long.mp4', fileSize: 8 * 1024 * 1024, mimeType: 'video/mp4', durationSeconds: 180, width: 1920, height: 1080, videoCodec: 'h264', audioCodec: 'aac' },
+    tools,
+    strict: true,
+  });
+  assert.equal(tooLong.status, 'blocked', 'over-long sponsor creative should be blocked');
+
+  const productionWebmWithoutFfmpeg = evaluateSponsorMediaQuality({
+    file: { filename: 'clip.webm', size: 8 * 1024 * 1024, mimetype: 'video/webm' },
+    metadata: { filename: 'clip.webm', fileSize: 8 * 1024 * 1024, mimeType: 'video/webm', durationSeconds: 20, width: 1280, height: 720, videoCodec: 'vp9', audioCodec: 'opus' },
+    tools,
+    strict: true,
+  });
+  assert.equal(productionWebmWithoutFfmpeg.status, 'blocked', 'strict production gate should block non-normalized WebM');
+  assert.ok(productionWebmWithoutFfmpeg.blockers.some(message => /H\.264|Non-MP4/.test(message)));
+
+  const warningOnly = evaluateSponsorMediaQuality({
+    file: { filename: 'square.mp4', size: 8 * 1024 * 1024, mimetype: 'video/mp4' },
+    metadata: { filename: 'square.mp4', fileSize: 8 * 1024 * 1024, mimeType: 'video/mp4', durationSeconds: 40, width: 1080, height: 1080, videoCodec: 'h264', audioCodec: 'aac' },
+    tools,
+    strict: true,
+  });
+  assert.equal(warningOnly.status, 'warn', 'non-ideal but playable creative should warn instead of block');
+}
+
+function testLaunchReadinessSponsorMediaGate() {
+  const report = buildLaunchReadinessReport({
+    env: {
+      NODE_ENV: 'production',
+      SPONSOR_STRICT_MEDIA_GATE: 'false',
+    },
+    sponsorTools: {
+      ffmpegAvailable: true,
+      ffmpeg: 'ffmpeg',
+      ffprobeAvailable: true,
+      ffprobe: 'ffprobe',
+    },
+  });
+  const gateCheck = report.checks.find(check => check.id === 'sponsor-media-gate');
+  assert.equal(gateCheck?.status, 'fail', 'launch readiness should fail production when sponsor media gate is disabled');
+}
+
 testEntitlements();
 testBillingPolicy();
+testSponsorMediaQualityGate();
+testLaunchReadinessSponsorMediaGate();
 console.log('Business logic smoke checks passed');

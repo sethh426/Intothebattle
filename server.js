@@ -863,7 +863,9 @@ function listActivePlatformSponsorCreatives() {
       SELECT *
       FROM platform_sponsor_creatives
       WHERE status = 'active'
+        AND COALESCE(processing_status, 'ready') NOT IN ('processing', 'queued', 'failed')
         AND COALESCE(readiness_status, 'ready') IN ('ready', 'tested')
+        AND COALESCE(quality_status, 'ready') <> 'blocked'
         AND (active_starts_at IS NULL OR active_starts_at <= CURRENT_TIMESTAMP)
         AND (active_ends_at IS NULL OR active_ends_at >= CURRENT_TIMESTAMP)
         AND (
@@ -989,6 +991,12 @@ setPlatformSponsorTestHandler(({ creativeId, action = 'show' } = {}) => {
   }
   if (!liveRooms.length) {
     const err = new Error('No live overlays are connected.');
+    err.status = 409;
+    throw err;
+  }
+  const playbackIssue = sponsorCreativePlaybackIssue(creative);
+  if (playbackIssue) {
+    const err = new Error(playbackIssue);
     err.status = 409;
     throw err;
   }
@@ -2883,9 +2891,11 @@ function sponsorCreativePlaybackIssue(entry) {
   if (!entry) return null;
   const processingStatus = String(entry.processingStatus || entry.processing_status || '').trim().toLowerCase();
   const readinessStatus = String(entry.readinessStatus || entry.readiness_status || '').trim().toLowerCase();
+  const qualityStatus = String(entry.qualityGateStatus || entry.quality_status || '').trim().toLowerCase();
 
   if (['processing', 'queued'].includes(processingStatus)) return 'Sponsor media is still processing.';
   if (processingStatus === 'failed') return entry.processingMessage || entry.processing_message || 'Sponsor media processing failed.';
+  if (qualityStatus === 'blocked') return entry.qualityBlockers || entry.quality_blockers || 'Sponsor media failed the production quality gate.';
   if (readinessStatus === 'failed') return entry.playbackMessage || entry.playback_message || 'Sponsor media failed its last overlay test.';
 
   return null;
@@ -3396,6 +3406,7 @@ app.post('/api/sponsor/upload', requireRoom, requireCreatorSponsorAccess, (req, 
       const { sponsorDir } = getRoomPaths(req.room.roomId);
       mediaMeta = await processSponsorUpload({ file: req.file, body: req.body || {}, targetDir: sponsorDir });
       if (rejectUploadedFileIfStorageLow(req, res, { path: mediaMeta.filepath, size: mediaMeta.fileSize }, 'sponsor')) return;
+      const qualityNotes = [...(mediaMeta.qualityWarnings || []), ...(mediaMeta.qualityRecommendations || [])];
       const entry = {
         filename: mediaMeta.filename,
         originalName: req.file.originalname,
@@ -3413,11 +3424,15 @@ app.post('/api/sponsor/upload', requireRoom, requireCreatorSponsorAccess, (req, 
         audioCodec: mediaMeta.audioCodec,
         thumbnailData: mediaMeta.thumbnailData,
         qualityWarnings: mediaMeta.qualityWarnings,
+        qualityGateStatus: mediaMeta.qualityGateStatus,
+        qualityGateScore: mediaMeta.qualityGateScore,
+        qualityGateBlockers: mediaMeta.qualityGateBlockers,
+        qualityRecommendations: mediaMeta.qualityRecommendations,
         normalized: mediaMeta.normalized,
         processingStatus: mediaMeta.processingStatus,
         processingMessage: mediaMeta.processingMessage,
         readinessStatus: 'ready',
-        playbackMessage: mediaMeta.qualityWarnings.length ? mediaMeta.qualityWarnings.join(' ') : 'Ready for overlay test.',
+        playbackMessage: qualityNotes.length ? `Ready with quality notes: ${qualityNotes.join(' ')}` : 'Ready for overlay test.',
         processedAt: mediaMeta.processedAt,
         uploadedAt: new Date().toISOString(),
       };
@@ -3429,7 +3444,11 @@ app.post('/api/sponsor/upload', requireRoom, requireCreatorSponsorAccess, (req, 
       try { if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); } catch (_cleanupErr) {}
       try { if (mediaMeta?.filepath && fs.existsSync(mediaMeta.filepath)) fs.unlinkSync(mediaMeta.filepath); } catch (_cleanupErr) {}
       logger.warn({ err: uploadErr, roomId: req.room?.roomId }, 'Sponsor media processing failed');
-      res.status(500).json({ success: false, error: uploadErr.message || 'Sponsor video processing failed.' });
+      res.status(uploadErr.statusCode || 500).json({
+        success: false,
+        error: uploadErr.message || 'Sponsor video processing failed.',
+        qualityGate: uploadErr.qualityGate || null,
+      });
     }
   });
 });

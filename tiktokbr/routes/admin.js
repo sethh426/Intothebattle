@@ -566,6 +566,11 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
     const processingLabel = isNormalized ? 'Normalized' : (processingStatus && processingStatus !== 'ready' ? creative.processing_status : 'Original');
     const previewHref = sponsorPreviewHref(creative);
     const readiness = String(creative.readiness_status || 'ready').toLowerCase();
+    const warnings = String(creative.quality_warnings || '').trim();
+    const qualityStatus = String(creative.quality_status || (warnings ? 'warn' : 'ready')).toLowerCase();
+    const qualityScore = Number.isFinite(Number(creative.quality_score)) ? Number(creative.quality_score) : 100;
+    const qualityBlockers = String(creative.quality_blockers || '').trim();
+    const qualityRecommendations = String(creative.quality_recommendations || '').trim();
     const thumbnail = creative.thumbnail_data
       ? `<img class="creative-thumb" src="${escapeAttr(creative.thumbnail_data)}" alt="" />`
       : '<div class="creative-thumb empty">No thumbnail</div>';
@@ -578,7 +583,6 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
       creative.file_size ? `${Math.round(Number(creative.file_size) / 1024 / 1024)}MB` : '',
       creative.aspect_ratio || '',
     ].filter(Boolean).join(' - ');
-    const warnings = String(creative.quality_warnings || '').trim();
     const statsOptions = ['endcap', 'delayed', 'hidden', 'always']
       .map(mode => `<option value="${mode}" ${creative.stats_mode === mode ? 'selected' : ''}>${escapeHtml(mode)}</option>`)
       .join('');
@@ -597,12 +601,15 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
             <small>${escapeHtml(metadata || creative.filename)}</small>
           </div>
         </div>
+        ${qualityBlockers ? `<div class="warning-note failed">${escapeHtml(qualityBlockers)}</div>` : ''}
         ${warnings ? `<div class="warning-note">${escapeHtml(warnings)}</div>` : ''}
+        ${qualityRecommendations ? `<div class="warning-note recommend">${escapeHtml(qualityRecommendations)}</div>` : ''}
       </td>
       <td>
         <span class="status-pill ${isActive ? 'active' : 'paused'}">${escapeHtml(creative.status || 'active')}</span>
         <span class="status-pill readiness ${escapeAttr(readiness)}">${escapeHtml(readinessLabel(readiness))}</span>
         <span class="status-pill processing">${escapeHtml(processingLabel)}</span>
+        <span class="status-pill quality ${escapeAttr(qualityStatus)}">${escapeHtml(`Quality ${qualityScore}`)}</span>
         <div class="creative-metrics">
           <span><strong>${numberValue(creative.impressions)}</strong> shown</span>
           <span><strong>${numberValue(creative.completions)}</strong> complete</span>
@@ -694,11 +701,16 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
     .status-pill.readiness.tested { color:#c6ffc3; border-color:rgba(119,240,161,.34); background:rgba(119,240,161,.08); }
     .status-pill.readiness.failed { color:#ffb6b6; border-color:rgba(232,59,95,.36); background:rgba(232,59,95,.1); }
     .status-pill.processing { margin-left:6px; color:#ffdf8a; border-color:rgba(246,201,91,.3); background:rgba(246,201,91,.08); }
+    .status-pill.quality { margin-left:6px; color:#c6ffc3; border-color:rgba(119,240,161,.34); background:rgba(119,240,161,.08); }
+    .status-pill.quality.warn { color:#ffdf8a; border-color:rgba(246,201,91,.34); background:rgba(246,201,91,.08); }
+    .status-pill.quality.blocked { color:#ffb6b6; border-color:rgba(232,59,95,.36); background:rgba(232,59,95,.1); }
     .creative-card-head { display:grid; grid-template-columns:120px minmax(0,1fr); gap:14px; align-items:start; }
     .creative-thumb { width:120px; aspect-ratio:16/9; border-radius:12px; object-fit:cover; border:1px solid rgba(255,255,255,.12); background:#050810; }
     .creative-thumb.empty { display:grid; place-items:center; color:#677083; font-size:11px; font-weight:900; text-align:center; text-transform:uppercase; }
     .campaign-name { color:#ffdf8a; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
     .warning-note { margin-top:10px; padding:9px 10px; border-radius:12px; color:#ffdf8a; background:rgba(246,201,91,.08); border:1px solid rgba(246,201,91,.18); font-size:12px; line-height:1.4; }
+    .warning-note.failed { color:#ffb6b6; background:rgba(232,59,95,.1); border-color:rgba(232,59,95,.32); }
+    .warning-note.recommend { color:#9fefff; background:rgba(85,231,255,.07); border-color:rgba(85,231,255,.22); }
     .creative-metrics { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:12px 0; }
     .creative-metrics span { padding:8px; border-radius:10px; background:rgba(255,255,255,.045); color:#a8afbf; font-size:11px; }
     .creative-metrics strong { color:#fff8e6; }
@@ -933,11 +945,12 @@ router.post('/sponsors/upload', requireAdminAuth, (req, res) => {
             filename, original_name, campaign_name, partner, title, subtitle,
             duration_ms, duration_seconds, width, height, file_size, mime_type,
             video_codec, audio_codec, aspect_ratio, thumbnail_data, quality_warnings,
+            quality_status, quality_score, quality_blockers, quality_recommendations,
             normalized, processing_status, processing_message, stats_mode, fit,
             muted, weight, cooldown_seconds, status, readiness_status, processed_at,
             active_starts_at, active_ends_at, uploaded_at, updated_at
           )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 'ready', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 'ready', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `).run(
         mediaMeta.filename,
         req.file.originalname,
@@ -956,6 +969,10 @@ router.post('/sponsors/upload', requireAdminAuth, (req, res) => {
         mediaMeta.aspectRatio,
         mediaMeta.thumbnailData,
         mediaMeta.qualityWarnings.join(' '),
+        mediaMeta.qualityGateStatus,
+        mediaMeta.qualityGateScore,
+        (mediaMeta.qualityGateBlockers || []).join(' '),
+        (mediaMeta.qualityRecommendations || []).join(' '),
         mediaMeta.normalized ? 1 : 0,
         mediaMeta.processingStatus,
         mediaMeta.processingMessage,

@@ -6,6 +6,26 @@ const DEFAULT_TRANSCODE_TIMEOUT_MS = Number(process.env.SPONSOR_TRANSCODE_TIMEOU
 const DEFAULT_PROBE_TIMEOUT_MS = Number(process.env.SPONSOR_PROBE_TIMEOUT_MS || 20000);
 const DEFAULT_THUMBNAIL_TIMEOUT_MS = Number(process.env.SPONSOR_THUMBNAIL_TIMEOUT_MS || 30000);
 const THUMBNAIL_MAX_BYTES = Number(process.env.SPONSOR_THUMBNAIL_MAX_BYTES || 260000);
+const MB = 1024 * 1024;
+const MAX_DURATION_SECONDS = Number(process.env.SPONSOR_VIDEO_MAX_SECONDS || 120);
+const RECOMMENDED_MAX_DURATION_SECONDS = Number(process.env.SPONSOR_VIDEO_RECOMMENDED_MAX_SECONDS || 30);
+const MAX_FILE_BYTES = Number(process.env.SPONSOR_VIDEO_MAX_MB || 100) * MB;
+const MIN_RECOMMENDED_WIDTH = Number(process.env.SPONSOR_VIDEO_MIN_WIDTH || 1280);
+const MIN_RECOMMENDED_HEIGHT = Number(process.env.SPONSOR_VIDEO_MIN_HEIGHT || 720);
+const MIN_ACCEPTABLE_WIDTH = Number(process.env.SPONSOR_VIDEO_MIN_ACCEPTABLE_WIDTH || 640);
+const MIN_ACCEPTABLE_HEIGHT = Number(process.env.SPONSOR_VIDEO_MIN_ACCEPTABLE_HEIGHT || 360);
+const SUPPORTED_VIDEO_EXTS = new Set(['.mp4', '.m4v', '.webm', '.mov']);
+const SUPPORTED_VIDEO_MIMES = new Set(['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v']);
+const OBS_SAFE_VIDEO_CODECS = new Set(['h264']);
+const OBS_SAFE_AUDIO_CODECS = new Set(['', 'aac', 'mp3']);
+
+function strictMediaGateEnabled(options = {}) {
+  if (options.strict != null) return Boolean(options.strict);
+  if (process.env.SPONSOR_STRICT_MEDIA_GATE != null) {
+    return process.env.SPONSOR_STRICT_MEDIA_GATE !== 'false';
+  }
+  return process.env.NODE_ENV === 'production';
+}
 
 function commandAvailable(command) {
   const result = spawnSync(command, ['-version'], { stdio: 'ignore' });
@@ -80,6 +100,113 @@ function aspectRatioLabel(width, height) {
   return `${width}:${height}`;
 }
 
+function uniqueMessages(messages = []) {
+  return Array.from(new Set(messages.filter(Boolean)));
+}
+
+function fileExtensionForQuality(file = {}, metadata = {}) {
+  return path.extname(metadata.filename || file.originalname || file.originalName || file.filename || '').toLowerCase();
+}
+
+function qualityScore(blockers, warnings) {
+  return Math.max(0, Math.min(100, 100 - (blockers.length * 35) - (warnings.length * 10)));
+}
+
+export function evaluateSponsorMediaQuality({ file = {}, metadata = {}, tools = {}, normalized = false, strict = null } = {}) {
+  const strictGate = strictMediaGateEnabled({ strict });
+  const blockers = [];
+  const warnings = [];
+  const recommendations = [];
+  const mimeType = String(metadata.mimeType || file.mimetype || '').toLowerCase();
+  const ext = fileExtensionForQuality(file, metadata);
+  const fileSize = Number(metadata.fileSize || file.size || 0) || 0;
+  const durationSeconds = Number(metadata.durationSeconds || 0) || 0;
+  const width = Number(metadata.width || 0) || 0;
+  const height = Number(metadata.height || 0) || 0;
+  const videoCodec = String(metadata.videoCodec || '').toLowerCase();
+  const audioCodec = String(metadata.audioCodec || '').toLowerCase();
+  const hasSupportedExt = SUPPORTED_VIDEO_EXTS.has(ext);
+  const hasSupportedMime = !mimeType || SUPPORTED_VIDEO_MIMES.has(mimeType);
+  const looksLikeVideo = (mimeType && mimeType.startsWith('video/')) || hasSupportedExt;
+  const isMp4Container = mimeType === 'video/mp4' || ext === '.mp4' || ext === '.m4v';
+  const isKnownObsSafe = isMp4Container
+    && (!videoCodec || OBS_SAFE_VIDEO_CODECS.has(videoCodec))
+    && (!audioCodec || OBS_SAFE_AUDIO_CODECS.has(audioCodec));
+
+  if (!looksLikeVideo) blockers.push('Upload a video file for sponsor breaks.');
+  if (!hasSupportedExt && !hasSupportedMime) blockers.push('Use MP4, M4V, WebM, or MOV video.');
+  if (fileSize <= 0) blockers.push('Uploaded video is empty.');
+  if (fileSize > MAX_FILE_BYTES) blockers.push(`Video is too large. Keep sponsor creatives under ${Math.round(MAX_FILE_BYTES / MB)}MB.`);
+
+  if (durationSeconds > MAX_DURATION_SECONDS) {
+    blockers.push(`Video is too long. Keep sponsor creatives under ${MAX_DURATION_SECONDS} seconds.`);
+  } else if (durationSeconds > RECOMMENDED_MAX_DURATION_SECONDS) {
+    recommendations.push(`Shorter ${Math.min(10, RECOMMENDED_MAX_DURATION_SECONDS)}-${RECOMMENDED_MAX_DURATION_SECONDS} second placements usually hold attention better.`);
+  } else if (!durationSeconds) {
+    warnings.push('Duration could not be verified before playback.');
+  }
+
+  if (width && height) {
+    const ratio = width / height;
+    if (width < MIN_ACCEPTABLE_WIDTH || height < MIN_ACCEPTABLE_HEIGHT) {
+      blockers.push(`Video resolution is too low. Use at least ${MIN_ACCEPTABLE_WIDTH}x${MIN_ACCEPTABLE_HEIGHT}.`);
+    } else if (width < MIN_RECOMMENDED_WIDTH || height < MIN_RECOMMENDED_HEIGHT) {
+      recommendations.push(`${MIN_RECOMMENDED_HEIGHT}p or 1080p video is recommended.`);
+    }
+    if (Math.abs(ratio - (16 / 9)) > 0.08) recommendations.push('16:9 video is recommended for full-screen placement.');
+  } else {
+    warnings.push('Resolution could not be verified before playback.');
+  }
+
+  if (videoCodec && !OBS_SAFE_VIDEO_CODECS.has(videoCodec)) {
+    const message = `Video codec is ${videoCodec}; H.264 is required for the safest OBS/browser playback.`;
+    if (strictGate || normalized || !tools.ffmpegAvailable) blockers.push(message);
+    else recommendations.push(message);
+  }
+  if (audioCodec && !OBS_SAFE_AUDIO_CODECS.has(audioCodec)) {
+    const message = `Audio codec is ${audioCodec}; AAC is recommended.`;
+    if (strictGate && !tools.ffmpegAvailable) blockers.push(message);
+    else recommendations.push(message);
+  }
+
+  if (!normalized && strictGate && mimeType && mimeType !== 'video/mp4' && !tools.ffmpegAvailable) {
+    blockers.push('Non-MP4 uploads need FFmpeg normalization before production playback.');
+  } else if (!normalized && mimeType && mimeType !== 'video/mp4') {
+    recommendations.push('MP4 H.264/AAC is recommended for OBS-safe playback.');
+  }
+  if (!tools.ffprobeAvailable) warnings.push('Server ffprobe is unavailable; metadata was limited to browser-provided values.');
+  if (!normalized && !tools.ffmpegAvailable && !isKnownObsSafe) warnings.push('Server FFmpeg is unavailable; video was not normalized.');
+
+  const finalBlockers = uniqueMessages(blockers);
+  const finalWarnings = uniqueMessages(warnings);
+  const finalRecommendations = uniqueMessages(recommendations);
+  return {
+    status: finalBlockers.length ? 'blocked' : finalWarnings.length || finalRecommendations.length ? 'warn' : 'ready',
+    score: qualityScore(finalBlockers, [...finalWarnings, ...finalRecommendations]),
+    blockers: finalBlockers,
+    warnings: finalWarnings,
+    recommendations: finalRecommendations,
+    strict: strictGate,
+    limits: {
+      maxDurationSeconds: MAX_DURATION_SECONDS,
+      recommendedMaxDurationSeconds: RECOMMENDED_MAX_DURATION_SECONDS,
+      maxFileBytes: MAX_FILE_BYTES,
+      minRecommendedWidth: MIN_RECOMMENDED_WIDTH,
+      minRecommendedHeight: MIN_RECOMMENDED_HEIGHT,
+    },
+  };
+}
+
+export class SponsorMediaQualityError extends Error {
+  constructor(qualityGate) {
+    const detail = qualityGate?.blockers?.join(' ') || 'Sponsor video did not pass the production quality gate.';
+    super(detail);
+    this.name = 'SponsorMediaQualityError';
+    this.statusCode = 422;
+    this.qualityGate = qualityGate;
+  }
+}
+
 function safeDerivedFilename(filename, suffix, ext) {
   const originalExt = path.extname(filename || '');
   const base = path.basename(filename || `sponsor-${Date.now()}`, originalExt)
@@ -132,28 +259,6 @@ function mergeMetadata(base, next) {
     thumbnailData: next?.thumbnailData || base.thumbnailData || '',
     mimeType: next?.mimeType || base.mimeType || '',
   };
-}
-
-function buildQualityWarnings(file, metadata, options = {}) {
-  const warnings = [];
-  const mimeType = metadata.mimeType || file?.mimetype || '';
-  if (mimeType && mimeType !== 'video/mp4') warnings.push('MP4 H.264/AAC is recommended for OBS-safe playback.');
-  if (metadata.videoCodec && metadata.videoCodec !== 'h264') warnings.push(`Video codec is ${metadata.videoCodec}; H.264 is recommended.`);
-  if (metadata.audioCodec && metadata.audioCodec !== 'aac') warnings.push(`Audio codec is ${metadata.audioCodec}; AAC is recommended.`);
-  if (!metadata.durationSeconds) warnings.push('Duration could not be verified.');
-  else if (metadata.durationSeconds > 120) warnings.push('Keep arena moments under 120 seconds.');
-  else if (metadata.durationSeconds > 30) warnings.push('Shorter 10-30 second placements usually hold attention better.');
-  if (metadata.width && metadata.height) {
-    const ratio = metadata.width / metadata.height;
-    if (Math.abs(ratio - (16 / 9)) > 0.08) warnings.push('16:9 video is recommended for full-screen placement.');
-    if (metadata.width < 1280 || metadata.height < 720) warnings.push('720p or 1080p video is recommended.');
-  } else {
-    warnings.push('Resolution could not be verified.');
-  }
-  if ((metadata.fileSize || file?.size || 0) > 100 * 1024 * 1024) warnings.push('Large files can buffer in OBS; compress before production use.');
-  if (!options.ffprobeAvailable) warnings.push('Server ffprobe is unavailable; metadata was limited to browser-provided values.');
-  if (!options.ffmpegAvailable) warnings.push('Server FFmpeg is unavailable; video was not normalized.');
-  return warnings;
 }
 
 async function probeMedia(filePath, ffprobe) {
@@ -269,13 +374,17 @@ export async function processSponsorUpload({ file, body = {}, targetDir }) {
   metadata.fileSize = stat.size || metadata.fileSize || file.size || 0;
   metadata.mimeType = normalized ? 'video/mp4' : metadata.mimeType;
   metadata.aspectRatio = aspectRatioLabel(metadata.width, metadata.height);
-  const warnings = buildQualityWarnings(file, metadata, tools);
-  if (normalized) {
-    const normalizedWarning = warnings.find(warning => /ffprobe|Duration|Resolution/i.test(warning));
-    metadata.qualityWarnings = normalizedWarning ? [normalizedWarning] : [];
-  } else {
-    metadata.qualityWarnings = warnings;
+  const qualityGate = evaluateSponsorMediaQuality({
+    file: { ...file, filename: activeFilename, originalname: file.originalname },
+    metadata: { ...metadata, filename: activeFilename },
+    tools,
+    normalized,
+  });
+  if (qualityGate.status === 'blocked') {
+    try { if (activePath && fs.existsSync(activePath)) fs.unlinkSync(activePath); } catch (_err) {}
+    throw new SponsorMediaQualityError(qualityGate);
   }
+  metadata.qualityWarnings = qualityGate.warnings;
 
   return {
     filename: activeFilename,
@@ -286,6 +395,10 @@ export async function processSponsorUpload({ file, body = {}, targetDir }) {
     processingStatus,
     processingMessage,
     processedAt: new Date().toISOString(),
+    qualityGateStatus: qualityGate.status,
+    qualityGateScore: qualityGate.score,
+    qualityGateBlockers: qualityGate.blockers,
+    qualityRecommendations: qualityGate.recommendations,
     ...metadata,
     toolStatus: tools,
   };
