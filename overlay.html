@@ -622,6 +622,34 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .sponsor-scene.live .sponsor-video-chrome { animation:sponsorChromeIn 760ms 120ms cubic-bezier(.16,1,.3,1) both; }
 .sponsor-scene.live.video-ready .sponsor-video-chrome { opacity:.94; }
 .sponsor-scene.live.stats-visible .sponsor-video-chrome { opacity:.28; }
+.sponsor-broadcast-frame {
+  position:absolute; inset:22px; z-index:3; pointer-events:none; opacity:0; border-radius:12px;
+  box-shadow:
+    inset 0 0 0 2px rgba(255,255,255,.08),
+    inset 0 0 0 1px rgba(85,231,255,.16),
+    0 0 42px rgba(85,231,255,.1);
+  transition:opacity 460ms ease,transform 760ms cubic-bezier(.16,1,.3,1);
+  transform:scale(1.018);
+}
+.sponsor-broadcast-frame::before {
+  content:""; position:absolute; inset:-1px; border-radius:13px; padding:2px;
+  background:linear-gradient(90deg,rgba(255,223,138,.95),rgba(85,231,255,.82),rgba(255,74,110,.58),rgba(255,223,138,.95));
+  background-size:280% 100%;
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask-composite:exclude;
+  animation:sponsorChromeBorder 4.4s linear infinite;
+}
+.sponsor-broadcast-frame span {
+  position:absolute; width:46px; height:46px; border-color:rgba(255,223,138,.9); border-style:solid;
+  filter:drop-shadow(0 0 14px rgba(255,223,138,.28));
+}
+.sponsor-broadcast-frame span:nth-child(1) { left:13px; top:13px; border-width:3px 0 0 3px; }
+.sponsor-broadcast-frame span:nth-child(2) { right:13px; top:13px; border-width:3px 3px 0 0; }
+.sponsor-broadcast-frame span:nth-child(3) { right:13px; bottom:13px; border-width:0 3px 3px 0; }
+.sponsor-broadcast-frame span:nth-child(4) { left:13px; bottom:13px; border-width:0 0 3px 3px; }
+.sponsor-scene.live.video-ready .sponsor-broadcast-frame { opacity:.96; transform:scale(1); }
+.sponsor-scene.live.stats-visible .sponsor-broadcast-frame { opacity:.24; }
 .sponsor-frame {
   position:absolute; left:60px; bottom:86px; z-index:2; width:min(64%,820px); min-height:auto;
   display:flex; flex-direction:column; justify-content:flex-end; gap:18px;
@@ -648,6 +676,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   background:rgba(3,7,14,.54); box-shadow:0 16px 42px rgba(0,0,0,.22);
   font:900 24px 'Exo 2','Segoe UI',sans-serif; color:#ffffff;
   letter-spacing:0; text-transform:uppercase;
+}
+.sponsor-scene.live.video-ready:not(.stats-visible) .sponsor-frame {
+  opacity:0; transform:translateY(18px); pointer-events:none;
 }
 .sponsor-scene.live.stats-visible .sponsor-frame {
   opacity:0; transform:translateY(18px); pointer-events:none;
@@ -843,6 +874,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .sponsor-subtitle { font-size:24px; }
   .sponsor-frame { left:34px; right:34px; bottom:72px; width:auto; }
   .sponsor-brand { top:28px; right:34px; font-size:20px; }
+  .sponsor-broadcast-frame { inset:14px; }
+  .sponsor-broadcast-frame span { width:32px; height:32px; }
   .sponsor-live-stats { left:34px; right:34px; bottom:64px; padding:16px; }
   .sponsor-stats-head { font-size:24px; }
   .sponsor-stats-head span:last-child { font-size:18px; }
@@ -869,6 +902,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .sponsor-kicker { font-size:14px; }
   .sponsor-frame { left:24px; right:24px; bottom:58px; width:auto; gap:12px; }
   .sponsor-brand { top:20px; right:24px; font-size:16px; }
+  .sponsor-broadcast-frame { inset:10px; }
+  .sponsor-broadcast-frame span { width:24px; height:24px; }
   .sponsor-live-stats { display:none; }
   .sponsor-progress { left:30px; right:30px; bottom:22px; }
   .sponsor-return-hint { display:none; }
@@ -1004,6 +1039,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     <div class="sponsor-live" aria-hidden="true">
       <div class="sponsor-scrim"></div>
       <div class="sponsor-video-chrome" aria-hidden="true"></div>
+      <div class="sponsor-broadcast-frame" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+      </div>
       <div class="sponsor-brand" id="sponsorBrand">IntoTheBattle</div>
       <div class="sponsor-frame">
         <div class="sponsor-kicker" id="sponsorKicker">Arena Spotlight</div>
@@ -1639,6 +1677,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function reportSponsorPlayback(payload, status, message = '') {
     if (!socket || !payload?.breakId) return;
+    const mediaDurationMs = sponsorVideo && Number.isFinite(sponsorVideo.duration) && sponsorVideo.duration > 0
+      ? Math.round(sponsorVideo.duration * 1000)
+      : Number(payload.mediaDurationMs) || null;
     try {
       socket.emit('sponsorPlaybackEvent', {
         breakId: payload.breakId,
@@ -1650,6 +1691,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         readyState: sponsorVideo ? sponsorVideo.readyState : null,
         currentTime: sponsorVideo ? sponsorVideo.currentTime : null,
         duration: sponsorVideo ? sponsorVideo.duration : null,
+        mediaDurationMs,
+        mediaWidth: sponsorVideo ? sponsorVideo.videoWidth || payload.mediaWidth || null : payload.mediaWidth || null,
+        mediaHeight: sponsorVideo ? sponsorVideo.videoHeight || payload.mediaHeight || null : payload.mediaHeight || null,
       });
     } catch (_err) {}
   }
@@ -1673,11 +1717,34 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     return new Promise(resolve => {
       let settled = false;
+      let decodedReported = false;
+      let readyTimer = null;
+      const reportDecoded = () => {
+        if (decodedReported || token !== sponsorVideoLoadToken) return;
+        decodedReported = true;
+        applySponsorVideoFit(payload);
+        reportSponsorPlayback(payload, 'decoded', 'Arena media metadata decoded');
+      };
       const done = (ready, message, stateClass) => {
         if (settled || token !== sponsorVideoLoadToken) return;
         settled = true;
+        if (ready) reportDecoded();
+        if (readyTimer) {
+          clearTimeout(readyTimer);
+          readyTimer = null;
+        }
         setSponsorMediaStatus(message, stateClass);
         resolve(ready);
+      };
+      const markReady = () => {
+        if (settled || token !== sponsorVideoLoadToken) return;
+        if (!sponsorVideo || sponsorVideo.readyState < 2) return;
+        reportDecoded();
+        if (readyTimer) clearTimeout(readyTimer);
+        readyTimer = setTimeout(() => {
+          readyTimer = null;
+          if (sponsorVideo && sponsorVideo.readyState >= 2) done(true, '', 'video-ready');
+        }, 120);
       };
 
       sponsorVideo.preload = 'auto';
@@ -1686,17 +1753,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       sponsorVideo.muted = payload.muted;
       sponsorVideo.loop = false;
       sponsorVideo.src = payload.videoUrl;
-      sponsorVideo.onloadedmetadata = () => applySponsorVideoFit(payload);
-      sponsorVideo.onloadeddata = () => done(true, '', 'video-ready');
-      sponsorVideo.oncanplay = () => done(true, '', 'video-ready');
-      sponsorVideo.oncanplaythrough = () => done(true, '', 'video-ready');
+      sponsorVideo.onloadedmetadata = reportDecoded;
+      sponsorVideo.onloadeddata = markReady;
+      sponsorVideo.oncanplay = markReady;
+      sponsorVideo.oncanplaythrough = markReady;
       sponsorVideo.onerror = () => done(false, sponsorVideoErrorMessage('Arena media could not preload'), 'video-error');
       sponsorVideo.onstalled = () => setSponsorMediaStatus('Buffering arena media', 'video-loading');
       sponsorVideo.onwaiting = () => setSponsorMediaStatus('Buffering arena media', 'video-loading');
 
       try {
         sponsorVideo.load();
-        if (sponsorVideo.readyState >= 2) done(true, '', 'video-ready');
+        if (sponsorVideo.readyState >= 1) reportDecoded();
+        if (sponsorVideo.readyState >= 2) markReady();
       } catch (_err) {
         done(false, 'Arena media could not load', 'video-error');
       }
@@ -1711,6 +1779,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     let playingNotified = false;
+    let playbackStartedNotified = false;
     let readyFallbackTimer = null;
     let firstFrameFallbackTimer = null;
     const clearFirstFrameFallback = () => {
@@ -1725,6 +1794,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         readyFallbackTimer = null;
       }
     };
+    const notifyPlaybackStarted = (message = 'Arena media playback started') => {
+      if (playbackStartedNotified) return;
+      playbackStartedNotified = true;
+      reportSponsorPlayback(payload, 'playing', message);
+    };
     const notifyPlaying = (message = '') => {
       if (playingNotified) return;
       playingNotified = true;
@@ -1732,6 +1806,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       clearFirstFrameFallback();
       applySponsorVideoFit(payload);
       setSponsorMediaStatus('', 'video-ready');
+      notifyPlaybackStarted();
       reportSponsorPlayback(payload, 'first_frame', message);
       hooks.onPlaying?.();
     };
@@ -1818,6 +1893,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     sponsorVideo.onloadedmetadata = () => applySponsorVideoFit(payload);
     sponsorVideo.onplaying = () => {
       handleRecovered();
+      notifyPlaybackStarted();
       requestFirstFrame();
     };
     sponsorVideo.onwaiting = handleBuffering;
@@ -1940,8 +2016,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function isPreparedSponsorVideo(payload = {}) {
     if (!preparedSponsorPayload || !sponsorVideo) return false;
-    if (payload.breakId && preparedSponsorPayload.breakId === payload.breakId) return sponsorVideo.readyState >= 1;
-    return Boolean(payload.videoUrl && preparedSponsorPayload.videoUrl === payload.videoUrl && sponsorVideo.readyState >= 1);
+    if (payload.breakId && preparedSponsorPayload.breakId === payload.breakId) return sponsorVideo.readyState >= 2;
+    return Boolean(payload.videoUrl && preparedSponsorPayload.videoUrl === payload.videoUrl && sponsorVideo.readyState >= 2);
   }
 
   function prepareSponsorScene(payload = {}) {
@@ -2056,11 +2132,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           if (readyEnough) {
             setSponsorMediaStatus('', 'video-ready');
             reportSponsorPlayback(payload, 'first_frame', 'Arena media started after live fallback');
+            startSponsorClock(payload, payload.durationMs, true);
           } else {
-            setSponsorMediaStatus('Arena media is still loading', 'video-loading');
-            reportSponsorPlayback(payload, 'fallback_started', 'Arena media was not ready before live fallback');
+            const message = 'Arena media never reached first frame';
+            setSponsorMediaStatus(message, 'video-error');
+            reportSponsorPlayback(payload, 'failed', message);
+            startSponsorOutro(payload, true, 'failed');
           }
-          startSponsorClock(payload, payload.durationMs, readyEnough);
         }
       }, 6500);
     } else {

@@ -146,7 +146,7 @@
     .sponsor-readiness-pill.completed { color:var(--green); border-color:rgba(119,240,161,.34); background:rgba(119,240,161,.09); }
     .sponsor-readiness-pill.failed,.sponsor-readiness-pill.stopped { color:#ff9aa8; border-color:rgba(232,59,95,.36); background:rgba(232,59,95,.1); }
     .sponsor-readiness-message { color:var(--muted); font-size:12px; font-weight:800; line-height:1.35; }
-    .sponsor-step-track { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+    .sponsor-step-track { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; }
     .sponsor-step { min-height:34px; display:flex; align-items:center; justify-content:center; padding:6px 8px; border-radius:12px; border:1px solid rgba(255,255,255,.09); background:rgba(255,255,255,.045); color:var(--dim); font-size:10px; font-weight:900; text-transform:uppercase; text-align:center; }
     .sponsor-step.active { color:#061016; border-color:transparent; background:linear-gradient(135deg,var(--cyan),#b9fbff); box-shadow:0 0 22px rgba(85,231,255,.14); }
     .sponsor-upload-meta { margin-top:8px; padding:10px 12px; border-radius:14px; background:rgba(255,255,255,.045); color:var(--muted); font-size:12px; font-weight:800; line-height:1.35; }
@@ -277,8 +277,9 @@
               <div class="sponsor-readiness-message" id="sponsorReadinessMessage">Send a power moment to see overlay loading and playback status.</div>
               <div class="sponsor-step-track" aria-label="Power moment progress">
                 <span class="sponsor-step" data-sponsor-step="preparing">Preparing</span>
+                <span class="sponsor-step" data-sponsor-step="decoded">Decoded</span>
                 <span class="sponsor-step" data-sponsor-step="ready">Ready</span>
-                <span class="sponsor-step" data-sponsor-step="live">Live</span>
+                <span class="sponsor-step" data-sponsor-step="first_frame">First Frame</span>
                 <span class="sponsor-step" data-sponsor-step="completed">Proof</span>
               </div>
             </div>
@@ -660,6 +661,7 @@ function sponsorStatusLabel(status) {
   const labels = {
     idle: 'Idle',
     preparing: 'Preparing',
+    decoded: 'Decoded',
     ready: 'Ready',
     starting: 'Starting',
     live: 'Live',
@@ -680,6 +682,8 @@ function updateSponsorBreakStatus(data = {}) {
       if (status === 'playing') {
         file.readinessStatus = 'tested';
         file.lastTestedAt = new Date().toISOString();
+      } else if (status === 'decoded') {
+        file.readinessStatus = file.readinessStatus === 'tested' ? 'tested' : 'ready';
       } else if (status === 'ready') {
         file.readinessStatus = file.readinessStatus === 'tested' ? 'tested' : 'ready';
       } else if (status === 'failed') {
@@ -702,12 +706,13 @@ function updateSponsorBreakStatus(data = {}) {
     const idCopy = data.breakId ? ` Break ${String(data.breakId).slice(-8)}.` : '';
     message.textContent = `${partner}${detail}${idCopy}`;
   }
-  const order = ['preparing', 'ready', 'live', 'completed'];
+  const order = ['preparing', 'decoded', 'ready', 'first_frame', 'completed'];
   let activeIndex = -1;
   if (status === 'preparing') activeIndex = 0;
-  else if (status === 'ready') activeIndex = 1;
-  else if (['starting', 'live', 'playing', 'video_completed'].includes(status)) activeIndex = 2;
-  else if (['completed', 'failed', 'stopped'].includes(status)) activeIndex = 3;
+  else if (status === 'decoded') activeIndex = 1;
+  else if (['ready', 'starting', 'live'].includes(status)) activeIndex = 2;
+  else if (['playing', 'video_completed'].includes(status)) activeIndex = 3;
+  else if (['completed', 'failed', 'stopped'].includes(status)) activeIndex = 4;
   document.querySelectorAll('[data-sponsor-step]').forEach((step, index) => {
     step.classList.toggle('active', activeIndex >= index);
   });

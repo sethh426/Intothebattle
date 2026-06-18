@@ -219,6 +219,84 @@ try {
     );
   }
 
+  const primaryOverlay = overlaySockets[0];
+  const preparePromise = waitForEvent(primaryOverlay, 'sponsorPrepare', payload => payload?.breakId, 10000);
+  const sponsorPlayRes = await request('/api/sponsor/play', {
+    method: 'POST',
+    headers: {
+      Cookie: `session_token=${e2eSessionToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      partner: 'Socket Smoke',
+      title: 'Handshake Proof',
+      subtitle: 'Testing sponsor playback state flow.',
+      durationMs: 5000,
+      muted: true,
+      fit: 'contain',
+      statsMode: 'endcap',
+    }),
+  });
+  assert(sponsorPlayRes.status === 200, `sponsor play should return 200, got ${sponsorPlayRes.status}`);
+  const sponsorPlay = await sponsorPlayRes.json();
+  assert(sponsorPlay.success === true && sponsorPlay.breakId, 'sponsor play should return a break id');
+  const prepared = await preparePromise;
+  assert(prepared.breakId === sponsorPlay.breakId, 'overlay should receive sponsor prepare before playback starts');
+
+  const decodedStatusPromise = waitForEvent(dashboard, 'sponsorBreakStatus', payload => payload.status === 'decoded' && payload.breakId === sponsorPlay.breakId, 10000);
+  primaryOverlay.emit('sponsorPlaybackEvent', {
+    breakId: sponsorPlay.breakId,
+    status: 'decoded',
+    readyState: 1,
+    mediaWidth: 1920,
+    mediaHeight: 1080,
+    mediaDurationMs: 5000,
+  });
+  const decodedStatus = await decodedStatusPromise;
+  assert(decodedStatus.decodedAt, 'decoded sponsor status should include decodedAt');
+
+  const readyStatusPromise = waitForEvent(dashboard, 'sponsorBreakStatus', payload => payload.status === 'ready' && payload.breakId === sponsorPlay.breakId, 10000);
+  const startingStatusPromise = waitForEvent(dashboard, 'sponsorBreakStatus', payload => payload.status === 'starting' && payload.breakId === sponsorPlay.breakId, 10000);
+  const showScenePromise = waitForEvent(primaryOverlay, 'sponsorScene', payload => payload.action === 'show' && payload.breakId === sponsorPlay.breakId, 10000);
+  primaryOverlay.emit('sponsorPlaybackEvent', {
+    breakId: sponsorPlay.breakId,
+    status: 'ready',
+    readyState: 2,
+    mediaWidth: 1920,
+    mediaHeight: 1080,
+    mediaDurationMs: 5000,
+  });
+  const readyStatus = await readyStatusPromise;
+  assert(readyStatus.readyAt, 'ready sponsor status should include readyAt');
+  await startingStatusPromise;
+  await showScenePromise;
+
+  const liveStatusPromise = waitForEvent(dashboard, 'sponsorBreakStatus', payload => payload.status === 'live' && payload.breakId === sponsorPlay.breakId, 10000);
+  primaryOverlay.emit('sponsorPlaybackEvent', { breakId: sponsorPlay.breakId, status: 'live', readyState: 2 });
+  await liveStatusPromise;
+
+  const playbackStartedPromise = waitForEvent(
+    dashboard,
+    'sponsorBreakStatus',
+    payload => payload.status === 'live' && /waiting for first frame/i.test(payload.message || '') && payload.breakId === sponsorPlay.breakId,
+    10000
+  );
+  primaryOverlay.emit('sponsorPlaybackEvent', { breakId: sponsorPlay.breakId, status: 'playing', readyState: 2, currentTime: 0.1 });
+  await playbackStartedPromise;
+
+  const firstFramePromise = waitForEvent(dashboard, 'sponsorBreakStatus', payload => payload.status === 'playing' && payload.breakId === sponsorPlay.breakId, 10000);
+  primaryOverlay.emit('sponsorPlaybackEvent', { breakId: sponsorPlay.breakId, status: 'first_frame', readyState: 4, currentTime: 0.2 });
+  const firstFrameStatus = await firstFramePromise;
+  assert(firstFrameStatus.firstFrameAt, 'first frame sponsor status should include firstFrameAt');
+
+  const videoCompletedPromise = waitForEvent(dashboard, 'sponsorBreakStatus', payload => payload.status === 'video_completed' && payload.breakId === sponsorPlay.breakId, 10000);
+  primaryOverlay.emit('sponsorPlaybackEvent', { breakId: sponsorPlay.breakId, status: 'video_completed', readyState: 4, currentTime: 5 });
+  await videoCompletedPromise;
+
+  const completedPromise = waitForEvent(dashboard, 'sponsorBreakStatus', payload => payload.status === 'completed' && payload.breakId === sponsorPlay.breakId, 10000);
+  primaryOverlay.emit('sponsorPlaybackEvent', { breakId: sponsorPlay.breakId, status: 'completed', readyState: 4, currentTime: 5 });
+  await completedPromise;
+
   for (let index = overlaySockets.length - 1; index >= 0; index--) {
     const expectedCount = index;
     const dashboardDisconnectedCountPromise = waitForEvent(
