@@ -70,6 +70,37 @@ function normalizeGoogleUsername(email) {
   return email.split('@')[0].replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 24) || 'google-user';
 }
 
+function fullAccessTrialDays() {
+  const value = Number(process.env.FREE_TRIAL_DAYS || 7);
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : 7;
+}
+
+function trialExpiresAtFromNow() {
+  return new Date(Date.now() + fullAccessTrialDays() * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 19)
+    .replace('T', ' ');
+}
+
+function createFullAccessTrial(userId) {
+  if (!userId) return;
+  const existing = db.prepare('SELECT id FROM subscriptions WHERE user_id = ? ORDER BY created_at ASC LIMIT 1').get(userId);
+  if (existing) return;
+  db.prepare(
+    "INSERT INTO subscriptions (user_id, plan_type, status, started_at, expires_at, created_at, updated_at) VALUES (?, '7-Day Full Access', 'trialing', CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+  ).run(userId, trialExpiresAtFromNow());
+}
+
+async function createFullAccessTrialAsync(userId) {
+  if (!userId) return;
+  const existing = await getAsync('SELECT id FROM subscriptions WHERE user_id = ? ORDER BY created_at ASC LIMIT 1', userId);
+  if (existing) return;
+  await runAsync(
+    "INSERT INTO subscriptions (user_id, plan_type, status, started_at, expires_at, created_at, updated_at) VALUES (?, '7-Day Full Access', 'trialing', CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+    [userId, trialExpiresAtFromNow()]
+  );
+}
+
 function ensureUserRoom(userId, name) {
   const existingRoom = db.prepare('SELECT * FROM user_rooms WHERE user_id = ? ORDER BY created_at DESC LIMIT 1').get(userId);
   if (existingRoom) return existingRoom;
@@ -848,6 +879,7 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
     ).run(name, tiktokUsername, sessionToken, verificationToken, verificationExpiresAt, existing.id);
     setSessionCookie(res, sessionToken);
     const room = ensureUserRoom(existing.id, name);
+    createFullAccessTrial(existing.id);
 
     let delivery;
     try {
@@ -895,6 +927,7 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
     `${name}'s room`
   );
   db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
+  createFullAccessTrial(userId);
 
   let delivery;
   try {
@@ -1003,6 +1036,7 @@ router.get('/auth/google/callback', async (req, res) => {
         [userId, roomId, `${name}'s room`]
       );
       await runAsync('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING', roomId);
+      await createFullAccessTrialAsync(userId);
       user = await getAsync('SELECT * FROM users WHERE id = ?', userId);
     } else {
       if (!user.is_active) {
@@ -1012,6 +1046,7 @@ router.get('/auth/google/callback', async (req, res) => {
         await runAsync('UPDATE users SET email_verified = 1 WHERE id = ?', user.id);
       }
       await ensureUserRoomAsync(user.id, user.name);
+      await createFullAccessTrialAsync(user.id);
     }
 
     const sessionToken = createSessionToken({ userId: user.id, email });

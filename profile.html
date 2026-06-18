@@ -121,11 +121,13 @@
         updateEmailVerificationStatus(json.user);
 
         const subscription = json.subscription;
-        if (subscription && subscription.status === 'active') {
+        const subscriptionStatus = String(subscription?.status || '').toLowerCase();
+        const isTrial = ['trial', 'trialing', 'free-trial', 'full-access-trial'].includes(subscriptionStatus);
+        if (subscription && (subscriptionStatus === 'active' || isTrial)) {
           subscriptionEl.innerHTML = `
             <p class="note">Status: <strong>${subscription.status}</strong></p>
-            <p class="note">Plan: ${subscription.plan_type || 'Creator Pro'}</p>
-            <p class="note">Next billing: ${subscription.next_billing_date || 'Pending'}</p>
+            <p class="note">Plan: ${subscription.plan_type || (isTrial ? '7-Day Full Access' : 'Creator Pro')}</p>
+            <p class="note">${isTrial ? 'Trial ends' : 'Next billing'}: ${subscription.expires_at || subscription.next_billing_date || 'Pending'}</p>
           `;
         } else {
           subscriptionEl.innerHTML = '<p class="note">Plan: <strong>Free</strong></p><p class="note">Upgrade to Creator Pro when you want advanced creator controls.</p><p style="margin-top:14px;"><a class="small-button" href="/paywall" style="margin-left:0;">Upgrade to Creator Pro</a></p>';

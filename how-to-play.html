@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How To Play IntoTheBattle | TikTok LIVE Viewer Commands</title>
+  <meta name="description" content="Learn how viewers play IntoTheBattle during TikTok LIVE with chat commands, emojis, attacks, shields, healing, likes, gifts, and future arena mechanics." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://intothebattle.com/how-to-play" />
+  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
+  <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
+  <script type="module" src="/js/clarity-loader.js"></script>
+  <script type="module" src="/js/site-breadcrumbs.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold: #f6c95b;
+      --gold2: #fff0b9;
+      --ember: #ff6a3d;
+      --cyan: #55e7ff;
+      --red: #e83b5f;
+      --green: #77f0a1;
+      --ink: #050608;
+      --panel: rgba(255,255,255,.055);
+      --line: rgba(255,255,255,.11);
+      --muted: #a8afbf;
+      --text: #fff8e6;
+      --max: 1180px;
+    }
+    body {
+      min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        linear-gradient(180deg, rgba(246,201,91,.09), transparent 360px),
+        linear-gradient(135deg, rgba(85,231,255,.08), transparent 32%),
+        linear-gradient(180deg, #050608 0%, #030406 66%, #020307 100%);
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(85,231,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(246,201,91,.035) 1px, transparent 1px);
+      background-size: 58px 58px;
+      mask-image: radial-gradient(circle at top, black, transparent 74%);
+    }
+    a { color: inherit; text-decoration: none; }
+    .nav-wrap { position: sticky; top: 0; z-index: 10; padding: 18px clamp(16px,4vw,42px) 0; }
+    nav.main-nav {
+      max-width: var(--max);
+      margin: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 12px 14px;
+      border: 1px solid rgba(246,201,91,.22);
+      border-radius: 24px;
+      background: rgba(5,7,11,.78);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 70px rgba(0,0,0,.32);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand img { width: 48px; height: 48px; border-radius: 16px; transform: scale(1.1); }
+    .brand strong { display: block; text-transform: uppercase; letter-spacing: .08em; }
+    .brand span span { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .nav-links { display: flex; align-items: center; gap: 10px; }
+    .nav-links a {
+      padding: 11px 14px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-weight: 850;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .nav-links .cta { color: #160d02; background: linear-gradient(135deg, var(--gold), var(--gold2) 52%, var(--ember)); }
+    main { max-width: var(--max); margin: auto; padding: clamp(48px,7vw,82px) clamp(18px,4vw,42px) 0; }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, .98fr) minmax(380px, .82fr);
+      gap: clamp(28px,5vw,62px);
+      align-items: center;
+      min-height: 70vh;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 18px;
+      padding: 9px 13px;
+      border: 1px solid rgba(85,231,255,.28);
+      border-radius: 999px;
+      background: rgba(85,231,255,.08);
+      color: #9ff5ff;
+      font-size: 12px;
+      font-weight: 950;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 14px rgba(246,201,91,.8);
+    }
+    h1 {
+      max-width: 760px;
+      font-size: clamp(48px,7vw,94px);
+      line-height: .9;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    h1 span {
+      display: block;
+      color: transparent;
+      background: linear-gradient(100deg, #fff7d7, var(--gold), #ff7a48);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    .lede {
+      max-width: 660px;
+      margin-bottom: 26px;
+      color: #c4ccdb;
+      font-size: clamp(17px,2vw,21px);
+      line-height: 1.68;
+    }
+    .actions { display: flex; gap: 14px; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 54px;
+      padding: 0 22px;
+      border-radius: 14px;
+      font-weight: 950;
+    }
+    .primary { color: #130a02; background: linear-gradient(135deg, var(--gold), #fff1bd 52%, var(--ember)); }
+    .secondary { border: 1px solid rgba(255,255,255,.13); background: rgba(255,255,255,.055); }
+    .terminal {
+      position: relative;
+      min-height: 430px;
+      padding: 22px;
+      border: 1px solid rgba(85,231,255,.24);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.025)),
+        rgba(2,4,10,.86);
+      box-shadow: 0 34px 90px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.08);
+      overflow: hidden;
+    }
+    .terminal::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, transparent 0 8px, rgba(85,231,255,.03) 8px 9px);
+      pointer-events: none;
+    }
+    .terminal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 18px;
+      color: #9ff5ff;
+      font-size: 12px;
+      font-weight: 950;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    .screen {
+      display: grid;
+      gap: 10px;
+      position: relative;
+      z-index: 1;
+    }
+    .line {
+      display: grid;
+      grid-template-columns: 96px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 13px 14px;
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 8px;
+      background: rgba(0,0,0,.24);
+      color: #dce6f6;
+      line-height: 1.45;
+    }
+    .line code {
+      color: var(--gold2);
+      font-weight: 950;
+      white-space: nowrap;
+    }
+    .line span { color: var(--muted); }
+    .section {
+      padding: clamp(56px,8vw,90px) 0;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    .section-head h2 {
+      max-width: 720px;
+      font-size: clamp(32px,4.5vw,56px);
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .section-head p { max-width: 500px; color: var(--muted); line-height: 1.65; }
+    .command-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .command {
+      min-height: 188px;
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.025));
+    }
+    .command code {
+      display: inline-flex;
+      margin-bottom: 12px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      color: #170c02;
+      background: linear-gradient(135deg, var(--gold), #fff0b9);
+      font-weight: 950;
+      font-size: 14px;
+    }
+    .command h3 { margin-bottom: 9px; font-size: 20px; }
+    .command p { color: var(--muted); line-height: 1.6; }
+    .rules {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    .rule-band {
+      padding: 24px;
+      border-left: 3px solid var(--cyan);
+      background: rgba(255,255,255,.045);
+    }
+    .rule-band:nth-child(2) { border-color: var(--gold); }
+    .rule-band:nth-child(3) { border-color: var(--ember); }
+    .rule-band:nth-child(4) { border-color: var(--green); }
+    .rule-band h3 { margin-bottom: 10px; font-size: 22px; }
+    .rule-band p { color: var(--muted); line-height: 1.65; }
+    .roadmap {
+      display: grid;
+      gap: 12px;
+    }
+    .roadmap-item {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 16px;
+      padding: 18px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px;
+      background: rgba(0,0,0,.2);
+    }
+    .roadmap-item b {
+      color: var(--gold2);
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      font-size: 12px;
+    }
+    .roadmap-item p { color: #c4ccdb; line-height: 1.6; }
+    .cta-band {
+      display: grid;
+      grid-template-columns: minmax(0,1fr) auto;
+      gap: 24px;
+      align-items: center;
+      margin-bottom: 72px;
+      padding: 28px;
+      border: 1px solid rgba(246,201,91,.22);
+      border-radius: 8px;
+      background: linear-gradient(90deg, rgba(246,201,91,.12), rgba(85,231,255,.06)), rgba(255,255,255,.035);
+    }
+    .cta-band h2 { margin-bottom: 8px; font-size: clamp(28px,4vw,46px); line-height: 1.05; text-transform: uppercase; }
+    .cta-band p { color: #c4ccdb; line-height: 1.6; }
+    footer {
+      max-width: var(--max);
+      margin: auto;
+      padding: 30px clamp(18px,4vw,42px);
+      color: #7e8799;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    @media (max-width: 980px) {
+      .hero, .section-head, .cta-band { grid-template-columns: 1fr; }
+      .terminal { max-width: 780px; }
+      .command-grid, .rules { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 620px) {
+      .nav-links a:not(.cta) { display: none; }
+      .brand span span { display: none; }
+      h1 { font-size: clamp(40px,14vw,66px); }
+      .actions .btn { width: 100%; }
+      .line, .roadmap-item { grid-template-columns: 1fr; }
+      .terminal { min-height: auto; padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-wrap">
+    <nav class="main-nav" aria-label="Main navigation">
+      <a class="brand" href="/">
+        <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo">
+        <span><strong>IntoTheBattle</strong><span>Player command guide</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="/sponsors">Sponsors</a>
+        <a href="/site-map">Site map</a>
+        <a href="/login">Login</a>
+        <a class="cta" href="/signup">Start free</a>
+      </div>
+    </nav>
+  </div>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div>
+        <div class="eyebrow">Viewer-powered arena</div>
+        <h1 id="hero-title">How players enter <span>the battle.</span></h1>
+        <p class="lede">IntoTheBattle turns TikTok LIVE chat into a playable arena. Viewers can join, customize their fighter, attack other players, defend themselves, heal, and create visible moments through likes, gifts, follows, and commands.</p>
+        <div class="actions">
+          <a class="btn primary" href="/signup">Create a room</a>
+          <a class="btn secondary" href="#commands">See commands</a>
+        </div>
+      </div>
+      <aside class="terminal" aria-label="Player command examples">
+        <div class="terminal-head"><span>Battle console</span><span>Live chat syntax</span></div>
+        <div class="screen">
+          <div class="line"><code>!join</code><span>Enter the arena or rally your fighter.</span></div>
+          <div class="line"><code>!emoji 🔥</code><span>Change the icon shown on your player card.</span></div>
+          <div class="line"><code>!laser @Nova</code><span>Attack a visible player or horde fighter by name.</span></div>
+          <div class="line"><code>!fire @Kai</code><span>Use a stronger themed attack effect.</span></div>
+          <div class="line"><code>!shield</code><span>Guard yourself and reduce incoming damage for 12 seconds.</span></div>
+          <div class="line"><code>!heal @Mia</code><span>Recover health for yourself or another player.</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section" id="commands" aria-labelledby="commands-title">
+      <div class="section-head">
+        <h2 id="commands-title">Commands players can use now.</h2>
+        <p>These commands are wired into the current game server and overlay. Commands can start with <strong>!</strong> or <strong>/</strong> for utility actions like join, emoji, heal, and shield.</p>
+      </div>
+      <div class="command-grid">
+        <article class="command"><code>!join</code><h3>Enter the arena</h3><p>Spawns your fighter, brings you back after being defeated, and announces your arrival on the overlay.</p></article>
+        <article class="command"><code>!emoji ⚔</code><h3>Customize your icon</h3><p>Changes the icon on your fighter card. Viewers can use a single emoji or a short emoji combo.</p></article>
+        <article class="command"><code>!laser @name</code><h3>Targeted attack</h3><p>Attacks the mentioned player with a fast laser-style hit. If no command is used, mentions still trigger a random attack effect.</p></article>
+        <article class="command"><code>!fire @name</code><h3>Heavy attack</h3><p>Launches a stronger fire hit. Other current attack words include flame, inferno, neon, ripple, wave, orb, beam, boom, nuke, and meteor.</p></article>
+        <article class="command"><code>!shield</code><h3>Defend yourself</h3><p>Raises a 12-second guard that reduces incoming damage while still letting some damage through.</p></article>
+        <article class="command"><code>!heal @name</code><h3>Support a fighter</h3><p>Heals yourself when no target is mentioned, or heals another fighter when you tag them.</p></article>
+        <article class="command"><code>!help</code><h3>Get a prompt</h3><p>Shows a quick on-screen reminder for the most important commands during the live battle.</p></article>
+        <article class="command"><code>likes</code><h3>Small energy boosts</h3><p>Likes emit small heart energy and help keep the screen alive without overwhelming the battle.</p></article>
+        <article class="command"><code>gifts</code><h3>Power moments</h3><p>Gifts create stronger visual attacks, celebration moments, and temporary message impact boosts.</p></article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="strategy-title">
+      <div class="section-head">
+        <h2 id="strategy-title">How the match flows.</h2>
+        <p>The current core loop is simple enough for live chat, but it still rewards timing and team behavior.</p>
+      </div>
+      <div class="rules">
+        <article class="rule-band"><h3>Players vs players</h3><p>Viewers become fighters. When they mention another player with an attack command, the server resolves damage, health, knockouts, streaks, and respawns.</p></article>
+        <article class="rule-band"><h3>Top cards and horde</h3><p>The overlay keeps top fighters visible as cards while the larger crowd forms the horde. Attacks can come from either side so the screen stays active even with many viewers.</p></article>
+        <article class="rule-band"><h3>Momentum matters</h3><p>Kills build streaks, gifts can boost message impact, shields reward defensive timing, and healing lets fans support a favorite fighter.</p></article>
+        <article class="rule-band"><h3>Creator pacing</h3><p>Sponsored video breaks are paced around battle intensity, cooldowns, and active overlays so they feel like broadcast intermissions instead of random interruptions.</p></article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="future-title">
+      <div class="section-head">
+        <h2 id="future-title">Where the game can go next.</h2>
+        <p>This is the product roadmap for deeper play without making TikTok chat too hard to understand.</p>
+      </div>
+      <div class="roadmap">
+        <div class="roadmap-item"><b>Classes</b><p>Let players choose fighter styles such as striker, guardian, medic, or trickster, each with a simple command identity.</p></div>
+        <div class="roadmap-item"><b>Teams</b><p>Add creator-controlled teams, faction colors, and team objectives so viewers can coordinate instead of only attacking one another.</p></div>
+        <div class="roadmap-item"><b>Boss waves</b><p>Bring the horde into the story with timed boss encounters, shared health bars, bounty calls, and community rewards.</p></div>
+        <div class="roadmap-item"><b>Season XP</b><p>Track persistent XP, badges, win streaks, and creator room leaderboards that reward viewers for returning.</p></div>
+        <div class="roadmap-item"><b>Objectives</b><p>Add short round goals like hold the gate, protect the champion, break the shield, or survive the meteor round.</p></div>
+      </div>
+    </section>
+
+    <section class="cta-band" aria-label="Start playing">
+      <div>
+        <h2>Give viewers a reason to type.</h2>
+        <p>Create a room, open the overlay, and pin a short command list in chat so fans know exactly how to join the next battle.</p>
+      </div>
+      <a class="btn primary" href="/signup">Start free</a>
+    </section>
+  </main>
+
+  <footer>&copy; 2026 IntoTheBattle. <a href="/">Home</a> &middot; <a href="/site-map">Site map</a> &middot; <a href="/sponsors">Sponsors</a></footer>
+</body>
+</html>

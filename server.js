@@ -165,6 +165,10 @@ const PLATFORM_SPONSOR_JITTER_MS = Number(process.env.PLATFORM_SPONSOR_JITTER_MS
 const PLATFORM_SPONSOR_NO_REPEAT_COUNT = Number(process.env.PLATFORM_SPONSOR_NO_REPEAT_COUNT || 3);
 const PLATFORM_SPONSOR_ACTIVE_HOURS_UTC = String(process.env.PLATFORM_SPONSOR_ACTIVE_HOURS_UTC || '').trim();
 const SPONSOR_PREPARE_TIMEOUT_MS = Number(process.env.SPONSOR_PREPARE_TIMEOUT_MS || 8000);
+const configuredFreeTrialDays = Number(process.env.FREE_TRIAL_DAYS || 7);
+const FREE_TRIAL_DAYS = Number.isFinite(configuredFreeTrialDays) && configuredFreeTrialDays > 0
+  ? Math.round(configuredFreeTrialDays)
+  : 7;
 const platformSponsorTimers = new Map();
 const sponsorBreaks = new Map();
 const SPONSOR_FINAL_STATUSES = new Set(['completed', 'failed', 'stopped']);
@@ -363,9 +367,10 @@ function emitEvent(type, payload = {}) {
 function recordRoomBattleAction(room, type) {
   if (!room || !BATTLE_ACTION_EVENTS.has(type)) return;
   const now = Date.now();
+  const schedule = getPlatformSponsorScheduleSettings();
   room.lastBattleActionAt = now;
   room.recentBattleActionAt = (room.recentBattleActionAt || [])
-    .filter(timestamp => now - timestamp <= PLATFORM_SPONSOR_INTENSE_WINDOW_MS);
+    .filter(timestamp => now - timestamp <= schedule.intenseWindowMs);
   room.recentBattleActionAt.push(now);
   if (HIGH_INTENSITY_BATTLE_EVENTS.has(type)) {
     room.lastHighIntensityBattleAt = now;
@@ -537,15 +542,47 @@ function getAlivePlayerCount(room) {
   return Object.values(room?.players || {}).filter(player => player?.alive).length;
 }
 
-function isRoomInSponsorCooldown(room) {
-  if (!room?.lastBattleActionAt) return false;
-  return Date.now() - room.lastBattleActionAt < PLATFORM_SPONSOR_ACTION_COOLDOWN_MS;
+function appSettingValue(key, fallback = '') {
+  try {
+    const row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get(key);
+    return row?.value ?? fallback;
+  } catch (_err) {
+    return fallback;
+  }
 }
 
-function isWithinPlatformSponsorActiveHours(now = new Date()) {
-  if (!PLATFORM_SPONSOR_ACTIVE_HOURS_UTC) return true;
+function appSettingNumber(key, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) {
+  const value = Number(appSettingValue(key, fallback));
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(value)));
+}
+
+function getPlatformSponsorScheduleSettings() {
+  return {
+    initialDelayMs: appSettingNumber('platform_sponsor_initial_delay_ms', PLATFORM_SPONSOR_INITIAL_DELAY_MS, 5000),
+    intervalMs: appSettingNumber('platform_sponsor_interval_ms', PLATFORM_SPONSOR_INTERVAL_MS, 30000),
+    actionCooldownMs: appSettingNumber('platform_sponsor_action_cooldown_ms', PLATFORM_SPONSOR_ACTION_COOLDOWN_MS, 0),
+    retryDelayMs: appSettingNumber('platform_sponsor_retry_delay_ms', PLATFORM_SPONSOR_RETRY_DELAY_MS, 5000),
+    intenseWindowMs: appSettingNumber('platform_sponsor_intense_window_ms', PLATFORM_SPONSOR_INTENSE_WINDOW_MS, 5000),
+    intenseActionLimit: appSettingNumber('platform_sponsor_intense_action_limit', PLATFORM_SPONSOR_INTENSE_ACTION_LIMIT, 1),
+    intenseCooldownMs: appSettingNumber('platform_sponsor_intense_cooldown_ms', PLATFORM_SPONSOR_INTENSE_COOLDOWN_MS, 0),
+    completionCooldownMs: appSettingNumber('platform_sponsor_completion_cooldown_ms', PLATFORM_SPONSOR_COMPLETION_COOLDOWN_MS, 0),
+    minPlayerCount: appSettingNumber('platform_sponsor_min_player_count', PLATFORM_SPONSOR_MIN_PLAYER_COUNT, 0, 100),
+    jitterMs: appSettingNumber('platform_sponsor_jitter_ms', PLATFORM_SPONSOR_JITTER_MS, 0),
+    noRepeatCount: appSettingNumber('platform_sponsor_no_repeat_count', PLATFORM_SPONSOR_NO_REPEAT_COUNT, 1, 50),
+    activeHoursUtc: String(appSettingValue('platform_sponsor_active_hours_utc', PLATFORM_SPONSOR_ACTIVE_HOURS_UTC)).trim(),
+  };
+}
+
+function isRoomInSponsorCooldown(room, settings = getPlatformSponsorScheduleSettings()) {
+  if (!room?.lastBattleActionAt) return false;
+  return Date.now() - room.lastBattleActionAt < settings.actionCooldownMs;
+}
+
+function isWithinPlatformSponsorActiveHours(now = new Date(), settings = getPlatformSponsorScheduleSettings()) {
+  if (!settings.activeHoursUtc) return true;
   const hour = now.getUTCHours() + now.getUTCMinutes() / 60;
-  return PLATFORM_SPONSOR_ACTIVE_HOURS_UTC.split(',')
+  return settings.activeHoursUtc.split(',')
     .map(part => part.trim())
     .filter(Boolean)
     .some(range => {
@@ -559,9 +596,9 @@ function isWithinPlatformSponsorActiveHours(now = new Date()) {
     });
 }
 
-function platformSponsorDelay(baseDelayMs = PLATFORM_SPONSOR_INTERVAL_MS, jitter = true) {
-  const base = Math.max(5000, Number(baseDelayMs) || PLATFORM_SPONSOR_INTERVAL_MS);
-  const jitterMs = jitter ? Math.max(0, PLATFORM_SPONSOR_JITTER_MS) : 0;
+function platformSponsorDelay(baseDelayMs = null, jitter = true, settings = getPlatformSponsorScheduleSettings()) {
+  const base = Math.max(5000, Number(baseDelayMs) || settings.intervalMs);
+  const jitterMs = jitter ? Math.max(0, settings.jitterMs) : 0;
   return base + (jitterMs ? Math.floor(Math.random() * jitterMs) : 0);
 }
 
@@ -576,46 +613,47 @@ function rememberPlatformSponsorCreative(room, creativeId) {
   const id = Number(creativeId);
   if (!Number.isFinite(id)) return;
   const history = [id, ...getRecentPlatformSponsorCreativeIds(room).filter(item => item !== id)];
-  const maxHistory = Math.max(1, PLATFORM_SPONSOR_NO_REPEAT_COUNT);
+  const maxHistory = Math.max(1, getPlatformSponsorScheduleSettings().noRepeatCount);
   room.platformSponsorCreativeHistory = history.slice(0, maxHistory);
   room.lastPlatformSponsorCreativeId = id;
   room.lastPlatformSponsorAt = Date.now();
 }
 
 function getRoomSponsorPacingDecision(room) {
-  if (!room?.roomId) return { ok: false, reason: 'missing_room', retryMs: PLATFORM_SPONSOR_RETRY_DELAY_MS };
-  if ((room.overlayCount || 0) <= 0) return { ok: false, reason: 'no_overlay', retryMs: PLATFORM_SPONSOR_RETRY_DELAY_MS };
-  if (roomHasActiveSponsorBreak(room.roomId)) return { ok: false, reason: 'active_break', retryMs: PLATFORM_SPONSOR_RETRY_DELAY_MS };
-  if (!isWithinPlatformSponsorActiveHours()) return { ok: false, reason: 'outside_active_hours', retryMs: PLATFORM_SPONSOR_INTERVAL_MS };
+  const settings = getPlatformSponsorScheduleSettings();
+  if (!room?.roomId) return { ok: false, reason: 'missing_room', retryMs: settings.retryDelayMs };
+  if ((room.overlayCount || 0) <= 0) return { ok: false, reason: 'no_overlay', retryMs: settings.retryDelayMs };
+  if (roomHasActiveSponsorBreak(room.roomId)) return { ok: false, reason: 'active_break', retryMs: settings.retryDelayMs };
+  if (!isWithinPlatformSponsorActiveHours(new Date(), settings)) return { ok: false, reason: 'outside_active_hours', retryMs: settings.intervalMs };
 
   const alivePlayers = getAlivePlayerCount(room);
-  if (alivePlayers < Math.max(0, PLATFORM_SPONSOR_MIN_PLAYER_COUNT)) {
-    return { ok: false, reason: 'not_enough_players', retryMs: PLATFORM_SPONSOR_RETRY_DELAY_MS, alivePlayers };
+  if (alivePlayers < Math.max(0, settings.minPlayerCount)) {
+    return { ok: false, reason: 'not_enough_players', retryMs: settings.retryDelayMs, alivePlayers };
   }
 
   const now = Date.now();
   const recentBattleActions = (room.recentBattleActionAt || [])
-    .filter(timestamp => now - timestamp <= PLATFORM_SPONSOR_INTENSE_WINDOW_MS);
+    .filter(timestamp => now - timestamp <= settings.intenseWindowMs);
   room.recentBattleActionAt = recentBattleActions;
 
-  if (isRoomInSponsorCooldown(room)) {
-    return { ok: false, reason: 'battle_action_cooldown', retryMs: PLATFORM_SPONSOR_RETRY_DELAY_MS, recentBattleActions: recentBattleActions.length };
+  if (isRoomInSponsorCooldown(room, settings)) {
+    return { ok: false, reason: 'battle_action_cooldown', retryMs: settings.retryDelayMs, recentBattleActions: recentBattleActions.length };
   }
 
-  if (recentBattleActions.length >= PLATFORM_SPONSOR_INTENSE_ACTION_LIMIT) {
-    return { ok: false, reason: 'battle_intensity', retryMs: PLATFORM_SPONSOR_INTENSE_COOLDOWN_MS, recentBattleActions: recentBattleActions.length };
+  if (recentBattleActions.length >= settings.intenseActionLimit) {
+    return { ok: false, reason: 'battle_intensity', retryMs: settings.intenseCooldownMs, recentBattleActions: recentBattleActions.length };
   }
 
-  if (room.lastHighIntensityBattleAt && now - room.lastHighIntensityBattleAt < PLATFORM_SPONSOR_INTENSE_COOLDOWN_MS) {
-    return { ok: false, reason: 'high_intensity_cooldown', retryMs: PLATFORM_SPONSOR_INTENSE_COOLDOWN_MS };
+  if (room.lastHighIntensityBattleAt && now - room.lastHighIntensityBattleAt < settings.intenseCooldownMs) {
+    return { ok: false, reason: 'high_intensity_cooldown', retryMs: settings.intenseCooldownMs };
   }
 
-  if (room.lastSponsorCompletedAt && now - room.lastSponsorCompletedAt < PLATFORM_SPONSOR_COMPLETION_COOLDOWN_MS) {
-    return { ok: false, reason: 'completion_cooldown', retryMs: PLATFORM_SPONSOR_COMPLETION_COOLDOWN_MS };
+  if (room.lastSponsorCompletedAt && now - room.lastSponsorCompletedAt < settings.completionCooldownMs) {
+    return { ok: false, reason: 'completion_cooldown', retryMs: settings.completionCooldownMs };
   }
 
-  if (room.lastSponsorFailedAt && now - room.lastSponsorFailedAt < PLATFORM_SPONSOR_RETRY_DELAY_MS) {
-    return { ok: false, reason: 'failure_backoff', retryMs: PLATFORM_SPONSOR_RETRY_DELAY_MS };
+  if (room.lastSponsorFailedAt && now - room.lastSponsorFailedAt < settings.retryDelayMs) {
+    return { ok: false, reason: 'failure_backoff', retryMs: settings.retryDelayMs };
   }
 
   return { ok: true, reason: 'ready', alivePlayers, recentBattleActions: recentBattleActions.length };
@@ -689,7 +727,7 @@ function startSponsorBreak(room, payload = {}, options = {}) {
       emitSponsorBreakStatus(room, latest, 'failed', { message: 'Overlay did not confirm video readiness before timeout' });
       cleanupSponsorBreakLater(latest.breakId);
       if (latest.source === 'platform' && !room.planEntitlements?.canUseCreatorSponsors) {
-        scheduleNextPlatformSponsor(room, PLATFORM_SPONSOR_RETRY_DELAY_MS);
+        scheduleNextPlatformSponsor(room, getPlatformSponsorScheduleSettings().retryDelayMs);
       }
       return;
     }
@@ -783,7 +821,7 @@ function handleSponsorPlaybackEvent(socket, room, event = {}) {
     emitSponsorBreakStatus(room, record, 'failed', { message: detail.message || 'Video failed to load' });
     cleanupSponsorBreakLater(record.breakId);
     if (record.source === 'platform' && !room.planEntitlements?.canUseCreatorSponsors) {
-      scheduleNextPlatformSponsor(room, PLATFORM_SPONSOR_RETRY_DELAY_MS);
+      scheduleNextPlatformSponsor(room, getPlatformSponsorScheduleSettings().retryDelayMs);
     }
     return;
   }
@@ -842,7 +880,7 @@ function handleSponsorPlaybackEvent(socket, room, event = {}) {
     emitSponsorBreakStatus(room, record, 'completed', { message: 'Break completed' });
     cleanupSponsorBreakLater(record.breakId);
     if (record.source === 'platform' && !room.planEntitlements?.canUseCreatorSponsors) {
-      scheduleNextPlatformSponsor(room, PLATFORM_SPONSOR_INTERVAL_MS);
+      scheduleNextPlatformSponsor(room, getPlatformSponsorScheduleSettings().intervalMs);
     }
     return;
   }
@@ -852,7 +890,7 @@ function handleSponsorPlaybackEvent(socket, room, event = {}) {
     emitSponsorBreakStatus(room, record, 'stopped', { message: 'Break stopped' });
     cleanupSponsorBreakLater(record.breakId);
     if (record.source === 'platform' && !room.planEntitlements?.canUseCreatorSponsors) {
-      scheduleNextPlatformSponsor(room, PLATFORM_SPONSOR_RETRY_DELAY_MS);
+      scheduleNextPlatformSponsor(room, getPlatformSponsorScheduleSettings().retryDelayMs);
     }
   }
 }
@@ -925,11 +963,13 @@ function clearPlatformSponsorSchedule(roomId) {
   platformSponsorTimers.delete(roomId);
 }
 
-function scheduleNextPlatformSponsor(room, delayMs = PLATFORM_SPONSOR_INTERVAL_MS) {
+function scheduleNextPlatformSponsor(room, delayMs = null) {
   if (!PLATFORM_SPONSOR_ENABLED) return;
   if (!room?.roomId) return;
   clearPlatformSponsorSchedule(room.roomId);
-  const safeDelay = platformSponsorDelay(delayMs, delayMs === PLATFORM_SPONSOR_INTERVAL_MS || delayMs === PLATFORM_SPONSOR_INITIAL_DELAY_MS);
+  const settings = getPlatformSponsorScheduleSettings();
+  const requestedDelay = delayMs == null ? settings.intervalMs : delayMs;
+  const safeDelay = platformSponsorDelay(requestedDelay, requestedDelay === settings.intervalMs || requestedDelay === settings.initialDelayMs, settings);
   const timer = setTimeout(() => {
     platformSponsorTimers.delete(room.roomId);
     if (room.planEntitlements?.canUseCreatorSponsors) return;
@@ -937,7 +977,7 @@ function scheduleNextPlatformSponsor(room, delayMs = PLATFORM_SPONSOR_INTERVAL_M
     const pacing = getRoomSponsorPacingDecision(room);
     if (!pacing.ok) {
       logger.debug({ roomId: room.roomId, reason: pacing.reason, alivePlayers: pacing.alivePlayers, recentBattleActions: pacing.recentBattleActions }, 'Platform sponsor pacing delayed break');
-      scheduleNextPlatformSponsor(room, pacing.retryMs || PLATFORM_SPONSOR_RETRY_DELAY_MS);
+      scheduleNextPlatformSponsor(room, pacing.retryMs || getPlatformSponsorScheduleSettings().retryDelayMs);
       return;
     }
 
@@ -949,7 +989,7 @@ function scheduleNextPlatformSponsor(room, delayMs = PLATFORM_SPONSOR_INTERVAL_M
       logger.info({ roomId: room.roomId, creativeId: creative.id, alivePlayers: pacing.alivePlayers }, 'Platform sponsor break prepared');
     }
 
-    scheduleNextPlatformSponsor(room, PLATFORM_SPONSOR_INTERVAL_MS);
+    scheduleNextPlatformSponsor(room, getPlatformSponsorScheduleSettings().intervalMs);
   }, safeDelay);
   if (typeof timer.unref === 'function') timer.unref();
   platformSponsorTimers.set(room.roomId, timer);
@@ -963,7 +1003,7 @@ function updatePlatformSponsorSchedule(room, entitlements) {
     return;
   }
   if (!platformSponsorTimers.has(room.roomId)) {
-    scheduleNextPlatformSponsor(room, PLATFORM_SPONSOR_INITIAL_DELAY_MS);
+    scheduleNextPlatformSponsor(room, getPlatformSponsorScheduleSettings().initialDelayMs);
   }
 }
 
@@ -1812,6 +1852,7 @@ function spawnPlayer(room, uniqueId, nickname) {
     color:               ex?.color               || randomColor(),
     iconEmoji:           ex?.iconEmoji           || '💎',
     messageBoostExpires: ex?.messageBoostExpires || 0,
+    shieldUntil:         ex?.shieldUntil         || 0,
     forceSpawn:          ex?.forceSpawn          || false,
   };
   console.log(`⚔️  Spawned: @${uniqueId} (HP: ${room.players[uniqueId].hp}, STR: ${room.players[uniqueId].strength}, Kills: ${room.players[uniqueId].kills})`);
@@ -1840,10 +1881,15 @@ function dealDamage(room, attackerId, targetId, multiplier = 1) {
 
   if (!attacker?.alive || !target?.alive || attackerId === targetId) return null;
 
-  const dmg = Math.floor(
+  let dmg = Math.floor(
     attacker.strength * multiplier *
     (1 - CFG.ATTACK_VARIANCE / 2 + Math.random() * CFG.ATTACK_VARIANCE)
   );
+  let shieldAbsorbed = 0;
+  if (target.shieldUntil && target.shieldUntil > Date.now()) {
+    shieldAbsorbed = Math.min(Math.max(1, Math.ceil(dmg * 0.55)), Math.max(0, dmg - 1));
+    dmg = Math.max(1, dmg - shieldAbsorbed);
+  }
 
   const preDamageHp = target.hp;
   target.hp = Math.max(0, target.hp - dmg);
@@ -1910,7 +1956,15 @@ function dealDamage(room, attackerId, targetId, multiplier = 1) {
 
   console.log(`⚡ @${attackerId} → @${targetId} for ${dmg} dmg${killed ? ' (KILL!)' : ''}${multiplier > 1 ? ' (SPECIAL!)' : ''}`);
 
-  const baseResult = { attacker: attackerId, target: targetId, damage: dmg, killed, special: multiplier > 1 };
+  const baseResult = {
+    attacker: attackerId,
+    target: targetId,
+    damage: dmg,
+    killed,
+    special: multiplier > 1,
+    shielded: shieldAbsorbed > 0,
+    shieldAbsorbed,
+  };
   return buildAttackPayload(room, baseResult, { ...target, hp: preDamageHp });
 }
 
@@ -1945,6 +1999,128 @@ function extractMentions(comment = '') {
 // ────────────────────────────────
 // REWRITTEN handleMentionAttack
 // ────────────────────────────────
+function sanitizeIconEmoji(value = '') {
+  const token = String(value || '').trim().split(/\s+/)[0] || '';
+  const cleaned = token.replace(/[<>{}[\]\\]/g, '').trim();
+  return Array.from(cleaned).slice(0, 4).join('');
+}
+
+function healPlayer(room, targetId, amount) {
+  const player = room.players[targetId];
+  if (!player) return 0;
+  const before = Number(player.hp) || 0;
+  player.hp = Math.min(Number(player.maxHp) || CFG.BASE_HP, before + amount);
+  player.lastActive = Date.now();
+  return Math.max(0, player.hp - before);
+}
+
+function handlePlayerUtilityCommand(room, playerId, nickname, comment) {
+  const text = String(comment || '').trim();
+  if (!text) return { handled: false, stop: false };
+
+  const emojiMatch = text.match(/^\s*(?:!|\/)?emoji\s+(.+)/i);
+  if (emojiMatch) {
+    if (!room.players[playerId]?.alive) spawnPlayer(room, playerId, nickname);
+    const iconEmoji = sanitizeIconEmoji(emojiMatch[1]);
+    if (room.players[playerId] && iconEmoji) {
+      room.players[playerId].iconEmoji = iconEmoji;
+      room.players[playerId].forceSpawn = true;
+      room.players[playerId].lastActive = Date.now();
+      emitRoomEvent(room, 'playerCommand', {
+        type: 'emoji',
+        uniqueId: playerId,
+        nickname,
+        iconEmoji,
+        message: `${nickname} changed their fighter icon`,
+      });
+    }
+    return { handled: true, stop: true };
+  }
+
+  const commandMatch = text.match(/^\s*(?:!|\/)?(join|spawn|play|help|commands|heal|shield|guard|block)\b(?:\s+(.+))?/i);
+  if (!commandMatch) return { handled: false, stop: false };
+
+  const command = commandMatch[1].toLowerCase();
+  const rest = commandMatch[2] || '';
+  if (['join', 'spawn', 'play'].includes(command)) {
+    const wasAlive = Boolean(room.players[playerId]?.alive);
+    if (!wasAlive) spawnPlayer(room, playerId, nickname);
+    if (room.players[playerId]) {
+      room.players[playerId].alive = true;
+      room.players[playerId].forceSpawn = true;
+      room.players[playerId].lastActive = Date.now();
+    }
+    emitRoomEvent(room, 'spawn', { uniqueId: playerId, nickname });
+    emitRoomEvent(room, 'playerCommand', {
+      type: 'join',
+      uniqueId: playerId,
+      nickname,
+      message: wasAlive ? `${nickname} rallied their fighter` : `${nickname} entered the arena`,
+    });
+    return { handled: true, stop: true };
+  }
+
+  if (['help', 'commands'].includes(command)) {
+    if (!room.players[playerId]?.alive) spawnPlayer(room, playerId, nickname);
+    emitRoomEvent(room, 'playerCommand', {
+      type: 'help',
+      uniqueId: playerId,
+      nickname,
+      message: `${nickname} opened the command list`,
+    });
+    return { handled: true, stop: true };
+  }
+
+  if (command === 'heal') {
+    if (!room.players[playerId]?.alive) spawnPlayer(room, playerId, nickname);
+    const mention = extractMentions(rest)[0];
+    const target = mention ? findTarget(room, mention) : room.players[playerId];
+    if (!target) return { handled: true, stop: true, reason: 'Heal target not found' };
+    if (!room.players[target.uniqueId]?.alive) spawnPlayer(room, target.uniqueId, target.nickname);
+    const amount = Math.max(8, CFG.LIKE_HP_BOOST * 8);
+    const healed = healPlayer(room, target.uniqueId, amount);
+    emitSoundAndSync(room, 'heal', { intensity: 0.45, tier: 'common' });
+    emitRoomEvent(room, 'heal', {
+      uniqueId: target.uniqueId,
+      nickname: target.nickname,
+      amount: healed || amount,
+      sourceId: playerId,
+      sourceNick: nickname,
+      color: '#77f0a1',
+    });
+    emitRoomEvent(room, 'playerCommand', {
+      type: 'heal',
+      uniqueId: target.uniqueId,
+      nickname: target.nickname,
+      sourceId: playerId,
+      sourceNick: nickname,
+      amount: healed || amount,
+      message: mention ? `${nickname} healed ${target.nickname || target.uniqueId}` : `${nickname} recovered HP`,
+    });
+    return { handled: true, stop: true };
+  }
+
+  if (['shield', 'guard', 'block'].includes(command)) {
+    if (!room.players[playerId]?.alive) spawnPlayer(room, playerId, nickname);
+    if (room.players[playerId]) {
+      room.players[playerId].shieldUntil = Date.now() + 12000;
+      room.players[playerId].lastActive = Date.now();
+      room.players[playerId].forceSpawn = true;
+    }
+    emitSoundAndSync(room, 'heal', { intensity: 0.35, tier: 'common' });
+    emitRoomEvent(room, 'playerCommand', {
+      type: 'shield',
+      uniqueId: playerId,
+      nickname,
+      message: `${nickname} raised a shield`,
+      durationMs: 12000,
+    });
+    return { handled: true, stop: true };
+  }
+
+  return { handled: false, stop: false };
+}
+
 function handleMentionAttack(room, attackerId, attackerNick, comment) {
   const mentions = extractMentions(comment);
   if (!mentions.length) return { handled: false, reason: 'No @mention found' };
@@ -2180,6 +2356,8 @@ app.get('/', (req, res) => {
 
 app.get('/home', (_req, res) => res.sendFile(path.join(__dirname, 'home.html')));
 app.get(['/sponsors', '/sponsors.html'], (_req, res) => res.sendFile(path.join(__dirname, 'sponsors.html')));
+app.get(['/how-to-play', '/how-to-play.html', '/players', '/game-guide'], (_req, res) => res.sendFile(path.join(__dirname, 'how-to-play.html')));
+app.get(['/site-map', '/site-map.html', '/sitemap'], (_req, res) => res.sendFile(path.join(__dirname, 'sitemap.html')));
 app.get('/verify-email', (_req, res) => res.sendFile(path.join(__dirname, 'verify-email.html')));
 app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));
 app.get(['/overlay-preview', '/overlay-preview.html', '/overlay-demo', '/overlay-demo.html'], (_req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
@@ -2480,6 +2658,16 @@ function toIsoStringOrNull(date) {
   return date ? date.toISOString() : null;
 }
 
+function trialExpiresAtForUser(user) {
+  const createdAt = parseDate(user?.created_at);
+  if (!createdAt) return null;
+  return new Date(createdAt.getTime() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000);
+}
+
+function isTrialStatus(value) {
+  return ['trial', 'trialing', 'free-trial', 'full-access-trial'].includes(String(value || '').toLowerCase());
+}
+
 function daysRemainingUntil(date, now = new Date()) {
   if (!date) return null;
   return Math.max(0, Math.ceil((date.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
@@ -2553,6 +2741,30 @@ function buildUserSubscriptionStatus(user, now = new Date()) {
   ).get(user.id);
 
   if (!subscription) {
+    const fallbackTrialExpiresAt = trialExpiresAtForUser(user);
+    const fallbackTrialActive = fallbackTrialExpiresAt && fallbackTrialExpiresAt >= now;
+    if (fallbackTrialActive) {
+      return {
+        type: 'user',
+        status: 'trialing',
+        tier: 'trial',
+        planName: '7-Day Full Access',
+        canUseCreatorSponsors: true,
+        platformSponsorManaged: false,
+        reason: null,
+        accessAllowed: true,
+        actionRequired: false,
+        paywallUrl: null,
+        subscription: {
+          status: 'trialing',
+          planType: '7-Day Full Access',
+          paypalSubscriptionId: null,
+          startedAt: toIsoStringOrNull(parseDate(user.created_at)),
+          nextBillingDate: null,
+          expiresAt: toIsoStringOrNull(fallbackTrialExpiresAt),
+        },
+      };
+    }
     return {
       type: 'user',
       status: 'free',
@@ -2583,25 +2795,26 @@ function buildUserSubscriptionStatus(user, now = new Date()) {
   let reason = null;
   let accessAllowed = true;
   const paid = rawStatus === 'active';
+  const trial = isTrialStatus(rawStatus) && (!expiresAt || expiresAt >= now);
 
-  if (!paid) {
+  if (!paid && !trial) {
     status = 'free';
   }
 
   return {
     type: 'user',
     status,
-    tier: paid ? 'paid' : 'free',
-    planName: paid ? 'Creator Pro' : 'Free',
-    canUseCreatorSponsors: paid,
-    platformSponsorManaged: !paid,
+    tier: paid ? 'paid' : trial ? 'trial' : 'free',
+    planName: paid ? 'Creator Pro' : trial ? '7-Day Full Access' : 'Free',
+    canUseCreatorSponsors: paid || trial,
+    platformSponsorManaged: !(paid || trial),
     reason,
     accessAllowed,
     actionRequired: !accessAllowed,
     paywallUrl: accessAllowed ? null : paywallUrl(reason),
     subscription: {
       status: rawStatus,
-      planType: paid ? (subscription.plan_type || 'Creator Pro') : 'Free',
+      planType: paid ? (subscription.plan_type || 'Creator Pro') : trial ? (subscription.plan_type || '7-Day Full Access') : 'Free',
       paypalSubscriptionId: subscription.paypal_subscription_id || null,
       startedAt: toIsoStringOrNull(startedAt),
       nextBillingDate: toIsoStringOrNull(nextBillingDate),
@@ -3690,6 +3903,13 @@ function setupTikTokEvents(tiktokClient, room) {
     if (!id) return;
 
     awardStats(room, id, nickname, 0, CFG.CHAT_STRENGTH_BOOST);
+
+    const utilityCommand = handlePlayerUtilityCommand(room, id, nickname, comment);
+    if (utilityCommand.handled) console.log(`Player command from @${nickname}: ${utilityCommand.reason || comment}`);
+    if (utilityCommand.stop) {
+      emitRoomEvent(room, 'gameState', room.players);
+      return;
+    }
 
     const iconMatch = comment.match(/^\s*(?:!emoji|\/emoji|emoji)\s+(.+)/i);
     if (iconMatch) {

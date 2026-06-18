@@ -212,6 +212,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     .notice { padding: 14px 16px; border-radius: 16px; border:1px solid rgba(255,255,255,.1); background: rgba(255,255,255,0.06); }
     .error { color: #ffb6b6; }
     .success { color: #c6ffc3; }
+    .muted { color:#a8afbf; line-height:1.5; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
     .card { background: linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); border: 1px solid rgba(255,255,255,.1); border-radius: 24px; padding: 20px; box-shadow:0 20px 60px rgba(0,0,0,.24); }
     .card h2 { margin:0 0 12px; font-size:20px; }
@@ -479,6 +480,41 @@ function parseFit(value) {
   return value === 'cover' ? 'cover' : 'contain';
 }
 
+function getAppSetting(key, fallback = '') {
+  try {
+    const row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get(key);
+    return row?.value ?? fallback;
+  } catch (_err) {
+    return fallback;
+  }
+}
+
+function setAppSetting(key, value) {
+  db.prepare('INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value));
+}
+
+function numberSetting(key, fallback, divisor = 1) {
+  const value = Number(getAppSetting(key, fallback));
+  return Number.isFinite(value) ? Math.round(value / divisor) : Math.round(fallback / divisor);
+}
+
+function platformSponsorTimerSettings() {
+  return {
+    initialDelayMinutes: numberSetting('platform_sponsor_initial_delay_ms', 8 * 60 * 1000, 60000),
+    intervalMinutes: numberSetting('platform_sponsor_interval_ms', 12 * 60 * 1000, 60000),
+    actionCooldownSeconds: numberSetting('platform_sponsor_action_cooldown_ms', 45000, 1000),
+    retryDelaySeconds: numberSetting('platform_sponsor_retry_delay_ms', 60000, 1000),
+    intenseWindowSeconds: numberSetting('platform_sponsor_intense_window_ms', 30000, 1000),
+    intenseActionLimit: numberSetting('platform_sponsor_intense_action_limit', 10),
+    intenseCooldownSeconds: numberSetting('platform_sponsor_intense_cooldown_ms', 75000, 1000),
+    completionCooldownSeconds: numberSetting('platform_sponsor_completion_cooldown_ms', 3 * 60 * 1000, 1000),
+    minPlayerCount: numberSetting('platform_sponsor_min_player_count', 1),
+    jitterSeconds: numberSetting('platform_sponsor_jitter_ms', 90000, 1000),
+    noRepeatCount: numberSetting('platform_sponsor_no_repeat_count', 3),
+    activeHoursUtc: String(getAppSetting('platform_sponsor_active_hours_utc', '')).trim(),
+  };
+}
+
 function sponsorPreviewHref(creative) {
   const params = new URLSearchParams({
     demo: '1',
@@ -538,11 +574,12 @@ function formatCompletionRate(creative) {
   return `${Math.round((numberValue(creative.completions) / impressions) * 100)}%`;
 }
 
-function renderSponsorAdminPage({ message = '', error = '', creatives = [], events = [], storageRisk = null } = {}) {
+function renderSponsorAdminPage({ message = '', error = '', creatives = [], events = [], storageRisk = null, timerSettings = platformSponsorTimerSettings() } = {}) {
   const mediaTools = getSponsorMediaToolStatus();
   const risk = storageRisk || storageRiskSummary(PLATFORM_SPONSOR_DIR);
   const storageWarnings = [...(risk.warnings || []), ...(risk.failures || [])];
   const storageUsage = risk.usage || {};
+  const timer = timerSettings || platformSponsorTimerSettings();
   const storagePanel = `<div class="card">
       <h2>Media storage</h2>
       <p>Used ${escapeHtml(storageUsage.humanBytes || 'unknown')}${storageUsage.capacity?.humanAvailable ? `, ${escapeHtml(storageUsage.capacity.humanAvailable)} available` : ''}${storageUsage.humanConfiguredLimit ? `, limit ${escapeHtml(storageUsage.humanConfiguredLimit)}` : ''}.</p>
@@ -768,6 +805,27 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
         <button type="submit" class="secondary">Stop Live Test</button>
       </form>
     </div>
+    <div class="card">
+      <h2>Automatic break timer</h2>
+      <p class="muted">Controls company-managed platform breaks for free sessions. Changes apply to the next scheduled cycle; Run Live remains instant for testing.</p>
+      <form method="POST" action="/admin/sponsors/timer">
+        <div class="inline-grid">
+          <span><label>First break minutes</label><input name="initial_delay_minutes" type="number" min="1" max="120" value="${escapeAttr(timer.initialDelayMinutes)}" /></span>
+          <span><label>Every minutes</label><input name="interval_minutes" type="number" min="1" max="240" value="${escapeAttr(timer.intervalMinutes)}" /></span>
+          <span><label>After battle seconds</label><input name="action_cooldown_seconds" type="number" min="0" max="600" value="${escapeAttr(timer.actionCooldownSeconds)}" /></span>
+          <span><label>After break seconds</label><input name="completion_cooldown_seconds" type="number" min="0" max="1800" value="${escapeAttr(timer.completionCooldownSeconds)}" /></span>
+          <span><label>Retry seconds</label><input name="retry_delay_seconds" type="number" min="5" max="900" value="${escapeAttr(timer.retryDelaySeconds)}" /></span>
+          <span><label>Intensity window</label><input name="intense_window_seconds" type="number" min="5" max="300" value="${escapeAttr(timer.intenseWindowSeconds)}" /></span>
+          <span><label>Action limit</label><input name="intense_action_limit" type="number" min="1" max="100" value="${escapeAttr(timer.intenseActionLimit)}" /></span>
+          <span><label>Intensity cooldown</label><input name="intense_cooldown_seconds" type="number" min="0" max="1800" value="${escapeAttr(timer.intenseCooldownSeconds)}" /></span>
+          <span><label>Minimum players</label><input name="min_player_count" type="number" min="0" max="100" value="${escapeAttr(timer.minPlayerCount)}" /></span>
+          <span><label>Jitter seconds</label><input name="jitter_seconds" type="number" min="0" max="600" value="${escapeAttr(timer.jitterSeconds)}" /></span>
+          <span><label>No-repeat count</label><input name="no_repeat_count" type="number" min="1" max="50" value="${escapeAttr(timer.noRepeatCount)}" /></span>
+          <span><label>Active hours UTC</label><input name="active_hours_utc" placeholder="13-23 or 13-17,19-23" value="${escapeAttr(timer.activeHoursUtc)}" /></span>
+        </div>
+        <button type="submit">Save Timer</button>
+      </form>
+    </div>
     ${storagePanel}
     <div class="card">
       <h2>Upload platform creative</h2>
@@ -919,7 +977,34 @@ router.get('/sponsors', requireAdminAuth, (req, res) => {
     creatives: listPlatformSponsorCreatives(),
     events: listRecentSponsorPlaybackEvents(),
     storageRisk: storageRiskSummary(PLATFORM_SPONSOR_DIR),
+    timerSettings: platformSponsorTimerSettings(),
   }));
+});
+
+function timerNumber(body, name, fallback, min, max) {
+  const value = Number(body?.[name]);
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(value)));
+}
+
+router.post('/sponsors/timer', requireAdminAuth, (req, res) => {
+  const body = req.body || {};
+  const pairs = [
+    ['platform_sponsor_initial_delay_ms', timerNumber(body, 'initial_delay_minutes', 8, 1, 120) * 60000],
+    ['platform_sponsor_interval_ms', timerNumber(body, 'interval_minutes', 12, 1, 240) * 60000],
+    ['platform_sponsor_action_cooldown_ms', timerNumber(body, 'action_cooldown_seconds', 45, 0, 600) * 1000],
+    ['platform_sponsor_completion_cooldown_ms', timerNumber(body, 'completion_cooldown_seconds', 180, 0, 1800) * 1000],
+    ['platform_sponsor_retry_delay_ms', timerNumber(body, 'retry_delay_seconds', 60, 5, 900) * 1000],
+    ['platform_sponsor_intense_window_ms', timerNumber(body, 'intense_window_seconds', 30, 5, 300) * 1000],
+    ['platform_sponsor_intense_action_limit', timerNumber(body, 'intense_action_limit', 10, 1, 100)],
+    ['platform_sponsor_intense_cooldown_ms', timerNumber(body, 'intense_cooldown_seconds', 75, 0, 1800) * 1000],
+    ['platform_sponsor_min_player_count', timerNumber(body, 'min_player_count', 1, 0, 100)],
+    ['platform_sponsor_jitter_ms', timerNumber(body, 'jitter_seconds', 90, 0, 600) * 1000],
+    ['platform_sponsor_no_repeat_count', timerNumber(body, 'no_repeat_count', 3, 1, 50)],
+    ['platform_sponsor_active_hours_utc', String(body.active_hours_utc || '').replace(/[^0-9,.\-\s]/g, '').trim()],
+  ];
+  pairs.forEach(([key, value]) => setAppSetting(key, value));
+  res.redirect('/admin/sponsors?message=Sponsor%20timer%20saved');
 });
 
 router.post('/sponsors/upload', requireAdminAuth, (req, res) => {

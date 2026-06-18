@@ -107,6 +107,9 @@ for (const [name, pathname, selector] of [
   ['home', '/', 'body'],
   ['login', '/login', '#accountLoginForm'],
   ['signup', '/signup', '#googleSignupLink'],
+  ['how-to-play', '/how-to-play', '#commands-title'],
+  ['site-map', '/site-map', '#site-map-title'],
+  ['sponsors', '/sponsors', '.hero'],
   ['paywall', '/paywall', 'body'],
 ]) {
   test(`${name} renders without local browser errors`, async ({ page }, testInfo) => {

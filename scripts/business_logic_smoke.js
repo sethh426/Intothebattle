@@ -100,11 +100,45 @@ function testEntitlements() {
   );
   assert.equal(
     isPaidAuthRecord(paidAuth, {
+      getLatestUserSubscription: () => ({
+        status: 'trialing',
+        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      }),
+    }),
+    true,
+    'active full-access user trials should unlock creator controls'
+  );
+  assert.equal(
+    isPaidAuthRecord(paidAuth, {
+      getLatestUserSubscription: () => ({
+        status: 'trialing',
+        expires_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      }),
+    }),
+    false,
+    'expired user trials should not unlock creator controls'
+  );
+  assert.equal(
+    isPaidAuthRecord(paidAuth, {
       getLatestUserSubscription: () => ({ status: 'suspended' }),
     }),
     false,
     'suspended user subscriptions should not be paid'
   );
+
+  const trialPlan = buildPlanEntitlements(paidAuth, {
+    getLatestUserSubscription: () => ({
+      status: 'trialing',
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    }),
+  });
+  assert.deepEqual(trialPlan, {
+    tier: 'trial',
+    planName: '7-Day Full Access',
+    canUseCreatorSponsors: true,
+    platformSponsorManaged: false,
+    betaTester: false,
+  });
 }
 
 function testBillingPolicy() {

@@ -26,6 +26,7 @@ export const BETA_ACCESS_CODE_TYPES = new Set([
 ]);
 
 export const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active']);
+export const TRIAL_SUBSCRIPTION_STATUSES = new Set(['trial', 'trialing', 'free-trial', 'full-access-trial']);
 
 function normalizeValue(value, fallback = '') {
   const normalized = String(value ?? '').trim().toLowerCase();
@@ -88,6 +89,20 @@ export function isActiveSubscription(subscription) {
   return ACTIVE_SUBSCRIPTION_STATUSES.has(normalizeSubscriptionStatus(subscription?.status));
 }
 
+function parseDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function isFullAccessTrialSubscription(subscription, now = new Date()) {
+  if (!subscription) return false;
+  const status = normalizeSubscriptionStatus(subscription.status);
+  if (!TRIAL_SUBSCRIPTION_STATUSES.has(status)) return false;
+  const expiresAt = parseDate(subscription.expires_at || subscription.expiresAt);
+  return !expiresAt || expiresAt >= now;
+}
+
 export function isPaidAuthRecord(auth, options = {}) {
   if (!auth) return false;
   if (auth.type === 'code') return isPaidAccessCode(auth.record);
@@ -96,16 +111,21 @@ export function isPaidAuthRecord(auth, options = {}) {
   const subscription = typeof getLatestUserSubscription === 'function'
     ? getLatestUserSubscription(auth.record?.id)
     : auth.subscription;
-  return isActiveSubscription(subscription);
+  return isActiveSubscription(subscription) || isFullAccessTrialSubscription(subscription);
 }
 
 export function buildPlanEntitlements(auth, options = {}) {
-  const paid = isPaidAuthRecord(auth, options);
+  const getLatestUserSubscription = options.getLatestUserSubscription;
+  const subscription = auth?.type === 'user'
+    ? (typeof getLatestUserSubscription === 'function' ? getLatestUserSubscription(auth.record?.id) : auth.subscription)
+    : null;
+  const trial = isFullAccessTrialSubscription(subscription);
+  const paid = auth?.type === 'code' ? isPaidAccessCode(auth.record) : isActiveSubscription(subscription);
   const beta = auth?.type === 'code' ? isBetaTesterAccessCode(auth.record) : false;
-  const creatorSponsors = paid || beta;
+  const creatorSponsors = paid || trial || beta;
   return {
-    tier: paid ? 'paid' : beta ? 'beta' : 'free',
-    planName: paid ? 'Creator Pro' : beta ? 'Beta Tester' : 'Free',
+    tier: paid ? 'paid' : trial ? 'trial' : beta ? 'beta' : 'free',
+    planName: paid ? 'Creator Pro' : trial ? '7-Day Full Access' : beta ? 'Beta Tester' : 'Free',
     canUseCreatorSponsors: creatorSponsors,
     platformSponsorManaged: !creatorSponsors,
     betaTester: beta,

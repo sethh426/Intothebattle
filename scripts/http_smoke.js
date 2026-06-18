@@ -87,7 +87,7 @@ try {
   await waitForHealth();
 
   await expectStatus('/healthz', 200);
-  for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/overlay-preview']) {
+  for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/how-to-play', '/site-map', '/overlay-preview']) {
     await expectStatus(pathname, 200);
   }
   for (const pathname of ['/intothebattlelogo_logo_only.svg', '/logo.svg', '/robots.txt', '/sitemap.xml', '/js/overlay-scene.js']) {
