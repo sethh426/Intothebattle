@@ -10,6 +10,13 @@ import db from '../db/db.js';
 import { triggerPlatformSponsorTest } from '../platformSponsorTestBus.js';
 import { processSponsorUpload, getSponsorMediaToolStatus } from '../sponsorMediaProcessor.js';
 import { buildUploadDecision, storageRiskSummary, uploadLimitBytes } from '../services/storagePolicy.js';
+import {
+  isActiveSubscription,
+  isBetaTesterAccessCode,
+  isFullAccessTrialSubscription,
+  isPaidAccessCode,
+} from '../services/entitlements.js';
+import { getAllRooms } from '../../roomManager.js';
 
 const router = express.Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -162,7 +169,121 @@ function requireAdminAuth(req, res, next) {
   next();
 }
 
-function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [], roomRequirementEnabled = true } = {}) {
+function parseAdminDate(value) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isActiveAccessCode(row, now = new Date()) {
+  if (!row || Number(row.is_promo) === 1 || Number(row.is_revoked) === 1) return false;
+  const expiresAt = parseAdminDate(row.expires_at);
+  return !expiresAt || expiresAt >= now;
+}
+
+function latestSubscriptionByUser(subscriptions = []) {
+  const latest = new Map();
+  subscriptions.forEach(subscription => {
+    if (!subscription?.user_id) return;
+    const current = latest.get(subscription.user_id);
+    const currentDate = parseAdminDate(current?.updated_at || current?.created_at)?.getTime() || 0;
+    const nextDate = parseAdminDate(subscription.updated_at || subscription.created_at)?.getTime() || 0;
+    if (!current || nextDate >= currentDate) latest.set(subscription.user_id, subscription);
+  });
+  return latest;
+}
+
+function classifySubscriptionTier(subscription, now = new Date()) {
+  if (isActiveSubscription(subscription)) return 'paid';
+  if (isFullAccessTrialSubscription(subscription, now)) return 'trialBeta';
+  return 'free';
+}
+
+function classifyAccessCodeTier(code, now = new Date()) {
+  if (!isActiveAccessCode(code, now)) return 'inactive';
+  if (isPaidAccessCode(code)) return 'paid';
+  if (isBetaTesterAccessCode(code)) return 'trialBeta';
+  return 'free';
+}
+
+function incrementTier(target, tier) {
+  if (tier === 'paid') target.paid += 1;
+  else if (tier === 'trialBeta') target.trialBeta += 1;
+  else if (tier === 'free') target.free += 1;
+}
+
+function strongerTier(current, next) {
+  const rank = { free: 1, trialBeta: 2, paid: 3 };
+  return (rank[next] || 0) > (rank[current] || 0) ? next : current;
+}
+
+function emptyAdminUserMetrics() {
+  return {
+    accounts: { free: 0, paid: 0, trialBeta: 0, total: 0 },
+    live: { free: 0, paid: 0, trialBeta: 0, total: 0, overlays: 0 },
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function buildAdminUserMetrics() {
+  const metrics = emptyAdminUserMetrics();
+  try {
+    const now = new Date();
+    const users = db.prepare('SELECT id, is_active FROM users').all();
+    const subscriptions = db.prepare('SELECT * FROM subscriptions ORDER BY updated_at DESC, id DESC').all();
+    const codes = db.prepare('SELECT * FROM access_codes').all();
+    const userRooms = db.prepare('SELECT room_id, user_id FROM user_rooms').all();
+    const latestByUser = latestSubscriptionByUser(subscriptions);
+    const userTierById = new Map();
+    const roomTierById = new Map();
+
+    users.forEach(user => {
+      if (!user?.id || Number(user.is_active) === 0) return;
+      const tier = classifySubscriptionTier(latestByUser.get(user.id), now);
+      userTierById.set(user.id, tier);
+      incrementTier(metrics.accounts, tier);
+    });
+
+    codes.forEach(code => {
+      const tier = classifyAccessCodeTier(code, now);
+      incrementTier(metrics.accounts, tier);
+      if (code?.room_id && ['paid', 'trialBeta', 'free'].includes(tier)) {
+        roomTierById.set(code.room_id, strongerTier(roomTierById.get(code.room_id) || 'free', tier));
+      }
+    });
+
+    userRooms.forEach(row => {
+      if (!row?.room_id || !row?.user_id) return;
+      const tier = userTierById.get(row.user_id) || 'free';
+      roomTierById.set(row.room_id, strongerTier(roomTierById.get(row.room_id) || 'free', tier));
+    });
+
+    metrics.accounts.total = metrics.accounts.free + metrics.accounts.paid + metrics.accounts.trialBeta;
+
+    for (const room of getAllRooms().values()) {
+      const overlayCount = Number(room?.overlayCount) || 0;
+      if (!room?.roomId || overlayCount <= 0) continue;
+      const tier = roomTierById.get(room.roomId) || 'free';
+      incrementTier(metrics.live, tier);
+      metrics.live.total += 1;
+      metrics.live.overlays += overlayCount;
+    }
+    metrics.updatedAt = new Date().toISOString();
+  } catch (err) {
+    console.warn('Failed to build admin user metrics:', err?.message || err);
+  }
+  return metrics;
+}
+
+function adminMetricCard(label, key, value, note = '') {
+  return `<div class="metric-card">
+    <span>${escapeHtml(label)}</span>
+    <strong data-count-key="${escapeAttr(key)}">${escapeHtml(String(value))}</strong>
+    ${note ? `<small>${escapeHtml(note)}</small>` : ''}
+  </div>`;
+}
+
+function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [], roomRequirementEnabled = true, userMetrics = buildAdminUserMetrics() } = {}) {
   const codeRows = codes.map((code) => {
     const status = code.is_revoked ? 'Revoked' : new Date(code.expires_at) < new Date() ? 'Expired' : 'Active';
     const actionLabel = code.is_revoked ? 'Enable' : 'Disable';
@@ -192,6 +313,15 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       <td>${escapeHtml(promo.created_at)}</td>
     </tr>`;
   }).join('');
+  const metrics = userMetrics || emptyAdminUserMetrics();
+  const metricCards = [
+    adminMetricCard('Free accounts', 'accounts.free', metrics.accounts.free, 'Active free creator accounts and free access-code rooms'),
+    adminMetricCard('Paid accounts', 'accounts.paid', metrics.accounts.paid, 'Active Creator Pro users and paid access codes'),
+    adminMetricCard('Trial / beta', 'accounts.trialBeta', metrics.accounts.trialBeta, 'Full-access trials and beta tester access'),
+    adminMetricCard('Live free rooms', 'live.free', metrics.live.free, 'Connected overlay rooms on free access'),
+    adminMetricCard('Live paid rooms', 'live.paid', metrics.live.paid, 'Connected overlay rooms on paid access'),
+    adminMetricCard('Live overlays', 'live.overlays', metrics.live.overlays, 'Total connected overlay browser sources'),
+  ].join('');
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -214,6 +344,12 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     .success { color: #c6ffc3; }
     .muted { color:#a8afbf; line-height:1.5; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+    .metrics-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; }
+    .metric-card { min-width:0; padding:16px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.22); box-shadow:inset 0 1px 0 rgba(255,255,255,.05); }
+    .metric-card span { display:block; color:#a8afbf; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+    .metric-card strong { display:block; margin-top:7px; color:#fff8e6; font-size:clamp(25px,3.2vw,40px); line-height:1; }
+    .metric-card small { display:block; min-height:32px; margin-top:8px; color:#8590a4; font-size:11px; line-height:1.4; }
+    .metrics-footnote { margin-top:-8px; color:#8590a4; font-size:12px; text-align:right; }
     .card { background: linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); border: 1px solid rgba(255,255,255,.1); border-radius: 24px; padding: 20px; box-shadow:0 20px 60px rgba(0,0,0,.24); }
     .card h2 { margin:0 0 12px; font-size:20px; }
     label { display: block; margin: 10px 0 6px; color: #a8afbf; font-size: 12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
@@ -230,7 +366,8 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     a { color: #ffdf8a; text-decoration: none; font-weight:800; }
     .admin-nav { display:flex; gap:10px; flex-wrap:wrap; }
     .admin-nav a { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:999px; border:1px solid rgba(255,255,255,.1); color:#fff8e6; background:rgba(255,255,255,.055); }
-    @media(max-width:720px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} }
+    @media(max-width:1100px){ .metrics-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
+    @media(max-width:720px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid{grid-template-columns:1fr}.metrics-footnote{text-align:left} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} }
   </style>
 </head>
 <body>
@@ -245,6 +382,10 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${createdCode ? `<div class="notice success">New access code created: <strong>${escapeHtml(createdCode)}</strong> <button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(createdCode)}')">Copy</button></div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
+    <section class="metrics-grid" aria-label="User and live room counts">
+      ${metricCards}
+    </section>
+    <div class="metrics-footnote">Counts refresh every 15 seconds. Last updated <span data-count-key="updatedAt">${escapeHtml(formatSponsorDate(metrics.updatedAt))}</span>.</div>
     <div class="grid">
       <div class="card">
         <h2>Issue access code</h2>
@@ -320,6 +461,33 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       <a href="/admin/logout">Logout</a>
     </div>
   </div>
+  <script>
+    const countKeys = {
+      'accounts.free': data => data.accounts && data.accounts.free,
+      'accounts.paid': data => data.accounts && data.accounts.paid,
+      'accounts.trialBeta': data => data.accounts && data.accounts.trialBeta,
+      'live.free': data => data.live && data.live.free,
+      'live.paid': data => data.live && data.live.paid,
+      'live.overlays': data => data.live && data.live.overlays,
+      updatedAt: data => {
+        const date = new Date(data.updatedAt);
+        return Number.isNaN(date.getTime()) ? 'just now' : date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+      },
+    };
+    async function refreshAdminCounts() {
+      try {
+        const res = await fetch('/admin/user-counts.json', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const data = await res.json();
+        Object.entries(countKeys).forEach(([key, getter]) => {
+          const el = document.querySelector('[data-count-key="' + key + '"]');
+          const value = getter(data);
+          if (el && value !== undefined && value !== null) el.textContent = String(value);
+        });
+      } catch (_err) {}
+    }
+    setInterval(refreshAdminCounts, 15000);
+  </script>
 </body>
 </html>`;
 }
@@ -374,11 +542,17 @@ router.get('/logout', (req, res) => {
   res.redirect('/admin/login');
 });
 
+router.get('/user-counts.json', requireAdminAuth, (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json(buildAdminUserMetrics());
+});
+
 router.get('/', requireAdminAuth, (req, res) => {
   const codes = db.prepare('SELECT * FROM access_codes ORDER BY expires_at DESC').all();
   const promos = db.prepare('SELECT * FROM promo_codes ORDER BY created_at DESC').all();
   const setting = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('require_room_id');
   const roomRequirementEnabled = setting ? setting.value !== '0' : true;
+  const userMetrics = buildAdminUserMetrics();
   res.send(renderAdminPage({
     createdCode: String(req.query.createdCode || '').trim(),
     message: String(req.query.message || ''),
@@ -386,6 +560,7 @@ router.get('/', requireAdminAuth, (req, res) => {
     codes,
     promos,
     roomRequirementEnabled,
+    userMetrics,
   }));
 });
 
