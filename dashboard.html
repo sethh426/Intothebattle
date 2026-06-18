@@ -325,7 +325,7 @@
         <div class="sponsor-creative">
           <div class="sponsor-fields">
             <div class="section-title">Creative</div>
-            <div class="form-group"><label class="input-label">Video creative</label><input type="file" id="sponsorFileInput" accept="video/mp4,video/webm,video/quicktime,video/x-m4v"><p class="muted" style="margin-top:8px;">Best: MP4 H.264/AAC, 16:9, 720p or 1080p, 10-30 seconds.</p><div class="sponsor-upload-meta" id="sponsorUploadMeta">Choose a video to inspect duration and format before upload.</div></div>
+            <div class="form-group"><label class="input-label">Video creative</label><input type="file" id="sponsorFileInput" accept="video/mp4,video/webm,video/quicktime,video/x-m4v"><p class="muted" style="margin-top:8px;">Best: MP4 H.264/AAC, 16:9, 720p or 1080p, 6-20 seconds for live breaks.</p><div class="sponsor-upload-meta" id="sponsorUploadMeta">Choose a video to inspect duration and format before upload.</div></div>
             <div class="form-group"><label class="input-label">Partner</label><input id="sponsorPartnerInput" type="text" maxlength="70" placeholder="Sponsor name"></div>
             <div class="form-group"><label class="input-label">Headline</label><input id="sponsorTitleInput" type="text" maxlength="90" placeholder="Power Moment"></div>
             <div class="form-group"><label class="input-label">Subtitle</label><input id="sponsorSubtitleInput" type="text" maxlength="140" placeholder="Stay locked in. The next fight is loading."></div>
@@ -354,7 +354,8 @@
               </div>
             </div>
             <div class="grid" style="gap:12px;">
-              <div class="col-6"><label class="input-label">Break length</label><select id="sponsorDurationInput"><option value="10000">10 seconds</option><option value="15000" selected>15 seconds</option><option value="30000">30 seconds</option><option value="60000">60 seconds</option></select></div>
+              <div class="col-6"><label class="input-label">Break format</label><select id="sponsorTimingProfileInput"><option value="bumper">6s bumper</option><option value="spotlight" selected>12s spotlight</option><option value="feature">20s feature</option><option value="full">Full creative</option></select></div>
+              <div class="col-6"><label class="input-label">Break length</label><select id="sponsorDurationInput"><option value="6000">6 seconds</option><option value="12000" selected>12 seconds</option><option value="20000">20 seconds</option><option value="30000">30 seconds</option><option value="60000">60 seconds</option></select></div>
               <div class="col-6"><label class="input-label">Video fit</label><select id="sponsorFitInput"><option value="contain" selected>Show full video</option><option value="cover">Fill screen</option></select></div>
               <div class="col-6"><label class="input-label">Audio</label><select id="sponsorMutedInput"><option value="true" selected>Muted autoplay</option><option value="false">Try video audio</option></select></div>
               <div class="col-6"><label class="input-label">Battle stats</label><select id="sponsorStatsModeInput"><option value="endcap" selected>End-cap stats</option><option value="delayed">After video starts</option><option value="hidden">Hide during video</option><option value="always">Always show</option></select></div>
@@ -415,12 +416,56 @@ const EVENTS = ['attack','gift','kill','respawn','heal','follow'];
 const EVENT_CLASSES = { attack:'event-attack', gift:'event-gift', kill:'event-kill', respawn:'event-respawn', heal:'event-heal', follow:'event-follow' };
 const SPONSOR_CLIENT_MAX_BYTES = 100 * 1024 * 1024;
 const SPONSOR_CLIENT_MAX_SECONDS = 120;
+const SPONSOR_TIMING_PRESETS = {
+  bumper: { durationMs: 6000, statsMode: 'hidden' },
+  spotlight: { durationMs: 12000, statsMode: 'delayed' },
+  feature: { durationMs: 20000, statsMode: 'endcap' },
+  full: { durationMs: 0, statsMode: 'endcap' },
+};
 
 function text(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
 function toast(msg, isError = false) { const el = document.getElementById('toast'); el.textContent = msg; el.style.borderColor = isError ? 'rgba(232,59,95,.5)' : 'rgba(246,201,91,.35)'; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3000); }
 function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
 function formatBytes(bytes) { if (bytes < 1024) return bytes + ' B'; if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB'; return (bytes/(1024*1024)).toFixed(1) + ' MB'; }
 function formatDuration(seconds) { const value = Number(seconds); return Number.isFinite(value) && value > 0 ? `${Math.round(value)}s` : 'unknown duration'; }
+function clampSponsorMs(value, fallback = 12000) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.max(5000, Math.min(120000, Math.round(numeric)));
+}
+function sponsorTimingProfile() {
+  const value = document.getElementById('sponsorTimingProfileInput')?.value || 'spotlight';
+  return SPONSOR_TIMING_PRESETS[value] ? value : 'spotlight';
+}
+function sponsorDurationMs(filename = selectedSponsorFilename) {
+  const profile = sponsorTimingProfile();
+  if (profile === 'full') {
+    const selected = selectedSponsorFile(filename);
+    if (selected?.durationSeconds) return clampSponsorMs(Number(selected.durationSeconds) * 1000, 12000);
+  }
+  return clampSponsorMs(document.getElementById('sponsorDurationInput')?.value, SPONSOR_TIMING_PRESETS[profile]?.durationMs || 12000);
+}
+function applySponsorTimingProfile(profile = sponsorTimingProfile()) {
+  const preset = SPONSOR_TIMING_PRESETS[profile] || SPONSOR_TIMING_PRESETS.spotlight;
+  const durationInput = document.getElementById('sponsorDurationInput');
+  const statsInput = document.getElementById('sponsorStatsModeInput');
+  if (durationInput) {
+    let duration = preset.durationMs;
+    if (profile === 'full') {
+      const selected = selectedSponsorFile();
+      duration = selected?.durationSeconds ? clampSponsorMs(Number(selected.durationSeconds) * 1000, 12000) : 30000;
+    }
+    durationInput.value = String(duration);
+    if (durationInput.value !== String(duration)) {
+      const option = document.createElement('option');
+      option.value = String(duration);
+      option.textContent = `${Math.round(duration / 1000)} seconds`;
+      durationInput.appendChild(option);
+      durationInput.value = String(duration);
+    }
+  }
+  if (statsInput && preset.statsMode) statsInput.value = preset.statsMode;
+}
 function sponsorReadinessLabel(value) {
   const status = String(value || 'ready').toLowerCase();
   if (status === 'tested') return 'Tested';
@@ -440,7 +485,7 @@ function sponsorQualityCheck(file, meta = {}) {
   if (meta.durationSeconds > SPONSOR_CLIENT_MAX_SECONDS) blockers.push('Keep moments under 120 seconds.');
   if (!supportedExt && type && !['video/mp4','video/webm','video/quicktime','video/x-m4v'].includes(type)) blockers.push('Use MP4, M4V, WebM, or MOV.');
   if (file?.type && file.type !== 'video/mp4') warnings.push('MP4 H.264/AAC is safest for OBS.');
-  if (meta.durationSeconds > 30 && meta.durationSeconds <= SPONSOR_CLIENT_MAX_SECONDS) warnings.push('10-30 seconds usually performs best.');
+  if (meta.durationSeconds > 20 && meta.durationSeconds <= SPONSOR_CLIENT_MAX_SECONDS) warnings.push('Use longer videos only for feature breaks; 9-15 seconds is safest for TikTok-style moments.');
   if (meta.width && meta.height && Math.abs((meta.width / meta.height) - (16 / 9)) > 0.08) warnings.push('16:9 is recommended.');
   if (meta.width && meta.height && (meta.width < 1280 || meta.height < 720)) warnings.push('720p or 1080p is recommended.');
   return { blockers, warnings };
@@ -949,15 +994,17 @@ function inspectSponsorFile(file) {
 }
 function currentSponsorPayload(filename = selectedSponsorFilename) {
   const selected = selectedSponsorFile(filename);
+  const timingProfile = sponsorTimingProfile();
   return {
     filename: filename || null,
     partner: sponsorInputValue('sponsorPartnerInput', selected?.partner || 'IntoTheBattle Partner'),
     title: sponsorInputValue('sponsorTitleInput', selected?.title || 'Power Moment'),
     subtitle: sponsorInputValue('sponsorSubtitleInput', selected?.subtitle || 'Stay locked in. The next fight is loading.'),
-    durationMs: Number(document.getElementById('sponsorDurationInput')?.value || 15000),
+    durationMs: sponsorDurationMs(filename),
     muted: document.getElementById('sponsorMutedInput')?.value !== 'false',
     fit: document.getElementById('sponsorFitInput')?.value || 'contain',
     statsMode: sponsorStatsMode(),
+    timingProfile,
   };
 }
 function updateSponsorSelectedSummary() {
@@ -986,6 +1033,7 @@ function setSponsorInputs(file) {
   document.getElementById('sponsorPartnerInput').value = file.partner || 'Sponsor';
   document.getElementById('sponsorTitleInput').value = file.title || file.originalName || 'Power Moment';
   document.getElementById('sponsorSubtitleInput').value = file.subtitle || 'Stay locked in. The next fight is loading.';
+  if (sponsorTimingProfile() === 'full') applySponsorTimingProfile('full');
   updateSponsorSelectedSummary();
 }
 function renderSponsorLibrary() {
@@ -1167,6 +1215,7 @@ function openSponsorPreview() {
   overlayUrl.searchParams.set('sponsor_muted',payload.muted ? '1':'0');
   overlayUrl.searchParams.set('sponsor_fit',payload.fit);
   overlayUrl.searchParams.set('sponsor_stats',payload.statsMode);
+  overlayUrl.searchParams.set('sponsor_timing',payload.timingProfile);
   if (payload.filename) overlayUrl.searchParams.set('sponsor_video',payload.filename);
   window.open(overlayUrl.toString(), '_blank');
 }
@@ -1205,6 +1254,8 @@ function uploadAudioFile(file){ const fd=new FormData(); fd.append('audio',file)
 const dropZone=document.getElementById('dropZone'); const audioFileInput=document.getElementById('audioFileInput');
 const sponsorFileInput=document.getElementById('sponsorFileInput');
 if (sponsorFileInput) sponsorFileInput.addEventListener('change',()=>inspectSponsorFile(sponsorFileInput.files[0]));
+const sponsorTimingProfileInput=document.getElementById('sponsorTimingProfileInput');
+if (sponsorTimingProfileInput) sponsorTimingProfileInput.addEventListener('change',()=>applySponsorTimingProfile());
 audioFileInput.addEventListener('change',()=>{ if(audioFileInput.files[0]) uploadAudioFile(audioFileInput.files[0]); });
 dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));

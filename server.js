@@ -1349,19 +1349,23 @@ function pickPlatformSponsorCreative(excludeCreativeIds = []) {
 
 function buildPlatformSponsorPayload(room, creative) {
   const token = createOverlayToken(room.roomId);
+  const timingProfile = parseSponsorTimingProfile(creative.timing_profile || creative.timingProfile || 'spotlight');
+  const mediaDurationMs = creative.duration_seconds ? Math.round(Number(creative.duration_seconds) * 1000) : null;
   return {
     action: 'show',
     source: 'platform',
     filename: creative.filename,
     videoUrl: appendOverlayAuth(`/platform-sponsor/${encodeURIComponent(creative.filename)}`, room.roomId, token, { v: Date.now() }),
     partner: sanitizeSponsorText(creative.partner, 'IntoTheBattle Partner', 70),
-    kicker: 'Arena Spotlight',
+    kicker: sponsorKickerForProfile(timingProfile),
     title: sanitizeSponsorText(creative.title, 'Power Moment', 90),
     subtitle: sanitizeSponsorText(creative.subtitle, 'Stay locked in. The next fight is loading.', 140),
-    durationMs: parseSponsorDuration(creative.duration_ms),
+    durationMs: sponsorProfileDuration(timingProfile, creative.duration_ms, mediaDurationMs),
+    mediaDurationMs,
     muted: Number(creative.muted) !== 0,
     fit: creative.fit === 'cover' ? 'cover' : 'contain',
-    statsMode: parseSponsorStatsMode(creative.stats_mode),
+    statsMode: sponsorProfileStatsMode(timingProfile, creative.stats_mode),
+    timingProfile,
     creativeId: creative.id,
   };
 }
@@ -3518,6 +3522,38 @@ function parseSponsorStatsMode(value) {
   return ['endcap', 'delayed', 'hidden', 'always'].includes(value) ? value : 'endcap';
 }
 
+const SPONSOR_TIMING_PROFILES = {
+  bumper: { durationMs: 6000, statsMode: 'hidden', kicker: 'Sponsored Bumper' },
+  spotlight: { durationMs: 12000, statsMode: 'delayed', kicker: 'Sponsored Moment' },
+  feature: { durationMs: 20000, statsMode: 'endcap', kicker: 'Sponsored Feature' },
+  full: { durationMs: null, statsMode: 'endcap', kicker: 'Sponsored Moment' },
+};
+
+function parseSponsorTimingProfile(value) {
+  const profile = String(value || '').trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(SPONSOR_TIMING_PROFILES, profile) ? profile : 'spotlight';
+}
+
+function sponsorProfileDuration(profile, requestedDuration, mediaDurationMs = null) {
+  const config = SPONSOR_TIMING_PROFILES[profile] || SPONSOR_TIMING_PROFILES.spotlight;
+  if (profile === 'full' && Number(mediaDurationMs) > 0) {
+    return Math.max(5000, Math.min(60000, Math.round(Number(mediaDurationMs))));
+  }
+  if (config.durationMs) return config.durationMs;
+  return parseSponsorDuration(requestedDuration);
+}
+
+function sponsorProfileStatsMode(profile, requestedStatsMode) {
+  const config = SPONSOR_TIMING_PROFILES[profile] || SPONSOR_TIMING_PROFILES.spotlight;
+  const requested = String(requestedStatsMode || '').trim().toLowerCase();
+  if (['endcap', 'delayed', 'hidden', 'always'].includes(requested)) return requested;
+  return config.statsMode || 'endcap';
+}
+
+function sponsorKickerForProfile(profile) {
+  return (SPONSOR_TIMING_PROFILES[profile] || SPONSOR_TIMING_PROFILES.spotlight).kicker;
+}
+
 function sponsorCreativePlaybackIssue(entry) {
   if (!entry) return null;
   const processingStatus = String(entry.processingStatus || entry.processing_status || '').trim().toLowerCase();
@@ -3616,6 +3652,8 @@ function buildSponsorScenePayload(room, body = {}) {
   if (filename && !entry) return { error: 'Sponsor media not found' };
   const playbackIssue = entry ? sponsorCreativePlaybackIssue(entry) : null;
   if (playbackIssue) return { error: playbackIssue, status: 409 };
+  const timingProfile = parseSponsorTimingProfile(body.timingProfile || body.placement || 'spotlight');
+  const mediaDurationMs = entry?.durationSeconds ? Math.round(Number(entry.durationSeconds) * 1000) : null;
 
   return {
     action: 'show',
@@ -3623,17 +3661,18 @@ function buildSponsorScenePayload(room, body = {}) {
     filename: entry?.filename || null,
     title: sanitizeSponsorText(body.title, entry?.title || entry?.originalName || 'Power Moment', 90),
     partner: sanitizeSponsorText(body.partner, entry?.partner || 'Presented By', 70),
-    kicker: 'Arena Spotlight',
+    kicker: sponsorKickerForProfile(timingProfile),
     subtitle: sanitizeSponsorText(body.subtitle, entry?.subtitle || 'Stay locked in. The next fight is loading.', 140),
-    durationMs: parseSponsorDuration(body.durationMs),
-    mediaDurationMs: entry?.durationSeconds ? Math.round(Number(entry.durationSeconds) * 1000) : null,
+    durationMs: sponsorProfileDuration(timingProfile, body.durationMs, mediaDurationMs),
+    mediaDurationMs,
     mediaWidth: entry?.width || null,
     mediaHeight: entry?.height || null,
     processingStatus: entry?.processingStatus || null,
     readinessStatus: entry?.readinessStatus || null,
     muted: parseSponsorMuted(body.muted),
     fit: ['cover', 'contain'].includes(body.fit) ? body.fit : 'contain',
-    statsMode: parseSponsorStatsMode(body.statsMode),
+    statsMode: sponsorProfileStatsMode(timingProfile, body.statsMode),
+    timingProfile,
     theme: ['arena', 'premium', 'minimal'].includes(body.theme) ? body.theme : 'arena',
     _ts: Date.now(),
   };
