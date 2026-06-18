@@ -23,7 +23,7 @@
     body { min-height:100vh; padding:22px; font-family:'DM Sans',system-ui,sans-serif; color:var(--text); background:radial-gradient(circle at 14% 2%,rgba(246,201,91,.16),transparent 28%),radial-gradient(circle at 86% 10%,rgba(232,59,95,.13),transparent 30%),linear-gradient(180deg,#050608,#030406); overflow-x:hidden; }
     body::before { content:''; position:fixed; inset:0; pointer-events:none; background-image:linear-gradient(rgba(246,201,91,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(246,201,91,.035) 1px,transparent 1px); background-size:58px 58px; mask-image:radial-gradient(circle at top,black,transparent 72%); z-index:-1; }
     a { color:inherit; text-decoration:none; }
-    button,input,select { font-family:inherit; }
+    button,input,select,textarea { font-family:inherit; }
     .shell { max-width:1500px; margin:0 auto; display:grid; gap:20px; }
     .topbar { position:sticky; top:12px; z-index:30; display:flex; justify-content:space-between; align-items:center; gap:18px; padding:14px; border:1px solid var(--line); border-radius:26px; background:rgba(5,7,11,.86); backdrop-filter:blur(22px); box-shadow:var(--shadow); }
     .brand { display:flex; align-items:center; gap:14px; min-width:0; }
@@ -93,10 +93,11 @@
     .status-chip.idle { color:var(--gold2); border-color:rgba(246,201,91,.28); background:rgba(246,201,91,.08); }
     .form-group { margin-bottom:14px; }
     .input-label { display:block; margin-bottom:8px; color:var(--muted); font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
-    input[type=text],input[type=file],input[type=color],select { width:100%; min-height:48px; border-radius:15px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.055); color:#fff; padding:12px 14px; outline:none; }
+    input[type=text],input[type=file],input[type=color],select,textarea { width:100%; min-height:48px; border-radius:15px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.055); color:#fff; padding:12px 14px; outline:none; }
     select { background-color:#111827; color:var(--text); }
     select option, select optgroup { background:#111827; color:#fff8e6; font-weight:800; }
-    input:focus,select:focus { border-color:rgba(246,201,91,.55); box-shadow:0 0 0 4px rgba(246,201,91,.08); }
+    textarea { min-height:174px; resize:vertical; color:#dfe8f8; line-height:1.55; font-weight:800; }
+    input:focus,select:focus,textarea:focus { border-color:rgba(246,201,91,.55); box-shadow:0 0 0 4px rgba(246,201,91,.08); }
     .btn-row { display:flex; flex-wrap:wrap; gap:10px; }
     .stat-box { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,.07); }
     .stat-box:last-child { border-bottom:0; }
@@ -157,6 +158,23 @@
     .sponsor-upload-meta.ready { color:var(--green); background:rgba(119,240,161,.07); border:1px solid rgba(119,240,161,.22); }
     .sponsor-upload-meta.warn { color:var(--gold2); background:rgba(246,201,91,.08); border:1px solid rgba(246,201,91,.24); }
     .sponsor-upload-meta.failed { color:#ff9aa8; background:rgba(232,59,95,.1); border:1px solid rgba(232,59,95,.32); }
+    .session-layout { display:grid; grid-template-columns:minmax(360px,.92fr) minmax(520px,1.08fr); gap:18px; align-items:start; }
+    .session-panel { min-width:0; border:1px solid rgba(255,255,255,.08); border-radius:22px; background:rgba(0,0,0,.18); padding:18px; }
+    .session-status-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-bottom:14px; }
+    .session-stat { min-width:0; padding:12px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); }
+    .session-stat span { display:block; color:var(--muted); font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+    .session-stat strong { display:block; margin-top:5px; color:#fff8e6; font-size:18px; line-height:1.1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .session-control-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+    .session-control-grid .btn { width:100%; }
+    .boss-meter { display:grid; gap:8px; margin:12px 0 16px; }
+    .boss-track { height:13px; border-radius:999px; background:rgba(255,255,255,.09); overflow:hidden; border:1px solid rgba(255,255,255,.09); }
+    .boss-fill { height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg,var(--red),var(--ember),var(--gold)); box-shadow:0 0 18px rgba(232,59,95,.28); transition:width .24s ease; }
+    .command-panel { display:grid; gap:12px; }
+    .command-panel textarea { min-height:214px; }
+    .recap-list { display:grid; gap:10px; margin-top:12px; }
+    .recap-row { display:flex; justify-content:space-between; gap:12px; padding:10px 12px; border-radius:14px; background:rgba(255,255,255,.045); border:1px solid rgba(255,255,255,.07); }
+    .recap-row span { color:var(--muted); font-size:12px; font-weight:900; text-transform:uppercase; }
+    .recap-row strong { color:#fff; font-size:13px; text-align:right; }
     .section-title { color:var(--gold2); font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; margin-bottom:12px; }
     .audio-files { display:grid; gap:10px; }
     .audio-row { display:flex; align-items:center; gap:10px; padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.2); }
@@ -173,7 +191,8 @@
     .footer { display:flex; flex-wrap:wrap; gap:12px; margin:4px 0 28px; }
     .footer-btn { display:inline-flex; min-height:46px; align-items:center; justify-content:center; padding:0 16px; border-radius:15px; font-weight:900; cursor:pointer; border:1px solid var(--line2); background:rgba(255,255,255,.06); color:#fff; }
     .footer-btn.primary { color:#170c02; background:linear-gradient(135deg,var(--gold),#fff0b9 52%,var(--ember)); border:0; }
-    @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,.sponsor-layout,.sponsor-upgrade,.ops-strip{grid-template-columns:1fr}#audioManagerCard,#toolsRail,#creatorSponsorCard{order:initial}}
+    @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,.sponsor-layout,.sponsor-upgrade,.ops-strip,.session-layout{grid-template-columns:1fr}#audioManagerCard,#toolsRail,#creatorSponsorCard{order:initial}}
+    @media(max-width:860px){.session-status-grid,.session-control-grid{grid-template-columns:1fr}}
     @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}}
   </style>
 </head>
@@ -249,6 +268,50 @@
       <div class="background-preview empty" id="backgroundPreview">
         <img id="backgroundPreviewImage" alt="Current overlay background preview">
         <span id="backgroundPreviewEmpty">No background preview loaded</span>
+      </div>
+    </article>
+
+    <article class="card col-12" id="sessionDirectorCard">
+      <div class="card-head">
+        <div>
+          <div class="card-title">Live Session Director</div>
+          <h3>Rounds, boss waves, and recap</h3>
+          <p class="muted">Run the battle like a broadcast: start a session, launch timed rounds, trigger a boss wave, and copy viewer commands while the overlay stays synced.</p>
+        </div>
+        <span class="card-badge" id="sessionStateBadge">Idle</span>
+      </div>
+      <div class="session-layout">
+        <div class="session-panel">
+          <div class="section-title">Director controls</div>
+          <div class="session-status-grid">
+            <div class="session-stat"><span>Session</span><strong id="sessionElapsed">Idle</strong></div>
+            <div class="session-stat"><span>Round</span><strong id="sessionRound">None</strong></div>
+            <div class="session-stat"><span>Players</span><strong id="sessionPlayers">0</strong></div>
+          </div>
+          <div class="boss-meter">
+            <div class="stat-box"><span class="stat-label">Boss wave</span><span class="stat-value" id="bossWaveLabel">Inactive</span></div>
+            <div class="boss-track" aria-label="Boss wave health"><div class="boss-fill" id="bossWaveFill"></div></div>
+          </div>
+          <div class="session-control-grid">
+            <button class="btn btn-success" onclick="sessionAction('/api/session/start','Session started')">Start Session</button>
+            <button class="btn btn-secondary" onclick="sessionAction('/api/session/end','Session ended')">End Session</button>
+            <button class="btn btn-primary" onclick="sessionAction('/api/session/round/start','Round started')">Start Round</button>
+            <button class="btn btn-warning" onclick="sessionAction('/api/session/round/end','Round ended')">End Round</button>
+            <button class="btn btn-danger" onclick="sessionAction('/api/session/boss/start','Boss wave started')">Boss Wave</button>
+            <button class="btn btn-secondary" onclick="sessionAction('/api/session/boss/stop','Boss wave stopped')">Stop Boss</button>
+          </div>
+        </div>
+        <div class="session-panel command-panel">
+          <div class="card-head" style="margin-bottom:0;">
+            <div><div class="section-title" style="margin-bottom:6px;">Viewer command panel</div><p class="muted">Copy this into chat, pinned comments, or your stream description.</p></div>
+            <button class="btn btn-secondary" onclick="copyViewerCommands()">Copy Commands</button>
+          </div>
+          <textarea id="viewerCommandText" readonly>Loading viewer commands...</textarea>
+          <div>
+            <div class="section-title">Last session recap</div>
+            <div id="sessionRecap" class="muted">No completed session yet.</div>
+          </div>
+        </div>
       </div>
     </article>
 
@@ -336,6 +399,7 @@ let canUseCreatorSponsors = false;
 let activeSponsorBreakId = '';
 let sponsorFileObjectUrl = '';
 let sponsorUploadProbe = null;
+let sessionStatusData = null;
 const dashboardState = {
   socketConnected: false,
   tiktokConnected: false,
@@ -483,6 +547,77 @@ function updateReadinessChecklist() {
   const list = document.getElementById('readiness-list');
   if (list) list.innerHTML = items.map(item => readinessItem(item.title, item.detail, item.status, item.label)).join('');
 }
+function formatClock(ms) {
+  const total = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+function renderSessionRecap(recap) {
+  const container = document.getElementById('sessionRecap');
+  if (!container) return;
+  if (!recap) {
+    container.className = 'muted';
+    container.textContent = 'No completed session yet.';
+    return;
+  }
+  const winner = recap.winner?.nickname || recap.winner?.uniqueId || 'No winner';
+  const rows = [
+    ['Winner', winner],
+    ['Duration', formatClock(recap.durationMs)],
+    ['Rounds', String(recap.roundsCompleted || 0)],
+    ['Boss clears', String(recap.bossDefeats || 0)],
+  ];
+  const top = Array.isArray(recap.topPlayers) ? recap.topPlayers.slice(0, 3) : [];
+  container.className = 'recap-list';
+  container.innerHTML = rows.map(([label, value]) => `<div class="recap-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('')
+    + top.map((player, index) => `<div class="recap-row"><span>#${index + 1} fighter</span><strong>${escapeHtml(player.nickname || player.uniqueId)} - ${Number(player.kills) || 0} K</strong></div>`).join('');
+}
+function renderSessionStatus(data = {}) {
+  sessionStatusData = data || {};
+  const active = !!sessionStatusData.active;
+  const badge = document.getElementById('sessionStateBadge');
+  if (badge) badge.textContent = active ? 'Live' : 'Idle';
+  text('sessionElapsed', active ? formatClock(sessionStatusData.elapsedMs) : 'Idle');
+  text('sessionPlayers', String(sessionStatusData.metrics?.players ?? dashboardState.playerCount ?? 0));
+  const round = sessionStatusData.round;
+  if (round?.active) {
+    text('sessionRound', `R${round.number} - ${formatClock(round.remainingMs)}`);
+  } else {
+    text('sessionRound', 'None');
+  }
+  const boss = sessionStatusData.bossWave;
+  const bossActive = !!boss?.active;
+  const maxHp = Math.max(1, Number(boss?.maxHp) || 1);
+  const hp = Math.max(0, Number(boss?.hp) || 0);
+  const fill = document.getElementById('bossWaveFill');
+  if (fill) fill.style.width = `${bossActive ? Math.max(0, Math.min(100, (hp / maxHp) * 100)) : 0}%`;
+  text('bossWaveLabel', bossActive ? `${Math.round(hp)} / ${Math.round(maxHp)} HP` : (boss?.status === 'defeated' ? 'Defeated' : 'Inactive'));
+  const commandText = document.getElementById('viewerCommandText');
+  if (commandText && sessionStatusData.commandText) commandText.value = sessionStatusData.commandText;
+  renderSessionRecap(sessionStatusData.recap);
+}
+function tickSessionClock() {
+  if (!sessionStatusData?.active) return;
+  const startedAt = Number(sessionStatusData.startedAt);
+  if (Number.isFinite(startedAt) && startedAt > 0) {
+    text('sessionElapsed', formatClock(Date.now() - startedAt));
+  }
+  const round = sessionStatusData.round;
+  if (round?.active) {
+    const remainingMs = Math.max(0, Number(round.endsAt) - Date.now());
+    text('sessionRound', `R${round.number} - ${formatClock(remainingMs)}`);
+  }
+}
+async function sessionAction(endpoint, successMessage) {
+  const result = await apiCall(endpoint, 'POST');
+  if (result.session) renderSessionStatus(result.session);
+  if (result.success) toast(successMessage || 'Session updated');
+}
+function copyViewerCommands() {
+  const value = document.getElementById('viewerCommandText')?.value || '!join\n!emoji <symbol>\n!shield\n!heal @name\n!laser @name\n!fire @boss';
+  navigator.clipboard?.writeText(value).then(() => toast('Viewer commands copied')).catch(() => toast('Copy failed', true));
+}
 async function apiCall(endpoint, method = 'POST', body = null) {
   const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
   if (body) opts.body = JSON.stringify(body);
@@ -501,6 +636,17 @@ socket.on('gameState', state => { const alive = Object.values(state || {}).filte
 socket.on('devModeChanged', data => { dashboardState.devTestMode = !!data.enabled; const value = data.enabled ? 'ON' : 'OFF'; text('dev-mode-badge', value); updateReadinessChecklist(); });
 socket.on('audioConfig', cfg => { if (cfg) audioConfigData = cfg; renderAssignTable(); });
 socket.on('sponsorBreakStatus', data => updateSponsorBreakStatus(data || {}));
+socket.on('sessionStatus', data => renderSessionStatus(data || {}));
+socket.on('roundEvent', data => {
+  if (data?.title) toast(data.title);
+});
+socket.on('bossWave', data => {
+  if (sessionStatusData) {
+    renderSessionStatus({ ...sessionStatusData, bossWave: data });
+  }
+  if (data?.type === 'started') toast('Boss wave started');
+  if (data?.type === 'defeated') toast('Boss wave defeated');
+});
 socket.on('connect', () => { setSocketStatus('connected'); socket.emit('register', { type: 'dashboard' }); });
 socket.on('disconnect', () => setSocketStatus('connecting'));
 socket.on('connect_error', () => setSocketStatus('error'));
@@ -636,6 +782,7 @@ async function fetchStatus() {
     const devValue = data.devTestMode ? 'ON' : 'OFF';
     text('dev-mode-badge', devValue);
     if (data.overlayCount !== undefined) setOverlayCount(data.overlayCount);
+    if (data.session) renderSessionStatus(data.session);
     socket.emit('register', { type: 'dashboard' });
     updateReadinessChecklist();
   } catch (_err) {
@@ -1063,7 +1210,7 @@ dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classLis
 dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', e=>{ e.preventDefault(); dropZone.classList.remove('dragover'); const file=e.dataTransfer.files[0]; if(file) uploadAudioFile(file); });
 fetch('/api/audio').then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData=d.library || []; audioConfigData=d.config || {}; renderAudioLibrary(); renderAssignTable(); }}).catch(()=>{});
-fetchStatus(); fetchSubscriptionStatus(); setInterval(fetchStatus,10000); setInterval(fetchSubscriptionStatus,60000);
+fetchStatus(); fetchSubscriptionStatus(); setInterval(fetchStatus,10000); setInterval(fetchSubscriptionStatus,60000); setInterval(tickSessionClock,1000);
 </script>
 </body>
 </html>

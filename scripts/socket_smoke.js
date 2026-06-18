@@ -220,13 +220,86 @@ try {
   }
 
   const primaryOverlay = overlaySockets[0];
+
+  const authedHeaders = {
+    Cookie: `session_token=${e2eSessionToken}`,
+    'Content-Type': 'application/json',
+  };
+
+  const sessionStartedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.active === true && payload.sessionId, 10000);
+  const overlaySessionStartedPromise = waitForEvent(primaryOverlay, 'roundEvent', payload => payload.type === 'session_started', 10000);
+  const sessionStartRes = await request('/api/session/start', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(sessionStartRes.status === 200, `session start should return 200, got ${sessionStartRes.status}`);
+  const sessionStart = await sessionStartRes.json();
+  assert(sessionStart.success === true && sessionStart.session?.active === true, 'session start should activate the session');
+  await sessionStartedStatusPromise;
+  await overlaySessionStartedPromise;
+
+  const roundStartedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.round?.active === true, 10000);
+  const overlayRoundStartedPromise = waitForEvent(primaryOverlay, 'roundEvent', payload => payload.type === 'round_started', 10000);
+  const roundStartRes = await request('/api/session/round/start', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ durationMs: 60000 }),
+  });
+  assert(roundStartRes.status === 200, `round start should return 200, got ${roundStartRes.status}`);
+  const roundStart = await roundStartRes.json();
+  assert(roundStart.success === true && roundStart.session?.round?.active === true, 'round start should activate a timed round');
+  await roundStartedStatusPromise;
+  await overlayRoundStartedPromise;
+
+  const bossStartedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.bossWave?.active === true, 10000);
+  const overlayBossStartedPromise = waitForEvent(primaryOverlay, 'bossWave', payload => payload.type === 'started' && payload.active === true, 10000);
+  const bossStartRes = await request('/api/session/boss/start', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ maxHp: 900 }),
+  });
+  assert(bossStartRes.status === 200, `boss start should return 200, got ${bossStartRes.status}`);
+  const bossStart = await bossStartRes.json();
+  assert(bossStart.success === true && bossStart.session?.bossWave?.active === true, 'boss start should activate boss wave state');
+  await bossStartedStatusPromise;
+  await overlayBossStartedPromise;
+
+  const bossStoppedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.bossWave?.active === false && payload.bossWave?.status === 'stopped', 10000);
+  const overlayBossStoppedPromise = waitForEvent(primaryOverlay, 'bossWave', payload => payload.type === 'stopped' && payload.active === false, 10000);
+  const bossStopRes = await request('/api/session/boss/stop', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(bossStopRes.status === 200, `boss stop should return 200, got ${bossStopRes.status}`);
+  await bossStoppedStatusPromise;
+  await overlayBossStoppedPromise;
+
+  const roundEndedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.round === null, 10000);
+  const overlayRoundEndedPromise = waitForEvent(primaryOverlay, 'roundEvent', payload => payload.type === 'round_ended', 10000);
+  const roundEndRes = await request('/api/session/round/end', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(roundEndRes.status === 200, `round end should return 200, got ${roundEndRes.status}`);
+  await roundEndedStatusPromise;
+  await overlayRoundEndedPromise;
+
+  const sessionEndedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.active === false && payload.recap, 10000);
+  const overlaySessionEndedPromise = waitForEvent(primaryOverlay, 'roundEvent', payload => payload.type === 'session_ended' && payload.recap, 10000);
+  const sessionEndRes = await request('/api/session/end', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(sessionEndRes.status === 200, `session end should return 200, got ${sessionEndRes.status}`);
+  const sessionEnd = await sessionEndRes.json();
+  assert(sessionEnd.success === true && sessionEnd.recap, 'session end should return a recap');
+  await sessionEndedStatusPromise;
+  await overlaySessionEndedPromise;
+
   const preparePromise = waitForEvent(primaryOverlay, 'sponsorPrepare', payload => payload?.breakId, 10000);
   const sponsorPlayRes = await request('/api/sponsor/play', {
     method: 'POST',
-    headers: {
-      Cookie: `session_token=${e2eSessionToken}`,
-      'Content-Type': 'application/json',
-    },
+    headers: authedHeaders,
     body: JSON.stringify({
       partner: 'Socket Smoke',
       title: 'Handshake Proof',

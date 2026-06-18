@@ -4328,6 +4328,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function visualEventPriority(type, data = {}) {
     if (data.killed || data.killingBlow) return 100;
+    if (type === 'bossWave') return data.type === 'defeated' ? 98 : 84;
+    if (type === 'roundEvent') return ['boss_started', 'boss_defeated', 'session_ended'].includes(data.type) ? 92 : 72;
     if (type === 'killEvent' || type === 'streakEvent') return 95;
     if (type === 'giftAttack' || type === 'giftCelebration') return 88;
     if (type === 'attack' || type === 'commentDamage') return data.special ? 82 : 70;
@@ -4612,6 +4614,118 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
   }
 
+  function handleRoundEvent(data) {
+    if (!data) return;
+    const type = String(data.type || '').toLowerCase();
+    if (type === 'round_started') {
+      const number = Number(data.number) || 1;
+      showBanner('streak', {
+        code: `R${number}`,
+        kicker: 'Round live',
+        title: data.title || `Round ${number}`,
+        meta: 'Fight for the top card',
+        charge: 62,
+        priority: 72,
+      }, 3100);
+      showBattlePrompt('New round is live', '', 1900);
+      return;
+    }
+    if (type === 'round_ended') {
+      const leader = Array.isArray(data.topPlayers) && data.topPlayers[0] ? data.topPlayers[0] : null;
+      showBanner('gift', {
+        code: 'END',
+        kicker: 'Round complete',
+        title: leader ? `${leader.nickname || leader.uniqueId} leads the arena` : (data.title || 'Round complete'),
+        meta: leader ? `${Number(leader.kills) || 0} kills | ${Math.round(Number(leader.hp) || 0)} HP` : 'Battle stats locked',
+        charge: 72,
+        priority: 76,
+      }, 3600);
+      showBattlePrompt('Round complete', 'return', 1900);
+      return;
+    }
+    if (type === 'boss_started') {
+      showBanner('legendary', {
+        code: 'BOSS',
+        kicker: 'Boss wave',
+        title: data.title || 'Boss wave incoming',
+        meta: 'Target @boss with fire, laser, or meteor',
+        charge: 100,
+        priority: 94,
+      }, 4300);
+      showBattlePrompt('Boss wave incoming', 'horde', 2400);
+      playSound('gift');
+      return;
+    }
+    if (type === 'boss_defeated') {
+      showBanner('legendary', {
+        code: 'CLEAR',
+        kicker: 'Boss cleared',
+        title: data.title || 'Boss wave defeated',
+        meta: data.message || 'Arena pressure released',
+        charge: 100,
+        priority: 98,
+      }, 4600);
+      showBattlePrompt('Boss wave defeated', 'return', 2400);
+      playSound('kill');
+      return;
+    }
+    if (type === 'session_started') {
+      showBanner('follow', {
+        code: 'LIVE',
+        kicker: 'Session online',
+        title: data.title || 'Battle session started',
+        meta: data.message || 'The arena is live',
+        charge: 56,
+        priority: 58,
+      }, 3000);
+      return;
+    }
+    if (type === 'session_ended') {
+      const winner = data.recap?.winner?.nickname || data.recap?.winner?.uniqueId || '';
+      showBanner('gift', {
+        code: 'RECAP',
+        kicker: 'Session complete',
+        title: winner ? `${winner} finished on top` : (data.title || 'Session recap ready'),
+        meta: `${data.recap?.roundsCompleted || 0} rounds | ${data.recap?.bossDefeats || 0} boss clears`,
+        charge: 82,
+        priority: 84,
+      }, 4200);
+      showBattlePrompt('Session recap ready', 'return', 2200);
+    }
+  }
+
+  function handleBossWave(data) {
+    if (!data) return;
+    const type = String(data.type || '').toLowerCase();
+    const hp = Math.max(0, Math.round(Number(data.hp) || 0));
+    const maxHp = Math.max(1, Math.round(Number(data.maxHp) || 1));
+    const pct = Math.max(0, Math.min(100, Math.round((hp / maxHp) * 100)));
+    if (type === 'started') {
+      showBattlePrompt('Boss wave active: target @boss', 'horde', 2800);
+      return;
+    }
+    if (type === 'damaged') {
+      const hitter = data.lastHitBy?.nickname || data.lastHitBy?.uniqueId || 'Viewer';
+      showBanner(pct <= 25 ? 'legendary' : 'streak', {
+        code: `${pct}%`,
+        kicker: 'Boss wave damage',
+        title: `${hitter} hit the boss wave`,
+        meta: `${hp} / ${maxHp} HP remaining`,
+        charge: Math.max(24, 100 - pct),
+        priority: pct <= 25 ? 88 : 64,
+      }, pct <= 25 ? 3200 : 2400);
+      showBattlePrompt(`Boss HP ${hp}/${maxHp}`, 'horde', 1500);
+      return;
+    }
+    if (type === 'defeated') {
+      handleRoundEvent({ type: 'boss_defeated', title: 'Boss wave defeated', message: data.finalHitBy?.nickname ? `${data.finalHitBy.nickname} landed the final hit` : '' });
+      return;
+    }
+    if (['stopped', 'ended', 'restarted'].includes(type)) {
+      showBattlePrompt('Boss wave ended', 'return', 1800);
+    }
+  }
+
   function registerOverlaySocket() {
     if (!socket || !socket.connected) return;
     if (registerRetryTimer) {
@@ -4691,6 +4805,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       socket.on('like', data => enqueueVisualEvent('like', data, handleLikeEvent, { mergeKey: payload => payload.uniqueId || payload.nickname || 'viewer' }));
       socket.on('heal', data => enqueueVisualEvent('heal', data, handleHealEvent, { mergeKey: payload => payload.uniqueId || 'viewer' }));
       socket.on('playerCommand', data => enqueueVisualEvent('playerCommand', data, handlePlayerCommand, { mergeKey: payload => payload.uniqueId || payload.nickname || 'viewer' }));
+      socket.on('roundEvent', data => enqueueVisualEvent('roundEvent', data, handleRoundEvent, { mergeKey: payload => payload.type || 'round' }));
+      socket.on('bossWave', data => enqueueVisualEvent('bossWave', data, handleBossWave, { mergeKey: () => 'boss-wave' }));
 
       socket.on('respawn',     data => { spawnRespawnEffect(data.uniqueId); });
       socket.on('soundEvent',  data => { if (data && data.event) playSound(data.event); });

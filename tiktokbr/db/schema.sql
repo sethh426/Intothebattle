@@ -146,6 +146,18 @@ CREATE TABLE IF NOT EXISTS sponsor_playback_events (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS live_sessions (
+  id SERIAL PRIMARY KEY,
+  session_id TEXT UNIQUE NOT NULL,
+  room_id TEXT NOT NULL,
+  status TEXT DEFAULT 'active',
+  started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  ended_at TIMESTAMP,
+  summary_json TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS admin_sessions (
   id SERIAL PRIMARY KEY,
   session_token TEXT UNIQUE NOT NULL,

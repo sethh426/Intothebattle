@@ -165,6 +165,9 @@ const PLATFORM_SPONSOR_JITTER_MS = Number(process.env.PLATFORM_SPONSOR_JITTER_MS
 const PLATFORM_SPONSOR_NO_REPEAT_COUNT = Number(process.env.PLATFORM_SPONSOR_NO_REPEAT_COUNT || 3);
 const PLATFORM_SPONSOR_ACTIVE_HOURS_UTC = String(process.env.PLATFORM_SPONSOR_ACTIVE_HOURS_UTC || '').trim();
 const SPONSOR_PREPARE_TIMEOUT_MS = Number(process.env.SPONSOR_PREPARE_TIMEOUT_MS || 8000);
+const SERVER_HORDE_ID = '__HORDE__';
+const BATTLE_ROUND_DURATION_MS = Number(process.env.BATTLE_ROUND_DURATION_MS || 4 * 60 * 1000);
+const BOSS_WAVE_HP = Number(process.env.BOSS_WAVE_HP || 1200);
 const configuredFreeTrialDays = Number(process.env.FREE_TRIAL_DAYS || 7);
 const FREE_TRIAL_DAYS = Number.isFinite(configuredFreeTrialDays) && configuredFreeTrialDays > 0
   ? Math.round(configuredFreeTrialDays)
@@ -657,6 +660,412 @@ function getRoomSponsorPacingDecision(room) {
   }
 
   return { ok: true, reason: 'ready', alivePlayers, recentBattleActions: recentBattleActions.length };
+}
+
+function clampSessionNumber(value, fallback, min, max) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(numeric)));
+}
+
+function sessionIdForRoom(room) {
+  return `session-${room.roomId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function roomAlivePlayers(room) {
+  return Object.values(room?.players || {}).filter(player => player?.alive);
+}
+
+function topSessionPlayers(room, limit = 5) {
+  return getTopPlayers(room, limit).map(player => ({
+    uniqueId: player.uniqueId,
+    nickname: player.nickname || player.uniqueId,
+    hp: Math.round(Number(player.hp) || 0),
+    maxHp: Math.round(Number(player.maxHp) || CFG.BASE_HP),
+    strength: Math.round(Number(player.strength) || CFG.BASE_STRENGTH),
+    kills: Number(player.kills) || 0,
+    alive: Boolean(player.alive),
+  }));
+}
+
+function viewerCommandText() {
+  return [
+    '!join - enter the arena',
+    '!emoji <symbol> - change your fighter icon',
+    '!shield - reduce incoming damage',
+    '!heal @name - restore a fighter',
+    '!laser @name - quick cyber attack',
+    '!fire @name - heavy fire attack',
+    '!fire @boss - damage the boss wave when active',
+  ].join('\n');
+}
+
+function buildSessionRecap(room, session, reason = 'manual_end') {
+  const topPlayers = topSessionPlayers(room, 5);
+  const startedAt = Number(session?.startedAt) || Date.now();
+  const endedAt = Date.now();
+  const roundsCompleted = Number(session?.roundsCompleted) || 0;
+  const bossDefeats = Number(session?.bossDefeats) || 0;
+  const totalKills = roomAlivePlayers(room).reduce((sum, player) => sum + (Number(player.kills) || 0), 0);
+  return {
+    reason,
+    sessionId: session?.sessionId || '',
+    startedAt,
+    endedAt,
+    durationMs: Math.max(0, endedAt - startedAt),
+    roundsCompleted,
+    bossDefeats,
+    totalKills,
+    activePlayers: roomAlivePlayers(room).length,
+    winner: topPlayers[0] || null,
+    topPlayers,
+  };
+}
+
+function persistLiveSessionStart(room, session) {
+  if (!room?.roomId || !session?.sessionId) return;
+  try {
+    db.prepare(`
+      INSERT INTO live_sessions (session_id, room_id, status, started_at, summary_json, updated_at)
+      VALUES (?, ?, 'active', CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(session_id) DO UPDATE SET
+        status = 'active',
+        updated_at = CURRENT_TIMESTAMP
+    `).run(session.sessionId, room.roomId, JSON.stringify({ source: 'dashboard' }));
+  } catch (err) {
+    logger.warn({ err, roomId: room.roomId, sessionId: session.sessionId }, 'Failed to persist live session start');
+  }
+}
+
+function persistLiveSessionEnd(room, recap) {
+  if (!room?.roomId || !recap?.sessionId) return;
+  try {
+    db.prepare(`
+      UPDATE live_sessions
+      SET status = 'ended',
+          ended_at = CURRENT_TIMESTAMP,
+          summary_json = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE session_id = ?
+    `).run(JSON.stringify(recap), recap.sessionId);
+  } catch (err) {
+    logger.warn({ err, roomId: room.roomId, sessionId: recap.sessionId }, 'Failed to persist live session recap');
+  }
+}
+
+function currentRoundStatus(room) {
+  const round = room?.roundState;
+  if (!round?.active) return null;
+  const now = Date.now();
+  return {
+    active: true,
+    number: round.number,
+    startedAt: round.startedAt,
+    endsAt: round.endsAt,
+    durationMs: round.durationMs,
+    remainingMs: Math.max(0, round.endsAt - now),
+    status: round.status || 'live',
+  };
+}
+
+function currentBossStatus(room) {
+  const boss = room?.bossWave;
+  if (!boss?.active) return boss?.lastStatus || null;
+  return {
+    active: true,
+    status: boss.status || 'live',
+    startedAt: boss.startedAt,
+    hp: Math.max(0, Math.round(Number(boss.hp) || 0)),
+    maxHp: Math.max(1, Math.round(Number(boss.maxHp) || BOSS_WAVE_HP)),
+    hits: Number(boss.hits) || 0,
+    lastHitBy: boss.lastHitBy || null,
+  };
+}
+
+function buildSessionStatus(room) {
+  const session = room?.liveSession || null;
+  const active = session?.status === 'active';
+  const now = Date.now();
+  const recap = room?.lastSessionRecap || null;
+  return {
+    success: true,
+    active,
+    sessionId: session?.sessionId || null,
+    status: active ? 'active' : 'idle',
+    startedAt: session?.startedAt || null,
+    elapsedMs: active ? Math.max(0, now - Number(session.startedAt || now)) : 0,
+    round: currentRoundStatus(room),
+    bossWave: currentBossStatus(room),
+    recap,
+    commandText: viewerCommandText(),
+    metrics: {
+      players: roomAlivePlayers(room).length,
+      roundsCompleted: Number(session?.roundsCompleted) || 0,
+      bossDefeats: Number(session?.bossDefeats) || 0,
+    },
+  };
+}
+
+function emitSessionStatus(room) {
+  emitRoomEvent(room, 'sessionStatus', buildSessionStatus(room));
+}
+
+function clearRoundTimer(room) {
+  if (room?.roundState?.timer) {
+    clearTimeout(room.roundState.timer);
+    room.roundState.timer = null;
+  }
+}
+
+function ensureLiveSession(room, source = 'dashboard') {
+  if (!room?.roomId) return null;
+  if (room.liveSession?.status === 'active') return room.liveSession;
+  const session = {
+    sessionId: sessionIdForRoom(room),
+    status: 'active',
+    source,
+    startedAt: Date.now(),
+    roundsStarted: 0,
+    roundsCompleted: 0,
+    bossWavesStarted: 0,
+    bossDefeats: 0,
+  };
+  room.liveSession = session;
+  persistLiveSessionStart(room, session);
+  emitRoomEvent(room, 'roundEvent', {
+    type: 'session_started',
+    title: 'Battle session started',
+    message: 'The arena is live.',
+  });
+  emitSessionStatus(room);
+  return session;
+}
+
+function startLiveSession(room, source = 'dashboard') {
+  const session = ensureLiveSession(room, source);
+  emitSessionStatus(room);
+  return session;
+}
+
+function endBattleRound(room, reason = 'manual') {
+  if (!room?.roundState?.active) return { ok: false, reason: 'no_active_round' };
+  const round = room.roundState;
+  clearRoundTimer(room);
+  round.active = false;
+  round.status = 'ended';
+  round.endedAt = Date.now();
+  if (room.liveSession?.status === 'active') {
+    room.liveSession.roundsCompleted = (Number(room.liveSession.roundsCompleted) || 0) + 1;
+  }
+  const topPlayers = topSessionPlayers(room, 3);
+  emitRoomEvent(room, 'roundEvent', {
+    type: 'round_ended',
+    number: round.number,
+    reason,
+    title: `Round ${round.number} complete`,
+    message: topPlayers[0] ? `${topPlayers[0].nickname} leads the arena.` : 'Round complete.',
+    topPlayers,
+  });
+  emitSessionStatus(room);
+  maybeTriggerMilestoneSponsorBreak(room, 'round_end');
+  return { ok: true, round: { ...round, timer: undefined } };
+}
+
+function startBattleRound(room, options = {}) {
+  const session = ensureLiveSession(room, options.source || 'dashboard');
+  if (!session) return null;
+  if (room.roundState?.active) endBattleRound(room, 'new_round');
+  const durationMs = clampSessionNumber(options.durationMs, BATTLE_ROUND_DURATION_MS, 30000, 30 * 60 * 1000);
+  const number = (Number(session.roundsStarted) || 0) + 1;
+  session.roundsStarted = number;
+  room.roundState = {
+    active: true,
+    status: 'live',
+    number,
+    startedAt: Date.now(),
+    durationMs,
+    endsAt: Date.now() + durationMs,
+    timer: null,
+  };
+  room.roundState.timer = setTimeout(() => endBattleRound(room, 'timer'), durationMs);
+  if (typeof room.roundState.timer.unref === 'function') room.roundState.timer.unref();
+  emitRoomEvent(room, 'roundEvent', {
+    type: 'round_started',
+    number,
+    durationMs,
+    title: `Round ${number}`,
+    message: 'New battle round is live.',
+  });
+  emitSessionStatus(room);
+  return room.roundState;
+}
+
+function completeBossWave(room, finalHit = null, reason = 'defeated') {
+  if (!room?.bossWave?.active) return { ok: false, reason: 'no_active_boss_wave' };
+  const boss = room.bossWave;
+  boss.active = false;
+  boss.status = reason;
+  boss.endedAt = Date.now();
+  boss.hp = Math.max(0, Number(boss.hp) || 0);
+  boss.finalHitBy = finalHit;
+  boss.lastStatus = {
+    active: false,
+    status: reason,
+    hp: boss.hp,
+    maxHp: boss.maxHp,
+    hits: boss.hits,
+    endedAt: boss.endedAt,
+    finalHitBy: finalHit,
+  };
+  if (reason === 'defeated' && room.liveSession?.status === 'active') {
+    room.liveSession.bossDefeats = (Number(room.liveSession.bossDefeats) || 0) + 1;
+  }
+  emitRoomEvent(room, 'bossWave', {
+    type: reason,
+    active: false,
+    hp: boss.hp,
+    maxHp: boss.maxHp,
+    hits: boss.hits,
+    finalHitBy: finalHit,
+    title: reason === 'defeated' ? 'Boss wave defeated' : 'Boss wave ended',
+  });
+  emitRoomEvent(room, 'roundEvent', {
+    type: reason === 'defeated' ? 'boss_defeated' : 'boss_ended',
+    title: reason === 'defeated' ? 'Boss wave defeated' : 'Boss wave ended',
+    message: finalHit?.nickname ? `${finalHit.nickname} landed the final hit.` : 'The arena resets.',
+  });
+  emitSessionStatus(room);
+  if (reason === 'defeated') maybeTriggerMilestoneSponsorBreak(room, 'boss_defeated');
+  return { ok: true, bossWave: boss.lastStatus };
+}
+
+function startBossWave(room, options = {}) {
+  const session = ensureLiveSession(room, options.source || 'dashboard');
+  if (!session) return null;
+  if (room.bossWave?.active) completeBossWave(room, null, 'restarted');
+  const maxHp = clampSessionNumber(options.maxHp, BOSS_WAVE_HP, 200, 50000);
+  room.bossWave = {
+    active: true,
+    status: 'live',
+    hp: maxHp,
+    maxHp,
+    hits: 0,
+    startedAt: Date.now(),
+    lastHitBy: null,
+  };
+  session.bossWavesStarted = (Number(session.bossWavesStarted) || 0) + 1;
+  emitRoomEvent(room, 'bossWave', {
+    type: 'started',
+    active: true,
+    hp: maxHp,
+    maxHp,
+    hits: 0,
+    title: 'Boss wave incoming',
+  });
+  emitRoomEvent(room, 'roundEvent', {
+    type: 'boss_started',
+    title: 'Boss wave incoming',
+    message: 'Viewers can target @boss to break the horde.',
+  });
+  emitSessionStatus(room);
+  return room.bossWave;
+}
+
+function damageBossWave(room, attackerId, attackerNick, multiplier = 1, effect = 'laser', comment = '') {
+  const boss = room?.bossWave;
+  const attacker = room?.players?.[attackerId];
+  if (!boss?.active || !attacker?.alive) return { handled: false, reason: 'Boss wave is not active' };
+  const variance = 1 - CFG.ATTACK_VARIANCE / 2 + Math.random() * CFG.ATTACK_VARIANCE;
+  const damage = Math.max(4, Math.floor((Number(attacker.strength) || CFG.BASE_STRENGTH) * multiplier * variance));
+  boss.hp = Math.max(0, (Number(boss.hp) || 0) - damage);
+  boss.hits = (Number(boss.hits) || 0) + 1;
+  boss.lastHitBy = { uniqueId: attackerId, nickname: attackerNick || attacker.nickname || attackerId, damage };
+  attacker.lastActive = Date.now();
+  const topBefore = new Set(getTopPlayers(room, 5).map(player => player.uniqueId));
+  const attackPayload = {
+    attacker: attackerId,
+    attackerNick: attackerNick || attacker.nickname,
+    target: SERVER_HORDE_ID,
+    targetNick: 'Boss Wave',
+    damage,
+    killed: boss.hp <= 0,
+    special: multiplier > 1.5,
+    effect,
+    intensity: Math.min(1, 0.48 + multiplier / 9),
+    critical: multiplier >= 3,
+    comment,
+    attackerScope: topBefore.has(attackerId) ? 'top' : 'horde',
+    targetScope: 'horde',
+    remainingHpPct: boss.maxHp ? boss.hp / boss.maxHp : 0,
+  };
+  emitRoomEvent(room, 'attack', attackPayload);
+  emitRoomEvent(room, 'commentDamage', {
+    ...attackPayload,
+    target: SERVER_HORDE_ID,
+    targetScope: 'horde',
+    commandDescription: effect,
+  });
+  emitSoundAndSync(room, boss.hp <= 0 ? 'kill' : (multiplier > 1.5 ? 'gift' : 'attack'), { intensity: attackPayload.intensity, tier: multiplier >= 5 ? 'rare' : 'common' });
+  emitRoomEvent(room, 'bossWave', {
+    type: boss.hp <= 0 ? 'defeated' : 'damaged',
+    active: boss.hp > 0,
+    hp: boss.hp,
+    maxHp: boss.maxHp,
+    hits: boss.hits,
+    lastHitBy: boss.lastHitBy,
+    damage,
+  });
+  if (boss.hp <= 0) {
+    completeBossWave(room, boss.lastHitBy, 'defeated');
+  } else {
+    emitSessionStatus(room);
+  }
+  return { handled: true, result: attackPayload, target: SERVER_HORDE_ID };
+}
+
+function endLiveSession(room, reason = 'manual_end') {
+  if (!room?.liveSession || room.liveSession.status !== 'active') {
+    return { ok: false, reason: 'no_active_session', recap: room?.lastSessionRecap || null };
+  }
+  const session = room.liveSession;
+  clearRoundTimer(room);
+  if (room.roundState?.active) {
+    room.roundState.active = false;
+    room.roundState.status = 'ended';
+    room.roundState.endedAt = Date.now();
+    session.roundsCompleted = (Number(session.roundsCompleted) || 0) + 1;
+  }
+  if (room.bossWave?.active) completeBossWave(room, null, 'ended');
+  session.status = 'ended';
+  session.endedAt = Date.now();
+  const recap = buildSessionRecap(room, session, reason);
+  room.lastSessionRecap = recap;
+  persistLiveSessionEnd(room, recap);
+  emitRoomEvent(room, 'roundEvent', {
+    type: 'session_ended',
+    title: 'Session recap ready',
+    message: recap.winner ? `${recap.winner.nickname} finished on top.` : 'Battle session ended.',
+    recap,
+  });
+  emitSessionStatus(room);
+  return { ok: true, recap };
+}
+
+function maybeTriggerMilestoneSponsorBreak(room, trigger = 'milestone') {
+  if (!PLATFORM_SPONSOR_ENABLED || !room?.roomId) return { started: false, reason: 'disabled' };
+  if (room.planEntitlements?.canUseCreatorSponsors) return { started: false, reason: 'creator_controlled' };
+  const pacing = getRoomSponsorPacingDecision(room);
+  if (!pacing.ok) {
+    if (pacing.retryMs) scheduleNextPlatformSponsor(room, pacing.retryMs);
+    return { started: false, reason: pacing.reason, retryMs: pacing.retryMs };
+  }
+  const creative = pickPlatformSponsorCreative(getRecentPlatformSponsorCreativeIds(room));
+  if (!creative) return { started: false, reason: 'no_creative' };
+  const payload = buildPlatformSponsorPayload(room, creative);
+  const record = startSponsorBreak(room, payload, { trigger, source: 'platform' });
+  rememberPlatformSponsorCreative(room, creative.id);
+  logger.info({ roomId: room.roomId, trigger, creativeId: creative.id }, 'Platform sponsor break prepared from gameplay milestone');
+  return { started: true, breakId: record?.breakId || null, creativeId: creative.id };
 }
 
 function startPreparedSponsorBreak(room, record, reason = 'ready') {
@@ -2122,11 +2531,16 @@ function handlePlayerUtilityCommand(room, playerId, nickname, comment) {
 }
 
 function handleMentionAttack(room, attackerId, attackerNick, comment) {
-  const mentions = extractMentions(comment);
-  if (!mentions.length) return { handled: false, reason: 'No @mention found' };
+  const text = String(comment || '');
+  const mentions = extractMentions(text);
+  const bossMentioned = Boolean(room?.bossWave?.active && (
+    /\b(?:boss|horde|raidboss|waveboss)\b/i.test(text) ||
+    mentions.some(mention => ['boss', 'horde', 'thehorde', 'raidboss', SERVER_HORDE_ID].includes(normalizeName(mention)))
+  ));
+  if (!mentions.length && !bossMentioned) return { handled: false, reason: 'No @mention found' };
 
   // Parse !command
-  const cmdMatch = String(comment || '').match(/!(\S+)/i);
+  const cmdMatch = text.match(/!(\S+)/i);
   let requestedEffect  = null;
   let commandMultiplier = 1;
   let commandDescription = null;
@@ -2162,6 +2576,10 @@ function handleMentionAttack(room, attackerId, attackerNick, comment) {
 
   let multiplier = commandMultiplier;
   if (boostActive) multiplier *= CFG.GIFT_MESSAGE_BOOST_MULTIPLIER;
+
+  if (bossMentioned) {
+    return damageBossWave(room, attackerId, attackerNick, multiplier, requestedEffect || 'laser', text);
+  }
 
   for (const mention of mentions) {
     const target = findTarget(room, mention);
@@ -3266,6 +3684,7 @@ io.on('connection', (socket) => {
       socket.emit('audioConfig',      room.audioConfig);
       socket.emit('overlaySettings',  room.overlaySettings);
       socket.emit('laserColor',       room.overlaySettings.laserColor);
+      socket.emit('sessionStatus',    buildSessionStatus(room));
       const background = buildBackgroundPayload(room, { v: Date.now() });
       if (background) socket.emit('backgroundChanged', background);
     } else if (clientType === 'dashboard' || clientType === 'stats') {
@@ -3278,6 +3697,7 @@ io.on('connection', (socket) => {
       socket.emit('overlaySettings', room.overlaySettings);
       socket.emit('laserColor',      room.overlaySettings.laserColor);
       socket.emit('gameState',       room.players);
+      socket.emit('sessionStatus',   buildSessionStatus(room));
     }
 
     if (typeof ack === 'function') {
@@ -3388,7 +3808,63 @@ app.get('/api/status', requireRoom, (req, res) => res.json({
   background:       buildBackgroundPayload(req.room, { v: Date.now() }),
   overlaySettings:  req.room.overlaySettings,
   devTestMode:      DEV_TEST_MODE,
+  session:          buildSessionStatus(req.room),
 }));
+
+app.get('/api/session/status', requireRoom, (req, res) => {
+  res.json(buildSessionStatus(req.room));
+});
+
+app.post('/api/session/start', requireRoom, (req, res) => {
+  const session = startLiveSession(req.room, 'dashboard');
+  res.json({ success: true, session: buildSessionStatus(req.room), sessionId: session?.sessionId || null });
+});
+
+app.post('/api/session/end', requireRoom, (req, res) => {
+  const result = endLiveSession(req.room, 'dashboard_end');
+  res.status(result.ok ? 200 : 409).json({
+    success: result.ok,
+    error: result.ok ? undefined : 'No active session to end.',
+    ...result,
+    session: buildSessionStatus(req.room),
+  });
+});
+
+app.post('/api/session/round/start', requireRoom, (req, res) => {
+  const round = startBattleRound(req.room, {
+    source: 'dashboard',
+    durationMs: req.body?.durationMs,
+  });
+  res.json({ success: true, round: currentRoundStatus(req.room) || round, session: buildSessionStatus(req.room) });
+});
+
+app.post('/api/session/round/end', requireRoom, (req, res) => {
+  const result = endBattleRound(req.room, 'dashboard_end');
+  res.status(result.ok ? 200 : 409).json({
+    success: result.ok,
+    error: result.ok ? undefined : 'No active round to end.',
+    ...result,
+    session: buildSessionStatus(req.room),
+  });
+});
+
+app.post('/api/session/boss/start', requireRoom, (req, res) => {
+  const bossWave = startBossWave(req.room, {
+    source: 'dashboard',
+    maxHp: req.body?.maxHp,
+  });
+  res.json({ success: true, bossWave: currentBossStatus(req.room) || bossWave, session: buildSessionStatus(req.room) });
+});
+
+app.post('/api/session/boss/stop', requireRoom, (req, res) => {
+  const result = completeBossWave(req.room, null, 'stopped');
+  res.status(result.ok ? 200 : 409).json({
+    success: result.ok,
+    error: result.ok ? undefined : 'No active boss wave to stop.',
+    ...result,
+    session: buildSessionStatus(req.room),
+  });
+});
 
 app.get('/api/subscription/status', (req, res) => {
   try {

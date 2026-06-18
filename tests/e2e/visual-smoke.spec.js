@@ -133,6 +133,8 @@ test('dashboard renders with E2E auth fixture', async ({ context, page }, testIn
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByText('IntoTheBattle Command Center')).toBeVisible();
   await expect(page.locator('#subscription-chip')).toBeVisible();
+  await expect(page.getByText('Live Session Director')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Boss Wave' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Open Overlay' }).first()).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'dashboard');

@@ -398,6 +398,23 @@ async function initDb() {
       )
     `);
 
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS live_sessions (
+        id SERIAL PRIMARY KEY,
+        session_id TEXT UNIQUE NOT NULL,
+        room_id TEXT NOT NULL,
+        status TEXT DEFAULT 'active',
+        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        ended_at TIMESTAMP,
+        summary_json TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await safeExec('ALTER TABLE live_sessions ADD COLUMN summary_json TEXT');
+    await safeExec("ALTER TABLE live_sessions ADD COLUMN status TEXT DEFAULT 'active'");
+    await safeExec('ALTER TABLE live_sessions ADD COLUMN ended_at TIMESTAMP');
+
     await safeExec('ALTER TABLE access_codes ADD COLUMN user_id INTEGER');
     await safeExec("ALTER TABLE access_codes ADD COLUMN code_type TEXT DEFAULT 'trial'");
 
