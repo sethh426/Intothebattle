@@ -8,10 +8,18 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: "schema-validation-${{ github.ref }}"
+  cancel-in-progress: true
+
 jobs:
   schema-validation:
     name: Run schema validation
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
@@ -32,3 +40,11 @@ jobs:
 
       - name: Run JSON-LD expansion validator
         run: python tools/validate_schema_expand.py
+
+      - name: Ensure schema reports are committed
+        run: |
+          git diff --exit-code -- \
+            schema_validation_report.json \
+            schema_validation_report.txt \
+            schema_expansion_report.json \
+            schema_expansion_report.txt

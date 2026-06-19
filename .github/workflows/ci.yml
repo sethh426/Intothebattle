@@ -6,9 +6,17 @@ on:
       - main
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: "ci-${{ github.ref }}"
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     env:
       NODE_ENV: test
@@ -30,6 +38,8 @@ jobs:
       GOOGLE_CLIENT_ID: google_ci_client
       GOOGLE_CLIENT_SECRET: google_ci_secret
       GOOGLE_OAUTH_REDIRECT_URI: https://intothebattle.test/auth/google/callback
+      DISK_PATH: ${{ runner.temp }}/intothebattle-data
+      SPONSOR_STRICT_MEDIA_GATE: "true"
 
     steps:
       - name: Checkout
@@ -45,6 +55,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      - name: Install media tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
 
       - name: Install dependencies
         run: npm ci
@@ -63,7 +78,10 @@ jobs:
 
       - name: Start server and check /healthz
         run: |
-          PORT=3000 nohup node server.js >server.log 2>&1 &
+          mkdir -p "$DISK_PATH"
+          PORT=3000 node server.js >server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           for i in $(seq 1 30); do
             if curl -sS http://localhost:3000/healthz >/dev/null; then
               echo "healthz OK"
@@ -74,6 +92,14 @@ jobs:
           echo "Server failed to respond; dumping logs"
           tail -n 200 server.log
           exit 1
+
+      - name: Upload server startup log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-startup-log
+          path: server.log
+          if-no-files-found: ignore
 
       - name: Validate schemas
         run: npm run validate:schemas
@@ -107,6 +133,7 @@ jobs:
   postgres-migrations:
     name: Check Postgres migrations
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       postgres:
