@@ -385,6 +385,42 @@ async function initDb() {
     await safeExec('ALTER TABLE platform_sponsor_creatives ADD COLUMN active_ends_at TIMESTAMP');
 
     await safeExec(`
+      CREATE TABLE IF NOT EXISTS signup_intents (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        name TEXT,
+        tiktok_username TEXT,
+        source TEXT DEFAULT 'signup',
+        last_path TEXT,
+        converted_at TIMESTAMP,
+        followup_sent_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await safeExec('ALTER TABLE signup_intents ADD COLUMN source TEXT DEFAULT \'signup\'');
+    await safeExec('ALTER TABLE signup_intents ADD COLUMN last_path TEXT');
+    await safeExec('ALTER TABLE signup_intents ADD COLUMN converted_at TIMESTAMP');
+    await safeExec('ALTER TABLE signup_intents ADD COLUMN followup_sent_at TIMESTAMP');
+    await safeExec('ALTER TABLE signup_intents ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS creator_comments (
+        id SERIAL PRIMARY KEY,
+        name TEXT,
+        email TEXT,
+        role TEXT,
+        comment TEXT NOT NULL,
+        status TEXT DEFAULT 'approved',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TIMESTAMP
+      )
+    `);
+    await safeExec('ALTER TABLE creator_comments ADD COLUMN role TEXT');
+    await safeExec("ALTER TABLE creator_comments ADD COLUMN status TEXT DEFAULT 'approved'");
+    await safeExec('ALTER TABLE creator_comments ADD COLUMN deleted_at TIMESTAMP');
+
+    await safeExec(`
       CREATE TABLE IF NOT EXISTS sponsor_playback_events (
         id SERIAL PRIMARY KEY,
         break_id TEXT NOT NULL,

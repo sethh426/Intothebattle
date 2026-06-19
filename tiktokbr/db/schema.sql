@@ -87,6 +87,30 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS signup_intents (
+  id SERIAL PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  name TEXT,
+  tiktok_username TEXT,
+  source TEXT DEFAULT 'signup',
+  last_path TEXT,
+  converted_at TIMESTAMP,
+  followup_sent_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS creator_comments (
+  id SERIAL PRIMARY KEY,
+  name TEXT,
+  email TEXT,
+  role TEXT,
+  comment TEXT NOT NULL,
+  status TEXT DEFAULT 'approved',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS platform_sponsor_creatives (
   id SERIAL PRIMARY KEY,
   filename TEXT UNIQUE NOT NULL,

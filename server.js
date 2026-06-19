@@ -255,6 +255,34 @@ function buildOverlayUrl(req, roomId) {
   return `${base}${appendOverlayAuth('/overlay', normalizedRoomId, token)}`;
 }
 
+function publicBaseUrl(req = null) {
+  const configuredBase = process.env.APP_BASE_URL;
+  const inferredBase = req ? `${req.protocol}://${req.get('host')}` : `http://localhost:${PORT}`;
+  return (configuredBase || inferredBase).replace(/\/$/, '');
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function cleanPublicText(value, maxLength = 140) {
+  return String(value || '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength);
+}
+
+function cleanEmail(value) {
+  const email = String(value || '').trim().toLowerCase();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email.slice(0, 254) : '';
+}
+
 function validateRuntimeConfiguration() {
   const production = process.env.NODE_ENV === 'production';
   if (production && !process.env.JWT_SECRET) {
@@ -710,6 +738,7 @@ function buildSessionRecap(room, session, reason = 'manual_end') {
   return {
     reason,
     sessionId: session?.sessionId || '',
+    shareUrl: session?.sessionId ? `${publicBaseUrl()}/battle-recap/${encodeURIComponent(session.sessionId)}` : '',
     startedAt,
     endedAt,
     durationMs: Math.max(0, endedAt - startedAt),
@@ -751,6 +780,198 @@ function persistLiveSessionEnd(room, recap) {
   } catch (err) {
     logger.warn({ err, roomId: room.roomId, sessionId: recap.sessionId }, 'Failed to persist live session recap');
   }
+}
+
+function parseSessionSummary(value) {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (_err) {
+    return null;
+  }
+}
+
+function getPublicSessionRecap(sessionId, req = null) {
+  const safeSessionId = cleanPublicText(sessionId, 180);
+  if (!safeSessionId) return null;
+  try {
+    const row = db.prepare(`
+      SELECT session_id, room_id, status, started_at, ended_at, summary_json
+      FROM live_sessions
+      WHERE session_id = ? AND status = 'ended'
+      LIMIT 1
+    `).get(safeSessionId);
+    if (!row) return null;
+    const summary = parseSessionSummary(row.summary_json) || {};
+    return {
+      sessionId: row.session_id,
+      roomId: row.room_id,
+      startedAt: summary.startedAt || row.started_at || null,
+      endedAt: summary.endedAt || row.ended_at || null,
+      durationMs: Number(summary.durationMs) || 0,
+      roundsCompleted: Number(summary.roundsCompleted) || 0,
+      bossDefeats: Number(summary.bossDefeats) || 0,
+      totalKills: Number(summary.totalKills) || 0,
+      activePlayers: Number(summary.activePlayers) || 0,
+      winner: summary.winner || null,
+      topPlayers: Array.isArray(summary.topPlayers) ? summary.topPlayers.slice(0, 5) : [],
+      shareUrl: `${publicBaseUrl(req)}/battle-recap/${encodeURIComponent(row.session_id)}`,
+    };
+  } catch (err) {
+    logger.warn({ err, sessionId: safeSessionId }, 'Failed to read public session recap');
+    return null;
+  }
+}
+
+function formatRecapClock(ms) {
+  const total = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+function renderBattleRecapPage(recap) {
+  const winner = recap.winner?.nickname || recap.winner?.uniqueId || 'Arena still deciding';
+  const topPlayers = (recap.topPlayers || []).map((player, index) => `
+    <div class="fighter-row">
+      <span>#${index + 1}</span>
+      <strong>${escapeHtml(player.nickname || player.uniqueId || 'Player')}</strong>
+      <b>${escapeHtml(String(Number(player.kills) || 0))} K</b>
+    </div>
+  `).join('');
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Battle Recap - IntoTheBattle</title>
+  <meta name="robots" content="noindex, follow" />
+  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{min-height:100vh;display:grid;place-items:center;padding:24px;font-family:Inter,system-ui,sans-serif;color:#fff8e6;background:radial-gradient(circle at 18% 0,rgba(246,201,91,.2),transparent 30%),radial-gradient(circle at 84% 20%,rgba(232,59,95,.16),transparent 30%),linear-gradient(180deg,#050608,#030406)}
+    main{width:min(920px,100%);display:grid;gap:18px}
+    .card{border:1px solid rgba(246,201,91,.22);border-radius:8px;background:rgba(5,7,11,.82);box-shadow:0 32px 90px rgba(0,0,0,.5);padding:clamp(24px,5vw,44px)}
+    .brand{display:flex;align-items:center;gap:12px;margin-bottom:24px;color:#ffdf8a;font-weight:950;text-transform:uppercase;letter-spacing:.1em}.brand img{width:52px;height:52px}
+    h1{font-size:clamp(42px,7vw,82px);line-height:.92;text-transform:uppercase;margin-bottom:16px}h1 span{display:block;color:#f6c95b}
+    .lede{color:#c4ccdb;line-height:1.7;font-size:18px;margin-bottom:26px}
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}.stat,.fighter-row{border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.045);border-radius:8px;padding:16px}.stat span{display:block;color:#a8afbf;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}.stat strong{display:block;margin-top:8px;font-size:28px}
+    .fighters{display:grid;gap:10px}.fighter-row{display:grid;grid-template-columns:44px 1fr auto;gap:12px;align-items:center}.fighter-row span{color:#55e7ff;font-weight:950}.fighter-row b{color:#ffdf8a}
+    .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:0 18px;border-radius:8px;font-weight:950;text-decoration:none}.primary{color:#170c02;background:linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d)}.secondary{color:#fff;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06)}
+    @media(max-width:720px){.stats{grid-template-columns:1fr 1fr}.fighter-row{grid-template-columns:34px 1fr auto}}
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <div class="brand"><img src="/intothebattlelogo_logo_only.svg" alt="" />IntoTheBattle recap</div>
+      <h1>${escapeHtml(winner)} <span>won the arena.</span></h1>
+      <p class="lede">A TikTok LIVE battle just wrapped. Viewers joined, attacked, powered up, and pushed the room through a playable stream moment.</p>
+      <div class="stats">
+        <div class="stat"><span>Duration</span><strong>${escapeHtml(formatRecapClock(recap.durationMs))}</strong></div>
+        <div class="stat"><span>Rounds</span><strong>${escapeHtml(String(recap.roundsCompleted))}</strong></div>
+        <div class="stat"><span>Boss clears</span><strong>${escapeHtml(String(recap.bossDefeats))}</strong></div>
+        <div class="stat"><span>Players</span><strong>${escapeHtml(String(recap.activePlayers))}</strong></div>
+      </div>
+      <div class="fighters">${topPlayers || '<div class="fighter-row"><span>#</span><strong>No fighters recorded</strong><b>0 K</b></div>'}</div>
+      <div class="actions"><a class="btn primary" href="/signup">Create your arena</a><a class="btn secondary" href="/how-to-play">See how players join</a></div>
+    </section>
+  </main>
+</body>
+</html>`;
+}
+
+function listPublicCreatorComments(limit = 12) {
+  const safeLimit = Math.max(1, Math.min(30, Number(limit) || 12));
+  try {
+    return db.prepare(`
+      SELECT id, name, role, comment, created_at
+      FROM creator_comments
+      WHERE COALESCE(status, 'approved') = 'approved'
+        AND deleted_at IS NULL
+      ORDER BY created_at DESC, id DESC
+      LIMIT ?
+    `).all(safeLimit).map(row => ({
+      id: row.id,
+      name: row.name || 'Creator',
+      role: row.role || 'TikTok LIVE creator',
+      comment: row.comment,
+      createdAt: row.created_at,
+    }));
+  } catch (err) {
+    logger.warn({ err }, 'Failed to load public creator comments');
+    return [];
+  }
+}
+
+function upsertSignupIntent({ email, name = '', tiktokUsername = '', source = 'signup', lastPath = '' } = {}) {
+  const normalizedEmail = cleanEmail(email);
+  if (!normalizedEmail) return { ok: false, error: 'Enter a valid email address.' };
+  const cleanedName = cleanPublicText(name, 80);
+  const cleanedTikTok = cleanPublicText(tiktokUsername, 80).replace(/^@+/, '');
+  const cleanedSource = cleanPublicText(source, 40) || 'signup';
+  const cleanedPath = String(lastPath || '').startsWith('/') ? cleanPublicText(lastPath, 180) : '';
+  try {
+    db.prepare(`
+      INSERT INTO signup_intents (email, name, tiktok_username, source, last_path, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT(email) DO UPDATE SET
+        name = COALESCE(NULLIF(excluded.name, ''), signup_intents.name),
+        tiktok_username = COALESCE(NULLIF(excluded.tiktok_username, ''), signup_intents.tiktok_username),
+        source = excluded.source,
+        last_path = COALESCE(NULLIF(excluded.last_path, ''), signup_intents.last_path),
+        updated_at = CURRENT_TIMESTAMP
+    `).run(normalizedEmail, cleanedName, cleanedTikTok, cleanedSource, cleanedPath);
+    return { ok: true, email: normalizedEmail };
+  } catch (err) {
+    logger.warn({ err, email: normalizedEmail }, 'Failed to save signup intent');
+    return { ok: false, error: 'Unable to save signup progress.' };
+  }
+}
+
+async function sendAbandonedSignupFollowups(limit = 20) {
+  const safeLimit = Math.max(1, Math.min(100, Number(limit) || 20));
+  const result = { scanned: 0, sent: 0, skipped: 0, failed: 0 };
+  let rows = [];
+  try {
+    rows = db.prepare(`
+      SELECT si.*
+      FROM signup_intents si
+      LEFT JOIN users u ON u.email = si.email
+      WHERE si.followup_sent_at IS NULL
+        AND si.converted_at IS NULL
+        AND u.id IS NULL
+        AND si.updated_at <= CURRENT_TIMESTAMP - interval '20 minutes'
+      ORDER BY si.updated_at ASC
+      LIMIT ?
+    `).all(safeLimit);
+  } catch (err) {
+    logger.warn({ err }, 'Failed to load abandoned signup intents');
+    throw err;
+  }
+
+  for (const row of rows) {
+    result.scanned++;
+    try {
+      const name = cleanPublicText(row.name, 80) || 'creator';
+      const delivery = await sendTransactionalEmail({
+        to: row.email,
+        subject: 'Your battle arena is ready, finish setup',
+        tag: 'abandoned-signup',
+        metadata: { source: 'signup-intent', signupIntentId: String(row.id) },
+        htmlBody: `<p>Hey ${escapeHtml(name)},</p><p>Your battle arena is ready. Finish setup, copy your overlay URL, and test your first battle before your next TikTok LIVE.</p><p><a href="${publicBaseUrl()}/signup">Finish setup</a></p>`,
+        textBody: `Hey ${name}, your battle arena is ready. Finish setup here: ${publicBaseUrl()}/signup`,
+      });
+      if (delivery.skipped) result.skipped++;
+      else result.sent++;
+      db.prepare('UPDATE signup_intents SET followup_sent_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(row.id);
+    } catch (err) {
+      result.failed++;
+      logger.warn({ err, signupIntentId: row.id }, 'Failed to send abandoned signup follow-up');
+    }
+  }
+  return result;
 }
 
 function currentRoundStatus(room) {
@@ -2782,6 +3003,7 @@ app.get(['/how-to-play', '/how-to-play.html', '/players', '/game-guide'], (_req,
 app.get(['/site-map', '/site-map.html', '/sitemap'], (_req, res) => res.sendFile(path.join(__dirname, 'sitemap.html')));
 app.get('/verify-email', (_req, res) => res.sendFile(path.join(__dirname, 'verify-email.html')));
 app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));
+app.get(['/battle-clip', '/battle-clip.html'], (_req, res) => res.sendFile(path.join(__dirname, 'battle-clip.html')));
 app.get(['/overlay-preview', '/overlay-preview.html', '/overlay-demo', '/overlay-demo.html'], (_req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
 app.get('/register', (req, res) => {
   const token = req.cookies?.session_token;
@@ -2829,6 +3051,54 @@ app.get('/paywall-link', (req, res) => {
     return res.redirect(302, '/billing/error?reason=paypal_not_configured');
   }
   res.redirect(302, url);
+});
+
+app.get('/battle-recap/:sessionId', (req, res) => {
+  const recap = getPublicSessionRecap(req.params.sessionId, req);
+  if (!recap) return res.status(404).sendFile(path.join(__dirname, '404.html'));
+  res.send(renderBattleRecapPage(recap));
+});
+
+app.get('/api/public/session-recap/:sessionId', (req, res) => {
+  const recap = getPublicSessionRecap(req.params.sessionId, req);
+  if (!recap) return res.status(404).json({ success: false, error: 'Recap not found' });
+  res.json({ success: true, recap });
+});
+
+app.get('/api/public/comments', (_req, res) => {
+  res.set('Cache-Control', 'public, max-age=45');
+  res.json({ success: true, comments: listPublicCreatorComments(18) });
+});
+
+app.post('/api/public/comments', (req, res) => {
+  const name = cleanPublicText(req.body?.name, 70) || 'Creator';
+  const email = cleanEmail(req.body?.email) || null;
+  const role = cleanPublicText(req.body?.role, 80) || 'TikTok LIVE creator';
+  const comment = cleanPublicText(req.body?.comment, 260);
+  if (comment.length < 8) {
+    return res.status(400).json({ success: false, error: 'Write a slightly longer comment.' });
+  }
+  try {
+    db.prepare(`
+      INSERT INTO creator_comments (name, email, role, comment, status, created_at)
+      VALUES (?, ?, ?, ?, 'approved', CURRENT_TIMESTAMP)
+    `).run(name, email, role, comment);
+    return res.json({ success: true, comments: listPublicCreatorComments(18) });
+  } catch (err) {
+    logger.warn({ err }, 'Failed to save creator comment');
+    return res.status(500).json({ success: false, error: 'Unable to save comment.' });
+  }
+});
+
+app.post('/api/signup-intent', (req, res) => {
+  const result = upsertSignupIntent({
+    email: req.body?.email,
+    name: req.body?.name,
+    tiktokUsername: req.body?.tiktokUsername,
+    source: req.body?.source || 'signup',
+    lastPath: req.body?.lastPath || req.path,
+  });
+  res.status(result.ok ? 200 : 400).json({ success: result.ok, error: result.error || undefined });
 });
 
 // Legacy code endpoints. Open code generation is retired; normal creator
@@ -3437,6 +3707,18 @@ app.post('/api/runtime/email-test', requireDiagnosticsAccess, async (req, res) =
   }
 });
 
+app.post('/api/runtime/signup-followups', requireDiagnosticsAccess, async (req, res) => {
+  try {
+    const result = await sendAbandonedSignupFollowups(req.body?.limit);
+    return res.json({ success: true, ...result });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      error: err.message || 'Unable to process signup follow-ups.',
+    });
+  }
+});
+
 app.get('/audio/:filename', (req, res) => {
   const filename = path.basename(req.params.filename);
   let room = req.room || null;
@@ -3917,6 +4199,187 @@ app.get('/api/subscription/status', (req, res) => {
     logger.error({ err }, 'Failed to build subscription status');
     return res.status(500).json({ success: false, error: 'Unable to load subscription status' });
   }
+});
+
+function ensureRoomLiveTestPlayers(room) {
+  const testPlayers = [
+    { id: 'arena_orion', nick: 'Orion', x: 240, y: 170, icon: '\u2694\ufe0f' },
+    { id: 'arena_blaze', nick: 'Blaze', x: 540, y: 195, icon: '\ud83d\udd25' },
+    { id: 'arena_nova', nick: 'Nova', x: 390, y: 315, icon: '\ud83d\udc8e' },
+  ];
+  testPlayers.forEach((player, index) => {
+    if (!room.players[player.id]) spawnPlayer(room, player.id, player.nick);
+    const record = room.players[player.id];
+    if (!record) return;
+    record.uniqueId = player.id;
+    record.nickname = player.nick;
+    record.alive = true;
+    record.hp = Math.max(80, Number(record.hp) || CFG.BASE_HP);
+    record.maxHp = Math.max(CFG.BASE_HP, Number(record.maxHp) || CFG.BASE_HP);
+    record.strength = Math.max(CFG.BASE_STRENGTH, Number(record.strength) || CFG.BASE_STRENGTH);
+    record.x = player.x;
+    record.y = player.y;
+    record.vx = (index - 1) * 0.4;
+    record.vy = (index === 1 ? 0.3 : -0.2);
+    record.iconEmoji = player.icon;
+    record.forceSpawn = true;
+    record.lastActive = Date.now();
+  });
+  emitRoomEvent(room, 'gameState', room.players);
+  return testPlayers;
+}
+
+function runRoomOverlayTest(room, action) {
+  const normalizedAction = String(action || '').toLowerCase();
+  ensureRoomLiveTestPlayers(room);
+  const attackerId = 'arena_orion';
+  const targetId = 'arena_blaze';
+  const supportId = 'arena_nova';
+
+  if (normalizedAction === 'attack') {
+    const result = handleMentionAttack(room, attackerId, 'Orion', '!laser @arena_blaze');
+    emitRoomEvent(room, 'gameState', room.players);
+    return { success: true, action: normalizedAction, result };
+  }
+
+  if (normalizedAction === 'gift') {
+    const diamonds = 25;
+    awardStats(room, supportId, 'Nova', diamonds * CFG.GIFT_HP_PER_DIAMOND, diamonds * CFG.GIFT_STR_PER_DIAMOND);
+    const result = dealDamage(room, supportId, targetId, 2.1);
+    if (result) {
+      emitGiftAttackAndSync(room, {
+        ...result,
+        diamonds,
+        effect: 'laser',
+        intensity: 0.72,
+        giftColor: '#7afcff',
+        attackerScope: 'top',
+        targetScope: 'top',
+      });
+    }
+    const giftMeta = classifyGift(diamonds);
+    emitSoundAndSync(room, 'gift', { intensity: 0.72, tier: giftMeta.tier || 'common' });
+    emitRoomEvent(room, 'giftCelebration', {
+      attacker: supportId,
+      nickname: 'Nova',
+      giftName: 'Test Gift',
+      diamonds,
+      ...giftMeta,
+    });
+    emitRoomEvent(room, 'gameState', room.players);
+    return { success: true, action: normalizedAction, result };
+  }
+
+  if (normalizedAction === 'like') {
+    const hearts = 8;
+    const intensity = 0.65;
+    awardStats(room, supportId, 'Nova', CFG.LIKE_HP_BOOST * hearts, 0);
+    emitSoundAndSync(room, 'heal', { intensity, tier: 'common' });
+    emitRoomEvent(room, 'like', {
+      uniqueId: supportId,
+      nickname: 'Nova',
+      hearts,
+      rate: 240,
+      intensity,
+      color: room.players[supportId]?.color || '#ff4f8f',
+    });
+    emitRoomEvent(room, 'gameState', room.players);
+    return { success: true, action: normalizedAction, hearts, intensity };
+  }
+
+  if (normalizedAction === 'heal') {
+    const amount = healPlayer(room, supportId, 80) || 80;
+    emitSoundAndSync(room, 'heal', { intensity: 0.5, tier: 'common' });
+    emitRoomEvent(room, 'heal', {
+      uniqueId: supportId,
+      nickname: 'Nova',
+      amount,
+      color: room.players[supportId]?.color,
+    });
+    emitRoomEvent(room, 'gameState', room.players);
+    return { success: true, action: normalizedAction, amount };
+  }
+
+  if (normalizedAction === 'kill') {
+    if (room.players[targetId]) room.players[targetId].hp = 1;
+    const result = dealDamage(room, attackerId, targetId, 8);
+    emitAttackAndSync(room, result);
+    emitRoomEvent(room, 'gameState', room.players);
+    return { success: true, action: normalizedAction, result };
+  }
+
+  if (normalizedAction === 'streak') {
+    if (room.players[attackerId]) {
+      room.players[attackerId].killStreak = 2;
+      room.players[attackerId].lastKillTime = Date.now();
+    }
+    if (room.players[targetId]) {
+      room.players[targetId].alive = true;
+      room.players[targetId].hp = 1;
+    }
+    const result = dealDamage(room, attackerId, targetId, 8);
+    emitAttackAndSync(room, result);
+    emitRoomEvent(room, 'gameState', room.players);
+    return { success: true, action: normalizedAction, result };
+  }
+
+  if (normalizedAction === 'boss') {
+    const session = startLiveSession(room, 'overlay_test');
+    const bossWave = startBossWave(room, { source: 'overlay_test', maxHp: 900 });
+    const timer = setTimeout(() => {
+      damageBossWave(room, attackerId, 'Orion', 2.4, 'laser', '!laser @boss');
+      emitRoomEvent(room, 'gameState', room.players);
+    }, 650);
+    if (typeof timer.unref === 'function') timer.unref();
+    return {
+      success: true,
+      action: normalizedAction,
+      session: buildSessionStatus(room),
+      sessionId: session?.sessionId || null,
+      bossWave,
+    };
+  }
+
+  if (normalizedAction === 'sponsor' || normalizedAction === 'break') {
+    const record = startSponsorBreak(room, {
+      source: 'creator',
+      partner: 'Arena Partner',
+      kicker: 'Battle Break',
+      title: 'Arena Spotlight',
+      subtitle: 'Chat made the moment. The next round is loading.',
+      durationMs: 7000,
+      statsMode: 'endcap',
+      timingProfile: 'spotlight',
+      muted: true,
+      fit: 'cover',
+    }, { trigger: 'overlay_test', source: 'creator' });
+    if (record) {
+      const timer = setTimeout(() => startPreparedSponsorBreak(room, record, 'test_ready'), 450);
+      if (typeof timer.unref === 'function') timer.unref();
+    }
+    return { success: true, action: normalizedAction, breakId: record?.breakId || null };
+  }
+
+  if (normalizedAction === 'burst' || normalizedAction === 'show') {
+    const sequence = ['attack', 'like', 'gift', 'boss', 'sponsor'];
+    sequence.forEach((eventName, index) => {
+      const timer = setTimeout(() => runRoomOverlayTest(room, eventName), index * 950);
+      if (typeof timer.unref === 'function') timer.unref();
+    });
+    emitRoomEvent(room, 'roundEvent', {
+      type: 'overlay_test_burst',
+      title: 'Overlay test running',
+      message: 'Chat, likes, gifts, boss wave, and broadcast break are being previewed.',
+    });
+    return { success: true, action: normalizedAction, sequence };
+  }
+
+  return { success: false, error: 'Unknown overlay test action.' };
+}
+
+app.post('/api/overlay/test/:action', requireRoom, (req, res) => {
+  const result = runRoomOverlayTest(req.room, req.params.action);
+  res.status(result.success ? 200 : 400).json(result);
 });
 
 app.post('/api/dev/test-mode', blockInProduction, (req, res) => {

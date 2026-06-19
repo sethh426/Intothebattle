@@ -74,6 +74,15 @@
     .readiness-pill.ready { color:var(--green); border-color:rgba(119,240,161,.32); background:rgba(119,240,161,.08); }
     .readiness-pill.warn { color:var(--gold2); border-color:rgba(246,201,91,.32); background:rgba(246,201,91,.08); }
     .readiness-pill.blocked { color:#ff9aa8; border-color:rgba(232,59,95,.32); background:rgba(232,59,95,.1); }
+    .launch-checklist { grid-column:span 12; display:grid; grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr); gap:16px; align-items:stretch; border-color:rgba(85,231,255,.18); background:linear-gradient(120deg,rgba(85,231,255,.08),rgba(255,255,255,.035)); }
+    .launch-checklist-copy { display:grid; gap:10px; align-content:center; }
+    .launch-checklist-copy p { color:var(--muted); line-height:1.55; margin:0; }
+    .setup-steps { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
+    .setup-step { min-width:0; display:grid; gap:8px; padding:14px; border-radius:16px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.18); }
+    .setup-step b { color:#fff; font-size:13px; line-height:1.2; }
+    .setup-step span { color:var(--muted); font-size:12px; line-height:1.35; }
+    .setup-step.ready { border-color:rgba(119,240,161,.28); background:rgba(119,240,161,.07); }
+    .setup-step.ready span { color:#b8ffd0; }
     .copy-field { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; margin:14px 0; }
     .copy-field input { min-width:0; font-size:12px; color:#dfe8f8; }
     .grid { display:grid; grid-template-columns:repeat(12,1fr); gap:20px; }
@@ -87,6 +96,27 @@
     .card-head h3 { margin-top:6px; font-size:24px; line-height:1.1; }
     .card-badge { padding:7px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:var(--muted); font-size:11px; font-weight:900; white-space:nowrap; }
     .muted { color:var(--muted); line-height:1.6; font-size:13px; }
+    .setup-locked { position:relative; opacity:.5; filter:saturate(.72); }
+    .setup-locked::after {
+      content: attr(data-lock-message);
+      position:absolute;
+      inset:12px;
+      z-index:12;
+      display:grid;
+      place-items:center;
+      padding:18px;
+      border-radius:20px;
+      border:1px solid rgba(246,201,91,.26);
+      background:rgba(5,7,11,.82);
+      color:#fff4d2;
+      text-align:center;
+      font-size:13px;
+      font-weight:950;
+      line-height:1.45;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      backdrop-filter:blur(10px);
+    }
     .status-chip { margin-bottom:14px; }
     .status-chip.online { color:var(--green); border-color:rgba(119,240,161,.25); background:rgba(119,240,161,.08); }
     .status-chip.offline { color:#ff9aa8; border-color:rgba(232,59,95,.28); background:rgba(232,59,95,.1); }
@@ -169,6 +199,9 @@
     .boss-meter { display:grid; gap:8px; margin:12px 0 16px; }
     .boss-track { height:13px; border-radius:999px; background:rgba(255,255,255,.09); overflow:hidden; border:1px solid rgba(255,255,255,.09); }
     .boss-fill { height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg,var(--red),var(--ember),var(--gold)); box-shadow:0 0 18px rgba(232,59,95,.28); transition:width .24s ease; }
+    .weekly-event { margin-top:14px; padding:14px; border-radius:16px; border:1px solid rgba(246,201,91,.18); background:rgba(246,201,91,.055); }
+    .weekly-event strong { display:block; margin-bottom:6px; color:#fff4d2; }
+    .weekly-event p { margin:0 0 12px; color:var(--muted); font-size:13px; line-height:1.45; }
     .command-panel { display:grid; gap:12px; }
     .command-panel textarea { min-height:214px; }
     .recap-list { display:grid; gap:10px; margin-top:12px; }
@@ -191,9 +224,9 @@
     .footer { display:flex; flex-wrap:wrap; gap:12px; margin:4px 0 28px; }
     .footer-btn { display:inline-flex; min-height:46px; align-items:center; justify-content:center; padding:0 16px; border-radius:15px; font-weight:900; cursor:pointer; border:1px solid var(--line2); background:rgba(255,255,255,.06); color:#fff; }
     .footer-btn.primary { color:#170c02; background:linear-gradient(135deg,var(--gold),#fff0b9 52%,var(--ember)); border:0; }
-    @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,.sponsor-layout,.sponsor-upgrade,.ops-strip,.session-layout{grid-template-columns:1fr}#audioManagerCard,#toolsRail,#creatorSponsorCard{order:initial}}
+    @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,.sponsor-layout,.sponsor-upgrade,.ops-strip,.session-layout,.launch-checklist{grid-template-columns:1fr}#audioManagerCard,#toolsRail,#creatorSponsorCard{order:initial}}
     @media(max-width:860px){.session-status-grid,.session-control-grid{grid-template-columns:1fr}}
-    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}}
+    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}.setup-steps{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -243,6 +276,21 @@
   </section>
 
   <section class="grid">
+    <article class="card launch-checklist" id="setupChecklistCard">
+      <div class="launch-checklist-copy">
+        <div class="card-title">Setup checklist</div>
+        <h3>Get live without guessing.</h3>
+        <p>Copy the overlay, open it once, run a test burst, and start the first event. These are the steps that prove the stream room is ready.</p>
+      </div>
+      <div class="setup-steps" id="setupChecklist">
+        <div class="setup-step ready"><b>Account</b><span>Room created</span></div>
+        <div class="setup-step"><b>TikTok username</b><span>Waiting for status</span></div>
+        <div class="setup-step"><b>Copy overlay</b><span>Waiting for URL</span></div>
+        <div class="setup-step"><b>Test overlay</b><span>Run test burst</span></div>
+        <div class="setup-step"><b>Go live</b><span>Session or boss wave</span></div>
+      </div>
+    </article>
+
     <article class="card col-4" id="connectCard">
       <div class="card-head"><div><div class="card-title">Step 1</div><h3>Connect TikTok LIVE</h3></div><span class="card-badge">Stream input</span></div>
       <div class="status-chip offline" id="tiktok-chip"><span class="pulse-dot"></span><span id="tiktok-label">Disconnected</span></div>
@@ -257,7 +305,7 @@
       <div class="stat-box"><span class="stat-label">Dev mode</span><span class="stat-value" id="dev-mode-badge">OFF</span></div>
       <div class="copy-field"><input type="text" id="overlayUrlField" readonly value="Loading signed overlay URL"><button class="btn btn-secondary" onclick="copyOverlayUrl()">Copy</button></div>
       <div class="divider"></div>
-      <div class="btn-row"><button class="btn btn-primary" onclick="openOverlay()">Open Overlay</button><button class="btn btn-secondary" onclick="reloadOverlay()">Reload</button></div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="openOverlay()">Open Overlay</button><button class="btn btn-success" onclick="testOverlayBurst()">Test My Overlay</button><button class="btn btn-secondary" onclick="reloadOverlay()">Reload</button></div>
     </article>
 
     <article class="card col-4" id="sceneCard">
@@ -300,6 +348,11 @@
             <button class="btn btn-danger" onclick="sessionAction('/api/session/boss/start','Boss wave started')">Boss Wave</button>
             <button class="btn btn-secondary" onclick="sessionAction('/api/session/boss/stop','Boss wave stopped')">Stop Boss</button>
           </div>
+          <div class="weekly-event">
+            <strong>Weekly boss event</strong>
+            <p>Run a scheduled community challenge creators can promote ahead of time. Start the session, trigger the boss wave, then share the recap after the battle.</p>
+            <div class="btn-row"><button class="btn btn-danger" onclick="startWeeklyBossEvent()">Start Weekly Boss</button><button class="btn btn-secondary" onclick="copyWeeklyBossPromo()">Copy Promo</button></div>
+          </div>
         </div>
         <div class="session-panel command-panel">
           <div class="card-head" style="margin-bottom:0;">
@@ -316,9 +369,9 @@
     </article>
 
     <article class="card col-12" id="creatorSponsorCard">
-      <div class="card-head"><div><div class="card-title">Brand moments</div><h3>Full-screen power moments</h3><p class="muted">Upload, test, and trigger polished video moments for planned breaks, high-value beats, or manual brand placements.</p></div><span class="card-badge" id="sponsorCountBadge">0 Videos</span></div>
+      <div class="card-head"><div><div class="card-title">Brand moments</div><h3>Full-screen power moments</h3><p class="muted">Free rooms receive platform-managed broadcast breaks. Creator Pro unlocks custom uploads, timing, previews, and live brand controls.</p></div><span class="card-badge" id="sponsorCountBadge">0 Videos</span></div>
       <div class="sponsor-upgrade" id="sponsorUpgradeNotice" hidden>
-        <div><strong>Creator Pro sponsor controls</strong><p class="muted">Upgrade to upload, preview, time, and trigger your own brand videos during live breaks. Free accounts keep the core overlay and battle controls.</p></div>
+        <div><strong>Creator Pro brand controls</strong><p class="muted">Free accounts keep the battle overlay with platform-managed video moments. Upgrade to upload, preview, time, and trigger your own brand videos live.</p></div>
         <button class="btn btn-primary" onclick="window.location.href='/paywall?reason=creator_sponsors'">Upgrade to Pro</button>
       </div>
       <div class="sponsor-layout">
@@ -411,6 +464,9 @@ const dashboardState = {
   sponsorCount: 0,
   devTestMode: false,
   planLabel: 'Checking',
+  overlayUrlCopied: false,
+  overlayTested: false,
+  eventStarted: false,
 };
 const EVENTS = ['attack','gift','kill','respawn','heal','follow'];
 const EVENT_CLASSES = { attack:'event-attack', gift:'event-gift', kill:'event-kill', respawn:'event-respawn', heal:'event-heal', follow:'event-follow' };
@@ -545,6 +601,77 @@ function setRoomLabel(roomId) {
 function readinessItem(title, detail, status, label) {
   return `<div class="readiness-item"><div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(detail)}</span></div><b class="readiness-pill ${status}">${escapeHtml(label)}</b></div>`;
 }
+function setupStep(title, detail, ready) {
+  return `<div class="setup-step ${ready ? 'ready' : ''}"><b>${escapeHtml(title)}</b><span>${escapeHtml(detail)}</span></div>`;
+}
+function setupGateReady() {
+  return dashboardState.tiktokConnected && (dashboardState.overlayUrlCopied || dashboardState.overlayConnected);
+}
+function setPanelLocked(id, locked, message) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('setup-locked', locked);
+  el.dataset.lockMessage = locked ? message : '';
+  el.querySelectorAll('button,input,select,textarea,a').forEach((control) => {
+    if (locked) {
+      if (control.tagName === 'A') {
+        control.dataset.lockedHref = control.getAttribute('href') || '';
+        control.removeAttribute('href');
+      } else {
+        if (!control.disabled) control.dataset.setupLockDisabled = '1';
+        control.disabled = true;
+      }
+    } else {
+      if (control.tagName === 'A') {
+        if (control.dataset.lockedHref) control.setAttribute('href', control.dataset.lockedHref);
+        delete control.dataset.lockedHref;
+      } else {
+        if (control.dataset.setupLockDisabled === '1') control.disabled = false;
+        delete control.dataset.setupLockDisabled;
+      }
+    }
+  });
+}
+function updateDashboardProgressLocks() {
+  const gateReady = setupGateReady();
+  const message = dashboardState.tiktokConnected
+    ? 'Copy the signed overlay URL before opening advanced controls.'
+    : 'Connect TikTok first, then copy the signed overlay URL.';
+  ['sceneCard', 'sessionDirectorCard', 'creatorSponsorCard', 'audioManagerCard', 'toolsRail'].forEach(id => setPanelLocked(id, !gateReady, message));
+}
+function updateSetupChecklist() {
+  const list = document.getElementById('setupChecklist');
+  if (!list) return;
+  const steps = [
+    {
+      title: 'Account',
+      ready: Boolean(currentRoomId),
+      detail: currentRoomId ? 'Creator room is ready' : 'Loading room',
+    },
+    {
+      title: 'TikTok username',
+      ready: dashboardState.tiktokConnected,
+      detail: dashboardState.tiktokConnected ? 'Stream input connected' : 'Connect your LIVE username',
+    },
+    {
+      title: 'Copy overlay',
+      ready: dashboardState.overlayUrlCopied || dashboardState.overlayConnected,
+      detail: dashboardState.overlayUrlCopied ? 'URL copied for OBS' : (dashboardState.overlayConnected ? 'Overlay source is live' : 'Copy the signed URL'),
+    },
+    {
+      title: 'Test overlay',
+      ready: dashboardState.overlayTested,
+      detail: dashboardState.overlayTested ? 'Test event sent' : 'Run the test burst',
+    },
+    {
+      title: 'Go live',
+      ready: dashboardState.eventStarted || !!sessionStatusData?.active || !!sessionStatusData?.bossWave?.active,
+      detail: dashboardState.eventStarted || sessionStatusData?.active ? 'Session activity started' : 'Start a session or boss wave',
+    },
+  ];
+  list.innerHTML = steps.map(step => setupStep(step.title, step.detail, step.ready)).join('');
+  updateDashboardProgressLocks();
+}
 function updateReadinessChecklist() {
   const items = [
     {
@@ -591,6 +718,7 @@ function updateReadinessChecklist() {
   text('dashboard-summary', blockers ? 'Finish the required connections before going live.' : `Room ${currentRoomId || ''} is ready for live control.`);
   const list = document.getElementById('readiness-list');
   if (list) list.innerHTML = items.map(item => readinessItem(item.title, item.detail, item.status, item.label)).join('');
+  updateSetupChecklist();
 }
 function formatClock(ms) {
   const total = Math.max(0, Math.floor((Number(ms) || 0) / 1000));
@@ -616,7 +744,8 @@ function renderSessionRecap(recap) {
   const top = Array.isArray(recap.topPlayers) ? recap.topPlayers.slice(0, 3) : [];
   container.className = 'recap-list';
   container.innerHTML = rows.map(([label, value]) => `<div class="recap-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('')
-    + top.map((player, index) => `<div class="recap-row"><span>#${index + 1} fighter</span><strong>${escapeHtml(player.nickname || player.uniqueId)} - ${Number(player.kills) || 0} K</strong></div>`).join('');
+    + top.map((player, index) => `<div class="recap-row"><span>#${index + 1} fighter</span><strong>${escapeHtml(player.nickname || player.uniqueId)} - ${Number(player.kills) || 0} K</strong></div>`).join('')
+    + (recap.shareUrl ? `<button class="btn btn-secondary" style="margin-top:4px;width:100%;" onclick="copyRecapShareUrl('${escapeHtml(recap.shareUrl)}')">Copy public recap link</button>` : '');
 }
 function renderSessionStatus(data = {}) {
   sessionStatusData = data || {};
@@ -641,6 +770,7 @@ function renderSessionStatus(data = {}) {
   const commandText = document.getElementById('viewerCommandText');
   if (commandText && sessionStatusData.commandText) commandText.value = sessionStatusData.commandText;
   renderSessionRecap(sessionStatusData.recap);
+  updateSetupChecklist();
 }
 function tickSessionClock() {
   if (!sessionStatusData?.active) return;
@@ -656,12 +786,17 @@ function tickSessionClock() {
 }
 async function sessionAction(endpoint, successMessage) {
   const result = await apiCall(endpoint, 'POST');
+  if (result.success && /\/start$/.test(endpoint)) dashboardState.eventStarted = true;
   if (result.session) renderSessionStatus(result.session);
   if (result.success) toast(successMessage || 'Session updated');
+  updateSetupChecklist();
 }
 function copyViewerCommands() {
   const value = document.getElementById('viewerCommandText')?.value || '!join\n!emoji <symbol>\n!shield\n!heal @name\n!laser @name\n!fire @boss';
   navigator.clipboard?.writeText(value).then(() => toast('Viewer commands copied')).catch(() => toast('Copy failed', true));
+}
+function copyRecapShareUrl(url) {
+  navigator.clipboard?.writeText(url).then(() => toast('Recap link copied')).catch(() => toast('Copy failed', true));
 }
 async function apiCall(endpoint, method = 'POST', body = null) {
   const opts = { method, headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin' };
@@ -841,7 +976,11 @@ function openOverlay() {
 }
 function copyOverlayUrl() {
   const url = currentOverlayUrl || `${window.location.origin}/overlay`;
-  navigator.clipboard?.writeText(url).then(() => toast(currentOverlayUrl ? 'Overlay URL copied' : 'Fallback overlay URL copied')).catch(() => toast('Copy failed', true));
+  navigator.clipboard?.writeText(url).then(() => {
+    dashboardState.overlayUrlCopied = true;
+    updateSetupChecklist();
+    toast(currentOverlayUrl ? 'Overlay URL copied' : 'Fallback overlay URL copied');
+  }).catch(() => toast('Copy failed', true));
 }
 
 const usernameInput = document.getElementById('username');
@@ -853,8 +992,28 @@ function clearPlayers(){ if(confirm('Clear all players?')) apiCall('/api/players
 function toggleDevMode(){ fetchStatus().then(()=>apiCall('/api/dev/test-mode','POST',{ enabled: document.getElementById('dev-mode-badge').textContent !== 'ON' })); }
 function uploadBackground(){ const file = document.getElementById('bgUpload').files[0]; if(!file) return toast('Choose an image first', true); const fd = new FormData(); fd.append('background', file); fetch('/api/background/upload', { method:'POST', credentials:'same-origin', body:fd }).then(r=>r.json()).then(d=>{ if(d.success){ updateBackgroundPreview(d.filename, file.name, d.background?.url || d.url || ''); toast('Background uploaded'); } else toast(d.error || 'Upload failed', true); }); }
 function clearBackground(){ apiCall('/api/background/clear').then(()=>{ updateBackgroundPreview(''); toast('Background cleared'); }); }
-function runOverlayTest(action){ apiCall(`/api/overlay/test/${action}`); toast(`${action} test triggered`); }
-function testOverlayAttack(){ runOverlayTest('attack'); } function testOverlayGift(){ runOverlayTest('gift'); } function testOverlayHeal(){ runOverlayTest('heal'); } function testOverlayKill(){ runOverlayTest('kill'); } function testStreak(){ apiCall('/api/overlay/test/streak'); toast('Streak test triggered'); }
+async function runOverlayTest(action){
+  const result = await apiCall(`/api/overlay/test/${action}`);
+  if (result.success) {
+    dashboardState.overlayTested = true;
+    updateSetupChecklist();
+    toast(`${action} test triggered`);
+  }
+}
+function testOverlayAttack(){ runOverlayTest('attack'); }
+function testOverlayGift(){ runOverlayTest('gift'); }
+function testOverlayHeal(){ runOverlayTest('heal'); }
+function testOverlayKill(){ runOverlayTest('kill'); }
+function testStreak(){ runOverlayTest('streak'); }
+function testOverlayBurst(){ runOverlayTest('burst'); }
+async function startWeeklyBossEvent() {
+  await sessionAction('/api/session/start','Weekly boss session started');
+  await sessionAction('/api/session/boss/start','Weekly boss wave started');
+}
+function copyWeeklyBossPromo() {
+  const text = 'Tonight: IntoTheBattle boss wave. Join the LIVE, type !join, use !emoji to pick your icon, then attack with !laser @boss or !fire @boss.';
+  navigator.clipboard?.writeText(text).then(() => toast('Weekly boss promo copied')).catch(() => toast('Copy failed', true));
+}
 
 function sponsorInputValue(id, fallback = '') { const el = document.getElementById(id); return (el && el.value.trim()) || fallback; }
 function selectedSponsorFile(filename = selectedSponsorFilename) { return sponsorLibraryData.find(file => file.filename === filename) || null; }

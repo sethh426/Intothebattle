@@ -643,8 +643,8 @@
 
   <main class="register-shell">
     <section class="hero-copy" aria-labelledby="register-title">
-      <h1 id="register-title">Create your account. <span>Build your room.</span></h1>
-      <p class="lede">Use email to create your creator account, then continue into setup for your TikTok LIVE battle room, overlay controls, and 7 unlocked days of creator tools.</p>
+      <h1 id="register-title">Launch a playable LIVE room. <span>Know it works first.</span></h1>
+      <p class="lede">Use email to create your creator account, then land in setup with 7 days of full access, a signed overlay URL, and test buttons that prove the battle works before viewers arrive.</p>
       <ul class="trust-list">
         <li>Works with OBS browser sources and TikTok Studio window capture.</li>
         <li>Dashboard controls for rooms, visuals, audio, and stream state.</li>
@@ -665,7 +665,7 @@
         <div class="card-top">
           <div class="eyebrow">Email account setup</div>
           <h2 class="card-title">Enter the arena</h2>
-          <p class="card-sub">Create your account with email, then continue to your welcome setup page with full trial access.</p>
+          <p class="card-sub">Create your account with email, then continue to the welcome dashboard with every creator control unlocked for 7 days.</p>
         </div>
 
         <div class="google-option">
@@ -753,7 +753,7 @@
       if (json.loginUrl) actions.push(`<a class="btn btn-secondary" style="min-height:38px;padding:0 12px;margin-top:12px;font-size:13px;" href="${json.loginUrl}">Sign in</a>`);
       if (json.resetUrl) actions.push(`<a class="btn btn-secondary" style="min-height:38px;padding:0 12px;margin-top:12px;font-size:13px;" href="${json.resetUrl}">Reset password</a>`);
       if (json.resendUrl) actions.push(`<a class="btn btn-secondary" style="min-height:38px;padding:0 12px;margin-top:12px;font-size:13px;" href="${json.resendUrl}">Resend verification</a>`);
-      showStatus(`${escapeHtml(json.error || 'Account already exists.')} ${actions.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">${actions.join('')}</div>` : ''}`, true);
+      showStatus(`<strong>You already have an arena for this email.</strong><br>${escapeHtml(json.error || 'Account already exists.')} ${actions.length ? `<div style="display:flex;gap:8px;flex-wrap:wrap;">${actions.join('')}</div>` : ''}`, true);
     }
 
     function setLoading(isLoading) {
@@ -857,6 +857,45 @@
       }
     }
 
+    let signupIntentTimer = null;
+    let lastSignupIntentEmail = '';
+
+    function signupIntentPayload() {
+      return {
+        name: nameInput.value.trim(),
+        email: emailInput.value.trim(),
+        tiktokUsername: tiktokInput.value.trim().replace(/^@+/, ''),
+        source: 'email-register',
+        lastPath: window.location.pathname + window.location.search,
+      };
+    }
+
+    function saveSignupIntent(useBeacon = false) {
+      const payload = signupIntentPayload();
+      if (!payload.email || !payload.email.includes('@') || payload.email === lastSignupIntentEmail) return;
+      lastSignupIntentEmail = payload.email;
+      if (useBeacon && navigator.sendBeacon) {
+        navigator.sendBeacon('/api/signup-intent', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
+        return;
+      }
+      fetch('/api/signup-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload),
+      }).catch(() => {});
+    }
+
+    function queueSignupIntentSave() {
+      clearTimeout(signupIntentTimer);
+      signupIntentTimer = setTimeout(() => saveSignupIntent(false), 650);
+    }
+
+    [nameInput, emailInput, tiktokInput].forEach((input) => {
+      input.addEventListener('input', queueSignupIntentSave);
+      input.addEventListener('blur', () => saveSignupIntent(false));
+    });
+    window.addEventListener('pagehide', () => saveSignupIntent(true));
     registerBtn.addEventListener('click', registerAccount);
     window.addEventListener('DOMContentLoaded', loadSecurityChallenge);
   </script>

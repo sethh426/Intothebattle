@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IntoTheBattle | TikTok LIVE Battle Overlay</title>
-  <meta name="description" content="IntoTheBattle gives creators a TikTok LIVE overlay, dashboard controls, and a stream-ready interactive battle room." />
+  <meta name="description" content="Turn your TikTok LIVE chat into a playable battle arena with a stream-ready overlay, dashboard controls, and viewer-powered combat moments." />
   <meta name="robots" content="index, follow" />
   <link rel="canonical" href="https://intothebattle.com/" />
   <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
@@ -302,6 +302,93 @@
     }
     .step h3 { margin-bottom: 10px; font-size: 21px; }
     .step p { color: var(--muted); line-height: 1.65; }
+    .comment-section {
+      display: grid;
+      grid-template-columns: minmax(0,.9fr) minmax(360px,1fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+    .comment-copy {
+      padding: 28px;
+      border: 1px solid rgba(246,201,91,.18);
+      border-radius: 8px;
+      background: rgba(255,255,255,.035);
+    }
+    .comment-copy h2 {
+      margin-bottom: 14px;
+      font-size: clamp(32px,4.2vw,54px);
+      line-height: 1;
+      text-transform: uppercase;
+    }
+    .comment-copy p { color: var(--muted); line-height: 1.65; }
+    .comment-wall {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      border: 1px solid rgba(85,231,255,.18);
+      border-radius: 8px;
+      background: rgba(4,8,16,.72);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+      min-width: 0;
+    }
+    .comment-ticker {
+      position: relative;
+      overflow: hidden;
+      height: 164px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.09);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.025));
+    }
+    .comment-stack {
+      display: grid;
+      transition: transform .55s cubic-bezier(.2,.82,.2,1);
+      will-change: transform;
+    }
+    .comment-card {
+      height: 164px;
+      display: grid;
+      align-content: center;
+      gap: 12px;
+      padding: 18px;
+    }
+    .comment-card blockquote {
+      color: #fff8e6;
+      font-size: 18px;
+      line-height: 1.45;
+      font-weight: 850;
+    }
+    .comment-card figcaption {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: #9ff5ff;
+      font-size: 12px;
+      font-weight: 950;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .comment-form {
+      display: grid;
+      gap: 10px;
+    }
+    .comment-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .comment-form input,
+    .comment-form textarea {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 8px;
+      background: #111827;
+      color: var(--text);
+      font: inherit;
+      padding: 12px 13px;
+      outline: none;
+    }
+    .comment-form textarea { min-height: 88px; resize: vertical; }
+    .comment-status { min-height: 20px; color: var(--muted); font-size: 13px; }
     .cta-band {
       display: grid;
       grid-template-columns: minmax(0,1fr) auto;
@@ -332,7 +419,7 @@
     @media (max-width: 980px) {
       .hero { min-height: auto; grid-template-columns: 1fr; }
       .demo-shell { max-width: 820px; width: 100%; }
-      .section-head, .cta-band { grid-template-columns: 1fr; }
+      .section-head, .cta-band, .comment-section { grid-template-columns: 1fr; }
       .quick-panel, .steps { grid-template-columns: 1fr; }
     }
     @media (max-width: 620px) {
@@ -343,6 +430,8 @@
       .demo-head { padding: 12px; }
       .demo-head span { display: none; }
       .proof-list span { white-space: normal; }
+      .comment-grid { grid-template-columns: 1fr; }
+      .comment-card blockquote { font-size: 16px; }
     }
   </style>
 </head>
@@ -366,9 +455,9 @@
   <main>
     <section class="hero" aria-labelledby="hero-title">
       <div>
-        <div class="eyebrow">Stream-ready battle overlay</div>
-        <h1 id="hero-title">Turn your TikTok LIVE into <span>a battle arena.</span></h1>
-        <p class="lede">IntoTheBattle gives creators an OBS-ready game screen, dashboard controls, and viewer-powered combat moments that make chat feel playable.</p>
+        <div class="eyebrow">Launch in under 5 minutes</div>
+        <h1 id="hero-title">Turn your TikTok LIVE chat into <span>a playable battle arena.</span></h1>
+        <p class="lede">Create your room, copy the OBS URL, run a test attack, and launch your first battle overlay before your next LIVE starts.</p>
         <div class="actions">
           <a class="btn primary" href="/signup">Create free account -></a>
           <a class="btn secondary" href="/how-to-play">See player commands</a>
@@ -376,23 +465,23 @@
         <div class="proof-list" aria-label="Included features">
           <span>OBS browser source ready</span>
           <span>Dashboard controls</span>
-          <span>Free rooms include managed video moments</span>
+          <span>7-day everything unlocked</span>
         </div>
       </div>
 
       <aside class="demo-shell" aria-label="Live overlay demo preview">
         <div class="demo-head">
-          <div><strong>Live battle demo</strong><span>Real overlay renderer</span></div>
-          <div class="demo-status">Running</div>
+          <div><strong>12-second battle clip</strong><span>Comment, attack, KO, power moment</span></div>
+          <div class="demo-status">Looping</div>
         </div>
         <div class="frame-wrap">
-          <iframe src="/overlay-preview?demo=1&controls=0" title="IntoTheBattle current overlay demo" loading="eager"></iframe>
+          <iframe src="/battle-clip" title="IntoTheBattle 12-second battle clip" loading="eager"></iframe>
         </div>
       </aside>
     </section>
 
     <div class="quick-panel" aria-label="Quick value summary">
-      <article class="quick-item"><b>Connect your stream</b><p>Prepare your room and connect your TikTok LIVE session from one dashboard.</p></article>
+      <article class="quick-item"><b>Launch fast</b><p>Create the room, add your TikTok username, copy the overlay URL, and test the first event.</p></article>
       <article class="quick-item"><b>Add the overlay</b><p>Use the signed overlay URL in OBS or capture it into TikTok Studio.</p></article>
       <article class="quick-item"><b>Let viewers play</b><p>Chat, likes, gifts, follows, and commands like !emoji, !shield, !fire, and !laser become visible action.</p></article>
     </div>
@@ -409,6 +498,33 @@
       </div>
     </section>
 
+    <section class="section comment-section" aria-labelledby="creator-comments-title">
+      <div class="comment-copy">
+        <div class="eyebrow">Creator signal</div>
+        <h2 id="creator-comments-title">What should the arena become?</h2>
+        <p>Drop a quick note, idea, or reaction. The newest comments scroll through one at a time so feedback feels alive without turning the page into noise.</p>
+      </div>
+      <div class="comment-wall">
+        <div class="comment-ticker" aria-live="polite">
+          <div class="comment-stack" id="commentStack">
+            <figure class="comment-card">
+              <blockquote>Loading creator comments...</blockquote>
+              <figcaption><span>IntoTheBattle</span><span>Live feedback</span></figcaption>
+            </figure>
+          </div>
+        </div>
+        <form class="comment-form" id="creatorCommentForm">
+          <div class="comment-grid">
+            <input id="commentName" name="name" maxlength="70" autocomplete="name" placeholder="Name" />
+            <input id="commentEmail" name="email" maxlength="120" autocomplete="email" placeholder="Email (optional)" />
+          </div>
+          <textarea id="commentText" name="comment" maxlength="260" placeholder="What would make this more fun to watch or play?"></textarea>
+          <button class="btn primary" type="submit">Add comment</button>
+          <div class="comment-status" id="commentStatus"></div>
+        </form>
+      </div>
+    </section>
+
     <section class="cta-band" aria-label="Create account">
       <div>
         <h2>Build the arena before your next LIVE.</h2>
@@ -419,5 +535,86 @@
   </main>
 
   <footer>&copy; 2026 IntoTheBattle. <a href="/how-to-play">How to play</a> &middot; <a href="/site-map">Site map</a> &middot; <a href="/login">Login</a> &middot; <a href="/signup">Create account</a></footer>
+  <script>
+    const defaultComments = [
+      { name: 'IntoTheBattle', role: 'Creator idea', comment: 'Make every LIVE feel like viewers are inside the arena, not watching from the outside.' },
+      { name: 'Stream setup', role: 'Launch note', comment: 'Copy the overlay, open the dashboard, and run test attacks before the first viewer arrives.' },
+      { name: 'Player command', role: 'Chat action', comment: 'Viewers can join, change icons, shield, heal, and fire attacks from chat.' },
+    ];
+    const commentStack = document.getElementById('commentStack');
+    const commentStatus = document.getElementById('commentStatus');
+    const commentForm = document.getElementById('creatorCommentForm');
+    let comments = defaultComments;
+    let commentIndex = 0;
+    let commentTimer = null;
+
+    function escapeComment(value) {
+      return String(value || '').replace(/[&<>"']/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      }[char]));
+    }
+
+    function renderComments(nextComments) {
+      comments = Array.isArray(nextComments) && nextComments.length ? nextComments : defaultComments;
+      commentIndex = 0;
+      commentStack.style.transform = 'translateY(0)';
+      commentStack.innerHTML = comments.map((item) => `
+        <figure class="comment-card">
+          <blockquote>${escapeComment(item.comment)}</blockquote>
+          <figcaption><span>${escapeComment(item.name || 'Creator')}</span><span>${escapeComment(item.role || 'TikTok LIVE creator')}</span></figcaption>
+        </figure>
+      `).join('');
+      clearInterval(commentTimer);
+      commentTimer = setInterval(() => {
+        if (!comments.length) return;
+        commentIndex = (commentIndex + 1) % comments.length;
+        commentStack.style.transform = `translateY(-${commentIndex * 164}px)`;
+      }, 4200);
+    }
+
+    async function loadComments() {
+      try {
+        const res = await fetch('/api/public/comments');
+        const json = await res.json();
+        renderComments(json.comments || []);
+      } catch (_err) {
+        renderComments(defaultComments);
+      }
+    }
+
+    commentForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const payload = {
+        name: document.getElementById('commentName').value.trim(),
+        email: document.getElementById('commentEmail').value.trim(),
+        comment: document.getElementById('commentText').value.trim(),
+      };
+      if (payload.comment.length < 8) {
+        commentStatus.textContent = 'Write a slightly longer comment.';
+        return;
+      }
+      commentStatus.textContent = 'Adding comment...';
+      try {
+        const res = await fetch('/api/public/comments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (!res.ok || !json.success) throw new Error(json.error || 'Unable to save comment.');
+        document.getElementById('commentText').value = '';
+        commentStatus.textContent = 'Added. Thank you for helping shape the arena.';
+        renderComments(json.comments || []);
+      } catch (err) {
+        commentStatus.textContent = err.message || 'Unable to save comment.';
+      }
+    });
+
+    loadComments();
+  </script>
 </body>
 </html>

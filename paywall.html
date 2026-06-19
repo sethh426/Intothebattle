@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Upgrade — IntoTheBattle Creator Pro</title>
-  <meta name="description" content="Upgrade IntoTheBattle to keep your TikTok LIVE battle overlay, sponsor moments, custom audio, and creator controls active." />
+  <meta name="description" content="Upgrade IntoTheBattle to unlock custom brand control, video moments, and premium controls after your 7-day everything-unlocked trial." />
   <meta name="robots" content="index, follow" />
   <meta name="author" content="IntoTheBattle" />
   <link rel="canonical" href="https://intothebattle.com/paywall" />
@@ -32,6 +32,8 @@
     .features { display:grid; gap:12px; margin-top:30px; }
     .feature { padding:15px 16px; border-radius:18px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.2); color:#dfe6f3; line-height:1.55; }
     .feature b { color:var(--gold2); }
+    .battle-clip-frame { margin-top:24px; border-radius:18px; overflow:hidden; border:1px solid rgba(85,231,255,.18); background:#02040a; box-shadow:0 22px 60px rgba(0,0,0,.32); aspect-ratio:16/9; }
+    .battle-clip-frame iframe { width:100%; height:100%; border:0; display:block; }
     .card { padding:clamp(28px,4vw,40px); border-color:rgba(246,201,91,.38); background:rgba(5,7,11,.72); }
     .price-label { color:var(--gold2); font-size:12px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
     .plan { margin:12px 0 8px; font-size:26px; font-weight:900; }
@@ -60,12 +62,15 @@
   <main class="wrap">
     <section class="hero">
       <div class="logo"><img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" /></div>
-      <div class="kicker">Creator Pro</div>
-      <h1>Keep your arena <span>live.</span></h1>
-      <p class="sub">Upgrade when you want advanced creator control over your battle overlay, custom audio, sponsor moments, room controls, and premium stream polish.</p>
+      <div class="kicker">Creator Pro after 7 days unlocked</div>
+      <h1>Unlock custom brand <span>control.</span></h1>
+      <p class="sub">Your first 7 days unlock everything. Upgrade when you want paid creator control over custom video moments, premium stream polish, and advanced room presentation.</p>
+      <div class="battle-clip-frame" aria-label="IntoTheBattle 12-second battle clip">
+        <iframe src="/battle-clip" title="IntoTheBattle 12-second battle clip" loading="eager"></iframe>
+      </div>
       <div class="features">
         <div class="feature"><b>Overlay control:</b> browser-source overlay, reload controls, room state, and stream-ready setup.</div>
-        <div class="feature"><b>Sponsor moments:</b> upload and trigger full-screen sponsor screens for monetizable live moments.</div>
+        <div class="feature"><b>Video moments:</b> free rooms receive platform-managed breaks; Creator Pro unlocks your custom uploads and timing.</div>
         <div class="feature"><b>Creator assets:</b> custom backgrounds, sounds, event assignments, and premium stream polish.</div>
       </div>
     </section>
@@ -77,9 +82,9 @@
       <ul class="list">
         <li>Battle rooms and creator dashboard</li>
         <li>Custom audio and visual controls</li>
-        <li>Sponsor screens and premium moments</li>
+        <li>Creator-controlled video moments after the unlocked trial</li>
         <li>Overlay support for OBS and TikTok Studio</li>
-        <li>Future transition and sponsor tooling</li>
+        <li>Advanced timing, transition, and presentation tooling</li>
       </ul>
       <div class="payment-box" aria-label="PayPal checkout">
         <div id="paymentStatus" class="payment-status">Loading secure PayPal checkout...</div>

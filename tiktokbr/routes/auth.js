@@ -101,6 +101,22 @@ async function createFullAccessTrialAsync(userId) {
   );
 }
 
+function markSignupIntentConverted(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return;
+  try {
+    db.prepare('UPDATE signup_intents SET converted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE email = ?').run(normalizedEmail);
+  } catch (_err) {}
+}
+
+async function markSignupIntentConvertedAsync(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return;
+  try {
+    await runAsync('UPDATE signup_intents SET converted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE email = ?', normalizedEmail);
+  } catch (_err) {}
+}
+
 function ensureUserRoom(userId, name) {
   const existingRoom = db.prepare('SELECT * FROM user_rooms WHERE user_id = ? ORDER BY created_at DESC LIMIT 1').get(userId);
   if (existingRoom) return existingRoom;
@@ -880,6 +896,7 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
     setSessionCookie(res, sessionToken);
     const room = ensureUserRoom(existing.id, name);
     createFullAccessTrial(existing.id);
+    markSignupIntentConverted(email);
 
     let delivery;
     try {
@@ -928,6 +945,7 @@ router.post('/auth/user/register', express.json(), async (req, res) => {
   );
   db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
   createFullAccessTrial(userId);
+  markSignupIntentConverted(email);
 
   let delivery;
   try {
@@ -1037,6 +1055,7 @@ router.get('/auth/google/callback', async (req, res) => {
       );
       await runAsync('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING', roomId);
       await createFullAccessTrialAsync(userId);
+      await markSignupIntentConvertedAsync(email);
       user = await getAsync('SELECT * FROM users WHERE id = ?', userId);
     } else {
       if (!user.is_active) {
@@ -1047,6 +1066,7 @@ router.get('/auth/google/callback', async (req, res) => {
       }
       await ensureUserRoomAsync(user.id, user.name);
       await createFullAccessTrialAsync(user.id);
+      await markSignupIntentConvertedAsync(email);
     }
 
     const sessionToken = createSessionToken({ userId: user.id, email });

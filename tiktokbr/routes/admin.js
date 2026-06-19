@@ -283,7 +283,54 @@ function adminMetricCard(label, key, value, note = '') {
   </div>`;
 }
 
-function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [], roomRequirementEnabled = true, userMetrics = buildAdminUserMetrics() } = {}) {
+function listRecentAdminUsers(limit = 80) {
+  try {
+    return db.prepare(`
+      SELECT
+        u.id,
+        u.email,
+        u.name,
+        u.tiktok_username,
+        u.email_verified,
+        u.is_active,
+        u.created_at,
+        u.last_login,
+        s.plan_type,
+        s.status AS subscription_status,
+        s.expires_at
+      FROM users u
+      LEFT JOIN subscriptions s ON s.id = (
+        SELECT id
+        FROM subscriptions
+        WHERE user_id = u.id
+        ORDER BY updated_at DESC, id DESC
+        LIMIT 1
+      )
+      ORDER BY u.created_at DESC, u.id DESC
+      LIMIT ?
+    `).all(Math.max(1, Math.min(200, Number(limit) || 80)));
+  } catch (err) {
+    console.warn('Failed to list recent admin users:', err?.message || err);
+    return [];
+  }
+}
+
+function listAdminCreatorComments(limit = 80) {
+  try {
+    return db.prepare(`
+      SELECT id, name, email, role, comment, status, created_at
+      FROM creator_comments
+      WHERE deleted_at IS NULL
+      ORDER BY created_at DESC, id DESC
+      LIMIT ?
+    `).all(Math.max(1, Math.min(200, Number(limit) || 80)));
+  } catch (err) {
+    console.warn('Failed to list creator comments:', err?.message || err);
+    return [];
+  }
+}
+
+function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [], roomRequirementEnabled = true, userMetrics = buildAdminUserMetrics(), users = [], comments = [] } = {}) {
   const codeRows = codes.map((code) => {
     const status = code.is_revoked ? 'Revoked' : new Date(code.expires_at) < new Date() ? 'Expired' : 'Active';
     const actionLabel = code.is_revoked ? 'Enable' : 'Disable';
@@ -313,6 +360,33 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       <td>${escapeHtml(promo.created_at)}</td>
     </tr>`;
   }).join('');
+  const userRows = users.map((user) => {
+    const verified = Number(user.email_verified) === 1 ? 'Verified' : 'Unverified';
+    const active = Number(user.is_active) === 0 ? 'Disabled' : 'Active';
+    const plan = user.plan_type || user.subscription_status || 'Free / pending';
+    return `<tr>
+      <td>${escapeHtml(String(user.id))}</td>
+      <td><strong>${escapeHtml(user.email || '')}</strong><br><span class="muted">${escapeHtml(user.name || '')}</span></td>
+      <td>${escapeHtml(user.tiktok_username ? `@${user.tiktok_username}` : '')}</td>
+      <td>${escapeHtml(plan)}</td>
+      <td>${escapeHtml(`${active} / ${verified}`)}</td>
+      <td>${escapeHtml(formatSponsorDate(user.created_at))}</td>
+      <td>${escapeHtml(formatSponsorDate(user.last_login))}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7">No users found yet.</td></tr>';
+  const commentRows = comments.map((comment) => {
+    return `<tr>
+      <td>${escapeHtml(formatSponsorDate(comment.created_at))}</td>
+      <td><strong>${escapeHtml(comment.name || 'Creator')}</strong><br><span class="muted">${escapeHtml(comment.role || 'TikTok LIVE creator')}</span></td>
+      <td>${escapeHtml(comment.email || '')}</td>
+      <td>${escapeHtml(comment.comment || '')}</td>
+      <td>
+        <form method="POST" action="/admin/comments/${escapeAttr(comment.id)}/delete" onsubmit="return confirm('Delete this public comment?')">
+          <button class="danger-button" type="submit">Delete</button>
+        </form>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5">No comments yet.</td></tr>';
   const metrics = userMetrics || emptyAdminUserMetrics();
   const metricCards = [
     adminMetricCard('Free accounts', 'accounts.free', metrics.accounts.free, 'Active free creator accounts and free access-code rooms'),
@@ -357,6 +431,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     select option, select optgroup { background:#111827; color:#fff8e6; }
     input[type="checkbox"] { width:auto; min-height:0; margin-right:8px; }
     button { margin-top: 12px; width: 100%; min-height:44px; padding: 0 14px; border: none; border-radius: 14px; background: linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color: #170c02; cursor: pointer; font-weight: 900; }
+    .danger-button { background: rgba(232,59,95,.16); color:#ffb7c1; border:1px solid rgba(232,59,95,.32); }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; overflow:hidden; border-radius:16px; }
     th, td { border-bottom: 1px solid rgba(255,255,255,0.08); padding: 12px; font-size: 13px; vertical-align:top; }
     th { background: rgba(246,201,91,0.09); color:#ffdf8a; text-align: left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
@@ -457,6 +532,22 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         <tbody>${promoRows}</tbody>
       </table>
     </div>
+    <div class="card" style="margin-top: 18px;">
+      <h2>Recent user emails</h2>
+      <p class="muted">Newest creator accounts, email status, TikTok handle, plan, and last login.</p>
+      <table>
+        <thead><tr><th>ID</th><th>Email / Name</th><th>TikTok</th><th>Plan</th><th>Status</th><th>Created</th><th>Last Login</th></tr></thead>
+        <tbody>${userRows}</tbody>
+      </table>
+    </div>
+    <div class="card" style="margin-top: 18px;">
+      <h2>Homepage comments</h2>
+      <p class="muted">Approved public comments shown in the homepage scroll. Delete removes the comment from public view.</p>
+      <table>
+        <thead><tr><th>Created</th><th>Name</th><th>Email</th><th>Comment</th><th>Action</th></tr></thead>
+        <tbody>${commentRows}</tbody>
+      </table>
+    </div>
     <div style="margin-top: 18px;">
       <a href="/admin/logout">Logout</a>
     </div>
@@ -553,6 +644,8 @@ router.get('/', requireAdminAuth, (req, res) => {
   const setting = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('require_room_id');
   const roomRequirementEnabled = setting ? setting.value !== '0' : true;
   const userMetrics = buildAdminUserMetrics();
+  const users = listRecentAdminUsers();
+  const comments = listAdminCreatorComments();
   res.send(renderAdminPage({
     createdCode: String(req.query.createdCode || '').trim(),
     message: String(req.query.message || ''),
@@ -561,6 +654,8 @@ router.get('/', requireAdminAuth, (req, res) => {
     promos,
     roomRequirementEnabled,
     userMetrics,
+    users,
+    comments,
   }));
 });
 
@@ -628,6 +723,15 @@ router.post('/reset-device', requireAdminAuth, (req, res) => {
   if (!row) return res.redirect(`/admin?error=${encodeURIComponent('Code not found')}`);
   db.prepare('UPDATE access_codes SET fingerprint = NULL, session_token = NULL WHERE id = ?').run(row.id);
   res.redirect(`/admin?message=${encodeURIComponent(`Reset device for ${code}`)}`);
+});
+
+router.post('/comments/:id/delete', requireAdminAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    return res.redirect(`/admin?error=${encodeURIComponent('Comment not found')}`);
+  }
+  db.prepare("UPDATE creator_comments SET status = 'deleted', deleted_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
+  res.redirect(`/admin?message=${encodeURIComponent('Comment removed from homepage')}`);
 });
 
 router.post('/create-promo', requireAdminAuth, (req, res) => {
