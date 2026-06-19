@@ -318,6 +318,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
 }
 .banner.closing { animation:cyberBannerOut 220ms ease-in forwards; }
+.banner.transition-slam { animation:cyberBannerSlamIn 340ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 820ms 120ms ease-out; }
+.banner.transition-sweep { animation:cyberBannerSweepIn 320ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 820ms 140ms ease-out; }
+.banner.transition-signal { animation:cyberBannerSignalIn 280ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 820ms 160ms ease-out; }
+.banner.transition-surge { animation:cyberBannerSurgeIn 390ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 900ms 120ms ease-out; }
 .banner-signal {
   position:relative; width:48px; height:42px; display:grid; place-items:center; flex:0 0 auto;
   color:var(--banner-accent); border-right:1px solid rgba(255,255,255,0.1);
@@ -381,6 +385,26 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 }
 @keyframes cyberBannerOut {
   to { opacity:0; transform:translate(-50%,-12px) scaleX(.82); filter:blur(4px); }
+}
+@keyframes cyberBannerSlamIn {
+  0% { opacity:0; transform:translate(-50%,-30px) scale(.88,1.18); filter:blur(8px) brightness(1.8); }
+  54% { opacity:1; transform:translate(-50%,5px) scale(1.035,.98); filter:blur(0) brightness(1.18); }
+  100% { opacity:1; transform:translate(-50%,0) scale(1); filter:none; }
+}
+@keyframes cyberBannerSweepIn {
+  0% { opacity:0; transform:translate(calc(-50% - 54px),0) scaleX(.72); clip-path:polygon(0 0,24% 0,14% 100%,0 100%); filter:blur(6px) brightness(1.55); }
+  58% { opacity:1; transform:translate(calc(-50% + 7px),0) scaleX(1.028); clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px); filter:blur(0) brightness(1.12); }
+  100% { opacity:1; transform:translate(-50%,0) scaleX(1); clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px); filter:none; }
+}
+@keyframes cyberBannerSignalIn {
+  0% { opacity:0; transform:translate(-50%,12px) scaleX(.86); filter:blur(5px) saturate(1.4); }
+  42% { opacity:.65; transform:translate(-50%,-3px) scaleX(1.02); filter:blur(0) saturate(1.35); }
+  100% { opacity:1; transform:translate(-50%,0) scaleX(1); filter:none; }
+}
+@keyframes cyberBannerSurgeIn {
+  0% { opacity:0; transform:translate(-50%,0) scale(.62); filter:blur(9px) brightness(2); }
+  48% { opacity:1; transform:translate(-50%,0) scale(1.06); filter:blur(0) brightness(1.24); }
+  100% { opacity:1; transform:translate(-50%,0) scale(1); filter:none; }
 }
 @keyframes cyberBannerSweep {
   0% { transform:translateX(-115%); }
@@ -1292,6 +1316,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const visualEventQueue = [];
   const seenVisualSeqs = new Set();
   const seenVisualSeqOrder = [];
+  const visualLaneReadyAt = {};
   let visualEventScheduled = false;
   let pendingGameState = null;
   let gameStateScheduled = false;
@@ -1301,6 +1326,53 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let registerRetryTimer = null;
   let battlePromptTimer = null;
   let battlePromptLastShown = 0;
+  let lastAnySoundAt = 0;
+  const recentSoundAt = new Map();
+
+  const VISUAL_EVENT_LANES = Object.freeze({
+    exclusive: {
+      label: 'Exclusive',
+      budget: 1,
+      cooldownMs: 80,
+      maxQueued: 8,
+      ttlMs: 120000,
+      sponsorPolicy: 'allow',
+    },
+    celebration: {
+      label: 'Celebration',
+      budget: 2,
+      cooldownMs: 180,
+      maxQueued: 18,
+      ttlMs: 18000,
+      sponsorPolicy: 'hold',
+    },
+    gameplay: {
+      label: 'Gameplay',
+      budget: 4,
+      cooldownMs: 70,
+      maxQueued: 72,
+      ttlMs: 8000,
+      sponsorPolicy: 'hold',
+    },
+    ambient: {
+      label: 'Ambient',
+      budget: 2,
+      cooldownMs: 130,
+      maxQueued: 28,
+      ttlMs: 2500,
+      sponsorPolicy: 'drop',
+    },
+    sound: {
+      label: 'Sound',
+      budget: 1,
+      cooldownMs: 110,
+      maxQueued: 18,
+      ttlMs: 3500,
+      sponsorPolicy: 'drop',
+    },
+  });
+  const VISUAL_EVENT_LANE_ORDER = ['exclusive', 'celebration', 'gameplay', 'ambient', 'sound'];
+  VISUAL_EVENT_LANE_ORDER.forEach(lane => { visualLaneReadyAt[lane] = 0; });
 
   const THEME = Object.freeze({
     gold: '#f6c95b',
@@ -2091,6 +2163,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     } else if (finishedPayload) {
       triggerBattleReturn();
     }
+    if (visualEventQueue.length) scheduleVisualEvents();
   }
 
   function sponsorIntroDelayMs(payload = {}) {
@@ -2238,6 +2311,28 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     hide: hideSponsorScene,
     stop: hideSponsorScene,
     state: () => sponsorState,
+  };
+
+  window.overlayEventEngine = {
+    status: () => ({
+      sponsorState,
+      queued: VISUAL_EVENT_LANE_ORDER.reduce((summary, lane) => {
+        summary[lane] = visualEventQueue.filter(item => item.lane === lane).length;
+        return summary;
+      }, {}),
+      activeBanner: activeBanner ? { type: activeBanner.cls, priority: activeBanner.priority } : null,
+    }),
+    flush: (lane = '') => {
+      for (let i = visualEventQueue.length - 1; i >= 0; i -= 1) {
+        if (!lane || visualEventQueue[i].lane === lane) visualEventQueue.splice(i, 1);
+      }
+    },
+    testBurst: () => {
+      enqueueVisualEvent('like', { uniqueId: 'demo-like', hearts: 1, intensity: 0.2 }, handleLikeEvent, { mergeKey: () => 'demo-like' });
+      enqueueVisualEvent('attack', { attacker: 'p1', target: 'p2', damage: 22, effect: 'laser' }, handleAttackEvent);
+      enqueueVisualEvent('giftCelebration', { uniqueId: 'p3', nickname: 'GhostByte', giftName: 'Galaxy', tier: 'legendary', diamonds: 1200 }, handleGiftCelebration);
+      enqueueVisualEvent('roundEvent', { type: 'round_started', label: 'Round started' }, handleRoundEvent, { mergeKey: () => 'round_started' });
+    },
   };
 
   // ── Demo players ──
@@ -2723,9 +2818,26 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
     return audioCache[filename];
   }
-  function playSound(type) {
+  function playSound(type, options = {}) {
     const fn = audioConfig[type];
     if (!fn) return;
+    const now = Date.now();
+    const normalizedType = String(type || '').toLowerCase();
+    const important = Boolean(options.force) || normalizedType === 'kill' || normalizedType === 'gift';
+    const typeCooldowns = {
+      attack: 170,
+      heal: 420,
+      gift: 360,
+      kill: 520,
+      respawn: 520,
+    };
+    const typeCooldown = typeCooldowns[normalizedType] || 260;
+    const globalCooldown = important ? 70 : 145;
+    const lastTypeAt = recentSoundAt.get(normalizedType) || 0;
+    if (!important && now - lastAnySoundAt < globalCooldown) return;
+    if (now - lastTypeAt < typeCooldown) return;
+    recentSoundAt.set(normalizedType, now);
+    lastAnySoundAt = now;
     try { const a = getAudio(fn); a.currentTime = 0; a.play().catch(() => {}); } catch (_) {}
   }
 
@@ -2768,6 +2880,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const cls = BANNER_CONFIG[type] ? type : 'gift';
     const config = BANNER_CONFIG[cls];
     const objectContent = content && typeof content === 'object' && !Array.isArray(content) ? content : null;
+    const requestedTransition = String((objectContent && objectContent.transition) || (options && options.transition) || '').trim();
     const titleHtml = objectContent
       ? escapeHtml(objectContent.title || objectContent.titleText || '')
       : String(content || '');
@@ -2793,9 +2906,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       config.charge
     );
     const signature = `${cls}|${stripBannerHtml(titleHtml)}|${stripBannerHtml(metaHtml)}`.toLowerCase();
+    const transition = ['transition-slam', 'transition-sweep', 'transition-signal', 'transition-surge'].includes(requestedTransition)
+      ? requestedTransition
+      : cls === 'legendary' ? 'transition-surge'
+        : cls === 'kill' || cls === 'streak' ? 'transition-slam'
+          : cls === 'gift' || cls === 'special' ? 'transition-sweep'
+            : 'transition-signal';
 
     return {
       cls,
+      transition,
       codeHtml,
       kickerHtml,
       titleHtml: titleHtml || escapeHtml(config.kicker),
@@ -2840,7 +2960,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const el = document.createElement('div');
     item.el = el;
     activeBanner = item;
-    el.className = `banner ${item.cls}`;
+    el.className = `banner ${item.cls} ${item.transition || ''}`;
     el.style.setProperty('--banner-duration', `${item.duration}ms`);
     el.style.setProperty('--banner-charge', `${item.charge}%`);
     el.innerHTML = `
@@ -4371,6 +4491,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function visualEventPriority(type, data = {}) {
     if (data.killed || data.killingBlow) return 100;
+    if (type === 'sponsorScene') return data.action === 'hide' ? 118 : 112;
+    if (type === 'sponsorPrepare') return 108;
+    if (type === 'soundEvent') return data.priority || 44;
     if (type === 'bossWave') return data.type === 'defeated' ? 98 : 84;
     if (type === 'roundEvent') return ['boss_started', 'boss_defeated', 'session_ended'].includes(data.type) ? 92 : 72;
     if (type === 'killEvent' || type === 'streakEvent') return 95;
@@ -4380,6 +4503,76 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (type === 'heal') return 38;
     if (type === 'like') return 24;
     return 40;
+  }
+
+  function visualEventLane(type, data = {}, options = {}) {
+    if (options.lane && VISUAL_EVENT_LANES[options.lane]) return options.lane;
+    if (type === 'sponsorPrepare' || type === 'sponsorScene') return 'exclusive';
+    if (type === 'soundEvent') return 'sound';
+    if (type === 'like' || type === 'heal' || type === 'socialBoost') return 'ambient';
+    if (type === 'killEvent' || type === 'streakEvent' || type === 'giftCelebration' || type === 'follow' || type === 'playerCommand' || type === 'roundEvent' || type === 'bossWave') return 'celebration';
+    if (type === 'respawn' || type === 'attack' || type === 'commentDamage' || type === 'giftAttack' || data.attacker || data.target) return 'gameplay';
+    return 'gameplay';
+  }
+
+  function visualLaneConfig(lane) {
+    return VISUAL_EVENT_LANES[lane] || VISUAL_EVENT_LANES.gameplay;
+  }
+
+  function visualQueueComparator(a, b) {
+    const priorityDiff = (b.priority || 0) - (a.priority || 0);
+    if (priorityDiff) return priorityDiff;
+    if (a.seq && b.seq && a.seq !== b.seq) return a.seq - b.seq;
+    return a.queuedAt - b.queuedAt;
+  }
+
+  function trimVisualLane(lane) {
+    const config = visualLaneConfig(lane);
+    const laneItems = [];
+    for (let i = 0; i < visualEventQueue.length; i += 1) {
+      if (visualEventQueue[i].lane === lane) laneItems.push({ index: i, item: visualEventQueue[i] });
+    }
+    if (laneItems.length <= config.maxQueued) return;
+    laneItems.sort((a, b) => (a.item.priority || 0) - (b.item.priority || 0) || a.item.queuedAt - b.item.queuedAt);
+    const drop = new Set(laneItems.slice(0, laneItems.length - config.maxQueued).map(entry => entry.index));
+    for (let i = visualEventQueue.length - 1; i >= 0; i -= 1) {
+      if (drop.has(i)) visualEventQueue.splice(i, 1);
+    }
+  }
+
+  function pruneVisualEventQueue(now = Date.now()) {
+    const sponsorActive = sponsorState !== 'battle';
+    for (let i = visualEventQueue.length - 1; i >= 0; i -= 1) {
+      const queued = visualEventQueue[i];
+      const config = visualLaneConfig(queued.lane);
+      const age = now - queued.queuedAt;
+      const expired = age > config.ttlMs;
+      const shouldDropDuringSponsor = sponsorActive && config.sponsorPolicy === 'drop' && queued.lane !== 'exclusive';
+      if (expired || shouldDropDuringSponsor) visualEventQueue.splice(i, 1);
+    }
+  }
+
+  function laneCanRunDuringSponsor(lane) {
+    return lane === 'exclusive' || visualLaneConfig(lane).sponsorPolicy === 'allow';
+  }
+
+  function pickNextVisualEvent(lane, now = Date.now()) {
+    const config = visualLaneConfig(lane);
+    if (now < (visualLaneReadyAt[lane] || 0)) return null;
+    const sponsorActive = sponsorState !== 'battle';
+    if (sponsorActive && !laneCanRunDuringSponsor(lane)) return null;
+
+    let bestIndex = -1;
+    for (let i = 0; i < visualEventQueue.length; i += 1) {
+      const queued = visualEventQueue[i];
+      if (queued.lane !== lane) continue;
+      if (bestIndex === -1 || visualQueueComparator(queued, visualEventQueue[bestIndex]) < 0) {
+        bestIndex = i;
+      }
+    }
+    if (bestIndex === -1) return null;
+    visualLaneReadyAt[lane] = now + config.cooldownMs;
+    return visualEventQueue.splice(bestIndex, 1)[0];
   }
 
   function rememberVisualSeq(seq) {
@@ -4407,7 +4600,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function scheduleVisualEvents() {
     if (visualEventScheduled) return;
     visualEventScheduled = true;
-    setTimeout(() => requestAnimationFrame(processVisualEvents), 55);
+    setTimeout(() => requestAnimationFrame(processVisualEvents), sponsorState === 'battle' ? 55 : 220);
   }
 
   function enqueueVisualEvent(type, data, handler, options = {}) {
@@ -4416,12 +4609,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const now = Date.now();
     const mergeKey = options.mergeKey ? options.mergeKey(data) : '';
     const priority = options.priority != null ? Number(options.priority) : visualEventPriority(type, data);
+    const lane = visualEventLane(type, data, options);
     if (seq && seenVisualSeqs.has(seq)) return;
 
     if (mergeKey) {
       for (let i = visualEventQueue.length - 1; i >= 0; i--) {
         const queued = visualEventQueue[i];
-        if (queued.type === type && queued.mergeKey === mergeKey && now - queued.queuedAt < 320) {
+        if (queued.type === type && queued.lane === lane && queued.mergeKey === mergeKey && now - queued.queuedAt < 320) {
           queued.data = mergeVisualPayload(queued.data, data);
           queued.seq = Math.max(queued.seq || 0, seq || 0);
           queued.priority = Math.max(queued.priority || 0, priority || 0);
@@ -4432,37 +4626,49 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       }
     }
 
-    visualEventQueue.push({ type, data, handler, seq, queuedAt: now, mergeKey, priority });
-    if (visualEventQueue.length > 96) {
-      visualEventQueue.sort((a, b) => (a.priority || 0) - (b.priority || 0) || a.queuedAt - b.queuedAt);
-      visualEventQueue.splice(0, visualEventQueue.length - 96);
-    }
+    visualEventQueue.push({ type, data, handler, seq, queuedAt: now, mergeKey, priority, lane });
+    trimVisualLane(lane);
     scheduleVisualEvents();
   }
 
   function processVisualEvents() {
     visualEventScheduled = false;
-    visualEventQueue.sort((a, b) => {
-      const priorityDiff = (b.priority || 0) - (a.priority || 0);
-      if (priorityDiff) return priorityDiff;
-      if (a.seq && b.seq && a.seq !== b.seq) return a.seq - b.seq;
-      return a.queuedAt - b.queuedAt;
-    });
-
+    const now = Date.now();
+    pruneVisualEventQueue(now);
     let processed = 0;
-    while (visualEventQueue.length && processed < 9) {
-      const queued = visualEventQueue.shift();
-      if (queued.seq && queued.seq <= lastVisualEventSeq) continue;
-      if (queued.seq && seenVisualSeqs.has(queued.seq)) continue;
-      rememberVisualSeq(queued.seq);
-      try {
-        queued.handler(queued.data);
-      } catch (err) {
-        console.error('Overlay event handler failed', queued.type, err);
+    const maxPerTick = sponsorState === 'battle' ? 10 : 2;
+    for (const lane of VISUAL_EVENT_LANE_ORDER) {
+      const config = visualLaneConfig(lane);
+      let laneProcessed = 0;
+      while (laneProcessed < config.budget && processed < maxPerTick) {
+        const queued = pickNextVisualEvent(lane, Date.now());
+        if (!queued) break;
+        if (queued.seq && queued.seq <= lastVisualEventSeq) continue;
+        if (queued.seq && seenVisualSeqs.has(queued.seq)) continue;
+        rememberVisualSeq(queued.seq);
+        try {
+          queued.handler(queued.data);
+        } catch (err) {
+          console.error('Overlay event handler failed', queued.type, err);
+        }
+        processed++;
+        laneProcessed++;
       }
-      processed++;
     }
     if (visualEventQueue.length) scheduleVisualEvents();
+  }
+
+  function handleSponsorPrepareEvent(data) {
+    prepareSponsorScene(data || {});
+  }
+
+  function handleSponsorSceneEvent(data) {
+    if (data && data.action === 'hide') hideSponsorScene();
+    else showSponsorScene(data || {});
+  }
+
+  function handleSoundEvent(data) {
+    if (data && data.event) playSound(data.event, { force: data.force || data.priority >= 90 });
   }
 
   function handleAttackEvent(data) {
@@ -4823,11 +5029,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       socket.on('audioConfig',     cfg      => { if (cfg) audioConfig = cfg; });
       socket.on('overlaySettings', settings => { if (settings && typeof settings === 'object') overlaySettings = Object.assign({}, overlaySettings, settings); });
       socket.on('sponsorPrepare', payload => {
-        prepareSponsorScene(payload || {});
+        enqueueVisualEvent('sponsorPrepare', payload || {}, handleSponsorPrepareEvent, {
+          lane: 'exclusive',
+          mergeKey: data => data.breakId || data.filename || 'sponsor-prepare',
+        });
       });
       socket.on('sponsorScene', payload => {
-        if (payload && payload.action === 'hide') hideSponsorScene();
-        else showSponsorScene(payload || {});
+        enqueueVisualEvent('sponsorScene', payload || {}, handleSponsorSceneEvent, {
+          lane: 'exclusive',
+          mergeKey: data => data.breakId || data.filename || data.action || 'sponsor-scene',
+        });
       });
       socket.on('laserColor',      data     => { const c = typeof data === 'string' ? data : (data && data.color); if (c) { overlaySettings.laserColor = c; setLaserColor(c); } });
 
@@ -4851,8 +5062,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       socket.on('roundEvent', data => enqueueVisualEvent('roundEvent', data, handleRoundEvent, { mergeKey: payload => payload.type || 'round' }));
       socket.on('bossWave', data => enqueueVisualEvent('bossWave', data, handleBossWave, { mergeKey: () => 'boss-wave' }));
 
-      socket.on('respawn',     data => { spawnRespawnEffect(data.uniqueId); });
-      socket.on('soundEvent',  data => { if (data && data.event) playSound(data.event); });
+      socket.on('respawn',     data => enqueueVisualEvent('respawn', data || {}, payload => spawnRespawnEffect(payload.uniqueId), { mergeKey: payload => payload.uniqueId || 'respawn' }));
+      socket.on('soundEvent',  data => enqueueVisualEvent('soundEvent', data || {}, handleSoundEvent, { lane: 'sound', mergeKey: payload => payload.event || 'sound' }));
 
       socket.on('killEvent', data => enqueueVisualEvent('killEvent', data, handleKillEvent));
       socket.on('streakEvent', data => enqueueVisualEvent('streakEvent', data, handleStreakEvent));
