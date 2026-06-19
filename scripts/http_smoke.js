@@ -138,6 +138,20 @@ try {
   await expectStatus(`/audio/missing.mp3?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 404);
   await expectStatus(`/sponsor/missing.mp4?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 404);
   await expectStatus(`/sponsor/missing.mp4?room_id=${roomId}&overlay_token=bad`, 401);
+  const sponsorDir = path.join(diskPath, 'sponsors', roomId);
+  fs.mkdirSync(sponsorDir, { recursive: true });
+  const sponsorFixture = Buffer.from('0123456789abcdef');
+  fs.writeFileSync(path.join(sponsorDir, 'range-test.mp4'), sponsorFixture);
+  const sponsorPath = `/sponsor/range-test.mp4?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`;
+  const rangeResponse = await expectStatus(sponsorPath, 206, { headers: { Range: 'bytes=2-6' } });
+  assert(rangeResponse.headers.get('accept-ranges') === 'bytes', 'sponsor media should advertise byte ranges');
+  assert(rangeResponse.headers.get('content-range') === `bytes 2-6/${sponsorFixture.length}`, 'sponsor media should return the requested content range');
+  assert(rangeResponse.headers.get('content-type')?.startsWith('video/mp4'), 'sponsor media should use a video content type');
+  assert((await rangeResponse.arrayBuffer()).byteLength === 5, 'sponsor media range body should match requested size');
+  const fullSponsorResponse = await expectStatus(sponsorPath, 200);
+  const sponsorEtag = fullSponsorResponse.headers.get('etag');
+  assert(Boolean(sponsorEtag), 'sponsor media should include an etag');
+  await expectStatus(sponsorPath, 304, { headers: { 'If-None-Match': sponsorEtag } });
   await expectStatus(`/backgrounds/${roomId}/missing.png`, 404);
   await expectStatus(`/audio/${roomId}/missing.mp3`, 404);
 

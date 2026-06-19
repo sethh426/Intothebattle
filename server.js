@@ -1587,6 +1587,7 @@ function buildPlatformSponsorPayload(room, creative) {
     fit: creative.fit === 'cover' ? 'cover' : 'contain',
     statsMode: sponsorProfileStatsMode(timingProfile, creative.stats_mode),
     timingProfile,
+    posterData: creative.thumbnail_data || '',
     creativeId: creative.id,
   };
 }
@@ -3805,10 +3806,10 @@ function parseSponsorStatsMode(value) {
 }
 
 const SPONSOR_TIMING_PROFILES = {
-  bumper: { durationMs: 6000, statsMode: 'hidden', kicker: 'Sponsored Bumper' },
-  spotlight: { durationMs: 12000, statsMode: 'delayed', kicker: 'Sponsored Moment' },
-  feature: { durationMs: 20000, statsMode: 'endcap', kicker: 'Sponsored Feature' },
-  full: { durationMs: null, statsMode: 'endcap', kicker: 'Sponsored Moment' },
+  bumper: { durationMs: 6000, statsMode: 'hidden', kicker: 'Arena Bumper' },
+  spotlight: { durationMs: 12000, statsMode: 'endcap', kicker: 'Arena Spotlight' },
+  feature: { durationMs: 20000, statsMode: 'endcap', kicker: 'Feature Moment' },
+  full: { durationMs: null, statsMode: 'endcap', kicker: 'Arena Spotlight' },
 };
 
 function parseSponsorTimingProfile(value) {
@@ -3859,6 +3860,24 @@ function inlineContentDisposition(filename) {
   return `inline; filename="${fallback}"`;
 }
 
+function sponsorMediaEtag(stat) {
+  return `W/"${Number(stat.size || 0).toString(16)}-${Math.round(Number(stat.mtimeMs || 0)).toString(16)}"`;
+}
+
+function requestMatchesEtag(req, etag) {
+  const raw = String(req.headers['if-none-match'] || '').trim();
+  if (!raw) return false;
+  return raw.split(',').map(value => value.trim()).includes(etag);
+}
+
+function requestMatchesModifiedSince(req, stat) {
+  const raw = String(req.headers['if-modified-since'] || '').trim();
+  if (!raw) return false;
+  const since = Date.parse(raw);
+  if (!Number.isFinite(since)) return false;
+  return Math.floor(stat.mtimeMs / 1000) <= Math.floor(since / 1000);
+}
+
 function sendSponsorMedia(req, res, filepath, filename) {
   let stat;
   try {
@@ -3869,10 +3888,14 @@ function sendSponsorMedia(req, res, filepath, filename) {
 
   const fileSize = stat.size;
   const contentType = sponsorContentType(filename);
+  const etag = sponsorMediaEtag(stat);
   res.setHeader('Accept-Ranges', 'bytes');
-  res.setHeader('Cache-Control', 'private, max-age=300');
+  res.setHeader('Cache-Control', 'private, max-age=3600');
   res.setHeader('Content-Type', contentType);
   res.setHeader('Content-Disposition', inlineContentDisposition(filename));
+  res.setHeader('ETag', etag);
+  res.setHeader('Last-Modified', stat.mtime.toUTCString());
+  res.setHeader('X-Content-Type-Options', 'nosniff');
 
   if (!fileSize) {
     res.setHeader('Content-Length', '0');
@@ -3881,6 +3904,9 @@ function sendSponsorMedia(req, res, filepath, filename) {
 
   const range = req.headers.range;
   if (!range) {
+    if (requestMatchesEtag(req, etag) || requestMatchesModifiedSince(req, stat)) {
+      return res.status(304).end();
+    }
     res.setHeader('Content-Length', fileSize);
     if (req.method === 'HEAD') return res.status(200).end();
     const stream = fs.createReadStream(filepath);
@@ -3955,6 +3981,7 @@ function buildSponsorScenePayload(room, body = {}) {
     fit: ['cover', 'contain'].includes(body.fit) ? body.fit : 'contain',
     statsMode: sponsorProfileStatsMode(timingProfile, body.statsMode),
     timingProfile,
+    posterData: entry?.thumbnailData || '',
     theme: ['arena', 'premium', 'minimal'].includes(body.theme) ? body.theme : 'arena',
     _ts: Date.now(),
   };
