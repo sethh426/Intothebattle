@@ -18,11 +18,160 @@
     },
     {
       "path": "home.html",
-      "blocks": []
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "mode": "pyld",
+          "expanded_sample": [
+            {
+              "@id": "https://intothebattle.com/#organization",
+              "@type": [
+                "https://schema.org/Organization"
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "IntoTheBattle turns TikTok LIVE chat into a playable battle arena for creators."
+                }
+              ],
+              "https://schema.org/image": [
+                {
+                  "@id": "https://intothebattle.com/og-intothebattle.png"
+                }
+              ],
+              "https://schema.org/logo": [
+                {
+                  "@id": "https://intothebattle.com/intothebattlelogo_logo_only.svg"
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/"
+                }
+              ]
+            },
+            {
+              "@id": "https://intothebattle.com/#website",
+              "@type": [
+                "https://schema.org/WebSite"
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle"
+                }
+              ],
+              "https://schema.org/publisher": [
+                {
+                  "@id": "https://intothebattle.com/#organization"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "path": "how-to-play.html",
-      "blocks": []
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "mode": "pyld",
+          "expanded_sample": [
+            {
+              "@id": "https://intothebattle.com/how-to-play#webpage",
+              "@type": [
+                "https://schema.org/WebPage"
+              ],
+              "https://schema.org/about": [
+                {
+                  "@id": "https://intothebattle.com/#software"
+                }
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "Learn how viewers play IntoTheBattle during TikTok LIVE with chat commands, emojis, attacks, shields, healing, likes, gifts, and future arena mechanics."
+                }
+              ],
+              "https://schema.org/isPartOf": [
+                {
+                  "@id": "https://intothebattle.com/#website"
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "How To Play IntoTheBattle | TikTok LIVE Viewer Commands"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/how-to-play"
+                }
+              ]
+            },
+            {
+              "@id": "https://intothebattle.com/how-to-play#breadcrumb",
+              "@type": [
+                "https://schema.org/BreadcrumbList"
+              ],
+              "https://schema.org/itemListElement": [
+                {
+                  "@type": [
+                    "https://schema.org/ListItem"
+                  ],
+                  "https://schema.org/item": [
+                    {
+                      "@id": "https://intothebattle.com/"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "Home"
+                    }
+                  ],
+                  "https://schema.org/position": [
+                    {
+                      "@value": 1
+                    }
+                  ]
+                },
+                {
+                  "@type": [
+                    "https://schema.org/ListItem"
+                  ],
+                  "https://schema.org/item": [
+                    {
+                      "@id": "https://intothebattle.com/how-to-play"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "How to play"
+                    }
+                  ],
+                  "https://schema.org/position": [
+                    {
+                      "@value": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "path": "login.html",
@@ -180,7 +329,100 @@
     },
     {
       "path": "paywall.html",
-      "blocks": []
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "mode": "pyld",
+          "expanded_sample": [
+            {
+              "@id": "https://intothebattle.com/paywall#webpage",
+              "@type": [
+                "https://schema.org/WebPage"
+              ],
+              "https://schema.org/about": [
+                {
+                  "@id": "https://intothebattle.com/#software"
+                }
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "Upgrade IntoTheBattle to unlock custom brand control, video moments, and premium controls after your 7-day everything-unlocked trial."
+                }
+              ],
+              "https://schema.org/isPartOf": [
+                {
+                  "@id": "https://intothebattle.com/#website"
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle Creator Pro"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/paywall"
+                }
+              ]
+            },
+            {
+              "@id": "https://intothebattle.com/#software",
+              "@type": [
+                "https://schema.org/SoftwareApplication"
+              ],
+              "https://schema.org/applicationCategory": [
+                {
+                  "@value": "MultimediaApplication"
+                }
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "A TikTok LIVE battle overlay platform with viewer commands, creator dashboard controls, sponsor video moments, and stream-ready OBS presentation."
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle"
+                }
+              ],
+              "https://schema.org/offers": [
+                {
+                  "@type": [
+                    "https://schema.org/Offer"
+                  ],
+                  "https://schema.org/availability": [
+                    {
+                      "@id": "https://schema.org/InStock"
+                    }
+                  ],
+                  "https://schema.org/price": [
+                    {
+                      "@value": "12"
+                    }
+                  ],
+                  "https://schema.org/priceCurrency": [
+                    {
+                      "@value": "USD"
+                    }
+                  ]
+                }
+              ],
+              "https://schema.org/operatingSystem": [
+                {
+                  "@value": "Web, OBS Browser Source, TikTok Studio"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "path": "profile.html",
@@ -254,29 +496,23 @@
           "mode": "pyld",
           "expanded_sample": [
             {
+              "@id": "https://intothebattle.com/signup#webpage",
               "@type": [
                 "https://schema.org/WebPage"
               ],
+              "https://schema.org/about": [
+                {
+                  "@id": "https://intothebattle.com/#software"
+                }
+              ],
               "https://schema.org/description": [
                 {
-                  "@value": "Create your free IntoTheBattle account for the interactive TikTok LIVE battle overlay platform."
+                  "@value": "Launch your first TikTok LIVE battle overlay in under 5 minutes with 7 days of everything unlocked."
                 }
               ],
               "https://schema.org/isPartOf": [
                 {
-                  "@type": [
-                    "https://schema.org/WebSite"
-                  ],
-                  "https://schema.org/name": [
-                    {
-                      "@value": "IntoTheBattle"
-                    }
-                  ],
-                  "https://schema.org/url": [
-                    {
-                      "@value": "https://intothebattle.com/"
-                    }
-                  ]
+                  "@id": "https://intothebattle.com/#website"
                 }
               ],
               "https://schema.org/name": [
@@ -289,6 +525,54 @@
                   "@value": "https://intothebattle.com/signup"
                 }
               ]
+            },
+            {
+              "@id": "https://intothebattle.com/signup#breadcrumb",
+              "@type": [
+                "https://schema.org/BreadcrumbList"
+              ],
+              "https://schema.org/itemListElement": [
+                {
+                  "@type": [
+                    "https://schema.org/ListItem"
+                  ],
+                  "https://schema.org/item": [
+                    {
+                      "@id": "https://intothebattle.com/"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "Home"
+                    }
+                  ],
+                  "https://schema.org/position": [
+                    {
+                      "@value": 1
+                    }
+                  ]
+                },
+                {
+                  "@type": [
+                    "https://schema.org/ListItem"
+                  ],
+                  "https://schema.org/item": [
+                    {
+                      "@id": "https://intothebattle.com/signup"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "Signup"
+                    }
+                  ],
+                  "https://schema.org/position": [
+                    {
+                      "@value": 2
+                    }
+                  ]
+                }
+              ]
             }
           ]
         }
@@ -296,11 +580,182 @@
     },
     {
       "path": "sitemap.html",
-      "blocks": []
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "mode": "pyld",
+          "expanded_sample": [
+            {
+              "@id": "https://intothebattle.com/site-map#webpage",
+              "@type": [
+                "https://schema.org/WebPage"
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "Find IntoTheBattle creator, player, sponsor, account, and support pages from one site map."
+                }
+              ],
+              "https://schema.org/isPartOf": [
+                {
+                  "@id": "https://intothebattle.com/#website"
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle Site Map"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/site-map"
+                }
+              ]
+            },
+            {
+              "@id": "https://intothebattle.com/site-map#breadcrumb",
+              "@type": [
+                "https://schema.org/BreadcrumbList"
+              ],
+              "https://schema.org/itemListElement": [
+                {
+                  "@type": [
+                    "https://schema.org/ListItem"
+                  ],
+                  "https://schema.org/item": [
+                    {
+                      "@id": "https://intothebattle.com/"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "Home"
+                    }
+                  ],
+                  "https://schema.org/position": [
+                    {
+                      "@value": 1
+                    }
+                  ]
+                },
+                {
+                  "@type": [
+                    "https://schema.org/ListItem"
+                  ],
+                  "https://schema.org/item": [
+                    {
+                      "@id": "https://intothebattle.com/site-map"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "Site map"
+                    }
+                  ],
+                  "https://schema.org/position": [
+                    {
+                      "@value": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "path": "sponsors.html",
-      "blocks": []
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "mode": "pyld",
+          "expanded_sample": [
+            {
+              "@id": "https://intothebattle.com/sponsors#webpage",
+              "@type": [
+                "https://schema.org/WebPage"
+              ],
+              "https://schema.org/about": [
+                {
+                  "@id": "https://intothebattle.com/#software"
+                }
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "Put your brand inside TikTok LIVE battle moments with sports-broadcast style video breaks that return viewers to the action."
+                }
+              ],
+              "https://schema.org/isPartOf": [
+                {
+                  "@id": "https://intothebattle.com/#website"
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle Sponsors | Live Stream Brand Takeovers"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/sponsors"
+                }
+              ]
+            },
+            {
+              "@id": "https://intothebattle.com/sponsors#breadcrumb",
+              "@type": [
+                "https://schema.org/BreadcrumbList"
+              ],
+              "https://schema.org/itemListElement": [
+                {
+                  "@type": [
+                    "https://schema.org/ListItem"
+                  ],
+                  "https://schema.org/item": [
+                    {
+                      "@id": "https://intothebattle.com/"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "Home"
+                    }
+                  ],
+                  "https://schema.org/position": [
+                    {
+                      "@value": 1
+                    }
+                  ]
+                },
+                {
+                  "@type": [
+                    "https://schema.org/ListItem"
+                  ],
+                  "https://schema.org/item": [
+                    {
+                      "@id": "https://intothebattle.com/sponsors"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "Sponsors"
+                    }
+                  ],
+                  "https://schema.org/position": [
+                    {
+                      "@value": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "path": "stats.html",
@@ -363,7 +818,7 @@
   ],
   "summary": {
     "total_files": 21,
-    "expanded": 6,
+    "expanded": 11,
     "errors": 0
   }
 }

@@ -1,10 +1,12 @@
-JSON-LD expansion summary: files scanned: 21, expanded blocks: 6, errors: 0
+JSON-LD expansion summary: files scanned: 21, expanded blocks: 11, errors: 0
 - 404.html: no JSON-LD blocks
 - battle-clip.html: no JSON-LD blocks
 - dashboard-welcome.html: no JSON-LD blocks
 - dashboard.html: no JSON-LD blocks
-- home.html: no JSON-LD blocks
-- how-to-play.html: no JSON-LD blocks
+- home.html: 1 block(s)
+  - block #1: expanded OK (pyld)
+- how-to-play.html: 1 block(s)
+  - block #1: expanded OK (pyld)
 - login.html: 1 block(s)
   - block #1: expanded OK (pyld)
 - overlay-legacy.html: 1 block(s)
@@ -12,7 +14,8 @@ JSON-LD expansion summary: files scanned: 21, expanded blocks: 6, errors: 0
 - overlay-phaser.html: no JSON-LD blocks
 - overlay.html: 1 block(s)
   - block #1: expanded OK (pyld)
-- paywall.html: no JSON-LD blocks
+- paywall.html: 1 block(s)
+  - block #1: expanded OK (pyld)
 - profile.html: no JSON-LD blocks
 - register.html: 1 block(s)
   - block #1: expanded OK (pyld)
@@ -20,8 +23,10 @@ JSON-LD expansion summary: files scanned: 21, expanded blocks: 6, errors: 0
 - reset-password.html: no JSON-LD blocks
 - signup.html: 1 block(s)
   - block #1: expanded OK (pyld)
-- sitemap.html: no JSON-LD blocks
-- sponsors.html: no JSON-LD blocks
+- sitemap.html: 1 block(s)
+  - block #1: expanded OK (pyld)
+- sponsors.html: 1 block(s)
+  - block #1: expanded OK (pyld)
 - stats.html: 1 block(s)
   - block #1: expanded OK (pyld)
 - theme-samples.html: no JSON-LD blocks

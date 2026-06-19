@@ -80,8 +80,8 @@
     .corners span {
       position: absolute;
       z-index: 62;
-      width: min(7vw, 74px);
-      height: min(7vw, 74px);
+      width: clamp(42px, 6vw, 68px);
+      height: clamp(42px, 6vw, 68px);
       border-color: rgba(246,201,91,.58);
       border-style: solid;
       filter: drop-shadow(0 0 14px rgba(246,201,91,.18));
@@ -96,12 +96,12 @@
       right: 5.2%;
       top: 5.8%;
       z-index: 18;
-      min-height: clamp(38px, 7.4vh, 66px);
+      min-height: clamp(34px, 6.4vh, 58px);
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 1rem;
-      padding: clamp(7px, 1.2vh, 12px) clamp(10px, 1.8vw, 18px);
+      padding: clamp(6px, 1vh, 10px) clamp(9px, 1.5vw, 15px);
       border: 1px solid rgba(255,255,255,.12);
       border-radius: 10px;
       background: rgba(2,4,10,.72);
@@ -118,15 +118,15 @@
     }
     .brand { gap: clamp(7px, 1.25vw, 12px); }
     .brand img {
-      width: clamp(28px, 5.2vh, 44px);
-      height: clamp(28px, 5.2vh, 44px);
+      width: clamp(26px, 4.7vh, 38px);
+      height: clamp(26px, 4.7vh, 38px);
       object-fit: contain;
       filter: drop-shadow(0 0 16px rgba(246,201,91,.28));
     }
     .brand strong {
       display: block;
       color: #fff8e6;
-      font-size: clamp(13px, 1.75vw, 21px);
+      font-size: clamp(12px, 1.45vw, 18px);
       line-height: 1;
       font-weight: 950;
       text-transform: uppercase;
@@ -157,8 +157,8 @@
     }
     .live-pill {
       gap: 7px;
-      min-height: 30px;
-      padding: 0 12px;
+      min-height: 28px;
+      padding: 0 10px;
       color: #b8ffd0;
       border: 1px solid rgba(119,240,161,.26);
       border-radius: 999px;
@@ -182,7 +182,7 @@
       left: 5.5%;
       top: 20.8%;
       z-index: 26;
-      width: min(47%, 620px);
+      width: min(43%, 560px);
       display: grid;
       gap: clamp(8px, 1.2vw, 14px);
       opacity: 0;
@@ -214,7 +214,7 @@
     }
     .hook h2 {
       color: #fff8e6;
-      font-size: clamp(30px, 5.9vw, 86px);
+      font-size: clamp(28px, 5vw, 72px);
       line-height: .86;
       font-weight: 950;
       text-transform: uppercase;
@@ -230,21 +230,21 @@
     .hook p {
       max-width: 560px;
       color: #d7f5ff;
-      font-size: clamp(13px, 1.85vw, 24px);
+      font-size: clamp(12px, 1.55vw, 20px);
       line-height: 1.2;
       font-weight: 900;
     }
     .command-card {
       position: absolute;
       right: 5.8%;
-      top: 22.8%;
+      top: clamp(72px, 15.5%, 108px);
       z-index: 28;
-      width: min(38%, 500px);
-      min-height: clamp(90px, 16vh, 150px);
-      padding: clamp(12px, 1.8vw, 22px);
+      width: min(30%, 340px);
+      min-height: clamp(56px, 10vh, 86px);
+      padding: clamp(8px, 1.05vw, 13px);
       display: grid;
       align-content: center;
-      gap: clamp(6px, 1vw, 10px);
+      gap: clamp(4px, .7vw, 7px);
       border: 1px solid rgba(85,231,255,.32);
       border-radius: 10px;
       background:
@@ -263,7 +263,7 @@
     }
     .command-card strong {
       color: #fff;
-      font-size: clamp(22px, 4.6vw, 68px);
+      font-size: clamp(19px, 2.65vw, 38px);
       line-height: .9;
       font-weight: 950;
       text-transform: uppercase;
@@ -271,7 +271,7 @@
     }
     .command-card span {
       color: #dfe8f5;
-      font-size: clamp(10px, 1.25vw, 16px);
+      font-size: clamp(8px, .85vw, 11px);
       font-weight: 900;
     }
     .arena {
@@ -283,7 +283,7 @@
       z-index: 8;
       display: grid;
       grid-template-rows: 1fr auto;
-      gap: clamp(12px, 2vh, 18px);
+      gap: clamp(10px, 1.7vh, 16px);
       opacity: 0;
       transform: translateY(14px);
       animation: arenaReveal var(--cycle) cubic-bezier(.16,1,.3,1) infinite;
@@ -292,15 +292,15 @@
       align-self: center;
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: clamp(7px, 1.1vw, 16px);
+      gap: clamp(7px, 1vw, 14px);
       align-items: stretch;
       animation: cardsBreathe var(--cycle) ease-in-out infinite;
     }
     .card {
       position: relative;
       min-width: 0;
-      min-height: clamp(78px, 18vh, 168px);
-      padding: clamp(8px, 1.25vw, 16px);
+      min-height: clamp(72px, 16.5vh, 150px);
+      padding: clamp(7px, 1.1vw, 14px);
       display: grid;
       grid-template-rows: auto 1fr auto;
       align-items: center;
@@ -342,7 +342,7 @@
     .avatar {
       align-self: center;
       justify-self: center;
-      width: clamp(42px, 9vh, 86px);
+      width: clamp(38px, 8vh, 74px);
       aspect-ratio: 1;
       display: grid;
       place-items: center;
@@ -351,7 +351,7 @@
       background: radial-gradient(circle, rgba(255,255,255,.16), rgba(0,0,0,.5) 62%);
       border: 3px solid rgba(85,231,255,.76);
       box-shadow: inset 0 0 26px rgba(0,0,0,.6), 0 0 24px rgba(85,231,255,.26);
-      font-size: clamp(18px, 3.7vh, 34px);
+      font-size: clamp(17px, 3.25vh, 30px);
       line-height: 1;
       font-weight: 950;
     }
@@ -405,12 +405,12 @@
       display: grid;
       gap: 8px;
       justify-self: center;
-      width: min(72%, 900px);
+      width: min(68%, 820px);
     }
     .event-banner {
       justify-self: center;
-      width: min(720px, 100%);
-      min-height: clamp(42px, 7.2vh, 68px);
+      width: min(660px, 100%);
+      min-height: clamp(40px, 6.5vh, 58px);
       display: grid;
       grid-template-columns: clamp(40px, 6vw, 60px) minmax(0, 1fr) 8px;
       gap: 12px;
@@ -465,7 +465,7 @@
     }
     .horde {
       position: relative;
-      height: clamp(48px, 8.4vh, 82px);
+      height: clamp(44px, 7.4vh, 68px);
       border: 1px solid rgba(232,59,95,.34);
       border-radius: 10px;
       overflow: hidden;
@@ -789,13 +789,13 @@
     }
     @keyframes hookIntro {
       0%, 2% { opacity: 0; transform: translateY(20px) scale(.98); }
-      7%, 22% { opacity: 1; transform: translateY(0) scale(1); }
-      28%, 100% { opacity: 0; transform: translateY(-12px) scale(.99); }
+      7%, 20% { opacity: 1; transform: translateY(0) scale(1); }
+      25%, 100% { opacity: 0; transform: translateY(-12px) scale(.99); }
     }
     @keyframes commandCue {
-      0%, 8% { opacity: 0; transform: translateY(20px) scale(.98); }
-      13%, 31% { opacity: 1; transform: translateY(0) scale(1); }
-      38%, 100% { opacity: 0; transform: translateY(12px) scale(.99); }
+      0%, 8% { opacity: 0; transform: translateY(16px) scale(.98); }
+      13%, 28% { opacity: 1; transform: translateY(0) scale(1); }
+      33%, 100% { opacity: 0; transform: translateY(10px) scale(.99); }
     }
     @keyframes arenaReveal {
       0%, 20% { opacity: .18; transform: translateY(16px) scale(.99); }
@@ -834,9 +834,9 @@
       48%, 100% { opacity: 0; transform: scale(.85) rotate(3deg); }
     }
     @keyframes eventBanner {
-      0%, 28% { opacity: 0; transform: translateY(18px) scale(.98); }
-      34%, 50% { opacity: 1; transform: translateY(0) scale(1); }
-      58%, 100% { opacity: 0; transform: translateY(12px) scale(.99); }
+      0%, 34% { opacity: 0; transform: translateY(16px) scale(.98); }
+      39%, 53% { opacity: 1; transform: translateY(0) scale(1); }
+      61%, 100% { opacity: 0; transform: translateY(10px) scale(.99); }
     }
     @keyframes meterDrain {
       0%, 34% { transform: scaleY(1); }
@@ -888,24 +888,26 @@
       100% { opacity: 0; transform: scale(1.015); }
     }
     @media (max-width: 720px), (max-height: 420px) {
-      .hud { top: 4.5%; left: 4.5%; right: 4.5%; min-height: 36px; }
+      .hud { top: 4.5%; left: 4.5%; right: 4.5%; min-height: 34px; padding: 6px 9px; }
       .brand span, .metric { display: none; }
       .hook { left: 5.5%; top: 22%; width: 55%; gap: 7px; }
       .hook-kicker { min-height: 24px; padding: 0 9px; font-size: 8px; }
       .hook h2 { font-size: clamp(24px, 7vw, 44px); }
       .hook p { font-size: clamp(10px, 2.6vw, 14px); line-height: 1.15; }
-      .command-card { right: 5%; top: 25%; width: 40%; min-height: 70px; padding: 9px; }
+      .command-card { right: 5%; top: 19%; width: 35%; min-height: 52px; padding: 8px; }
       .command-card b { font-size: 8px; }
-      .command-card strong { font-size: clamp(18px, 5vw, 30px); }
+      .command-card strong { font-size: clamp(18px, 4.5vw, 28px); }
       .command-card span { display: none; }
       .arena { left: 4.8%; right: 4.8%; top: 19%; bottom: 9%; gap: 8px; }
-      .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+      .cards { align-self: end; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+      .card:nth-child(4) { display: none; }
       .card { min-height: clamp(66px, 17vh, 120px); padding: 7px; }
       .avatar { width: clamp(32px, 8vh, 54px); font-size: clamp(15px, 4vh, 24px); border-width: 2px; }
       .copy span { display: none; }
-      .horde-wrap { width: 86%; }
-      .event-banner { min-height: 38px; grid-template-columns: 34px minmax(0,1fr) 6px; gap: 7px; }
+      .horde-wrap { width: 82%; gap: 7px; }
+      .event-banner { min-height: 36px; grid-template-columns: 34px minmax(0,1fr) 6px; gap: 7px; }
       .event-code { width: 28px; }
+      .horde { height: 44px; }
       .horde::before { width: 23%; }
       .horde-label, .horde-track { left: 28%; }
       .damage { right: 16%; top: 39%; }
@@ -921,9 +923,9 @@
       .live-pill { display: none; }
       .hook { width: 58%; top: 24%; }
       .hook p { display: none; }
-      .command-card { top: 29%; width: 37%; }
-      .cards { grid-template-columns: repeat(4, minmax(42px, 1fr)); }
-      .card:nth-child(4) { display: none; }
+      .command-card { top: 17%; width: 36%; min-height: 38px; gap: 2px; padding: 5px 7px; }
+      .command-card b { font-size: 7px; }
+      .command-card strong { font-size: clamp(15px, 4vw, 22px); }
       .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .rank { padding: 1px 5px; }
       .copy strong { font-size: clamp(10px, 2.4vw, 15px); }

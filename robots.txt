@@ -1,4 +1,15 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /overlay
+Disallow: /overlay-preview
+Disallow: /stats
+Disallow: /auth/
+Disallow: /background/
+Disallow: /audio/
+Disallow: /uploads/
 
 Sitemap: https://intothebattle.com/sitemap.xml
