@@ -19,11 +19,13 @@ jobs:
   render-health:
     name: Check Render production health
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       RENDER_HEALTH_URLS: "https://www.intothebattle.com/healthz https://intothebattle.com/healthz"
       RENDER_APP_URLS: "https://www.intothebattle.com/ https://intothebattle.com/"
-      RENDER_DEPLOY_GRACE_SECONDS: "180"
+      RENDER_DEPLOY_GRACE_SECONDS: "300"
+      RENDER_CHECK_ATTEMPTS: "45"
+      RENDER_RETRY_SECONDS: "10"
 
     steps:
       - name: Wait for Render deploy after push
@@ -36,14 +38,17 @@ jobs:
           for url in $RENDER_HEALTH_URLS; do
             echo "Checking $url"
             passed=0
-            for i in $(seq 1 30); do
-              if curl -fsSL --max-time 10 "$url"; then
+            for i in $(seq 1 "$RENDER_CHECK_ATTEMPTS"); do
+              status=$(curl -sS -o /tmp/render-health-body.txt -w "%{http_code}" --max-time 10 "$url" || true)
+              if [ "$status" = "200" ]; then
+                cat /tmp/render-health-body.txt
                 echo "Render health check passed for $url"
                 passed=1
                 break
               fi
-              echo "Attempt $i failed for $url; retrying in 10 seconds..."
-              sleep 10
+              echo "Attempt $i/$RENDER_CHECK_ATTEMPTS failed for $url with HTTP status ${status:-curl-error}; retrying in $RENDER_RETRY_SECONDS seconds..."
+              tail -c 500 /tmp/render-health-body.txt || true
+              sleep "$RENDER_RETRY_SECONDS"
             done
             if [ "$passed" -ne 1 ]; then
               echo "Render health check failed after retries for $url"
@@ -58,14 +63,17 @@ jobs:
             echo "Checking $url"
             output="/tmp/home-$(echo "$url" | tr -c 'A-Za-z0-9' '_').html"
             passed=0
-            for i in $(seq 1 30); do
-              if curl -fsSL --max-time 15 "$url" >"$output" && test -s "$output"; then
-                echo "Homepage responded with $(wc -c <"$output") bytes for $url"
+            for i in $(seq 1 "$RENDER_CHECK_ATTEMPTS"); do
+              status=$(curl -sS -o "$output" -w "%{http_code}" --max-time 15 "$url" || true)
+              bytes=$(wc -c <"$output" 2>/dev/null || echo 0)
+              if [ "$status" = "200" ] && [ "$bytes" -gt 0 ]; then
+                echo "Homepage responded with $bytes bytes for $url"
                 passed=1
                 break
               fi
-              echo "Attempt $i failed for $url; retrying in 10 seconds..."
-              sleep 10
+              echo "Attempt $i/$RENDER_CHECK_ATTEMPTS failed for $url with HTTP status ${status:-curl-error} and $bytes bytes; retrying in $RENDER_RETRY_SECONDS seconds..."
+              tail -c 500 "$output" || true
+              sleep "$RENDER_RETRY_SECONDS"
             done
             if [ "$passed" -ne 1 ]; then
               echo "Homepage check failed after retries for $url"
