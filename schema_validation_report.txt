@@ -1,7 +1,10 @@
-Schema validation summary: files scanned: 17, files with JSON-LD: 6, blocks: 6, errors: 0, warnings: 0
+Schema validation summary: files scanned: 21, files with JSON-LD: 6, blocks: 6, errors: 0, warnings: 0
+- 404.html: no JSON-LD blocks found
+- battle-clip.html: no JSON-LD blocks found
 - dashboard-welcome.html: no JSON-LD blocks found
 - dashboard.html: no JSON-LD blocks found
 - home.html: no JSON-LD blocks found
+- how-to-play.html: no JSON-LD blocks found
 - login.html: 1 JSON-LD block(s)
   - block #1: OK
 - overlay-legacy.html: 1 JSON-LD block(s)
@@ -17,6 +20,7 @@ Schema validation summary: files scanned: 17, files with JSON-LD: 6, blocks: 6, 
 - reset-password.html: no JSON-LD blocks found
 - signup.html: 1 JSON-LD block(s)
   - block #1: OK
+- sitemap.html: no JSON-LD blocks found
 - sponsors.html: no JSON-LD blocks found
 - stats.html: 1 JSON-LD block(s)
   - block #1: OK

@@ -1,6 +1,14 @@
 {
   "files": [
     {
+      "path": "404.html",
+      "blocks": []
+    },
+    {
+      "path": "battle-clip.html",
+      "blocks": []
+    },
+    {
       "path": "dashboard-welcome.html",
       "blocks": []
     },
@@ -13,28 +21,54 @@
       "blocks": []
     },
     {
+      "path": "how-to-play.html",
+      "blocks": []
+    },
+    {
       "path": "login.html",
       "blocks": [
         {
           "index": 1,
           "ok": true,
           "error": null,
-          "mode": "fallback",
+          "mode": "pyld",
           "expanded_sample": [
             {
               "@type": [
                 "https://schema.org/WebPage"
               ],
-              "https://schema.org/name": "IntoTheBattle Login",
-              "https://schema.org/url": "https://intothebattle.com/login",
-              "https://schema.org/description": "Log into IntoTheBattle to access your TikTok LIVE battle overlay, creator dashboard, and stream management tools.",
-              "https://schema.org/isPartOf": {
-                "@type": [
-                  "https://schema.org/WebSite"
-                ],
-                "https://schema.org/name": "IntoTheBattle",
-                "https://schema.org/url": "https://intothebattle.com/"
-              }
+              "https://schema.org/description": [
+                {
+                  "@value": "Log into IntoTheBattle to access your TikTok LIVE battle overlay, creator dashboard, and stream management tools."
+                }
+              ],
+              "https://schema.org/isPartOf": [
+                {
+                  "@type": [
+                    "https://schema.org/WebSite"
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "IntoTheBattle"
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/"
+                    }
+                  ]
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle Login"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/login"
+                }
+              ]
             }
           ]
         }
@@ -47,22 +81,44 @@
           "index": 1,
           "ok": true,
           "error": null,
-          "mode": "fallback",
+          "mode": "pyld",
           "expanded_sample": [
             {
               "@type": [
                 "https://schema.org/WebPage"
               ],
-              "https://schema.org/name": "IntoTheBattle Battle Royale Overlay",
-              "https://schema.org/url": "https://intothebattle.com/overlay",
-              "https://schema.org/description": "Interactive TikTok LIVE battle overlay with real-time combat effects and viewer engagement features.",
-              "https://schema.org/isPartOf": {
-                "@type": [
-                  "https://schema.org/WebSite"
-                ],
-                "https://schema.org/name": "IntoTheBattle",
-                "https://schema.org/url": "https://intothebattle.com/"
-              }
+              "https://schema.org/description": [
+                {
+                  "@value": "Interactive TikTok LIVE battle overlay with real-time combat effects and viewer engagement features."
+                }
+              ],
+              "https://schema.org/isPartOf": [
+                {
+                  "@type": [
+                    "https://schema.org/WebSite"
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "IntoTheBattle"
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/"
+                    }
+                  ]
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle Battle Royale Overlay"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/overlay"
+                }
+              ]
             }
           ]
         }
@@ -79,22 +135,44 @@
           "index": 1,
           "ok": true,
           "error": null,
-          "mode": "fallback",
+          "mode": "pyld",
           "expanded_sample": [
             {
               "@type": [
                 "https://schema.org/WebPage"
               ],
-              "https://schema.org/name": "IntoTheBattle Battle Royale Overlay",
-              "https://schema.org/url": "https://intothebattle.com/overlay",
-              "https://schema.org/description": "Interactive TikTok LIVE battle overlay with real-time combat effects and viewer engagement features.",
-              "https://schema.org/isPartOf": {
-                "@type": [
-                  "https://schema.org/WebSite"
-                ],
-                "https://schema.org/name": "IntoTheBattle",
-                "https://schema.org/url": "https://intothebattle.com/"
-              }
+              "https://schema.org/description": [
+                {
+                  "@value": "Interactive TikTok LIVE battle overlay with real-time combat effects and viewer engagement features."
+                }
+              ],
+              "https://schema.org/isPartOf": [
+                {
+                  "@type": [
+                    "https://schema.org/WebSite"
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "IntoTheBattle"
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/"
+                    }
+                  ]
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle Battle Royale Overlay"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/overlay"
+                }
+              ]
             }
           ]
         }
@@ -115,22 +193,44 @@
           "index": 1,
           "ok": true,
           "error": null,
-          "mode": "fallback",
+          "mode": "pyld",
           "expanded_sample": [
             {
               "@type": [
                 "https://schema.org/WebPage"
               ],
-              "https://schema.org/name": "IntoTheBattle Email Registration",
-              "https://schema.org/url": "https://intothebattle.com/register",
-              "https://schema.org/description": "Create your IntoTheBattle account with email and continue setting up your TikTok LIVE battle overlay.",
-              "https://schema.org/isPartOf": {
-                "@type": [
-                  "https://schema.org/WebSite"
-                ],
-                "https://schema.org/name": "IntoTheBattle",
-                "https://schema.org/url": "https://intothebattle.com/"
-              }
+              "https://schema.org/description": [
+                {
+                  "@value": "Create your IntoTheBattle account with email and continue setting up your TikTok LIVE battle overlay."
+                }
+              ],
+              "https://schema.org/isPartOf": [
+                {
+                  "@type": [
+                    "https://schema.org/WebSite"
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "IntoTheBattle"
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/"
+                    }
+                  ]
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle Email Registration"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/register"
+                }
+              ]
             }
           ]
         }
@@ -151,26 +251,52 @@
           "index": 1,
           "ok": true,
           "error": null,
-          "mode": "fallback",
+          "mode": "pyld",
           "expanded_sample": [
             {
               "@type": [
                 "https://schema.org/WebPage"
               ],
-              "https://schema.org/name": "IntoTheBattle Free Account Signup",
-              "https://schema.org/url": "https://intothebattle.com/signup",
-              "https://schema.org/description": "Create your free IntoTheBattle account for the interactive TikTok LIVE battle overlay platform.",
-              "https://schema.org/isPartOf": {
-                "@type": [
-                  "https://schema.org/WebSite"
-                ],
-                "https://schema.org/name": "IntoTheBattle",
-                "https://schema.org/url": "https://intothebattle.com/"
-              }
+              "https://schema.org/description": [
+                {
+                  "@value": "Create your free IntoTheBattle account for the interactive TikTok LIVE battle overlay platform."
+                }
+              ],
+              "https://schema.org/isPartOf": [
+                {
+                  "@type": [
+                    "https://schema.org/WebSite"
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "IntoTheBattle"
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/"
+                    }
+                  ]
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle Free Account Signup"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/signup"
+                }
+              ]
             }
           ]
         }
       ]
+    },
+    {
+      "path": "sitemap.html",
+      "blocks": []
     },
     {
       "path": "sponsors.html",
@@ -183,22 +309,44 @@
           "index": 1,
           "ok": true,
           "error": null,
-          "mode": "fallback",
+          "mode": "pyld",
           "expanded_sample": [
             {
               "@type": [
                 "https://schema.org/WebPage"
               ],
-              "https://schema.org/name": "IntoTheBattle Battle Leaderboard",
-              "https://schema.org/url": "https://intothebattle.com/stats",
-              "https://schema.org/description": "Real-time battle leaderboards and live statistics from TikTok LIVE streams on IntoTheBattle.",
-              "https://schema.org/isPartOf": {
-                "@type": [
-                  "https://schema.org/WebSite"
-                ],
-                "https://schema.org/name": "IntoTheBattle",
-                "https://schema.org/url": "https://intothebattle.com/"
-              }
+              "https://schema.org/description": [
+                {
+                  "@value": "Real-time battle leaderboards and live statistics from TikTok LIVE streams on IntoTheBattle."
+                }
+              ],
+              "https://schema.org/isPartOf": [
+                {
+                  "@type": [
+                    "https://schema.org/WebSite"
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "IntoTheBattle"
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/"
+                    }
+                  ]
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle Battle Leaderboard"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/stats"
+                }
+              ]
             }
           ]
         }
@@ -214,7 +362,7 @@
     }
   ],
   "summary": {
-    "total_files": 17,
+    "total_files": 21,
     "expanded": 6,
     "errors": 0
   }

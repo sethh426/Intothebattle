@@ -1,6 +1,14 @@
 {
   "files": [
     {
+      "path": "404.html",
+      "blocks": []
+    },
+    {
+      "path": "battle-clip.html",
+      "blocks": []
+    },
+    {
       "path": "dashboard-welcome.html",
       "blocks": []
     },
@@ -10,6 +18,10 @@
     },
     {
       "path": "home.html",
+      "blocks": []
+    },
+    {
+      "path": "how-to-play.html",
       "blocks": []
     },
     {
@@ -93,6 +105,10 @@
       ]
     },
     {
+      "path": "sitemap.html",
+      "blocks": []
+    },
+    {
       "path": "sponsors.html",
       "blocks": []
     },
@@ -118,7 +134,7 @@
     }
   ],
   "summary": {
-    "total_files": 17,
+    "total_files": 21,
     "files_with_jsonld": 6,
     "total_blocks": 6,
     "errors": 0,
