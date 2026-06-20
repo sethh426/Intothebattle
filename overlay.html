@@ -1300,7 +1300,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const hordeThreshold = 5;      // now fixed
   let backgroundImg   = null;
   let socket          = null;
-  let audioConfig     = {};
+  const DEFAULT_OVERLAY_AUDIO_CONFIG = Object.freeze({
+    attack:  'sound1.mp3',
+    gift:    'sound2.mp3',
+    kill:    'sound3.mp3',
+    respawn: 'sound4.mp3',
+    heal:    'sound5.mp3',
+    follow:  'sound6.mp3',
+  });
+  let audioConfig     = { ...DEFAULT_OVERLAY_AUDIO_CONFIG };
   let audioCache      = {};
   let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1 };
   let isDemoMode      = false;
@@ -1343,6 +1351,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let battlePromptLastShown = 0;
   let lastAnySoundAt = 0;
   const recentSoundAt = new Map();
+  const audioWarnings = new Set();
+  let audioUnlocked = false;
+  let audioUnlockInFlight = false;
+  let pendingAudioReplay = null;
 
   const VISUAL_EVENT_LANES = Object.freeze({
     exclusive: {
@@ -2880,16 +2892,97 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   // ═══════════════════════════════════════
   // AUDIO
   // ═══════════════════════════════════════
+  function applyAudioConfig(cfg) {
+    const incoming = cfg && typeof cfg === 'object' ? cfg : {};
+    const hasAssignedAudio = Object.values(incoming).some(Boolean);
+    audioConfig = hasAssignedAudio
+      ? { ...DEFAULT_OVERLAY_AUDIO_CONFIG, ...incoming }
+      : { ...DEFAULT_OVERLAY_AUDIO_CONFIG };
+    Object.values(audioConfig).forEach(filename => {
+      if (!filename) return;
+      try { getAudio(filename); } catch (_) {}
+    });
+  }
+
   function getAudio(filename) {
     if (!audioCache[filename]) {
       const a = new Audio(withOverlayAuth(`/audio/${encodeURIComponent(filename)}`));
       a.preload = 'auto';
+      a.load();
       audioCache[filename] = a;
     }
     return audioCache[filename];
   }
+
+  function audioFilenames() {
+    return [...new Set([
+      ...Object.values(DEFAULT_OVERLAY_AUDIO_CONFIG),
+      ...Object.values(audioConfig),
+    ].filter(Boolean))];
+  }
+
+  async function unlockOverlayAudio() {
+    if (audioUnlocked || audioUnlockInFlight) return;
+    audioUnlockInFlight = true;
+    let unlockedAny = false;
+    const attempts = audioFilenames().map(filename => {
+      try {
+        const audio = getAudio(filename);
+        const previousMuted = audio.muted;
+        const previousVolume = audio.volume;
+        audio.muted = false;
+        audio.volume = 0;
+        audio.currentTime = 0;
+        return { audio, previousMuted, previousVolume, playPromise: audio.play() };
+      } catch (_) {
+        return null;
+      }
+    }).filter(Boolean);
+
+    for (const attempt of attempts) {
+      const { audio, previousMuted, previousVolume, playPromise } = attempt;
+      try {
+        if (playPromise && typeof playPromise.then === 'function') await playPromise;
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = previousMuted;
+        audio.volume = previousVolume;
+        unlockedAny = true;
+      } catch (_) {
+        audio.pause();
+        audio.muted = previousMuted;
+        audio.volume = previousVolume;
+      }
+    }
+    audioUnlockInFlight = false;
+    if (!unlockedAny) return;
+    audioUnlocked = true;
+    const replay = pendingAudioReplay;
+    pendingAudioReplay = null;
+    if (replay) {
+      setTimeout(() => playSound(replay.type, { ...replay.options, force: true }), 0);
+    }
+  }
+
+  ['pointerdown', 'mousedown', 'touchstart', 'keydown'].forEach(eventName => {
+    window.addEventListener(eventName, unlockOverlayAudio, { capture: true });
+  });
+
+  function handleAudioFailure(filename, type, options, err) {
+    const message = String(err?.message || '');
+    const blocked = err?.name === 'NotAllowedError' || /interact|gesture|autoplay/i.test(message);
+    if (blocked) {
+      pendingAudioReplay = { type, options };
+    }
+    if (!audioWarnings.has(filename)) {
+      audioWarnings.add(filename);
+      console.warn(blocked ? 'Overlay audio is blocked until the page is clicked' : 'Overlay sound failed', filename, err);
+    }
+  }
+
   function playSound(type, options = {}) {
-    const fn = audioConfig[type];
+    const hasAudioSetting = Object.prototype.hasOwnProperty.call(audioConfig, type);
+    const fn = hasAudioSetting ? audioConfig[type] : DEFAULT_OVERLAY_AUDIO_CONFIG[type];
     if (!fn) return;
     const now = Date.now();
     const normalizedType = String(type || '').toLowerCase();
@@ -2908,7 +3001,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (now - lastTypeAt < typeCooldown) return;
     recentSoundAt.set(normalizedType, now);
     lastAnySoundAt = now;
-    try { const a = getAudio(fn); a.currentTime = 0; a.play().catch(() => {}); } catch (_) {}
+    try {
+      const a = getAudio(fn);
+      a.currentTime = 0;
+      const playPromise = a.play();
+      if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(err => handleAudioFailure(fn, type, options, err));
+      }
+    } catch (err) {
+      handleAudioFailure(fn, type, options, err);
+    }
   }
 
   // ═══════════════════════════════════════
@@ -4238,20 +4340,43 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.fillStyle = '#dce9ff';
     ctx.fillText(fittedHpText, pos.x, barY + barH + plateH * 0.105);
 
-    if (player.kills > 0) {
-      const badgeW = compactDemoCard ? Math.max(24, Math.min(34, cardW * 0.42)) : Math.max(44, cardW * 0.2);
-      const badgeH = compactDemoCard ? Math.max(16, plateH * 0.12) : Math.max(22, plateH * 0.13);
-      const bx = plateX + cardW - badgeW - cardW * 0.08;
-      const by = chipY;
-      ctx.fillStyle = 'rgba(232,59,95,0.18)';
+    const killCount = Math.max(0, Math.round(Number(player.kills) || 0));
+    if (killCount > 0) {
+      const killLabel = compactDemoCard ? `${killCount}K` : `${killCount} K`;
+      const badgeH = compactDemoCard ? Math.max(14, avatarR * 0.5) : Math.max(18, avatarR * 0.48);
+      const badgeFont = Math.max(compactDemoCard ? 9 : 10, badgeH * 0.56);
+      ctx.font = `900 ${badgeFont}px 'Rajdhani','Segoe UI',sans-serif`;
+      const badgeW = Math.min(
+        cardW * (compactDemoCard ? 0.44 : 0.34),
+        Math.max(badgeH * 1.78, ctx.measureText(killLabel).width + badgeH * 0.95)
+      );
+      const bx = pos.x - badgeW / 2;
+      const targetBy = avatarY + avatarR * (compactDemoCard ? 0.38 : 0.44);
+      const maxBy = barY - badgeH - Math.max(3, plateH * 0.025);
+      const by = Math.min(targetBy, maxBy);
+      const badgeGrad = ctx.createLinearGradient(bx, by, bx + badgeW, by + badgeH);
+      badgeGrad.addColorStop(0, 'rgba(255,94,117,0.94)');
+      badgeGrad.addColorStop(0.52, 'rgba(232,59,95,0.88)');
+      badgeGrad.addColorStop(1, 'rgba(121,24,49,0.92)');
+      ctx.save();
+      ctx.shadowColor = 'rgba(232,59,95,0.45)';
+      ctx.shadowBlur = compactDemoCard ? 8 : 12;
+      ctx.fillStyle = badgeGrad;
       roundedRectPath(ctx, bx, by, badgeW, badgeH, badgeH / 2);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(232,59,95,0.5)';
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = rank === 1 ? 'rgba(246,201,91,0.82)' : 'rgba(255,255,255,0.34)';
+      ctx.lineWidth = 1.1;
       roundedRectPath(ctx, bx, by, badgeW, badgeH, badgeH / 2);
       ctx.stroke();
-      ctx.font = `900 ${Math.max(compactDemoCard ? 9 : 10, badgeH * 0.54)}px 'Rajdhani','Segoe UI',sans-serif`;
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff2f4';
-      ctx.fillText(compactDemoCard ? `${player.kills}K` : `${player.kills} K`, bx + badgeW / 2, by + badgeH / 2 + 1);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.strokeStyle = 'rgba(34,4,14,0.7)';
+      ctx.lineWidth = compactDemoCard ? 2 : 2.5;
+      ctx.strokeText(killLabel, pos.x, by + badgeH / 2 + 1);
+      ctx.fillStyle = '#fff7f8';
+      ctx.fillText(killLabel, pos.x, by + badgeH / 2 + 1);
+      ctx.restore();
     }
     ctx.restore();
   }
@@ -5094,7 +5219,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
       socket.on('gameState', receiveGameState);
 
-      socket.on('audioConfig',     cfg      => { if (cfg) audioConfig = cfg; });
+      socket.on('audioConfig',     cfg      => applyAudioConfig(cfg));
       socket.on('overlaySettings', settings => { if (settings && typeof settings === 'object') overlaySettings = Object.assign({}, overlaySettings, settings); });
       socket.on('sponsorPrepare', payload => {
         enqueueVisualEvent('sponsorPrepare', payload || {}, handleSponsorPrepareEvent, {

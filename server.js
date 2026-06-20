@@ -3722,6 +3722,11 @@ app.post('/api/runtime/signup-followups', requireDiagnosticsAccess, async (req, 
 
 app.get('/audio/:filename', (req, res) => {
   const filename = path.basename(req.params.filename);
+  const bundledDir = getBundledAudioDir();
+  const bundledPath = path.join(bundledDir, filename);
+  const bundledPresetPath = isSafePath(bundledDir, bundledPath) && fs.existsSync(bundledPath)
+    ? bundledPath
+    : null;
   let room = req.room || null;
   if (!room && enableRoomScoped && req.query.room_id) {
     const roomId = normalizeRoomId(req.query.room_id);
@@ -3731,7 +3736,10 @@ app.get('/audio/:filename', (req, res) => {
     room = getOrCreateRoom(roomId);
   }
   if (!room) room = getSessionRoom(req);
-  if (!room) return res.status(401).send('Unauthorized');
+  if (!room) {
+    if (bundledPresetPath) return res.sendFile(bundledPresetPath);
+    return res.status(401).send('Unauthorized');
+  }
   const audioPath = resolveAudioFile(room, filename);
   if (audioPath) return res.sendFile(audioPath);
   return res.status(404).send('Audio file not found');
