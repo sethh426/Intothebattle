@@ -252,20 +252,46 @@
       min-height: calc(100vh - 88px);
       margin: 0 auto;
       display: grid;
-      grid-template-columns: minmax(380px, .96fr) minmax(0, 1.04fr);
-      gap: clamp(30px, 5vw, 70px);
-      align-items: center;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: clamp(26px, 4vw, 56px);
+      align-items: start;
       padding: clamp(34px, 5vw, 68px) 0 58px;
     }
-    .signup-card-wrap { order: 1; }
-    .hero-copy { order: 2; }
+    .signup-card-wrap {
+      grid-column: 1 / span 5;
+      order: 2;
+    }
+    .hero-copy {
+      grid-column: 1 / -1;
+      order: 1;
+      display: grid;
+      justify-items: center;
+      text-align: center;
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+    .signup-preview-panel {
+      grid-column: 6 / -1;
+      order: 3;
+      display: grid;
+      align-self: start;
+      justify-items: center;
+    }
 
+    .hero-header-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
     .kicker {
       display: inline-flex;
       align-items: center;
       gap: 10px;
       width: fit-content;
-      margin-bottom: 20px;
+      margin: 0;
       padding: 9px 13px;
       border: 1px solid rgba(246, 201, 91, .3);
       border-radius: 999px;
@@ -273,7 +299,7 @@
       color: var(--gold-2);
       font-size: 12px;
       font-weight: 900;
-      letter-spacing: .13em;
+      letter-spacing: 0;
       text-transform: uppercase;
     }
     .kicker::before {
@@ -284,18 +310,39 @@
       background: var(--green);
       box-shadow: 0 0 18px rgba(119, 240, 161, .8);
     }
+    .hero-proof {
+      display: inline-flex;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 13px;
+      border-radius: 999px;
+      border: 1px solid rgba(85, 231, 255, .22);
+      background: rgba(85, 231, 255, .07);
+      color: #dffbff;
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
 
     .hero-copy h1 {
-      max-width: 760px;
+      max-width: 1120px;
       font-family: 'Black Ops One', 'Rajdhani', sans-serif;
-      font-size: clamp(46px, 6.6vw, 88px);
-      line-height: .95;
-      letter-spacing: -.02em;
+      font-size: clamp(44px, 5.9vw, 88px);
+      line-height: 1.02;
+      letter-spacing: 0;
       text-transform: uppercase;
-      margin-bottom: 22px;
+      text-align: center;
+      text-wrap: balance;
+      margin: 0 auto 20px;
     }
     .hero-copy h1 span {
       display: block;
+    }
+    .hero-copy h1 .headline-main {
+      color: #fff8e6;
+      text-shadow: 0 0 28px rgba(246, 201, 91, .14);
+    }
+    .hero-copy h1 .headline-accent {
       color: transparent;
       background: linear-gradient(100deg, #fff7d7, var(--gold), var(--ember));
       -webkit-background-clip: text;
@@ -307,7 +354,9 @@
       color: #c7cedd;
       font-size: clamp(17px, 2vw, 21px);
       line-height: 1.7;
-      margin-bottom: 26px;
+      text-align: center;
+      text-wrap: balance;
+      margin: 0 auto 26px;
     }
 
     .outcome-grid {
@@ -315,7 +364,7 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
       max-width: 680px;
-      margin: 0 0 26px;
+      margin: 0 auto 26px;
     }
     .outcome-item {
       min-height: 98px;
@@ -345,9 +394,10 @@
     .trust-chips {
       display: flex;
       flex-wrap: wrap;
+      justify-content: center;
       gap: 10px;
       max-width: 660px;
-      margin-bottom: 28px;
+      margin: 0 auto 28px;
     }
     .trust-chips span {
       display: inline-flex;
@@ -375,6 +425,7 @@
 
     .battle-preview {
       max-width: 720px;
+      width: 100%;
       padding: 1px;
       border-radius: 28px;
       background: linear-gradient(145deg, rgba(246, 201, 91, .62), rgba(255, 255, 255, .1) 35%, rgba(232, 59, 95, .36), rgba(85, 231, 255, .24));
@@ -467,7 +518,7 @@
       color: #b8ffd0;
       font-size: 11px;
       font-weight: 900;
-      letter-spacing: .12em;
+      letter-spacing: 0;
       text-transform: uppercase;
     }
     .eyebrow::before {
@@ -482,6 +533,7 @@
       font-family: 'Black Ops One', 'Rajdhani', sans-serif;
       font-size: clamp(32px, 4vw, 48px);
       line-height: 1;
+      text-align: center;
       text-transform: uppercase;
       margin-bottom: 12px;
     }
@@ -506,6 +558,7 @@
       font-size: 13px;
       font-weight: 900;
       line-height: 1.35;
+      text-align: center;
     }
     .recommended-path span {
       flex: 0 0 auto;
@@ -514,7 +567,7 @@
       color: #06130b;
       background: var(--green);
       font-size: 11px;
-      letter-spacing: .08em;
+      letter-spacing: 0;
       text-transform: uppercase;
     }
     .actions { display: grid; gap: 12px; margin: 0 0 18px; }
@@ -563,6 +616,7 @@
     .setup-path strong {
       color: #effbff;
       font-size: 14px;
+      text-align: center;
     }
     .setup-path ol {
       display: grid;
@@ -604,6 +658,9 @@
       display: block;
       color: #fff;
       font-size: 14px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0;
     }
     .plan-compare {
       display: grid;
@@ -638,7 +695,7 @@
       font-size: 11px;
       font-weight: 900;
       text-transform: uppercase;
-      letter-spacing: .08em;
+      letter-spacing: 0;
     }
     .plan-column ul {
       display: grid;
@@ -687,6 +744,7 @@
     @media (max-width: 980px) {
       .signup-shell { grid-template-columns: 1fr; padding-top: 24px; }
       .hero-copy { text-align: center; }
+      .hero-copy, .signup-card-wrap, .signup-preview-panel { grid-column: 1 / -1; }
       .kicker, .lede, .outcome-grid, .battle-preview { margin-left: auto; margin-right: auto; }
       .trust-chips { justify-content: center; margin-left: auto; margin-right: auto; }
     }
@@ -710,7 +768,9 @@
       }
       .brand-mark { width: 42px; height: 42px; }
       .signup-shell { width: min(100% - 24px, var(--max)); padding-top: 16px; }
-      .hero-copy h1 { font-size: clamp(38px, 12vw, 58px); }
+      .hero-header-row { gap: 8px; margin-bottom: 14px; }
+      .kicker, .hero-proof { width: 100%; justify-content: center; }
+      .hero-copy h1 { font-size: clamp(36px, 11vw, 54px); }
       .outcome-grid { grid-template-columns: 1fr; }
       .trust-chips span { width: 100%; justify-content: center; }
       .recommended-path {
@@ -758,8 +818,14 @@
 
   <main class="signup-shell">
     <section class="hero-copy" aria-labelledby="signup-title">
-      <div class="kicker">7-day everything unlocked. No card.</div>
-      <h1 id="signup-title">Launch your first battle overlay in under 5 minutes.</h1>
+      <div class="hero-header-row">
+        <div class="kicker">7-day everything unlocked. No card.</div>
+        <div class="hero-proof">Setup built for OBS and TikTok Studio</div>
+      </div>
+      <h1 id="signup-title">
+        <span class="headline-main">Launch your first battle overlay</span>
+        <span class="headline-accent">in under 5 minutes.</span>
+      </h1>
       <p class="lede">Turn your TikTok LIVE chat into a playable battle arena. Create a room, get your signed OBS URL, and fire a test event before your next LIVE starts.</p>
       <div class="outcome-grid" aria-label="Signup outcomes">
         <div class="outcome-item"><b>Room</b><span>Your creator room is created after signup.</span></div>
@@ -770,15 +836,6 @@
         <span>7 days full access</span>
         <span>No credit card required</span>
         <span>Everything unlocked during trial</span>
-      </div>
-
-      <div class="battle-preview" aria-label="Live battle demo preview">
-        <div class="battle-preview-inner">
-          <div class="preview-top"><span>18-second battle clip</span><span>Comment to KO</span></div>
-          <div class="preview-frame">
-            <iframe src="/battle-clip" title="IntoTheBattle 18-second battle clip" loading="eager"></iframe>
-          </div>
-        </div>
       </div>
     </section>
 
@@ -842,6 +899,17 @@
             </div>
           </div>
 
+        </div>
+      </div>
+    </section>
+
+    <section class="signup-preview-panel" aria-label="Live battle demo preview">
+      <div class="battle-preview">
+        <div class="battle-preview-inner">
+          <div class="preview-top"><span>18-second battle clip</span><span>Comment to KO</span></div>
+          <div class="preview-frame">
+            <iframe src="/battle-clip" title="IntoTheBattle 18-second battle clip" loading="eager"></iframe>
+          </div>
         </div>
       </div>
     </section>
