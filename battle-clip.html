@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --cycle: 12s;
+      --cycle: 18s;
       --gold: #f6c95b;
       --gold2: #fff0b9;
       --ember: #ff6a3d;
@@ -725,7 +725,7 @@
     .effect-demo-grid {
       min-width: 0;
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: clamp(6px, .85vw, 11px);
     }
     .attack-demo {
@@ -1130,30 +1130,30 @@
       50% { transform: scale(1.18); opacity: 1; }
     }
     @keyframes battleLayer {
-      0%, 60% { opacity: 1; }
-      62%, 100% { opacity: 0; }
+      0%, 55% { opacity: 1; }
+      58%, 100% { opacity: 0; }
     }
     @keyframes commandCue {
-      0%, 33% { opacity: 0; transform: translateY(16px) scale(.98); }
-      36%, 40% { opacity: 1; transform: translateY(0) scale(1); }
-      43%, 100% { opacity: 0; transform: translateY(8px) scale(.99); }
+      0%, 10% { opacity: 0; transform: translateY(16px) scale(.98); }
+      12%, 25% { opacity: 1; transform: translateY(0) scale(1); }
+      28%, 100% { opacity: 0; transform: translateY(8px) scale(.99); }
     }
     @keyframes chatPanel {
-      0%, 12% { opacity: 0; transform: translate(-50%, 14px) scale(.98); }
-      17%, 28% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-      30%, 50% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
-      54%, 62% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-      67%, 100% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
+      0%, 9% { opacity: 0; transform: translate(-50%, 14px) scale(.98); }
+      12%, 26% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      28%, 39% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
+      42%, 53% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      56%, 100% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
     }
     @keyframes chatLaser {
-      0%, 15% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); }
-      20%, 28% { opacity: 1; border-color: rgba(246, 201, 91, .48); background: rgba(246, 201, 91, .12); box-shadow: 0 0 18px rgba(246, 201, 91, .18); }
-      30%, 100% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); box-shadow: none; }
+      0%, 10% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); box-shadow: none; }
+      12%, 26% { opacity: 1; border-color: rgba(246, 201, 91, .48); background: rgba(246, 201, 91, .12); box-shadow: 0 0 18px rgba(246, 201, 91, .18); }
+      28%, 100% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); box-shadow: none; }
     }
     @keyframes chatEmoji {
-      0%, 50% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); }
-      55%, 62% { opacity: 1; border-color: rgba(255, 106, 61, .55); background: rgba(255, 106, 61, .13); box-shadow: 0 0 18px rgba(255, 106, 61, .2); }
-      67%, 100% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); box-shadow: none; }
+      0%, 39% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); box-shadow: none; }
+      42%, 53% { opacity: 1; border-color: rgba(255, 106, 61, .55); background: rgba(255, 106, 61, .13); box-shadow: 0 0 18px rgba(255, 106, 61, .2); }
+      56%, 100% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); box-shadow: none; }
     }
     @keyframes cardsSettle {
       0% { opacity: 1; transform: translateY(0) scale(1); }
@@ -1162,101 +1162,101 @@
       100% { opacity: 1; transform: translateY(0) scale(1); }
     }
     @keyframes beamFire {
-      0%, 37% { opacity: 0; width: 0; }
-      41% { opacity: 1; width: 45%; }
-      47% { opacity: 1; width: 45%; }
-      53%, 100% { opacity: 0; width: 0; }
+      0%, 26% { opacity: 0; width: 0; }
+      30% { opacity: 1; width: 45%; }
+      36% { opacity: 1; width: 45%; }
+      40%, 100% { opacity: 0; width: 0; }
     }
     @keyframes targetHit {
-      0%, 42% { filter: none; }
-      46%, 55% { filter: drop-shadow(0 0 26px rgba(232, 59, 95, .92)); }
-      63%, 100% { filter: grayscale(.32) brightness(.78); }
+      0%, 30% { filter: none; }
+      33%, 42% { filter: drop-shadow(0 0 26px rgba(232, 59, 95, .92)); }
+      45%, 100% { filter: grayscale(.32) brightness(.78); }
     }
     @keyframes targetAvatar {
-      0%, 42% { transform: scale(1); opacity: 1; }
-      46% { transform: scale(1.12); opacity: 1; }
-      56%, 100% { transform: scale(.92); opacity: .48; }
+      0%, 30% { transform: scale(1); opacity: 1; }
+      33% { transform: scale(1.12); opacity: 1; }
+      42%, 100% { transform: scale(.92); opacity: .48; }
     }
     @keyframes blazeHp {
-      0%, 42% { width: 31%; }
-      48%, 100% { width: 0%; }
+      0%, 30% { width: 31%; }
+      36%, 100% { width: 0%; }
     }
     @keyframes emojiDefault {
-      0%, 51% { opacity: 1; transform: scale(1); }
-      56%, 100% { opacity: 0; transform: scale(.72) rotate(8deg); }
+      0%, 46% { opacity: 1; transform: scale(1); }
+      50%, 100% { opacity: 0; transform: scale(.72) rotate(8deg); }
     }
     @keyframes emojiActive {
-      0%, 50% { opacity: 0; transform: scale(.7) rotate(-8deg); }
-      56%, 66% { opacity: 1; transform: scale(1.12) rotate(0deg); }
-      72%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+      0%, 46% { opacity: 0; transform: scale(.7) rotate(-8deg); }
+      50%, 56% { opacity: 1; transform: scale(1.12) rotate(0deg); }
+      60%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
     }
     @keyframes emojiBadgePulse {
-      0%, 51% { border-color: rgba(246, 201, 91, .38); box-shadow: 0 0 22px rgba(246, 201, 91, .14); }
-      56%, 66% { border-color: rgba(255, 106, 61, .74); box-shadow: 0 0 34px rgba(255, 106, 61, .34); }
-      72%, 100% { border-color: rgba(255, 106, 61, .42); box-shadow: 0 0 22px rgba(255, 106, 61, .18); }
+      0%, 46% { border-color: rgba(246, 201, 91, .38); box-shadow: 0 0 22px rgba(246, 201, 91, .14); }
+      50%, 58% { border-color: rgba(255, 106, 61, .74); box-shadow: 0 0 34px rgba(255, 106, 61, .34); }
+      62%, 100% { border-color: rgba(255, 106, 61, .42); box-shadow: 0 0 22px rgba(255, 106, 61, .18); }
     }
     @keyframes emojiBurst {
-      0%, 54% { opacity: 0; transform: translate(0, 0) scale(.6); }
-      60% { opacity: 1; transform: translate(calc(var(--x) * .35), calc(var(--y) * .35)) scale(1); }
-      68%, 100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(.25); }
+      0%, 49% { opacity: 0; transform: translate(0, 0) scale(.6); }
+      53% { opacity: 1; transform: translate(calc(var(--x) * .35), calc(var(--y) * .35)) scale(1); }
+      60%, 100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(.25); }
     }
     @keyframes impactPop {
-      0%, 42% { opacity: 0; transform: translate(-50%, -50%) scale(.62) rotate(-5deg); }
-      47%, 57% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
-      66%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(.88) rotate(2deg); }
+      0%, 31% { opacity: 0; transform: translate(-50%, -50%) scale(.62) rotate(-5deg); }
+      34%, 40% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+      44%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(.88) rotate(2deg); }
     }
     @keyframes spark {
-      0%, 42% { opacity: 0; transform: translate(0, 0) scale(.6); }
-      48% { opacity: 1; transform: translate(calc(var(--x) * .45), calc(var(--y) * .45)) scale(1); }
-      64%, 100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(.2); }
+      0%, 31% { opacity: 0; transform: translate(0, 0) scale(.6); }
+      36% { opacity: 1; transform: translate(calc(var(--x) * .45), calc(var(--y) * .45)) scale(1); }
+      45%, 100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(.2); }
     }
     @keyframes eventConfirm {
-      0%, 46% { opacity: 0; transform: translate(-50%, 16px) scale(.98); }
-      51%, 57% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-      63%, 100% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
+      0%, 31% { opacity: 0; transform: translate(-50%, 16px) scale(.98); }
+      34%, 41% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      44%, 100% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
     }
     @keyframes hordePressure {
-      0%, 40% { width: 62%; background-position: 0% 0; }
-      56%, 74% { width: 42%; background-position: 90% 0; }
-      84%, 100% { width: 62%; background-position: 180% 0; }
+      0%, 30% { width: 62%; background-position: 0% 0; }
+      40%, 55% { width: 42%; background-position: 90% 0; }
+      58%, 100% { width: 62%; background-position: 180% 0; }
     }
     @keyframes effectsScene {
-      0%, 61% { opacity: 0; transform: translateY(16px) scale(1.02); }
-      65%, 72% { opacity: 1; transform: translateY(0) scale(1); }
-      76%, 100% { opacity: 0; transform: translateY(-10px) scale(.995); }
+      0%, 54% { opacity: 0; transform: translateY(16px) scale(1.02); }
+      57%, 69% { opacity: 1; transform: translateY(0) scale(1); }
+      72%, 100% { opacity: 0; transform: translateY(-10px) scale(.995); }
     }
     @keyframes fxLaser {
-      0%, 62% { opacity: 0; clip-path: inset(0 100% 0 0); }
-      66%, 72% { opacity: 1; clip-path: inset(0 0 0 0); }
-      76%, 100% { opacity: 0; clip-path: inset(0 0 0 100%); }
+      0%, 56% { opacity: 0; clip-path: inset(0 100% 0 0); }
+      58%, 62% { opacity: 1; clip-path: inset(0 0 0 0); }
+      65%, 100% { opacity: 0; clip-path: inset(0 0 0 100%); }
     }
     @keyframes fxBeam {
-      0%, 62% { opacity: 0; transform: translateY(-50%) scaleX(.18); transform-origin: left center; }
-      66%, 72% { opacity: 1; transform: translateY(-50%) scaleX(1); transform-origin: left center; }
-      76%, 100% { opacity: 0; transform: translateY(-50%) scaleX(.18); transform-origin: right center; }
+      0%, 56% { opacity: 0; transform: translateY(-50%) scaleX(.18); transform-origin: left center; }
+      58%, 62% { opacity: 1; transform: translateY(-50%) scaleX(1); transform-origin: left center; }
+      65%, 100% { opacity: 0; transform: translateY(-50%) scaleX(.18); transform-origin: right center; }
     }
     @keyframes fxTravel {
-      0%, 62% { opacity: 0; transform: translate(-10%, -50%) scale(.76); }
-      66% { opacity: 1; transform: translate(20%, -50%) scale(1); }
-      72% { opacity: 1; transform: translate(380%, -50%) scale(1); }
-      76%, 100% { opacity: 0; transform: translate(420%, -50%) scale(.72); }
+      0%, 61% { opacity: 0; transform: translate(-10%, -50%) scale(.76); }
+      63% { opacity: 1; transform: translate(20%, -50%) scale(1); }
+      67% { opacity: 1; transform: translate(380%, -50%) scale(1); }
+      70%, 100% { opacity: 0; transform: translate(420%, -50%) scale(.72); }
     }
     @keyframes fxNeon {
-      0%, 62% { opacity: 0; transform: translate(-50%, -50%) scale(.46); }
-      66% { opacity: 1; transform: translate(-50%, -50%) scale(.72); }
-      72% { opacity: 1; transform: translate(-50%, -50%) scale(1.18); }
-      76%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.36); }
+      0%, 61% { opacity: 0; transform: translate(-50%, -50%) scale(.46); }
+      63% { opacity: 1; transform: translate(-50%, -50%) scale(.72); }
+      67% { opacity: 1; transform: translate(-50%, -50%) scale(1.18); }
+      70%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.36); }
     }
     @keyframes fxExplosion {
-      0%, 62% { opacity: 0; transform: translate(-50%, -50%) scale(.28); }
+      0%, 65% { opacity: 0; transform: translate(-50%, -50%) scale(.28); }
       67% { opacity: 1; transform: translate(-50%, -50%) scale(.7); }
-      72% { opacity: 1; transform: translate(-50%, -50%) scale(1.16); }
-      76%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.4); }
+      69% { opacity: 1; transform: translate(-50%, -50%) scale(1.16); }
+      72%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.4); }
     }
     @keyframes recapScene {
-      0%, 72% { opacity: 0; transform: translateY(14px) scale(1.02); }
-      76%, 84% { opacity: 1; transform: translateY(0) scale(1); }
-      88%, 100% { opacity: 0; transform: translateY(-10px) scale(.995); }
+      0%, 70% { opacity: 0; transform: translateY(14px) scale(1.02); }
+      73%, 84% { opacity: 1; transform: translateY(0) scale(1); }
+      87%, 100% { opacity: 0; transform: translateY(-10px) scale(.995); }
     }
     @keyframes creatorSheen {
       0% { transform: translateX(-45%); opacity: .35; }
@@ -1264,7 +1264,7 @@
       100% { transform: translateX(45%); opacity: .35; }
     }
     @keyframes ctaScene {
-      0%, 84% { opacity: 0; transform: scale(1.02); }
+      0%, 85% { opacity: 0; transform: scale(1.02); }
       88%, 98% { opacity: 1; transform: scale(1); }
       100% { opacity: 0; transform: scale(1.01); }
     }
@@ -1325,10 +1325,10 @@
         top: 49%;
       }
       @keyframes beamFire {
-        0%, 37% { opacity: 0; width: 0; }
-        41% { opacity: 1; width: 49%; }
-        47% { opacity: 1; width: 49%; }
-        53%, 100% { opacity: 0; width: 0; }
+        0%, 26% { opacity: 0; width: 0; }
+        30% { opacity: 1; width: 49%; }
+        36% { opacity: 1; width: 49%; }
+        40%, 100% { opacity: 0; width: 0; }
       }
       .event-banner {
         top: 67%;
@@ -1503,10 +1503,10 @@
         left: 75.5%;
       }
       @keyframes beamFire {
-        0%, 37% { opacity: 0; width: 0; }
-        41% { opacity: 1; width: 51%; }
-        47% { opacity: 1; width: 51%; }
-        53%, 100% { opacity: 0; width: 0; }
+        0%, 26% { opacity: 0; width: 0; }
+        30% { opacity: 1; width: 51%; }
+        36% { opacity: 1; width: 51%; }
+        40%, 100% { opacity: 0; width: 0; }
       }
       .event-banner {
         display: none;
@@ -1566,7 +1566,7 @@
         display: none;
       }
       .effect-demo-grid {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 3px;
       }
       .attack-demo {
@@ -1612,16 +1612,10 @@
         font-size: clamp(12px, 5.2vw, 18px);
       }
       .recap-stat span {
-        margin-top: 2px;
-        font-size: 5.5px;
+        display: none;
       }
       .stats-bars {
-        gap: 3px;
-      }
-      .stats-bar {
-        grid-template-columns: 43px minmax(0, 1fr);
-        gap: 5px;
-        font-size: 5.5px;
+        display: none;
       }
       .cta-box {
         width: 86%;
@@ -1669,7 +1663,7 @@
   </style>
 </head>
 <body>
-  <div class="clip" aria-label="IntoTheBattle 12-second battle demo">
+  <div class="clip" aria-label="IntoTheBattle 18-second battle demo">
     <div class="grid" aria-hidden="true"></div>
     <div class="corners" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
 
@@ -1689,12 +1683,6 @@
         <h3>Live chat</h3>
         <div class="chat-line laser"><strong>@mira_live</strong><b>!laser</b></div>
         <div class="chat-line emoji"><strong>@nova_fan</strong><b>!emoji 🔥</b></div>
-      </section>
-
-      <section class="command-card" aria-hidden="true">
-        <b>@mira_live typed</b>
-        <strong>!laser</strong>
-        <span>Command locks onto Blaze.</span>
       </section>
 
       <article class="fighter nova" aria-hidden="true">
@@ -1731,15 +1719,10 @@
         <div class="effects-copy">
           <span>Effect library</span>
           <h2>Multiple attack styles <em>ready for chat</em></h2>
-          <p>Show viewers that chat can trigger different attack looks, not one repeating laser.</p>
         </div>
         <div class="effect-demo-grid">
           <div class="attack-demo fx-laser"><b>Laser</b><span></span></div>
-          <div class="attack-demo fx-beam"><b>Beam</b><span></span></div>
-          <div class="attack-demo fx-projectile"><b>Projectile</b><span></span></div>
-          <div class="attack-demo fx-neon"><b>Neon</b><span></span></div>
           <div class="attack-demo fx-fire"><b>Fire</b><span></span></div>
-          <div class="attack-demo fx-sphere"><b>Sphere</b><span></span></div>
           <div class="attack-demo fx-explosion"><b>Explosion</b><span></span></div>
         </div>
       </div>
@@ -1750,7 +1733,6 @@
         <div class="recap-copy">
           <span>Stats page preview</span>
           <h2>See battle stats <em>after every live</em></h2>
-          <p>Recap participation, KOs, commands, and engagement without digging through chat logs.</p>
         </div>
         <div class="stats-window">
           <header><span>Battle analytics</span><b>Round 04</b></header>
@@ -1778,7 +1760,6 @@
         <div class="creator-copy">
           <span>Creator videos built in</span>
           <h2>Run video breaks <em>inside the battle</em></h2>
-          <p>Drop in creator clips, sponsor reads, or hype videos without leaving the live arena.</p>
           <div class="cta-button">Create free account</div>
         </div>
       </div>
