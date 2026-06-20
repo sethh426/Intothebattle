@@ -85,6 +85,11 @@
     .setup-step.ready span { color:#b8ffd0; }
     .copy-field { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; margin:14px 0; }
     .copy-field input { min-width:0; font-size:12px; color:#dfe8f8; }
+    .overlay-v2-panel { margin-top:14px; padding:14px; border-radius:18px; border:1px solid rgba(85,231,255,.2); background:linear-gradient(180deg,rgba(85,231,255,.075),rgba(0,0,0,.16)); display:grid; gap:12px; }
+    .overlay-v2-panel strong { color:#fff8e6; font-size:13px; text-transform:uppercase; letter-spacing:.08em; }
+    .overlay-v2-panel p { margin:0; color:var(--muted); font-size:12px; line-height:1.45; font-weight:800; }
+    .overlay-v2-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .overlay-v2-grid .btn { min-height:40px; padding:0 10px; font-size:12px; }
     .grid { display:grid; grid-template-columns:repeat(12,1fr); gap:20px; }
     .col-12{grid-column:span 12}.col-8{grid-column:span 8}.col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}
     .card { padding:24px; }
@@ -304,6 +309,15 @@
       <div class="stat-box"><span class="stat-label">Active players</span><span class="stat-value" id="player-count">—</span></div>
       <div class="stat-box"><span class="stat-label">Dev mode</span><span class="stat-value" id="dev-mode-badge">OFF</span></div>
       <div class="copy-field"><input type="text" id="overlayUrlField" readonly value="Loading signed overlay URL"><button class="btn btn-secondary" onclick="copyOverlayUrl()">Copy</button></div>
+      <div class="overlay-v2-panel">
+        <div><strong>Phaser V2 test overlay</strong><p>Use these for sharp browser-source testing before switching the default overlay.</p></div>
+        <div class="overlay-v2-grid">
+          <button class="btn btn-secondary" onclick="copyOverlayV2SourceUrl('1080p')">Copy V2 1080p</button>
+          <button class="btn btn-secondary" onclick="copyOverlayV2SourceUrl('1440p')">Copy V2 1440p</button>
+          <button class="btn btn-secondary" onclick="openOverlayV2Preview()">Preview V2</button>
+          <button class="btn btn-primary" onclick="openOverlayV2Source('1080p')">Use V2 Test</button>
+        </div>
+      </div>
       <div class="divider"></div>
       <div class="btn-row"><button class="btn btn-primary" onclick="openOverlay()">Open Overlay</button><button class="btn btn-success" onclick="testOverlayBurst()">Test My Overlay</button><button class="btn btn-secondary" onclick="reloadOverlay()">Reload</button></div>
     </article>
@@ -444,6 +458,7 @@ const socket = io();
 let overlayCount = 0;
 let currentRoomId = null;
 let currentOverlayUrl = null;
+let currentOverlayV2Url = null;
 let subscriptionStatusData = null;
 let audioLibraryData = [];
 let audioConfigData = {};
@@ -584,8 +599,18 @@ function setOverlayCount(count) {
   }
   updateReadinessChecklist();
 }
-function setOverlayUrl(url) {
+function overlayV2VariantUrl(render = '1080p', sourceMode = true) {
+  const base = currentOverlayV2Url || currentOverlayUrl || `${window.location.origin}/overlay-v2`;
+  const url = new URL(base, window.location.origin);
+  url.pathname = url.pathname.replace(/\/overlay$/, '/overlay-v2');
+  url.searchParams.set('render', render === '1440p' ? '1440p' : '1080p');
+  if (sourceMode) url.searchParams.set('source', '1');
+  else url.searchParams.delete('source');
+  return url.toString();
+}
+function setOverlayUrl(url, v2Url = null) {
   currentOverlayUrl = url || currentOverlayUrl || null;
+  currentOverlayV2Url = v2Url || currentOverlayV2Url || null;
   const field = document.getElementById('overlayUrlField');
   const label = document.getElementById('overlay-url-state');
   const display = currentOverlayUrl ? 'Signed URL ready' : 'URL unavailable';
@@ -949,7 +974,7 @@ async function fetchStatus() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Unable to load dashboard status');
     setRoomLabel(data.roomId || null);
-    setOverlayUrl(data.overlayUrl || null);
+    setOverlayUrl(data.overlayUrl || null, data.overlayV2Url || null);
     if (initialLoad) {
       document.getElementById('username').value = data.username || '';
       initialLoad = false;
@@ -981,6 +1006,21 @@ function copyOverlayUrl() {
     updateSetupChecklist();
     toast(currentOverlayUrl ? 'Overlay URL copied' : 'Fallback overlay URL copied');
   }).catch(() => toast('Copy failed', true));
+}
+function copyOverlayV2SourceUrl(render = '1080p') {
+  const url = overlayV2VariantUrl(render, true);
+  navigator.clipboard?.writeText(url).then(() => {
+    dashboardState.overlayUrlCopied = true;
+    updateSetupChecklist();
+    toast(`Phaser V2 ${render === '1440p' ? '1440p' : '1080p'} source URL copied`);
+  }).catch(() => toast('Copy failed', true));
+}
+function openOverlayV2Preview() {
+  window.open(overlayV2VariantUrl('1080p', false), '_blank');
+}
+function openOverlayV2Source(render = '1080p') {
+  window.open(overlayV2VariantUrl(render, true), '_blank');
+  toast(`Opened Phaser V2 ${render === '1440p' ? '1440p' : '1080p'} test source`);
 }
 
 const usernameInput = document.getElementById('username');

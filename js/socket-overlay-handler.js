@@ -15,6 +15,7 @@ function initSocketOverlay(game) {
   const overlayToken = overlayParams.get('overlay_token') || overlayParams.get('overlayToken') || '';
   const audioConfig = {};
   const audioCache = {};
+  let audioUnlocked = false;
 
   function withOverlayAuth(path, extraParams = {}) {
     const url = new URL(path, window.location.origin);
@@ -101,23 +102,70 @@ function initSocketOverlay(game) {
     if (!audioCache[filename]) {
       const audio = new Audio(withOverlayAuth(`/audio/${encodeURIComponent(filename)}`));
       audio.preload = 'auto';
+      audio.playsInline = true;
       audioCache[filename] = audio;
     }
     return audioCache[filename];
   }
 
-  function playSound(event) {
-    const filename = audioConfig[event];
+  function resolveSoundFilename(input) {
+    if (!input) return '';
+    if (typeof input === 'string') return audioConfig[input] || '';
+    return input.filename || audioConfig[input.event] || '';
+  }
+
+  function markAudioUnlocked() {
+    audioUnlocked = true;
+    Object.values(audioCache).forEach(audio => {
+      try { audio.load(); } catch (_err) {}
+    });
+  }
+
+  window.addEventListener('pointerdown', markAudioUnlocked, { once: true, passive: true });
+  window.addEventListener('keydown', markAudioUnlocked, { once: true });
+
+  function playSound(input, options = {}) {
+    const filename = resolveSoundFilename(input);
     if (!filename) return;
     try {
       const audio = getAudio(filename);
       if (!audio) return;
       audio.currentTime = 0;
-      audio.play().catch(() => {});
+      audio.play().then(() => { audioUnlocked = true; }).catch(() => {
+        if (options.force || audioUnlocked) {
+          setTimeout(() => audio.play().catch(() => {}), 120);
+        }
+      });
     } catch (_err) {
       // Browser autoplay policies can reject playback until OBS/user interaction.
     }
   }
+
+  function resolveSponsorPayload(payload = {}) {
+    const scenePayload = { ...(payload || {}) };
+    if (scenePayload.filename && !scenePayload.videoUrl) {
+      scenePayload.videoUrl = withOverlayAuth(`/sponsor/${encodeURIComponent(scenePayload.filename)}`, { v: scenePayload._ts || Date.now() });
+    }
+    return scenePayload;
+  }
+
+  function reportSponsorPlayback(payload = {}, status, message = '') {
+    if (!payload?.breakId) return;
+    try {
+      const detail = scene.getSponsorMediaTelemetry ? scene.getSponsorMediaTelemetry(payload) : {};
+      socket.emit('sponsorPlaybackEvent', {
+        breakId: payload.breakId,
+        status,
+        message,
+        source: payload.source || 'creator',
+        creativeId: payload.creativeId || null,
+        filename: payload.filename || '',
+        ...detail,
+      });
+    } catch (_err) {}
+  }
+
+  if (scene.setSponsorPlaybackReporter) scene.setSponsorPlaybackReporter(reportSponsorPlayback);
 
   // Status updates
   socket.on('connect', () => {
@@ -147,7 +195,15 @@ function initSocketOverlay(game) {
   socket.on('gameState', syncGameState);
   socket.on('audioConfig', (config) => {
     Object.keys(audioConfig).forEach(key => delete audioConfig[key]);
-    if (config && typeof config === 'object') Object.assign(audioConfig, config);
+    if (config && typeof config === 'object') {
+      Object.assign(audioConfig, config);
+      Object.values(audioConfig).forEach(filename => {
+        const audio = getAudio(filename);
+        if (audio) {
+          try { audio.load(); } catch (_err) {}
+        }
+      });
+    }
   });
   socket.on('backgroundChanged', (data) => {
     const filename = data && data.filename;
@@ -156,7 +212,7 @@ function initSocketOverlay(game) {
       return;
     }
     if (scene.setBackgroundImageUrl) {
-      scene.setBackgroundImageUrl(withOverlayAuth(`/background/${encodeURIComponent(filename)}`, { v: Date.now() }));
+      scene.setBackgroundImageUrl(data.url ? withOverlayAuth(data.url, { v: Date.now() }) : withOverlayAuth(`/background/${encodeURIComponent(filename)}`, { v: Date.now() }));
     }
   });
   socket.on('overlaySettings', (settings) => {
@@ -170,17 +226,25 @@ function initSocketOverlay(game) {
     const color = typeof data === 'string' ? data : data && data.color;
     if (color && scene.updateLaserColor) scene.updateLaserColor(color);
   });
-  socket.on('soundEvent', (data) => playSound(data && data.event));
+  socket.on('soundEvent', (data) => {
+    playSound(data || {}, { force: Boolean(data?.force || data?.priority >= 90) });
+    if (scene.showSoundPulse && data?.event) scene.showSoundPulse(data.event);
+  });
+  socket.on('sponsorPrepare', (payload) => {
+    const scenePayload = resolveSponsorPayload(payload || {});
+    if (scene.prepareSponsorBreak) {
+      scene.prepareSponsorBreak(scenePayload);
+    } else {
+      reportSponsorPlayback(scenePayload, scenePayload.videoUrl ? 'failed' : 'ready', scenePayload.videoUrl ? 'Phaser sponsor prepare handler unavailable' : 'No media required');
+    }
+  });
   socket.on('sponsorScene', (payload) => {
     if (!scene.playSponsorBreak || !scene.stopSponsorBreak) return;
     if (payload && payload.action === 'hide') {
-      scene.stopSponsorBreak();
+      scene.stopSponsorBreak('stopped');
       return;
     }
-    const scenePayload = { ...(payload || {}) };
-    if (scenePayload.filename && !scenePayload.videoUrl) {
-      scenePayload.videoUrl = withOverlayAuth(`/sponsor/${encodeURIComponent(scenePayload.filename)}`, { v: scenePayload._ts || Date.now() });
-    }
+    const scenePayload = resolveSponsorPayload(payload || {});
     scene.playSponsorBreak(scenePayload);
   });
 
@@ -218,21 +282,75 @@ function initSocketOverlay(game) {
 
   socket.on('attack', (data) => {
     if (!data) return;
-    const type = data.killed ? 'kill' : data.critical ? 'critical' : 'normal';
-    scene.showDamage(game.scale.width / 2, game.scale.height * 0.35, data.damage || 'HIT', type);
+    if (scene.handleAttackEvent) scene.handleAttackEvent(data);
+    else scene.showDamage(game.scale.width / 2, game.scale.height * 0.35, data.damage || 'HIT', data.killed ? 'kill' : data.critical ? 'critical' : 'normal');
     playSound('attack');
+  });
+  socket.on('commentDamage', (data) => {
+    if (!data) return;
+    if (scene.handleAttackEvent) scene.handleAttackEvent(data);
+    else scene.showDamage(game.scale.width / 2, game.scale.height * 0.35, data.damage || 'HIT', data.killed ? 'kill' : data.critical ? 'critical' : 'normal');
+    playSound(data.killed ? 'kill' : 'attack');
   });
 
   socket.on('giftAttack', (data) => {
     if (!data) return;
-    const type = data.killed ? 'kill' : data.tier === 'legendary' ? 'critical' : 'normal';
-    scene.showDamage(game.scale.width / 2, game.scale.height * 0.32, data.damage || 'GIFT', type);
+    if (scene.handleGiftAttackEvent) scene.handleGiftAttackEvent(data);
+    else scene.showDamage(game.scale.width / 2, game.scale.height * 0.32, data.damage || 'GIFT', data.killed ? 'kill' : data.tier === 'legendary' ? 'critical' : 'normal');
     playSound(data.killed ? 'kill' : 'gift');
   });
 
-  socket.on('heal', () => playSound('heal'));
-  socket.on('spawn', () => playSound('respawn'));
-  socket.on('respawn', () => playSound('respawn'));
+  socket.on('like', (data) => {
+    if (scene.handleLikeEvent) scene.handleLikeEvent(data || {});
+  });
+  socket.on('heal', (data) => {
+    if (scene.handleHealEvent) scene.handleHealEvent(data || {});
+    playSound('heal');
+  });
+  socket.on('spawn', (data) => {
+    if (scene.spawnRespawnEffect) scene.spawnRespawnEffect(data?.uniqueId || data?.id || data?.userId);
+    playSound('respawn');
+  });
+  socket.on('respawn', (data) => {
+    if (scene.spawnRespawnEffect) scene.spawnRespawnEffect(data?.uniqueId || data?.id || data?.userId);
+    playSound('respawn');
+  });
+  socket.on('playerCommand', (data) => {
+    if (scene.handlePlayerCommand) scene.handlePlayerCommand(data || {});
+  });
+  socket.on('roundEvent', (data) => {
+    if (scene.handleRoundEvent) scene.handleRoundEvent(data || {});
+  });
+  socket.on('bossWave', (data) => {
+    if (scene.handleBossWave) scene.handleBossWave(data || {});
+  });
+  socket.on('killEvent', (data) => {
+    if (scene.handleKillEvent) scene.handleKillEvent(data || {});
+    playSound('kill');
+  });
+  socket.on('streakEvent', (data) => {
+    if (scene.handleStreakEvent) scene.handleStreakEvent(data || {});
+  });
+  socket.on('giftCelebration', (data) => {
+    if (scene.handleGiftCelebration) scene.handleGiftCelebration(data || {});
+    playSound('gift');
+  });
+  socket.on('follow', (data) => {
+    if (scene.handleFollowEvent) scene.handleFollowEvent(data || {});
+  });
+  socket.on('socialBoost', (data) => {
+    if (scene.showSocialBoost) scene.showSocialBoost(data || {});
+  });
+  socket.on('layoutUpdate', (data = {}) => {
+    if (!scene.updateLayoutConfig) return;
+    if (typeof data.gapX === 'number') scene.updateLayoutConfig('gapX', data.gapX);
+    if (typeof data.gapY === 'number') scene.updateLayoutConfig('gapY', data.gapY);
+  });
+  socket.on('forceReload', (data = {}) => {
+    const delayMs = Number(data.delayMs) || 3000;
+    setStatus('RELOADING', 'connected');
+    setTimeout(() => window.location.reload(), delayMs);
+  });
 
   socket.on('effect:flash', (data) => {
     // data: { duration, color }
@@ -303,15 +421,23 @@ function initSocketOverlay(game) {
 
   if (overlayParams.get('sponsor_preview') === '1' && scene.playSponsorBreak) {
     const filename = overlayParams.get('sponsor_video') || '';
+    const sponsorSource = overlayParams.get('sponsor_source') || '';
     const payload = {
       filename,
-      videoUrl: filename ? withOverlayAuth(`/sponsor/${encodeURIComponent(filename)}`, { v: Date.now() }) : '',
+      videoUrl: filename
+        ? sponsorSource === 'platform'
+          ? withOverlayAuth(`/platform-sponsor/${encodeURIComponent(filename)}`, { v: Date.now() })
+          : withOverlayAuth(`/sponsor/${encodeURIComponent(filename)}`, { v: Date.now() })
+        : '',
       title: overlayParams.get('sponsor_title') || 'Power Moment',
       partner: overlayParams.get('sponsor_partner') || 'IntoTheBattle Partner',
       subtitle: overlayParams.get('sponsor_subtitle') || 'Stay locked in. The next fight is loading.',
       durationMs: Number(overlayParams.get('sponsor_duration')) || 15000,
       muted: overlayParams.get('sponsor_muted') !== '0',
       fit: overlayParams.get('sponsor_fit') || 'contain',
+      statsMode: overlayParams.get('sponsor_stats') || 'endcap',
+      timingProfile: overlayParams.get('sponsor_timing') || 'spotlight',
+      source: sponsorSource || 'creator',
     };
     setTimeout(() => scene.playSponsorBreak(payload), 600);
   }

@@ -65,6 +65,11 @@
       this.demoAttackStartAt = 0;
       this.sponsorVideo = null;
       this.sponsorTimer = null;
+      this.sponsorWallClockTimer = null;
+      this.sponsorEndcapTimer = null;
+      this.sponsorReporter = null;
+      this.preparedSponsor = null;
+      this.bossState = null;
       this.bannerQueue = [];
       this.bannerActive = false;
     }
@@ -244,14 +249,22 @@
       const reserve = Math.max(0, this.playerGroups.length - 5);
       const alive = this.playerGroups.filter(player => Number(player.data.health || 0) > 0).length;
       const pulse = 0.66 + Math.sin(this.time.now * 0.004) * 0.1;
+      const bossActive = Boolean(this.bossState?.active);
+      const bossPct = bossActive
+        ? clamp(Number(this.bossState.hp || 0) / Math.max(1, Number(this.bossState.maxHp || 1)), 0, 1)
+        : 0;
 
       this.hordeGraphics.clear();
-      this.hordeGraphics.fillStyle(0x150406, 0.92);
+      this.hordeGraphics.fillStyle(bossActive ? 0x19050a : 0x150406, 0.92);
       this.hordeGraphics.fillRoundedRect(x, y, w, h, h * 0.22);
-      this.hordeGraphics.lineStyle(Math.max(2, 4 * this.scaleUnit), 0xe83b5f, 0.78);
+      this.hordeGraphics.lineStyle(Math.max(2, 4 * this.scaleUnit), bossActive ? 0xf6c95b : 0xe83b5f, bossActive ? 0.9 : 0.78);
       this.hordeGraphics.strokeRoundedRect(x, y, w, h, h * 0.22);
       this.hordeGraphics.fillStyle(0xe83b5f, 0.18 * pulse);
       this.hordeGraphics.fillRoundedRect(x + 12 * this.scaleUnit, y + 12 * this.scaleUnit, w - 24 * this.scaleUnit, h - 24 * this.scaleUnit, h * 0.16);
+      if (bossActive) {
+        this.hordeGraphics.fillStyle(0xf6c95b, 0.72);
+        this.hordeGraphics.fillRoundedRect(x + 16 * this.scaleUnit, y + h - 21 * this.scaleUnit, (w - 32 * this.scaleUnit) * bossPct, 8 * this.scaleUnit, 4 * this.scaleUnit);
+      }
 
       for (let i = 0; i < 12; i += 1) {
         const stripeX = x + (i / 12) * w + ((this.time.now * 0.04) % (w / 12));
@@ -259,9 +272,12 @@
         this.hordeGraphics.fillRect(stripeX, y + 8 * this.scaleUnit, Math.max(6, 10 * this.scaleUnit), h - 16 * this.scaleUnit);
       }
 
+      this.hordeTitle.setText(bossActive ? 'BOSS WAVE' : 'HORDE');
       this.hordeTitle.setPosition(x + w * 0.18, y + h / 2);
       this.hordeMeta.setPosition(x + w * 0.58, y + h / 2);
-      this.hordeMeta.setText(reserve > 0 ? `${reserve} RESERVE | ${alive} ACTIVE` : `${alive || 0} ACTIVE FIGHTERS`);
+      this.hordeMeta.setText(bossActive
+        ? `${Math.round(bossPct * 100)}% HP | TARGET @BOSS`
+        : reserve > 0 ? `${reserve} RESERVE | ${alive} ACTIVE` : `${alive || 0} ACTIVE FIGHTERS`);
       this.hordeBounds = { x, y, width: w, height: h };
     }
 
@@ -321,6 +337,360 @@
 
     updateLayoutConfig(key, value) {
       this.layoutConfig[key] = value;
+    }
+
+    setSponsorPlaybackReporter(reporter) {
+      this.sponsorReporter = typeof reporter === 'function' ? reporter : null;
+    }
+
+    reportSponsor(payload, status, message = '') {
+      if (this.sponsorReporter) this.sponsorReporter(payload || this.activeSponsorPayload || {}, status, message);
+    }
+
+    getSponsorMediaTelemetry(payload = {}) {
+      const video = this.sponsorVideo?.video || this.preparedSponsor?.video || null;
+      return {
+        readyState: video ? video.readyState : null,
+        currentTime: video ? video.currentTime : null,
+        duration: video ? video.duration : null,
+        mediaDurationMs: video && Number.isFinite(video.duration) && video.duration > 0 ? Math.round(video.duration * 1000) : Number(payload.mediaDurationMs) || null,
+        mediaWidth: video ? video.videoWidth || payload.mediaWidth || null : payload.mediaWidth || null,
+        mediaHeight: video ? video.videoHeight || payload.mediaHeight || null : payload.mediaHeight || null,
+      };
+    }
+
+    findPlayerRecord(id) {
+      const key = String(id || '').trim();
+      if (!key) return null;
+      if (this.playerMap.has(key)) return this.playerMap.get(key);
+      const lowered = key.toLowerCase();
+      return this.playerGroups.find(record => {
+        return String(record.playerId || '').toLowerCase() === lowered ||
+          String(record.data?.name || '').toLowerCase() === lowered;
+      }) || null;
+    }
+
+    getHordePosition() {
+      const horde = this.hordeBounds || {
+        x: this.W * 0.2,
+        y: this.safe.y + this.safe.height * 0.68,
+        width: this.W * 0.6,
+        height: Math.max(74, this.H * 0.088),
+      };
+      return {
+        x: horde.x + horde.width / 2,
+        y: horde.y + horde.height / 2,
+      };
+    }
+
+    getEntityPosition(id, scope = '') {
+      const normalized = String(id || '').toLowerCase();
+      if (scope === 'horde' || normalized === 'horde' || normalized === '@horde' || normalized === 'boss' || normalized === '@boss') {
+        return this.getHordePosition();
+      }
+      const record = this.findPlayerRecord(id);
+      if (!record) return null;
+      return {
+        x: record.targetX || record.container.x,
+        y: (record.targetY || record.container.y) - (record.cardH || 150 * this.scaleUnit) * 0.12,
+      };
+    }
+
+    pulseCard(playerId, color = 0x7afcff) {
+      const record = this.findPlayerRecord(playerId);
+      if (!record) return;
+      const ring = this.add.graphics();
+      const w = (record.cardW || 280 * this.scaleUnit) + 22 * this.scaleUnit;
+      const h = (record.cardH || 156 * this.scaleUnit) + 22 * this.scaleUnit;
+      ring.lineStyle(Math.max(3, 5 * this.scaleUnit), color, 0.85);
+      ring.strokeRoundedRect(-w / 2, -h / 2, w, h, 20 * this.scaleUnit);
+      ring.setPosition(record.container.x, record.container.y);
+      this.effectLayer.add(ring);
+      this.tweens.add({
+        targets: ring,
+        scaleX: 1.16,
+        scaleY: 1.16,
+        alpha: 0,
+        duration: 560,
+        ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy(),
+      });
+    }
+
+    pulseHorde(color = 0xe83b5f) {
+      const horde = this.hordeBounds;
+      if (!horde) return;
+      const ring = this.add.graphics();
+      ring.lineStyle(Math.max(3, 5 * this.scaleUnit), color, 0.72);
+      ring.strokeRoundedRect(
+        -horde.width / 2 - 10 * this.scaleUnit,
+        -horde.height / 2 - 10 * this.scaleUnit,
+        horde.width + 20 * this.scaleUnit,
+        horde.height + 20 * this.scaleUnit,
+        horde.height * 0.25
+      );
+      ring.setPosition(horde.x + horde.width / 2, horde.y + horde.height / 2);
+      this.effectLayer.add(ring);
+      this.tweens.add({
+        targets: ring,
+        alpha: 0,
+        scaleX: 1.04,
+        scaleY: 1.18,
+        duration: 620,
+        ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy(),
+      });
+    }
+
+    fireBeam(from, to, damage, type = 'normal', options = {}) {
+      const start = from || this.getHordePosition();
+      const end = to || this.getHordePosition();
+      const color = options.color || (type === 'kill' ? 0xf6c95b : type === 'critical' ? 0xff315f : this.laserColor);
+      const beam = this.add.graphics();
+      const width = options.special ? 11 * this.scaleUnit : 7 * this.scaleUnit;
+      beam.lineStyle(Math.max(4, width), color, 0.82);
+      beam.lineBetween(start.x, start.y, end.x, end.y);
+      beam.lineStyle(Math.max(1, 2 * this.scaleUnit), 0xffffff, 0.95);
+      beam.lineBetween(start.x, start.y, end.x, end.y);
+      beam.fillStyle(color, 0.36);
+      beam.fillCircle(end.x, end.y, Math.max(12, 18 * this.scaleUnit));
+      this.effectLayer.add(beam);
+      this.tweens.add({
+        targets: beam,
+        alpha: 0,
+        duration: type === 'kill' ? 420 : 270,
+        ease: 'Cubic.easeOut',
+        onComplete: () => beam.destroy(),
+      });
+
+      const text = this.add.text(end.x, end.y - 26 * this.scaleUnit, type === 'kill' ? 'KO' : String(damage || 'HIT'), {
+        fontFamily: 'Arial Black, Impact, sans-serif',
+        fontSize: `${Math.round((type === 'kill' ? 62 : type === 'critical' ? 56 : 42) * this.scaleUnit)}px`,
+        color: type === 'kill' ? '#fff0b9' : type === 'critical' ? '#ff4268' : '#ffffff',
+        stroke: '#02040a',
+        strokeThickness: Math.max(5, 8 * this.scaleUnit),
+      }).setOrigin(0.5);
+      this.effectLayer.add(text);
+      this.tweens.add({
+        targets: text,
+        y: text.y - 122 * this.scaleUnit,
+        alpha: 0,
+        scaleX: 1.16,
+        scaleY: 1.16,
+        duration: 920,
+        ease: 'Quad.easeOut',
+        onComplete: () => text.destroy(),
+      });
+    }
+
+    handleAttackEvent(data = {}) {
+      const type = data.killed || data.killingBlow ? 'kill' : data.critical ? 'critical' : 'normal';
+      const from = this.getEntityPosition(data.attacker || data.attackerId, data.attackerScope) || this.getHordePosition();
+      const to = this.getEntityPosition(data.target || data.targetId, data.targetScope) || this.getHordePosition();
+      this.fireBeam(from, to, data.damage || 'HIT', type, {
+        special: Boolean(data.special || data.giftBoosted),
+        color: data.laserColor ? hexToNumber(data.laserColor, this.laserColor) : undefined,
+      });
+      if (data.attacker || data.attackerId) this.pulseCard(data.attacker || data.attackerId, type === 'kill' ? 0xf6c95b : this.laserColor);
+      if (data.target || data.targetId) this.pulseCard(data.target || data.targetId, type === 'kill' ? 0xff5566 : 0xff6a3d);
+      if (String(data.target || '').toLowerCase().includes('boss') || String(data.targetScope || '').toLowerCase() === 'horde') this.pulseHorde(type === 'kill' ? 0xf6c95b : 0xff6a3d);
+      if (data.shielded) this.showBanner(`Shield absorbed ${Math.round(Number(data.shieldAbsorbed) || 0)} damage`, 'heal');
+    }
+
+    handleGiftAttackEvent(data = {}) {
+      this.handleAttackEvent({ ...data, special: true, giftBoosted: true, critical: data.critical || data.tier === 'legendary', laserColor: data.giftColor || '#f6c95b' });
+      if (data.attacker) this.spawnHeartBurst(data.attacker, data.tier === 'legendary' ? 5 : 3, 'gift', data.giftColor || '#f6c95b');
+    }
+
+    spawnHeartBurst(playerId, count = 3, kind = 'like', color = '#ff78b2') {
+      const record = this.findPlayerRecord(playerId);
+      const base = record
+        ? { x: record.container.x, y: record.container.y - (record.cardH || 150 * this.scaleUnit) * 0.42 }
+        : { x: this.W / 2, y: this.safe.y + this.safe.height * 0.42 };
+      const fill = hexToNumber(color, kind === 'heal' ? 0x99ffda : kind === 'follow' ? 0x7afcff : 0xff78b2);
+      for (let index = 0; index < Math.min(12, Math.max(2, count)); index += 1) {
+        const label = kind === 'heal' ? '+' : kind === 'follow' ? '*' : '♥';
+        const particle = this.add.text(base.x, base.y, label, {
+          fontFamily: 'Arial Black, Impact, sans-serif',
+          fontSize: `${Math.round((kind === 'like' ? 24 : 30) * this.scaleUnit)}px`,
+          color: `#${fill.toString(16).padStart(6, '0')}`,
+          stroke: '#02040a',
+          strokeThickness: Math.max(2, 4 * this.scaleUnit),
+        }).setOrigin(0.5);
+        this.effectLayer.add(particle);
+        this.tweens.add({
+          targets: particle,
+          x: base.x + (Math.random() - 0.5) * 170 * this.scaleUnit,
+          y: base.y - (70 + Math.random() * 90) * this.scaleUnit,
+          alpha: 0,
+          scaleX: 1.25,
+          scaleY: 1.25,
+          duration: 880 + Math.random() * 320,
+          ease: 'Cubic.easeOut',
+          onComplete: () => particle.destroy(),
+        });
+      }
+      if (record) this.pulseCard(playerId, fill);
+    }
+
+    handleLikeEvent(data = {}) {
+      this.spawnHeartBurst(data.uniqueId || data.userId || data.nickname, Math.max(2, Number(data.hearts) || 2), 'like', data.color || '#ff78b2');
+    }
+
+    handleHealEvent(data = {}) {
+      this.spawnHeartBurst(data.uniqueId || data.userId || data.nickname, Math.max(2, Math.round((Number(data.amount) || 10) / 8)), 'heal', data.color || '#99ffda');
+      this.showBanner(`${data.sourceNick || data.nickname || 'Viewer'} restored health`, 'heal');
+    }
+
+    handleFollowEvent(data = {}) {
+      const name = data.nickname || data.uniqueId || 'Viewer';
+      this.showBanner(`${name} joined the arena`, 'follow');
+      this.spawnHeartBurst(data.uniqueId || data.userId || data.nickname, 4, 'follow', data.color || '#7afcff');
+    }
+
+    showSocialBoost(data = {}) {
+      const name = data.nickname || data.uniqueId || 'Viewer';
+      this.showBanner(`${name} boosted the crowd`, 'follow');
+      this.spawnHeartBurst(data.uniqueId || data.userId || data.nickname, 5, data.type || 'follow', data.color || '#7afcff');
+    }
+
+    spawnRespawnEffect(playerId) {
+      const record = this.findPlayerRecord(playerId);
+      const pos = record ? { x: record.container.x, y: record.container.y } : { x: this.W / 2, y: this.safe.y + this.safe.height * 0.42 };
+      const ring = this.add.graphics();
+      ring.lineStyle(Math.max(4, 7 * this.scaleUnit), 0x99ffda, 0.88);
+      ring.strokeCircle(pos.x, pos.y, 42 * this.scaleUnit);
+      this.effectLayer.add(ring);
+      this.tweens.add({
+        targets: ring,
+        scaleX: 2.2,
+        scaleY: 2.2,
+        alpha: 0,
+        duration: 720,
+        ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy(),
+      });
+      if (playerId) this.pulseCard(playerId, 0x99ffda);
+    }
+
+    handlePlayerCommand(data = {}) {
+      const name = data.nickname || data.sourceNick || data.uniqueId || 'Viewer';
+      if (data.type === 'emoji') {
+        this.showBanner(`${name} changed their icon ${data.iconEmoji || ''}`, 'follow');
+        this.pulseCard(data.uniqueId, 0x7afcff);
+      } else if (data.type === 'heal') {
+        this.handleHealEvent(data);
+      } else if (data.type === 'shield') {
+        this.showBanner(`${name} raised a shield`, 'heal');
+        this.pulseCard(data.uniqueId, 0x7afcff);
+      } else if (data.type === 'help') {
+        this.showBanner('Try !join, !emoji, !shield, !laser @name, !fire @name', 'event');
+      } else if (data.type === 'join') {
+        this.showBanner(`${name} entered the arena`, 'follow');
+      }
+    }
+
+    handleKillEvent(data = {}) {
+      this.handleAttackEvent({
+        attacker: data.killer,
+        target: data.victim,
+        damage: data.damage || 'KO',
+        killed: true,
+        effect: data.effect || 'explosion',
+        attackerScope: data.attackerScope,
+        targetScope: data.targetScope,
+      });
+      const killerName = data.killerNick || data.killer || 'Fighter';
+      const victimName = data.victimNick || data.victim || 'Opponent';
+      this.showBanner(`${killerName} eliminated ${victimName}`, Number(data.killerStreak || 0) >= 5 ? 'legendary' : 'kill');
+    }
+
+    handleStreakEvent(data = {}) {
+      const name = data.nickname || data.killerNick || 'Fighter';
+      const streak = Number(data.streak || data.streakCount || 0);
+      this.showBanner(`${name} is on a ${streak || 1} KO streak`, streak >= 10 ? 'legendary' : 'kill');
+    }
+
+    handleGiftCelebration(data = {}) {
+      const name = data.nickname || 'Viewer';
+      const gift = data.giftName || 'a gift';
+      this.showBanner(`${name} sent ${gift}`, data.tier === 'legendary' ? 'legendary' : 'gift');
+      this.spawnHeartBurst(data.uniqueId || data.userId || data.nickname, data.tier === 'legendary' ? 8 : 4, 'gift', data.tier === 'legendary' ? '#f6c95b' : '#ff8bc2');
+    }
+
+    handleRoundEvent(data = {}) {
+      const type = String(data.type || '').toLowerCase();
+      if (type === 'round_started') {
+        this.showBanner(data.title || `Round ${Number(data.number) || 1} is live`, 'kill');
+      } else if (type === 'round_ended') {
+        const leader = Array.isArray(data.topPlayers) ? data.topPlayers[0] : null;
+        this.showBanner(leader ? `${leader.nickname || leader.uniqueId} leads the arena` : (data.title || 'Round complete'), 'gift');
+      } else if (type === 'boss_started') {
+        this.handleBossWave({ type: 'started', hp: data.hp || data.maxHp || 100, maxHp: data.maxHp || data.hp || 100 });
+      } else if (type === 'boss_defeated') {
+        this.handleBossWave({ type: 'defeated', finalHitBy: { nickname: data.message || '' } });
+      } else if (type === 'session_started') {
+        this.showBanner(data.title || 'Battle session started', 'follow');
+      } else if (type === 'session_ended') {
+        const winner = data.recap?.winner?.nickname || data.recap?.winner?.uniqueId;
+        this.showBanner(winner ? `${winner} finished on top` : 'Session recap ready', 'gift');
+      }
+    }
+
+    handleBossWave(data = {}) {
+      const type = String(data.type || '').toLowerCase();
+      if (type === 'started' || data.active === true) {
+        this.bossState = {
+          active: true,
+          hp: Number(data.hp || data.maxHp || 100),
+          maxHp: Number(data.maxHp || data.hp || 100),
+        };
+        this.showBanner('Boss wave incoming', 'legendary');
+        this.pulseHorde(0xf6c95b);
+        return;
+      }
+      if (type === 'damaged') {
+        this.bossState = {
+          active: true,
+          hp: Number(data.hp || 0),
+          maxHp: Number(data.maxHp || 1),
+        };
+        const hitter = data.lastHitBy?.nickname || data.lastHitBy?.uniqueId || 'Viewer';
+        this.showBanner(`${hitter} hit the boss wave`, Number(data.hp || 0) <= Number(data.maxHp || 1) * 0.25 ? 'legendary' : 'kill');
+        this.pulseHorde(0xff6a3d);
+        return;
+      }
+      if (type === 'defeated') {
+        this.bossState = null;
+        this.showBanner('Boss wave defeated', 'legendary');
+        this.pulseHorde(0xf6c95b);
+        return;
+      }
+      if (['stopped', 'ended', 'restarted'].includes(type) || data.active === false) {
+        this.bossState = null;
+        this.showBanner('Boss wave ended', 'event');
+      }
+    }
+
+    showSoundPulse(eventName) {
+      if (!eventName) return;
+      const pos = { x: this.safe.x + this.safe.width - 78 * this.scaleUnit, y: this.safe.y + 58 * this.scaleUnit };
+      const pulse = this.add.text(pos.x, pos.y, 'SND', {
+        fontFamily: 'Arial Black, Impact, sans-serif',
+        fontSize: `${Math.round(18 * this.scaleUnit)}px`,
+        color: '#99ffda',
+        stroke: '#02040a',
+        strokeThickness: Math.max(2, 4 * this.scaleUnit),
+      }).setOrigin(0.5);
+      this.effectLayer.add(pulse);
+      this.tweens.add({
+        targets: pulse,
+        alpha: 0,
+        y: pos.y - 34 * this.scaleUnit,
+        duration: 520,
+        ease: 'Cubic.easeOut',
+        onComplete: () => pulse.destroy(),
+      });
     }
 
     setBackgroundImageUrl(url) {
@@ -720,10 +1090,78 @@
       this.cameras.main.shake(180, clamp(Number(intensity) || 5, 1, 18) / 1000);
     }
 
+    cleanupPreparedSponsor() {
+      if (!this.preparedSponsor) return;
+      try {
+        this.preparedSponsor.video.pause();
+        this.preparedSponsor.video.removeAttribute('src');
+        this.preparedSponsor.video.load();
+      } catch (_err) {}
+      this.preparedSponsor = null;
+    }
+
+    prepareSponsorBreak(payload = {}) {
+      this.cleanupPreparedSponsor();
+      if (!payload.breakId) return;
+      if (!payload.videoUrl) {
+        this.reportSponsor(payload, 'decoded', 'No video media required');
+        this.reportSponsor(payload, 'ready', 'Fallback sponsor scene ready');
+        return;
+      }
+
+      const video = document.createElement('video');
+      video.preload = 'auto';
+      video.playsInline = true;
+      video.muted = payload.muted !== false;
+      video.crossOrigin = 'anonymous';
+      this.preparedSponsor = { breakId: payload.breakId, payload, video, decoded: false, ready: false };
+
+      let settled = false;
+      const markDecoded = () => {
+        if (!this.preparedSponsor || this.preparedSponsor.breakId !== payload.breakId || this.preparedSponsor.decoded) return;
+        this.preparedSponsor.decoded = true;
+        this.reportSponsor(payload, 'decoded', 'Phaser media metadata decoded');
+      };
+      const markReady = () => {
+        if (settled || !this.preparedSponsor || this.preparedSponsor.breakId !== payload.breakId || video.readyState < 2) return;
+        settled = true;
+        markDecoded();
+        this.preparedSponsor.ready = true;
+        this.reportSponsor(payload, 'ready', 'Phaser media ready for first frame');
+      };
+      const markFailed = () => {
+        if (settled) return;
+        settled = true;
+        this.reportSponsor(payload, 'failed', 'Phaser media failed to preload');
+      };
+
+      video.onloadedmetadata = markDecoded;
+      video.onloadeddata = markReady;
+      video.oncanplay = markReady;
+      video.oncanplaythrough = markReady;
+      video.onerror = markFailed;
+      video.onstalled = () => this.reportSponsor(payload, 'decoded', 'Phaser media buffering after metadata');
+      video.src = payload.videoUrl;
+      try {
+        video.load();
+        if (video.readyState >= 1) markDecoded();
+        if (video.readyState >= 2) markReady();
+      } catch (_err) {
+        markFailed();
+      }
+
+      this.time.delayedCall(9000, () => {
+        if (!settled && this.preparedSponsor?.breakId === payload.breakId) markFailed();
+      });
+    }
+
     playSponsorBreak(payload = {}) {
+      this.activeSponsorPayload = payload;
+      this.sponsorFinalized = false;
       document.body.classList.add('sponsor-active');
       this.sponsorLayer.removeAll(true);
       this.sponsorLayer.setVisible(true).setAlpha(0);
+      this.reportSponsor(payload, 'live', 'Phaser power moment is live');
 
       const intro = this.add.graphics();
       intro.fillStyle(0x02040a, 0.96);
@@ -769,13 +1207,39 @@
           this.sponsorVideo.setDisplaySize(videoBox.w, videoBox.h);
           this.sponsorVideo.setMute(payload.muted !== false);
           this.sponsorVideo.loadURL(payload.videoUrl, true);
-          this.sponsorVideo.once('play', () => this.showSponsorEndCap(payload, Number(payload.durationMs || 15000) - 3200));
-          this.sponsorVideo.once('complete', () => this.stopSponsorBreak());
+          let firstFrameReported = false;
+          const reportFirstFrame = (message = 'Phaser video first frame confirmed') => {
+            if (firstFrameReported) return;
+            firstFrameReported = true;
+            this.reportSponsor(payload, 'playing', 'Phaser media playback started');
+            this.reportSponsor(payload, 'first_frame', message);
+          };
+          this.sponsorVideo.once('play', () => {
+            this.showSponsorEndCap(payload, Number(payload.durationMs || 15000) - 3200);
+            const videoEl = this.sponsorVideo?.video;
+            if (videoEl && typeof videoEl.requestVideoFrameCallback === 'function') {
+              videoEl.requestVideoFrameCallback(() => reportFirstFrame('Phaser video frame callback confirmed'));
+            } else {
+              this.time.delayedCall(220, () => reportFirstFrame('Phaser video ready-state fallback confirmed'));
+            }
+          });
+          this.sponsorVideo.once('complete', () => {
+            this.reportSponsor(payload, 'video_completed', 'Phaser sponsor video finished');
+          });
+          this.sponsorVideo.once('error', () => {
+            this.reportSponsor(payload, 'failed', 'Phaser video failed during playback');
+            this.showSponsorFallback(videoBox, payload);
+          });
           this.sponsorVideo.play(false);
+          this.time.delayedCall(1400, () => {
+            if (!firstFrameReported) reportFirstFrame('Phaser video start fallback confirmed');
+          });
         } catch (_err) {
+          this.reportSponsor(payload, 'failed', 'Phaser video could not start');
           this.showSponsorFallback(videoBox, payload);
         }
       } else {
+        this.reportSponsor(payload, 'fallback_started', 'Phaser sponsor break started without video media');
         this.showSponsorFallback(videoBox, payload);
       }
 
@@ -796,7 +1260,10 @@
       });
 
       if (this.sponsorTimer) this.sponsorTimer.remove(false);
-      this.sponsorTimer = this.time.delayedCall(Number(payload.durationMs || 15000), () => this.stopSponsorBreak());
+      if (this.sponsorWallClockTimer) window.clearTimeout(this.sponsorWallClockTimer);
+      const durationMs = clamp(Number(payload.durationMs) || 15000, 1200, 60000);
+      this.sponsorTimer = this.time.delayedCall(durationMs, () => this.stopSponsorBreak('completed'));
+      this.sponsorWallClockTimer = window.setTimeout(() => this.stopSponsorBreak('completed'), durationMs + 500);
       if (!payload.videoUrl) this.showSponsorEndCap(payload, Number(payload.durationMs || 9000) - 2800);
     }
 
@@ -821,7 +1288,8 @@
 
     showSponsorEndCap(payload, delay) {
       const safeDelay = clamp(Number(delay) || 0, 900, 12000);
-      this.time.delayedCall(safeDelay, () => {
+      if (this.sponsorEndcapTimer) this.sponsorEndcapTimer.remove(false);
+      this.sponsorEndcapTimer = this.time.delayedCall(safeDelay, () => {
         if (!this.sponsorLayer.visible) return;
         const alive = this.playerGroups.filter(player => Number(player.data.health || 0) > 0).length;
         const kills = this.playerGroups.reduce((sum, player) => sum + Number(player.data.kills || 0), 0);
@@ -865,14 +1333,26 @@
       });
     }
 
-    stopSponsorBreak() {
+    stopSponsorBreak(status = 'completed') {
       if (this.sponsorTimer) {
         this.sponsorTimer.remove(false);
         this.sponsorTimer = null;
       }
+      if (this.sponsorWallClockTimer) {
+        window.clearTimeout(this.sponsorWallClockTimer);
+        this.sponsorWallClockTimer = null;
+      }
+      if (this.sponsorEndcapTimer) {
+        this.sponsorEndcapTimer.remove(false);
+        this.sponsorEndcapTimer = null;
+      }
       try {
         if (this.sponsorVideo?.isPlaying) this.sponsorVideo.stop();
       } catch (_err) {}
+      if (!this.sponsorFinalized && this.activeSponsorPayload?.breakId) {
+        this.sponsorFinalized = true;
+        this.reportSponsor(this.activeSponsorPayload, status === 'stopped' ? 'stopped' : 'completed', status === 'stopped' ? 'Phaser break stopped' : 'Phaser break completed');
+      }
       this.tweens.add({
         targets: this.sponsorLayer,
         alpha: 0,
@@ -882,6 +1362,8 @@
           this.sponsorLayer.removeAll(true);
           this.sponsorLayer.setVisible(false);
           document.body.classList.remove('sponsor-active');
+          this.cleanupPreparedSponsor();
+          this.activeSponsorPayload = null;
           this.showBanner('Battle resumed', 'return');
         },
       });

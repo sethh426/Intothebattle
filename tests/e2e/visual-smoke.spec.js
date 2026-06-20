@@ -136,6 +136,10 @@ test('dashboard renders with E2E auth fixture', async ({ context, page }, testIn
   await expect(page.getByText('Live Session Director')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Boss Wave' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Open Overlay' }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Copy V2 1080p' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Copy V2 1440p' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Preview V2' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Use V2 Test' })).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'dashboard');
   expect(errors).toEqual([]);
@@ -211,6 +215,59 @@ test('signed Phaser overlay v2 source mode fills the browser source', async ({ p
   expect(errors).toEqual([]);
 });
 
+test('signed Phaser overlay v2 handles production event parity hooks', async ({ page }, testInfo) => {
+  const errors = await watchPage(page);
+  const params = new URLSearchParams({
+    room_id: roomId,
+    overlay_token: overlayToken,
+    demo: '1',
+    render: '1080p',
+  });
+  await page.goto(`${baseUrl}/overlay-v2?${params.toString()}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__overlayV2Ready === true, null, { timeout: 6000 });
+  await page.waitForFunction(() => Array.isArray(window.__overlayV2Layout) && window.__overlayV2Layout.length >= 5, null, { timeout: 6000 });
+
+  const parityResult = await page.evaluate(() => {
+    const scene = window.overlayV2Scene;
+    window.__sponsorReports = [];
+    scene.setSponsorPlaybackReporter((payload, status, message) => {
+      window.__sponsorReports.push({ breakId: payload.breakId, status, message });
+    });
+    scene.handleBossWave({ type: 'started', active: true, hp: 900, maxHp: 900, title: 'Test Boss' });
+    scene.handleAttackEvent({ attacker: 'demo-1', attackerScope: 'top', target: 'demo-2', targetScope: 'top', damage: 42, critical: true });
+    scene.handleAttackEvent({ attacker: 'demo-3', attackerScope: 'top', target: '@boss', targetScope: 'horde', damage: 86, special: true });
+    scene.handleGiftAttackEvent({ attacker: 'demo-4', target: 'demo-5', damage: 120, tier: 'legendary', giftColor: '#f6c95b' });
+    scene.handleLikeEvent({ uniqueId: 'demo-1', hearts: 5, color: '#ff78b2' });
+    scene.handleHealEvent({ uniqueId: 'demo-2', sourceNick: 'Nova', amount: 48, color: '#99ffda' });
+    scene.handleFollowEvent({ uniqueId: 'demo-3', nickname: 'NewFan', color: '#7afcff' });
+    scene.showSocialBoost({ uniqueId: 'demo-3', nickname: 'NewFan', type: 'share', color: '#7afcff' });
+    scene.handlePlayerCommand({ type: 'emoji', uniqueId: 'demo-4', nickname: 'JettByte', iconEmoji: '*' });
+    scene.handleKillEvent({ killer: 'demo-1', victim: 'demo-5', damage: 180 });
+    scene.handleStreakEvent({ uniqueId: 'demo-1', nickname: 'NovaStrike', label: 'Rampage', streak: 3, color: '#f6c95b' });
+    scene.handleGiftCelebration({ attacker: 'demo-4', nickname: 'JettByte', giftName: 'Galaxy', diamonds: 99, tier: 'legendary' });
+    scene.spawnRespawnEffect('demo-5');
+    scene.showSoundPulse('attack');
+    scene.prepareSponsorBreak({ breakId: 'event-parity-break', durationMs: 1800, title: 'Power Moment' });
+    scene.playSponsorBreak({ breakId: 'event-parity-break', durationMs: 1800, title: 'Power Moment', partner: 'Arcade Forge', subtitle: 'Fallback path ready.' });
+    return {
+      bossActive: Boolean(scene.bossState?.active),
+      sponsorActive: document.body.classList.contains('sponsor-active'),
+      players: scene.playerGroups.length,
+    };
+  });
+  await page.waitForFunction(() => (window.__sponsorReports || []).some(item => item.status === 'completed'), null, { timeout: 5000 });
+  await page.waitForFunction(() => !document.body.classList.contains('sponsor-active'), null, { timeout: 5000 });
+  const reports = await page.evaluate(() => window.__sponsorReports || []);
+
+  expect(parityResult.players).toBeGreaterThanOrEqual(5);
+  expect(parityResult.bossActive).toBe(true);
+  expect(parityResult.sponsorActive).toBe(true);
+  expect(reports.map(item => item.status)).toEqual(expect.arrayContaining(['decoded', 'ready', 'live', 'fallback_started', 'completed']));
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'overlay-v2-event-parity');
+  expect(errors).toEqual([]);
+});
+
 test('signed overlay sponsor preview renders transitioned ad scene', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
   const params = new URLSearchParams({
@@ -229,5 +286,28 @@ test('signed overlay sponsor preview renders transitioned ad scene', async ({ pa
   await expect(page.locator('#status-badge')).toBeHidden();
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'overlay-sponsor-preview');
+  expect(errors).toEqual([]);
+});
+
+test('signed Phaser overlay v2 sponsor preview renders broadcast break', async ({ page }, testInfo) => {
+  const errors = await watchPage(page);
+  const params = new URLSearchParams({
+    room_id: roomId,
+    overlay_token: overlayToken,
+    sponsor_preview: '1',
+    sponsor_partner: 'Arcade Forge',
+    sponsor_title: 'Power Moment',
+    sponsor_subtitle: 'Battle stats return at the end of the break.',
+    sponsor_duration: '9000',
+    render: '1080p',
+  });
+  await page.goto(`${baseUrl}/overlay-v2?${params.toString()}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__overlayV2Ready === true, null, { timeout: 6000 });
+  await expect(page.locator('#phaser-overlay-root canvas')).toBeVisible();
+  await page.waitForTimeout(1400);
+  const hasSponsorLayer = await page.evaluate(() => document.body.classList.contains('sponsor-active'));
+  expect(hasSponsorLayer).toBe(true);
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'overlay-v2-sponsor-preview');
   expect(errors).toEqual([]);
 });
