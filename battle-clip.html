@@ -247,12 +247,12 @@
       right: 7%;
       top: 18%;
       z-index: 28;
-      width: min(30%, 360px);
-      min-height: clamp(40px, 12%, 78px);
+      width: min(28%, 320px);
+      min-height: clamp(34px, 9%, 58px);
       display: grid;
       align-content: center;
       gap: clamp(3px, .6vw, 7px);
-      padding: clamp(7px, 1vw, 13px);
+      padding: clamp(6px, .85vw, 10px);
       border: 1px solid rgba(85, 231, 255, .34);
       border-radius: 10px;
       background:
@@ -648,6 +648,140 @@
       background-size: 170% 100%;
       animation: hordePressure var(--cycle) linear infinite;
     }
+    .effects-scene {
+      position: absolute;
+      inset: 0;
+      z-index: 34;
+      display: grid;
+      place-items: center;
+      padding: 7%;
+      pointer-events: none;
+      opacity: 0;
+      background:
+        radial-gradient(circle at 28% 42%, rgba(255, 106, 61, .2), transparent 30%),
+        radial-gradient(circle at 72% 50%, rgba(85, 231, 255, .18), transparent 32%),
+        linear-gradient(180deg, rgba(2, 4, 10, .9), rgba(2, 6, 14, .96));
+      animation: effectsScene var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
+    }
+    .effects-card {
+      width: min(82%, 980px);
+      display: grid;
+      grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr);
+      gap: clamp(14px, 2.1vw, 30px);
+      align-items: center;
+      padding: clamp(14px, 2.2vw, 28px);
+      border: 1px solid rgba(85, 231, 255, .32);
+      border-radius: 12px;
+      background:
+        linear-gradient(180deg, rgba(7, 18, 32, .96), rgba(2, 6, 14, .95)),
+        radial-gradient(circle at top left, rgba(246, 201, 91, .12), transparent 42%);
+      box-shadow: 0 30px 100px rgba(0, 0, 0, .46), inset 0 1px 0 rgba(255, 255, 255, .08);
+    }
+    .effects-copy,
+    .recap-copy {
+      min-width: 0;
+    }
+    .effects-copy span,
+    .recap-copy span {
+      display: inline-flex;
+      min-height: clamp(22px, 4vh, 32px);
+      align-items: center;
+      margin-bottom: clamp(8px, 1.2vw, 13px);
+      padding: 0 clamp(9px, 1.15vw, 13px);
+      border: 1px solid rgba(85, 231, 255, .28);
+      border-radius: 999px;
+      color: var(--cyan2);
+      background: rgba(85, 231, 255, .08);
+      font-size: clamp(7px, .86vw, 12px);
+      font-weight: 950;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .effects-copy h2,
+    .recap-card h2 {
+      color: #fff8e6;
+      font-size: clamp(24px, 4.1vw, 64px);
+      line-height: .92;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+    .effects-copy h2 em,
+    .recap-card h2 em {
+      display: block;
+      color: transparent;
+      font-style: normal;
+      background: linear-gradient(100deg, #fff7d7, var(--gold), var(--ember));
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    .effects-copy p,
+    .recap-copy p {
+      margin-top: clamp(7px, 1vw, 12px);
+      color: #d7f5ff;
+      font-size: clamp(9px, 1.05vw, 15px);
+      line-height: 1.3;
+      font-weight: 900;
+    }
+    .effect-grid {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: clamp(6px, .85vw, 11px);
+    }
+    .effect-mini {
+      position: relative;
+      min-width: 0;
+      min-height: clamp(50px, 11vh, 90px);
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: clamp(4px, .65vw, 7px);
+      overflow: hidden;
+      padding: clamp(7px, .95vw, 11px);
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .045);
+    }
+    .effect-mini::before {
+      content: "";
+      position: absolute;
+      inset: 12% 10%;
+      border-radius: inherit;
+      opacity: .58;
+      filter: blur(1px);
+    }
+    .effect-mini b {
+      position: relative;
+      z-index: 2;
+      color: #fff8e6;
+      font-size: clamp(8px, .98vw, 13px);
+      line-height: 1;
+      font-weight: 950;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .effect-mini span {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      place-items: center;
+      width: clamp(22px, 4.2vw, 44px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      font-size: clamp(13px, 2vw, 25px);
+      line-height: 1;
+      color: #061017;
+      background: linear-gradient(135deg, #fff7d7, var(--gold), var(--ember));
+      box-shadow: 0 0 24px rgba(246, 201, 91, .24);
+    }
+    .effect-mini.laser::before { background: linear-gradient(90deg, transparent, var(--cyan), transparent); transform: scaleY(.16); }
+    .effect-mini.effect-beam::before { background: linear-gradient(90deg, transparent, var(--gold2), var(--cyan)); transform: scaleY(.28); }
+    .effect-mini.projectile::before { background: radial-gradient(circle, var(--gold), transparent 58%); transform: translateX(16%) scale(.62); }
+    .effect-mini.neon::before { border: 2px solid var(--cyan); box-shadow: 0 0 18px rgba(85, 231, 255, .68), inset 0 0 18px rgba(255, 106, 61, .32); }
+    .effect-mini.fire::before { background: radial-gradient(circle at 50% 70%, var(--ember), transparent 58%); transform: scale(.74, 1.05); }
+    .effect-mini.bubble::before { background: radial-gradient(circle at 28% 40%, rgba(164, 246, 255, .82), transparent 18%), radial-gradient(circle at 66% 62%, rgba(164, 246, 255, .7), transparent 18%); }
+    .effect-mini.sphere::before { background: radial-gradient(circle, rgba(199, 125, 255, .95), rgba(85, 231, 255, .2) 58%, transparent 62%); transform: scale(.8); }
+    .effect-mini.explosion::before { background: radial-gradient(circle, #fff0b9, var(--ember) 38%, transparent 64%); transform: scale(.9); }
     .recap-scene {
       position: absolute;
       inset: 0;
@@ -664,11 +798,12 @@
       animation: recapScene var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
     }
     .recap-card {
-      width: min(72%, 860px);
-      min-height: clamp(118px, 34%, 250px);
+      width: min(80%, 950px);
+      min-height: clamp(136px, 40%, 286px);
       display: grid;
-      align-content: center;
-      gap: clamp(10px, 1.8vw, 22px);
+      grid-template-columns: minmax(0, .86fr) minmax(0, 1.14fr);
+      align-items: center;
+      gap: clamp(12px, 2vw, 28px);
       padding: clamp(14px, 2.3vw, 30px);
       border: 1px solid rgba(85, 231, 255, .36);
       border-radius: 12px;
@@ -676,36 +811,63 @@
         linear-gradient(180deg, rgba(6, 17, 32, .95), rgba(2, 6, 14, .94)),
         radial-gradient(circle at top, rgba(246, 201, 91, .13), transparent 46%);
       box-shadow: 0 30px 100px rgba(0, 0, 0, .46), inset 0 1px 0 rgba(255, 255, 255, .08), 0 0 34px rgba(85, 231, 255, .13);
-      text-align: center;
+      text-align: left;
     }
-    .recap-card > span {
-      justify-self: center;
-      display: inline-flex;
-      min-height: clamp(22px, 4vh, 32px);
+    .stats-window {
+      min-width: 0;
+      display: grid;
+      gap: clamp(8px, 1.1vw, 14px);
+      padding: clamp(9px, 1.45vw, 18px);
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 10px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .065), rgba(255, 255, 255, .035)),
+        radial-gradient(circle at top right, rgba(85, 231, 255, .1), transparent 48%);
+    }
+    .stats-window header {
+      display: flex;
       align-items: center;
-      padding: 0 clamp(10px, 1.4vw, 16px);
-      border: 1px solid rgba(246, 201, 91, .34);
-      border-radius: 999px;
-      color: var(--gold2);
-      background: rgba(246, 201, 91, .09);
-      font-size: clamp(7px, .9vw, 12px);
+      justify-content: space-between;
+      gap: 10px;
+      color: #d7f5ff;
+      font-size: clamp(8px, .96vw, 13px);
       font-weight: 950;
       text-transform: uppercase;
       white-space: nowrap;
     }
-    .recap-card h2 {
-      color: #fff8e6;
-      font-size: clamp(28px, 4.8vw, 72px);
-      line-height: .9;
+    .stats-window header b {
+      color: var(--gold2);
+    }
+    .stats-bars {
+      display: grid;
+      gap: clamp(5px, .7vw, 9px);
+    }
+    .stats-bar {
+      display: grid;
+      grid-template-columns: minmax(62px, .4fr) minmax(0, 1fr);
+      gap: 9px;
+      align-items: center;
+      color: var(--soft);
+      font-size: clamp(7px, .86vw, 11px);
       font-weight: 950;
       text-transform: uppercase;
+      white-space: nowrap;
     }
-    .recap-card h2 em {
-      color: transparent;
-      font-style: normal;
-      background: linear-gradient(100deg, #fff7d7, var(--gold), var(--ember));
-      -webkit-background-clip: text;
-      background-clip: text;
+    .stats-bar i {
+      height: clamp(6px, 1vh, 10px);
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, .38);
+      border: 1px solid rgba(255, 255, 255, .1);
+    }
+    .stats-bar i::before {
+      content: "";
+      display: block;
+      height: 100%;
+      width: var(--w);
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--cyan), var(--gold2), var(--ember));
+      box-shadow: 0 0 16px rgba(85, 231, 255, .24);
     }
     .recap-stats {
       display: grid;
@@ -907,30 +1069,30 @@
       50% { transform: scale(1.18); opacity: 1; }
     }
     @keyframes battleLayer {
-      0%, 78% { opacity: 1; }
-      84%, 100% { opacity: 0; }
+      0%, 60% { opacity: 1; }
+      62%, 100% { opacity: 0; }
     }
     @keyframes commandCue {
-      0%, 29% { opacity: 0; transform: translateY(16px) scale(.98); }
-      34%, 39% { opacity: 1; transform: translateY(0) scale(1); }
+      0%, 33% { opacity: 0; transform: translateY(16px) scale(.98); }
+      36%, 40% { opacity: 1; transform: translateY(0) scale(1); }
       43%, 100% { opacity: 0; transform: translateY(8px) scale(.99); }
     }
     @keyframes chatPanel {
       0%, 12% { opacity: 0; transform: translate(-50%, 14px) scale(.98); }
       17%, 28% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-      32%, 58% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
-      63%, 78% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-      84%, 100% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
+      30%, 50% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
+      54%, 62% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      67%, 100% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
     }
     @keyframes chatLaser {
       0%, 15% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); }
-      20%, 29% { opacity: 1; border-color: rgba(246, 201, 91, .48); background: rgba(246, 201, 91, .12); box-shadow: 0 0 18px rgba(246, 201, 91, .18); }
-      33%, 100% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); box-shadow: none; }
+      20%, 28% { opacity: 1; border-color: rgba(246, 201, 91, .48); background: rgba(246, 201, 91, .12); box-shadow: 0 0 18px rgba(246, 201, 91, .18); }
+      30%, 100% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); box-shadow: none; }
     }
     @keyframes chatEmoji {
-      0%, 60% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); }
-      66%, 78% { opacity: 1; border-color: rgba(255, 106, 61, .55); background: rgba(255, 106, 61, .13); box-shadow: 0 0 18px rgba(255, 106, 61, .2); }
-      84%, 100% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); box-shadow: none; }
+      0%, 50% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); }
+      55%, 62% { opacity: 1; border-color: rgba(255, 106, 61, .55); background: rgba(255, 106, 61, .13); box-shadow: 0 0 18px rgba(255, 106, 61, .2); }
+      67%, 100% { opacity: 0; border-color: rgba(255, 255, 255, .09); background: rgba(255, 255, 255, .045); box-shadow: none; }
     }
     @keyframes cardsSettle {
       0% { opacity: 1; transform: translateY(0) scale(1); }
@@ -959,23 +1121,23 @@
       48%, 100% { width: 0%; }
     }
     @keyframes emojiDefault {
-      0%, 61% { opacity: 1; transform: scale(1); }
-      66%, 100% { opacity: 0; transform: scale(.72) rotate(8deg); }
+      0%, 51% { opacity: 1; transform: scale(1); }
+      56%, 100% { opacity: 0; transform: scale(.72) rotate(8deg); }
     }
     @keyframes emojiActive {
-      0%, 60% { opacity: 0; transform: scale(.7) rotate(-8deg); }
-      66%, 82% { opacity: 1; transform: scale(1.12) rotate(0deg); }
-      88%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+      0%, 50% { opacity: 0; transform: scale(.7) rotate(-8deg); }
+      56%, 66% { opacity: 1; transform: scale(1.12) rotate(0deg); }
+      72%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
     }
     @keyframes emojiBadgePulse {
-      0%, 61% { border-color: rgba(246, 201, 91, .38); box-shadow: 0 0 22px rgba(246, 201, 91, .14); }
-      66%, 82% { border-color: rgba(255, 106, 61, .74); box-shadow: 0 0 34px rgba(255, 106, 61, .34); }
-      88%, 100% { border-color: rgba(255, 106, 61, .42); box-shadow: 0 0 22px rgba(255, 106, 61, .18); }
+      0%, 51% { border-color: rgba(246, 201, 91, .38); box-shadow: 0 0 22px rgba(246, 201, 91, .14); }
+      56%, 66% { border-color: rgba(255, 106, 61, .74); box-shadow: 0 0 34px rgba(255, 106, 61, .34); }
+      72%, 100% { border-color: rgba(255, 106, 61, .42); box-shadow: 0 0 22px rgba(255, 106, 61, .18); }
     }
     @keyframes emojiBurst {
-      0%, 64% { opacity: 0; transform: translate(0, 0) scale(.6); }
-      70% { opacity: 1; transform: translate(calc(var(--x) * .35), calc(var(--y) * .35)) scale(1); }
-      82%, 100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(.25); }
+      0%, 54% { opacity: 0; transform: translate(0, 0) scale(.6); }
+      60% { opacity: 1; transform: translate(calc(var(--x) * .35), calc(var(--y) * .35)) scale(1); }
+      68%, 100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(.25); }
     }
     @keyframes impactPop {
       0%, 42% { opacity: 0; transform: translate(-50%, -50%) scale(.62) rotate(-5deg); }
@@ -989,18 +1151,23 @@
     }
     @keyframes eventConfirm {
       0%, 46% { opacity: 0; transform: translate(-50%, 16px) scale(.98); }
-      51%, 60% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-      66%, 100% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
+      51%, 57% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      63%, 100% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
     }
     @keyframes hordePressure {
       0%, 40% { width: 62%; background-position: 0% 0; }
       56%, 74% { width: 42%; background-position: 90% 0; }
       84%, 100% { width: 62%; background-position: 180% 0; }
     }
+    @keyframes effectsScene {
+      0%, 61% { opacity: 0; transform: translateY(16px) scale(1.02); }
+      65%, 72% { opacity: 1; transform: translateY(0) scale(1); }
+      76%, 100% { opacity: 0; transform: translateY(-10px) scale(.995); }
+    }
     @keyframes recapScene {
-      0%, 60% { opacity: 0; transform: translateY(14px) scale(1.02); }
-      66%, 77% { opacity: 1; transform: translateY(0) scale(1); }
-      83%, 100% { opacity: 0; transform: translateY(-10px) scale(.995); }
+      0%, 72% { opacity: 0; transform: translateY(14px) scale(1.02); }
+      76%, 84% { opacity: 1; transform: translateY(0) scale(1); }
+      88%, 100% { opacity: 0; transform: translateY(-10px) scale(.995); }
     }
     @keyframes creatorSheen {
       0% { transform: translateX(-45%); opacity: .35; }
@@ -1008,8 +1175,8 @@
       100% { transform: translateX(45%); opacity: .35; }
     }
     @keyframes ctaScene {
-      0%, 75% { opacity: 0; transform: scale(1.02); }
-      81%, 98% { opacity: 1; transform: scale(1); }
+      0%, 84% { opacity: 0; transform: scale(1.02); }
+      88%, 98% { opacity: 1; transform: scale(1); }
       100% { opacity: 0; transform: scale(1.01); }
     }
     @media (max-width: 760px), (max-height: 430px) {
@@ -1084,14 +1251,58 @@
         width: 74%;
         height: clamp(32px, 8%, 44px);
       }
-      .recap-card {
-        width: 80%;
-        min-height: 116px;
+      .effects-card {
+        width: 86%;
+        grid-template-columns: minmax(0, .62fr) minmax(0, 1.38fr);
         gap: 10px;
         padding: 12px;
       }
+      .effects-copy h2,
       .recap-card h2 {
-        font-size: clamp(24px, 5.6vw, 46px);
+        font-size: clamp(20px, 5.2vw, 40px);
+      }
+      .effects-copy p,
+      .recap-copy p {
+        font-size: 8px;
+        line-height: 1.18;
+      }
+      .effect-grid {
+        gap: 5px;
+      }
+      .effect-mini {
+        min-height: 38px;
+        gap: 3px;
+        padding: 5px;
+        border-radius: 8px;
+      }
+      .effect-mini span {
+        width: clamp(17px, 4vw, 25px);
+        font-size: clamp(10px, 2vw, 15px);
+      }
+      .effect-mini b {
+        font-size: 7px;
+      }
+      .recap-card {
+        width: 80%;
+        min-height: 126px;
+        grid-template-columns: minmax(0, .74fr) minmax(0, 1.26fr);
+        gap: 10px;
+        padding: 12px;
+      }
+      .stats-window {
+        gap: 6px;
+        padding: 8px;
+      }
+      .stats-window header {
+        font-size: 7px;
+      }
+      .stats-bars {
+        gap: 4px;
+      }
+      .stats-bar {
+        grid-template-columns: 52px minmax(0, 1fr);
+        gap: 6px;
+        font-size: 6px;
       }
       .recap-stat {
         padding: 8px;
@@ -1227,31 +1438,77 @@
       .recap-card {
         width: 86%;
         min-height: 116px;
+        grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr);
         gap: 8px;
         padding: 10px;
       }
-      .recap-card > span {
-        min-height: 20px;
-        padding: 0 8px;
-        font-size: 7px;
+      .effects-card {
+        width: 88%;
+        grid-template-columns: 1fr;
+        gap: 6px;
+        padding: 9px;
       }
+      .effects-copy span,
+      .recap-copy span {
+        min-height: 18px;
+        margin-bottom: 5px;
+        padding: 0 7px;
+        font-size: 6px;
+      }
+      .effects-copy h2,
       .recap-card h2 {
-        font-size: clamp(18px, 6.1vw, 26px);
-        line-height: .94;
+        font-size: clamp(15px, 5.5vw, 21px);
+        line-height: .95;
+      }
+      .effects-copy p,
+      .recap-copy p {
+        display: none;
+      }
+      .effect-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 4px;
+      }
+      .effect-mini {
+        min-height: 31px;
+        gap: 2px;
+        padding: 4px 3px;
+        border-radius: 7px;
+      }
+      .effect-mini span {
+        width: clamp(16px, 8vw, 20px);
+        font-size: 10px;
+      }
+      .effect-mini b {
+        font-size: 5.5px;
+      }
+      .stats-window {
+        gap: 5px;
+        padding: 7px;
+      }
+      .stats-window header {
+        display: none;
       }
       .recap-stats {
-        gap: 6px;
+        gap: 4px;
       }
       .recap-stat {
         padding: 7px 5px;
         border-radius: 8px;
       }
       .recap-stat strong {
-        font-size: clamp(15px, 6.1vw, 24px);
+        font-size: clamp(12px, 5.2vw, 18px);
       }
       .recap-stat span {
         margin-top: 2px;
-        font-size: 6px;
+        font-size: 5.5px;
+      }
+      .stats-bars {
+        gap: 3px;
+      }
+      .stats-bar {
+        grid-template-columns: 43px minmax(0, 1fr);
+        gap: 5px;
+        font-size: 5.5px;
       }
       .cta-box {
         width: 86%;
@@ -1356,14 +1613,45 @@
       </section>
     </div>
 
+    <section class="effects-scene" aria-hidden="true">
+      <div class="effects-card">
+        <div class="effects-copy">
+          <span>Effect library</span>
+          <h2>Every attack style <em>ready for chat</em></h2>
+          <p>Show viewers that chat can trigger different attack looks, not one repeating laser.</p>
+        </div>
+        <div class="effect-grid">
+          <div class="effect-mini laser"><span>⚡</span><b>Laser</b></div>
+          <div class="effect-mini effect-beam"><span>▰</span><b>Beam</b></div>
+          <div class="effect-mini projectile"><span>➤</span><b>Projectile</b></div>
+          <div class="effect-mini neon"><span>✦</span><b>Neon</b></div>
+          <div class="effect-mini fire"><span>🔥</span><b>Fire</b></div>
+          <div class="effect-mini bubble"><span>○</span><b>Bubble</b></div>
+          <div class="effect-mini sphere"><span>●</span><b>Sphere</b></div>
+          <div class="effect-mini explosion"><span>✹</span><b>Explosion</b></div>
+        </div>
+      </div>
+    </section>
+
     <section class="recap-scene" aria-hidden="true">
       <div class="recap-card">
-        <span>Battle recap generated</span>
-        <h2>Stats your viewers <em>can feel</em></h2>
-        <div class="recap-stats">
-          <div class="recap-stat"><strong>247</strong><span>fighters joined</span></div>
-          <div class="recap-stat"><strong>18</strong><span>KOs triggered</span></div>
-          <div class="recap-stat"><strong>92%</strong><span>chat engaged</span></div>
+        <div class="recap-copy">
+          <span>Stats page preview</span>
+          <h2>See battle stats <em>after every live</em></h2>
+          <p>Recap participation, KOs, commands, and engagement without digging through chat logs.</p>
+        </div>
+        <div class="stats-window">
+          <header><span>Battle analytics</span><b>Round 04</b></header>
+          <div class="recap-stats">
+            <div class="recap-stat"><strong>247</strong><span>fighters joined</span></div>
+            <div class="recap-stat"><strong>18</strong><span>KOs triggered</span></div>
+            <div class="recap-stat"><strong>92%</strong><span>chat engaged</span></div>
+          </div>
+          <div class="stats-bars">
+            <div class="stats-bar"><span>Commands</span><i style="--w: 86%"></i></div>
+            <div class="stats-bar"><span>Gifts</span><i style="--w: 62%"></i></div>
+            <div class="stats-bar"><span>Returns</span><i style="--w: 74%"></i></div>
+          </div>
         </div>
       </div>
     </section>
