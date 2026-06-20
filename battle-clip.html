@@ -7,17 +7,19 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
+      --cycle: 12s;
       --gold: #f6c95b;
       --gold2: #fff0b9;
       --ember: #ff6a3d;
       --cyan: #55e7ff;
-      --cyan2: #9ff5ff;
+      --cyan2: #a4f6ff;
       --red: #e83b5f;
       --green: #77f0a1;
       --ink: #02040a;
+      --panel: rgba(4, 10, 20, .82);
+      --line: rgba(143, 236, 255, .24);
+      --soft: #d9e8f5;
       --text: #fff8e6;
-      --muted: #a8afbf;
-      --cycle: 12s;
     }
     html,
     body {
@@ -33,237 +35,179 @@
       position: relative;
       width: 100%;
       height: 100%;
-      min-height: 210px;
+      min-height: 180px;
       overflow: hidden;
       isolation: isolate;
       background:
-        radial-gradient(circle at 18% 18%, rgba(246,201,91,.22), transparent 32%),
-        radial-gradient(circle at 82% 28%, rgba(85,231,255,.16), transparent 34%),
-        linear-gradient(180deg, #07111f, #02040a 74%);
-      border: 1px solid rgba(246,201,91,.28);
-      box-shadow: inset 0 0 0 1px rgba(85,231,255,.12);
+        radial-gradient(circle at 18% 18%, rgba(246, 201, 91, .18), transparent 30%),
+        radial-gradient(circle at 78% 28%, rgba(85, 231, 255, .16), transparent 34%),
+        linear-gradient(180deg, #07111f, #02040a 76%);
+      border: 1px solid rgba(246, 201, 91, .24);
+      box-shadow: inset 0 0 0 1px rgba(85, 231, 255, .12);
     }
     .clip::before,
     .clip::after {
       content: "";
       position: absolute;
-      inset: 0;
       pointer-events: none;
-      z-index: 60;
     }
     .clip::before {
+      inset: 0;
+      z-index: 60;
       background:
-        repeating-linear-gradient(0deg, rgba(255,255,255,.032) 0 1px, transparent 1px 5px),
-        linear-gradient(90deg, transparent 0 18%, rgba(85,231,255,.04) 50%, transparent 82%);
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, .03) 0 1px, transparent 1px 5px),
+        linear-gradient(90deg, transparent 0 22%, rgba(85, 231, 255, .04) 50%, transparent 80%);
       mix-blend-mode: screen;
-      opacity: .45;
+      opacity: .44;
     }
     .clip::after {
-      inset: 2.2%;
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 10px;
-      box-shadow: inset 0 0 0 1px rgba(246,201,91,.14), 0 0 42px rgba(85,231,255,.08);
+      inset: 3%;
+      z-index: 61;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 12px;
+      box-shadow: inset 0 0 0 1px rgba(246, 201, 91, .12), 0 0 42px rgba(85, 231, 255, .08);
     }
     .grid {
       position: absolute;
       inset: 0;
       z-index: 0;
       background-image:
-        linear-gradient(rgba(85,231,255,.07) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(85,231,255,.055) 1px, transparent 1px);
-      background-size: 5.2% 9.2%;
-      transform: perspective(740px) rotateX(62deg) translateY(24%);
+        linear-gradient(rgba(85, 231, 255, .065) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(85, 231, 255, .055) 1px, transparent 1px);
+      background-size: 5.5% 9.8%;
+      transform: perspective(820px) rotateX(62deg) translateY(26%);
       transform-origin: 50% 100%;
-      opacity: .55;
+      opacity: .48;
       animation: gridDrift var(--cycle) linear infinite;
     }
     .corners span {
       position: absolute;
       z-index: 62;
-      width: clamp(42px, 6vw, 68px);
-      height: clamp(42px, 6vw, 68px);
-      border-color: rgba(246,201,91,.58);
+      width: clamp(34px, 6vw, 76px);
+      height: clamp(34px, 6vw, 76px);
+      border-color: rgba(246, 201, 91, .58);
       border-style: solid;
-      filter: drop-shadow(0 0 14px rgba(246,201,91,.18));
+      filter: drop-shadow(0 0 14px rgba(246, 201, 91, .18));
     }
-    .corners span:nth-child(1) { left: 2.8%; top: 5.2%; border-width: 2px 0 0 2px; }
-    .corners span:nth-child(2) { right: 2.8%; top: 5.2%; border-width: 2px 2px 0 0; }
-    .corners span:nth-child(3) { right: 2.8%; bottom: 5.2%; border-width: 0 2px 2px 0; }
-    .corners span:nth-child(4) { left: 2.8%; bottom: 5.2%; border-width: 0 0 2px 2px; }
+    .corners span:nth-child(1) { left: 3.2%; top: 5.4%; border-width: 2px 0 0 2px; }
+    .corners span:nth-child(2) { right: 3.2%; top: 5.4%; border-width: 2px 2px 0 0; }
+    .corners span:nth-child(3) { right: 3.2%; bottom: 5.4%; border-width: 0 2px 2px 0; }
+    .corners span:nth-child(4) { left: 3.2%; bottom: 5.4%; border-width: 0 0 2px 2px; }
+    .battle-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      opacity: 1;
+      animation: battleLayer var(--cycle) linear infinite;
+    }
     .hud {
       position: absolute;
-      left: 5.2%;
-      right: 5.2%;
-      top: 5.8%;
-      z-index: 18;
-      min-height: clamp(34px, 6.4vh, 58px);
+      left: 6%;
+      right: 6%;
+      top: 5%;
+      z-index: 20;
+      height: clamp(34px, 10%, 66px);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 1rem;
-      padding: clamp(6px, 1vh, 10px) clamp(9px, 1.5vw, 15px);
-      border: 1px solid rgba(255,255,255,.12);
+      gap: 14px;
+      padding: 0 clamp(10px, 1.5vw, 18px);
+      border: 1px solid rgba(255, 255, 255, .12);
       border-radius: 10px;
-      background: rgba(2,4,10,.72);
-      box-shadow: 0 16px 42px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
-      backdrop-filter: blur(14px) saturate(1.1);
+      background: rgba(2, 5, 12, .76);
+      box-shadow: 0 16px 42px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .08);
+      backdrop-filter: blur(12px) saturate(1.08);
     }
     .brand,
     .hud-right,
-    .metric,
-    .live-pill {
+    .status-pill {
       display: inline-flex;
       align-items: center;
       min-width: 0;
     }
-    .brand { gap: clamp(7px, 1.25vw, 12px); }
+    .brand { gap: clamp(7px, 1vw, 12px); }
     .brand img {
-      width: clamp(26px, 4.7vh, 38px);
-      height: clamp(26px, 4.7vh, 38px);
+      width: clamp(24px, 5vh, 42px);
+      height: clamp(24px, 5vh, 42px);
       object-fit: contain;
-      filter: drop-shadow(0 0 16px rgba(246,201,91,.28));
+      filter: drop-shadow(0 0 16px rgba(246, 201, 91, .28));
     }
     .brand strong {
       display: block;
       color: #fff8e6;
-      font-size: clamp(12px, 1.45vw, 18px);
+      font-size: clamp(11px, 1.45vw, 20px);
       line-height: 1;
       font-weight: 950;
       text-transform: uppercase;
+      white-space: nowrap;
     }
     .brand span {
       display: block;
       margin-top: 3px;
       color: var(--cyan2);
-      font-size: clamp(8px, 1vw, 11px);
+      font-size: clamp(7px, .85vw, 11px);
       line-height: 1;
       font-weight: 950;
       text-transform: uppercase;
       white-space: nowrap;
     }
-    .hud-right { gap: clamp(8px, 1.1vw, 14px); }
-    .metric {
-      flex-direction: column;
-      align-items: flex-end;
-      color: var(--muted);
-      font-size: clamp(8px, .95vw, 11px);
-      font-weight: 900;
+    .hud-right {
+      gap: clamp(7px, 1vw, 12px);
+      color: var(--soft);
+      font-size: clamp(8px, .95vw, 12px);
+      font-weight: 950;
       text-transform: uppercase;
+      white-space: nowrap;
     }
-    .metric b {
-      color: var(--gold2);
-      font-size: clamp(13px, 1.65vw, 20px);
-      line-height: 1;
-    }
-    .live-pill {
-      gap: 7px;
-      min-height: 28px;
-      padding: 0 10px;
-      color: #b8ffd0;
-      border: 1px solid rgba(119,240,161,.26);
+    .status-pill {
+      min-height: clamp(24px, 4.5vh, 34px);
+      padding: 0 clamp(8px, 1.1vw, 13px);
+      border: 1px solid rgba(119, 240, 161, .26);
       border-radius: 999px;
-      background: rgba(5,22,14,.7);
-      font-size: clamp(9px, 1vw, 12px);
-      font-weight: 950;
-      text-transform: uppercase;
-      white-space: nowrap;
+      color: #b8ffd0;
+      background: rgba(5, 22, 14, .72);
     }
-    .live-pill::before {
+    .status-pill::before {
       content: "";
-      width: 8px;
-      height: 8px;
+      width: 7px;
+      height: 7px;
+      margin-right: 7px;
       border-radius: 50%;
       background: var(--green);
-      box-shadow: 0 0 16px rgba(119,240,161,.9);
+      box-shadow: 0 0 16px rgba(119, 240, 161, .9);
       animation: livePulse 1.1s ease-in-out infinite;
-    }
-    .hook {
-      position: absolute;
-      left: 5.5%;
-      top: 20.8%;
-      z-index: 26;
-      width: min(43%, 560px);
-      display: grid;
-      gap: clamp(8px, 1.2vw, 14px);
-      opacity: 0;
-      transform: translateY(18px);
-      animation: hookIntro var(--cycle) cubic-bezier(.16,1,.3,1) infinite;
-    }
-    .hook::before {
-      content: "";
-      position: absolute;
-      inset: -8% -9% -10% -5%;
-      z-index: -1;
-      border-radius: 12px;
-      background: linear-gradient(90deg, rgba(2,4,10,.72), rgba(2,4,10,.4), transparent);
-      filter: blur(.2px);
-    }
-    .hook-kicker {
-      display: inline-flex;
-      width: fit-content;
-      min-height: 30px;
-      align-items: center;
-      padding: 0 12px;
-      border: 1px solid rgba(246,201,91,.36);
-      border-radius: 999px;
-      color: var(--gold2);
-      background: rgba(2,4,10,.68);
-      font-size: clamp(9px, 1.1vw, 14px);
-      font-weight: 950;
-      text-transform: uppercase;
-    }
-    .hook h2 {
-      color: #fff8e6;
-      font-size: clamp(28px, 5vw, 72px);
-      line-height: .86;
-      font-weight: 950;
-      text-transform: uppercase;
-      text-shadow: 0 18px 46px rgba(0,0,0,.62);
-    }
-    .hook h2 span {
-      display: block;
-      color: transparent;
-      background: linear-gradient(100deg, #fff7d7, var(--gold), var(--ember));
-      -webkit-background-clip: text;
-      background-clip: text;
-    }
-    .hook p {
-      max-width: 560px;
-      color: #d7f5ff;
-      font-size: clamp(12px, 1.55vw, 20px);
-      line-height: 1.2;
-      font-weight: 900;
     }
     .command-card {
       position: absolute;
-      right: 5.8%;
-      top: clamp(72px, 15.5%, 108px);
+      right: 7%;
+      top: 18%;
       z-index: 28;
-      width: min(30%, 340px);
-      min-height: clamp(56px, 10vh, 86px);
-      padding: clamp(8px, 1.05vw, 13px);
+      width: min(30%, 360px);
+      min-height: clamp(40px, 12%, 78px);
       display: grid;
       align-content: center;
-      gap: clamp(4px, .7vw, 7px);
-      border: 1px solid rgba(85,231,255,.32);
+      gap: clamp(3px, .6vw, 7px);
+      padding: clamp(7px, 1vw, 13px);
+      border: 1px solid rgba(85, 231, 255, .34);
       border-radius: 10px;
       background:
-        linear-gradient(180deg, rgba(7,19,34,.92), rgba(3,8,16,.9)),
-        radial-gradient(circle at top right, rgba(85,231,255,.16), transparent 46%);
-      box-shadow: 0 26px 68px rgba(0,0,0,.36), inset 0 1px 0 rgba(255,255,255,.08);
+        linear-gradient(180deg, rgba(7, 18, 32, .94), rgba(3, 8, 16, .92)),
+        radial-gradient(circle at top right, rgba(85, 231, 255, .16), transparent 46%);
+      box-shadow: 0 24px 62px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 255, 255, .08);
       opacity: 0;
-      transform: translateY(20px) scale(.98);
-      animation: commandCue var(--cycle) cubic-bezier(.16,1,.3,1) infinite;
+      transform: translateY(16px) scale(.98);
+      animation: commandCue var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
     }
     .command-card b {
       color: var(--cyan2);
-      font-size: clamp(10px, 1.1vw, 14px);
+      font-size: clamp(7px, .8vw, 12px);
       font-weight: 950;
       text-transform: uppercase;
+      white-space: nowrap;
     }
     .command-card strong {
       color: #fff;
-      font-size: clamp(19px, 2.65vw, 38px);
+      font-size: clamp(18px, 3vw, 42px);
       line-height: .9;
       font-weight: 950;
       text-transform: uppercase;
@@ -271,123 +215,118 @@
     }
     .command-card span {
       color: #dfe8f5;
-      font-size: clamp(8px, .85vw, 11px);
+      font-size: clamp(8px, .85vw, 12px);
       font-weight: 900;
+      white-space: nowrap;
     }
-    .arena {
+    .fighter {
       position: absolute;
-      left: 5.4%;
-      right: 5.4%;
-      top: 18%;
-      bottom: 10.5%;
-      z-index: 8;
-      display: grid;
-      grid-template-rows: 1fr auto;
-      gap: clamp(10px, 1.7vh, 16px);
-      opacity: 0;
-      transform: translateY(14px);
-      animation: arenaReveal var(--cycle) cubic-bezier(.16,1,.3,1) infinite;
-    }
-    .cards {
-      align-self: center;
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: clamp(7px, 1vw, 14px);
-      align-items: stretch;
-      animation: cardsBreathe var(--cycle) ease-in-out infinite;
-    }
-    .card {
-      position: relative;
-      min-width: 0;
-      min-height: clamp(72px, 16.5vh, 150px);
-      padding: clamp(7px, 1.1vw, 14px);
+      top: 34%;
+      z-index: 11;
+      width: 29%;
+      height: 29%;
       display: grid;
       grid-template-rows: auto 1fr auto;
       align-items: center;
+      min-width: 0;
       overflow: hidden;
-      border: 1px solid rgba(85,231,255,.28);
+      padding: clamp(7px, 1.05vw, 15px);
+      border: 1px solid rgba(85, 231, 255, .28);
       border-radius: 9px;
       background:
-        radial-gradient(circle at 50% 36%, rgba(85,231,255,.16), transparent 44%),
-        linear-gradient(180deg, rgba(12,26,42,.84), rgba(3,7,14,.9));
-      box-shadow: 0 22px 50px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08);
+        radial-gradient(circle at 50% 38%, rgba(85, 231, 255, .16), transparent 44%),
+        linear-gradient(180deg, rgba(12, 26, 42, .84), rgba(3, 7, 14, .92));
+      box-shadow: 0 22px 50px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .08);
+      animation: cardsSettle var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
     }
-    .card::before {
+    .fighter::before {
       content: "";
       position: absolute;
-      left: 9%;
-      right: 9%;
+      left: 8%;
+      right: 8%;
       top: 9%;
-      height: 4px;
+      height: clamp(3px, .65vh, 6px);
       border-radius: 999px;
       background: linear-gradient(90deg, var(--cyan), var(--gold2));
-      box-shadow: 0 0 18px rgba(85,231,255,.55);
+      box-shadow: 0 0 18px rgba(85, 231, 255, .55);
     }
-    .card.rank-1 {
-      border-color: rgba(246,201,91,.5);
-      box-shadow: 0 22px 58px rgba(0,0,0,.32), 0 0 26px rgba(246,201,91,.14);
+    .fighter.nova {
+      left: 13%;
+      border-color: rgba(246, 201, 91, .5);
+      box-shadow: 0 22px 58px rgba(0, 0, 0, .32), 0 0 26px rgba(246, 201, 91, .14);
     }
-    .card.rank-1::before { background: linear-gradient(90deg, var(--gold), var(--gold2)); }
+    .fighter.blaze {
+      left: 58%;
+      border-color: rgba(232, 59, 95, .34);
+      animation: cardsSettle var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite, targetHit var(--cycle) ease-in-out infinite;
+    }
+    .fighter.nova::before { background: linear-gradient(90deg, var(--gold), var(--gold2)); }
     .rank {
+      position: relative;
+      z-index: 2;
       justify-self: start;
       min-width: 2.2em;
       padding: 2px 7px;
-      border: 1px solid rgba(255,255,255,.18);
+      border: 1px solid rgba(255, 255, 255, .18);
       border-radius: 999px;
       color: #d7f5ff;
-      background: rgba(0,0,0,.32);
-      font-size: clamp(9px, 1.05vw, 13px);
+      background: rgba(0, 0, 0, .32);
+      font-size: clamp(7px, .9vw, 13px);
       font-weight: 950;
     }
     .avatar {
       align-self: center;
       justify-self: center;
-      width: clamp(38px, 8vh, 74px);
+      width: clamp(34px, 8vh, 78px);
       aspect-ratio: 1;
       display: grid;
       place-items: center;
       border-radius: 50%;
       color: #fff8e6;
-      background: radial-gradient(circle, rgba(255,255,255,.16), rgba(0,0,0,.5) 62%);
-      border: 3px solid rgba(85,231,255,.76);
-      box-shadow: inset 0 0 26px rgba(0,0,0,.6), 0 0 24px rgba(85,231,255,.26);
-      font-size: clamp(17px, 3.25vh, 30px);
+      background: radial-gradient(circle, rgba(255, 255, 255, .16), rgba(0, 0, 0, .5) 62%);
+      border: 3px solid rgba(85, 231, 255, .76);
+      box-shadow: inset 0 0 26px rgba(0, 0, 0, .6), 0 0 24px rgba(85, 231, 255, .26);
+      font-size: clamp(14px, 3.2vh, 31px);
       line-height: 1;
       font-weight: 950;
     }
-    .rank-1 .avatar {
-      border-color: rgba(246,201,91,.86);
-      box-shadow: inset 0 0 26px rgba(0,0,0,.6), 0 0 28px rgba(246,201,91,.3);
+    .nova .avatar {
+      border-color: rgba(246, 201, 91, .86);
+      box-shadow: inset 0 0 26px rgba(0, 0, 0, .6), 0 0 28px rgba(246, 201, 91, .3);
     }
-    .copy {
+    .blaze .avatar {
+      border-color: rgba(232, 59, 95, .75);
+      animation: targetAvatar var(--cycle) ease-in-out infinite;
+    }
+    .name {
       min-width: 0;
-      text-align: center;
       display: grid;
-      gap: 5px;
+      gap: clamp(3px, .45vw, 5px);
+      text-align: center;
     }
-    .copy strong {
+    .name strong {
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       color: #fff;
-      font-size: clamp(13px, 1.8vw, 23px);
+      font-size: clamp(11px, 1.45vw, 24px);
       line-height: 1;
       font-weight: 950;
     }
-    .copy span {
+    .name span {
       color: #dfe8f5;
-      font-size: clamp(8px, 1.05vw, 12px);
+      font-size: clamp(7px, .82vw, 12px);
       font-weight: 950;
       text-transform: uppercase;
       white-space: nowrap;
     }
     .hp {
-      height: clamp(6px, 1.2vh, 11px);
-      border: 1px solid rgba(255,255,255,.14);
+      height: clamp(5px, 1.05vh, 10px);
+      border: 1px solid rgba(255, 255, 255, .14);
       border-radius: 999px;
       overflow: hidden;
-      background: rgba(0,0,0,.42);
+      background: rgba(0, 0, 0, .42);
     }
     .hp span {
       display: block;
@@ -395,53 +334,127 @@
       border-radius: inherit;
       background: linear-gradient(90deg, var(--green), var(--gold2));
     }
-    .nova { animation: novaStrike var(--cycle) ease-in-out infinite; }
-    .blaze { animation: blazeDown var(--cycle) ease-in-out infinite; }
-    .blaze .hp span { width: 31%; background: linear-gradient(90deg, var(--red), var(--ember)); animation: hpDrop var(--cycle) linear infinite; }
     .nova .hp span { width: 86%; }
-    .iron .hp span { width: 48%; }
-    .vortex .hp span { width: 64%; }
-    .horde-wrap {
-      display: grid;
-      gap: 8px;
-      justify-self: center;
-      width: min(68%, 820px);
+    .blaze .hp span {
+      width: 31%;
+      background: linear-gradient(90deg, var(--red), var(--ember));
+      animation: blazeHp var(--cycle) linear infinite;
     }
-    .event-banner {
-      justify-self: center;
-      width: min(660px, 100%);
-      min-height: clamp(40px, 6.5vh, 58px);
-      display: grid;
-      grid-template-columns: clamp(40px, 6vw, 60px) minmax(0, 1fr) 8px;
-      gap: 12px;
-      align-items: center;
-      padding: 0 clamp(10px, 1.6vw, 16px);
-      overflow: hidden;
-      border: 1px solid rgba(246,201,91,.32);
-      border-radius: 8px;
-      background:
-        linear-gradient(90deg, rgba(2,7,14,.98), rgba(5,16,31,.94), rgba(3,9,18,.98)),
-        radial-gradient(circle at 12% 50%, rgba(246,201,91,.16), transparent 38%);
-      box-shadow: 0 20px 58px rgba(0,0,0,.44), 0 0 26px rgba(246,201,91,.12);
+    .beam {
+      position: absolute;
+      z-index: 24;
+      left: 27.5%;
+      top: 46.45%;
+      width: 0;
+      height: clamp(4px, 1.05vh, 8px);
+      border-radius: 999px;
+      transform-origin: left center;
+      background: linear-gradient(90deg, transparent, var(--cyan), var(--gold2), var(--ember));
+      box-shadow: 0 0 24px rgba(85, 231, 255, .9), 0 0 42px rgba(246, 201, 91, .34);
       opacity: 0;
-      transform: translateY(18px) scale(.98);
-      animation: eventBanner var(--cycle) cubic-bezier(.16,1,.3,1) infinite;
+      animation: beamFire var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
+    }
+    .beam::after {
+      content: "";
+      position: absolute;
+      right: -7px;
+      top: 50%;
+      width: clamp(10px, 2vh, 18px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      transform: translateY(-50%);
+      background: #fff8e6;
+      box-shadow: 0 0 20px rgba(255, 240, 185, .9), 0 0 42px rgba(232, 59, 95, .72);
+    }
+    .impact {
+      position: absolute;
+      z-index: 31;
+      left: 72.5%;
+      top: 46.45%;
+      width: clamp(44px, 9vw, 120px);
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #fff;
+      font-size: clamp(26px, 6vw, 76px);
+      line-height: 1;
+      font-weight: 950;
+      text-shadow: 0 0 24px rgba(232, 59, 95, .95);
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(.72);
+      animation: impactPop var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
+    }
+    .sparks {
+      position: absolute;
+      z-index: 30;
+      left: 72.5%;
+      top: 46.45%;
+      width: 1px;
+      height: 1px;
+      pointer-events: none;
+    }
+    .sparks span {
+      position: absolute;
+      width: clamp(4px, .72vw, 9px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 14px currentColor;
+      color: var(--cyan);
+      opacity: 0;
+      animation: spark var(--cycle) ease-out infinite;
+    }
+    .sparks span:nth-child(2n) { background: var(--gold); color: var(--gold); }
+    .sparks span:nth-child(3n) { background: var(--red); color: var(--red); }
+    .sparks span:nth-child(1) { --x: 34px; --y: -36px; }
+    .sparks span:nth-child(2) { --x: 52px; --y: 16px; }
+    .sparks span:nth-child(3) { --x: -26px; --y: -34px; }
+    .sparks span:nth-child(4) { --x: -38px; --y: 22px; }
+    .sparks span:nth-child(5) { --x: 12px; --y: 46px; }
+    .sparks span:nth-child(6) { --x: 66px; --y: -8px; }
+    .event-banner {
+      position: absolute;
+      left: 50%;
+      top: 68%;
+      z-index: 27;
+      width: min(64%, 760px);
+      min-height: clamp(36px, 8.5%, 64px);
+      display: grid;
+      grid-template-columns: clamp(34px, 5vw, 56px) minmax(0, 1fr);
+      gap: clamp(8px, 1.1vw, 14px);
+      align-items: center;
+      padding: 0 clamp(9px, 1.3vw, 16px);
+      overflow: hidden;
+      border: 1px solid rgba(246, 201, 91, .34);
+      border-radius: 9px;
+      background:
+        linear-gradient(90deg, rgba(2, 7, 14, .98), rgba(5, 16, 31, .94), rgba(3, 9, 18, .98)),
+        radial-gradient(circle at 12% 50%, rgba(246, 201, 91, .16), transparent 38%);
+      box-shadow: 0 20px 58px rgba(0, 0, 0, .44), 0 0 26px rgba(246, 201, 91, .12);
+      opacity: 0;
+      transform: translate(-50%, 16px) scale(.98);
+      animation: eventConfirm var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
     }
     .event-code {
       display: grid;
       place-items: center;
-      width: clamp(32px, 5vw, 48px);
+      width: clamp(28px, 4.4vw, 48px);
       aspect-ratio: 1;
-      border: 1px solid rgba(246,201,91,.42);
+      border: 1px solid rgba(246, 201, 91, .42);
       color: var(--gold2);
-      background: rgba(0,0,0,.24);
-      font-size: clamp(10px, 1.25vw, 15px);
+      background: rgba(0, 0, 0, .24);
+      font-size: clamp(9px, 1vw, 14px);
       font-weight: 950;
     }
-    .event-copy { min-width: 0; display: grid; gap: 2px; }
+    .event-copy {
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
     .event-copy span {
       color: var(--gold);
-      font-size: clamp(9px, 1.1vw, 13px);
+      font-size: clamp(8px, .9vw, 13px);
       font-weight: 950;
       text-transform: uppercase;
     }
@@ -450,27 +463,24 @@
       text-overflow: ellipsis;
       white-space: nowrap;
       color: #fff;
-      font-size: clamp(15px, 2.2vw, 29px);
+      font-size: clamp(12px, 1.8vw, 28px);
       line-height: 1;
       font-weight: 950;
       text-transform: uppercase;
     }
-    .event-meter {
-      height: 70%;
-      border: 1px solid rgba(255,255,255,.14);
-      border-radius: 999px;
-      background: linear-gradient(180deg, var(--gold2), var(--cyan));
-      transform-origin: bottom;
-      animation: meterDrain var(--cycle) linear infinite;
-    }
     .horde {
-      position: relative;
-      height: clamp(44px, 7.4vh, 68px);
-      border: 1px solid rgba(232,59,95,.34);
-      border-radius: 10px;
+      position: absolute;
+      left: 50%;
+      top: 82%;
+      z-index: 12;
+      width: min(66%, 820px);
+      height: clamp(34px, 7.5%, 62px);
       overflow: hidden;
-      background: linear-gradient(90deg, rgba(232,59,95,.22), rgba(255,106,61,.12), rgba(4,9,18,.8));
-      box-shadow: 0 20px 60px rgba(0,0,0,.28), 0 0 28px rgba(232,59,95,.12);
+      border: 1px solid rgba(232, 59, 95, .34);
+      border-radius: 10px;
+      background: linear-gradient(90deg, rgba(232, 59, 95, .22), rgba(255, 106, 61, .12), rgba(4, 9, 18, .84));
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .28), 0 0 28px rgba(232, 59, 95, .12);
+      transform: translateX(-50%);
     }
     .horde::before {
       content: "HORDE";
@@ -478,38 +488,39 @@
       left: 0;
       top: 0;
       bottom: 0;
-      width: min(18%, 150px);
+      width: 22%;
       display: grid;
       place-items: center;
       color: #ffe2e8;
-      background: linear-gradient(180deg, rgba(232,59,95,.78), rgba(124,19,52,.82));
-      font-size: clamp(14px, 2.1vw, 26px);
+      background: linear-gradient(180deg, rgba(232, 59, 95, .78), rgba(124, 19, 52, .82));
+      font-size: clamp(11px, 1.8vw, 25px);
       font-weight: 950;
       text-transform: uppercase;
     }
     .horde-label {
       position: absolute;
-      left: min(22%, 180px);
-      right: 5%;
-      top: 17%;
+      left: 27%;
+      right: 6%;
+      top: 18%;
       display: flex;
       justify-content: space-between;
-      gap: 1rem;
+      gap: 10px;
       color: var(--gold2);
-      font-size: clamp(9px, 1.25vw, 15px);
+      font-size: clamp(7px, .95vw, 13px);
       font-weight: 950;
       text-transform: uppercase;
+      white-space: nowrap;
     }
     .horde-track {
       position: absolute;
-      left: min(22%, 180px);
-      right: 5%;
+      left: 27%;
+      right: 6%;
       bottom: 22%;
-      height: clamp(9px, 1.6vh, 15px);
-      border-radius: 999px;
+      height: clamp(6px, 1.2vh, 12px);
       overflow: hidden;
-      background: rgba(0,0,0,.48);
-      border: 1px solid rgba(255,255,255,.12);
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 999px;
+      background: rgba(0, 0, 0, .48);
     }
     .horde-track span {
       display: block;
@@ -520,240 +531,47 @@
       background-size: 170% 100%;
       animation: hordePressure var(--cycle) linear infinite;
     }
-    .laser {
-      position: absolute;
-      z-index: 24;
-      left: 26%;
-      top: 48%;
-      width: 0;
-      height: clamp(5px, 1vh, 9px);
-      border-radius: 999px;
-      transform-origin: left center;
-      transform: rotate(-4deg);
-      background: linear-gradient(90deg, transparent, var(--cyan), var(--gold2), var(--ember));
-      box-shadow: 0 0 26px rgba(85,231,255,.9), 0 0 46px rgba(246,201,91,.28);
-      opacity: 0;
-      animation: laserShot var(--cycle) infinite;
-    }
-    .damage {
-      position: absolute;
-      right: 23%;
-      top: 38%;
-      z-index: 30;
-      color: #fff;
-      font-size: clamp(34px, 7vw, 82px);
-      line-height: 1;
-      font-weight: 950;
-      text-shadow: 0 0 24px rgba(232,59,95,.95);
-      opacity: 0;
-      transform: scale(.75);
-      animation: damagePop var(--cycle) cubic-bezier(.16,1,.3,1) infinite;
-    }
-    .particles {
+    .cta-scene {
       position: absolute;
       inset: 0;
-      z-index: 22;
-      pointer-events: none;
-    }
-    .particles span {
-      position: absolute;
-      width: clamp(6px, .8vw, 10px);
-      aspect-ratio: 1;
-      border-radius: 50%;
-      background: var(--cyan);
-      box-shadow: 0 0 14px currentColor;
-      color: var(--cyan);
-      opacity: 0;
-      animation: spark var(--cycle) ease-out infinite;
-    }
-    .particles span:nth-child(3n) { background: var(--gold); color: var(--gold); }
-    .particles span:nth-child(4n) { background: var(--red); color: var(--red); }
-    .particles span:nth-child(1) { left: 49%; top: 45%; --x: 80px; --y: -50px; }
-    .particles span:nth-child(2) { left: 54%; top: 45%; --x: 100px; --y: 22px; }
-    .particles span:nth-child(3) { left: 60%; top: 44%; --x: 54px; --y: -66px; }
-    .particles span:nth-child(4) { left: 65%; top: 44%; --x: 38px; --y: 54px; }
-    .particles span:nth-child(5) { left: 71%; top: 43%; --x: -36px; --y: -58px; }
-    .particles span:nth-child(6) { left: 75%; top: 43%; --x: -62px; --y: 38px; }
-    .break {
-      position: absolute;
-      inset: 0;
-      z-index: 42;
-      display: grid;
-      place-items: center;
-      padding: 6%;
-      pointer-events: none;
-      background:
-        radial-gradient(circle at 50% 42%, rgba(246,201,91,.25), transparent 34%),
-        linear-gradient(90deg, rgba(2,4,10,.98), rgba(7,18,32,.96), rgba(2,4,10,.98));
-      opacity: 0;
-      transform: scale(1.04);
-      animation: sponsorScene var(--cycle) cubic-bezier(.16,1,.3,1) infinite;
-    }
-    .break::before,
-    .break::after {
-      content: "";
-      position: absolute;
-      top: -20%;
-      bottom: -20%;
-      width: 28%;
-      background: rgba(85,231,255,.18);
-      mix-blend-mode: screen;
-      transform: skewX(-13deg);
-      animation: sponsorSweep var(--cycle) cubic-bezier(.16,1,.3,1) infinite;
-    }
-    .break::before { left: -36%; }
-    .break::after {
-      right: -36%;
-      background: rgba(246,201,91,.2);
-      transform: skewX(13deg);
-      animation-name: sponsorSweepRight;
-    }
-    .video-frame {
-      position: absolute;
-      inset: 5.5%;
-      z-index: 1;
-      overflow: hidden;
-      border: 1px solid rgba(246,201,91,.32);
-      border-radius: 10px;
-      background:
-        linear-gradient(90deg, rgba(6,20,38,.95), rgba(16,44,52,.84), rgba(246,201,91,.22)),
-        repeating-linear-gradient(90deg, transparent 0 64px, rgba(255,255,255,.08) 64px 92px);
-      box-shadow: inset 0 0 0 1px rgba(85,231,255,.18), 0 0 50px rgba(85,231,255,.1);
-      opacity: .9;
-    }
-    .video-frame::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background:
-        linear-gradient(100deg, transparent, rgba(255,255,255,.13), transparent),
-        radial-gradient(circle at 70% 35%, rgba(246,201,91,.38), transparent 32%);
-      animation: videoSheen 2.8s ease-in-out infinite;
-    }
-    .break-copy {
-      position: relative;
-      z-index: 4;
-      width: min(760px, 88%);
-      text-align: left;
-      justify-self: start;
-      margin-left: 3%;
-      align-self: end;
-      margin-bottom: 7%;
-      text-shadow: 0 6px 28px rgba(0,0,0,.9);
-      opacity: 0;
-      transform: translateY(18px);
-      animation: breakCopy var(--cycle) cubic-bezier(.16,1,.3,1) infinite;
-    }
-    .break-copy span {
-      display: inline-flex;
-      min-height: 30px;
-      align-items: center;
-      margin-bottom: 10px;
-      padding: 0 12px;
-      border: 1px solid rgba(246,201,91,.42);
-      border-radius: 999px;
-      color: var(--gold2);
-      background: rgba(2,4,10,.6);
-      font-size: clamp(10px, 1.1vw, 14px);
-      font-weight: 950;
-      text-transform: uppercase;
-    }
-    .break-copy h2 {
-      width: min(760px, 100%);
-      color: #fff8e6;
-      font-size: clamp(42px, 8.4vw, 100px);
-      line-height: .86;
-      font-weight: 950;
-      text-transform: uppercase;
-    }
-    .break-copy p {
-      margin-top: 10px;
-      color: #d7f5ff;
-      font-size: clamp(14px, 2.2vw, 28px);
-      font-weight: 900;
-    }
-    .stats-endcap {
-      position: absolute;
-      left: 6%;
-      right: 6%;
-      bottom: 9%;
-      z-index: 46;
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: clamp(8px, 1.1vw, 16px);
-      opacity: 0;
-      transform: translateY(20px);
-      animation: statsEndcap var(--cycle) cubic-bezier(.16,1,.3,1) infinite;
-    }
-    .stat {
-      min-width: 0;
-      min-height: clamp(52px, 8.6vh, 88px);
-      padding: clamp(9px, 1.35vw, 17px);
-      border: 1px solid rgba(85,231,255,.28);
-      border-radius: 8px;
-      background: rgba(3,9,18,.8);
-      box-shadow: 0 20px 46px rgba(0,0,0,.28);
-    }
-    .stat span {
-      display: block;
-      color: var(--gold);
-      font-size: clamp(8px, 1vw, 12px);
-      font-weight: 950;
-      text-transform: uppercase;
-    }
-    .stat strong {
-      display: block;
-      margin-top: 3px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      color: #fff;
-      font-size: clamp(22px, 4.2vw, 54px);
-      line-height: 1;
-      font-weight: 950;
-    }
-    .cta-panel {
-      position: absolute;
-      inset: 0;
-      z-index: 50;
+      z-index: 40;
       display: grid;
       place-items: center;
       padding: 7%;
       pointer-events: none;
       opacity: 0;
-      transform: scale(1.025);
       background:
-        radial-gradient(circle at 28% 50%, rgba(246,201,91,.24), transparent 34%),
-        linear-gradient(90deg, rgba(2,4,10,.985), rgba(4,13,24,.97), rgba(2,4,10,.99));
-      animation: ctaScene var(--cycle) cubic-bezier(.16,1,.3,1) infinite;
+        radial-gradient(circle at 32% 48%, rgba(246, 201, 91, .2), transparent 34%),
+        linear-gradient(90deg, rgba(2, 4, 10, .99), rgba(4, 13, 24, .97), rgba(2, 4, 10, .99));
+      animation: ctaScene var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
     }
     .cta-box {
-      width: min(820px, 90%);
-      padding: clamp(18px, 3vw, 36px);
-      border: 1px solid rgba(246,201,91,.34);
+      width: min(66%, 820px);
+      padding: clamp(14px, 2.6vw, 34px);
+      border: 1px solid rgba(246, 201, 91, .35);
       border-radius: 12px;
-      background: rgba(3,8,17,.88);
-      box-shadow: 0 30px 100px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
+      background: rgba(3, 8, 17, .9);
+      box-shadow: 0 30px 100px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .08);
       text-align: center;
     }
     .cta-box span {
       display: inline-flex;
-      min-height: 30px;
+      min-height: clamp(24px, 4.4vh, 34px);
       align-items: center;
-      margin-bottom: 12px;
-      padding: 0 12px;
-      border: 1px solid rgba(85,231,255,.28);
+      margin-bottom: clamp(8px, 1.3vw, 14px);
+      padding: 0 clamp(9px, 1.2vw, 14px);
+      border: 1px solid rgba(85, 231, 255, .28);
       border-radius: 999px;
       color: var(--cyan2);
-      background: rgba(85,231,255,.08);
-      font-size: clamp(9px, 1.05vw, 13px);
+      background: rgba(85, 231, 255, .08);
+      font-size: clamp(8px, .9vw, 13px);
       font-weight: 950;
       text-transform: uppercase;
     }
     .cta-box h2 {
       color: #fff8e6;
-      font-size: clamp(36px, 7vw, 94px);
-      line-height: .88;
+      font-size: clamp(28px, 5.2vw, 80px);
+      line-height: .9;
       font-weight: 950;
       text-transform: uppercase;
     }
@@ -767,18 +585,19 @@
     }
     .cta-button {
       display: inline-flex;
-      min-height: clamp(36px, 6vh, 54px);
+      min-height: clamp(32px, 5.5vh, 52px);
       align-items: center;
       justify-content: center;
-      margin-top: clamp(12px, 2vh, 20px);
-      padding: 0 clamp(18px, 3vw, 34px);
+      margin-top: clamp(10px, 1.7vw, 18px);
+      padding: 0 clamp(16px, 2.6vw, 32px);
       border-radius: 999px;
-      color: #130a02;
+      color: #140a02;
       background: linear-gradient(135deg, var(--gold), #fff1bd 52%, var(--ember));
-      box-shadow: 0 18px 44px rgba(246,201,91,.2);
-      font-size: clamp(12px, 1.7vw, 20px);
+      box-shadow: 0 18px 44px rgba(246, 201, 91, .2);
+      font-size: clamp(10px, 1.35vw, 18px);
       font-weight: 950;
       text-transform: uppercase;
+      white-space: nowrap;
     }
     @keyframes gridDrift {
       to { background-position: 0 44px, 44px 0; }
@@ -787,209 +606,198 @@
       0%, 100% { transform: scale(.82); opacity: .76; }
       50% { transform: scale(1.18); opacity: 1; }
     }
-    @keyframes hookIntro {
-      0%, 2% { opacity: 0; transform: translateY(20px) scale(.98); }
-      7%, 20% { opacity: 1; transform: translateY(0) scale(1); }
-      25%, 100% { opacity: 0; transform: translateY(-12px) scale(.99); }
+    @keyframes battleLayer {
+      0%, 78% { opacity: 1; }
+      84%, 100% { opacity: .1; }
     }
     @keyframes commandCue {
       0%, 22% { opacity: 0; transform: translateY(16px) scale(.98); }
-      27%, 31% { opacity: 1; transform: translateY(0) scale(1); }
-      33%, 100% { opacity: 0; transform: translateY(10px) scale(.99); }
+      27%, 36% { opacity: 1; transform: translateY(0) scale(1); }
+      42%, 100% { opacity: 0; transform: translateY(8px) scale(.99); }
     }
-    @keyframes arenaReveal {
-      0%, 20% { opacity: .18; transform: translateY(16px) scale(.99); }
-      27%, 70% { opacity: 1; transform: translateY(0) scale(1); }
-      78%, 100% { opacity: .72; transform: translateY(0) scale(1); }
+    @keyframes cardsSettle {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      3% { opacity: 1; transform: translateY(0) scale(1); }
+      50% { transform: translateY(-1px) scale(1); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
     }
-    @keyframes cardsBreathe {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-2px); }
+    @keyframes beamFire {
+      0%, 37% { opacity: 0; width: 0; }
+      41% { opacity: 1; width: 45%; }
+      47% { opacity: 1; width: 45%; }
+      53%, 100% { opacity: 0; width: 0; }
     }
-    @keyframes novaStrike {
-      0%, 18% { transform: translateY(0) scale(1); }
-      24%, 34% { transform: translateY(-4px) scale(1.035); filter: drop-shadow(0 0 18px rgba(246,201,91,.28)); }
-      46%, 100% { transform: translateY(0) scale(1); filter: none; }
+    @keyframes targetHit {
+      0%, 42% { filter: none; }
+      46%, 55% { filter: drop-shadow(0 0 26px rgba(232, 59, 95, .92)); }
+      63%, 100% { filter: grayscale(.32) brightness(.78); }
     }
-    @keyframes blazeDown {
-      0%, 26% { opacity: 1; transform: scale(1); filter: none; }
-      32% { transform: scale(1.1) rotate(1.5deg); filter: drop-shadow(0 0 22px rgba(232,59,95,.9)); }
-      42%, 70% { opacity: .25; transform: translateY(16px) scale(.93); filter: grayscale(.4); }
-      82%, 100% { opacity: 1; transform: translateY(0) scale(1); filter: none; }
+    @keyframes targetAvatar {
+      0%, 42% { transform: scale(1); opacity: 1; }
+      46% { transform: scale(1.12); opacity: 1; }
+      56%, 100% { transform: scale(.92); opacity: .48; }
     }
-    @keyframes hpDrop {
-      0%, 26% { width: 31%; }
-      33%, 72% { width: 0%; }
-      84%, 100% { width: 31%; }
+    @keyframes blazeHp {
+      0%, 42% { width: 31%; }
+      48%, 100% { width: 0%; }
     }
-    @keyframes laserShot {
-      0%, 21% { opacity: 0; width: 0; }
-      26% { opacity: 1; width: 50%; }
-      31% { opacity: 1; width: 50%; }
-      37%, 100% { opacity: 0; width: 0; }
-    }
-    @keyframes damagePop {
-      0%, 27% { opacity: 0; transform: scale(.65) rotate(-6deg); }
-      32%, 40% { opacity: 1; transform: scale(1) rotate(0deg); }
-      48%, 100% { opacity: 0; transform: scale(.85) rotate(3deg); }
-    }
-    @keyframes eventBanner {
-      0%, 34% { opacity: 0; transform: translateY(16px) scale(.98); }
-      39%, 53% { opacity: 1; transform: translateY(0) scale(1); }
-      61%, 100% { opacity: 0; transform: translateY(10px) scale(.99); }
-    }
-    @keyframes meterDrain {
-      0%, 34% { transform: scaleY(1); }
-      54%, 100% { transform: scaleY(.08); }
-    }
-    @keyframes hordePressure {
-      0%, 22% { width: 62%; background-position: 0% 0; }
-      36%, 62% { width: 36%; background-position: 90% 0; }
-      78%, 100% { width: 62%; background-position: 180% 0; }
+    @keyframes impactPop {
+      0%, 42% { opacity: 0; transform: translate(-50%, -50%) scale(.62) rotate(-5deg); }
+      47%, 57% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+      66%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(.88) rotate(2deg); }
     }
     @keyframes spark {
-      0%, 26% { opacity: 0; transform: translate(0,0) scale(.6); }
-      33% { opacity: 1; transform: translate(calc(var(--x) * .45), calc(var(--y) * .45)) scale(1); }
-      47%, 100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(.2); }
+      0%, 42% { opacity: 0; transform: translate(0, 0) scale(.6); }
+      48% { opacity: 1; transform: translate(calc(var(--x) * .45), calc(var(--y) * .45)) scale(1); }
+      64%, 100% { opacity: 0; transform: translate(var(--x), var(--y)) scale(.2); }
     }
-    @keyframes sponsorScene {
-      0%, 49% { opacity: 0; transform: scale(1.045); }
-      54%, 72% { opacity: 1; transform: scale(1); }
-      78%, 100% { opacity: 0; transform: scale(1.03); }
+    @keyframes eventConfirm {
+      0%, 46% { opacity: 0; transform: translate(-50%, 16px) scale(.98); }
+      51%, 66% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      72%, 100% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
     }
-    @keyframes sponsorSweep {
-      0%, 51% { left: -36%; opacity: 0; }
-      56% { opacity: 1; }
-      70%, 100% { left: 112%; opacity: 0; }
-    }
-    @keyframes sponsorSweepRight {
-      0%, 51% { right: -36%; opacity: 0; }
-      58% { opacity: .95; }
-      72%, 100% { right: 112%; opacity: 0; }
-    }
-    @keyframes videoSheen {
-      0% { transform: translateX(-42%); opacity: .25; }
-      55% { opacity: .75; }
-      100% { transform: translateX(42%); opacity: .25; }
-    }
-    @keyframes breakCopy {
-      0%, 52% { opacity: 0; transform: translateY(22px); }
-      56%, 64% { opacity: 1; transform: translateY(0); }
-      69%, 100% { opacity: 0; transform: translateY(-18px); }
-    }
-    @keyframes statsEndcap {
-      0%, 67% { opacity: 0; transform: translateY(20px); }
-      72%, 78% { opacity: 1; transform: translateY(0); }
-      82%, 100% { opacity: 0; transform: translateY(18px); }
+    @keyframes hordePressure {
+      0%, 40% { width: 62%; background-position: 0% 0; }
+      56%, 74% { width: 42%; background-position: 90% 0; }
+      84%, 100% { width: 62%; background-position: 180% 0; }
     }
     @keyframes ctaScene {
-      0%, 81% { opacity: 0; transform: scale(1.025); }
-      86%, 98% { opacity: 1; transform: scale(1); }
-      100% { opacity: 0; transform: scale(1.015); }
+      0%, 81% { opacity: 0; transform: scale(1.02); }
+      88%, 98% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(1.01); }
     }
-    @media (max-width: 720px), (max-height: 420px) {
-      .hud { top: 4.5%; left: 4.5%; right: 4.5%; min-height: 34px; padding: 6px 9px; }
-      .brand span, .metric { display: none; }
-      .hook { left: 5.5%; top: 22%; width: 55%; gap: 7px; }
-      .hook-kicker { min-height: 24px; padding: 0 9px; font-size: 8px; }
-      .hook h2 { font-size: clamp(24px, 7vw, 44px); }
-      .hook p { font-size: clamp(10px, 2.6vw, 14px); line-height: 1.15; }
-      .command-card { right: 5%; top: 19%; width: 35%; min-height: 52px; padding: 8px; }
-      .command-card b { font-size: 8px; }
-      .command-card strong { font-size: clamp(18px, 4.5vw, 28px); }
-      .command-card span { display: none; }
-      .arena { left: 4.8%; right: 4.8%; top: 19%; bottom: 9%; gap: 8px; }
-      .cards { align-self: end; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-      .card:nth-child(4) { display: none; }
-      .card { min-height: clamp(66px, 17vh, 120px); padding: 7px; }
-      .avatar { width: clamp(32px, 8vh, 54px); font-size: clamp(15px, 4vh, 24px); border-width: 2px; }
-      .copy span { display: none; }
-      .horde-wrap { width: 82%; gap: 7px; }
-      .event-banner { min-height: 36px; grid-template-columns: 34px minmax(0,1fr) 6px; gap: 7px; }
-      .event-code { width: 28px; }
-      .horde { height: 44px; }
-      .horde::before { width: 23%; }
-      .horde-label, .horde-track { left: 28%; }
-      .damage { right: 16%; top: 39%; }
-      .break-copy { width: 76%; margin-bottom: 10%; }
-      .stats-endcap { left: 5%; right: 5%; bottom: 10%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-      .stat { padding: 8px; min-height: 48px; }
-      .stat span { font-size: 8px; }
-      .stat strong { font-size: clamp(18px, 4vw, 32px); }
-      .cta-box { width: 92%; padding: 16px; }
-      .cta-box h2 { font-size: clamp(28px, 8vw, 48px); }
-    }
-    @media (min-width: 521px) and (max-width: 860px) {
+    @media (max-width: 760px), (max-height: 430px) {
+      .brand span,
+      .hud-right span { display: none; }
+      .hud { top: 4.7%; left: 5%; right: 5%; }
       .command-card {
-        top: clamp(62px, 17%, 78px);
-        width: min(32%, 240px);
-        min-height: 34px;
-        padding: 5px 8px;
-        gap: 2px;
+        right: 5.6%;
+        top: 18%;
+        width: 32%;
+        min-height: clamp(36px, 12%, 52px);
+        padding: 6px 8px;
       }
-      .command-card b { font-size: 7px; }
       .command-card span { display: none; }
-      .command-card strong { font-size: clamp(16px, 2.8vw, 24px); }
-    }
-    @media (min-width: 521px) and (max-height: 330px) {
-      .live-pill { display: none; }
-      .hook { width: 58%; top: 24%; }
-      .hook p { display: none; }
-      .command-card { top: 17%; width: 36%; min-height: 38px; gap: 2px; padding: 5px 7px; }
-      .command-card b { font-size: 7px; }
-      .command-card strong { font-size: clamp(15px, 4vw, 22px); }
-      .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      .rank { padding: 1px 5px; }
-      .copy strong { font-size: clamp(10px, 2.4vw, 15px); }
-      .event-copy strong { font-size: clamp(11px, 3vw, 16px); }
-      .break-copy p { display: none; }
-      .stats-endcap { bottom: 11%; }
-      .cta-box span { display: none; }
+      .command-card strong { font-size: clamp(16px, 4.1vw, 28px); }
+      .fighter {
+        top: 36%;
+        width: 31%;
+        height: 27%;
+        padding: 6px;
+      }
+      .fighter.nova { left: 10%; }
+      .fighter.blaze { left: 59%; }
+      .avatar {
+        width: clamp(28px, 8vh, 52px);
+        border-width: 2px;
+      }
+      .name span { display: none; }
+      .beam {
+        left: 25.5%;
+        top: 49%;
+        height: clamp(3px, 1vh, 6px);
+      }
+      .impact,
+      .sparks {
+        left: 74.5%;
+        top: 49%;
+      }
+      @keyframes beamFire {
+        0%, 37% { opacity: 0; width: 0; }
+        41% { opacity: 1; width: 49%; }
+        47% { opacity: 1; width: 49%; }
+        53%, 100% { opacity: 0; width: 0; }
+      }
+      .event-banner {
+        top: 67%;
+        width: 74%;
+        min-height: clamp(34px, 9%, 46px);
+      }
+      .horde {
+        top: 81%;
+        width: 74%;
+        height: clamp(32px, 8%, 44px);
+      }
+      .cta-box {
+        width: 78%;
+      }
+      .cta-box h2 {
+        font-size: clamp(24px, 6vw, 50px);
+      }
     }
     @media (max-width: 520px) {
-      .live-pill { display: none; }
-      .hook,
-      .command-card,
-      .event-banner { display: none; }
       .hud {
         top: 4%;
         min-height: 30px;
-        padding: 4px 7px;
+        padding: 0 8px;
       }
       .brand { gap: 6px; }
       .brand img {
         width: 24px;
         height: 24px;
       }
-      .brand strong { font-size: clamp(10px, 3.4vw, 14px); }
-      .arena {
-        top: 28%;
-        bottom: 5%;
-        gap: 5px;
+      .brand strong { font-size: clamp(10px, 3.3vw, 14px); }
+      .status-pill {
+        min-height: 22px;
+        padding: 0 8px;
+        font-size: 8px;
       }
-      .cards {
-        align-self: end;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 4px;
+      .command-card {
+        top: 22%;
+        right: 5%;
+        width: 31%;
+        min-height: 18px;
+        gap: 1px;
+        padding: 2px 6px;
       }
-      .card {
-        min-height: clamp(50px, 24vh, 74px);
+      .command-card b {
+        display: none;
+      }
+      .command-card strong {
+        font-size: clamp(13px, 4vw, 18px);
+      }
+      .fighter {
+        top: 36%;
+        width: 35%;
+        height: 28%;
         padding: 5px;
       }
-      .rank { font-size: 7px; padding: 1px 4px; }
+      .fighter.nova { left: 7%; }
+      .fighter.blaze { left: 58%; }
+      .rank {
+        padding: 1px 4px;
+        font-size: 7px;
+      }
       .avatar {
         width: clamp(24px, 11vh, 38px);
-        border-width: 2px;
         font-size: clamp(12px, 5vh, 18px);
       }
-      .copy strong { font-size: clamp(9px, 3vw, 13px); }
-      .copy span { display: none; }
-      .horde-wrap {
-        width: 78%;
-        gap: 0;
+      .name strong {
+        font-size: clamp(9px, 3vw, 13px);
+      }
+      .hp {
+        height: 5px;
+      }
+      .beam {
+        left: 24.5%;
+      }
+      .impact,
+      .sparks {
+        left: 75.5%;
+      }
+      @keyframes beamFire {
+        0%, 37% { opacity: 0; width: 0; }
+        41% { opacity: 1; width: 51%; }
+        47% { opacity: 1; width: 51%; }
+        53%, 100% { opacity: 0; width: 0; }
+      }
+      .event-banner {
+        display: none;
       }
       .horde {
-        height: clamp(28px, 15vh, 36px);
+        top: 78%;
+        width: 74%;
+        height: clamp(28px, 14vh, 36px);
       }
       .horde::before {
         width: 25%;
@@ -1008,29 +816,15 @@
         bottom: 18%;
         height: 7px;
       }
-      .damage {
-        right: 16%;
-        top: 38%;
-        font-size: clamp(24px, 12vw, 42px);
-      }
-      .break-copy {
-        width: 78%;
-        margin-bottom: 14%;
-      }
-      .stats-endcap {
-        left: 6%;
-        right: 6%;
-        bottom: 9%;
-        gap: 4px;
-      }
-      .stat {
-        min-height: 38px;
-        padding: 6px;
-      }
-      .stat strong { font-size: clamp(14px, 5vw, 22px); }
       .cta-box {
-        width: 88%;
+        width: 86%;
         padding: 10px;
+      }
+      .cta-box span {
+        min-height: 22px;
+        margin-bottom: 8px;
+        padding: 0 8px;
+        font-size: 7px;
       }
       .cta-box h2 {
         font-size: clamp(18px, 7vw, 26px);
@@ -1046,91 +840,56 @@
   </style>
 </head>
 <body>
-  <div class="clip" aria-label="IntoTheBattle live battle demo">
+  <div class="clip" aria-label="IntoTheBattle 12-second battle demo">
     <div class="grid" aria-hidden="true"></div>
     <div class="corners" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
 
-    <header class="hud">
-      <div class="brand">
-        <img src="/intothebattlelogo_logo_only.svg" alt="" />
-        <div><strong>IntoTheBattle</strong><span>TikTok live battle overlay</span></div>
-      </div>
-      <div class="hud-right">
-        <div class="metric"><span>Fighters</span><b>247</b></div>
-        <div class="metric"><span>KOs</span><b>18</b></div>
-        <div class="live-pill">Live</div>
-      </div>
-    </header>
-
-    <section class="hook" aria-hidden="true">
-      <div class="hook-kicker">Viewer-powered combat</div>
-      <h2>Chat becomes <span>the battle</span></h2>
-      <p>Comments, likes, and commands turn into attacks your audience can see instantly.</p>
-    </section>
-
-    <section class="command-card" aria-hidden="true">
-      <b>@mira_live typed</b>
-      <strong>!laser</strong>
-      <span>The overlay fires the attack on stream.</span>
-    </section>
-
-    <section class="arena" aria-hidden="true">
-      <div class="cards">
-        <article class="card rank-1 nova">
-          <div class="rank">#1</div>
-          <div class="avatar">NX</div>
-          <div class="copy"><strong>NovaX</strong><span>300 HP / 7 K</span><div class="hp"><span></span></div></div>
-        </article>
-        <article class="card iron">
-          <div class="rank">#2</div>
-          <div class="avatar">IR</div>
-          <div class="copy"><strong>IronRift</strong><span>148 HP / 3 K</span><div class="hp"><span></span></div></div>
-        </article>
-        <article class="card blaze">
-          <div class="rank">#3</div>
-          <div class="avatar">BZ</div>
-          <div class="copy"><strong>Blaze</strong><span>46 HP / 2 K</span><div class="hp"><span></span></div></div>
-        </article>
-        <article class="card vortex">
-          <div class="rank">#4</div>
-          <div class="avatar">VX</div>
-          <div class="copy"><strong>Vortex</strong><span>190 HP / 1 K</span><div class="hp"><span></span></div></div>
-        </article>
-      </div>
-
-      <div class="horde-wrap">
-        <div class="event-banner">
-          <div class="event-code">KO</div>
-          <div class="event-copy"><span>Attack confirmed</span><strong>NovaX sent Blaze to zero</strong></div>
-          <div class="event-meter"></div>
+    <div class="battle-layer">
+      <header class="hud">
+        <div class="brand">
+          <img src="/intothebattlelogo_logo_only.svg" alt="" />
+          <div><strong>IntoTheBattle</strong><span>TikTok live battle overlay</span></div>
         </div>
-        <div class="horde">
-          <div class="horde-label"><span>Horde Pressure</span><span>160 / 260 HP</span></div>
-          <div class="horde-track"><span></span></div>
+        <div class="hud-right">
+          <span>Chat-driven combat</span>
+          <div class="status-pill">Live</div>
         </div>
-      </div>
-    </section>
+      </header>
 
-    <div class="laser" aria-hidden="true"></div>
-    <div class="damage" aria-hidden="true">KO</div>
-    <div class="particles" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <section class="command-card" aria-hidden="true">
+        <b>@mira_live typed</b>
+        <strong>!laser</strong>
+        <span>Command locks onto Blaze.</span>
+      </section>
 
-    <section class="break" aria-hidden="true">
-      <div class="video-frame"></div>
-      <div class="break-copy">
-        <span>Arena Spotlight</span>
-        <h2>Battle Break</h2>
-        <p>Broadcast-style moments keep the show feeling premium.</p>
-      </div>
-    </section>
+      <article class="fighter nova" aria-hidden="true">
+        <div class="rank">#1</div>
+        <div class="avatar">NX</div>
+        <div class="name"><strong>NovaX</strong><span>300 HP / 7 K</span><div class="hp"><span></span></div></div>
+      </article>
 
-    <section class="stats-endcap" aria-hidden="true">
-      <div class="stat"><span>Alive</span><strong>4 / 5</strong></div>
-      <div class="stat"><span>Top Fighter</span><strong>NovaX</strong></div>
-      <div class="stat"><span>Horde</span><strong>62%</strong></div>
-    </section>
+      <article class="fighter blaze" aria-hidden="true">
+        <div class="rank">#2</div>
+        <div class="avatar">BZ</div>
+        <div class="name"><strong>Blaze</strong><span>46 HP / 2 K</span><div class="hp"><span></span></div></div>
+      </article>
 
-    <section class="cta-panel" aria-hidden="true">
+      <div class="beam" aria-hidden="true"></div>
+      <div class="impact" aria-hidden="true">KO</div>
+      <div class="sparks" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+
+      <section class="event-banner" aria-hidden="true">
+        <div class="event-code">KO</div>
+        <div class="event-copy"><span>Attack confirmed</span><strong>NovaX sent Blaze to zero</strong></div>
+      </section>
+
+      <section class="horde" aria-hidden="true">
+        <div class="horde-label"><span>Horde pressure</span><span>160 / 260 HP</span></div>
+        <div class="horde-track"><span></span></div>
+      </section>
+    </div>
+
+    <section class="cta-scene" aria-hidden="true">
       <div class="cta-box">
         <span>OBS-ready in minutes</span>
         <h2>Launch your first <em>battle overlay</em></h2>
