@@ -163,6 +163,54 @@ test('signed overlay renders a nonblank canvas', async ({ page }, testInfo) => {
   expect(errors).toEqual([]);
 });
 
+test('signed Phaser overlay v2 renders a fitted broadcast canvas', async ({ page }, testInfo) => {
+  const errors = await watchPage(page);
+  const params = new URLSearchParams({
+    room_id: roomId,
+    overlay_token: overlayToken,
+    demo: '1',
+    render: '1080p',
+  });
+  await page.goto(`${baseUrl}/overlay-v2?${params.toString()}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__overlayV2Ready === true, null, { timeout: 6000 });
+  await page.waitForFunction(() => Array.isArray(window.__overlayV2Layout) && window.__overlayV2Layout.length >= 5, null, { timeout: 6000 });
+  const canvas = page.locator('#phaser-overlay-root canvas');
+  await expect(canvas).toBeVisible();
+  const stage = await canvas.getAttribute('data-stage');
+  expect(stage).toBe('1920x1080');
+  const box = await canvas.boundingBox();
+  expect(box).toBeTruthy();
+  expect(Math.abs((box.width / box.height) - (16 / 9))).toBeLessThan(0.02);
+  const layout = await page.evaluate(() => window.__overlayV2Layout);
+  const sorted = layout.slice().sort((a, b) => a.left - b.left);
+  const minGap = sorted.slice(1).reduce((gap, item, index) => Math.min(gap, item.left - sorted[index].right), Infinity);
+  expect(minGap).toBeGreaterThanOrEqual(44);
+  await page.waitForTimeout(900);
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'overlay-v2-phaser');
+  expect(errors).toEqual([]);
+});
+
+test('signed Phaser overlay v2 source mode fills the browser source', async ({ page }, testInfo) => {
+  const errors = await watchPage(page);
+  const params = new URLSearchParams({
+    room_id: roomId,
+    overlay_token: overlayToken,
+    demo: '1',
+    render: '1080p',
+    source: '1',
+  });
+  await page.goto(`${baseUrl}/overlay-v2?${params.toString()}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__overlayV2Ready === true, null, { timeout: 6000 });
+  const shellBox = await page.locator('#phaser-overlay-shell').boundingBox();
+  const viewport = page.viewportSize();
+  expect(shellBox).toBeTruthy();
+  expect(Math.abs(shellBox.width - viewport.width)).toBeLessThanOrEqual(2);
+  expect(Math.abs(shellBox.height - viewport.height)).toBeLessThanOrEqual(2);
+  await capture(page, testInfo, 'overlay-v2-source-mode');
+  expect(errors).toEqual([]);
+});
+
 test('signed overlay sponsor preview renders transitioned ad scene', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
   const params = new URLSearchParams({

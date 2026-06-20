@@ -244,7 +244,7 @@ function appendOverlayAuth(urlPath, roomId, token, extraParams = {}) {
   return `${url.pathname}${url.search}`;
 }
 
-function buildOverlayUrl(req, roomId) {
+function buildOverlayUrl(req, roomId, overlayPath = '/overlay') {
   const normalizedRoomId = normalizeRoomId(roomId);
   const token = createOverlayToken(normalizedRoomId);
   if (!normalizedRoomId || !token) return null;
@@ -252,7 +252,7 @@ function buildOverlayUrl(req, roomId) {
   const configuredBase = process.env.APP_BASE_URL;
   const inferredBase = req ? `${req.protocol}://${req.get('host')}` : `http://localhost:${PORT}`;
   const base = (configuredBase || inferredBase).replace(/\/$/, '');
-  return `${base}${appendOverlayAuth('/overlay', normalizedRoomId, token)}`;
+  return `${base}${appendOverlayAuth(overlayPath, normalizedRoomId, token)}`;
 }
 
 function publicBaseUrl(req = null) {
@@ -3006,6 +3006,8 @@ app.get('/verify-email', (_req, res) => res.sendFile(path.join(__dirname, 'verif
 app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));
 app.get(['/battle-clip', '/battle-clip.html'], (_req, res) => res.sendFile(path.join(__dirname, 'battle-clip.html')));
 app.get(['/overlay-preview', '/overlay-preview.html', '/overlay-demo', '/overlay-demo.html'], (_req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
+app.get(['/overlay-v2-preview', '/overlay-v2-preview.html', '/overlay-v2-demo', '/overlay-v2-demo.html'], (_req, res) => res.sendFile(path.join(__dirname, 'overlay-v2.html')));
+app.get(['/overlay-phaser', '/overlay-phaser.html'], (_req, res) => res.sendFile(path.join(__dirname, 'overlay-phaser.html')));
 app.get('/register', (req, res) => {
   const token = req.cookies?.session_token;
   const auth = getAuthRecord(token);
@@ -3180,6 +3182,24 @@ app.get(['/overlay.html', '/overlay'], (req, res) => {
     }
   }
   return requireAccess(req, res, () => res.sendFile(path.join(__dirname, 'overlay.html')));
+});
+
+app.get(['/overlay-v2.html', '/overlay-v2'], (req, res) => {
+  if (enableRoomScoped && req.query.room_id) {
+    const roomId = normalizeRoomId(req.query.room_id);
+    const overlayToken = getOverlayTokenFromRequest(req);
+    if (!roomId) return res.status(400).send('Invalid room id');
+    if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).send('Unauthorized overlay URL');
+    return res.sendFile(path.join(__dirname, 'overlay-v2.html'));
+  }
+  if (enableRoomScoped) {
+    const room = getSessionRoom(req);
+    if (room) {
+      const overlayUrl = buildOverlayUrl(req, room.roomId, '/overlay-v2');
+      if (overlayUrl) return res.redirect(302, overlayUrl);
+    }
+  }
+  return requireAccess(req, res, () => res.sendFile(path.join(__dirname, 'overlay-v2.html')));
 });
 app.get('/admin-panel',  requireAccess, (_req, res) => res.redirect('/admin'));
 
@@ -3566,6 +3586,14 @@ app.use('/vendor/microsoft-clarity', express.static(path.join(__dirname, 'node_m
   fallthrough: false,
   index: false,
   maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
+}));
+
+app.use('/vendor/phaser', express.static(path.join(__dirname, 'node_modules', 'phaser', 'dist'), {
+  dotfiles: 'deny',
+  etag: true,
+  fallthrough: false,
+  index: false,
+  maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
 }));
 
 app.get('/api/public-config', (_req, res) => {
@@ -4155,6 +4183,7 @@ app.get('/state', (req, res) => {
 app.get('/api/status', requireRoom, (req, res) => res.json({
   roomId:           req.room.roomId,
   overlayUrl:       buildOverlayUrl(req, req.room.roomId),
+  overlayV2Url:     buildOverlayUrl(req, req.room.roomId, '/overlay-v2'),
   plan:             buildPlanEntitlements(req.auth),
   username:         req.room.streamerUsername || currentStreamer,
   connected:        !!(client && client.connected),

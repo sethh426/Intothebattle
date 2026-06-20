@@ -87,10 +87,10 @@ try {
   await waitForHealth();
 
   await expectStatus('/healthz', 200);
-  for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/how-to-play', '/site-map', '/overlay-preview']) {
+  for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/how-to-play', '/site-map', '/overlay-preview', '/overlay-v2-preview', '/overlay-phaser.html']) {
     await expectStatus(pathname, 200);
   }
-  for (const pathname of ['/intothebattlelogo_logo_only.svg', '/logo.svg', '/robots.txt', '/sitemap.xml', '/js/overlay-scene.js']) {
+  for (const pathname of ['/intothebattlelogo_logo_only.svg', '/logo.svg', '/robots.txt', '/sitemap.xml', '/js/overlay-scene.js', '/js/overlay-v2.js', '/vendor/phaser/phaser.min.js']) {
     await expectStatus(pathname, 200);
   }
 
@@ -131,6 +131,9 @@ try {
   await expectStatus(`/overlay?room_id=${roomId}`, 401);
   await expectStatus(`/overlay?room_id=${roomId}&overlay_token=bad`, 401);
   await expectStatus(`/overlay?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 200);
+  await expectStatus(`/overlay-v2?room_id=${roomId}`, 401);
+  await expectStatus(`/overlay-v2?room_id=${roomId}&overlay_token=bad`, 401);
+  await expectStatus(`/overlay-v2?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 200);
   await expectStatus(`/state?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 200);
   await expectStatus(`/state?room_id=${roomId}&overlay_token=bad`, 401);
 

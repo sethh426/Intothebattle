@@ -63,8 +63,21 @@ function initSocketOverlay(game) {
   function syncGameState(state) {
     if (!state || typeof state !== 'object') return;
     const activeIds = new Set();
+    const hasExplicitPlayers = state.players && typeof state.players === 'object' && !Array.isArray(state.players);
+    const source = hasExplicitPlayers ? state.players : state;
+    const playerEntries = Object.entries(source).filter(([id, player]) => {
+      if (!player || typeof player !== 'object' || Array.isArray(player)) return false;
+      if (String(id).startsWith('_')) return false;
+      if (['players', 'horde', 'boss', 'settings', 'meta', 'eventSeq'].includes(String(id))) return false;
+      return Boolean(
+        player.uniqueId || player.id || player.userId || player.nickname || player.name ||
+        player.hp !== undefined || player.health !== undefined || player.kills !== undefined
+      );
+    });
 
-    Object.entries(state).forEach(([id, player]) => {
+    if (!playerEntries.length && !hasExplicitPlayers) return;
+
+    playerEntries.forEach(([id, player]) => {
       if (!player || player.alive === false) return;
       const normalized = normalizePlayer(id, player);
       activeIds.add(normalized.id);

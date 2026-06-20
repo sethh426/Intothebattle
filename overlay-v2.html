@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>IntoTheBattle Overlay V2</title>
+  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #02040a;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+    }
+    body {
+      display: grid;
+      place-items: center;
+      padding: clamp(10px, 1.8vw, 30px);
+      background:
+        radial-gradient(circle at 14% 18%, rgba(246, 201, 91, 0.11), transparent 30%),
+        radial-gradient(circle at 82% 18%, rgba(122, 252, 255, 0.08), transparent 34%),
+        linear-gradient(135deg, #03050c, #070b16 54%, #040208);
+    }
+    #phaser-overlay-shell {
+      position: relative;
+      width: min(96vw, 170.6667vh, 1920px);
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      background: #02040a;
+      border-radius: 16px;
+      box-shadow:
+        0 0 0 1px rgba(246, 201, 91, 0.38),
+        0 0 52px rgba(246, 201, 91, 0.12),
+        0 26px 82px rgba(0, 0, 0, 0.64);
+    }
+    body.layout-vertical #phaser-overlay-shell {
+      width: min(56.25vh, 94vw, 1080px);
+      aspect-ratio: 9 / 16;
+    }
+    body.layout-compact #phaser-overlay-shell {
+      width: min(94vw, 250vh, 1600px);
+      aspect-ratio: 21 / 9;
+    }
+    body.source-mode {
+      padding: 0;
+      background: #02040a;
+    }
+    body.source-mode #phaser-overlay-shell {
+      width: 100vw;
+      height: 100vh;
+      aspect-ratio: auto;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    body.source-mode #phaser-overlay-root {
+      border-radius: 0;
+    }
+    #phaser-overlay-root {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      border-radius: inherit;
+    }
+    #phaser-overlay-root canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      image-rendering: auto;
+    }
+    #status-badge {
+      position: fixed;
+      left: 14px;
+      bottom: 14px;
+      z-index: 10;
+      min-width: 92px;
+      padding: 8px 12px;
+      border: 1px solid rgba(246, 201, 91, 0.35);
+      border-radius: 999px;
+      background: rgba(2, 4, 10, 0.72);
+      color: #fff0b9;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      text-align: center;
+      text-transform: uppercase;
+      backdrop-filter: blur(14px);
+    }
+    #status-badge.connected {
+      color: #99ffda;
+      border-color: rgba(153, 255, 218, 0.38);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+    }
+    body.show-overlay-status #status-badge.connected {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    #status-badge.disconnected { color: #ff8a9b; border-color: rgba(255, 138, 155, 0.38); }
+    body.hide-overlay-status #status-badge,
+    body.sponsor-active #status-badge { display: none; }
+  </style>
+</head>
+<body>
+  <main id="phaser-overlay-shell" aria-label="IntoTheBattle overlay v2">
+    <div id="phaser-overlay-root"></div>
+  </main>
+  <div id="status-badge">Starting</div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/vendor/phaser/phaser.min.js"></script>
+  <script src="/js/socket-overlay-handler.js"></script>
+  <script src="/js/overlay-v2.js"></script>
+</body>
+</html>
