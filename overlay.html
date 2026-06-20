@@ -470,6 +470,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .battle-prompt.horde::before { background:#e83b5f; box-shadow:0 0 18px #e83b5f; }
 .battle-prompt.return { color:#dffaff; border-color:rgba(85,231,255,0.42); }
 .battle-prompt.return::before { background:#55e7ff; box-shadow:0 0 18px #55e7ff; }
+body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
+  bottom:auto;
+  top:61.5%;
+  max-width:min(82vw,760px);
+}
 @keyframes battlePromptPulse {
   0%,100% { transform:scale(.78); opacity:.7; }
   50% { transform:scale(1.18); opacity:1; }
@@ -2441,6 +2446,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   resizeCanvas();
   function cw() { return canvas.width / renderScale;  }
   function ch() { return canvas.height / renderScale; }
+  function canvasUiScale() {
+    const W = cw(), H = ch();
+    if (!W || !H) return 1;
+    return Math.max(0.48, Math.min(1, Math.min(W / 1280, H / 720)));
+  }
 
   // ── Panel: collapsible sections ──
   function setPanelOpen(open) {
@@ -2632,10 +2642,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       showBattlePrompt('Waiting for fighters', '', 2300);
       return;
     }
-    if (horde && horde.hordeCount >= 3) {
-      showBattlePrompt(`${horde.hordeCount} fighters in the horde`, 'horde', 2300);
-      return;
-    }
+    if (horde && horde.hordeCount >= 3) return;
     if (alive.length <= 1 && roster.length > 1) {
       showBattlePrompt('Final fighter standing', '', 2300);
     }
@@ -2752,7 +2759,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function getPlayerCardMetrics(total = 1) {
     const W = cw(), H = ch();
-    const requestedCardH = H * 0.5 * 0.84 * layoutZoom;
+    const requestedCardH = H * (isPublicDemo ? 0.42 : 0.37) * layoutZoom;
     const requestedCardW = requestedCardH * 0.72;
     const baseGap = requestedCardW * (total >= 5 ? 0.035 : total === 4 ? 0.05 : total === 3 ? 0.08 : 0.11);
     const minGap = Math.max(6, Math.min(12, requestedCardW * 0.035));
@@ -2770,10 +2777,51 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return { cardH, cardW, spacing, totalWidth };
   }
 
+  function getPlayerCardDrawMetrics(pos, total = 1) {
+    const compactDemoCard = isPublicDemo;
+    const ui = canvasUiScale();
+    const { cardH, cardW } = getPlayerCardMetrics(total);
+    const plateH = compactDemoCard ? Math.max(96 * ui, cardH * 0.58) : Math.max(122 * ui, cardH * 0.58);
+    const plateX = pos.x - cardW / 2;
+    const plateY = pos.y - plateH * 0.56;
+    const radius = Math.max(12 * ui, plateH * 0.08);
+    const avatarR = compactDemoCard ? Math.max(18 * ui, cardH * 0.14) : Math.max(26 * ui, cardH * 0.15);
+    const avatarY = plateY + plateH * (compactDemoCard ? 0.53 : 0.45);
+    const barW = cardW - cardW * 0.16;
+    const barH = Math.max(9 * ui, plateH * 0.075);
+    const barX = pos.x - barW / 2;
+    const barY = plateY + plateH * 0.72;
+    const hpTextY = barY + barH + plateH * 0.105;
+    const glowPad = Math.max(3 * ui, avatarR * 0.18);
+    return {
+      compactDemoCard,
+      ui,
+      cardH,
+      cardW,
+      plateH,
+      plateX,
+      plateY,
+      radius,
+      avatarR,
+      avatarY,
+      barW,
+      barH,
+      barX,
+      barY,
+      hpTextY,
+      left: plateX - glowPad,
+      right: plateX + cardW + glowPad,
+      top: plateY - glowPad,
+      bottom: hpTextY + Math.max(6 * ui, plateH * 0.05),
+    };
+  }
+
   function getPlayerPosition(index, total) {
     const W = cw(), H = ch();
     const { cardW, spacing, totalWidth } = getPlayerCardMetrics(total);
-    const baseY = isPublicDemo ? H * demoPlayerYRatio : H * 0.28;
+    const frame = arenaFrame();
+    const liveBoardY = frame.y + frame.h * 0.42;
+    const baseY = isPublicDemo ? H * demoPlayerYRatio : liveBoardY;
     return {
       x: (W - totalWidth) / 2 + offsetX + index * spacing + cardW / 2,
       y: baseY + offsetY + H * 0.16 * (1 - layoutZoom),
@@ -2782,12 +2830,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function getHordeLayout() {
     const W = cw(), H = ch();
-    const pad = Math.max(18, Math.min(W, H) * 0.035);
+    const frame = arenaFrame();
+    const ui = canvasUiScale();
+    const pad = Math.max(18 * ui, Math.min(W, H) * 0.035);
     const barW = Math.min(W - pad * 2, W * 0.62 + Math.min(120, H * 0.1));
-    const barH = Math.max(58, Math.min(112, H * 0.125 * layoutZoom));
+    const barH = Math.max(58 * ui, Math.min(112 * ui, H * 0.125 * layoutZoom));
     const centerX = Math.max(pad + barW / 2, Math.min(W - pad - barW / 2, W / 2 + offsetX * 0.45));
-    const desiredTopY = isPublicDemo ? H * demoHordeTopRatio : H * 0.56 + offsetY * 0.34;
-    const topY = Math.max(H * 0.45, Math.min(H - pad - barH, desiredTopY));
+    const liveHordeTopY = frame.y + frame.h * 0.8;
+    const desiredTopY = isPublicDemo ? H * demoHordeTopRatio : liveHordeTopY + offsetY * 0.34;
+    const topY = Math.max(frame.y + frame.h * 0.55, Math.min(frame.y + frame.h - pad - barH, desiredTopY));
     return {
       x: centerX,
       y: topY + barH * 0.46,
@@ -2795,7 +2846,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       barY: topY,
       barW,
       barH,
-      radius: Math.max(14, barH * 0.22),
+      radius: Math.max(14 * ui, barH * 0.22),
     };
   }
 
@@ -4194,18 +4245,23 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const maxHp = Math.max(1, Number(player.maxHp) || 100);
     const hpPct = clamp01(hp / maxHp);
     const nearDeath = hpPct < 0.2;
-    const compactDemoCard = isPublicDemo;
-    const { cardH, cardW } = getPlayerCardMetrics(total);
-    const plateH = compactDemoCard ? Math.max(96, cardH * 0.58) : Math.max(122, cardH * 0.58);
-    const plateX = pos.x - cardW / 2;
-    const plateY = pos.y - plateH * 0.56;
-    const radius = Math.max(12, plateH * 0.08);
-    const avatarR = compactDemoCard ? Math.max(18, cardH * 0.14) : Math.max(26, cardH * 0.15);
-    const avatarY = plateY + plateH * (compactDemoCard ? 0.53 : 0.45);
-    const barW = cardW - cardW * 0.16;
-    const barH = Math.max(9, plateH * 0.075);
-    const barX = pos.x - barW / 2;
-    const barY = plateY + plateH * 0.72;
+    const {
+      compactDemoCard,
+      ui,
+      cardH,
+      cardW,
+      plateH,
+      plateX,
+      plateY,
+      radius,
+      avatarR,
+      avatarY,
+      barW,
+      barH,
+      barX,
+      barY,
+      hpTextY,
+    } = getPlayerCardDrawMetrics(pos, total);
     const accent = rank === 1 ? THEME.gold : THEME.cyan;
     const pulse = 0.55 + Math.sin(Date.now() / 310 + rank) * 0.45;
     const cardAccent = getCardAccent(player);
@@ -4261,8 +4317,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     roundedRectPath(ctx, railX, plateY + plateH * 0.24, 4, railH, 3);
     ctx.fill();
 
-    const chipW = compactDemoCard ? Math.max(24, Math.min(30, cardW * 0.38)) : Math.max(34, cardW * 0.18);
-    const chipH = compactDemoCard ? Math.max(16, plateH * 0.12) : Math.max(20, plateH * 0.13);
+    const chipW = compactDemoCard ? Math.max(24 * ui, Math.min(30 * ui, cardW * 0.38)) : Math.max(34 * ui, cardW * 0.18);
+    const chipH = compactDemoCard ? Math.max(16 * ui, plateH * 0.12) : Math.max(20 * ui, plateH * 0.13);
     const chipX = plateX + cardW * 0.08;
     const chipY = plateY + plateH * (compactDemoCard ? 0.11 : 0.15);
     ctx.fillStyle = rank === 1 ? 'rgba(246,201,91,0.18)' : 'rgba(85,231,255,0.12)';
@@ -4272,7 +4328,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.lineWidth = 1;
     roundedRectPath(ctx, chipX, chipY, chipW, chipH, chipH / 2);
     ctx.stroke();
-    ctx.font = `900 ${Math.max(compactDemoCard ? 9 : 11, chipH * 0.58)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.font = `900 ${Math.max((compactDemoCard ? 9 : 11) * ui, chipH * 0.58)}px 'Rajdhani','Segoe UI',sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#fff8df';
@@ -4316,7 +4372,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.stroke();
     }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const fittedName = fitCanvasText(ctx, name, nameMaxW, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(compactDemoCard ? 10 : 14, plateH * (compactDemoCard ? 0.105 : 0.115)), compactDemoCard ? 7 : 10);
+    const fittedName = fitCanvasText(
+      ctx,
+      name,
+      nameMaxW,
+      size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`,
+      Math.max((compactDemoCard ? 10 : 14) * ui, plateH * (compactDemoCard ? 0.105 : 0.115)),
+      Math.max(5, (compactDemoCard ? 7 : 10) * ui)
+    );
     ctx.lineWidth = compactDemoCard ? 2.6 : 3.5; ctx.strokeStyle = 'rgba(0,0,0,0.82)'; ctx.strokeText(fittedName, pos.x, nameY);
     ctx.fillStyle = '#ffffff'; ctx.fillText(fittedName, pos.x, nameY);
 
@@ -4338,17 +4401,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     const hpText = `${Math.round(hp)} / ${Math.round(maxHp)} HP`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const fittedHpText = fitCanvasText(ctx, hpText, barW * 0.88, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10, plateH * 0.085), 8);
+    const fittedHpText = fitCanvasText(ctx, hpText, barW * 0.88, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10 * ui, plateH * 0.085), Math.max(5, 8 * ui));
     ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.lineWidth = 2.5;
-    ctx.strokeText(fittedHpText, pos.x, barY + barH + plateH * 0.105);
+    ctx.strokeText(fittedHpText, pos.x, hpTextY);
     ctx.fillStyle = '#dce9ff';
-    ctx.fillText(fittedHpText, pos.x, barY + barH + plateH * 0.105);
+    ctx.fillText(fittedHpText, pos.x, hpTextY);
 
     const killCount = Math.max(0, Math.round(Number(player.kills) || 0));
     if (killCount > 0) {
       const killLabel = compactDemoCard ? `${killCount}K` : `${killCount} K`;
-      const badgeH = compactDemoCard ? Math.max(14, avatarR * 0.5) : Math.max(18, avatarR * 0.48);
-      const badgeFont = Math.max(compactDemoCard ? 9 : 10, badgeH * 0.56);
+      const badgeH = compactDemoCard ? Math.max(14 * ui, avatarR * 0.5) : Math.max(18 * ui, avatarR * 0.48);
+      const badgeFont = Math.max((compactDemoCard ? 9 : 10) * ui, badgeH * 0.56);
       ctx.font = `900 ${badgeFont}px 'Rajdhani','Segoe UI',sans-serif`;
       const badgeW = Math.min(
         cardW * (compactDemoCard ? 0.44 : 0.34),
@@ -4394,11 +4457,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const hpPct = clamp01(horde.hp / Math.max(1, horde.maxHp));
     const now = Date.now() * 0.001;
     const pulse = 0.5 + Math.sin(now * 3) * 0.5;
-    const badgeW = Math.min(barW * 0.27, Math.max(142, barW * 0.18));
+    const ui = canvasUiScale();
+    const badgeW = Math.min(barW * 0.27, Math.max(142 * ui, barW * 0.18));
     const trackX = barX + badgeW + barH * 0.28;
     const trackY = barY + barH * 0.5;
-    const trackW = Math.max(80, barX + barW - trackX - barH * 0.24);
-    const trackH = Math.max(14, barH * 0.24);
+    const trackW = Math.max(80 * ui, barX + barW - trackX - barH * 0.24);
+    const trackH = Math.max(14 * ui, barH * 0.24);
     const compactHorde = barW < 580;
 
     ctx.save();
@@ -4450,7 +4514,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     topRail.addColorStop(0.48, 'rgba(246,201,91,0.78)');
     topRail.addColorStop(1, 'rgba(85,231,255,0.72)');
     ctx.fillStyle = topRail;
-    roundedRectPath(ctx, barX + 8, barY + 7, barW - 16, Math.max(4, barH * 0.055), 4);
+    roundedRectPath(ctx, barX + 8 * ui, barY + 7 * ui, barW - 16 * ui, Math.max(4 * ui, barH * 0.055), 4 * ui);
     ctx.fill();
 
     const badgeGrad = ctx.createLinearGradient(barX, 0, barX + badgeW, 0);
@@ -4458,34 +4522,34 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     badgeGrad.addColorStop(0.6, 'rgba(84,18,34,0.72)');
     badgeGrad.addColorStop(1, 'rgba(9,14,24,0.56)');
     ctx.fillStyle = badgeGrad;
-    roundedRectPath(ctx, barX + 12, barY + barH * 0.18, badgeW - 20, barH * 0.64, Math.max(10, barH * 0.18));
+    roundedRectPath(ctx, barX + 12 * ui, barY + barH * 0.18, badgeW - 20 * ui, barH * 0.64, Math.max(10 * ui, barH * 0.18));
     ctx.fill();
     ctx.strokeStyle = 'rgba(255,230,180,0.22)';
     ctx.lineWidth = 1;
-    roundedRectPath(ctx, barX + 12, barY + barH * 0.18, badgeW - 20, barH * 0.64, Math.max(10, barH * 0.18));
+    roundedRectPath(ctx, barX + 12 * ui, barY + barH * 0.18, badgeW - 20 * ui, barH * 0.64, Math.max(10 * ui, barH * 0.18));
     ctx.stroke();
 
-    ctx.font = `900 ${Math.max(14, barH * 0.26)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.font = `900 ${Math.max(14 * ui, barH * 0.26)}px 'Rajdhani','Segoe UI',sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#fff4f4';
     ctx.shadowColor = 'rgba(0,0,0,0.8)';
     ctx.shadowBlur = 8;
-    ctx.fillText('HORDE', barX + 12 + (badgeW - 20) / 2, barY + barH * 0.43);
-    ctx.font = `800 ${Math.max(10, barH * 0.14)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.fillText('HORDE', barX + 12 * ui + (badgeW - 20 * ui) / 2, barY + barH * 0.43);
+    ctx.font = `800 ${Math.max(10 * ui, barH * 0.14)}px 'Rajdhani','Segoe UI',sans-serif`;
     ctx.fillStyle = '#ffe0bf';
-    const reserveText = fitCanvasText(ctx, `${horde.hordeCount} IN RESERVE`, badgeW - 34, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10, barH * 0.14), 8);
-    ctx.fillText(reserveText, barX + 12 + (badgeW - 20) / 2, barY + barH * 0.64);
+    const reserveText = fitCanvasText(ctx, `${horde.hordeCount} IN RESERVE`, badgeW - 34 * ui, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10 * ui, barH * 0.14), Math.max(5, 8 * ui));
+    ctx.fillText(reserveText, barX + 12 * ui + (badgeW - 20 * ui) / 2, barY + barH * 0.64);
     ctx.shadowBlur = 0;
 
-    const titleFontMax = Math.max(11, barH * (compactHorde ? 0.15 : 0.19));
+    const titleFontMax = Math.max(11 * ui, barH * (compactHorde ? 0.15 : 0.19));
     const titleMaxW = trackW * (compactHorde ? 0.42 : 0.52);
-    const hordeTitle = fitCanvasText(ctx, 'HORDE PRESSURE', titleMaxW, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, titleFontMax, 8);
+    const hordeTitle = fitCanvasText(ctx, 'HORDE PRESSURE', titleMaxW, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, titleFontMax, Math.max(5, 8 * ui));
     ctx.textAlign = 'left';
     ctx.fillStyle = '#fff3d7';
     ctx.fillText(hordeTitle, trackX, barY + barH * (compactHorde ? 0.29 : 0.31));
-    const hpFontMax = Math.max(10, barH * (compactHorde ? 0.13 : 0.16));
-    const hordeHpText = fitCanvasText(ctx, `${Math.round(horde.hp)} / ${Math.round(horde.maxHp)} HP`, trackW * (compactHorde ? 0.34 : 0.42), size => `700 ${size}px 'Rajdhani','Segoe UI',sans-serif`, hpFontMax, 8);
+    const hpFontMax = Math.max(10 * ui, barH * (compactHorde ? 0.13 : 0.16));
+    const hordeHpText = fitCanvasText(ctx, `${Math.round(horde.hp)} / ${Math.round(horde.maxHp)} HP`, trackW * (compactHorde ? 0.34 : 0.42), size => `700 ${size}px 'Rajdhani','Segoe UI',sans-serif`, hpFontMax, Math.max(5, 8 * ui));
     ctx.textAlign = 'right';
     ctx.fillStyle = '#ffd9a8';
     ctx.fillText(hordeHpText, barX + barW - barH * 0.22, barY + barH * (compactHorde ? 0.29 : 0.31));
@@ -4570,18 +4634,46 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.save();
     clipArenaFrame();
     const top = topPlayers();
+    const legacyLayoutPlayers = [];
     top.forEach((p, i) => {
       const pos = getPlayerPosition(i, top.length);
       rememberPosition(p.uniqueId, pos, 'top');
+      const bounds = getPlayerCardDrawMetrics(pos, top.length);
+      legacyLayoutPlayers.push({
+        id: p.uniqueId,
+        x: pos.x,
+        y: pos.y,
+        width: bounds.cardW,
+        height: bounds.bottom - bounds.top,
+        left: bounds.left,
+        right: bounds.right,
+        top: bounds.top,
+        bottom: bounds.bottom,
+      });
       drawPlayerCard(p, pos, i + 1, top.length);
     });
     const horde = hordePlayer();
+    let legacyLayoutHorde = null;
     if (horde) {
       const pos = getHordePosition();
       rememberPosition(HORDE_ID, pos, 'horde');
       (horde.memberIds || []).forEach(id => rememberPosition(id, pos, 'horde'));
+      const layout = getHordeLayout();
+      legacyLayoutHorde = {
+        x: layout.x,
+        y: layout.y,
+        top: layout.barY,
+        bottom: layout.barY + layout.barH,
+        width: layout.barW,
+        height: layout.barH,
+      };
     }
     drawHorde(horde);
+    window.__overlayLegacyLayout = {
+      frame: arenaFrame(),
+      players: legacyLayoutPlayers,
+      horde: legacyLayoutHorde,
+    };
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     attacks = attacks.filter(a => { const alive = a.update(); if (alive) a.draw(); return alive; });
     ctx.restore();

@@ -150,7 +150,10 @@ test('signed overlay renders a nonblank canvas', async ({ page }, testInfo) => {
   await page.goto(`${baseUrl}/overlay?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, { waitUntil: 'domcontentloaded' });
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
-  await page.waitForTimeout(1000);
+  await page.waitForFunction(() => {
+    const layout = window.__overlayLegacyLayout;
+    return Array.isArray(layout?.players) && layout.players.length >= 5 && layout.horde;
+  }, null, { timeout: 7000 });
 
   const hasVisiblePixels = await canvas.evaluate(el => {
     if (!el.width || !el.height) return false;
@@ -162,6 +165,14 @@ test('signed overlay renders a nonblank canvas', async ({ page }, testInfo) => {
     return false;
   });
   expect(hasVisiblePixels).toBe(true);
+  const legacyLayout = await page.evaluate(() => window.__overlayLegacyLayout);
+  const playerTop = Math.min(...legacyLayout.players.map(player => player.top));
+  const playerBottom = Math.max(...legacyLayout.players.map(player => player.bottom));
+  const frameTop = legacyLayout.frame.y;
+  const frameHeight = legacyLayout.frame.h;
+  expect(playerTop).toBeGreaterThan(frameTop + frameHeight * 0.2);
+  expect(legacyLayout.horde.top).toBeGreaterThan(frameTop + frameHeight * 0.58);
+  expect(legacyLayout.horde.top - playerBottom).toBeGreaterThan(frameHeight * 0.06);
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'overlay');
   expect(errors).toEqual([]);
