@@ -648,6 +648,94 @@
       background-size: 170% 100%;
       animation: hordePressure var(--cycle) linear infinite;
     }
+    .recap-scene {
+      position: absolute;
+      inset: 0;
+      z-index: 36;
+      display: grid;
+      place-items: center;
+      padding: 7%;
+      pointer-events: none;
+      opacity: 0;
+      background:
+        radial-gradient(circle at 50% 48%, rgba(85, 231, 255, .16), transparent 36%),
+        linear-gradient(180deg, rgba(2, 4, 10, .72), rgba(2, 6, 14, .86));
+      transform: scale(1.02);
+      animation: recapScene var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
+    }
+    .recap-card {
+      width: min(72%, 860px);
+      min-height: clamp(118px, 34%, 250px);
+      display: grid;
+      align-content: center;
+      gap: clamp(10px, 1.8vw, 22px);
+      padding: clamp(14px, 2.3vw, 30px);
+      border: 1px solid rgba(85, 231, 255, .36);
+      border-radius: 12px;
+      background:
+        linear-gradient(180deg, rgba(6, 17, 32, .95), rgba(2, 6, 14, .94)),
+        radial-gradient(circle at top, rgba(246, 201, 91, .13), transparent 46%);
+      box-shadow: 0 30px 100px rgba(0, 0, 0, .46), inset 0 1px 0 rgba(255, 255, 255, .08), 0 0 34px rgba(85, 231, 255, .13);
+      text-align: center;
+    }
+    .recap-card > span {
+      justify-self: center;
+      display: inline-flex;
+      min-height: clamp(22px, 4vh, 32px);
+      align-items: center;
+      padding: 0 clamp(10px, 1.4vw, 16px);
+      border: 1px solid rgba(246, 201, 91, .34);
+      border-radius: 999px;
+      color: var(--gold2);
+      background: rgba(246, 201, 91, .09);
+      font-size: clamp(7px, .9vw, 12px);
+      font-weight: 950;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .recap-card h2 {
+      color: #fff8e6;
+      font-size: clamp(28px, 4.8vw, 72px);
+      line-height: .9;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+    .recap-card h2 em {
+      color: transparent;
+      font-style: normal;
+      background: linear-gradient(100deg, #fff7d7, var(--gold), var(--ember));
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    .recap-stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(8px, 1.2vw, 14px);
+    }
+    .recap-stat {
+      min-width: 0;
+      padding: clamp(8px, 1.4vw, 16px);
+      border: 1px solid rgba(255, 255, 255, .1);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, .05);
+    }
+    .recap-stat strong {
+      display: block;
+      color: #fff8e6;
+      font-size: clamp(19px, 3vw, 46px);
+      line-height: .95;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+    .recap-stat span {
+      display: block;
+      margin-top: 4px;
+      color: var(--cyan2);
+      font-size: clamp(7px, .9vw, 12px);
+      font-weight: 950;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
     .cta-scene {
       position: absolute;
       inset: 0;
@@ -909,14 +997,19 @@
       56%, 74% { width: 42%; background-position: 90% 0; }
       84%, 100% { width: 62%; background-position: 180% 0; }
     }
+    @keyframes recapScene {
+      0%, 60% { opacity: 0; transform: translateY(14px) scale(1.02); }
+      66%, 77% { opacity: 1; transform: translateY(0) scale(1); }
+      83%, 100% { opacity: 0; transform: translateY(-10px) scale(.995); }
+    }
     @keyframes creatorSheen {
       0% { transform: translateX(-45%); opacity: .35; }
       55% { opacity: .8; }
       100% { transform: translateX(45%); opacity: .35; }
     }
     @keyframes ctaScene {
-      0%, 81% { opacity: 0; transform: scale(1.02); }
-      88%, 98% { opacity: 1; transform: scale(1); }
+      0%, 75% { opacity: 0; transform: scale(1.02); }
+      81%, 98% { opacity: 1; transform: scale(1); }
       100% { opacity: 0; transform: scale(1.01); }
     }
     @media (max-width: 760px), (max-height: 430px) {
@@ -990,6 +1083,18 @@
         top: 81%;
         width: 74%;
         height: clamp(32px, 8%, 44px);
+      }
+      .recap-card {
+        width: 80%;
+        min-height: 116px;
+        gap: 10px;
+        padding: 12px;
+      }
+      .recap-card h2 {
+        font-size: clamp(24px, 5.6vw, 46px);
+      }
+      .recap-stat {
+        padding: 8px;
       }
       .cta-box {
         width: 82%;
@@ -1119,6 +1224,35 @@
         bottom: 18%;
         height: 7px;
       }
+      .recap-card {
+        width: 86%;
+        min-height: 116px;
+        gap: 8px;
+        padding: 10px;
+      }
+      .recap-card > span {
+        min-height: 20px;
+        padding: 0 8px;
+        font-size: 7px;
+      }
+      .recap-card h2 {
+        font-size: clamp(18px, 6.1vw, 26px);
+        line-height: .94;
+      }
+      .recap-stats {
+        gap: 6px;
+      }
+      .recap-stat {
+        padding: 7px 5px;
+        border-radius: 8px;
+      }
+      .recap-stat strong {
+        font-size: clamp(15px, 6.1vw, 24px);
+      }
+      .recap-stat span {
+        margin-top: 2px;
+        font-size: 6px;
+      }
       .cta-box {
         width: 86%;
         min-height: 118px;
@@ -1138,14 +1272,6 @@
         font-size: 6px;
       }
       .creator-video .video-label {
-        left: 5px;
-        right: 5px;
-        bottom: 5px;
-      }
-      .creator-video .video-label b {
-        font-size: 7px;
-      }
-      .creator-video .video-label span {
         display: none;
       }
       .creator-copy > span {
@@ -1155,7 +1281,7 @@
         font-size: 7px;
       }
       .cta-box h2 {
-        font-size: clamp(15px, 5.8vw, 22px);
+        font-size: clamp(17px, 6.2vw, 25px);
         line-height: .95;
       }
       .creator-copy p {
@@ -1229,6 +1355,18 @@
         <div class="horde-track"><span></span></div>
       </section>
     </div>
+
+    <section class="recap-scene" aria-hidden="true">
+      <div class="recap-card">
+        <span>Battle recap generated</span>
+        <h2>Stats your viewers <em>can feel</em></h2>
+        <div class="recap-stats">
+          <div class="recap-stat"><strong>247</strong><span>fighters joined</span></div>
+          <div class="recap-stat"><strong>18</strong><span>KOs triggered</span></div>
+          <div class="recap-stat"><strong>92%</strong><span>chat engaged</span></div>
+        </div>
+      </div>
+    </section>
 
     <section class="cta-scene" aria-hidden="true">
       <div class="cta-box">
