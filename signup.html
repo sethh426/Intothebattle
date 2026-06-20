@@ -252,11 +252,13 @@
       min-height: calc(100vh - 88px);
       margin: 0 auto;
       display: grid;
-      grid-template-columns: minmax(0, 1.04fr) minmax(380px, .96fr);
+      grid-template-columns: minmax(380px, .96fr) minmax(0, 1.04fr);
       gap: clamp(30px, 5vw, 70px);
       align-items: center;
       padding: clamp(34px, 5vw, 68px) 0 58px;
     }
+    .signup-card-wrap { order: 1; }
+    .hero-copy { order: 2; }
 
     .kicker {
       display: inline-flex;
@@ -683,7 +685,7 @@
     }
 
     @media (max-width: 980px) {
-      .signup-shell { grid-template-columns: 1fr; padding-top: 34px; }
+      .signup-shell { grid-template-columns: 1fr; padding-top: 24px; }
       .hero-copy { text-align: center; }
       .kicker, .lede, .outcome-grid, .battle-preview { margin-left: auto; margin-right: auto; }
       .trust-chips { justify-content: center; margin-left: auto; margin-right: auto; }
@@ -691,16 +693,42 @@
     @media (max-width: 620px) {
       .nav-wrap { padding: 12px 12px 0; }
       nav { border-radius: 18px; }
-      .brand-text span, .nav-link { display: none; }
+      .brand-text, .nav-link:not(.login-link-nav) { display: none; }
+      .nav-links { gap: 6px; }
+      .nav-link.login-link-nav {
+        display: inline-flex;
+        align-items: center;
+        min-height: 38px;
+        padding: 0 11px;
+        border: 1px solid rgba(255, 255, 255, .1);
+        background: rgba(255, 255, 255, .045);
+        color: var(--text);
+      }
+      .nav-cta {
+        min-height: 38px;
+        padding: 0 12px;
+      }
       .brand-mark { width: 42px; height: 42px; }
-      .signup-shell { width: min(100% - 24px, var(--max)); padding-top: 24px; }
+      .signup-shell { width: min(100% - 24px, var(--max)); padding-top: 16px; }
       .hero-copy h1 { font-size: clamp(38px, 12vw, 58px); }
       .outcome-grid { grid-template-columns: 1fr; }
       .trust-chips span { width: 100%; justify-content: center; }
-      .recommended-path { align-items: flex-start; flex-direction: column; }
+      .recommended-path {
+        align-items: flex-start;
+        flex-direction: column;
+        margin: 14px 0 10px;
+        padding: 10px 12px;
+      }
       .plan-compare { grid-template-columns: 1fr; }
-      .signup-card { padding: 24px; }
-      .card-logo { width: 70px; height: 70px; border-radius: 22px; }
+      .signup-card { padding: 20px; }
+      .card-top { margin-bottom: 14px; }
+      .card-logo { display: none; }
+      .eyebrow { margin-bottom: 8px; padding: 7px 10px; font-size: 10px; }
+      .card-title { margin-bottom: 8px; font-size: clamp(29px, 9vw, 38px); }
+      .card-sub { font-size: 14px; line-height: 1.45; }
+      .actions { gap: 10px; margin-bottom: 12px; }
+      .btn { min-height: 54px; border-radius: 14px; }
+      .login-link { margin-top: 12px; padding-top: 12px; }
       .battle-preview-inner { padding: 10px; }
       .preview-frame { border-radius: 18px; }
     }
@@ -722,8 +750,8 @@
       <div class="nav-links">
         <a class="nav-link" href="/">Home</a>
         <a class="nav-link" href="/how-to-play">How to play</a>
-        <a class="nav-link" href="/login">Login</a>
-        <a class="nav-cta" href="/auth/google" data-conversion-event="signup_nav_google" data-conversion-choice="google">Start free</a>
+        <a class="nav-link login-link-nav" href="/login">Login</a>
+        <a class="nav-cta" href="#signup-options" data-conversion-event="signup_nav_options" data-conversion-choice="options">Start free</a>
       </div>
     </nav>
   </div>
@@ -746,15 +774,15 @@
 
       <div class="battle-preview" aria-label="Live battle demo preview">
         <div class="battle-preview-inner">
-          <div class="preview-top"><span>12-second battle clip</span><span>Comment to KO</span></div>
+          <div class="preview-top"><span>18-second battle clip</span><span>Comment to KO</span></div>
           <div class="preview-frame">
-            <iframe src="/battle-clip" title="IntoTheBattle 12-second battle clip" loading="eager"></iframe>
+            <iframe src="/battle-clip" title="IntoTheBattle 18-second battle clip" loading="eager"></iframe>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="signup-card-wrap" aria-label="Create creator account">
+    <section class="signup-card-wrap" id="signup-options" aria-label="Create creator account">
       <div class="signup-card">
         <div class="card-content">
           <div class="card-top">
@@ -775,6 +803,8 @@
             <a href="/auth/google" class="btn btn-primary" id="googleSignupLink">Continue with Google →</a>
             <a href="/register" class="btn btn-secondary" id="emailSignupLink">Create account with email</a>
           </div>
+
+          <div class="login-link">Already have an account? <a href="/login" id="loginLink">Sign in here</a>.</div>
 
           <p class="microcopy">No card. No paid wall before setup. Your first 7 days unlock everything so you can prove the overlay works.</p>
 
@@ -812,7 +842,6 @@
             </div>
           </div>
 
-          <div class="login-link">Already have an account? <a href="/login" id="loginLink">Sign in here</a>.</div>
         </div>
       </div>
     </section>
@@ -852,13 +881,12 @@
       if (googleSignupLink) googleSignupLink.href = `/auth/google${nextQuery}`;
       if (emailSignupLink) emailSignupLink.href = `/register${nextQuery}`;
       if (loginLink) loginLink.href = `/login${nextQuery}`;
-      if (navSignupLink) navSignupLink.href = `/auth/google${nextQuery}`;
     }
 
     [
       [googleSignupLink, 'signup_google_click', 'google', true],
       [emailSignupLink, 'signup_email_click', 'email', true],
-      [navSignupLink, 'signup_nav_google_click', 'nav_google', true],
+      [navSignupLink, 'signup_nav_options_click', 'options', false],
       [loginLink, 'signup_login_click', 'login', false],
     ].forEach(([element, eventName, choice, upgrade]) => {
       if (!element) return;

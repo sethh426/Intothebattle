@@ -151,6 +151,11 @@
       font-size: 14px;
       white-space: nowrap;
     }
+    .nav-links .login-link-nav {
+      border: 1px solid rgba(255,255,255,.1);
+      background: rgba(255,255,255,.045);
+      color: #fff8e6;
+    }
     .nav-links .cta {
       color: #160d02;
       background: linear-gradient(135deg, var(--gold), var(--gold2) 52%, var(--ember));
@@ -494,8 +499,10 @@
       .quick-panel, .steps { grid-template-columns: 1fr; }
     }
     @media (max-width: 620px) {
-      .nav-links a:not(.cta) { display: none; }
-      .brand span span { display: none; }
+      .nav-links { gap: 6px; }
+      .nav-links a { padding: 10px 11px; font-size: 13px; }
+      .nav-links a:not(.cta):not(.login-link-nav) { display: none; }
+      .brand > span { display: none; }
       h1 { font-size: clamp(42px,15vw,68px); }
       .actions .btn { width: 100%; }
       .demo-head { padding: 12px; }
@@ -518,7 +525,7 @@
         <a href="#how">How it works</a>
         <a href="/how-to-play">How to play</a>
         <a href="/sponsors">Sponsors</a>
-        <a href="/login">Login</a>
+        <a class="login-link-nav" href="/login">Login</a>
         <a class="cta" href="/signup">Create free account</a>
       </div>
     </nav>
