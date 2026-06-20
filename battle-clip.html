@@ -244,24 +244,36 @@
     }
     .command-card {
       position: absolute;
-      right: 7%;
-      top: 18%;
+      left: 50%;
+      top: 25.5%;
       z-index: 28;
-      width: min(28%, 320px);
-      min-height: clamp(34px, 9%, 58px);
-      display: grid;
-      align-content: center;
-      gap: clamp(3px, .6vw, 7px);
-      padding: clamp(6px, .85vw, 10px);
+      width: min(42%, 460px);
+      min-height: clamp(32px, 7.5%, 52px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(7px, 1vw, 12px);
+      padding: 0 clamp(10px, 1.45vw, 18px);
       border: 1px solid rgba(85, 231, 255, .34);
       border-radius: 10px;
       background:
-        linear-gradient(180deg, rgba(7, 18, 32, .94), rgba(3, 8, 16, .92)),
-        radial-gradient(circle at top right, rgba(85, 231, 255, .16), transparent 46%);
-      box-shadow: 0 24px 62px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 255, 255, .08);
+        linear-gradient(180deg, rgba(7, 18, 32, .92), rgba(3, 8, 16, .9)),
+        radial-gradient(circle at top, rgba(246, 201, 91, .15), transparent 48%);
+      box-shadow: 0 20px 54px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 255, 255, .08);
       opacity: 0;
-      transform: translateY(16px) scale(.98);
+      transform: translate(-50%, 12px) scale(.98);
       animation: commandCue var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
+    }
+    .command-card::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 100%;
+      width: 1px;
+      height: clamp(8px, 1.5vh, 14px);
+      background: linear-gradient(180deg, rgba(246, 201, 91, 0), rgba(246, 201, 91, .54));
+      box-shadow: 0 0 12px rgba(246, 201, 91, .26);
+      transform: translateX(-50%);
     }
     .command-card b {
       color: var(--cyan2);
@@ -272,8 +284,8 @@
     }
     .command-card strong {
       color: #fff;
-      font-size: clamp(18px, 3vw, 42px);
-      line-height: .9;
+      font-size: clamp(11px, 1.55vw, 22px);
+      line-height: 1;
       font-weight: 950;
       text-transform: uppercase;
       white-space: nowrap;
@@ -304,16 +316,17 @@
       box-shadow: 0 22px 50px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .08);
       animation: cardsSettle var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
     }
-    .fighter::before {
-      content: "";
+    .battle-flow-line {
       position: absolute;
-      left: 8%;
-      right: 8%;
-      top: 9%;
+      left: 50%;
+      top: 78.8%;
+      z-index: 13;
+      width: min(66%, 820px);
       height: clamp(3px, .65vh, 6px);
       border-radius: 999px;
-      background: linear-gradient(90deg, var(--cyan), var(--gold2));
-      box-shadow: 0 0 18px rgba(85, 231, 255, .55);
+      background: linear-gradient(90deg, transparent, rgba(246, 201, 91, .85), rgba(85, 231, 255, .78), transparent);
+      box-shadow: 0 0 18px rgba(85, 231, 255, .18), 0 0 16px rgba(246, 201, 91, .12);
+      transform: translateX(-50%);
     }
     .fighter.nova {
       left: 13%;
@@ -325,7 +338,6 @@
       border-color: rgba(232, 59, 95, .34);
       animation: cardsSettle var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite, targetHit var(--cycle) ease-in-out infinite;
     }
-    .fighter.nova::before { background: linear-gradient(90deg, var(--gold), var(--gold2)); }
     .rank {
       position: relative;
       z-index: 2;
@@ -1134,9 +1146,9 @@
       58%, 100% { opacity: 0; }
     }
     @keyframes commandCue {
-      0%, 10% { opacity: 0; transform: translateY(16px) scale(.98); }
-      12%, 25% { opacity: 1; transform: translateY(0) scale(1); }
-      28%, 100% { opacity: 0; transform: translateY(8px) scale(.99); }
+      0%, 16% { opacity: 0; transform: translate(-50%, 12px) scale(.98); }
+      19%, 27% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      30%, 100% { opacity: 0; transform: translate(-50%, 8px) scale(.99); }
     }
     @keyframes chatPanel {
       0%, 9% { opacity: 0; transform: translate(-50%, 14px) scale(.98); }
@@ -1284,14 +1296,18 @@
         padding: 0 7px;
       }
       .command-card {
-        right: 5.6%;
-        top: 18%;
-        width: 32%;
+        top: 26.5%;
+        width: 48%;
         min-height: clamp(36px, 12%, 52px);
-        padding: 6px 8px;
+        padding: 0 8px;
+        gap: 7px;
       }
       .command-card span { display: none; }
-      .command-card strong { font-size: clamp(16px, 4.1vw, 28px); }
+      .command-card strong { font-size: clamp(10px, 2.4vw, 16px); }
+      .battle-flow-line {
+        top: 77.2%;
+        width: 74%;
+      }
       .fighter {
         top: 36%;
         width: 31%;
@@ -1516,6 +1532,10 @@
         width: 74%;
         height: clamp(28px, 14vh, 36px);
       }
+      .battle-flow-line {
+        top: 73.8%;
+        width: 74%;
+      }
       .horde::before {
         width: 25%;
         font-size: clamp(10px, 4vw, 15px);
@@ -1685,6 +1705,11 @@
         <div class="chat-line emoji"><strong>@nova_fan</strong><b>!emoji 🔥</b></div>
       </section>
 
+      <section class="command-card" aria-hidden="true">
+        <b>Command locked</b>
+        <strong>Laser targets Blaze</strong>
+      </section>
+
       <article class="fighter nova" aria-hidden="true">
         <div class="rank">#1</div>
         <div class="avatar">NX</div>
@@ -1707,6 +1732,8 @@
         <div class="event-code">KO</div>
         <div class="event-copy"><span>Attack confirmed</span><strong>NovaX sent Blaze to zero</strong></div>
       </section>
+
+      <div class="battle-flow-line" aria-hidden="true"></div>
 
       <section class="horde" aria-hidden="true">
         <div class="horde-label"><span>Horde pressure</span><span>160 / 260 HP</span></div>
