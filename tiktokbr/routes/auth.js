@@ -151,6 +151,18 @@ const loginLimiter = rateLimit({
   message: 'Too many login attempts. Try again in 15 minutes.',
 });
 
+const registrationLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 12,
+  message: 'Too many account attempts. Try again in 15 minutes.',
+});
+
+const emailActionLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'Too many email requests. Try again in 15 minutes.',
+});
+
 const promoLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -636,7 +648,7 @@ router.post('/auth/user/verify-email', express.json(), async (req, res) => {
   return res.json({ success: true, message: 'Email verified successfully.' });
 });
 
-router.post('/auth/user/resend-verification', express.json(), async (req, res) => {
+router.post('/auth/user/resend-verification', emailActionLimiter, express.json(), async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   if (!email) {
     return res.status(400).json({ success: false, error: 'Email is required.' });
@@ -764,7 +776,7 @@ router.post('/auth/user/rooms', express.json(), (req, res) => {
   return res.json({ success: true, room: { room_id: roomId, room_name: roomName } });
 });
 
-router.post('/auth/user/request-password-reset', express.json(), async (req, res) => {
+router.post('/auth/user/request-password-reset', emailActionLimiter, express.json(), async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   if (!email) return res.status(400).json({ success: false, error: 'Email is required.' });
 
@@ -830,7 +842,7 @@ router.get('/auth/user/register-challenge', (req, res) => {
   res.json({ success: true, challenge: { prompt: challenge.prompt, options: challenge.options }, token });
 });
 
-router.post('/auth/user/register', express.json(), async (req, res) => {
+router.post('/auth/user/register', registrationLimiter, express.json(), async (req, res) => {
   const captchaToken = String(req.body.captchaToken || '').trim();
   const captchaAnswer = String(req.body.captchaAnswer || '').trim();
   const redirectUrl = safeRedirectPath(req.body.next, '/dashboard/welcome');
@@ -1080,7 +1092,7 @@ router.get('/auth/google/callback', async (req, res) => {
   }
 });
 
-router.post('/auth/user/login', express.json(), async (req, res) => {
+router.post('/auth/user/login', loginLimiter, express.json(), async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
   const redirectUrl = safeRedirectPath(req.body.next, '/dashboard');

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import multer from 'multer';
+import rateLimit from 'express-rate-limit';
 import db from '../db/db.js';
 import { triggerPlatformSponsorTest } from '../platformSponsorTestBus.js';
 import { processSponsorUpload, getSponsorMediaToolStatus } from '../sponsorMediaProcessor.js';
@@ -27,6 +28,13 @@ const COOKIE_OPTIONS = {
   secure: process.env.NODE_ENV === 'production',
 };
 const MAX_BCRYPT_ROUNDS = Number(process.env.MAX_BCRYPT_ROUNDS || 14);
+const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many admin login attempts. Try again in 15 minutes.',
+});
 const SPONSOR_MEDIA_EXTS = new Set(['.mp4', '.webm', '.m4v', '.mov']);
 const SPONSOR_MEDIA_MIMES = new Set(['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v']);
 const PLATFORM_SPONSOR_DIR = path.join(process.env.DISK_PATH || path.resolve(__dirname, '..', '..'), 'platform-sponsors');
@@ -756,7 +764,7 @@ router.get('/login', (_req, res) => {
 </html>`);
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', adminLoginLimiter, (req, res) => {
   const password = String(req.body.password || '');
   if (!compareAdminPassword(password)) {
     return res.status(401).send('<p>Invalid password. <a href="/admin/login">Back</a></p>');

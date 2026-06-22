@@ -110,6 +110,18 @@ try {
 
   await expectStatus('/api/status', 401);
   await expectStatus('/api/subscription/status', 401);
+  await expectStatus('/api/signup-intent', 403, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', Origin: 'https://evil.example' },
+    body: JSON.stringify({ email: 'security-smoke@example.com', source: 'smoke' }),
+  });
+  const sameOriginSignup = await expectStatus('/api/signup-intent', 200, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', Origin: baseUrl },
+    body: JSON.stringify({ email: 'security-smoke@example.com', source: 'smoke' }),
+  });
+  const sameOriginSignupBody = await sameOriginSignup.json();
+  assert(sameOriginSignupBody.success === true, 'same-origin signup intent should remain allowed');
   const paypalConfig = await expectStatus('/api/paypal/config', 200);
   const paypalConfigBody = await paypalConfig.json();
   assert(paypalConfigBody.authenticated === false, 'unauthenticated paypal config should return safe login prompt');

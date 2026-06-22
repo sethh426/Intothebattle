@@ -2921,8 +2921,52 @@ app.use((req, res, next) => {
   next();
 });
 
+function safeOrigin(value) {
+  try {
+    return value ? new URL(value).origin : '';
+  } catch (_err) {
+    return '';
+  }
+}
+
+function requestOrigin(req) {
+  const host = req.get('host');
+  if (!host) return '';
+  return `${req.protocol}://${host}`;
+}
+
+function allowedBrowserOrigins(req) {
+  return new Set([
+    requestOrigin(req),
+    safeOrigin(process.env.APP_BASE_URL),
+  ].filter(Boolean));
+}
+
+function isAllowedBrowserOrigin(req, value) {
+  const origin = safeOrigin(value);
+  return Boolean(origin && allowedBrowserOrigins(req).has(origin));
+}
+
+function isAllowedSocketOrigin(origin) {
+  if (!origin) return true;
+  const normalized = safeOrigin(origin);
+  if (!normalized) return false;
+  const appOrigin = safeOrigin(process.env.APP_BASE_URL);
+  return !appOrigin || normalized === appOrigin;
+}
+
+function shouldBypassOriginCheck(req) {
+  return req.path === '/api/paypal/webhook';
+}
+
 const httpServer = createServer(app);
-const io         = new Server(httpServer, { cors: { origin: '*' } });
+const io         = new Server(httpServer, {
+  cors: {
+    origin(origin, callback) {
+      callback(null, isAllowedSocketOrigin(origin));
+    },
+  },
+});
 
 function emitAttackAndSync(room, result) {
   if (!result) return;
@@ -2972,6 +3016,32 @@ if (process.env.REDIS_URL && enableRedisAdapter) {
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), usb=()');
+  if (!req.path.startsWith('/overlay')) {
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  }
+  if (/^\/(?:api|admin|dashboard|profile|stats|overlay|overlay-v2|state)(?:\/|$)/.test(req.path)) {
+    res.setHeader('Cache-Control', 'no-store');
+  }
+  next();
+});
+
+app.use((req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || shouldBypassOriginCheck(req)) return next();
+  const origin = req.get('origin');
+  const referer = req.get('referer');
+  if (!origin && !referer) return next();
+  if ((origin && isAllowedBrowserOrigin(req, origin)) || (!origin && referer && isAllowedBrowserOrigin(req, referer))) {
+    return next();
+  }
+  logger.warn({ method: req.method, path: req.path, origin: origin || null, referer: referer || null }, 'Blocked cross-origin state-changing request');
+  return res.status(403).json({ success: false, error: 'Cross-origin request blocked' });
+});
 
 // Request debug logging middleware
 app.use((req, res, next) => {
@@ -3173,7 +3243,7 @@ app.post('/auth/create-account', express.json(), (req, res) => {
     );
 
     // Create first room
-    const roomId = Math.random().toString(36).slice(2, 10);
+    const roomId = createRoomId();
 
     // Update access code with profile and session. Existing access codes keep
     // their original expiration and paid/free status.
@@ -3196,8 +3266,13 @@ app.post('/auth/create-account', express.json(), (req, res) => {
     );
 
     // Set session cookie using Express helper so browsers accept it with fetch credentials
-    res.cookie('session_token', sessionToken, { httpOnly: true, sameSite: 'lax', maxAge: 90 * 24 * 60 * 60 * 1000 });
-    res.json({ success: true, roomId, sessionToken });
+    res.cookie('session_token', sessionToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 90 * 24 * 60 * 60 * 1000,
+    });
+    res.json({ success: true, roomId });
   } catch (err) {
     console.error('Account creation error:', err);
     res.status(500).json({ error: 'Failed to create account' });
