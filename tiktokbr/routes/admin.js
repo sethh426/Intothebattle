@@ -330,7 +330,92 @@ function listAdminCreatorComments(limit = 80) {
   }
 }
 
-function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [], roomRequirementEnabled = true, userMetrics = buildAdminUserMetrics(), users = [], comments = [] } = {}) {
+function buildAdminLiveActivity() {
+  const ownerByRoom = new Map();
+  try {
+    db.prepare(`
+      SELECT
+        ur.room_id,
+        u.email,
+        u.name,
+        u.tiktok_username,
+        s.plan_type,
+        s.status AS subscription_status
+      FROM user_rooms ur
+      JOIN users u ON u.id = ur.user_id
+      LEFT JOIN subscriptions s ON s.id = (
+        SELECT id
+        FROM subscriptions
+        WHERE user_id = u.id
+        ORDER BY updated_at DESC, id DESC
+        LIMIT 1
+      )
+    `).all().forEach(row => {
+      ownerByRoom.set(row.room_id, {
+        accountType: 'User account',
+        email: row.email || '',
+        name: row.name || '',
+        tiktok: row.tiktok_username || '',
+        plan: row.plan_type || row.subscription_status || 'Free',
+      });
+    });
+  } catch (err) {
+    console.warn('Failed to map user room owners:', err?.message || err);
+  }
+
+  try {
+    db.prepare(`
+      SELECT room_id, code, email, owner_name, streamer_name, tiktok_username, code_type, subscription_status
+      FROM access_codes
+      WHERE room_id IS NOT NULL AND room_id != ''
+    `).all().forEach(row => {
+      if (ownerByRoom.has(row.room_id)) return;
+      ownerByRoom.set(row.room_id, {
+        accountType: 'Access code',
+        email: row.email || '',
+        name: row.owner_name || row.streamer_name || row.code || '',
+        tiktok: row.tiktok_username || '',
+        plan: row.code_type || row.subscription_status || 'Access code',
+      });
+    });
+  } catch (err) {
+    console.warn('Failed to map access-code room owners:', err?.message || err);
+  }
+
+  return Array.from(getAllRooms().values())
+    .map(room => {
+      const players = Object.values(room?.players || {})
+        .filter(player => player && player.alive)
+        .sort((a, b) => (Number(b.kills) || 0) - (Number(a.kills) || 0))
+        .slice(0, 5)
+        .map(player => ({
+          id: player.uniqueId || '',
+          name: player.nickname || player.uniqueId || 'Player',
+          kills: Number(player.kills) || 0,
+          hp: Math.round(Number(player.hp) || 0),
+        }));
+      const owner = ownerByRoom.get(room.roomId) || {
+        accountType: 'Unclaimed room',
+        email: '',
+        name: '',
+        tiktok: '',
+        plan: 'Unknown',
+      };
+      return {
+        roomId: room.roomId,
+        owner,
+        streamerUsername: room.streamerUsername || '',
+        connected: Boolean(room.tiktokClient && room.tiktokClient.connected),
+        overlayCount: Number(room.overlayCount) || 0,
+        playerCount: Object.values(room?.players || {}).filter(player => player && player.alive).length,
+        topPlayers: players,
+      };
+    })
+    .filter(item => item.overlayCount > 0 || item.connected || item.playerCount > 0 || item.streamerUsername)
+    .sort((a, b) => b.overlayCount - a.overlayCount || b.playerCount - a.playerCount || a.roomId.localeCompare(b.roomId));
+}
+
+function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [], roomRequirementEnabled = true, userMetrics = buildAdminUserMetrics(), users = [], comments = [], liveActivity = buildAdminLiveActivity() } = {}) {
   const codeRows = codes.map((code) => {
     const status = code.is_revoked ? 'Revoked' : new Date(code.expires_at) < new Date() ? 'Expired' : 'Active';
     const actionLabel = code.is_revoked ? 'Enable' : 'Disable';
@@ -387,6 +472,21 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       </td>
     </tr>`;
   }).join('') || '<tr><td colspan="5">No comments yet.</td></tr>';
+  const liveActivityRows = liveActivity.map((item) => {
+    const owner = item.owner || {};
+    const topPlayers = (item.topPlayers || [])
+      .map(player => `${player.name}${player.kills ? ` (${player.kills}K)` : ''}`)
+      .join(', ');
+    const status = item.connected ? 'TikTok connected' : item.streamerUsername ? 'Stream pending' : 'No TikTok stream';
+    return `<tr data-live-room-row>
+      <td><strong>${escapeHtml(item.roomId)}</strong><br><span class="muted">${escapeHtml(owner.accountType || 'Room')}</span></td>
+      <td><strong>${escapeHtml(owner.email || owner.name || 'Unknown owner')}</strong><br><span class="muted">${escapeHtml(owner.tiktok ? `@${owner.tiktok}` : owner.plan || '')}</span></td>
+      <td>${escapeHtml(item.streamerUsername ? `@${item.streamerUsername}` : '')}<br><span class="muted">${escapeHtml(status)}</span></td>
+      <td>${escapeHtml(String(item.overlayCount))}</td>
+      <td>${escapeHtml(String(item.playerCount))}</td>
+      <td>${escapeHtml(topPlayers || 'No active players')}</td>
+    </tr>`;
+  }).join('') || '<tr data-live-empty><td colspan="6">No live room activity right now.</td></tr>';
   const metrics = userMetrics || emptyAdminUserMetrics();
   const metricCards = [
     adminMetricCard('Free accounts', 'accounts.free', metrics.accounts.free, 'Active free creator accounts and free access-code rooms'),
@@ -541,6 +641,14 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       </table>
     </div>
     <div class="card" style="margin-top: 18px;">
+      <h2>Live room activity</h2>
+      <p class="muted">Room-scoped activity for spotting bad routing fast. Another creator's players should never appear in the wrong room.</p>
+      <table>
+        <thead><tr><th>Room</th><th>Owner</th><th>Stream</th><th>Overlays</th><th>Players</th><th>Top players</th></tr></thead>
+        <tbody id="liveActivityRows">${liveActivityRows}</tbody>
+      </table>
+    </div>
+    <div class="card" style="margin-top: 18px;">
       <h2>Homepage comments</h2>
       <p class="muted">Approved public comments shown in the homepage scroll. Delete removes the comment from public view.</p>
       <table>
@@ -577,7 +685,43 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         });
       } catch (_err) {}
     }
+    function escapeCell(value) {
+      return String(value || '').replace(/[&<>"]/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
+    }
+    function renderLiveActivityRows(items) {
+      const body = document.getElementById('liveActivityRows');
+      if (!body) return;
+      if (!Array.isArray(items) || !items.length) {
+        body.innerHTML = '<tr data-live-empty><td colspan="6">No live room activity right now.</td></tr>';
+        return;
+      }
+      body.innerHTML = items.map(item => {
+        const owner = item.owner || {};
+        const players = (item.topPlayers || []).map(player => {
+          const name = player.name || player.id || 'Player';
+          return name + (player.kills ? ' (' + player.kills + 'K)' : '');
+        }).join(', ') || 'No active players';
+        const status = item.connected ? 'TikTok connected' : item.streamerUsername ? 'Stream pending' : 'No TikTok stream';
+        return '<tr data-live-room-row>'
+          + '<td><strong>' + escapeCell(item.roomId) + '</strong><br><span class="muted">' + escapeCell(owner.accountType || 'Room') + '</span></td>'
+          + '<td><strong>' + escapeCell(owner.email || owner.name || 'Unknown owner') + '</strong><br><span class="muted">' + escapeCell(owner.tiktok ? '@' + owner.tiktok : owner.plan || '') + '</span></td>'
+          + '<td>' + escapeCell(item.streamerUsername ? '@' + item.streamerUsername : '') + '<br><span class="muted">' + escapeCell(status) + '</span></td>'
+          + '<td>' + escapeCell(item.overlayCount) + '</td>'
+          + '<td>' + escapeCell(item.playerCount) + '</td>'
+          + '<td>' + escapeCell(players) + '</td>'
+          + '</tr>';
+      }).join('');
+    }
+    async function refreshLiveActivity() {
+      try {
+        const res = await fetch('/admin/live-activity.json', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const data = await res.json();
+        renderLiveActivityRows(data.rooms || []);
+      } catch (_err) {}
+    }
     setInterval(refreshAdminCounts, 15000);
+    setInterval(refreshLiveActivity, 10000);
   </script>
 </body>
 </html>`;
@@ -638,12 +782,18 @@ router.get('/user-counts.json', requireAdminAuth, (_req, res) => {
   res.json(buildAdminUserMetrics());
 });
 
+router.get('/live-activity.json', requireAdminAuth, (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ rooms: buildAdminLiveActivity(), updatedAt: new Date().toISOString() });
+});
+
 router.get('/', requireAdminAuth, (req, res) => {
   const codes = db.prepare('SELECT * FROM access_codes ORDER BY expires_at DESC').all();
   const promos = db.prepare('SELECT * FROM promo_codes ORDER BY created_at DESC').all();
   const setting = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('require_room_id');
   const roomRequirementEnabled = setting ? setting.value !== '0' : true;
   const userMetrics = buildAdminUserMetrics();
+  const liveActivity = buildAdminLiveActivity();
   const users = listRecentAdminUsers();
   const comments = listAdminCreatorComments();
   res.send(renderAdminPage({
@@ -654,6 +804,7 @@ router.get('/', requireAdminAuth, (req, res) => {
     promos,
     roomRequirementEnabled,
     userMetrics,
+    liveActivity,
     users,
     comments,
   }));

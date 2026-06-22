@@ -1105,6 +1105,7 @@ router.post('/auth/user/login', express.json(), async (req, res) => {
 
   const sessionToken = createSessionToken({ userId: user.id, email });
   db.prepare('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?').run(sessionToken, user.id);
+  ensureUserRoom(user.id, user.name);
   setSessionCookie(res, sessionToken);
 
   return res.json({
@@ -1135,6 +1136,7 @@ router.get('/auth/user/me', (req, res) => {
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
 
+  ensureUserRoom(user.id, user.name);
   const rooms = db.prepare('SELECT room_id, room_name, created_at FROM user_rooms WHERE user_id = ? ORDER BY created_at DESC').all(user.id);
   const subscription = db.prepare('SELECT paypal_subscription_id, plan_type, status, started_at, next_billing_date, expires_at FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1').get(user.id);
   return res.json({ success: true, user: {

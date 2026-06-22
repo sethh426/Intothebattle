@@ -14,6 +14,7 @@ import promClient from 'prom-client';
 import fs from 'fs';
 import multer from 'multer';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import db, { getDbHealthSnapshot } from './tiktokbr/db/db.js';
 import authRoutes from './tiktokbr/routes/auth.js';
 import adminRoutes from './tiktokbr/routes/admin.js';
@@ -94,6 +95,43 @@ function getLatestUserSubscription(userId) {
     return db.prepare('SELECT * FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1').get(userId);
   } catch (err) {
     logger.error({ err, userId }, 'Failed to read user subscription');
+    return null;
+  }
+}
+
+function createRoomId() {
+  return crypto.randomUUID().replace(/-/g, '').slice(0, 10);
+}
+
+function roomNameForOwner(name) {
+  const owner = String(name || 'Creator').trim() || 'Creator';
+  return `${owner}'s room`;
+}
+
+function ensureRoomSettingsRow(roomId) {
+  if (!roomId) return;
+  db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
+}
+
+function createPrivateRoomForUser(user) {
+  if (!user?.id) return null;
+  const roomId = createRoomId();
+  db.prepare(
+    'INSERT INTO user_rooms (user_id, room_id, room_name, created_at, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)'
+  ).run(user.id, roomId, roomNameForOwner(user.name));
+  ensureRoomSettingsRow(roomId);
+  logger.warn({ userId: user.id, roomId }, 'Created missing private room for user account');
+  return roomId;
+}
+
+function ensureUserRoomId(user) {
+  if (!user?.id) return null;
+  const existing = getUserRoomId(user.id);
+  if (existing) return existing;
+  try {
+    return createPrivateRoomForUser(user);
+  } catch (err) {
+    logger.error({ err, userId: user.id }, 'Failed to create private user room');
     return null;
   }
 }
@@ -3203,14 +3241,15 @@ app.get(['/overlay-v2.html', '/overlay-v2'], (req, res) => {
 });
 app.get('/admin-panel',  requireAccess, (_req, res) => res.redirect('/admin'));
 
-function assignDefaultRoomIfMissing(row) {
+function assignPrivateRoomIfMissing(row) {
   if (row.room_id) return row.room_id;
 
-  const assignedRoom = DEFAULT_ROOM_ID;
+  const assignedRoom = createRoomId();
   try {
     db.prepare('UPDATE access_codes SET room_id = ? WHERE id = ?').run(assignedRoom, row.id);
+    ensureRoomSettingsRow(assignedRoom);
     row.room_id = assignedRoom;
-    logger.info({ rowId: row.id, code: row.code, assignedRoom, requiresRoomId: requiresRoomId() }, 'Assigned default room to access code missing room_id');
+    logger.warn({ rowId: row.id, code: row.code, assignedRoom, requiresRoomId: requiresRoomId() }, 'Created missing private room for access code');
   } catch (err) {
     logger.error({ err, rowId: row.id, code: row.code }, 'Failed to assign default room to access code');
   }
@@ -3220,7 +3259,7 @@ function assignDefaultRoomIfMissing(row) {
 function socketAuth(socket, next) {
   const e2eAuth = getE2EAuthRecord(parseCookies(socket.request).session_token);
   if (e2eAuth) {
-    socket.roomId = enableRoomScoped ? assignDefaultRoomIfMissing(e2eAuth.record) : DEFAULT_ROOM_ID;
+    socket.roomId = enableRoomScoped ? assignPrivateRoomIfMissing(e2eAuth.record) : DEFAULT_ROOM_ID;
     socket.accessCode = e2eAuth.record;
     return next();
   }
@@ -3266,7 +3305,7 @@ function socketAuth(socket, next) {
       logger.warn({ rowId: row?.id, code: row?.code, isRevoked: row?.is_revoked, expiresAt: row?.expires_at }, 'Socket auth failed: expired or revoked');
       return next(new Error('Unauthorized: expired or revoked'));
     }
-    socket.roomId = enableRoomScoped ? assignDefaultRoomIfMissing(row) : DEFAULT_ROOM_ID;
+    socket.roomId = enableRoomScoped ? assignPrivateRoomIfMissing(row) : DEFAULT_ROOM_ID;
     socket.accessCode = row;
     return next();
   }
@@ -3276,7 +3315,11 @@ function socketAuth(socket, next) {
     logger.warn({ userId: user?.id, isActive: user?.is_active }, 'Socket auth failed: invalid user session');
     return next(new Error('Unauthorized: invalid session'));
   }
-  socket.roomId = enableRoomScoped ? (getUserRoomId(user.id) || DEFAULT_ROOM_ID) : DEFAULT_ROOM_ID;
+  socket.roomId = enableRoomScoped ? ensureUserRoomId(user) : DEFAULT_ROOM_ID;
+  if (!socket.roomId) {
+    logger.error({ userId: user.id }, 'Socket auth failed: user has no room and room creation failed');
+    return next(new Error('Unauthorized: room unavailable'));
+  }
   socket.user = user;
   next();
 }
@@ -3301,7 +3344,7 @@ function requireRoom(req, res, next) {
       logger.warn({ path: req.path, method: req.method, rowId: row?.id, code: row?.code, isRevoked: row?.is_revoked, expiresAt: row?.expires_at }, 'API auth failed: expired or revoked');
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
-    req.roomId = enableRoomScoped ? assignDefaultRoomIfMissing(row) : DEFAULT_ROOM_ID;
+    req.roomId = enableRoomScoped ? assignPrivateRoomIfMissing(row) : DEFAULT_ROOM_ID;
     logger.info({ path: req.path, method: req.method, rowId: row.id, code: row.code, roomId: req.roomId, requiresRoomId: requiresRoomId() }, '/api/connect auth success');
   } else {
     const user = auth.record;
@@ -3309,7 +3352,11 @@ function requireRoom(req, res, next) {
       logger.warn({ path: req.path, method: req.method, userId: user.id }, 'API auth failed: user disabled');
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
-    const roomId = enableRoomScoped ? (getUserRoomId(user.id) || DEFAULT_ROOM_ID) : DEFAULT_ROOM_ID;
+    const roomId = enableRoomScoped ? ensureUserRoomId(user) : DEFAULT_ROOM_ID;
+    if (!roomId) {
+      logger.error({ path: req.path, method: req.method, userId: user.id }, 'API auth failed: user room unavailable');
+      return res.status(500).json({ success: false, error: 'Creator room unavailable. Please try again.' });
+    }
     req.roomId = roomId;
     req.user = user;
     logger.info({ path: req.path, method: req.method, userId: user.id, roomId, requiresRoomId: requiresRoomId() }, '/api/connect auth success');
@@ -3347,11 +3394,12 @@ function getSessionRoom(req) {
   if (auth.type === 'code') {
     const row = auth.record;
     if (row.is_revoked || new Date(row.expires_at) < new Date()) return null;
-    roomId = enableRoomScoped ? assignDefaultRoomIfMissing(row) : DEFAULT_ROOM_ID;
+    roomId = enableRoomScoped ? assignPrivateRoomIfMissing(row) : DEFAULT_ROOM_ID;
   } else {
     const user = auth.record;
     if (!user.is_active) return null;
-    roomId = enableRoomScoped ? (getUserRoomId(user.id) || DEFAULT_ROOM_ID) : DEFAULT_ROOM_ID;
+    roomId = enableRoomScoped ? ensureUserRoomId(user) : DEFAULT_ROOM_ID;
+    if (!roomId) return null;
   }
 
   const room = getOrCreateRoom(roomId);
@@ -4185,8 +4233,8 @@ app.get('/api/status', requireRoom, (req, res) => res.json({
   overlayUrl:       buildOverlayUrl(req, req.room.roomId),
   overlayV2Url:     buildOverlayUrl(req, req.room.roomId, '/overlay-v2'),
   plan:             buildPlanEntitlements(req.auth),
-  username:         req.room.streamerUsername || currentStreamer,
-  connected:        !!(client && client.connected),
+  username:         req.room.streamerUsername || '',
+  connected:        !!(req.room.tiktokClient && req.room.tiktokClient.connected),
   overlayConnected: req.room.overlayCount > 0,
   overlayCount:     req.room.overlayCount,
   playerCount:      Object.values(req.room.players).filter(p => p.alive).length,
@@ -4504,7 +4552,7 @@ app.post('/api/connect', requireRoom, (req, res) => {
   res.json({ success: true });
 });
 
-app.post('/api/reset', requireRoom, (_req, res) => { disconnectStreamer(); res.json({ success: true }); });
+app.post('/api/reset', requireRoom, (req, res) => { disconnectStreamer(req.room); res.json({ success: true }); });
 app.post('/api/overlay/reload', requireRoom, (req, res) => {
   emitRoomEvent(req.room, 'forceReload', { v: Date.now(), delayMs: 3000, reason: 'Operator reload' });
   res.json({ success: true });
@@ -4926,7 +4974,7 @@ app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) =>
 // ────────────────────────────────
 function setupTikTokEvents(tiktokClient, room) {
   tiktokClient.on('connected', () => {
-    console.log(`✅ Connected to @${room.streamerUsername || currentStreamer || 'unknown'}'s LIVE stream for room ${room.roomId}\n`);
+    console.log(`✅ Connected to @${room.streamerUsername || 'unknown'}'s LIVE stream for room ${room.roomId}\n`);
   });
 
   tiktokClient.on('member', (e) => {
@@ -5134,33 +5182,40 @@ function setupTikTokEvents(tiktokClient, room) {
   });
 }
 
-function safeDisconnectClient() {
-  if (!client) return;
+function safeDisconnectClient(room = getDefaultRoom()) {
+  const targetClient = room?.tiktokClient || (room?.roomId === DEFAULT_ROOM_ID ? client : null);
+  if (!targetClient) return;
   try {
-    if (client.ws) { client.ws.onerror = () => {}; client.ws.onclose = () => {}; }
-    client.disconnect();
+    if (targetClient.ws) { targetClient.ws.onerror = () => {}; targetClient.ws.onclose = () => {}; }
+    targetClient.disconnect();
   } catch (err) {
     console.error('⚠️ Error during disconnect:', err?.message || err);
   }
-  client = null;
+  if (room) room.tiktokClient = null;
+  if (targetClient === client) client = null;
 }
 
 function connectToStreamer(username, room = getDefaultRoom()) {
-  safeDisconnectClient();
-  currentStreamer = username;
+  if (!room) throw new Error('Cannot connect TikTok stream without a room');
+  safeDisconnectClient(room);
+  if (room.roomId === DEFAULT_ROOM_ID) currentStreamer = username;
   room.streamerUsername = username;
-  client = new TikTokLive({ uniqueId: currentStreamer, apiKey: API_KEY });
-  setupTikTokEvents(client, room);
-  client.connect().catch(err => {
+  const tiktokClient = new TikTokLive({ uniqueId: username, apiKey: API_KEY });
+  room.tiktokClient = tiktokClient;
+  if (room.roomId === DEFAULT_ROOM_ID) client = tiktokClient;
+  setupTikTokEvents(tiktokClient, room);
+  tiktokClient.connect().catch(err => {
     console.error('❌ Could not connect:', err?.message || err);
-    console.error(`   Make sure @${currentStreamer} is currently LIVE on TikTok`);
-    client = null;
+    console.error(`   Make sure @${username} is currently LIVE on TikTok`);
+    if (room.tiktokClient === tiktokClient) room.tiktokClient = null;
+    if (client === tiktokClient) client = null;
   });
 }
 
-function disconnectStreamer() {
-  safeDisconnectClient();
-  currentStreamer = '';
+function disconnectStreamer(room = getDefaultRoom()) {
+  safeDisconnectClient(room);
+  if (!room || room.roomId === DEFAULT_ROOM_ID) currentStreamer = '';
+  if (room) room.streamerUsername = '';
 }
 
 function getTopPlayers(roomOrCount = 20, count = 20) {
