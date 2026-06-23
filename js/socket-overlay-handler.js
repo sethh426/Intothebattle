@@ -110,8 +110,9 @@ function initSocketOverlay(game) {
 
   function resolveSoundFilename(input) {
     if (!input) return '';
-    if (typeof input === 'string') return audioConfig[input] || '';
-    return input.filename || audioConfig[input.event] || '';
+    const fallback = { socialBoost: audioConfig.follow || audioConfig.gift, engagementSurge: audioConfig.gift || audioConfig.follow };
+    if (typeof input === 'string') return audioConfig[input] || fallback[input] || '';
+    return input.filename || audioConfig[input.event] || fallback[input.event] || '';
   }
 
   function markAudioUnlocked() {
@@ -341,7 +342,11 @@ function initSocketOverlay(game) {
   });
   socket.on('socialBoost', (data) => {
     if (scene.showSocialBoost) scene.showSocialBoost(data || {});
-    playSound(String(data?.type || '').toLowerCase() === 'repost' ? 'gift' : 'follow');
+    playSound('socialBoost');
+  });
+  socket.on('engagementSurge', (data) => {
+    if (scene.handleEngagementSurge) scene.handleEngagementSurge(data || {});
+    playSound('engagementSurge');
   });
   socket.on('layoutUpdate', (data = {}) => {
     if (!scene.updateLayoutConfig) return;

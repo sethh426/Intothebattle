@@ -228,6 +228,7 @@ const BATTLE_ACTION_EVENTS = new Set([
   'giftCelebration',
   'follow',
   'socialBoost',
+  'engagementSurge',
   'bossWave',
 ]);
 const HIGH_INTENSITY_BATTLE_EVENTS = new Set([
@@ -236,6 +237,7 @@ const HIGH_INTENSITY_BATTLE_EVENTS = new Set([
   'killEvent',
   'streakEvent',
   'giftCelebration',
+  'engagementSurge',
   'bossWave',
 ]);
 
@@ -414,6 +416,8 @@ const CFG = {
   REPOST_STR_BOOST:                 12,
   REPOST_SHIELD_MS:              18000,
   REPOST_BOSS_MULTIPLIER:          1.2,
+  ENGAGEMENT_COMBO_WINDOW_MS:    30000,
+  ENGAGEMENT_SURGE_COOLDOWN_MS:  12000,
   GIFT_HP_PER_DIAMOND:              3,
   GIFT_STR_PER_DIAMOND:             1,
   GIFT_MESSAGE_BOOST_MULTIPLIER:    3,
@@ -2415,7 +2419,7 @@ function loadRoomAudioConfig(room) {
 
     const allUnassigned = Object.values(room.audioConfig).every(val => !val);
     if (allUnassigned && room.audioLibrary.length) {
-      const eventOrder = ['attack', 'gift', 'kill', 'respawn', 'heal', 'follow'];
+      const eventOrder = ['attack', 'gift', 'kill', 'respawn', 'heal', 'follow', 'socialBoost', 'engagementSurge'];
       eventOrder.forEach((event, idx) => {
         if (idx < room.audioLibrary.length) room.audioConfig[event] = room.audioLibrary[idx].filename;
       });
@@ -2817,36 +2821,129 @@ function applySquadRally(room, amount, options = {}) {
   return affected;
 }
 
+function updateEngagementMomentum(room, type) {
+  if (!room) return { combo: 1, score: 0, tier: '', tierLabel: '', triggered: false };
+  if (!room.engagementStats || typeof room.engagementStats !== 'object') {
+    room.engagementStats = {
+      total: 0,
+      follow: 0,
+      share: 0,
+      repost: 0,
+      combo: 0,
+      score: 0,
+      lastAt: 0,
+      lastSurgeAt: 0,
+      lastTier: '',
+    };
+  }
+  const stats = room.engagementStats;
+  const now = Date.now();
+  const value = type === 'repost' ? 4 : type === 'share' ? 2 : 1;
+  const chained = stats.lastAt && now - stats.lastAt <= CFG.ENGAGEMENT_COMBO_WINDOW_MS;
+  stats.combo = chained ? Math.min(99, (Number(stats.combo) || 0) + 1) : 1;
+  stats.score = chained ? Math.min(120, Math.max(0, Number(stats.score) || 0) + value) : value;
+  stats.total = (Number(stats.total) || 0) + 1;
+  stats[type] = (Number(stats[type]) || 0) + 1;
+  stats.lastAt = now;
+
+  let tier = '';
+  let tierLabel = '';
+  if (stats.score >= 24 || stats.combo >= 12) {
+    tier = 'takeover';
+    tierLabel = 'Arena Takeover';
+  } else if (stats.score >= 14 || stats.combo >= 7) {
+    tier = 'viral';
+    tierLabel = 'Viral Rally';
+  } else if (stats.score >= 7 || stats.combo >= 4) {
+    tier = 'surge';
+    tierLabel = 'Crowd Surge';
+  }
+
+  const rank = { '': 0, surge: 1, viral: 2, takeover: 3 };
+  const improved = rank[tier] > rank[stats.lastTier || ''];
+  const cooledDown = !stats.lastSurgeAt || now - stats.lastSurgeAt >= CFG.ENGAGEMENT_SURGE_COOLDOWN_MS;
+  const triggered = Boolean(tier && (improved || cooledDown));
+  if (triggered) {
+    stats.lastSurgeAt = now;
+    stats.lastTier = tier;
+  }
+
+  return {
+    combo: stats.combo,
+    score: stats.score,
+    tier,
+    tierLabel,
+    triggered,
+    totals: {
+      total: stats.total,
+      follow: stats.follow,
+      share: stats.share,
+      repost: stats.repost,
+    },
+  };
+}
+
+function emitEngagementSurge(room, sourcePayload = {}, momentum = {}) {
+  if (!room || !momentum?.triggered) return;
+  const tier = momentum.tier || 'surge';
+  const tierLabel = momentum.tierLabel || 'Crowd Surge';
+  emitSoundAndSync(room, 'engagementSurge', {
+    intensity: tier === 'takeover' ? 1 : tier === 'viral' ? 0.86 : 0.72,
+    tier: tier === 'takeover' ? 'rare' : 'common',
+  });
+  emitRoomEvent(room, 'engagementSurge', {
+    uniqueId: sourcePayload.uniqueId || '',
+    nickname: sourcePayload.nickname || 'Crowd',
+    type: sourcePayload.type || 'engagement',
+    tier,
+    tierLabel,
+    combo: momentum.combo,
+    score: momentum.score,
+    totals: momentum.totals,
+    color: sourcePayload.color || (tier === 'takeover' ? '#f6c95b' : '#7afcff'),
+  });
+}
+
 function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share', rawEvent = {}) {
   if (!room || !uniqueId) return null;
   if (!room.players[uniqueId]?.alive) spawnPlayer(room, uniqueId, nickname);
   const player = room.players[uniqueId];
   if (!player) return null;
   const type = engagementType === 'follow' ? 'follow' : engagementType === 'repost' ? 'repost' : 'share';
+  const momentum = updateEngagementMomentum(room, type);
+  const comboBoost = Math.min(1.45, 1 + Math.max(0, Number(momentum.score) || 0) * 0.025);
   const baseColor = type === 'repost' ? '#f6c95b' : type === 'follow' ? '#7afcff' : '#99ffda';
 
   if (type === 'follow') {
-    awardStats(room, uniqueId, nickname, CFG.FOLLOW_HP_BOOST, CFG.FOLLOW_STR_BOOST);
+    const hpBoost = Math.round(CFG.FOLLOW_HP_BOOST * comboBoost);
+    const strengthBoost = Math.max(CFG.FOLLOW_STR_BOOST, Math.round(CFG.FOLLOW_STR_BOOST * comboBoost));
+    awardStats(room, uniqueId, nickname, hpBoost, strengthBoost);
     const current = room.players[uniqueId];
     if (current) current.shieldUntil = Math.max(Number(current.shieldUntil) || 0, Date.now() + CFG.FOLLOW_SHIELD_MS);
     emitSoundAndSync(room, 'follow', { intensity: 0.72, tier: 'common' });
-    emitRoomEvent(room, 'follow', {
+    const payload = {
       uniqueId,
       nickname,
       type,
       rewardLabel: 'Recruit Shield',
-      hpBoost: CFG.FOLLOW_HP_BOOST,
-      strengthBoost: CFG.FOLLOW_STR_BOOST,
+      hpBoost,
+      strengthBoost,
       shieldMs: CFG.FOLLOW_SHIELD_MS,
+      combo: momentum.combo,
+      comboScore: momentum.score,
+      surgeTier: momentum.tier,
+      surgeLabel: momentum.tierLabel,
       color: current?.color || baseColor,
-    });
+    };
+    emitRoomEvent(room, 'follow', payload);
+    emitEngagementSurge(room, payload, momentum);
     emitRoomEvent(room, 'gameState', room.players);
-    return { type, affectedCount: 1, hpBoost: CFG.FOLLOW_HP_BOOST, strengthBoost: CFG.FOLLOW_STR_BOOST };
+    return { type, affectedCount: 1, hpBoost, strengthBoost, momentum };
   }
 
   const isRepost = type === 'repost';
-  const rallyHeal = isRepost ? CFG.REPOST_RALLY_HEAL : CFG.SHARE_RALLY_HEAL;
-  const strengthBoost = isRepost ? CFG.REPOST_STR_BOOST : CFG.SHARE_STR_BOOST;
+  const rallyHeal = Math.round((isRepost ? CFG.REPOST_RALLY_HEAL : CFG.SHARE_RALLY_HEAL) * comboBoost);
+  const strengthBoost = Math.round((isRepost ? CFG.REPOST_STR_BOOST : CFG.SHARE_STR_BOOST) * comboBoost);
   const shieldMs = isRepost ? CFG.REPOST_SHIELD_MS : 0;
   awardStats(room, uniqueId, nickname, 0, strengthBoost);
   const affected = applySquadRally(room, rallyHeal, { shieldMs });
@@ -2855,8 +2952,8 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
     bossPressure = true;
     damageBossWave(room, uniqueId, nickname, isRepost ? CFG.REPOST_BOSS_MULTIPLIER : CFG.SHARE_BOSS_MULTIPLIER, isRepost ? 'explosion' : 'ripple', `${type} surge`);
   }
-  emitSoundAndSync(room, isRepost ? 'gift' : 'follow', { intensity: isRepost ? 0.92 : 0.66, tier: isRepost ? 'rare' : 'common' });
-  emitRoomEvent(room, 'socialBoost', {
+  emitSoundAndSync(room, 'socialBoost', { intensity: isRepost ? 0.92 : 0.66, tier: isRepost ? 'rare' : 'common' });
+  const payload = {
     uniqueId,
     nickname,
     type,
@@ -2868,11 +2965,17 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
     affectedCount: affected.length,
     affected,
     bossPressure,
+    combo: momentum.combo,
+    comboScore: momentum.score,
+    surgeTier: momentum.tier,
+    surgeLabel: momentum.tierLabel,
     rawType: rawEvent.type || rawEvent.socialType || rawEvent.eventType || '',
     color: room.players[uniqueId]?.color || baseColor,
-  });
+  };
+  emitRoomEvent(room, 'socialBoost', payload);
+  emitEngagementSurge(room, payload, momentum);
   emitRoomEvent(room, 'gameState', room.players);
-  return { type, affectedCount: affected.length, rallyHeal, strengthBoost, shieldMs, bossPressure };
+  return { type, affectedCount: affected.length, rallyHeal, strengthBoost, shieldMs, bossPressure, momentum };
 }
 
 // ────────────────────────────────

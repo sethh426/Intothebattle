@@ -575,9 +575,20 @@
       const type = String(data.type || 'share').toLowerCase();
       const isRepost = type === 'repost';
       const affected = Number(data.affectedCount) || 0;
-      this.showBanner(`${name} ${isRepost ? 'triggered a broadcast surge' : 'rallied the squad'}${affected ? ` (${affected})` : ''}`, isRepost ? 'legendary' : 'follow');
+      const combo = Number(data.combo) || 0;
+      this.showBanner(`${name} ${isRepost ? 'triggered a broadcast surge' : 'rallied the squad'}${affected ? ` (${affected})` : ''}${combo ? ` x${combo}` : ''}`, isRepost ? 'legendary' : 'follow');
       this.spawnHeartBurst(data.uniqueId || data.userId || data.nickname, isRepost ? 9 : 6, isRepost ? 'repost' : 'share', data.color || (isRepost ? '#f6c95b' : '#7afcff'));
       this.pulseHorde(isRepost ? 0xf6c95b : 0x7afcff);
+    }
+
+    handleEngagementSurge(data = {}) {
+      const tier = String(data.tier || 'surge').toLowerCase();
+      const label = data.tierLabel || (tier === 'takeover' ? 'Arena Takeover' : tier === 'viral' ? 'Viral Rally' : 'Crowd Surge');
+      const combo = Number(data.combo) || 1;
+      this.showBanner(`${label} unlocked x${combo}`, tier === 'takeover' ? 'legendary' : 'gift');
+      this.pulseHorde(tier === 'takeover' ? 0xf6c95b : 0x7afcff);
+      this.spawnHeartBurst(data.uniqueId || data.nickname || 'crowd', tier === 'takeover' ? 10 : 7, tier === 'takeover' ? 'repost' : 'share', data.color || (tier === 'takeover' ? '#f6c95b' : '#7afcff'));
+      this.showDamage(this.W / 2, this.safe.y + this.safe.height * 0.58, label.toUpperCase(), tier === 'takeover' ? 'critical' : 'normal');
     }
 
     spawnRespawnEffect(playerId) {

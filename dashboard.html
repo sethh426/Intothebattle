@@ -220,7 +220,7 @@
     .audio-size { color:var(--dim); font-size:11px; }
     .assign-table { width:100%; border-collapse:collapse; }.assign-table td { padding:10px 0; border-bottom:1px solid rgba(255,255,255,.06); }
     .event-pill { min-width:86px; display:inline-flex; justify-content:center; padding:7px 10px; border-radius:999px; font-size:11px; font-weight:900; text-transform:uppercase; }
-    .event-attack{background:rgba(85,231,255,.12);color:var(--cyan)}.event-gift{background:rgba(246,201,91,.12);color:var(--gold2)}.event-kill{background:rgba(232,59,95,.14);color:#ff9aa8}.event-heal{background:rgba(119,240,161,.12);color:var(--green)}.event-follow{background:rgba(255,255,255,.08);color:#fff}.event-respawn{background:rgba(85,231,255,.12);color:var(--cyan)}
+    .event-attack{background:rgba(85,231,255,.12);color:var(--cyan)}.event-gift{background:rgba(246,201,91,.12);color:var(--gold2)}.event-kill{background:rgba(232,59,95,.14);color:#ff9aa8}.event-heal{background:rgba(119,240,161,.12);color:var(--green)}.event-follow{background:rgba(255,255,255,.08);color:#fff}.event-respawn{background:rgba(85,231,255,.12);color:var(--cyan)}.event-social{background:rgba(153,255,218,.12);color:#99ffda}.event-surge{background:rgba(246,201,91,.14);color:var(--gold2)}
     details.tool { border:1px solid rgba(255,255,255,.09); border-radius:22px; background:rgba(255,255,255,.035); overflow:hidden; }
     details.tool summary { cursor:pointer; padding:18px 20px; font-weight:900; color:#fff; list-style:none; display:flex; justify-content:space-between; gap:14px; }
     details.tool summary::-webkit-details-marker{display:none} details.tool summary::after{content:'+';color:var(--gold)} details[open].tool summary::after{content:'−'} .tool-body{padding:0 20px 20px}
@@ -483,8 +483,9 @@ const dashboardState = {
   overlayTested: false,
   eventStarted: false,
 };
-const EVENTS = ['attack','gift','kill','respawn','heal','follow'];
-const EVENT_CLASSES = { attack:'event-attack', gift:'event-gift', kill:'event-kill', respawn:'event-respawn', heal:'event-heal', follow:'event-follow' };
+const EVENTS = ['attack','gift','kill','respawn','heal','follow','socialBoost','engagementSurge'];
+const EVENT_LABELS = { attack:'Attack', gift:'Gift', kill:'Kill', respawn:'Respawn', heal:'Heal', follow:'Follow', socialBoost:'Share/Repost boost', engagementSurge:'Audience surge' };
+const EVENT_CLASSES = { attack:'event-attack', gift:'event-gift', kill:'event-kill', respawn:'event-respawn', heal:'event-heal', follow:'event-follow', socialBoost:'event-social', engagementSurge:'event-surge' };
 const SPONSOR_CLIENT_MAX_BYTES = 100 * 1024 * 1024;
 const SPONSOR_CLIENT_MAX_SECONDS = 120;
 const SPONSOR_TIMING_PRESETS = {
@@ -1450,7 +1451,7 @@ function renderAudioLibrary() {
   });
   updateReadinessChecklist();
 }
-function renderAssignTable(){ const tbody=document.getElementById('assignTableBody'); tbody.innerHTML=''; EVENTS.forEach(event=>{ const currentFile=audioConfigData[event] || ''; const tr=document.createElement('tr'); let options='<option value="">— None —</option>'; audioLibraryData.forEach(f=>{ options += `<option value="${f.filename}" ${currentFile===f.filename?'selected':''}>${escapeHtml(f.originalName)}</option>`; }); tr.innerHTML=`<td><span class="event-pill ${EVENT_CLASSES[event]}">${event}</span></td><td style="padding-left:14px"><select data-event="${event}" onchange="assignAudio('${event}', this.value)">${options}</select></td>`; tbody.appendChild(tr); }); }
+function renderAssignTable(){ const tbody=document.getElementById('assignTableBody'); tbody.innerHTML=''; EVENTS.forEach(event=>{ const currentFile=audioConfigData[event] || ''; const tr=document.createElement('tr'); let options='<option value="">— None —</option>'; audioLibraryData.forEach(f=>{ options += `<option value="${f.filename}" ${currentFile===f.filename?'selected':''}>${escapeHtml(f.originalName)}</option>`; }); tr.innerHTML=`<td><span class="event-pill ${EVENT_CLASSES[event] || ''}">${EVENT_LABELS[event] || event}</span></td><td style="padding-left:14px"><select data-event="${event}" onchange="assignAudio('${event}', this.value)">${options}</select></td>`; tbody.appendChild(tr); }); }
 function assignAudio(event, filename){ fetch('/api/audio/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,filename:filename || null})}).then(r=>r.json()).then(d=>{ if(d.success) toast(`Assigned ${event} → ${filename || 'none'}`); else toast('Assignment failed', true); }); }
 function uploadAudioFile(file){ const fd=new FormData(); fd.append('audio',file); fetch('/api/audio/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData.push(d.file); renderAudioLibrary(); renderAssignTable(); toast('Audio uploaded'); } else toast('Upload failed', true); }); }
 const dropZone=document.getElementById('dropZone'); const audioFileInput=document.getElementById('audioFileInput');

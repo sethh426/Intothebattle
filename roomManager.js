@@ -14,12 +14,14 @@ export const DEFAULT_OVERLAY_SETTINGS = {
 };
 
 export const DEFAULT_AUDIO_CONFIG = {
-  attack:  null,
-  gift:    null,
-  kill:    null,
-  respawn: null,
-  heal:    null,
-  follow:  null,
+  attack:          null,
+  gift:            null,
+  kill:            null,
+  respawn:         null,
+  heal:            null,
+  follow:          null,
+  socialBoost:     null,
+  engagementSurge: null,
 };
 
 const rooms = new Map();
