@@ -204,8 +204,12 @@ const PLATFORM_SPONSOR_NO_REPEAT_COUNT = Number(process.env.PLATFORM_SPONSOR_NO_
 const PLATFORM_SPONSOR_ACTIVE_HOURS_UTC = String(process.env.PLATFORM_SPONSOR_ACTIVE_HOURS_UTC || '').trim();
 const SPONSOR_PREPARE_TIMEOUT_MS = Number(process.env.SPONSOR_PREPARE_TIMEOUT_MS || 8000);
 const SERVER_HORDE_ID = '__HORDE__';
+const SERVER_BOSS_ID = '__BOSS__';
 const BATTLE_ROUND_DURATION_MS = Number(process.env.BATTLE_ROUND_DURATION_MS || 4 * 60 * 1000);
 const BOSS_WAVE_HP = Number(process.env.BOSS_WAVE_HP || 1200);
+const BOSS_WAVE_DURATION_MS = Number(process.env.BOSS_WAVE_DURATION_MS || 90 * 1000);
+const BOSS_WAVE_ATTACK_INTERVAL_MS = Number(process.env.BOSS_WAVE_ATTACK_INTERVAL_MS || 11 * 1000);
+const BOSS_WAVE_ATTACK_DAMAGE = Number(process.env.BOSS_WAVE_ATTACK_DAMAGE || 18);
 const configuredFreeTrialDays = Number(process.env.FREE_TRIAL_DAYS || 7);
 const FREE_TRIAL_DAYS = Number.isFinite(configuredFreeTrialDays) && configuredFreeTrialDays > 0
   ? Math.round(configuredFreeTrialDays)
@@ -224,6 +228,7 @@ const BATTLE_ACTION_EVENTS = new Set([
   'giftCelebration',
   'follow',
   'socialBoost',
+  'bossWave',
 ]);
 const HIGH_INTENSITY_BATTLE_EVENTS = new Set([
   'commentDamage',
@@ -231,6 +236,7 @@ const HIGH_INTENSITY_BATTLE_EVENTS = new Set([
   'killEvent',
   'streakEvent',
   'giftCelebration',
+  'bossWave',
 ]);
 
 function getOverlayTokenSecret() {
@@ -1030,10 +1036,17 @@ function currentRoundStatus(room) {
 function currentBossStatus(room) {
   const boss = room?.bossWave;
   if (!boss?.active) return boss?.lastStatus || null;
+  const now = Date.now();
   return {
     active: true,
     status: boss.status || 'live',
     startedAt: boss.startedAt,
+    durationMs: Math.max(0, Math.round(Number(boss.durationMs) || BOSS_WAVE_DURATION_MS)),
+    endsAt: boss.endsAt || null,
+    remainingMs: boss.endsAt ? Math.max(0, boss.endsAt - now) : null,
+    nextAttackAt: boss.nextAttackAt || null,
+    nextAttackMs: boss.nextAttackAt ? Math.max(0, boss.nextAttackAt - now) : null,
+    attackIntervalMs: Math.max(0, Math.round(Number(boss.attackIntervalMs) || BOSS_WAVE_ATTACK_INTERVAL_MS)),
     hp: Math.max(0, Math.round(Number(boss.hp) || 0)),
     maxHp: Math.max(1, Math.round(Number(boss.maxHp) || BOSS_WAVE_HP)),
     hits: Number(boss.hits) || 0,
@@ -1159,9 +1172,150 @@ function startBattleRound(room, options = {}) {
   return room.roundState;
 }
 
+function clearBossWaveTimers(room) {
+  const boss = room?.bossWave;
+  if (!boss) return;
+  if (boss.timer) {
+    clearTimeout(boss.timer);
+    boss.timer = null;
+  }
+  if (boss.attackTimer) {
+    clearTimeout(boss.attackTimer);
+    boss.attackTimer = null;
+  }
+}
+
+function bossWaveTargets(room) {
+  return getTopPlayers(room, 5)
+    .filter(player => player?.alive && player.uniqueId !== SERVER_HORDE_ID)
+    .slice(0, 5);
+}
+
+function applyBossDamageToPlayer(room, target, damage) {
+  if (!room || !target?.uniqueId || !room.players[target.uniqueId]?.alive) return null;
+  const player = room.players[target.uniqueId];
+  let dmg = Math.max(1, Math.round(Number(damage) || BOSS_WAVE_ATTACK_DAMAGE));
+  let shieldAbsorbed = 0;
+  if (player.shieldUntil && player.shieldUntil > Date.now()) {
+    shieldAbsorbed = Math.min(Math.max(1, Math.ceil(dmg * 0.45)), Math.max(0, dmg - 1));
+    dmg = Math.max(1, dmg - shieldAbsorbed);
+  }
+
+  player.hp = Math.max(0, (Number(player.hp) || 0) - dmg);
+  player.lastActive = Date.now();
+  const killed = player.hp <= 0;
+  if (killed) {
+    player.alive = false;
+    player.killStreak = 0;
+    emitRoomEvent(room, 'killEvent', {
+      killer: SERVER_BOSS_ID,
+      killerNick: 'Boss Wave',
+      killerKills: 0,
+      killerStreak: 0,
+      victim: target.uniqueId,
+      victimNick: player.nickname || target.nickname || target.uniqueId,
+      damage: dmg,
+      effect: 'boss',
+      attackerScope: 'boss',
+      targetScope: 'top',
+    });
+  }
+
+  return {
+    attacker: SERVER_BOSS_ID,
+    attackerNick: 'Boss Wave',
+    target: target.uniqueId,
+    targetNick: player.nickname || target.nickname || target.uniqueId,
+    damage: dmg,
+    killed,
+    special: true,
+    effect: killed ? 'explosion' : 'boss',
+    intensity: killed ? 0.95 : 0.72,
+    critical: dmg >= Math.max(12, (Number(player.maxHp) || CFG.BASE_HP) * 0.16),
+    shielded: shieldAbsorbed > 0,
+    shieldAbsorbed,
+    attackerScope: 'boss',
+    targetScope: 'top',
+    remainingHpPct: Math.max(0, Number(player.hp) || 0) / Math.max(1, Number(player.maxHp) || CFG.BASE_HP),
+  };
+}
+
+function runBossWaveAttack(room, reason = 'pulse') {
+  const boss = room?.bossWave;
+  if (!boss?.active) return [];
+  const targets = bossWaveTargets(room);
+  const attacks = [];
+  const baseDamage = Math.max(4, Math.round(Number(boss.attackDamage) || BOSS_WAVE_ATTACK_DAMAGE));
+  const remainingAfterStrike = boss.endsAt ? Math.max(0, boss.endsAt - Date.now()) : boss.attackIntervalMs;
+  const projectedNextAttackAt = remainingAfterStrike > 1000
+    ? Date.now() + Math.min(Math.max(900, boss.attackIntervalMs || BOSS_WAVE_ATTACK_INTERVAL_MS), remainingAfterStrike)
+    : null;
+  boss.nextAttackAt = projectedNextAttackAt;
+
+  targets.forEach((target, index) => {
+    const variance = 0.82 + Math.random() * 0.42;
+    const falloff = Math.max(0.72, 1 - index * 0.06);
+    const payload = applyBossDamageToPlayer(room, target, baseDamage * variance * falloff);
+    if (!payload) return;
+    attacks.push(payload);
+    emitRoomEvent(room, 'attack', payload);
+  });
+
+  emitRoomEvent(room, 'bossWave', {
+    type: 'attack',
+    active: true,
+    hp: boss.hp,
+    maxHp: boss.maxHp,
+    hits: boss.hits,
+    targets: attacks.map(attack => ({
+      uniqueId: attack.target,
+      nickname: attack.targetNick,
+      damage: attack.damage,
+      killed: attack.killed,
+    })),
+    reason,
+    durationMs: boss.durationMs,
+    endsAt: boss.endsAt,
+    remainingMs: boss.endsAt ? Math.max(0, boss.endsAt - Date.now()) : null,
+    nextAttackAt: projectedNextAttackAt,
+    attackIntervalMs: boss.attackIntervalMs,
+  });
+
+  if (attacks.length) {
+    emitSoundAndSync(room, attacks.some(attack => attack.killed) ? 'kill' : 'attack', {
+      intensity: attacks.some(attack => attack.killed) ? 0.9 : 0.72,
+      tier: attacks.some(attack => attack.killed) ? 'rare' : 'common',
+    });
+    setTimeout(() => emitRoomEvent(room, 'gameState', room.players), 40);
+    emitSessionStatus(room);
+  }
+  return attacks;
+}
+
+function scheduleBossWaveAttack(room, delayMs = BOSS_WAVE_ATTACK_INTERVAL_MS) {
+  const boss = room?.bossWave;
+  if (!boss?.active) return;
+  if (boss.attackTimer) clearTimeout(boss.attackTimer);
+  const remaining = boss.endsAt ? boss.endsAt - Date.now() : delayMs;
+  if (remaining <= 0) {
+    completeBossWave(room, null, 'expired');
+    return;
+  }
+  const nextDelay = Math.max(900, Math.min(Math.round(delayMs), remaining));
+  boss.nextAttackAt = Date.now() + nextDelay;
+  boss.attackTimer = setTimeout(() => {
+    boss.attackTimer = null;
+    if (!room?.bossWave?.active) return;
+    runBossWaveAttack(room);
+    scheduleBossWaveAttack(room, room.bossWave.attackIntervalMs || BOSS_WAVE_ATTACK_INTERVAL_MS);
+  }, nextDelay);
+  if (typeof boss.attackTimer.unref === 'function') boss.attackTimer.unref();
+}
+
 function completeBossWave(room, finalHit = null, reason = 'defeated') {
   if (!room?.bossWave?.active) return { ok: false, reason: 'no_active_boss_wave' };
   const boss = room.bossWave;
+  clearBossWaveTimers(room);
   boss.active = false;
   boss.status = reason;
   boss.endedAt = Date.now();
@@ -1173,6 +1327,11 @@ function completeBossWave(room, finalHit = null, reason = 'defeated') {
     hp: boss.hp,
     maxHp: boss.maxHp,
     hits: boss.hits,
+    startedAt: boss.startedAt,
+    durationMs: boss.durationMs,
+    endsAt: boss.endsAt,
+    remainingMs: 0,
+    attackIntervalMs: boss.attackIntervalMs,
     endedAt: boss.endedAt,
     finalHitBy: finalHit,
   };
@@ -1185,6 +1344,10 @@ function completeBossWave(room, finalHit = null, reason = 'defeated') {
     hp: boss.hp,
     maxHp: boss.maxHp,
     hits: boss.hits,
+    durationMs: boss.durationMs,
+    endsAt: boss.endsAt,
+    remainingMs: 0,
+    attackIntervalMs: boss.attackIntervalMs,
     finalHitBy: finalHit,
     title: reason === 'defeated' ? 'Boss wave defeated' : 'Boss wave ended',
   });
@@ -1203,15 +1366,28 @@ function startBossWave(room, options = {}) {
   if (!session) return null;
   if (room.bossWave?.active) completeBossWave(room, null, 'restarted');
   const maxHp = clampSessionNumber(options.maxHp, BOSS_WAVE_HP, 200, 50000);
+  const durationMs = clampSessionNumber(options.durationMs, BOSS_WAVE_DURATION_MS, 15000, 10 * 60 * 1000);
+  const attackIntervalMs = clampSessionNumber(options.attackIntervalMs, BOSS_WAVE_ATTACK_INTERVAL_MS, 4000, 60000);
+  const startedAt = Date.now();
   room.bossWave = {
     active: true,
     status: 'live',
     hp: maxHp,
     maxHp,
     hits: 0,
-    startedAt: Date.now(),
+    startedAt,
+    durationMs,
+    endsAt: startedAt + durationMs,
+    attackIntervalMs,
+    attackDamage: clampSessionNumber(options.attackDamage, BOSS_WAVE_ATTACK_DAMAGE, 4, 250),
+    nextAttackAt: null,
+    timer: null,
+    attackTimer: null,
     lastHitBy: null,
   };
+  room.bossWave.timer = setTimeout(() => completeBossWave(room, null, 'expired'), durationMs);
+  if (typeof room.bossWave.timer.unref === 'function') room.bossWave.timer.unref();
+  scheduleBossWaveAttack(room, Math.min(2400, Math.max(1000, attackIntervalMs * 0.28)));
   session.bossWavesStarted = (Number(session.bossWavesStarted) || 0) + 1;
   emitRoomEvent(room, 'bossWave', {
     type: 'started',
@@ -1219,6 +1395,11 @@ function startBossWave(room, options = {}) {
     hp: maxHp,
     maxHp,
     hits: 0,
+    durationMs,
+    endsAt: room.bossWave.endsAt,
+    remainingMs: durationMs,
+    nextAttackAt: room.bossWave.nextAttackAt,
+    attackIntervalMs,
     title: 'Boss wave incoming',
   });
   emitRoomEvent(room, 'roundEvent', {
@@ -1244,7 +1425,7 @@ function damageBossWave(room, attackerId, attackerNick, multiplier = 1, effect =
   const attackPayload = {
     attacker: attackerId,
     attackerNick: attackerNick || attacker.nickname,
-    target: SERVER_HORDE_ID,
+    target: SERVER_BOSS_ID,
     targetNick: 'Boss Wave',
     damage,
     killed: boss.hp <= 0,
@@ -1254,14 +1435,14 @@ function damageBossWave(room, attackerId, attackerNick, multiplier = 1, effect =
     critical: multiplier >= 3,
     comment,
     attackerScope: topBefore.has(attackerId) ? 'top' : 'horde',
-    targetScope: 'horde',
+    targetScope: 'boss',
     remainingHpPct: boss.maxHp ? boss.hp / boss.maxHp : 0,
   };
   emitRoomEvent(room, 'attack', attackPayload);
   emitRoomEvent(room, 'commentDamage', {
     ...attackPayload,
-    target: SERVER_HORDE_ID,
-    targetScope: 'horde',
+    target: SERVER_BOSS_ID,
+    targetScope: 'boss',
     commandDescription: effect,
   });
   emitSoundAndSync(room, boss.hp <= 0 ? 'kill' : (multiplier > 1.5 ? 'gift' : 'attack'), { intensity: attackPayload.intensity, tier: multiplier >= 5 ? 'rare' : 'common' });
@@ -1273,13 +1454,18 @@ function damageBossWave(room, attackerId, attackerNick, multiplier = 1, effect =
     hits: boss.hits,
     lastHitBy: boss.lastHitBy,
     damage,
+    durationMs: boss.durationMs,
+    endsAt: boss.endsAt,
+    remainingMs: boss.endsAt ? Math.max(0, boss.endsAt - Date.now()) : null,
+    nextAttackAt: boss.nextAttackAt || null,
+    attackIntervalMs: boss.attackIntervalMs,
   });
   if (boss.hp <= 0) {
     completeBossWave(room, boss.lastHitBy, 'defeated');
   } else {
     emitSessionStatus(room);
   }
-  return { handled: true, result: attackPayload, target: SERVER_HORDE_ID };
+  return { handled: true, result: attackPayload, target: SERVER_BOSS_ID };
 }
 
 function endLiveSession(room, reason = 'manual_end') {
@@ -2499,6 +2685,37 @@ function resolveTikTokUser(eventPayload) {
   return { id, nickname };
 }
 
+function likeIncrementFromEvent(eventPayload = {}) {
+  const raw = Number(eventPayload.likeCount ?? eventPayload.count ?? eventPayload.likes ?? 1);
+  if (!Number.isFinite(raw) || raw <= 0) return 1;
+  return Math.max(1, Math.min(100, Math.round(raw)));
+}
+
+function updateRoomLikeMilestone(room, increment = 1) {
+  if (!room) return { total: 0, milestone: null, tier: null };
+  if (!room.likeStats || typeof room.likeStats !== 'object') {
+    room.likeStats = { total: 0, lastMilestone: 0 };
+  }
+  const step = Math.max(1, Math.round(Number(increment) || 1));
+  const previous = Math.max(0, Number(room.likeStats.total) || 0);
+  const total = previous + step;
+  room.likeStats.total = total;
+
+  const previousHundred = Math.floor(previous / 100);
+  const currentHundred = Math.floor(total / 100);
+  if (currentHundred <= previousHundred) {
+    return { total, milestone: null, tier: null };
+  }
+
+  const milestone = currentHundred * 100;
+  room.likeStats.lastMilestone = milestone;
+  return {
+    total,
+    milestone,
+    tier: milestone % 1000 === 0 ? 'mega' : 'standard',
+  };
+}
+
 function spawnPlayer(room, uniqueId, nickname) {
   if (!room || !uniqueId) return;
   if (room.players[uniqueId]?.alive) {
@@ -2669,6 +2886,37 @@ function extractMentions(comment = '') {
     .filter(Boolean);
 }
 
+function textTargetsBossWave(text, mentions = []) {
+  const bossTargets = new Set([
+    'boss',
+    'horde',
+    'thehorde',
+    'raidboss',
+    'waveboss',
+    normalizeName(SERVER_BOSS_ID),
+    normalizeName(SERVER_HORDE_ID),
+  ]);
+  if (mentions.some(mention => bossTargets.has(normalizeName(mention)))) return true;
+  const value = String(text || '').trim();
+  if (/(^|\s)!(?:boss|raidboss|waveboss)\b/i.test(value)) return true;
+  if (/(^|\s)!\S+\s+@?(?:boss|horde|thehorde|raidboss|waveboss)\b/i.test(value)) return true;
+  if (/(^|\s)(?:attack|hit|strike|damage|fight)\s+@?(?:boss|horde|thehorde|raidboss|waveboss)\b/i.test(value)) return true;
+  if (/\b(?:boss|horde|raidboss|waveboss)\b/i.test(value)) return true;
+  return false;
+}
+
+function parseAttackCommand(text = '') {
+  const value = String(text || '');
+  const explicit = value.match(/(?:^|\s)[!/](\S+)/i);
+  const rawCommand = explicit?.[1] || value.match(/\b([a-z][a-z0-9_-]{1,24})\b/i)?.[1] || '';
+  const normalized = String(rawCommand || '').toLowerCase();
+  if (EFFECT_COMMANDS[normalized]) return EFFECT_COMMANDS[normalized];
+
+  const words = value.toLowerCase().match(/[a-z][a-z0-9_-]*/g) || [];
+  const naturalEffect = words.find(word => EFFECT_COMMANDS[word]);
+  return naturalEffect ? EFFECT_COMMANDS[naturalEffect] : null;
+}
+
 // ────────────────────────────────
 // REWRITTEN handleMentionAttack
 // ────────────────────────────────
@@ -2797,22 +3045,18 @@ function handlePlayerUtilityCommand(room, playerId, nickname, comment) {
 function handleMentionAttack(room, attackerId, attackerNick, comment) {
   const text = String(comment || '');
   const mentions = extractMentions(text);
-  const bossMentioned = Boolean(room?.bossWave?.active && (
-    /\b(?:boss|horde|raidboss|waveboss)\b/i.test(text) ||
-    mentions.some(mention => ['boss', 'horde', 'thehorde', 'raidboss', SERVER_HORDE_ID].includes(normalizeName(mention)))
-  ));
+  const bossMentioned = Boolean(room?.bossWave?.active && textTargetsBossWave(text, mentions));
   if (!mentions.length && !bossMentioned) return { handled: false, reason: 'No @mention found' };
 
-  // Parse !command
-  const cmdMatch = text.match(/!(\S+)/i);
+  // Parse command words with or without !/ prefix.
+  const attackCommand = parseAttackCommand(text);
   let requestedEffect  = null;
   let commandMultiplier = 1;
   let commandDescription = null;
   let isSpecialCommand  = false;
 
-  if (cmdMatch) {
-    const cmd = cmdMatch[1].toLowerCase();
-    const entry = EFFECT_COMMANDS[cmd];
+  if (attackCommand) {
+    const entry = attackCommand;
     if (entry) {
       requestedEffect    = entry.effect;
       commandMultiplier  = entry.multiplier;
@@ -4192,6 +4436,8 @@ io.on('connection', (socket) => {
       socket.emit('overlaySettings',  room.overlaySettings);
       socket.emit('laserColor',       room.overlaySettings.laserColor);
       socket.emit('sessionStatus',    buildSessionStatus(room));
+      const bossStatus = currentBossStatus(room);
+      if (bossStatus?.active) socket.emit('bossWave', { type: 'started', ...bossStatus });
       const background = buildBackgroundPayload(room, { v: Date.now() });
       if (background) socket.emit('backgroundChanged', background);
     } else if (clientType === 'dashboard' || clientType === 'stats') {
@@ -4360,6 +4606,9 @@ app.post('/api/session/boss/start', requireRoom, (req, res) => {
   const bossWave = startBossWave(req.room, {
     source: 'dashboard',
     maxHp: req.body?.maxHp,
+    durationMs: req.body?.durationMs,
+    attackIntervalMs: req.body?.attackIntervalMs,
+    attackDamage: req.body?.attackDamage,
   });
   res.json({ success: true, bossWave: currentBossStatus(req.room) || bossWave, session: buildSessionStatus(req.room) });
 });
@@ -4461,12 +4710,17 @@ function runRoomOverlayTest(room, action) {
     const hearts = 8;
     const intensity = 0.65;
     awardStats(room, supportId, 'Nova', CFG.LIKE_HP_BOOST * hearts, 0);
+    const likeMilestone = updateRoomLikeMilestone(room, 100);
     emitSoundAndSync(room, 'heal', { intensity, tier: 'common' });
     emitRoomEvent(room, 'like', {
       uniqueId: supportId,
       nickname: 'Nova',
       hearts,
       rate: 240,
+      increment: 100,
+      totalLikes: likeMilestone.total,
+      milestone: likeMilestone.milestone,
+      milestoneTier: likeMilestone.tier,
       intensity,
       color: room.players[supportId]?.color || '#ff4f8f',
     });
@@ -5202,14 +5456,18 @@ function setupTikTokEvents(tiktokClient, room) {
     const { id, nickname } = resolveTikTokUser(e);
     if (!id) return;
     if (!room.players[id]) spawnPlayer(room, id, nickname);
-    awardStats(room, id, nickname, CFG.LIKE_HP_BOOST, 0);
+    const likeIncrement = likeIncrementFromEvent(e);
+    awardStats(room, id, nickname, CFG.LIKE_HP_BOOST * Math.min(5, likeIncrement), 0);
+    const likeMilestone = updateRoomLikeMilestone(room, likeIncrement);
 
     const likeKey = `${room.roomId}:${id}`;
     if (!likeRateTracker[likeKey]) {
       likeRateTracker[likeKey] = { likes: [], window: 90000 };
     }
     const now = Date.now();
-    likeRateTracker[likeKey].likes.push(now);
+    for (let i = 0; i < Math.min(10, likeIncrement); i += 1) {
+      likeRateTracker[likeKey].likes.push(now);
+    }
     likeRateTracker[likeKey].likes = likeRateTracker[likeKey].likes.filter(t => now - t < likeRateTracker[likeKey].window);
 
     const likeCount  = likeRateTracker[likeKey].likes.length;
@@ -5223,6 +5481,10 @@ function setupTikTokEvents(tiktokClient, room) {
       nickname,
       hearts:    heartCount,
       rate:      likeCount,
+      increment:  likeIncrement,
+      totalLikes: likeMilestone.total,
+      milestone: likeMilestone.milestone,
+      milestoneTier: likeMilestone.tier,
       intensity: Math.min(likeCount / 500, 1),
       color:     room.players[id]?.color || '#FF6B6B',
     });

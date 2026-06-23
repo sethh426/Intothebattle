@@ -1345,6 +1345,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   const lastKnownPositions = new Map();
   const cardAccents = new Map();
   const hordePulses = [];
+  const bossPulses = [];
   const visualEventQueue = [];
   const seenVisualSeqs = new Set();
   const seenVisualSeqOrder = [];
@@ -1353,6 +1354,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   let pendingGameState = null;
   let gameStateScheduled = false;
   let lastVisualEventSeq = 0;
+  let bossWaveState = null;
   let stateFetchInFlight = false;
   let registerAcked = false;
   let registerRetryTimer = null;
@@ -1437,6 +1439,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   }
 
   const HORDE_ID = '__HORDE__';
+  const BOSS_ID = '__BOSS__';
   const overlayParams = new URLSearchParams(window.location.search);
   const overlayRoomId = overlayParams.get('room_id') || '';
   const overlayToken  = overlayParams.get('overlay_token') || overlayParams.get('overlayToken') || '';
@@ -2870,13 +2873,63 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     return { x: Math.max(left, Math.min(right, otherPos.x)), y: dy < 0 ? top : bottom };
   }
 
+  function getBossLayout() {
+    const frame = arenaFrame();
+    const ui = canvasUiScale();
+    const hordeLayout = getHordeLayout();
+    const r = Math.max(30 * ui, Math.min(54 * ui, frame.h * 0.076));
+    const x = frame.x + frame.w * 0.5;
+    const desiredY = frame.y + frame.h * 0.64;
+    const maxY = hordeLayout.barY - r * 1.32;
+    const minY = frame.y + frame.h * 0.5;
+    const y = Math.max(minY, Math.min(maxY, desiredY));
+    const panelW = Math.max(220 * ui, Math.min(frame.w * 0.42, 380 * ui));
+    const panelH = Math.max(48 * ui, 58 * ui);
+    return {
+      x,
+      y,
+      r,
+      panelX: x - panelW / 2,
+      panelY: y + r * 0.72,
+      panelW,
+      panelH,
+    };
+  }
+
+  function getBossPosition() {
+    const layout = getBossLayout();
+    return { x: layout.x, y: layout.y };
+  }
+
+  function getBossEdgePosition(otherPos) {
+    const layout = getBossLayout();
+    if (!otherPos) return { x: layout.x, y: layout.y };
+    const dx = otherPos.x - layout.x;
+    const dy = otherPos.y - layout.y;
+    const len = Math.max(1, Math.hypot(dx, dy));
+    return {
+      x: layout.x + (dx / len) * layout.r * 0.88,
+      y: layout.y + (dy / len) * layout.r * 0.88,
+    };
+  }
+
+  function pulseBoss(type = 'attack', color = THEME.ember, duration = 1000) {
+    bossPulses.push({
+      type,
+      color,
+      startedAt: Date.now(),
+      duration: Math.max(350, duration),
+    });
+    if (bossPulses.length > 8) bossPulses.splice(0, bossPulses.length - 8);
+  }
+
   function rememberPosition(id, pos, scope) {
     if (!id || !pos) return;
     lastKnownPositions.set(String(id).toLowerCase(), { x: pos.x, y: pos.y, scope, ts: Date.now() });
   }
 
   function setCardAccent(id, type = 'attack', color = THEME.cyan, duration = 900) {
-    if (!id || id === HORDE_ID) return;
+    if (!id || id === HORDE_ID || id === BOSS_ID) return;
     cardAccents.set(String(id).toLowerCase(), {
       type,
       color,
@@ -2927,6 +2980,9 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   }
 
   function getPositionForPlayer(id, preferredScope) {
+    if (id === BOSS_ID || preferredScope === 'boss') {
+      return getBossPosition();
+    }
     if (preferredScope === 'horde') {
       return hordePlayer()
         ? getHordePosition()
@@ -3837,6 +3893,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     neon:'neon', ripple:'ripple', wave:'ripple',
     sphere:'sphere', gift:'gift', hearts:'gift',
     explosion:'explosion', boom:'explosion',
+    boss:'neon', bosswave:'neon',
     meteor:'fire', tsunami:'ripple', nuke:'explosion', nukes:'explosion',
   };
 
@@ -3881,16 +3938,22 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   function fireAttack(attackerId, targetId, damage, killed, special, effect, meta) {
     meta = meta || {};
     const horde = hordePlayer();
+    const attackerIsBoss = attackerId === BOSS_ID || meta.attackerScope === 'boss';
+    const targetIsBoss = targetId === BOSS_ID || meta.targetScope === 'boss';
     const attackerIsHorde = attackerId === HORDE_ID || meta.attackerScope === 'horde';
     const targetIsHorde = targetId === HORDE_ID || meta.targetScope === 'horde';
     const rawFrom = attackerIsHorde
       ? (horde ? getHordePosition() : null)
-      : getPositionForPlayer(attackerId, meta.attackerScope) || (horde ? getHordeEdgePosition(null) : null);
+      : attackerIsBoss
+        ? getBossPosition()
+        : getPositionForPlayer(attackerId, meta.attackerScope) || (horde ? getHordeEdgePosition(null) : null);
     const rawTo = targetIsHorde
       ? (horde ? getHordePosition() : null)
-      : getPositionForPlayer(targetId, meta.targetScope) || (horde ? getHordeEdgePosition(rawFrom) : null);
-    const from = attackerIsHorde && horde ? getHordeEdgePosition(rawTo) : rawFrom;
-    const to = targetIsHorde && horde ? getHordeEdgePosition(rawFrom) : rawTo;
+      : targetIsBoss
+        ? getBossPosition()
+        : getPositionForPlayer(targetId, meta.targetScope) || (horde ? getHordeEdgePosition(rawFrom) : null);
+    const from = attackerIsBoss ? getBossEdgePosition(rawTo) : attackerIsHorde && horde ? getHordeEdgePosition(rawTo) : rawFrom;
+    const to = targetIsBoss ? getBossEdgePosition(rawFrom) : targetIsHorde && horde ? getHordeEdgePosition(rawFrom) : rawTo;
     if (!from || !to) return false;
     if (Math.abs(from.x - to.x) < 2 && Math.abs(from.y - to.y) < 2) {
       from.x -= 24;
@@ -3916,13 +3979,19 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       color:          meta.laserColor || overlaySettings.laserColor,
       shotSpeed:      meta.shotSpeed  || overlaySettings.shotSpeed,
     }));
-    if (attackerIsHorde) {
+    if (attackerIsBoss) {
+      pulseBoss(killed ? 'kill' : 'attack', killed ? THEME.gold : THEME.ember, killed ? 1350 : 980);
+      showBattlePrompt(killed ? 'Boss wave claimed a fighter' : 'Boss wave strikes', 'horde', 1900);
+    } else if (attackerIsHorde) {
       pulseHorde(killed ? 'kill' : 'attack', killed ? THEME.gold : THEME.red, killed ? 1150 : 850);
       showBattlePrompt(killed ? 'Horde claimed a fighter' : 'Horde strikes', 'horde', 1900);
     } else {
       setCardAccent(attackerId, special ? 'gift' : 'attack', special ? THEME.gold : THEME.cyan, 650);
     }
-    if (targetIsHorde) {
+    if (targetIsBoss) {
+      pulseBoss(killed ? 'kill' : 'hit', killed ? THEME.gold : THEME.cyan, killed ? 1400 : 900);
+      showBattlePrompt(killed ? 'Boss wave broken' : 'Boss core hit', 'horde', 1900);
+    } else if (targetIsHorde) {
       pulseHorde(killed ? 'kill' : 'hit', killed ? THEME.gold : THEME.ember, killed ? 1200 : 820);
       showBattlePrompt(killed ? 'Horde pressure broken' : 'Horde under fire', 'horde', 1900);
     } else {
@@ -3986,6 +4055,50 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 
     rememberCheer(playerId);
     if (meta.kind !== 'follow' && meta.kind !== 'gift') applyHeal(playerId, hearts * 5);
+  }
+
+  function fireLikeMilestoneEffect(data) {
+    const milestone = Number(data?.milestone) || 0;
+    if (!milestone) return;
+    const isMega = data.milestoneTier === 'mega' || milestone % 1000 === 0;
+    const frame = arenaFrame();
+    const center = { x: frame.x + frame.w * 0.5, y: frame.y + frame.h * 0.47 };
+    const atk = new Attack(center, center, 'static', { intensity: isMega ? 1 : 0.72 });
+    const count = isMega ? 64 : 34;
+    const palette = isMega
+      ? [THEME.gold, THEME.goldBright, THEME.cyan, '#ffffff', '#ff78b2']
+      : ['#ff78b2', THEME.cyan, THEME.gold, '#ffffff'];
+
+    for (let i = 0; i < count; i += 1) {
+      const angle = Math.PI * 2 * (i / count);
+      const speed = (isMega ? 7 : 4.8) + Math.random() * (isMega ? 6 : 3.4);
+      const particle = new Particle(center.x, center.y, {
+        speed,
+        color: palette[i % palette.length],
+        radius: (isMega ? 2.8 : 2) + Math.random() * (isMega ? 3.4 : 2.4),
+        decay: isMega ? 0.012 : 0.018,
+        rise: isMega ? 0.9 : 0.55,
+      });
+      particle.vx = Math.cos(angle) * speed * (0.55 + Math.random() * 0.45);
+      particle.vy = Math.sin(angle) * speed * 0.55 - (isMega ? 1.6 : 1.0);
+      atk.particles.push(particle);
+    }
+    attacks.push(atk);
+    fireHeartEffect(data.uniqueId, isMega ? 6 : 4, isMega ? 0.95 : 0.62, {
+      ...data,
+      kind: 'like',
+      color: isMega ? THEME.gold : '#ff78b2',
+    });
+    setCardAccent(data.uniqueId, isMega ? 'gift' : 'like', isMega ? THEME.gold : '#ff78b2', isMega ? 1800 : 1200);
+    showBanner(isMega ? 'legendary' : 'special', {
+      code: isMega ? '1K' : '+100',
+      kicker: isMega ? 'Crowd eruption' : 'Crowd surge',
+      title: `${milestone.toLocaleString()} likes powered the arena`,
+      meta: isMega ? 'Mega pulse unlocked' : 'Every 100 likes boosts the fight',
+      charge: isMega ? 100 : 68,
+      priority: isMega ? 96 : 68,
+    }, isMega ? 4300 : 2800);
+    showBattlePrompt(isMega ? '1,000 like arena surge' : '100 like crowd surge', isMega ? 'return' : '', isMega ? 2400 : 1800);
   }
 
   function showSocialBoost(data) {
@@ -4448,6 +4561,151 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     ctx.restore();
   }
 
+  function formatBossTime(ms) {
+    const safeMs = Math.max(0, Number(ms) || 0);
+    const seconds = Math.ceil(safeMs / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const rem = seconds % 60;
+    return minutes > 0 ? `${minutes}:${String(rem).padStart(2, '0')}` : `${seconds}s`;
+  }
+
+  function drawBossWave() {
+    if (!bossWaveState?.active) return;
+    const layout = getBossLayout();
+    const nowMs = Date.now();
+    const now = nowMs * 0.001;
+    const hp = Math.max(0, Number(bossWaveState.hp) || 0);
+    const maxHp = Math.max(1, Number(bossWaveState.maxHp) || 1);
+    const hpPct = clamp01(hp / maxHp);
+    const remainingMs = bossWaveState.endsAt
+      ? Math.max(0, Number(bossWaveState.endsAt) - nowMs)
+      : Math.max(0, Number(bossWaveState.remainingMs) || 0);
+    const durationMs = Math.max(1, Number(bossWaveState.durationMs) || 90000);
+    const timePct = clamp01(remainingMs / durationMs);
+    const nextAttackMs = bossWaveState.nextAttackAt
+      ? Math.max(0, Number(bossWaveState.nextAttackAt) - nowMs)
+      : null;
+    const nextAttackPct = nextAttackMs == null
+      ? 0
+      : clamp01(1 - nextAttackMs / Math.max(1, Number(bossWaveState.attackIntervalMs) || 11000));
+    const ui = canvasUiScale();
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+
+    const aura = ctx.createRadialGradient(layout.x, layout.y, 0, layout.x, layout.y, layout.r * 2.9);
+    aura.addColorStop(0, `rgba(255,106,61,${0.24 + Math.sin(now * 4) * 0.05})`);
+    aura.addColorStop(0.48, 'rgba(85,231,255,0.12)');
+    aura.addColorStop(1, 'rgba(232,59,95,0)');
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(layout.x, layout.y, layout.r * 2.9, 0, Math.PI * 2);
+    ctx.fill();
+
+    for (let i = bossPulses.length - 1; i >= 0; i -= 1) {
+      const item = bossPulses[i];
+      const progress = clamp01((nowMs - item.startedAt) / item.duration);
+      if (progress >= 1) {
+        bossPulses.splice(i, 1);
+        continue;
+      }
+      const alpha = Math.sin(progress * Math.PI) * (item.type === 'kill' ? 0.6 : 0.42);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = item.color || THEME.ember;
+      ctx.lineWidth = Math.max(2, layout.r * (0.06 + progress * 0.06));
+      ctx.beginPath();
+      ctx.arc(layout.x, layout.y, layout.r * (1.05 + progress * 1.25), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    const coreGrad = ctx.createRadialGradient(
+      layout.x - layout.r * 0.28,
+      layout.y - layout.r * 0.32,
+      layout.r * 0.12,
+      layout.x,
+      layout.y,
+      layout.r * 1.18
+    );
+    coreGrad.addColorStop(0, '#fff1ba');
+    coreGrad.addColorStop(0.2, '#ff6a3d');
+    coreGrad.addColorStop(0.58, '#481422');
+    coreGrad.addColorStop(1, '#050711');
+    ctx.shadowColor = 'rgba(255,106,61,0.72)';
+    ctx.shadowBlur = 24;
+    ctx.fillStyle = coreGrad;
+    ctx.beginPath();
+    ctx.arc(layout.x, layout.y, layout.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    const hpStart = -Math.PI / 2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = Math.max(4 * ui, layout.r * 0.09);
+    ctx.beginPath();
+    ctx.arc(layout.x, layout.y, layout.r * 1.18, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = hpPct <= 0.25 ? THEME.gold : hpPct <= 0.5 ? THEME.ember : THEME.cyan;
+    ctx.beginPath();
+    ctx.arc(layout.x, layout.y, layout.r * 1.18, hpStart, hpStart + Math.PI * 2 * hpPct);
+    ctx.stroke();
+
+    if (nextAttackPct > 0) {
+      ctx.strokeStyle = colorWithAlpha(THEME.red, 0.35 + nextAttackPct * 0.4);
+      ctx.lineWidth = Math.max(2 * ui, layout.r * 0.045);
+      ctx.beginPath();
+      ctx.arc(layout.x, layout.y, layout.r * (1.34 + nextAttackPct * 0.16), hpStart, hpStart + Math.PI * 2 * nextAttackPct);
+      ctx.stroke();
+    }
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `900 ${Math.max(15 * ui, layout.r * 0.36)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.fillStyle = '#fff7e8';
+    ctx.shadowColor = 'rgba(0,0,0,0.82)';
+    ctx.shadowBlur = 8;
+    ctx.fillText('BOSS', layout.x, layout.y - layout.r * 0.08);
+    ctx.font = `800 ${Math.max(10 * ui, layout.r * 0.18)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.fillStyle = '#ffe08f';
+    ctx.fillText(formatBossTime(remainingMs), layout.x, layout.y + layout.r * 0.35);
+    ctx.shadowBlur = 0;
+
+    drawGlassPanel(layout.panelX, layout.panelY, layout.panelW, layout.panelH, Math.max(12 * ui, layout.panelH * 0.26), {
+      start: 'rgba(32,6,18,0.88)',
+      mid: 'rgba(8,14,28,0.9)',
+      end: 'rgba(4,7,14,0.94)',
+      stroke: colorWithAlpha(THEME.ember, 0.42),
+    });
+    const pad = Math.max(12 * ui, layout.panelH * 0.22);
+    const trackX = layout.panelX + pad;
+    const trackY = layout.panelY + layout.panelH * 0.56;
+    const trackW = layout.panelW - pad * 2;
+    const trackH = Math.max(6 * ui, layout.panelH * 0.12);
+    ctx.fillStyle = 'rgba(0,0,0,0.48)';
+    roundedRectPath(ctx, trackX, trackY, trackW, trackH, trackH / 2);
+    ctx.fill();
+    const timeGrad = ctx.createLinearGradient(trackX, 0, trackX + trackW, 0);
+    timeGrad.addColorStop(0, THEME.red);
+    timeGrad.addColorStop(0.55, THEME.ember);
+    timeGrad.addColorStop(1, THEME.gold);
+    ctx.fillStyle = timeGrad;
+    roundedRectPath(ctx, trackX, trackY, Math.max(trackH, trackW * timePct), trackH, trackH / 2);
+    ctx.fill();
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = 'left';
+    ctx.font = `900 ${Math.max(10 * ui, layout.panelH * 0.22)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.fillStyle = '#fff4d8';
+    ctx.fillText('BOSS WAVE', trackX, layout.panelY + layout.panelH * 0.36);
+    ctx.textAlign = 'right';
+    const hpLabel = fitCanvasText(ctx, `${Math.round(hp)} / ${Math.round(maxHp)} HP`, trackW * 0.5, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10 * ui, layout.panelH * 0.2), Math.max(7, 8 * ui));
+    ctx.fillStyle = '#ffd9a8';
+    ctx.fillText(hpLabel, trackX + trackW, layout.panelY + layout.panelH * 0.36);
+    ctx.restore();
+  }
+
   // ═══════════════════════════════════════
   // HORDE (improved visibility)
   // ═══════════════════════════════════════
@@ -4669,6 +4927,11 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       };
     }
     drawHorde(horde);
+    if (bossWaveState?.active) {
+      const bossPos = getBossPosition();
+      rememberPosition(BOSS_ID, bossPos, 'boss');
+      drawBossWave();
+    }
     window.__overlayLegacyLayout = {
       frame: arenaFrame(),
       players: legacyLayoutPlayers,
@@ -4788,6 +5051,8 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     if (type === 'killEvent' || type === 'streakEvent') return 95;
     if (type === 'giftAttack' || type === 'giftCelebration') return 88;
     if (type === 'attack' || type === 'commentDamage') return data.special ? 82 : 70;
+    if (type === 'like' && data.milestoneTier === 'mega') return 90;
+    if (type === 'like' && data.milestone) return 66;
     if (type === 'socialBoost' || type === 'follow' || type === 'respawn') return 58;
     if (type === 'heal') return 38;
     if (type === 'like') return 24;
@@ -4798,6 +5063,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     if (options.lane && VISUAL_EVENT_LANES[options.lane]) return options.lane;
     if (type === 'sponsorPrepare' || type === 'sponsorScene') return 'exclusive';
     if (type === 'soundEvent') return 'sound';
+    if (type === 'like' && data.milestone) return 'celebration';
     if (type === 'like' || type === 'heal' || type === 'socialBoost') return 'ambient';
     if (type === 'killEvent' || type === 'streakEvent' || type === 'giftCelebration' || type === 'follow' || type === 'playerCommand' || type === 'roundEvent' || type === 'bossWave') return 'celebration';
     if (type === 'respawn' || type === 'attack' || type === 'commentDamage' || type === 'giftAttack' || data.attacker || data.target) return 'gameplay';
@@ -4993,6 +5259,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       kind: 'like',
       color: data.color || '#ff78b2',
     });
+    if (data.milestone) fireLikeMilestoneEffect(data);
     playSound('heal');
   }
 
@@ -5238,11 +5505,43 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     const hp = Math.max(0, Math.round(Number(data.hp) || 0));
     const maxHp = Math.max(1, Math.round(Number(data.maxHp) || 1));
     const pct = Math.max(0, Math.min(100, Math.round((hp / maxHp) * 100)));
+    const mergeBossState = () => {
+      bossWaveState = {
+        ...(bossWaveState || {}),
+        ...data,
+        type,
+        active: data.active !== false && !['defeated', 'stopped', 'ended', 'expired', 'restarted'].includes(type),
+        hp,
+        maxHp,
+        updatedAt: Date.now(),
+      };
+    };
     if (type === 'started') {
+      mergeBossState();
+      pulseBoss('spawn', THEME.gold, 1600);
       showBattlePrompt('Boss wave active: target @boss', 'horde', 2800);
       return;
     }
+    if (type === 'attack') {
+      mergeBossState();
+      pulseBoss('attack', THEME.ember, 1100);
+      const count = Array.isArray(data.targets) ? data.targets.length : 0;
+      if (count) {
+        showBanner(count >= 4 ? 'legendary' : 'streak', {
+          code: 'BOSS',
+          kicker: 'Boss wave strike',
+          title: `Boss wave hit ${count} fighter${count === 1 ? '' : 's'}`,
+          meta: 'Everyone in the frame is under pressure',
+          charge: Math.min(100, 68 + count * 6),
+          priority: count >= 4 ? 90 : 74,
+        }, count >= 4 ? 3400 : 2600);
+      }
+      showBattlePrompt(count ? `Boss wave hit ${count} fighters` : 'Boss wave is charging', 'horde', 1700);
+      return;
+    }
     if (type === 'damaged') {
+      mergeBossState();
+      pulseBoss('hit', pct <= 25 ? THEME.gold : THEME.cyan, pct <= 25 ? 1300 : 900);
       const hitter = data.lastHitBy?.nickname || data.lastHitBy?.uniqueId || 'Viewer';
       showBanner(pct <= 25 ? 'legendary' : 'streak', {
         code: `${pct}%`,
@@ -5256,10 +5555,21 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       return;
     }
     if (type === 'defeated') {
+      mergeBossState();
+      if (bossWaveState) bossWaveState.active = false;
+      pulseBoss('kill', THEME.gold, 1800);
+      setTimeout(() => {
+        if (bossWaveState && bossWaveState.active === false) bossWaveState = null;
+      }, 2600);
       handleRoundEvent({ type: 'boss_defeated', title: 'Boss wave defeated', message: data.finalHitBy?.nickname ? `${data.finalHitBy.nickname} landed the final hit` : '' });
       return;
     }
-    if (['stopped', 'ended', 'restarted'].includes(type)) {
+    if (['stopped', 'ended', 'expired', 'restarted'].includes(type)) {
+      mergeBossState();
+      if (bossWaveState) bossWaveState.active = false;
+      setTimeout(() => {
+        if (bossWaveState && bossWaveState.active === false) bossWaveState = null;
+      }, 1800);
       showBattlePrompt('Boss wave ended', 'return', 1800);
     }
   }
@@ -5345,7 +5655,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       socket.on('attack', data => enqueueVisualEvent('attack', data, handleAttackEvent));
       socket.on('commentDamage', data => enqueueVisualEvent('commentDamage', data, handleCommentDamage));
       socket.on('giftAttack', data => enqueueVisualEvent('giftAttack', data, handleGiftAttackEvent));
-      socket.on('like', data => enqueueVisualEvent('like', data, handleLikeEvent, { mergeKey: payload => payload.uniqueId || payload.nickname || 'viewer' }));
+      socket.on('like', data => enqueueVisualEvent('like', data, handleLikeEvent, { mergeKey: payload => payload.milestone ? `like-${payload.milestone}` : (payload.uniqueId || payload.nickname || 'viewer') }));
       socket.on('heal', data => enqueueVisualEvent('heal', data, handleHealEvent, { mergeKey: payload => payload.uniqueId || 'viewer' }));
       socket.on('playerCommand', data => enqueueVisualEvent('playerCommand', data, handlePlayerCommand, { mergeKey: payload => payload.uniqueId || payload.nickname || 'viewer' }));
       socket.on('roundEvent', data => enqueueVisualEvent('roundEvent', data, handleRoundEvent, { mergeKey: payload => payload.type || 'round' }));
