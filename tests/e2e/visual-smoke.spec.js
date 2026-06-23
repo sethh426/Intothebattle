@@ -40,7 +40,10 @@ async function watchPage(page) {
   const errors = [];
   page.on('pageerror', err => errors.push(`pageerror: ${err.message}`));
   page.on('console', msg => {
-    if (msg.type() === 'error') errors.push(`console error: ${msg.text()}`);
+    const text = msg.text();
+    if (msg.type() === 'error' && !/Failed to load resource: net::ERR_NETWORK_CHANGED\b/.test(text)) {
+      errors.push(`console error: ${text}`);
+    }
   });
   page.on('requestfailed', req => {
     try {

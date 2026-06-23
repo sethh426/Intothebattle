@@ -77,10 +77,11 @@ body {
   width:min(94vw,167vh,1920px);
   aspect-ratio:16/9;
   background:rgba(4,8,18,0.94);
-  border:2px solid rgba(246,201,91,0.44); border-radius:20px;
+  border:2px solid rgba(246,201,91,0.52); border-radius:18px;
   box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,0.08),
-    inset 0 0 44px rgba(246,201,91,0.08),
+    inset 0 0 0 1px rgba(255,255,255,0.11),
+    inset 0 0 0 9px rgba(3,7,15,0.28),
+    inset 0 0 48px rgba(246,201,91,0.1),
     0 0 0 1px rgba(255,255,255,0.04),
     0 18px 70px rgba(0,0,0,0.62),
     0 0 70px rgba(246,201,91,0.12),
@@ -89,8 +90,10 @@ body {
 }
 #overlay-container::before {
   content:""; position:absolute; inset:10px; z-index:20; pointer-events:none;
-  border:1px solid rgba(255,255,255,0.09); border-radius:14px;
-  box-shadow:inset 0 0 26px rgba(246,201,91,0.08);
+  border:1px solid rgba(255,255,255,0.12); border-radius:12px;
+  box-shadow:
+    inset 0 0 0 1px rgba(85,231,255,0.08),
+    inset 0 0 28px rgba(246,201,91,0.1);
 }
 #overlay-container::after {
   content:""; position:absolute; inset:0; z-index:19; pointer-events:none;
@@ -109,7 +112,7 @@ body.signed-overlay #overlay-container {
   height:auto !important;
   aspect-ratio:16/9;
   transform:translate(-50%,-50%);
-  border:2px solid rgba(246,201,91,0.52);
+  border:2px solid rgba(246,201,91,0.62);
   border-radius:clamp(12px,1.25vw,22px);
   box-shadow:
     inset 0 0 0 1px rgba(255,255,255,0.08),
@@ -537,13 +540,13 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 .sponsor-scene.live.video-ready .sponsor-poster { opacity:0; }
 .sponsor-scene.live.video-ready video { opacity:1; transform:scale(1.005); }
 .sponsor-scene.live.stats-visible.video-ready video {
-  opacity:.78;
-  filter:saturate(1.02) contrast(1.06) brightness(.86);
+  opacity:.9;
+  filter:saturate(1.02) contrast(1.06) brightness(.92);
 }
 .sponsor-scene.outro video,
 .sponsor-scene.intro video { opacity:0; }
 .sponsor-scene.contain.live.video-ready video { object-fit:contain; opacity:1; background:#02040a; filter:none; }
-.sponsor-scene.contain.live.stats-visible.video-ready video { opacity:.68; filter:saturate(.98) contrast(1.04) brightness(.82); }
+.sponsor-scene.contain.live.stats-visible.video-ready video { opacity:.82; filter:saturate(.98) contrast(1.04) brightness(.9); }
 
 .sponsor-intro,
 .sponsor-live,
@@ -644,8 +647,8 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     linear-gradient(0deg, rgba(0,0,0,.66), transparent 34%, rgba(0,0,0,.5));
   opacity:1; transition:opacity 420ms ease;
 }
-.sponsor-scene.live.video-ready .sponsor-scrim { opacity:.14; }
-.sponsor-scene.live.stats-visible.video-ready .sponsor-scrim { opacity:.52; }
+.sponsor-scene.live.video-ready .sponsor-scrim { opacity:.1; }
+.sponsor-scene.live.stats-visible.video-ready .sponsor-scrim { opacity:.38; }
 .sponsor-video-chrome {
   position:absolute; inset:28px; z-index:1; pointer-events:none; border-radius:12px;
   opacity:0; border:1px solid rgba(255,223,138,.22);
@@ -1346,6 +1349,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   const cardAccents = new Map();
   const hordePulses = [];
   const bossPulses = [];
+  const impactBursts = [];
   const visualEventQueue = [];
   const seenVisualSeqs = new Set();
   const seenVisualSeqOrder = [];
@@ -1360,6 +1364,9 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   let registerRetryTimer = null;
   let battlePromptTimer = null;
   let battlePromptLastShown = 0;
+  let arenaShakeUntil = 0;
+  let arenaShakeStartedAt = 0;
+  let arenaShakeMagnitude = 0;
   let lastAnySoundAt = 0;
   const recentSoundAt = new Map();
   const audioWarnings = new Set();
@@ -2438,7 +2445,11 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   function resizeCanvas() {
     const rect = container.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
-    renderScale = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+    const requestedQuality = Number(overlayParams.get('quality_scale'));
+    const sourceQuality = Number.isFinite(requestedQuality) && requestedQuality > 0
+      ? requestedQuality
+      : (isSignedOverlay ? 2 : 1);
+    renderScale = Math.max(1, Math.min(Math.max(window.devicePixelRatio || 1, sourceQuality), 2.5));
     canvas.width  = Math.max(1, Math.round(rect.width * renderScale));
     canvas.height = Math.max(1, Math.round(rect.height * renderScale));
     ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
@@ -2762,14 +2773,15 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 
   function getPlayerCardMetrics(total = 1) {
     const W = cw(), H = ch();
-    const requestedCardH = H * (isPublicDemo ? 0.42 : 0.37) * layoutZoom;
+    const frame = arenaFrame();
+    const requestedCardH = frame.h * (isPublicDemo ? 0.42 : 0.35) * layoutZoom;
     const requestedCardW = requestedCardH * 0.72;
     const baseGap = requestedCardW * (total >= 5 ? 0.035 : total === 4 ? 0.05 : total === 3 ? 0.08 : 0.11);
     const minGap = Math.max(6, Math.min(12, requestedCardW * 0.035));
     const maxGap = requestedCardW * (total >= 5 ? 0.12 : total === 4 ? 0.16 : total === 3 ? 0.24 : 0.32);
     const gapScale = total >= 5 ? 0.18 : total === 4 ? 0.24 : 0.32;
     const visualGap = Math.min(Math.max(minGap, maxGap), Math.max(minGap, baseGap + Math.max(0, layoutGap) * gapScale));
-    const availableW = Math.max(240, W - Math.max(32, Math.min(W, H) * 0.072) * 2);
+    const availableW = Math.max(240, frame.w - Math.max(32, Math.min(W, H) * 0.08) * 2);
     const naturalWidth = total > 1 ? requestedCardW * total + visualGap * (total - 1) : requestedCardW;
     const fitScale = naturalWidth > availableW ? availableW / naturalWidth : 1;
     const cardH = requestedCardH * fitScale;
@@ -2823,7 +2835,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     const W = cw(), H = ch();
     const { cardW, spacing, totalWidth } = getPlayerCardMetrics(total);
     const frame = arenaFrame();
-    const liveBoardY = frame.y + frame.h * 0.42;
+    const liveBoardY = frame.y + frame.h * 0.39;
     const baseY = isPublicDemo ? H * demoPlayerYRatio : liveBoardY;
     return {
       x: (W - totalWidth) / 2 + offsetX + index * spacing + cardW / 2,
@@ -2835,11 +2847,11 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     const W = cw(), H = ch();
     const frame = arenaFrame();
     const ui = canvasUiScale();
-    const pad = Math.max(18 * ui, Math.min(W, H) * 0.035);
-    const barW = Math.min(W - pad * 2, W * 0.62 + Math.min(120, H * 0.1));
-    const barH = Math.max(58 * ui, Math.min(112 * ui, H * 0.125 * layoutZoom));
-    const centerX = Math.max(pad + barW / 2, Math.min(W - pad - barW / 2, W / 2 + offsetX * 0.45));
-    const liveHordeTopY = frame.y + frame.h * 0.8;
+    const pad = Math.max(20 * ui, Math.min(W, H) * 0.04);
+    const barW = Math.min(frame.w - pad * 2, frame.w * 0.68 + Math.min(130, frame.h * 0.09));
+    const barH = Math.max(58 * ui, Math.min(104 * ui, frame.h * 0.118 * layoutZoom));
+    const centerX = Math.max(frame.x + pad + barW / 2, Math.min(frame.x + frame.w - pad - barW / 2, frame.x + frame.w / 2 + offsetX * 0.45));
+    const liveHordeTopY = frame.y + frame.h * 0.79;
     const desiredTopY = isPublicDemo ? H * demoHordeTopRatio : liveHordeTopY + offsetY * 0.34;
     const topY = Math.max(frame.y + frame.h * 0.55, Math.min(frame.y + frame.h - pad - barH, desiredTopY));
     return {
@@ -2877,14 +2889,14 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     const frame = arenaFrame();
     const ui = canvasUiScale();
     const hordeLayout = getHordeLayout();
-    const r = Math.max(30 * ui, Math.min(54 * ui, frame.h * 0.076));
+    const r = Math.max(34 * ui, Math.min(64 * ui, frame.h * 0.088));
     const x = frame.x + frame.w * 0.5;
-    const desiredY = frame.y + frame.h * 0.64;
-    const maxY = hordeLayout.barY - r * 1.32;
-    const minY = frame.y + frame.h * 0.5;
+    const desiredY = frame.y + frame.h * 0.595;
+    const maxY = hordeLayout.barY - r * 1.8;
+    const minY = frame.y + frame.h * 0.49;
     const y = Math.max(minY, Math.min(maxY, desiredY));
-    const panelW = Math.max(220 * ui, Math.min(frame.w * 0.42, 380 * ui));
-    const panelH = Math.max(48 * ui, 58 * ui);
+    const panelW = Math.max(250 * ui, Math.min(frame.w * 0.46, 430 * ui));
+    const panelH = Math.max(62 * ui, 74 * ui);
     return {
       x,
       y,
@@ -3216,7 +3228,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     const now = Date.now();
     cleanupRecentBannerSignatures(now);
     const last = recentBannerSignatures.get(item.signature);
-    if (last && now - last < 1500) return true;
+    if (last && now - last < 2200) return true;
     recentBannerSignatures.set(item.signature, now);
     return false;
   }
@@ -3273,6 +3285,8 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 
   function enqueueBanner(item) {
     if (shouldDropBanner(item)) return;
+    if (item.priority < 52 && (activeBanner || bannerQueue.length)) return;
+    if (activeBanner && item.priority < activeBanner.priority - 28) return;
     if (activeBanner && item.priority >= activeBanner.priority + 18) {
       bannerQueue.unshift(item);
       closeActiveBanner(true);
@@ -3308,6 +3322,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     const el = document.createElement('div');
     el.className  = 'damage' + (kill ? ' kill' : critical ? ' critical' : '');
     el.textContent = kill ? '💀 KILL!' : critical ? `⚡ ${Math.round(damage)}` : `-${Math.round(damage)}`;
+    el.textContent = kill ? 'KO!' : critical ? `CRIT ${Math.round(damage)}` : `-${Math.round(damage)}`;
     el.style.left = vp.x + 'px';
     el.style.top  = vp.y + 'px';
     document.body.appendChild(el);
@@ -3419,6 +3434,82 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     roundedRectPath(ctx, frame.x, frame.y, frame.w, frame.h, frame.r);
     ctx.clip();
     return frame;
+  }
+
+  function triggerArenaShake(magnitude = 4, duration = 220) {
+    const safeMagnitude = Math.max(0, Math.min(10, Number(magnitude) || 0));
+    if (!safeMagnitude) return;
+    arenaShakeMagnitude = Math.max(arenaShakeMagnitude * 0.65, safeMagnitude);
+    arenaShakeStartedAt = Date.now();
+    arenaShakeUntil = Math.max(arenaShakeUntil, arenaShakeStartedAt + Math.max(80, Number(duration) || 220));
+  }
+
+  function currentArenaShake() {
+    const now = Date.now();
+    if (now >= arenaShakeUntil || !arenaShakeMagnitude) return { x: 0, y: 0 };
+    const duration = Math.max(1, arenaShakeUntil - arenaShakeStartedAt);
+    const progress = clamp01((now - arenaShakeStartedAt) / duration);
+    const amount = arenaShakeMagnitude * (1 - easeOutCubic(progress));
+    return {
+      x: Math.sin(now * 0.065) * amount,
+      y: Math.cos(now * 0.081) * amount * 0.58,
+    };
+  }
+
+  function addImpactBurst(x, y, options = {}) {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    impactBursts.push({
+      x,
+      y,
+      startedAt: Date.now(),
+      duration: Math.max(260, Math.min(1200, Number(options.duration) || 620)),
+      radius: Math.max(18, Number(options.radius) || 36),
+      color: options.color || THEME.cyan,
+      accent: options.accent || THEME.gold,
+      intensity: clamp01(options.intensity == null ? 0.55 : options.intensity),
+      type: options.type || 'hit',
+    });
+    if (impactBursts.length > 24) impactBursts.splice(0, impactBursts.length - 24);
+  }
+
+  function drawImpactBursts() {
+    const now = Date.now();
+    for (let i = impactBursts.length - 1; i >= 0; i -= 1) {
+      const burst = impactBursts[i];
+      const progress = clamp01((now - burst.startedAt) / burst.duration);
+      if (progress >= 1) {
+        impactBursts.splice(i, 1);
+        continue;
+      }
+      const wave = easeOutCubic(progress);
+      const alpha = Math.sin(progress * Math.PI);
+      const r = burst.radius * (0.5 + wave * (burst.type === 'kill' ? 1.72 : 1.24));
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const glow = ctx.createRadialGradient(burst.x, burst.y, 0, burst.x, burst.y, r * 1.08);
+      glow.addColorStop(0, colorWithAlpha(burst.accent, 0.16 * alpha));
+      glow.addColorStop(0.38, colorWithAlpha(burst.color, 0.08 * alpha));
+      glow.addColorStop(1, colorWithAlpha(burst.color, 0));
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(burst.x, burst.y, r * 1.08, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = alpha * (burst.type === 'kill' ? 0.68 : 0.38);
+      ctx.strokeStyle = burst.type === 'shield' ? THEME.cyan : burst.color;
+      ctx.lineWidth = Math.max(1.4, 2.3 + burst.intensity * 2.8);
+      ctx.beginPath();
+      ctx.arc(burst.x, burst.y, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = alpha * 0.38;
+      ctx.setLineDash([Math.max(8, r * 0.18), Math.max(8, r * 0.16)]);
+      ctx.lineDashOffset = -now * 0.06;
+      ctx.strokeStyle = burst.accent;
+      ctx.lineWidth = Math.max(1, 1.4 + burst.intensity);
+      ctx.beginPath();
+      ctx.arc(burst.x, burst.y, r * 0.62, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   function drawContainedBackgroundImage(img, frame) {
@@ -3620,7 +3711,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       this._impacted      = false;
 
       const speed = Math.max(0.5, options.shotSpeed || overlaySettings.shotSpeed || 1);
-      const durations = { static:1800, projectile:700, gift:900, explosion:750, beam:360, laser:420, neon:520, ripple:580, fire:700, bubble:680, sphere:720 };
+      const durations = { static:1800, projectile:760, gift:900, explosion:780, beam:430, laser:520, neon:640, ripple:650, fire:780, bubble:720, sphere:780 };
       this.duration = Math.round((durations[type] || 500) / speed);
 
       if (type === 'fire') {
@@ -3651,6 +3742,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     draw() {
       ctx.save();
       this.drawAnchorCues();
+      this.drawVectorRail();
       switch (this.type) {
         case 'laser':      this.drawLaser();      break;
         case 'beam':       this.drawBeam();       break;
@@ -3671,6 +3763,63 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
         this.particles.forEach(p => p.draw(ctx));
         ctx.restore();
       }
+    }
+
+    drawVectorRail() {
+      if (this.type === 'static') return;
+      const p = clamp01(this.progress);
+      const f = this.from;
+      const t = this.to;
+      const dx = t.x - f.x;
+      const dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist;
+      const uy = dy / dist;
+      const headT = easeOutCubic(Math.min(1, p * 1.05));
+      const headX = f.x + dx * headT;
+      const headY = f.y + dy * headT;
+      const ui = canvasUiScale();
+      const railAlpha = Math.max(0, 0.28 - p * 0.12);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.setLineDash([Math.max(8, 12 * ui), Math.max(10, 18 * ui)]);
+      ctx.lineDashOffset = -Date.now() * 0.06;
+      ctx.globalAlpha = railAlpha;
+      ctx.strokeStyle = this.killingBlow ? THEME.gold : this.color;
+      ctx.lineWidth = Math.max(1.2, 2.2 * ui + this.intensity * 1.4);
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y);
+      ctx.lineTo(t.x, t.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const reticleAlpha = Math.sin(Math.min(1, p / 0.9) * Math.PI) * (this.killingBlow ? 0.72 : 0.42);
+      if (reticleAlpha > 0) {
+        const r = 14 * ui + this.intensity * 16 * ui + p * 18 * ui;
+        ctx.globalAlpha = reticleAlpha;
+        ctx.strokeStyle = this.killingBlow ? THEME.gold : (this.critical ? '#ffffff' : this.color);
+        ctx.lineWidth = this.killingBlow ? 3.2 * ui : 2 * ui;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(t.x - ux * (r + 10 * ui), t.y - uy * (r + 10 * ui));
+        ctx.lineTo(t.x - ux * (r - 2 * ui), t.y - uy * (r - 2 * ui));
+        ctx.moveTo(t.x + ux * (r - 2 * ui), t.y + uy * (r - 2 * ui));
+        ctx.lineTo(t.x + ux * (r + 10 * ui), t.y + uy * (r + 10 * ui));
+        ctx.stroke();
+      }
+
+      ctx.globalAlpha = Math.max(0, 0.52 - p * 0.32);
+      ctx.fillStyle = this.killingBlow ? THEME.gold : '#ffffff';
+      ctx.shadowColor = this.color;
+      ctx.shadowBlur = 16 * ui;
+      ctx.beginPath();
+      ctx.arc(headX, headY, Math.max(3 * ui, 4 * ui + this.intensity * 3 * ui), 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
 
     drawAnchorCues() {
@@ -3969,8 +4118,9 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       type = s === 'beam' ? 'beam' : s === 'pulse' ? 'fire' : s === 'wave' ? 'ripple' : s === 'burst' ? 'explosion' : s === 'ripple' ? 'ripple' : 'laser';
     }
 
+    const attackIntensity = meta.intensity != null ? meta.intensity : 0.5;
     attacks.push(new Attack(from, to, type, {
-      intensity:      meta.intensity      != null ? meta.intensity      : 0.5,
+      intensity:      attackIntensity,
       critical:       meta.critical       != null ? meta.critical       : false,
       streak:         meta.streak         != null ? meta.streak         : 0,
       giftBoosted:    meta.giftBoosted    != null ? meta.giftBoosted    : false,
@@ -3979,6 +4129,21 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       color:          meta.laserColor || overlaySettings.laserColor,
       shotSpeed:      meta.shotSpeed  || overlaySettings.shotSpeed,
     }));
+    const impactType = meta.shielded ? 'shield' : killed ? 'kill' : meta.critical ? 'critical' : 'hit';
+    addImpactBurst(to.x, to.y, {
+      type: impactType,
+      color: meta.shielded ? THEME.cyan : killed ? THEME.gold : (meta.critical ? THEME.ember : THEME.red),
+      accent: special || attackerIsBoss ? THEME.gold : THEME.cyan,
+      radius: killed ? 38 : meta.critical ? 32 : attackerIsBoss ? 34 : 24,
+      intensity: Math.max(0.35, attackIntensity),
+      duration: killed ? 820 : attackerIsBoss ? 720 : 580,
+    });
+    if (killed || meta.critical || special || attackerIsBoss || attackerIsHorde || targetIsBoss || targetIsHorde) {
+      triggerArenaShake(
+        killed ? 7.5 : attackerIsBoss ? 6.5 : meta.critical ? 5 : special ? 4.2 : 3.2,
+        killed ? 360 : attackerIsBoss ? 300 : 230
+      );
+    }
     if (attackerIsBoss) {
       pulseBoss(killed ? 'kill' : 'attack', killed ? THEME.gold : THEME.ember, killed ? 1350 : 980);
       showBattlePrompt(killed ? 'Boss wave claimed a fighter' : 'Boss wave strikes', 'horde', 1900);
@@ -4084,6 +4249,15 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       atk.particles.push(particle);
     }
     attacks.push(atk);
+    addImpactBurst(center.x, center.y, {
+      type: isMega ? 'kill' : 'hit',
+      color: isMega ? THEME.gold : '#ff78b2',
+      accent: isMega ? THEME.cyan : THEME.gold,
+      radius: isMega ? frame.h * 0.16 : frame.h * 0.11,
+      intensity: isMega ? 1 : 0.72,
+      duration: isMega ? 940 : 720,
+    });
+    triggerArenaShake(isMega ? 5.8 : 3.2, isMega ? 320 : 220);
     fireHeartEffect(data.uniqueId, isMega ? 6 : 4, isMega ? 0.95 : 0.62, {
       ...data,
       kind: 'like',
@@ -4222,6 +4396,98 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     vignette.addColorStop(1, 'rgba(0,0,0,0.62)');
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, W, H);
+    ctx.restore();
+  }
+
+  function drawArenaDepth(topCount = 0, hasHorde = false, hasBoss = false) {
+    const frame = arenaFrame();
+    const ui = canvasUiScale();
+    const now = Date.now() * 0.001;
+    const playerBandY = frame.y + frame.h * 0.18;
+    const playerBandH = frame.h * 0.34;
+    const lowerBandY = frame.y + frame.h * 0.535;
+    const lowerBandH = frame.h * 0.39;
+    const horizonY = frame.y + frame.h * 0.545;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+
+    const deck = ctx.createLinearGradient(frame.x, playerBandY, frame.x, frame.y + frame.h);
+    deck.addColorStop(0, 'rgba(85,231,255,0.025)');
+    deck.addColorStop(0.44, 'rgba(246,201,91,0.045)');
+    deck.addColorStop(1, 'rgba(232,59,95,0.055)');
+    ctx.fillStyle = deck;
+    roundedRectPath(ctx, frame.x + frame.w * 0.035, playerBandY, frame.w * 0.93, frame.h * 0.74, Math.max(16 * ui, frame.r * 0.7));
+    ctx.fill();
+
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = 'rgba(85,231,255,0.42)';
+    ctx.lineWidth = Math.max(1, 1.2 * ui);
+    for (let i = 0; i <= 10; i += 1) {
+      const t = i / 10;
+      const x = frame.x + frame.w * (0.075 + t * 0.85);
+      ctx.beginPath();
+      ctx.moveTo(x, playerBandY + 4 * ui);
+      ctx.lineTo(x + Math.sin(now * 0.8 + i) * 6 * ui, frame.y + frame.h - frame.h * 0.065);
+      ctx.stroke();
+    }
+    for (let i = 0; i <= 4; i += 1) {
+      const y = playerBandY + playerBandH * (i / 4);
+      ctx.beginPath();
+      ctx.moveTo(frame.x + frame.w * 0.07, y);
+      ctx.lineTo(frame.x + frame.w * 0.93, y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    const horizon = ctx.createLinearGradient(frame.x + frame.w * 0.1, 0, frame.x + frame.w * 0.9, 0);
+    horizon.addColorStop(0, 'rgba(85,231,255,0)');
+    horizon.addColorStop(0.24, 'rgba(85,231,255,0.26)');
+    horizon.addColorStop(0.5, hasBoss ? 'rgba(255,106,61,0.44)' : 'rgba(246,201,91,0.32)');
+    horizon.addColorStop(0.76, 'rgba(85,231,255,0.26)');
+    horizon.addColorStop(1, 'rgba(85,231,255,0)');
+    ctx.strokeStyle = horizon;
+    ctx.lineWidth = Math.max(1.5, 2.4 * ui);
+    ctx.beginPath();
+    ctx.moveTo(frame.x + frame.w * 0.08, horizonY);
+    ctx.lineTo(frame.x + frame.w * 0.92, horizonY);
+    ctx.stroke();
+
+    if (hasHorde) {
+      const horde = getHordeLayout();
+      const halo = ctx.createLinearGradient(horde.barX, 0, horde.barX + horde.barW, 0);
+      halo.addColorStop(0, 'rgba(232,59,95,0.02)');
+      halo.addColorStop(0.5, 'rgba(232,59,95,0.11)');
+      halo.addColorStop(1, 'rgba(246,201,91,0.04)');
+      ctx.fillStyle = halo;
+      roundedRectPath(ctx, horde.barX - 20 * ui, horde.barY - 16 * ui, horde.barW + 40 * ui, horde.barH + 30 * ui, horde.radius + 10 * ui);
+      ctx.fill();
+    }
+
+    if (hasBoss) {
+      const boss = getBossLayout();
+      const bossGlow = ctx.createRadialGradient(boss.x, boss.y, 0, boss.x, boss.y, boss.r * 4.2);
+      bossGlow.addColorStop(0, 'rgba(255,106,61,0.18)');
+      bossGlow.addColorStop(0.4, 'rgba(246,201,91,0.07)');
+      bossGlow.addColorStop(1, 'rgba(255,106,61,0)');
+      ctx.fillStyle = bossGlow;
+      ctx.beginPath();
+      ctx.arc(boss.x, boss.y, boss.r * 4.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (topCount > 1) {
+      ctx.globalAlpha = 0.18;
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.setLineDash([8 * ui, 14 * ui]);
+      ctx.beginPath();
+      ctx.moveTo(frame.x + frame.w * 0.08, lowerBandY);
+      ctx.lineTo(frame.x + frame.w * 0.92, lowerBandY + lowerBandH * 0.04);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+
     ctx.restore();
   }
 
@@ -4430,10 +4696,10 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     roundedRectPath(ctx, railX, plateY + plateH * 0.24, 4, railH, 3);
     ctx.fill();
 
-    const chipW = compactDemoCard ? Math.max(24 * ui, Math.min(30 * ui, cardW * 0.38)) : Math.max(34 * ui, cardW * 0.18);
-    const chipH = compactDemoCard ? Math.max(16 * ui, plateH * 0.12) : Math.max(20 * ui, plateH * 0.13);
-    const chipX = plateX + cardW * 0.08;
-    const chipY = plateY + plateH * (compactDemoCard ? 0.11 : 0.15);
+    const chipW = compactDemoCard ? Math.max(21 * ui, Math.min(28 * ui, cardW * 0.24)) : Math.max(34 * ui, cardW * 0.18);
+    const chipH = compactDemoCard ? Math.max(14 * ui, plateH * 0.105) : Math.max(20 * ui, plateH * 0.13);
+    const chipX = plateX + cardW * (compactDemoCard ? 0.045 : 0.08);
+    const chipY = plateY + plateH * (compactDemoCard ? 0.08 : 0.15);
     ctx.fillStyle = rank === 1 ? 'rgba(246,201,91,0.18)' : 'rgba(85,231,255,0.12)';
     roundedRectPath(ctx, chipX, chipY, chipW, chipH, chipH / 2);
     ctx.fill();
@@ -4471,30 +4737,35 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       drawBattleInsignia(pos.x, avatarY, avatarR * 0.78, rank === 1 ? '#ffd451' : '#7afcff');
     }
 
-    const name = (player.nickname || player.uniqueId || 'Player').slice(0, 18);
-    const nameY = plateY + plateH * (compactDemoCard ? 0.31 : 0.22);
-    const nameMaxW = compactDemoCard ? cardW * 0.86 : cardW * 0.72;
-    if (compactDemoCard) {
-      const nameBoxH = Math.max(15, plateH * 0.15);
-      ctx.fillStyle = 'rgba(2,5,12,0.58)';
-      roundedRectPath(ctx, plateX + cardW * 0.07, nameY - nameBoxH / 2, cardW * 0.86, nameBoxH, nameBoxH / 2);
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-      ctx.lineWidth = 0.8;
-      roundedRectPath(ctx, plateX + cardW * 0.07, nameY - nameBoxH / 2, cardW * 0.86, nameBoxH, nameBoxH / 2);
-      ctx.stroke();
-    }
+    const name = (player.nickname || player.uniqueId || 'Player').slice(0, 20);
+    const nameY = plateY + plateH * (compactDemoCard ? 0.31 : 0.205);
+    const nameBoxW = compactDemoCard ? cardW * 0.69 : cardW * 0.76;
+    const nameBoxH = compactDemoCard ? Math.max(15, plateH * 0.15) : Math.max(19 * ui, plateH * 0.145);
+    const nameBoxX = compactDemoCard ? plateX + cardW * 0.245 : plateX + cardW * 0.18;
+    const nameTextX = nameBoxX + nameBoxW / 2;
+    const nameMaxW = nameBoxW - Math.max(12 * ui, nameBoxH * 0.58);
+    const namePlateGrad = ctx.createLinearGradient(nameBoxX, nameY, nameBoxX + nameBoxW, nameY);
+    namePlateGrad.addColorStop(0, rank === 1 ? 'rgba(246,201,91,0.14)' : 'rgba(85,231,255,0.11)');
+    namePlateGrad.addColorStop(0.48, 'rgba(2,5,12,0.7)');
+    namePlateGrad.addColorStop(1, 'rgba(2,5,12,0.54)');
+    ctx.fillStyle = namePlateGrad;
+    roundedRectPath(ctx, nameBoxX, nameY - nameBoxH / 2, nameBoxW, nameBoxH, nameBoxH / 2);
+    ctx.fill();
+    ctx.strokeStyle = rank === 1 ? 'rgba(246,201,91,0.32)' : 'rgba(85,231,255,0.24)';
+    ctx.lineWidth = Math.max(0.8, 1 * ui);
+    roundedRectPath(ctx, nameBoxX, nameY - nameBoxH / 2, nameBoxW, nameBoxH, nameBoxH / 2);
+    ctx.stroke();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const fittedName = fitCanvasText(
       ctx,
       name,
       nameMaxW,
       size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`,
-      Math.max((compactDemoCard ? 10 : 14) * ui, plateH * (compactDemoCard ? 0.105 : 0.115)),
-      Math.max(5, (compactDemoCard ? 7 : 10) * ui)
+      Math.max((compactDemoCard ? 10 : 15) * ui, plateH * (compactDemoCard ? 0.105 : 0.12)),
+      Math.max(6, (compactDemoCard ? 7 : 11) * ui)
     );
-    ctx.lineWidth = compactDemoCard ? 2.6 : 3.5; ctx.strokeStyle = 'rgba(0,0,0,0.82)'; ctx.strokeText(fittedName, pos.x, nameY);
-    ctx.fillStyle = '#ffffff'; ctx.fillText(fittedName, pos.x, nameY);
+    ctx.lineWidth = compactDemoCard ? 2.6 : 3.5; ctx.strokeStyle = 'rgba(0,0,0,0.82)'; ctx.strokeText(fittedName, nameTextX, nameY);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(fittedName, nameTextX, nameY);
 
     ctx.fillStyle = 'rgba(0,0,0,0.56)';
     roundedRectPath(ctx, barX, barY, barW, barH, barH / 2);
@@ -4514,10 +4785,10 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 
     const hpText = `${Math.round(hp)} / ${Math.round(maxHp)} HP`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const fittedHpText = fitCanvasText(ctx, hpText, barW * 0.88, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10 * ui, plateH * 0.085), Math.max(5, 8 * ui));
+    const fittedHpText = fitCanvasText(ctx, hpText, barW * 0.94, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(11 * ui, plateH * 0.095), Math.max(6, 9 * ui));
     ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.lineWidth = 2.5;
     ctx.strokeText(fittedHpText, pos.x, hpTextY);
-    ctx.fillStyle = '#dce9ff';
+    ctx.fillStyle = nearDeath ? '#ffe2dc' : '#f2f8ff';
     ctx.fillText(fittedHpText, pos.x, hpTextY);
 
     const killCount = Math.max(0, Math.round(Number(player.kills) || 0));
@@ -4569,6 +4840,52 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     return minutes > 0 ? `${minutes}:${String(rem).padStart(2, '0')}` : `${seconds}s`;
   }
 
+  function drawBossTargetWarnings(layout, nextAttackMs, nextAttackPct) {
+    if (nextAttackMs == null || nextAttackMs > 3600) return;
+    const targets = topPlayers().slice(0, 5);
+    if (!targets.length) return;
+    const ui = canvasUiScale();
+    const intensity = clamp01(1 - nextAttackMs / 3600);
+    const pulse = 0.5 + Math.sin(Date.now() * 0.016) * 0.5;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    ctx.setLineDash([Math.max(8, 12 * ui), Math.max(10, 18 * ui)]);
+    ctx.lineDashOffset = -Date.now() * 0.06;
+    targets.forEach((player, index) => {
+      const target = getPlayerPosition(index, targets.length);
+      const dx = target.x - layout.x;
+      const dy = target.y - layout.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const sx = layout.x + (dx / dist) * layout.r * 1.26;
+      const sy = layout.y + (dy / dist) * layout.r * 1.26;
+      const lockR = Math.max(10 * ui, layout.r * (0.22 + intensity * 0.1));
+      ctx.globalAlpha = (0.14 + intensity * 0.28) * (0.72 + pulse * 0.28);
+      ctx.strokeStyle = index % 2 ? THEME.gold : THEME.red;
+      ctx.lineWidth = Math.max(1, 1.4 * ui + intensity * 1.8 * ui);
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(target.x, target.y - layout.r * 0.18);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 0.18 + intensity * 0.42;
+      ctx.strokeStyle = nextAttackPct > 0.82 ? THEME.red : THEME.gold;
+      ctx.beginPath();
+      ctx.arc(target.x, target.y - layout.r * 0.2, lockR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(target.x - lockR * 1.35, target.y - layout.r * 0.2);
+      ctx.lineTo(target.x - lockR * 0.72, target.y - layout.r * 0.2);
+      ctx.moveTo(target.x + lockR * 0.72, target.y - layout.r * 0.2);
+      ctx.lineTo(target.x + lockR * 1.35, target.y - layout.r * 0.2);
+      ctx.stroke();
+      ctx.setLineDash([Math.max(8, 12 * ui), Math.max(10, 18 * ui)]);
+    });
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
   function drawBossWave() {
     if (!bossWaveState?.active) return;
     const layout = getBossLayout();
@@ -4592,6 +4909,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 
     ctx.save();
     ctx.globalCompositeOperation = 'source-over';
+    drawBossTargetWarnings(layout, nextAttackMs, nextAttackPct);
 
     const aura = ctx.createRadialGradient(layout.x, layout.y, 0, layout.x, layout.y, layout.r * 2.9);
     aura.addColorStop(0, `rgba(255,106,61,${0.24 + Math.sin(now * 4) * 0.05})`);
@@ -4640,6 +4958,35 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     ctx.arc(layout.x, layout.y, layout.r, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
+
+    ctx.save();
+    ctx.translate(layout.x, layout.y);
+    const bossTilt = Math.sin(now * 2.8) * 0.04;
+    ctx.rotate(bossTilt);
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillStyle = 'rgba(255,238,166,0.86)';
+    ctx.beginPath();
+    ctx.moveTo(-layout.r * 0.72, -layout.r * 0.48);
+    ctx.lineTo(-layout.r * 0.32, -layout.r * 0.9);
+    ctx.lineTo(-layout.r * 0.18, -layout.r * 0.38);
+    ctx.lineTo(layout.r * 0.18, -layout.r * 0.38);
+    ctx.lineTo(layout.r * 0.32, -layout.r * 0.9);
+    ctx.lineTo(layout.r * 0.72, -layout.r * 0.48);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#050711';
+    roundedRectPath(ctx, -layout.r * 0.58, -layout.r * 0.15, layout.r * 0.38, layout.r * 0.13, layout.r * 0.04);
+    ctx.fill();
+    roundedRectPath(ctx, layout.r * 0.2, -layout.r * 0.15, layout.r * 0.38, layout.r * 0.13, layout.r * 0.04);
+    ctx.fill();
+    ctx.strokeStyle = colorWithAlpha(nextAttackMs != null && nextAttackMs < 2500 ? THEME.red : THEME.gold, 0.78);
+    ctx.lineWidth = Math.max(2 * ui, layout.r * 0.045);
+    ctx.beginPath();
+    ctx.moveTo(-layout.r * 0.34, layout.r * 0.36);
+    ctx.quadraticCurveTo(0, layout.r * 0.52, layout.r * 0.34, layout.r * 0.36);
+    ctx.stroke();
+    ctx.restore();
 
     const hpStart = -Math.PI / 2;
     ctx.lineCap = 'round';
@@ -4696,13 +5043,32 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     ctx.fill();
     ctx.textBaseline = 'alphabetic';
     ctx.textAlign = 'left';
-    ctx.font = `900 ${Math.max(10 * ui, layout.panelH * 0.22)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.font = `900 ${Math.max(10 * ui, layout.panelH * 0.2)}px 'Rajdhani','Segoe UI',sans-serif`;
     ctx.fillStyle = '#fff4d8';
-    ctx.fillText('BOSS WAVE', trackX, layout.panelY + layout.panelH * 0.36);
+    ctx.fillText('BOSS WAVE', trackX, layout.panelY + layout.panelH * 0.3);
     ctx.textAlign = 'right';
-    const hpLabel = fitCanvasText(ctx, `${Math.round(hp)} / ${Math.round(maxHp)} HP`, trackW * 0.5, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10 * ui, layout.panelH * 0.2), Math.max(7, 8 * ui));
+    const hpLabel = fitCanvasText(ctx, `${Math.round(hp)} / ${Math.round(maxHp)} HP`, trackW * 0.5, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10 * ui, layout.panelH * 0.18), Math.max(7, 8 * ui));
     ctx.fillStyle = '#ffd9a8';
-    ctx.fillText(hpLabel, trackX + trackW, layout.panelY + layout.panelH * 0.36);
+    ctx.fillText(hpLabel, trackX + trackW, layout.panelY + layout.panelH * 0.3);
+    if (nextAttackMs != null) {
+      const strikeSoon = nextAttackMs < 2600;
+      const strikeLabel = strikeSoon ? 'STRIKE READY' : `NEXT STRIKE ${formatBossTime(nextAttackMs)}`;
+      ctx.textAlign = 'left';
+      ctx.font = `900 ${Math.max(9 * ui, layout.panelH * 0.15)}px 'Rajdhani','Segoe UI',sans-serif`;
+      ctx.fillStyle = strikeSoon ? '#ffe8ea' : '#bdefff';
+      ctx.shadowColor = strikeSoon ? colorWithAlpha(THEME.red, 0.72) : colorWithAlpha(THEME.cyan, 0.5);
+      ctx.shadowBlur = strikeSoon ? 14 : 8;
+      ctx.fillText(
+        fitCanvasText(ctx, strikeLabel, trackW * 0.66, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(9 * ui, layout.panelH * 0.15), Math.max(6, 7 * ui)),
+        trackX,
+        layout.panelY + layout.panelH * 0.86
+      );
+      ctx.shadowBlur = 0;
+      ctx.textAlign = 'right';
+      const pressure = Math.round(nextAttackPct * 100);
+      ctx.fillStyle = strikeSoon ? '#ffd0a1' : '#ffe3ad';
+      ctx.fillText(`${pressure}%`, trackX + trackW, layout.panelY + layout.panelH * 0.86);
+    }
     ctx.restore();
   }
 
@@ -4891,7 +5257,12 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     drawBackground();
     ctx.save();
     clipArenaFrame();
+    const shake = currentArenaShake();
+    if (shake.x || shake.y) ctx.translate(shake.x, shake.y);
     const top = topPlayers();
+    const horde = hordePlayer();
+    drawArenaDepth(top.length, Boolean(horde), Boolean(bossWaveState?.active));
+    drawImpactBursts();
     const legacyLayoutPlayers = [];
     top.forEach((p, i) => {
       const pos = getPlayerPosition(i, top.length);
@@ -4910,7 +5281,6 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       });
       drawPlayerCard(p, pos, i + 1, top.length);
     });
-    const horde = hordePlayer();
     let legacyLayoutHorde = null;
     if (horde) {
       const pos = getHordePosition();
@@ -5228,14 +5598,20 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 
   function handleAttackEvent(data) {
     if (!data) return;
-    const fired = fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect, {
-      intensity: data.intensity, critical: data.critical, streak: data.streak,
-      giftBoosted: data.giftBoosted, remainingHpPct: data.remainingHpPct,
-      killingBlow: data.killingBlow, laserColor: data.laserColor, shotSpeed: data.shotSpeed,
-      attackerScope: data.attackerScope, targetScope: data.targetScope,
-    });
-    if (fired) rememberAttack(data.attacker, data.target, data.effect);
-    if (data.shielded) showBattlePrompt(`Shield absorbed ${Math.round(Number(data.shieldAbsorbed) || 0)} damage`, 'return', 1400);
+    const delayMs = Math.max(0, Math.min(1400, Number(data.impactDelayMs) || 0));
+    const run = () => {
+      const fired = fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect, {
+        intensity: data.intensity, critical: data.critical, streak: data.streak,
+        giftBoosted: data.giftBoosted, remainingHpPct: data.remainingHpPct,
+        killingBlow: data.killingBlow, laserColor: data.laserColor, shotSpeed: data.shotSpeed,
+        attackerScope: data.attackerScope, targetScope: data.targetScope,
+        shielded: data.shielded,
+      });
+      if (fired) rememberAttack(data.attacker, data.target, data.effect);
+      if (data.shielded) showBattlePrompt(`Shield absorbed ${Math.round(Number(data.shieldAbsorbed) || 0)} damage`, 'return', 1400);
+    };
+    if (delayMs) setTimeout(run, delayMs);
+    else run();
   }
 
   function handleGiftAttackEvent(data) {

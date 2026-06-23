@@ -1257,6 +1257,10 @@ function runBossWaveAttack(room, reason = 'pulse') {
     const falloff = Math.max(0.72, 1 - index * 0.06);
     const payload = applyBossDamageToPlayer(room, target, baseDamage * variance * falloff);
     if (!payload) return;
+    payload.sequenceIndex = index;
+    payload.totalTargets = targets.length;
+    payload.impactDelayMs = 160 + index * 135;
+    payload.bossSweep = true;
     attacks.push(payload);
     emitRoomEvent(room, 'attack', payload);
   });
