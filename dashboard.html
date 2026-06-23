@@ -444,7 +444,7 @@
     </article>
 
     <aside class="col-4" id="toolsRail" style="display:grid;gap:20px;">
-      <details class="tool" open><summary>Live testing controls</summary><div class="tool-body"><p class="muted" style="margin-bottom:14px;">Use these during setup only. They trigger test overlay events.</p><div class="btn-row"><button class="btn btn-success" onclick="testOverlayAttack()">Attack</button><button class="btn btn-warning" onclick="testOverlayGift()">Gift</button><button class="btn btn-purple" onclick="testOverlayHeal()">Heal</button><button class="btn btn-danger" onclick="testOverlayKill()">Kill</button><button class="btn btn-primary" onclick="testStreak()">Streak</button></div></div></details>
+      <details class="tool" open><summary>Live testing controls</summary><div class="tool-body"><p class="muted" style="margin-bottom:14px;">Use these during setup only. They trigger test overlay events.</p><div class="btn-row"><button class="btn btn-success" onclick="testOverlayAttack()">Attack</button><button class="btn btn-warning" onclick="testOverlayGift()">Gift</button><button class="btn btn-purple" onclick="testOverlayHeal()">Heal</button><button class="btn btn-danger" onclick="testOverlayKill()">Kill</button><button class="btn btn-primary" onclick="testStreak()">Streak</button><button class="btn btn-secondary" onclick="testOverlayFollow()">Follow</button><button class="btn btn-secondary" onclick="testOverlayShare()">Share</button><button class="btn btn-secondary" onclick="testOverlayRepost()">Repost</button></div></div></details>
       <details class="tool"><summary>Maintenance</summary><div class="tool-body"><div class="btn-row"><button class="btn btn-secondary" onclick="clearPlayers()">Clear Players</button><button class="btn btn-secondary" onclick="toggleDevMode()">Toggle Dev Mode</button><button class="btn btn-secondary" onclick="window.open('/api/status','_blank')">Raw JSON</button></div></div></details>
     </aside>
   </section>
@@ -1045,6 +1045,9 @@ function testOverlayGift(){ runOverlayTest('gift'); }
 function testOverlayHeal(){ runOverlayTest('heal'); }
 function testOverlayKill(){ runOverlayTest('kill'); }
 function testStreak(){ runOverlayTest('streak'); }
+function testOverlayFollow(){ runOverlayTest('follow'); }
+function testOverlayShare(){ runOverlayTest('share'); }
+function testOverlayRepost(){ runOverlayTest('repost'); }
 function testOverlayBurst(){ runOverlayTest('burst'); }
 async function startWeeklyBossEvent() {
   await sessionAction('/api/session/start','Weekly boss session started');

@@ -528,7 +528,7 @@
       const base = record
         ? { x: record.container.x, y: record.container.y - (record.cardH || 150 * this.scaleUnit) * 0.42 }
         : { x: this.W / 2, y: this.safe.y + this.safe.height * 0.42 };
-      const fill = hexToNumber(color, kind === 'heal' ? 0x99ffda : kind === 'follow' ? 0x7afcff : 0xff78b2);
+      const fill = hexToNumber(color, kind === 'heal' ? 0x99ffda : kind === 'repost' ? 0xf6c95b : (kind === 'follow' || kind === 'share') ? 0x7afcff : 0xff78b2);
       for (let index = 0; index < Math.min(12, Math.max(2, count)); index += 1) {
         const label = kind === 'heal' ? '+' : kind === 'follow' ? '*' : '♥';
         const particle = this.add.text(base.x, base.y, label, {
@@ -565,14 +565,19 @@
 
     handleFollowEvent(data = {}) {
       const name = data.nickname || data.uniqueId || 'Viewer';
-      this.showBanner(`${name} joined the arena`, 'follow');
-      this.spawnHeartBurst(data.uniqueId || data.userId || data.nickname, 4, 'follow', data.color || '#7afcff');
+      const shield = Math.round((Number(data.shieldMs) || 0) / 1000);
+      this.showBanner(`${name} earned a recruit shield${shield ? ` (${shield}s)` : ''}`, 'follow');
+      this.spawnHeartBurst(data.uniqueId || data.userId || data.nickname, 6, 'follow', data.color || '#7afcff');
     }
 
     showSocialBoost(data = {}) {
       const name = data.nickname || data.uniqueId || 'Viewer';
-      this.showBanner(`${name} boosted the crowd`, 'follow');
-      this.spawnHeartBurst(data.uniqueId || data.userId || data.nickname, 5, data.type || 'follow', data.color || '#7afcff');
+      const type = String(data.type || 'share').toLowerCase();
+      const isRepost = type === 'repost';
+      const affected = Number(data.affectedCount) || 0;
+      this.showBanner(`${name} ${isRepost ? 'triggered a broadcast surge' : 'rallied the squad'}${affected ? ` (${affected})` : ''}`, isRepost ? 'legendary' : 'follow');
+      this.spawnHeartBurst(data.uniqueId || data.userId || data.nickname, isRepost ? 9 : 6, isRepost ? 'repost' : 'share', data.color || (isRepost ? '#f6c95b' : '#7afcff'));
+      this.pulseHorde(isRepost ? 0xf6c95b : 0x7afcff);
     }
 
     spawnRespawnEffect(playerId) {

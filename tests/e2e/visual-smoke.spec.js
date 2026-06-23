@@ -253,8 +253,9 @@ test('signed Phaser overlay v2 handles production event parity hooks', async ({ 
     scene.handleGiftAttackEvent({ attacker: 'demo-4', target: 'demo-5', damage: 120, tier: 'legendary', giftColor: '#f6c95b' });
     scene.handleLikeEvent({ uniqueId: 'demo-1', hearts: 5, color: '#ff78b2' });
     scene.handleHealEvent({ uniqueId: 'demo-2', sourceNick: 'Nova', amount: 48, color: '#99ffda' });
-    scene.handleFollowEvent({ uniqueId: 'demo-3', nickname: 'NewFan', color: '#7afcff' });
-    scene.showSocialBoost({ uniqueId: 'demo-3', nickname: 'NewFan', type: 'share', color: '#7afcff' });
+    scene.handleFollowEvent({ uniqueId: 'demo-3', nickname: 'NewFan', color: '#7afcff', hpBoost: 45, strengthBoost: 2, shieldMs: 20000 });
+    scene.showSocialBoost({ uniqueId: 'demo-3', nickname: 'NewFan', type: 'share', color: '#7afcff', affectedCount: 5, rallyHeal: 24 });
+    scene.showSocialBoost({ uniqueId: 'demo-4', nickname: 'SignalAce', type: 'repost', color: '#f6c95b', affectedCount: 5, rallyHeal: 38, shieldMs: 18000, bossPressure: true });
     scene.handlePlayerCommand({ type: 'emoji', uniqueId: 'demo-4', nickname: 'JettByte', iconEmoji: '*' });
     scene.handleKillEvent({ killer: 'demo-1', victim: 'demo-5', damage: 180 });
     scene.handleStreakEvent({ uniqueId: 'demo-1', nickname: 'NovaStrike', label: 'Rampage', streak: 3, color: '#f6c95b' });

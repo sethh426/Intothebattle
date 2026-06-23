@@ -2475,6 +2475,9 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     },
     testBurst: () => {
       enqueueVisualEvent('like', { uniqueId: 'demo-like', hearts: 1, intensity: 0.2 }, handleLikeEvent, { mergeKey: () => 'demo-like' });
+      enqueueVisualEvent('follow', { uniqueId: 'p2', nickname: 'Vortex', hpBoost: 45, strengthBoost: 2, shieldMs: 20000, color: THEME.cyan }, handleFollowEvent);
+      enqueueVisualEvent('socialBoost', { uniqueId: 'p3', nickname: 'GhostByte', type: 'share', affectedCount: 5, rallyHeal: 24, color: '#99ffda' }, showSocialBoost);
+      enqueueVisualEvent('socialBoost', { uniqueId: 'p4', nickname: 'IronRift', type: 'repost', affectedCount: 5, rallyHeal: 38, shieldMs: 18000, bossPressure: true, color: THEME.gold }, showSocialBoost);
       enqueueVisualEvent('attack', { attacker: 'p1', target: 'p2', damage: 22, effect: 'laser' }, handleAttackEvent);
       enqueueVisualEvent('giftCelebration', { uniqueId: 'p3', nickname: 'GhostByte', giftName: 'Galaxy', tier: 'legendary', diamonds: 1200 }, handleGiftCelebration);
       enqueueVisualEvent('roundEvent', { type: 'round_started', label: 'Round started' }, handleRoundEvent, { mergeKey: () => 'round_started' });
@@ -3640,9 +3643,13 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
         ? [this.color, '#8fffd2', '#77f0a1', '#d8ffe9', '#55e7ff']
         : this.kind === 'follow'
           ? [this.color, '#55e7ff', '#ffd166', '#f6c95b', '#ffffff']
-          : [this.color, '#ff4f8f', '#ff8bc2', '#ffd1e3', '#ffd166'];
-      const baseCount = this.kind === 'like' ? 3 + this.hearts : 6 + this.hearts * 2;
-      const count    = Math.min(this.kind === 'like' ? 10 : 18, Math.max(4, baseCount + Math.floor(this.intensity * 6)));
+          : this.kind === 'share'
+            ? [this.color, '#99ffda', '#55e7ff', '#d8ffe9', '#f6c95b']
+            : this.kind === 'repost'
+              ? [this.color, '#f6c95b', '#ff6a3d', '#ffffff', '#55e7ff']
+              : [this.color, '#ff4f8f', '#ff8bc2', '#ffd1e3', '#ffd166'];
+      const baseCount = this.kind === 'like' ? 3 + this.hearts : this.kind === 'repost' ? 12 + this.hearts * 3 : 6 + this.hearts * 2;
+      const count    = Math.min(this.kind === 'like' ? 10 : this.kind === 'repost' ? 26 : 18, Math.max(4, baseCount + Math.floor(this.intensity * 6)));
 
       this.motes = Array.from({ length: count }, (_, i) => {
         const spread = Math.PI * 2 * (i / count) + Math.random() * 0.45;
@@ -3722,7 +3729,11 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
           ? `HEAL +${this.hearts * 5}`
           : this.kind === 'follow'
             ? 'NEW FOLLOWER'
-            : `LIKE +${this.hearts}`;
+            : this.kind === 'share'
+              ? 'SQUAD RALLY'
+              : this.kind === 'repost'
+                ? 'BROADCAST SURGE'
+                : `LIKE +${this.hearts}`;
         ctx.save();
         ctx.globalAlpha = Math.max(0, labelAlpha);
         ctx.font = `800 ${Math.max(12, ch() * 0.032)}px 'Rajdhani','Segoe UI',sans-serif`;
@@ -4269,14 +4280,18 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     if (pos) {
       attacks.push(new HeartBloom(pos, hearts, intensity, meta));
       if (playerId && playerId !== HORDE_ID) {
-        const type = meta.kind === 'follow' ? 'follow' : meta.kind === 'heal' ? 'heal' : 'like';
+        const type = meta.kind === 'follow' || meta.kind === 'share' || meta.kind === 'repost'
+          ? 'follow'
+          : meta.kind === 'heal'
+            ? 'heal'
+            : 'like';
         const color = meta.color || (type === 'heal' ? THEME.green : type === 'follow' ? THEME.cyan : '#ff7ab6');
-        setCardAccent(playerId, type, color, type === 'follow' ? 1400 : 820);
+        setCardAccent(playerId, type, color, meta.kind === 'repost' ? 2200 : type === 'follow' ? 1400 : 820);
       }
     }
 
     rememberCheer(playerId);
-    if (meta.kind !== 'follow' && meta.kind !== 'gift') applyHeal(playerId, hearts * 5);
+    if (!['follow', 'gift', 'share', 'repost'].includes(meta.kind)) applyHeal(playerId, hearts * 5);
   }
 
   function fireLikeMilestoneEffect(data) {
@@ -4335,30 +4350,45 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   function showSocialBoost(data) {
     if (!data) return;
     const name = data.nickname || data.uniqueId || 'viewer';
-    showBanner('special', {
-      code: 'AMP',
-      kicker: 'Signal amplified',
-      title: `${name} triggered a share boost`,
-      meta: 'Crowd reach increased',
-      charge: 58,
-      priority: 52,
-    }, 2600);
+    const type = String(data.type || 'share').toLowerCase();
+    const isRepost = type === 'repost';
+    const affected = Number(data.affectedCount) || 0;
+    const rallyHeal = Number(data.rallyHeal) || 0;
+    showBanner(isRepost ? 'legendary' : 'special', {
+      code: isRepost ? 'RPT' : 'SHR',
+      kicker: isRepost ? 'Broadcast surge' : 'Squad rally',
+      title: `${name} ${isRepost ? 'reposted the battle' : 'shared the battle'}`,
+      meta: [
+        affected ? `${affected} fighters rallied` : 'Arena reach increased',
+        rallyHeal ? `+${rallyHeal} HP pulse` : '',
+        data.bossPressure ? 'boss pressure' : '',
+      ].filter(Boolean).join(' | '),
+      charge: isRepost ? 92 : 72,
+      priority: isRepost ? 92 : 66,
+    }, isRepost ? 3900 : 3100);
     const pos = getPositionForPlayer(data.uniqueId);
-    if (!pos) return;
-    const atk = new Attack(pos, pos, 'static');
-    const color = data.color || '#ffd166';
-    for (let i = 0; i < 20; i++) {
-      atk.particles.push(new Particle(pos.x, pos.y, {
-        speed: 2.5 + Math.random() * 4.5,
-        color: i % 2 ? color : '#7afcff',
-        radius: 2 + Math.random() * 2.8,
-        decay: 0.02,
-        rise: 1.8 + Math.random() * 1.4,
+    const center = getHordePosition();
+    const origin = pos || center;
+    const atk = new Attack(origin, center, isRepost ? 'ripple' : 'static', {
+      intensity: isRepost ? 0.9 : 0.62,
+      color: data.color || (isRepost ? THEME.gold : THEME.cyan),
+    });
+    const color = data.color || (isRepost ? THEME.gold : '#99ffda');
+    const count = isRepost ? 38 : 24;
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count;
+      atk.particles.push(new Particle(center.x + Math.cos(angle) * (isRepost ? 40 : 24), center.y + Math.sin(angle) * 12, {
+        speed: (isRepost ? 3.8 : 2.8) + Math.random() * 4.8,
+        color: i % 3 === 0 ? color : i % 3 === 1 ? '#7afcff' : '#ffffff',
+        radius: (isRepost ? 2.8 : 2) + Math.random() * 3,
+        decay: isRepost ? 0.016 : 0.02,
+        rise: 1.4 + Math.random() * 1.8,
       }));
     }
     attacks.push(atk);
-    setCardAccent(data.uniqueId, 'boost', data.color || THEME.cyan, 1200);
-    showBattlePrompt('Share boost activated', 'return', 1900);
+    fireHeartEffect(data.uniqueId, isRepost ? 6 : 4, isRepost ? 0.82 : 0.58, { ...data, kind: isRepost ? 'repost' : 'share', color });
+    setCardAccent(data.uniqueId, 'boost', color, isRepost ? 2100 : 1450);
+    showBattlePrompt(isRepost ? 'Broadcast surge shielded the squad' : 'Share rally boosted the squad', 'return', isRepost ? 2500 : 2100);
   }
 
   function spawnRespawnEffect(uniqueId) {
@@ -5789,16 +5819,21 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 
   function handleFollowEvent(data) {
     if (!data) return;
+    const shieldSeconds = Math.round((Number(data.shieldMs) || 0) / 1000);
     showBanner('follow', {
-      code: 'NEW',
-      kicker: 'Crowd signal',
+      code: 'REC',
+      kicker: 'Recruit shield',
       title: `${data.nickname || data.uniqueId || 'Viewer'} joined the arena`,
-      meta: 'Audience energy increased',
-      charge: 48,
-      priority: 40,
-    }, 2600);
-    fireHeartEffect(data.uniqueId, 2, 0.55, { ...data, kind: 'follow', color: data.color || THEME.cyan });
-    showBattlePrompt('New fighter joined the crowd', 'return', 1900);
+      meta: [
+        data.hpBoost ? `+${Math.round(Number(data.hpBoost))} HP` : '',
+        data.strengthBoost ? `+${Math.round(Number(data.strengthBoost))} power` : '',
+        shieldSeconds ? `${shieldSeconds}s shield` : '',
+      ].filter(Boolean).join(' | ') || 'Audience energy increased',
+      charge: 64,
+      priority: 58,
+    }, 3100);
+    fireHeartEffect(data.uniqueId, 4, 0.68, { ...data, kind: 'follow', color: data.color || THEME.cyan });
+    showBattlePrompt('Recruit shield activated', 'return', 2200);
   }
 
   function handlePlayerCommand(data) {

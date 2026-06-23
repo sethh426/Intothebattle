@@ -337,9 +337,11 @@ function initSocketOverlay(game) {
   });
   socket.on('follow', (data) => {
     if (scene.handleFollowEvent) scene.handleFollowEvent(data || {});
+    playSound('follow');
   });
   socket.on('socialBoost', (data) => {
     if (scene.showSocialBoost) scene.showSocialBoost(data || {});
+    playSound(String(data?.type || '').toLowerCase() === 'repost' ? 'gift' : 'follow');
   });
   socket.on('layoutUpdate', (data = {}) => {
     if (!scene.updateLayoutConfig) return;

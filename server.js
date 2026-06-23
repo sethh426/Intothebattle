@@ -404,6 +404,16 @@ const CFG = {
   CHAT_STRENGTH_BOOST:              1,
   LIKE_HP_BOOST:                    2,
   SOCIAL_STRENGTH_BOOST:            5,
+  FOLLOW_HP_BOOST:                  45,
+  FOLLOW_STR_BOOST:                  2,
+  FOLLOW_SHIELD_MS:              20000,
+  SHARE_RALLY_HEAL:                 24,
+  SHARE_STR_BOOST:                   7,
+  SHARE_BOSS_MULTIPLIER:          0.65,
+  REPOST_RALLY_HEAL:                38,
+  REPOST_STR_BOOST:                 12,
+  REPOST_SHIELD_MS:              18000,
+  REPOST_BOSS_MULTIPLIER:          1.2,
   GIFT_HP_PER_DIAMOND:              3,
   GIFT_STR_PER_DIAMOND:             1,
   GIFT_MESSAGE_BOOST_MULTIPLIER:    3,
@@ -2766,6 +2776,105 @@ function awardStats(room, uniqueId, nickname, hpBoost = 0, strBoost = 0) {
   p.lastActive = Date.now();
 }
 
+function normalizeSocialEngagementType(eventPayload = {}) {
+  const text = [
+    eventPayload.type,
+    eventPayload.socialType,
+    eventPayload.eventType,
+    eventPayload.action,
+    eventPayload.displayType,
+    eventPayload.label,
+    eventPayload.message,
+  ].filter(Boolean).join(' ').toLowerCase();
+  if (/\bre[\s_-]?post\b/.test(text) || /\breposted\b/.test(text)) return 'repost';
+  if (/\bshare\b/.test(text) || /\bshared\b/.test(text)) return 'share';
+  return 'share';
+}
+
+function activeRewardTargets(room, limit = 8) {
+  return Object.values(room?.players || {})
+    .filter(player => player && player.alive && player.uniqueId !== SERVER_HORDE_ID && player.uniqueId !== SERVER_BOSS_ID)
+    .sort((a, b) => (Number(b.kills) || 0) - (Number(a.kills) || 0) || (Number(b.hp) || 0) - (Number(a.hp) || 0))
+    .slice(0, limit);
+}
+
+function applySquadRally(room, amount, options = {}) {
+  const affected = [];
+  const shieldMs = Math.max(0, Number(options.shieldMs) || 0);
+  const now = Date.now();
+  activeRewardTargets(room).forEach(player => {
+    const maxHp = Math.max(1, Number(player.maxHp) || CFG.BASE_HP);
+    const before = Number(player.hp) || 0;
+    player.hp = Math.min(maxHp, before + amount);
+    if (shieldMs) player.shieldUntil = Math.max(Number(player.shieldUntil) || 0, now + shieldMs);
+    affected.push({
+      uniqueId: player.uniqueId,
+      nickname: player.nickname,
+      amount: Math.max(0, Math.round(player.hp - before)),
+      shielded: Boolean(shieldMs),
+    });
+  });
+  return affected;
+}
+
+function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share', rawEvent = {}) {
+  if (!room || !uniqueId) return null;
+  if (!room.players[uniqueId]?.alive) spawnPlayer(room, uniqueId, nickname);
+  const player = room.players[uniqueId];
+  if (!player) return null;
+  const type = engagementType === 'follow' ? 'follow' : engagementType === 'repost' ? 'repost' : 'share';
+  const baseColor = type === 'repost' ? '#f6c95b' : type === 'follow' ? '#7afcff' : '#99ffda';
+
+  if (type === 'follow') {
+    awardStats(room, uniqueId, nickname, CFG.FOLLOW_HP_BOOST, CFG.FOLLOW_STR_BOOST);
+    const current = room.players[uniqueId];
+    if (current) current.shieldUntil = Math.max(Number(current.shieldUntil) || 0, Date.now() + CFG.FOLLOW_SHIELD_MS);
+    emitSoundAndSync(room, 'follow', { intensity: 0.72, tier: 'common' });
+    emitRoomEvent(room, 'follow', {
+      uniqueId,
+      nickname,
+      type,
+      rewardLabel: 'Recruit Shield',
+      hpBoost: CFG.FOLLOW_HP_BOOST,
+      strengthBoost: CFG.FOLLOW_STR_BOOST,
+      shieldMs: CFG.FOLLOW_SHIELD_MS,
+      color: current?.color || baseColor,
+    });
+    emitRoomEvent(room, 'gameState', room.players);
+    return { type, affectedCount: 1, hpBoost: CFG.FOLLOW_HP_BOOST, strengthBoost: CFG.FOLLOW_STR_BOOST };
+  }
+
+  const isRepost = type === 'repost';
+  const rallyHeal = isRepost ? CFG.REPOST_RALLY_HEAL : CFG.SHARE_RALLY_HEAL;
+  const strengthBoost = isRepost ? CFG.REPOST_STR_BOOST : CFG.SHARE_STR_BOOST;
+  const shieldMs = isRepost ? CFG.REPOST_SHIELD_MS : 0;
+  awardStats(room, uniqueId, nickname, 0, strengthBoost);
+  const affected = applySquadRally(room, rallyHeal, { shieldMs });
+  let bossPressure = false;
+  if (room.bossWave?.active) {
+    bossPressure = true;
+    damageBossWave(room, uniqueId, nickname, isRepost ? CFG.REPOST_BOSS_MULTIPLIER : CFG.SHARE_BOSS_MULTIPLIER, isRepost ? 'explosion' : 'ripple', `${type} surge`);
+  }
+  emitSoundAndSync(room, isRepost ? 'gift' : 'follow', { intensity: isRepost ? 0.92 : 0.66, tier: isRepost ? 'rare' : 'common' });
+  emitRoomEvent(room, 'socialBoost', {
+    uniqueId,
+    nickname,
+    type,
+    rewardLabel: isRepost ? 'Broadcast Surge' : 'Squad Rally',
+    amount: strengthBoost,
+    strengthBoost,
+    rallyHeal,
+    shieldMs,
+    affectedCount: affected.length,
+    affected,
+    bossPressure,
+    rawType: rawEvent.type || rawEvent.socialType || rawEvent.eventType || '',
+    color: room.players[uniqueId]?.color || baseColor,
+  });
+  emitRoomEvent(room, 'gameState', room.players);
+  return { type, affectedCount: affected.length, rallyHeal, strengthBoost, shieldMs, bossPressure };
+}
+
 // ────────────────────────────────
 // DEAL DAMAGE (enriched)
 // ────────────────────────────────
@@ -4745,6 +4854,21 @@ function runRoomOverlayTest(room, action) {
     return { success: true, action: normalizedAction, amount };
   }
 
+  if (normalizedAction === 'follow') {
+    const reward = applyEngagementReward(room, supportId, 'Nova', 'follow');
+    return { success: true, action: normalizedAction, reward };
+  }
+
+  if (normalizedAction === 'share' || normalizedAction === 'social') {
+    const reward = applyEngagementReward(room, supportId, 'Nova', 'share', { type: 'share' });
+    return { success: true, action: normalizedAction, reward };
+  }
+
+  if (normalizedAction === 'repost') {
+    const reward = applyEngagementReward(room, supportId, 'Nova', 'repost', { type: 'repost' });
+    return { success: true, action: normalizedAction, reward };
+  }
+
   if (normalizedAction === 'kill') {
     if (room.players[targetId]) room.players[targetId].hp = 1;
     const result = dealDamage(room, attackerId, targetId, 8);
@@ -4806,7 +4930,7 @@ function runRoomOverlayTest(room, action) {
   }
 
   if (normalizedAction === 'burst' || normalizedAction === 'show') {
-    const sequence = ['attack', 'like', 'gift', 'boss', 'sponsor'];
+    const sequence = ['attack', 'like', 'follow', 'share', 'repost', 'gift', 'boss', 'sponsor'];
     sequence.forEach((eventName, index) => {
       const timer = setTimeout(() => runRoomOverlayTest(room, eventName), index * 950);
       if (typeof timer.unref === 'function') timer.unref();
@@ -4814,7 +4938,7 @@ function runRoomOverlayTest(room, action) {
     emitRoomEvent(room, 'roundEvent', {
       type: 'overlay_test_burst',
       title: 'Overlay test running',
-      message: 'Chat, likes, gifts, boss wave, and broadcast break are being previewed.',
+      message: 'Chat, likes, follows, shares, reposts, gifts, boss wave, and broadcast break are being previewed.',
     });
     return { success: true, action: normalizedAction, sequence };
   }
@@ -5217,9 +5341,8 @@ app.post('/api/test/follow', blockInProduction, requireDevTestMode, (_req, res) 
   const room = getDefaultRoom();
   const id = 'test_delta';
   const player = room.players[id];
-  emitSoundAndSync(room, 'follow', { intensity: 0.6, tier: 'common' });
-  emitRoomEvent(room, 'follow', { uniqueId: id, nickname: player.nickname, color: player.color });
-  res.json({ success: true, uniqueId: id });
+  const reward = applyEngagementReward(room, id, player.nickname, 'follow');
+  res.json({ success: true, uniqueId: id, reward });
 });
 
 app.post('/api/test/social', blockInProduction, requireDevTestMode, (_req, res) => {
@@ -5227,15 +5350,9 @@ app.post('/api/test/social', blockInProduction, requireDevTestMode, (_req, res) 
   const room = getDefaultRoom();
   const id = 'test_echo';
   const player = room.players[id];
-  awardStats(room, id, player.nickname, 0, CFG.SOCIAL_STRENGTH_BOOST);
-  emitRoomEvent(room, 'socialBoost', {
-    uniqueId: id,
-    nickname: player.nickname,
-    amount: CFG.SOCIAL_STRENGTH_BOOST,
-    color: player.color || '#ffd166',
-  });
-  emitRoomEvent(room, 'gameState', room.players);
-  res.json({ success: true, uniqueId: id, amount: CFG.SOCIAL_STRENGTH_BOOST });
+  const type = String(_req.query?.type || _req.body?.type || 'share').toLowerCase() === 'repost' ? 'repost' : 'share';
+  const reward = applyEngagementReward(room, id, player.nickname, type, { type });
+  res.json({ success: true, uniqueId: id, reward });
 });
 
 app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) => {
@@ -5311,8 +5428,7 @@ function setupTikTokEvents(tiktokClient, room) {
   });
 
   tiktokClient.on('member', (e) => {
-    const id   = e.user?.uniqueId;
-    const nick = e.user?.nickname || id;
+    const { id, nickname: nick } = resolveTikTokUser(e);
     if (!id) return;
     spawnPlayer(room, id, nick);
     if (room.players[id]) room.players[id].alive = true;
@@ -5498,15 +5614,9 @@ function setupTikTokEvents(tiktokClient, room) {
   tiktokClient.on('social', (e) => {
     const { id, nickname } = resolveTikTokUser(e);
     if (!id) return;
-    if (!room.players[id]) spawnPlayer(room, id, nickname);
-    awardStats(room, id, nickname, 0, CFG.SOCIAL_STRENGTH_BOOST);
-    emitRoomEvent(room, 'socialBoost', {
-      uniqueId: id,
-      nickname,
-      amount: CFG.SOCIAL_STRENGTH_BOOST,
-      color: room.players[id]?.color || '#ffd166',
-    });
-    emitRoomEvent(room, 'gameState', room.players);
+    const type = normalizeSocialEngagementType(e);
+    const reward = applyEngagementReward(room, id, nickname, type, e);
+    console.log(`Social reward: @${nickname} ${type}`, reward || '');
   });
 
   tiktokClient.on('follow', (e) => {
@@ -5514,8 +5624,7 @@ function setupTikTokEvents(tiktokClient, room) {
     const nick = e.user?.nickname || id;
     if (!id) return;
     console.log(`❤️  @${nick} followed!`);
-    emitSoundAndSync(room, 'follow', { intensity: 0.6, tier: 'common' });
-    emitRoomEvent(room, 'follow', { uniqueId: id, nickname: nick, color: room.players[id]?.color });
+    applyEngagementReward(room, id, nick, 'follow', e);
   });
 
   tiktokClient.on('error', (err) => {
