@@ -67,6 +67,9 @@
       this.sponsorTimer = null;
       this.sponsorWallClockTimer = null;
       this.sponsorEndcapTimer = null;
+      this.sponsorEndcapWallClockTimer = null;
+      this.sponsorEndcapShown = false;
+      this.sponsorStartedAt = 0;
       this.sponsorReporter = null;
       this.preparedSponsor = null;
       this.bossState = null;
@@ -345,6 +348,24 @@
 
     reportSponsor(payload, status, message = '') {
       if (this.sponsorReporter) this.sponsorReporter(payload || this.activeSponsorPayload || {}, status, message);
+    }
+
+    sponsorEndcapDurationMs(payload = {}, durationMs = 15000) {
+      if ((payload.statsMode || 'endcap') === 'hidden') return 0;
+      const duration = clamp(Number(durationMs) || 15000, 1200, 60000);
+      const profile = String(payload.timingProfile || 'spotlight');
+      const preferred = profile === 'feature' ? 5600 : profile === 'full' ? 6400 : profile === 'bumper' ? 2800 : 4600;
+      const responsive = Math.round(duration * (profile === 'full' ? 0.18 : 0.32));
+      return clamp(Math.max(2400, preferred, responsive), 900, Math.max(900, duration - 500));
+    }
+
+    sponsorEndcapDelayMs(payload = {}, durationMs = 15000) {
+      const mode = payload.statsMode || 'endcap';
+      const duration = clamp(Number(durationMs) || 15000, 1200, 60000);
+      if (mode === 'hidden') return duration + 1000;
+      if (mode === 'always') return payload.videoUrl ? 900 : 350;
+      if (mode === 'delayed') return payload.videoUrl ? Math.min(Math.max(3200, duration * 0.42), Math.max(900, duration - 3600)) : 700;
+      return Math.max(700, duration - this.sponsorEndcapDurationMs(payload, duration));
     }
 
     getSponsorMediaTelemetry(payload = {}) {
@@ -1158,10 +1179,13 @@
     playSponsorBreak(payload = {}) {
       this.activeSponsorPayload = payload;
       this.sponsorFinalized = false;
+      this.sponsorEndcapShown = false;
+      this.sponsorStartedAt = this.time.now;
       document.body.classList.add('sponsor-active');
       this.sponsorLayer.removeAll(true);
       this.sponsorLayer.setVisible(true).setAlpha(0);
       this.reportSponsor(payload, 'live', 'Phaser power moment is live');
+      const plannedDurationMs = clamp(Number(payload.durationMs) || 15000, 1200, 60000);
 
       const intro = this.add.graphics();
       intro.fillStyle(0x02040a, 0.96);
@@ -1215,7 +1239,7 @@
             this.reportSponsor(payload, 'first_frame', message);
           };
           this.sponsorVideo.once('play', () => {
-            this.showSponsorEndCap(payload, Number(payload.durationMs || 15000) - 3200);
+            this.showSponsorEndCap(payload, this.sponsorEndcapDelayMs(payload, plannedDurationMs));
             const videoEl = this.sponsorVideo?.video;
             if (videoEl && typeof videoEl.requestVideoFrameCallback === 'function') {
               videoEl.requestVideoFrameCallback(() => reportFirstFrame('Phaser video frame callback confirmed'));
@@ -1225,6 +1249,8 @@
           });
           this.sponsorVideo.once('complete', () => {
             this.reportSponsor(payload, 'video_completed', 'Phaser sponsor video finished');
+            const elapsed = Math.max(0, this.time.now - this.sponsorStartedAt);
+            this.showSponsorEndCap(payload, Math.max(140, this.sponsorEndcapDelayMs(payload, plannedDurationMs) - elapsed));
           });
           this.sponsorVideo.once('error', () => {
             this.reportSponsor(payload, 'failed', 'Phaser video failed during playback');
@@ -1261,10 +1287,9 @@
 
       if (this.sponsorTimer) this.sponsorTimer.remove(false);
       if (this.sponsorWallClockTimer) window.clearTimeout(this.sponsorWallClockTimer);
-      const durationMs = clamp(Number(payload.durationMs) || 15000, 1200, 60000);
-      this.sponsorTimer = this.time.delayedCall(durationMs, () => this.stopSponsorBreak('completed'));
-      this.sponsorWallClockTimer = window.setTimeout(() => this.stopSponsorBreak('completed'), durationMs + 500);
-      if (!payload.videoUrl) this.showSponsorEndCap(payload, Number(payload.durationMs || 9000) - 2800);
+      this.sponsorTimer = this.time.delayedCall(plannedDurationMs, () => this.stopSponsorBreak('completed'));
+      this.sponsorWallClockTimer = window.setTimeout(() => this.stopSponsorBreak('completed'), plannedDurationMs + 500);
+      if (!payload.videoUrl) this.showSponsorEndCap(payload, this.sponsorEndcapDelayMs(payload, plannedDurationMs));
     }
 
     showSponsorFallback(videoBox, payload) {
@@ -1287,50 +1312,112 @@
     }
 
     showSponsorEndCap(payload, delay) {
-      const safeDelay = clamp(Number(delay) || 0, 900, 12000);
+      if ((payload.statsMode || 'endcap') === 'hidden') return;
+      const safeDelay = clamp(Number(delay) || 0, 0, 12000);
       if (this.sponsorEndcapTimer) this.sponsorEndcapTimer.remove(false);
-      this.sponsorEndcapTimer = this.time.delayedCall(safeDelay, () => {
-        if (!this.sponsorLayer.visible) return;
+      if (this.sponsorEndcapWallClockTimer) window.clearTimeout(this.sponsorEndcapWallClockTimer);
+      const renderEndcap = () => {
+        this.sponsorEndcapTimer = null;
+        if (this.sponsorEndcapWallClockTimer) {
+          window.clearTimeout(this.sponsorEndcapWallClockTimer);
+          this.sponsorEndcapWallClockTimer = null;
+        }
+        if (!this.sponsorLayer.visible || this.activeSponsorPayload !== payload || this.sponsorEndcapShown) return;
+        this.sponsorEndcapShown = true;
+        const previousBreakItems = this.sponsorLayer.list.slice();
+        this.tweens.add({
+          targets: previousBreakItems,
+          alpha: 0.2,
+          duration: 420,
+          ease: 'Cubic.easeOut',
+        });
+        if ((payload.statsMode || 'endcap') === 'endcap') {
+          try {
+            if (this.sponsorVideo?.isPlaying) this.sponsorVideo.pause();
+          } catch (_err) {}
+          if (this.sponsorVideo) {
+            this.tweens.add({
+              targets: this.sponsorVideo,
+              alpha: 0.28,
+              duration: 420,
+              ease: 'Cubic.easeOut',
+            });
+          }
+        }
         const alive = this.playerGroups.filter(player => Number(player.data.health || 0) > 0).length;
         const kills = this.playerGroups.reduce((sum, player) => sum + Number(player.data.kills || 0), 0);
-        const cap = this.add.container(this.W + 380 * this.scaleUnit, this.H * 0.54);
-        const w = this.W * 0.34;
-        const h = this.H * 0.38;
+        const reserve = Math.max(0, this.playerGroups.length - 5);
+        const cap = this.add.container(this.W / 2, this.H + 260 * this.scaleUnit);
+        const w = this.W * 0.74;
+        const h = this.H * 0.26;
         const gfx = this.add.graphics();
         gfx.fillStyle(0x02040a, 0.91);
         gfx.fillRoundedRect(-w / 2, -h / 2, w, h, 22 * this.scaleUnit);
         gfx.lineStyle(Math.max(2, 4 * this.scaleUnit), 0xf6c95b, 0.82);
         gfx.strokeRoundedRect(-w / 2, -h / 2, w, h, 22 * this.scaleUnit);
-        const label = this.add.text(0, -h * 0.28, 'BATTLE SNAPSHOT', {
+        const glow = this.add.graphics();
+        glow.lineStyle(Math.max(1, 2 * this.scaleUnit), 0x7afcff, 0.28);
+        glow.strokeRoundedRect(-w / 2 + 14 * this.scaleUnit, -h / 2 + 14 * this.scaleUnit, w - 28 * this.scaleUnit, h - 28 * this.scaleUnit, 16 * this.scaleUnit);
+        const label = this.add.text(0, -h * 0.33, 'BATTLE SNAPSHOT', {
           fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
-          fontSize: `${Math.round(26 * this.scaleUnit)}px`,
+          fontSize: `${Math.round(30 * this.scaleUnit)}px`,
           color: '#ffd37a',
           align: 'center',
         }).setOrigin(0.5);
-        const stats = this.add.text(0, h * 0.02, `${alive} ACTIVE\n${kills} KOs`, {
-          fontFamily: 'Arial Black, Impact, sans-serif',
-          fontSize: `${Math.round(54 * this.scaleUnit)}px`,
-          color: '#fff8e6',
-          align: 'center',
-          lineSpacing: Math.round(12 * this.scaleUnit),
-          stroke: '#02040a',
-          strokeThickness: Math.max(5, 8 * this.scaleUnit),
-        }).setOrigin(0.5);
-        const returnText = this.add.text(0, h * 0.36, payload.returnText || 'Back to battle', {
+        const statItems = [
+          ['ACTIVE', String(alive || 0)],
+          ['KOs', String(kills || 0)],
+          ['HORDE', reserve > 0 ? `${reserve} RESERVE` : `${alive || 0} READY`],
+        ].map((item, index) => {
+          const group = this.add.container((index - 1) * w * 0.27, h * 0.02);
+          const plate = this.add.graphics();
+          plate.fillStyle(index === 1 ? 0x111b2a : 0x10131d, 0.78);
+          plate.fillRoundedRect(-w * 0.12, -h * 0.19, w * 0.24, h * 0.34, 14 * this.scaleUnit);
+          plate.lineStyle(Math.max(1, 2 * this.scaleUnit), index === 1 ? 0xf6c95b : 0x7afcff, 0.36);
+          plate.strokeRoundedRect(-w * 0.12, -h * 0.19, w * 0.24, h * 0.34, 14 * this.scaleUnit);
+          const value = this.add.text(0, -h * 0.035, item[1], {
+            fontFamily: 'Arial Black, Impact, sans-serif',
+            fontSize: `${Math.round((index === 2 ? 42 : 58) * this.scaleUnit)}px`,
+            color: '#fff8e6',
+            align: 'center',
+            fixedWidth: Math.round(w * 0.21),
+            stroke: '#02040a',
+            strokeThickness: Math.max(4, 6 * this.scaleUnit),
+          }).setOrigin(0.5);
+          const textLabel = this.add.text(0, h * 0.115, item[0], {
+            fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
+            fontSize: `${Math.round(22 * this.scaleUnit)}px`,
+            color: '#99ffda',
+            align: 'center',
+          }).setOrigin(0.5);
+          group.add([plate, value, textLabel]);
+          return group;
+        });
+        const returnText = this.add.text(0, h * 0.39, payload.returnText || 'Back to battle', {
           fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
-          fontSize: `${Math.round(27 * this.scaleUnit)}px`,
+          fontSize: `${Math.round(28 * this.scaleUnit)}px`,
           color: '#99ffda',
           align: 'center',
         }).setOrigin(0.5);
-        cap.add([gfx, label, stats, returnText]);
+        cap.add([gfx, glow, label, ...statItems, returnText]);
         this.sponsorLayer.add(cap);
         this.tweens.add({
           targets: cap,
-          x: this.W * 0.78,
-          duration: 520,
+          y: this.H * 0.68,
+          duration: 620,
           ease: 'Back.easeOut',
         });
-      });
+        this.tweens.add({
+          targets: glow,
+          alpha: { from: 0.42, to: 0.92 },
+          duration: 1200,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
+      };
+      this.sponsorEndcapTimer = this.time.delayedCall(safeDelay, renderEndcap);
+      this.sponsorEndcapWallClockTimer = window.setTimeout(renderEndcap, safeDelay + 75);
     }
 
     stopSponsorBreak(status = 'completed') {
@@ -1346,6 +1433,12 @@
         this.sponsorEndcapTimer.remove(false);
         this.sponsorEndcapTimer = null;
       }
+      if (this.sponsorEndcapWallClockTimer) {
+        window.clearTimeout(this.sponsorEndcapWallClockTimer);
+        this.sponsorEndcapWallClockTimer = null;
+      }
+      this.sponsorEndcapShown = false;
+      this.sponsorStartedAt = 0;
       try {
         if (this.sponsorVideo?.isPlaying) this.sponsorVideo.stop();
       } catch (_err) {}

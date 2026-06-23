@@ -540,13 +540,19 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 .sponsor-scene.live.video-ready .sponsor-poster { opacity:0; }
 .sponsor-scene.live.video-ready video { opacity:1; transform:scale(1.005); }
 .sponsor-scene.live.stats-visible.video-ready video {
-  opacity:.9;
-  filter:saturate(1.02) contrast(1.06) brightness(.92);
+  opacity:.92;
+  filter:saturate(1.02) contrast(1.06) brightness(.94);
+}
+.sponsor-scene.live.stats-endcap.video-ready video {
+  opacity:.32;
+  transform:scale(1.018);
+  filter:saturate(.92) contrast(1.04) brightness(.56) blur(1.2px);
 }
 .sponsor-scene.outro video,
 .sponsor-scene.intro video { opacity:0; }
 .sponsor-scene.contain.live.video-ready video { object-fit:contain; opacity:1; background:#02040a; filter:none; }
 .sponsor-scene.contain.live.stats-visible.video-ready video { opacity:.82; filter:saturate(.98) contrast(1.04) brightness(.9); }
+.sponsor-scene.contain.live.stats-endcap.video-ready video { opacity:.36; filter:saturate(.88) contrast(1.02) brightness(.58) blur(1px); }
 
 .sponsor-intro,
 .sponsor-live,
@@ -648,7 +654,8 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   opacity:1; transition:opacity 420ms ease;
 }
 .sponsor-scene.live.video-ready .sponsor-scrim { opacity:.1; }
-.sponsor-scene.live.stats-visible.video-ready .sponsor-scrim { opacity:.38; }
+.sponsor-scene.live.stats-visible.video-ready .sponsor-scrim { opacity:.34; }
+.sponsor-scene.live.stats-endcap.video-ready .sponsor-scrim { opacity:.72; }
 .sponsor-video-chrome {
   position:absolute; inset:28px; z-index:1; pointer-events:none; border-radius:12px;
   opacity:0; border:1px solid rgba(255,223,138,.22);
@@ -671,6 +678,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 .sponsor-scene.live .sponsor-video-chrome { animation:sponsorChromeIn 760ms 120ms cubic-bezier(.16,1,.3,1) both; }
 .sponsor-scene.live.video-ready .sponsor-video-chrome { opacity:.94; }
 .sponsor-scene.live.stats-visible .sponsor-video-chrome { opacity:.62; }
+.sponsor-scene.live.stats-endcap .sponsor-video-chrome { opacity:.34; }
 .sponsor-broadcast-frame {
   position:absolute; inset:22px; z-index:3; pointer-events:none; opacity:0; border-radius:12px;
   box-shadow:
@@ -699,6 +707,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 .sponsor-broadcast-frame span:nth-child(4) { left:13px; bottom:13px; border-width:0 0 3px 3px; }
 .sponsor-scene.live.video-ready .sponsor-broadcast-frame { opacity:.96; transform:scale(1); }
 .sponsor-scene.live.stats-visible .sponsor-broadcast-frame { opacity:.58; }
+.sponsor-scene.live.stats-endcap .sponsor-broadcast-frame { opacity:.82; }
 .sponsor-frame {
   position:absolute; left:60px; bottom:86px; z-index:2; width:min(64%,820px); min-height:auto;
   display:flex; flex-direction:column; justify-content:flex-end; gap:18px;
@@ -770,6 +779,12 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   transition:opacity 420ms ease,transform 560ms cubic-bezier(.16,1,.3,1);
   text-shadow:0 2px 14px rgba(0,0,0,.8);
 }
+.sponsor-scene.live.stats-endcap .sponsor-live-stats {
+  left:78px; right:78px; top:50%; bottom:auto;
+  padding:30px 32px 28px;
+  transform:translateY(calc(-50% + 28px)) scale(.982);
+  box-shadow:0 26px 76px rgba(0,0,0,.6),0 0 54px rgba(85,231,255,.14),0 0 82px rgba(246,201,91,.08),inset 0 1px 0 rgba(255,255,255,.1);
+}
 .sponsor-live-stats::before {
   content:""; position:absolute; inset:-1px; z-index:0; pointer-events:none; border-radius:9px; padding:1px;
   background:linear-gradient(90deg,rgba(255,223,138,.9),rgba(85,231,255,.95),rgba(255,74,110,.62),rgba(255,223,138,.9));
@@ -792,6 +807,11 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   opacity:1; transform:translateY(0);
   animation:sponsorStatsBg 7s 900ms ease-in-out infinite;
 }
+.sponsor-scene.live.stats-visible.stats-endcap .sponsor-live-stats {
+  transform:translateY(-50%) scale(1);
+  animation:sponsorStatsEndcapIn 760ms cubic-bezier(.16,1,.3,1) both,sponsorStatsBg 7s 900ms ease-in-out infinite;
+}
+.sponsor-scene.live.stats-endcap .sponsor-leaderboard { display:none; }
 .sponsor-scene.live.stats-visible .sponsor-live-stats::before { animation:sponsorStatsBorder 4.8s linear infinite; }
 .sponsor-scene.live.stats-visible .sponsor-live-stats::after { animation:sponsorStatsSheen 3.8s 900ms cubic-bezier(.16,1,.3,1) infinite; }
 .sponsor-stats-head {
@@ -965,7 +985,19 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   .sponsor-disclosure { top:20px; left:24px; font-size:14px; }
   .sponsor-broadcast-frame { inset:10px; }
   .sponsor-broadcast-frame span { width:24px; height:24px; }
-  .sponsor-live-stats { display:none; }
+  .sponsor-live-stats { display:block; left:18px; right:18px; bottom:50px; top:auto; padding:12px 13px; }
+  .sponsor-scene.live.stats-endcap .sponsor-live-stats { left:18px; right:18px; top:50%; bottom:auto; padding:14px; }
+  .sponsor-stats-head { font-size:20px; margin-bottom:8px; }
+  .sponsor-stats-head span:last-child { font-size:14px; padding-left:20px; }
+  .sponsor-stats-head span:last-child::before { width:10px; height:10px; }
+  .sponsor-stat { min-height:72px; padding:12px 14px; }
+  .sponsor-stat-label { font-size:15px; margin-bottom:3px; }
+  .sponsor-stat-value,
+  .sponsor-stat-score .sponsor-stat-value,
+  .sponsor-stat-fighter .sponsor-stat-value { font-size:28px; line-height:1.05; }
+  .sponsor-stat-sub { margin-top:4px; font-size:16px; }
+  .sponsor-horde-bar { height:9px; margin-top:8px; }
+  .sponsor-leaderboard { display:none; }
   .sponsor-progress { left:30px; right:30px; bottom:22px; }
   .sponsor-return-hint { display:none; }
   .sponsor-media-status { display:none; }
@@ -1023,6 +1055,11 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   0% { opacity:0; transform:translateY(28px) scale(.985); filter:blur(10px); }
   52% { opacity:1; transform:translateY(-2px) scale(1.002); filter:blur(0); }
   100% { opacity:1; transform:translateY(0) scale(1); filter:blur(0); }
+}
+@keyframes sponsorStatsEndcapIn {
+  0% { opacity:0; transform:translateY(calc(-50% + 34px)) scale(.972); filter:blur(12px); }
+  58% { opacity:1; transform:translateY(calc(-50% - 3px)) scale(1.006); filter:blur(0); }
+  100% { opacity:1; transform:translateY(-50%) scale(1); filter:blur(0); }
 }
 @keyframes sponsorStatsBg {
   0%,100% { background-position:0% 50%; }
@@ -1104,7 +1141,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       <div class="sponsor-broadcast-frame" aria-hidden="true">
         <span></span><span></span><span></span><span></span>
       </div>
-      <div class="sponsor-disclosure" id="sponsorDisclosure">Sponsored</div>
+      <div class="sponsor-disclosure" id="sponsorDisclosure">Arena Break</div>
       <div class="sponsor-brand" id="sponsorBrand">IntoTheBattle</div>
       <div class="sponsor-frame">
         <div class="sponsor-kicker" id="sponsorKicker">Sponsored Moment</div>
@@ -1592,22 +1629,25 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     return timer;
   }
 
-  function setSponsorStatsVisible(visible) {
+  function setSponsorStatsVisible(visible, phase = 'endcap') {
     if (!sponsorScene) return;
-    sponsorScene.classList.toggle('stats-visible', Boolean(visible));
-    if (visible) renderSponsorStats(true);
+    sponsorScene.classList.remove('stats-visible', 'stats-endcap', 'stats-overlay', 'stats-delayed');
     if (sponsorLiveStats) {
-      sponsorLiveStats.style.opacity = visible ? '1' : '';
-      sponsorLiveStats.style.transform = visible ? 'translateY(0)' : '';
+      sponsorLiveStats.style.opacity = '';
+      sponsorLiveStats.style.transform = '';
       sponsorLiveStats.querySelectorAll('.sponsor-stat').forEach(el => {
-        el.style.opacity = visible ? '1' : '';
-        el.style.transform = visible ? 'translateY(0)' : '';
+        el.style.opacity = '';
+        el.style.transform = '';
       });
       sponsorLiveStats.querySelectorAll('.sponsor-leader-row').forEach(el => {
-        el.style.opacity = visible ? '1' : '';
-        el.style.transform = visible ? 'translateX(0)' : '';
+        el.style.opacity = '';
+        el.style.transform = '';
       });
     }
+    if (!visible) return;
+    renderSponsorStats(true);
+    sponsorScene.classList.add('stats-visible');
+    sponsorScene.classList.add(phase === 'overlay' ? 'stats-overlay' : phase === 'delayed' ? 'stats-delayed' : 'stats-endcap');
   }
 
   function pauseSponsorVideoForStats(payload) {
@@ -1615,6 +1655,12 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     try {
       if (!sponsorVideo.paused && !sponsorVideo.ended) sponsorVideo.pause();
     } catch (_err) {}
+  }
+
+  function revealSponsorStats(payload, phase = 'endcap') {
+    if (sponsorState !== 'live' || activeSponsorPayload !== payload) return;
+    if (phase === 'endcap') pauseSponsorVideoForStats(payload);
+    setSponsorStatsVisible(true, phase);
   }
 
   function resetSponsorTimingClasses() {
@@ -1625,7 +1671,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     sponsorClockRemainingMs = 0;
     sponsorClockPaused = false;
     if (sponsorScene) {
-      sponsorScene.classList.remove('clock-running', 'clock-paused', 'stats-visible');
+      sponsorScene.classList.remove('clock-running', 'clock-paused', 'stats-visible', 'stats-endcap', 'stats-overlay', 'stats-delayed');
     }
   }
 
@@ -1639,22 +1685,22 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     let showAt = 0;
     if (mode === 'endcap' && startedByVideo) {
       const mediaMs = sponsorMediaDurationMs();
-      const endcapLength = sponsorEndcapDurationMs(duration);
-      if (mediaMs > 0 && mediaMs < duration - 450) return;
+      const endcapLength = sponsorEndcapDurationMs(duration, payload);
+      if (mediaMs > 0 && mediaMs < duration - endcapLength + 250) return;
       showAt = Math.max(900, duration - endcapLength);
     } else if (mode === 'always') {
       showAt = startedByVideo ? 900 : 350;
     } else if (mode === 'delayed') {
-      showAt = startedByVideo ? Math.min(7000, Math.max(3200, duration * 0.45)) : 700;
+      showAt = startedByVideo ? Math.min(Math.max(3200, duration * 0.42), Math.max(1000, duration - 3600)) : 700;
     } else {
-      const endcapLength = Math.min(5200, Math.max(3200, duration * 0.28));
+      const endcapLength = sponsorEndcapDurationMs(duration, payload);
       showAt = startedByVideo ? Math.max(900, duration - endcapLength) : Math.min(Math.max(3600, duration * 0.58), Math.max(0, duration - endcapLength));
     }
     showAt = Math.min(showAt, Math.max(0, duration - 1200));
     scheduleSponsorStatsTimer(() => {
       if (sponsorState === 'live' && activeSponsorPayload === payload) {
-        if (mode === 'endcap' && startedByVideo) pauseSponsorVideoForStats(payload);
-        setSponsorStatsVisible(true);
+        const phase = mode === 'endcap' ? 'endcap' : mode === 'delayed' ? 'delayed' : 'overlay';
+        revealSponsorStats(payload, phase);
       }
     }, showAt);
   }
@@ -1831,8 +1877,13 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     return Math.round(sponsorVideo.duration * 1000);
   }
 
-  function sponsorEndcapDurationMs(baseDuration) {
-    return Math.min(5600, Math.max(3400, Math.round((baseDuration || 15000) * 0.26)));
+  function sponsorEndcapDurationMs(baseDuration, payload = {}) {
+    const duration = Math.max(1500, Number(baseDuration) || 15000);
+    if ((payload.statsMode || 'endcap') === 'hidden') return 0;
+    const profile = payload.timingProfile || 'spotlight';
+    const preferred = profile === 'feature' ? 5600 : profile === 'full' ? 6400 : profile === 'bumper' ? 2800 : 4600;
+    const responsive = Math.round(duration * (profile === 'full' ? 0.18 : 0.32));
+    return Math.min(Math.max(2400, preferred, responsive), Math.max(2400, duration - 1200), 7200);
   }
 
   function resolveSponsorLiveDuration(payload, startedByVideo) {
@@ -1843,9 +1894,8 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     const statsMode = payload.statsMode || 'endcap';
     const profile = payload.timingProfile || 'spotlight';
     if (statsMode === 'endcap') {
-      const endcapMs = sponsorEndcapDurationMs(requested);
+      const endcapMs = sponsorEndcapDurationMs(requested, payload);
       if (profile === 'full') return Math.min(120000, mediaMs + endcapMs);
-      if (mediaMs <= requested - 800) return Math.min(120000, mediaMs + endcapMs);
       return requested;
     }
     if (profile !== 'full' && mediaMs > requested) return requested;
@@ -2086,9 +2136,15 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       clearFirstFrameFallback();
       clearSponsorStallTimer();
       if (sponsorState === 'live' && activeSponsorPayload === payload) {
-        reportSponsorPlayback(payload, 'video_completed');
+        reportSponsorPlayback(payload, 'video_completed', 'Arena media completed');
         if ((payload.statsMode || 'endcap') === 'endcap' && sponsorTimer) {
-          setSponsorStatsVisible(true);
+          const remaining = Math.max(0, sponsorClockDeadline - Date.now());
+          const endcapLength = sponsorEndcapDurationMs(remaining + 1200, payload);
+          if (remaining > endcapLength + 350) {
+            scheduleSponsorStatsTimer(() => revealSponsorStats(payload, 'endcap'), remaining - endcapLength);
+          } else {
+            revealSponsorStats(payload, 'endcap');
+          }
           return;
         }
         startSponsorOutro(payload);
@@ -2233,7 +2289,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     resetSponsorTimingClasses();
     resetSponsorVideo(true);
     if (sponsorScene) {
-      sponsorScene.classList.remove('active', 'intro', 'live', 'outro', 'contain', 'clock-running', 'clock-paused', 'stats-visible');
+      sponsorScene.classList.remove('active', 'intro', 'live', 'outro', 'contain', 'clock-running', 'clock-paused', 'stats-visible', 'stats-endcap', 'stats-overlay', 'stats-delayed');
       sponsorScene.setAttribute('aria-hidden', 'true');
     }
     document.body.classList.remove('sponsor-active');
@@ -2255,9 +2311,9 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   }
 
   function sponsorIntroDelayMs(payload = {}) {
-    if (payload.timingProfile === 'bumper') return 900;
-    if (payload.timingProfile === 'feature' || payload.timingProfile === 'full') return 1850;
-    return 1250;
+    if (payload.timingProfile === 'bumper') return 1120;
+    if (payload.timingProfile === 'feature' || payload.timingProfile === 'full') return 2080;
+    return 1780;
   }
 
   function sponsorPreloadWaitMs(payload = {}) {
@@ -2273,7 +2329,8 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   }
 
   function sponsorOutroDelayMs(payload = {}) {
-    return payload.timingProfile === 'bumper' ? 850 : 1250;
+    if (payload.timingProfile === 'feature' || payload.timingProfile === 'full') return 1450;
+    return payload.timingProfile === 'bumper' ? 900 : 1320;
   }
 
   function startSponsorIntro(payload) {
@@ -2317,8 +2374,8 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     reportSponsorPlayback(payload, 'live', 'Power moment is live');
 
     setSponsorText(sponsorBrand, payload.partner, 'IntoTheBattle');
-    setSponsorText(sponsorDisclosure, 'Sponsored', 'Sponsored');
-    setSponsorText(sponsorKicker, payload.kicker, 'Sponsored Moment');
+    setSponsorText(sponsorDisclosure, 'Arena Break', 'Arena Break');
+    setSponsorText(sponsorKicker, payload.kicker, 'Arena Spotlight');
     setSponsorText(sponsorTitle, payload.title, 'Power Moment');
     setSponsorText(sponsorSubtitle, payload.subtitle, 'Stay locked in. The next fight is loading.');
     renderSponsorStats(true);
