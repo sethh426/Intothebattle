@@ -1,20 +1,28 @@
-version: '3.8'
 services:
   app:
     build: .
+    restart: unless-stopped
     ports:
       - '3000:3000'
     environment:
       - NODE_ENV=development
       - API_KEY=test
       - JWT_SECRET=local_dev_change_me
+      - OVERLAY_TOKEN_SECRET=local_overlay_change_me
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=postgres://postgres:example@postgres:5432/tiktokbr
       - ENABLE_ROOM_SCOPED=true
       - DISK_PATH=/usr/src/app/data
+      - METRICS_TOKEN=local_metrics_token
+      - DIAGNOSTICS_TOKEN=local_diagnostics_token
+      - APP_BASE_URL=http://localhost:3000
+      - TIKTOK_AUTO_RECONNECT=true
+      - TIKTOK_MAX_RECONNECT_ATTEMPTS=3
     depends_on:
-      - redis
-      - postgres
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     volumes:
       - ./:/usr/src/app
       - ./data:/usr/src/app/data
@@ -22,16 +30,32 @@ services:
   redis:
     image: redis:6-alpine
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   postgres:
     image: postgres:15-alpine
+    restart: unless-stopped
     environment:
+      - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=example
+      - POSTGRES_DB=tiktokbr
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d tiktokbr"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   prometheus:
     image: prom/prometheus:latest
+    restart: unless-stopped
+    environment:
+      - METRICS_TOKEN=local_metrics_token
     volumes:
       - ./devops/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
     ports:

@@ -278,6 +278,10 @@
       "blocks": []
     },
     {
+      "path": "overlay-v2.html",
+      "blocks": []
+    },
+    {
       "path": "overlay.html",
       "blocks": [
         {
@@ -817,7 +821,7 @@
     }
   ],
   "summary": {
-    "total_files": 21,
+    "total_files": 22,
     "expanded": 11,
     "errors": 0
   }

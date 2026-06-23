@@ -4,6 +4,9 @@
   "description": "TikTok LIVE PvP Battle Game",
   "type": "module",
   "main": "server.js",
+  "engines": {
+    "node": ">=24 <25"
+  },
   "scripts": {
     "start": "node server.js",
     "start:dev": "NODE_ENV=development node server.js",

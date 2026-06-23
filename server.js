@@ -399,6 +399,11 @@ validateWritableStorage();
 
 let currentStreamer = process.argv[2] || '';
 let client = null;
+const TIKTOK_AUTO_RECONNECT = process.env.TIKTOK_AUTO_RECONNECT == null
+  ? true
+  : process.env.TIKTOK_AUTO_RECONNECT === 'true';
+const TIKTOK_MAX_RECONNECT_ATTEMPTS = Math.max(0, Number(process.env.TIKTOK_MAX_RECONNECT_ATTEMPTS || 3));
+const TIKTOK_HEARTBEAT_MS = Math.max(5000, Number(process.env.TIKTOK_HEARTBEAT_MS || 10000));
 
 const CFG = {
   BASE_HP:                        300,
@@ -1514,6 +1519,135 @@ function endLiveSession(room, reason = 'manual_end') {
   return { ok: true, recap };
 }
 
+function normalizeTikTokUsername(value = '') {
+  const username = String(value || '').trim().replace(/^@+/, '').toLowerCase();
+  return /^[a-z0-9._]{2,32}$/i.test(username) ? username : '';
+}
+
+function clearLikeRateTrackerForRoom(roomId) {
+  if (!roomId) return;
+  const prefix = `${roomId}:`;
+  for (const key of Object.keys(likeRateTracker)) {
+    if (key.startsWith(prefix)) delete likeRateTracker[key];
+  }
+}
+
+function buildTikTokConnectionStatus(room) {
+  const connection = room?.tiktokConnection || {};
+  const status = connection.status || 'disconnected';
+  return {
+    connectionId: connection.id || null,
+    username: connection.username || room?.streamerUsername || '',
+    status,
+    connected: Boolean(status === 'connected' && room?.tiktokClient?.connected),
+    tiktokRoomId: connection.tiktokRoomId || null,
+    startedAt: connection.startedAt || null,
+    connectedAt: connection.connectedAt || null,
+    disconnectedAt: connection.disconnectedAt || null,
+    lastEventAt: connection.lastEventAt || null,
+    lastEventType: connection.lastEventType || '',
+    eventCount: Number(connection.eventCount) || 0,
+    staleEventsDropped: Number(room?.staleTikTokEventsDropped) || 0,
+    reason: connection.reason || '',
+    error: connection.error || '',
+  };
+}
+
+function emitTikTokConnectionStatus(room, patch = {}) {
+  if (!room) return;
+  room.tiktokConnection = {
+    ...(room.tiktokConnection || {}),
+    ...patch,
+    updatedAt: Date.now(),
+  };
+  emitRoomEvent(room, 'tiktokConnection', buildTikTokConnectionStatus(room));
+}
+
+function resetRoomLiveRuntime(room, options = {}) {
+  if (!room?.roomId) return;
+  const reason = options.reason || 'stream_reset';
+  const clearPlayers = options.clearPlayers !== false;
+
+  if (room.liveSession?.status === 'active') {
+    endLiveSession(room, reason);
+  } else {
+    clearRoundTimer(room);
+    room.roundState = null;
+    if (room.bossWave?.active) {
+      completeBossWave(room, null, reason);
+    } else {
+      clearBossWaveTimers(room);
+      room.bossWave = null;
+    }
+    emitSessionStatus(room);
+  }
+
+  stopSponsorBreaksForRoom(room, reason);
+  clearPlatformSponsorSchedule(room.roomId);
+  room.recentBattleActionAt = [];
+  room.lastBattleActionAt = 0;
+  room.lastHighIntensityBattleAt = 0;
+  room.likeStats = { total: 0, lastMilestone: 0 };
+  room.engagementStats = null;
+  clearLikeRateTrackerForRoom(room.roomId);
+
+  if (clearPlayers) {
+    room.players = {};
+  } else {
+    for (const player of Object.values(room.players || {})) {
+      player.alive = false;
+      player.forceSpawn = false;
+    }
+  }
+
+  markRoomPlayerPresenceOffline(room);
+  emitRoomEvent(room, 'gameState', room.players);
+  emitSessionStatus(room);
+  updatePlayerGauge();
+}
+
+function createTikTokConnection(room, username) {
+  const id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  room.staleTikTokEventsDropped = 0;
+  room.tiktokConnection = {
+    id,
+    username,
+    status: 'connecting',
+    startedAt: Date.now(),
+    connectedAt: null,
+    disconnectedAt: null,
+    lastEventAt: null,
+    lastEventType: '',
+    eventCount: 0,
+    staleEventsDropped: 0,
+    tiktokRoomId: null,
+    reason: '',
+    error: '',
+  };
+  emitTikTokConnectionStatus(room);
+  return room.tiktokConnection;
+}
+
+function isActiveTikTokConnection(room, tiktokClient, connectionId) {
+  return Boolean(
+    room?.tiktokClient &&
+    room.tiktokClient === tiktokClient &&
+    room.tiktokConnection?.id === connectionId
+  );
+}
+
+function markTikTokEventAccepted(room, eventType) {
+  if (!room?.tiktokConnection) return;
+  room.tiktokConnection.lastEventAt = Date.now();
+  room.tiktokConnection.lastEventType = eventType;
+  room.tiktokConnection.eventCount = (Number(room.tiktokConnection.eventCount) || 0) + 1;
+}
+
+function markTikTokEventDropped(room, connectionId, eventType) {
+  if (room) room.staleTikTokEventsDropped = (Number(room.staleTikTokEventsDropped) || 0) + 1;
+  logger.warn({ roomId: room?.roomId, connectionId, eventType }, 'Dropped stale TikTok event from inactive connection');
+}
+
 function maybeTriggerMilestoneSponsorBreak(room, trigger = 'milestone') {
   if (!PLATFORM_SPONSOR_ENABLED || !room?.roomId) return { started: false, reason: 'disabled' };
   if (room.planEntitlements?.canUseCreatorSponsors) return { started: false, reason: 'creator_controlled' };
@@ -2058,11 +2192,6 @@ function isSafePath(baseDir, targetPath) {
   return target === base || target.startsWith(base + path.sep);
 }
 
-const DASHBOARD_OWNER_EMAIL  = process.env.DASHBOARD_EMAIL    || '';
-const DASHBOARD_PASSWORD     = process.env.DASHBOARD_PASSWORD || '';
-const DASHBOARD_COOKIE_NAME  = 'dashboard_auth';
-const DASHBOARD_COOKIE_VALUE = Buffer.from(`${DASHBOARD_OWNER_EMAIL}:${DASHBOARD_PASSWORD}`).toString('base64');
-
 function parseCookies(req) {
   return Object.fromEntries(
     (req.headers.cookie || '').split(';').map(part => {
@@ -2072,63 +2201,9 @@ function parseCookies(req) {
   );
 }
 
-function isDashboardAuthed(req) {
-  return parseCookies(req)[DASHBOARD_COOKIE_NAME] === DASHBOARD_COOKIE_VALUE;
-}
-
 function loadRoomPlayerStats(room) {
   try {
-    let rows = db.prepare('SELECT * FROM room_player_stats WHERE room_id = ?').all(room.roomId);
-    if (!rows.length) {
-      const { playerStatsFile } = getRoomPaths(room.roomId);
-      if (fs.existsSync(playerStatsFile)) {
-        const saved = JSON.parse(fs.readFileSync(playerStatsFile, 'utf8'));
-        const insert = db.prepare(`
-          INSERT INTO room_player_stats (
-            room_id, unique_id, nickname, hp, max_hp, strength, kills,
-            kill_streak, last_kill_time, alive, last_active, color,
-            message_boost_expires, force_spawn
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(room_id, unique_id) DO UPDATE SET
-            nickname = excluded.nickname,
-            hp = excluded.hp,
-            max_hp = excluded.max_hp,
-            strength = excluded.strength,
-            kills = excluded.kills,
-            kill_streak = excluded.kill_streak,
-            last_kill_time = excluded.last_kill_time,
-            alive = excluded.alive,
-            last_active = excluded.last_active,
-            color = excluded.color,
-            message_boost_expires = excluded.message_boost_expires,
-            force_spawn = excluded.force_spawn
-        `);
-        const tx = db.transaction(() => {
-          for (const id in saved) {
-            const s = saved[id] || {};
-            insert.run(
-              room.roomId,
-              id,
-              s.nickname || id,
-              s.hp || s.maxHp || CFG.BASE_HP,
-              s.maxHp || CFG.BASE_HP,
-              s.strength || CFG.BASE_STRENGTH,
-              s.kills || 0,
-              s.killStreak || 0,
-              s.lastKillTime || 0,
-              s.alive ? 1 : 0,
-              s.lastActive || Date.now(),
-              s.color || randomColor(),
-              s.messageBoostExpires || 0,
-              s.forceSpawn ? 1 : 0
-            );
-          }
-        });
-        tx();
-        rows = db.prepare('SELECT * FROM room_player_stats WHERE room_id = ?').all(room.roomId);
-        console.log(`📂 Migrated ${rows.length} legacy saved player stats for room ${room.roomId}`);
-      }
-    }
+    const rows = db.prepare('SELECT * FROM room_player_stats WHERE room_id = ?').all(room.roomId);
 
     for (const row of rows) {
       const id = row.unique_id;
@@ -2142,12 +2217,12 @@ function loadRoomPlayerStats(room) {
           kills:    row.kills || 0,
           killStreak: row.kill_streak || 0,
           lastKillTime: row.last_kill_time || 0,
-          alive:    Boolean(row.alive),
+          alive:    false,
           lastActive: row.last_active || Date.now(),
           x: 0, y: 0, vx: 0, vy: 0,
           color: row.color || randomColor(),
           messageBoostExpires: row.message_boost_expires || 0,
-          forceSpawn: Boolean(row.force_spawn),
+          forceSpawn: false,
         };
       } else {
         const target = room.players[id];
@@ -2202,11 +2277,11 @@ function saveRoomPlayerStats(room) {
           player.kills,
           player.killStreak || 0,
           player.lastKillTime || 0,
-          player.alive ? 1 : 0,
+          0,
           player.lastActive || Date.now(),
           player.color || randomColor(),
           player.messageBoostExpires || 0,
-          player.forceSpawn ? 1 : 0
+          0
         );
       }
     });
@@ -3389,6 +3464,15 @@ function safeOrigin(value) {
   }
 }
 
+function markRoomPlayerPresenceOffline(room) {
+  if (!room?.roomId) return;
+  try {
+    db.prepare('UPDATE room_player_stats SET alive = 0, force_spawn = 0 WHERE room_id = ?').run(room.roomId);
+  } catch (err) {
+    logger.warn({ err, roomId: room.roomId }, 'Failed to mark persisted room players offline');
+  }
+}
+
 function requestOrigin(req) {
   const host = req.get('host');
   if (!host) return '';
@@ -4198,7 +4282,7 @@ function requireMetricsAccess(req, res, next) {
 
   const authHeader = req.get('authorization') || '';
   const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
-  const suppliedToken = bearerToken || req.get('x-metrics-token') || req.query.token;
+  const suppliedToken = bearerToken || req.get('x-metrics-token');
   if (suppliedToken === expectedToken) return next();
 
   return res.status(401).send('Unauthorized');
@@ -4212,7 +4296,7 @@ function requireDiagnosticsAccess(req, res, next) {
 
   const authHeader = req.get('authorization') || '';
   const bearerToken = authHeader.startsWith('Bearer ') ? authHeader.slice('Bearer '.length) : '';
-  const suppliedToken = bearerToken || req.get('x-diagnostics-token') || req.get('x-metrics-token') || req.query.token;
+  const suppliedToken = bearerToken || req.get('x-diagnostics-token') || req.get('x-metrics-token');
   if (suppliedToken === expectedToken) return next();
 
   return res.status(401).send('Unauthorized');
@@ -4634,6 +4718,7 @@ io.on('connection', (socket) => {
     overlaySettings: room.overlaySettings,
     laserColor: room.overlaySettings.laserColor,
     gameStateCount: Object.values(room.players).filter(p => p.alive).length,
+    stream: buildTikTokConnectionStatus(room),
   });
 
   socket.on('register', ({ type } = {}, ack) => {
@@ -4652,6 +4737,7 @@ io.on('connection', (socket) => {
       socket.emit('overlaySettings',  room.overlaySettings);
       socket.emit('laserColor',       room.overlaySettings.laserColor);
       socket.emit('sessionStatus',    buildSessionStatus(room));
+      socket.emit('tiktokConnection',  buildTikTokConnectionStatus(room));
       const bossStatus = currentBossStatus(room);
       if (bossStatus?.active) socket.emit('bossWave', { type: 'started', ...bossStatus });
       const background = buildBackgroundPayload(room, { v: Date.now() });
@@ -4667,6 +4753,7 @@ io.on('connection', (socket) => {
       socket.emit('laserColor',      room.overlaySettings.laserColor);
       socket.emit('gameState',       room.players);
       socket.emit('sessionStatus',   buildSessionStatus(room));
+      socket.emit('tiktokConnection', buildTikTokConnectionStatus(room));
     }
 
     if (typeof ack === 'function') {
@@ -4700,7 +4787,6 @@ app.get('/dashboard/logout', (req, res) => {
     db.prepare('UPDATE access_codes SET session_token = NULL WHERE session_token = ?').run(token);
     db.prepare('UPDATE users SET session_token = NULL WHERE session_token = ?').run(token);
   }
-  res.clearCookie(DASHBOARD_COOKIE_NAME, { path: '/', httpOnly: true, sameSite: 'lax' });
   res.clearCookie('session_token', { path: '/', httpOnly: true, sameSite: 'lax' });
   res.redirect('/login');
 });
@@ -4765,21 +4851,25 @@ app.get('/state', (req, res) => {
   return res.json(req.room.players);
 });
 
-app.get('/api/status', requireRoom, (req, res) => res.json({
-  roomId:           req.room.roomId,
-  overlayUrl:       buildOverlayUrl(req, req.room.roomId),
-  overlayV2Url:     buildOverlayUrl(req, req.room.roomId, '/overlay-v2'),
-  plan:             buildPlanEntitlements(req.auth),
-  username:         req.room.streamerUsername || '',
-  connected:        !!(req.room.tiktokClient && req.room.tiktokClient.connected),
-  overlayConnected: req.room.overlayCount > 0,
-  overlayCount:     req.room.overlayCount,
-  playerCount:      Object.values(req.room.players).filter(p => p.alive).length,
-  background:       buildBackgroundPayload(req.room, { v: Date.now() }),
-  overlaySettings:  req.room.overlaySettings,
-  devTestMode:      DEV_TEST_MODE,
-  session:          buildSessionStatus(req.room),
-}));
+app.get('/api/status', requireRoom, (req, res) => {
+  const stream = buildTikTokConnectionStatus(req.room);
+  res.json({
+    roomId:           req.room.roomId,
+    overlayUrl:       buildOverlayUrl(req, req.room.roomId),
+    overlayV2Url:     buildOverlayUrl(req, req.room.roomId, '/overlay-v2'),
+    plan:             buildPlanEntitlements(req.auth),
+    username:         req.room.streamerUsername || '',
+    connected:        stream.connected,
+    stream,
+    overlayConnected: req.room.overlayCount > 0,
+    overlayCount:     req.room.overlayCount,
+    playerCount:      Object.values(req.room.players).filter(p => p.alive).length,
+    background:       buildBackgroundPayload(req.room, { v: Date.now() }),
+    overlaySettings:  req.room.overlaySettings,
+    devTestMode:      DEV_TEST_MODE,
+    session:          buildSessionStatus(req.room),
+  });
+});
 
 app.get('/api/session/status', requireRoom, (req, res) => {
   res.json(buildSessionStatus(req.room));
@@ -5108,8 +5198,12 @@ app.post('/api/connect', requireRoom, (req, res) => {
   const { username } = req.body;
   if (!username) return res.json({ success: false, error: 'Username required' });
   if (!API_KEY)  return res.status(500).json({ success: false, error: 'Missing TikTok API_KEY in .env' });
-  connectToStreamer(username, req.room);
-  res.json({ success: true });
+  try {
+    const stream = connectToStreamer(username, req.room);
+    res.json({ success: true, username: stream.username, status: stream.status, stream });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message || 'Unable to connect TikTok stream' });
+  }
 });
 
 app.post('/api/reset', requireRoom, (req, res) => { disconnectStreamer(req.room); res.json({ success: true }); });
@@ -5119,8 +5213,10 @@ app.post('/api/overlay/reload', requireRoom, (req, res) => {
 });
 
 app.post('/api/players/clear', requireRoom, (req, res) => {
-  for (const id in req.room.players) { req.room.players[id].alive = false; req.room.players[id].forceSpawn = false; }
+  req.room.players = {};
+  markRoomPlayerPresenceOffline(req.room);
   emitRoomEvent(req.room, 'gameState', req.room.players);
+  updatePlayerGauge();
   res.json({ success: true });
 });
 
@@ -5525,12 +5621,47 @@ app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) =>
 // ────────────────────────────────
 // TIKTOK EVENT HANDLING
 // ────────────────────────────────
-function setupTikTokEvents(tiktokClient, room) {
-  tiktokClient.on('connected', () => {
+function setupTikTokEvents(tiktokClient, room, connectionId) {
+  const onTikTok = (eventType, handler) => {
+    tiktokClient.on(eventType, (...args) => {
+      if (!isActiveTikTokConnection(room, tiktokClient, connectionId)) {
+        markTikTokEventDropped(room, connectionId, eventType);
+        return;
+      }
+      markTikTokEventAccepted(room, eventType);
+      handler(...args);
+    });
+  };
+
+  onTikTok('connected', () => {
+    emitTikTokConnectionStatus(room, {
+      status: 'connected',
+      connectedAt: Date.now(),
+      disconnectedAt: null,
+      reason: '',
+      error: '',
+    });
     console.log(`✅ Connected to @${room.streamerUsername || 'unknown'}'s LIVE stream for room ${room.roomId}\n`);
   });
 
-  tiktokClient.on('member', (e) => {
+  onTikTok('roomInfo', (info = {}) => {
+    emitTikTokConnectionStatus(room, {
+      status: 'connected',
+      tiktokRoomId: info.roomId || room.tiktokConnection?.tiktokRoomId || null,
+    });
+  });
+
+  onTikTok('disconnected', (code, reason) => {
+    const willReconnect = !tiktokClient.intentionalClose && TIKTOK_AUTO_RECONNECT;
+    emitTikTokConnectionStatus(room, {
+      status: willReconnect ? 'reconnecting' : 'disconnected',
+      disconnectedAt: Date.now(),
+      reason: reason || `code ${code || 'unknown'}`,
+    });
+    if (!willReconnect && room.tiktokClient === tiktokClient) room.tiktokClient = null;
+  });
+
+  onTikTok('member', (e) => {
     const { id, nickname: nick } = resolveTikTokUser(e);
     if (!id) return;
     spawnPlayer(room, id, nick);
@@ -5539,7 +5670,7 @@ function setupTikTokEvents(tiktokClient, room) {
     emitRoomEvent(room, 'spawn', { uniqueId: id });
   });
 
-  tiktokClient.on('chat', (e) => {
+  onTikTok('chat', (e) => {
     const { id, nickname } = resolveTikTokUser(e);
     const comment = String(e.comment || e.message || '').trim();
     if (!id) return;
@@ -5587,7 +5718,7 @@ function setupTikTokEvents(tiktokClient, room) {
     emitRoomEvent(room, 'gameState', room.players);
   });
 
-  tiktokClient.on('gift', (e) => {
+  onTikTok('gift', (e) => {
     const { id, nickname } = resolveTikTokUser(e);
     const diamonds = (e.diamondCount || e.amount || 1) * (e.repeatCount || 1);
     if (!id) return;
@@ -5675,7 +5806,7 @@ function setupTikTokEvents(tiktokClient, room) {
     console.log(`🎁 @${id} sent ${e.giftName} (${diamonds} 💎) [${giftMeta.tier}]`);
   });
 
-  tiktokClient.on('like', (e) => {
+  onTikTok('like', (e) => {
     const { id, nickname } = resolveTikTokUser(e);
     if (!id) return;
     if (!room.players[id]) spawnPlayer(room, id, nickname);
@@ -5714,7 +5845,7 @@ function setupTikTokEvents(tiktokClient, room) {
     emitRoomEvent(room, 'gameState', room.players);
   });
 
-  tiktokClient.on('social', (e) => {
+  onTikTok('social', (e) => {
     const { id, nickname } = resolveTikTokUser(e);
     if (!id) return;
     const type = normalizeSocialEngagementType(e);
@@ -5722,7 +5853,7 @@ function setupTikTokEvents(tiktokClient, room) {
     console.log(`Social reward: @${nickname} ${type}`, reward || '');
   });
 
-  tiktokClient.on('follow', (e) => {
+  onTikTok('follow', (e) => {
     const id   = e.user?.uniqueId;
     const nick = e.user?.nickname || id;
     if (!id) return;
@@ -5730,45 +5861,96 @@ function setupTikTokEvents(tiktokClient, room) {
     applyEngagementReward(room, id, nick, 'follow', e);
   });
 
-  tiktokClient.on('error', (err) => {
+  onTikTok('error', (err) => {
+    emitTikTokConnectionStatus(room, {
+      status: room.tiktokClient?.connected ? 'connected' : 'error',
+      error: err?.message || String(err || 'TikTok connection error'),
+    });
     console.error('⚠️  TikTok error:', err?.message || err);
   });
 }
 
-function safeDisconnectClient(room = getDefaultRoom()) {
+function safeDisconnectClient(room = getDefaultRoom(), reason = 'operator_disconnect') {
   const targetClient = room?.tiktokClient || (room?.roomId === DEFAULT_ROOM_ID ? client : null);
-  if (!targetClient) return;
+  if (!targetClient) {
+    if (room?.tiktokConnection && !['disconnected', 'error'].includes(room.tiktokConnection.status)) {
+      emitTikTokConnectionStatus(room, {
+        status: 'disconnected',
+        disconnectedAt: Date.now(),
+        reason,
+      });
+    }
+    return;
+  }
   try {
-    if (targetClient.ws) { targetClient.ws.onerror = () => {}; targetClient.ws.onclose = () => {}; }
-    targetClient.disconnect();
+    if (typeof targetClient.destroy === 'function') targetClient.destroy();
+    else targetClient.disconnect();
   } catch (err) {
     console.error('⚠️ Error during disconnect:', err?.message || err);
+  }
+  if (room?.tiktokConnection) {
+    emitTikTokConnectionStatus(room, {
+      status: 'disconnected',
+      disconnectedAt: Date.now(),
+      reason,
+    });
   }
   if (room) room.tiktokClient = null;
   if (targetClient === client) client = null;
 }
 
-function connectToStreamer(username, room = getDefaultRoom()) {
+function connectToStreamer(username, room = getDefaultRoom(), options = {}) {
   if (!room) throw new Error('Cannot connect TikTok stream without a room');
-  safeDisconnectClient(room);
-  if (room.roomId === DEFAULT_ROOM_ID) currentStreamer = username;
-  room.streamerUsername = username;
-  const tiktokClient = new TikTokLive({ uniqueId: username, apiKey: API_KEY });
+  const normalizedUsername = normalizeTikTokUsername(username);
+  if (!normalizedUsername) throw new Error('Enter a valid TikTok username.');
+  safeDisconnectClient(room, 'new_stream_requested');
+  if (options.resetLiveRuntime !== false) {
+    resetRoomLiveRuntime(room, { reason: 'new_stream_requested', clearPlayers: true });
+  }
+  if (room.roomId === DEFAULT_ROOM_ID) currentStreamer = normalizedUsername;
+  room.streamerUsername = normalizedUsername;
+  const connection = createTikTokConnection(room, normalizedUsername);
+  const tiktokClient = new TikTokLive({
+    uniqueId: normalizedUsername,
+    apiKey: API_KEY,
+    autoReconnect: TIKTOK_AUTO_RECONNECT,
+    maxReconnectAttempts: TIKTOK_MAX_RECONNECT_ATTEMPTS,
+    heartbeatInterval: TIKTOK_HEARTBEAT_MS,
+  });
   room.tiktokClient = tiktokClient;
   if (room.roomId === DEFAULT_ROOM_ID) client = tiktokClient;
-  setupTikTokEvents(tiktokClient, room);
-  tiktokClient.connect().catch(err => {
+  setupTikTokEvents(tiktokClient, room, connection.id);
+  if (room.planEntitlements) updatePlatformSponsorSchedule(room, room.planEntitlements);
+  room.tiktokConnectPromise = tiktokClient.connect().catch(err => {
     console.error('❌ Could not connect:', err?.message || err);
-    console.error(`   Make sure @${username} is currently LIVE on TikTok`);
-    if (room.tiktokClient === tiktokClient) room.tiktokClient = null;
+    console.error(`   Make sure @${normalizedUsername} is currently LIVE on TikTok`);
+    if (isActiveTikTokConnection(room, tiktokClient, connection.id)) {
+      emitTikTokConnectionStatus(room, {
+        status: 'error',
+        disconnectedAt: Date.now(),
+        error: err?.message || String(err || 'Could not connect'),
+      });
+      room.tiktokClient = null;
+    }
     if (client === tiktokClient) client = null;
   });
+  return buildTikTokConnectionStatus(room);
 }
 
 function disconnectStreamer(room = getDefaultRoom()) {
-  safeDisconnectClient(room);
+  safeDisconnectClient(room, 'operator_disconnect');
   if (!room || room.roomId === DEFAULT_ROOM_ID) currentStreamer = '';
-  if (room) room.streamerUsername = '';
+  if (room) {
+    room.streamerUsername = '';
+    resetRoomLiveRuntime(room, { reason: 'operator_disconnect', clearPlayers: true });
+    emitTikTokConnectionStatus(room, {
+      username: '',
+      status: 'disconnected',
+      disconnectedAt: Date.now(),
+      reason: 'operator_disconnect',
+      error: '',
+    });
+  }
 }
 
 function getTopPlayers(roomOrCount = 20, count = 20) {

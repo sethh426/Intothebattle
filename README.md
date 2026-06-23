@@ -92,7 +92,7 @@ devops/prometheus/                Prometheus configuration
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 24
 - npm
 - PostgreSQL connection string, or Docker Compose
 - TikTok API key/integration token
@@ -230,7 +230,7 @@ Current technical debt:
 
 - Schema bootstrapping and `ALTER TABLE` patches are still handled in `db.js`.
 - Future work should move this into versioned migrations.
-- Some legacy JSON/disk references remain for migration compatibility and upload metadata.
+- Runtime player state is stored in the database and reset per live stream; legacy flat-file player snapshots are no longer loaded.
 - Full JSON cleanup is paused until the Phaser 4 rewrite direction is ready.
 
 ## Runtime Storage
@@ -243,8 +243,6 @@ Expected persistent file storage:
 backgrounds/<roomId>/             Uploaded background images
 audio/<roomId>/                   Uploaded audio files
 ```
-
-Do not treat `players_<roomId>.json` as the desired long-term storage path. It is legacy/migration-only while the game layer is being rewritten.
 
 ## Important URLs
 
@@ -358,17 +356,16 @@ Postmark production setup:
 - Verify `intothebattle.com` or the exact `no-reply@intothebattle.com` sender signature in Postmark before sending.
 - Keep transactional app emails in the `outbound` Message Stream unless you create a dedicated transactional stream and set `POSTMARK_MESSAGE_STREAM` to that stream ID.
 - Set `POSTMARK_TEST_EMAIL` locally or temporarily on Render when running `npm run test:postmark`.
-- Check `/api/runtime/diagnostics?token=<diagnostics-or-metrics-token>` for the `email` block; it reports whether the token, sender, stream, and base URL are configured without exposing secrets.
-- Send a live production test with `POST /api/runtime/email-test?token=<diagnostics-or-metrics-token>` and JSON body `{"to":"you@example.com"}`. It returns the Postmark message id or the provider error without exposing secrets.
+- Check `/api/runtime/diagnostics` with `Authorization: Bearer <diagnostics-or-metrics-token>` for the `email` block; it reports whether the token, sender, stream, and base URL are configured without exposing secrets.
+- Send a live production test with `POST /api/runtime/email-test`, `Authorization: Bearer <diagnostics-or-metrics-token>`, and JSON body `{"to":"you@example.com"}`. It returns the Postmark message id or the provider error without exposing secrets.
 
 Use a managed PostgreSQL service for production. Do not rely on local JSON files or ephemeral app storage for production state.
 
 Render recovery checks:
 
 ```bash
-curl -fsS https://tiktokbr.onrender.com/healthz
-curl -fsS "https://tiktokbr.onrender.com/api/runtime/diagnostics?token=$METRICS_TOKEN"
 curl -fsS https://www.intothebattle.com/healthz
+curl -fsS -H "Authorization: Bearer $METRICS_TOKEN" https://www.intothebattle.com/api/runtime/diagnostics
 ```
 
 The diagnostics response reports runtime bind settings, whether required secrets are present, storage writability under `DISK_PATH`, and the background database connection state. It never returns secret values.

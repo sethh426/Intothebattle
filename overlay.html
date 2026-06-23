@@ -4862,11 +4862,11 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     const defaultGemIcon = '\u{1F48E}';
     const customIcon = player.iconEmoji;
     if (customIcon && customIcon !== defaultSwordIcon && customIcon !== defaultGemIcon) {
-      ctx.font = `${avatarR * 1.04}px Arial`;
+      ctx.font = `${avatarR * 1.248}px Arial`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
       ctx.fillText(customIcon, pos.x, avatarY);
     } else {
-      drawBattleInsignia(pos.x, avatarY, avatarR * 0.78, rank === 1 ? '#ffd451' : '#7afcff');
+      drawBattleInsignia(pos.x, avatarY, avatarR * 0.936, rank === 1 ? '#ffd451' : '#7afcff');
     }
 
     const name = (player.nickname || player.uniqueId || 'Player').slice(0, 20);
@@ -5502,6 +5502,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     for (const key in state) {
       const value = state[key];
       if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+      if (value.alive === false) continue;
       const p = { ...value };
       p.uniqueId = p.uniqueId || p.id || key;
       out[p.uniqueId] = p;

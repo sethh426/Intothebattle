@@ -370,6 +370,34 @@ try {
   primaryOverlay.emit('sponsorPlaybackEvent', { breakId: sponsorPlay.breakId, status: 'completed', readyState: 4, currentTime: 5 });
   await completedPromise;
 
+  const livePlayersPromise = waitForEvent(
+    primaryOverlay,
+    'gameState',
+    payload => Object.values(payload || {}).some(player => player?.alive),
+    10000
+  );
+  const followTestRes = await request('/api/overlay/test/follow', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(followTestRes.status === 200, `overlay follow test should return 200, got ${followTestRes.status}`);
+  await livePlayersPromise;
+
+  const resetStreamPromise = waitForEvent(dashboard, 'tiktokConnection', payload => payload.status === 'disconnected', 10000);
+  const resetGameStatePromise = waitForEvent(
+    primaryOverlay,
+    'gameState',
+    payload => Object.values(payload || {}).filter(player => player?.alive).length === 0,
+    10000
+  );
+  const resetRes = await request('/api/reset', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(resetRes.status === 200, `stream reset should return 200, got ${resetRes.status}`);
+  await resetStreamPromise;
+  await resetGameStatePromise;
+
   for (let index = overlaySockets.length - 1; index >= 0; index--) {
     const expectedCount = index;
     const dashboardDisconnectedCountPromise = waitForEvent(

@@ -414,6 +414,11 @@ function buildAdminLiveActivity() {
         owner,
         streamerUsername: room.streamerUsername || '',
         connected: Boolean(room.tiktokClient && room.tiktokClient.connected),
+        streamStatus: room.tiktokConnection?.status || (room.tiktokClient?.connected ? 'connected' : 'disconnected'),
+        streamConnectionId: room.tiktokConnection?.id || '',
+        lastEventType: room.tiktokConnection?.lastEventType || '',
+        lastEventAt: room.tiktokConnection?.lastEventAt || null,
+        staleEventsDropped: Number(room.staleTikTokEventsDropped) || 0,
         overlayCount: Number(room.overlayCount) || 0,
         playerCount: Object.values(room?.players || {}).filter(player => player && player.alive).length,
         topPlayers: players,
@@ -485,11 +490,14 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     const topPlayers = (item.topPlayers || [])
       .map(player => `${player.name}${player.kills ? ` (${player.kills}K)` : ''}`)
       .join(', ');
-    const status = item.connected ? 'TikTok connected' : item.streamerUsername ? 'Stream pending' : 'No TikTok stream';
+    const status = item.streamStatus || (item.connected ? 'connected' : item.streamerUsername ? 'pending' : 'disconnected');
+    const lastEvent = item.lastEventAt
+      ? `${item.lastEventType || 'event'} ${formatSponsorDate(item.lastEventAt)}`
+      : (item.staleEventsDropped ? `${item.staleEventsDropped} stale event(s) dropped` : 'No live events yet');
     return `<tr data-live-room-row>
       <td><strong>${escapeHtml(item.roomId)}</strong><br><span class="muted">${escapeHtml(owner.accountType || 'Room')}</span></td>
       <td><strong>${escapeHtml(owner.email || owner.name || 'Unknown owner')}</strong><br><span class="muted">${escapeHtml(owner.tiktok ? `@${owner.tiktok}` : owner.plan || '')}</span></td>
-      <td>${escapeHtml(item.streamerUsername ? `@${item.streamerUsername}` : '')}<br><span class="muted">${escapeHtml(status)}</span></td>
+      <td>${escapeHtml(item.streamerUsername ? `@${item.streamerUsername}` : '')}<br><span class="muted">${escapeHtml(status)} - ${escapeHtml(lastEvent)}</span></td>
       <td>${escapeHtml(String(item.overlayCount))}</td>
       <td>${escapeHtml(String(item.playerCount))}</td>
       <td>${escapeHtml(topPlayers || 'No active players')}</td>
@@ -709,11 +717,14 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
           const name = player.name || player.id || 'Player';
           return name + (player.kills ? ' (' + player.kills + 'K)' : '');
         }).join(', ') || 'No active players';
-        const status = item.connected ? 'TikTok connected' : item.streamerUsername ? 'Stream pending' : 'No TikTok stream';
+        const status = item.streamStatus || (item.connected ? 'connected' : item.streamerUsername ? 'pending' : 'disconnected');
+        const lastEvent = item.lastEventAt
+          ? ((item.lastEventType || 'event') + ' ' + new Date(item.lastEventAt).toLocaleString())
+          : (item.staleEventsDropped ? item.staleEventsDropped + ' stale event(s) dropped' : 'No live events yet');
         return '<tr data-live-room-row>'
           + '<td><strong>' + escapeCell(item.roomId) + '</strong><br><span class="muted">' + escapeCell(owner.accountType || 'Room') + '</span></td>'
           + '<td><strong>' + escapeCell(owner.email || owner.name || 'Unknown owner') + '</strong><br><span class="muted">' + escapeCell(owner.tiktok ? '@' + owner.tiktok : owner.plan || '') + '</span></td>'
-          + '<td>' + escapeCell(item.streamerUsername ? '@' + item.streamerUsername : '') + '<br><span class="muted">' + escapeCell(status) + '</span></td>'
+          + '<td>' + escapeCell(item.streamerUsername ? '@' + item.streamerUsername : '') + '<br><span class="muted">' + escapeCell(status + ' - ' + lastEvent) + '</span></td>'
           + '<td>' + escapeCell(item.overlayCount) + '</td>'
           + '<td>' + escapeCell(item.playerCount) + '</td>'
           + '<td>' + escapeCell(players) + '</td>'

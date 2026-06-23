@@ -843,6 +843,15 @@ socket.on('devModeChanged', data => { dashboardState.devTestMode = !!data.enable
 socket.on('audioConfig', cfg => { if (cfg) audioConfigData = cfg; renderAssignTable(); });
 socket.on('sponsorBreakStatus', data => updateSponsorBreakStatus(data || {}));
 socket.on('sessionStatus', data => renderSessionStatus(data || {}));
+socket.on('tiktokConnection', data => {
+  const stream = data || {};
+  setTikTokStatus(stream.status || (stream.connected ? 'connected' : 'disconnected'), stream.username || '');
+  if (stream.username && document.activeElement !== document.getElementById('username')) {
+    document.getElementById('username').value = stream.username;
+  }
+  if (stream.status === 'error') toast(stream.error || 'TikTok connection failed', true);
+  if (stream.status === 'reconnecting') toast('TikTok stream reconnecting...');
+});
 socket.on('roundEvent', data => {
   if (data?.title) toast(data.title);
 });
@@ -865,9 +874,12 @@ function setTikTokStatus(state, username) {
   if (state === 'connected') {
     chip.className = 'status-chip online';
     label.textContent = `Connected to @${username}`;
-  } else if (state === 'connecting') {
+  } else if (state === 'connecting' || state === 'reconnecting') {
     chip.className = 'status-chip idle';
-    label.textContent = 'Connecting...';
+    label.textContent = state === 'reconnecting' ? `Reconnecting${username ? ` @${username}` : ''}...` : `Connecting${username ? ` @${username}` : ''}...`;
+  } else if (state === 'error') {
+    chip.className = 'status-chip offline';
+    label.textContent = 'Connection error';
   } else {
     chip.className = 'status-chip offline';
     label.textContent = 'Disconnected';
@@ -984,7 +996,8 @@ async function fetchStatus() {
     dashboardState.devTestMode = !!data.devTestMode;
     text('player-count', dashboardState.playerCount);
     updateBackgroundPreview(data.background?.filename || '', data.background?.originalName || data.background?.filename || '', data.background?.url || '');
-    setTikTokStatus(data.connected ? 'connected' : 'disconnected', data.username);
+    const stream = data.stream || {};
+    setTikTokStatus(stream.status || (data.connected ? 'connected' : 'disconnected'), stream.username || data.username);
     const devValue = data.devTestMode ? 'ON' : 'OFF';
     text('dev-mode-badge', devValue);
     if (data.overlayCount !== undefined) setOverlayCount(data.overlayCount);
@@ -1026,7 +1039,7 @@ function openOverlayV2Source(render = '1080p') {
 
 const usernameInput = document.getElementById('username');
 if (usernameInput) usernameInput.addEventListener('input', event => { const input = event.target; const start = input.selectionStart; const end = input.selectionEnd; const normalized = input.value.toLowerCase(); if (normalized !== input.value) { input.value = normalized; if (typeof start === 'number' && typeof end === 'number') input.setSelectionRange(start, end); } });
-function connect() { let username = document.getElementById('username').value.trim().replace(/^@/, '').toLowerCase(); if (!username) return toast('Enter a username', true); setTikTokStatus('connecting', username); fetch('/api/connect', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body:JSON.stringify({ username }) }).then(r=>r.json()).then(d=>{ if(d.success){ setTikTokStatus('connected', username); toast(`Connected to @${username}`); } else { setTikTokStatus('disconnected'); toast(d.error || 'Connection failed', true); }}).catch(()=>{ setTikTokStatus('disconnected'); toast('Connection failed', true); }); }
+function connect() { let username = document.getElementById('username').value.trim().replace(/^@/, '').toLowerCase(); if (!username) return toast('Enter a username', true); setTikTokStatus('connecting', username); fetch('/api/connect', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body:JSON.stringify({ username }) }).then(r=>r.json()).then(d=>{ if(d.success){ setTikTokStatus(d.status || 'connecting', d.username || username); toast(`Connecting to @${d.username || username}`); } else { setTikTokStatus('error'); toast(d.error || 'Connection failed', true); }}).catch(()=>{ setTikTokStatus('error'); toast('Connection failed', true); }); }
 function resetTikTok(){ apiCall('/api/reset').then(()=>{ setTikTokStatus('disconnected'); toast('Disconnected'); }); }
 function reloadOverlay(){ apiCall('/api/overlay/reload'); toast('Overlay reload signal sent'); }
 function clearPlayers(){ if(confirm('Clear all players?')) apiCall('/api/players/clear').then(()=>toast('Players cleared')); }

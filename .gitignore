@@ -2,6 +2,7 @@
 node_modules/
 backgrounds/
 players.json
+players_*.json
 tiktokbr.db
 tiktokbr/*.db*
 data/

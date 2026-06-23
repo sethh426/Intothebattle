@@ -29,7 +29,7 @@ Run production launch readiness after deploy:
 DIAGNOSTICS_TOKEN=your-token npm run launch:check:remote
 ```
 
-The production readiness endpoint is protected at `/api/runtime/launch-readiness` and should be called with a bearer token, `x-diagnostics-token`, or `?token=`.
+The production readiness endpoint is protected at `/api/runtime/launch-readiness` and should be called with `Authorization: Bearer <token>` or `x-diagnostics-token`. Do not put production tokens in query strings.
 
 ## Required Production Environment
 

@@ -1,4 +1,4 @@
-Schema validation summary: files scanned: 21, files with JSON-LD: 11, blocks: 11, errors: 0, warnings: 0
+Schema validation summary: files scanned: 22, files with JSON-LD: 11, blocks: 11, errors: 0, warnings: 0
 - 404.html: no JSON-LD blocks found
 - battle-clip.html: no JSON-LD blocks found
 - dashboard-welcome.html: no JSON-LD blocks found
@@ -12,6 +12,7 @@ Schema validation summary: files scanned: 21, files with JSON-LD: 11, blocks: 11
 - overlay-legacy.html: 1 JSON-LD block(s)
   - block #1: OK
 - overlay-phaser.html: no JSON-LD blocks found
+- overlay-v2.html: no JSON-LD blocks found
 - overlay.html: 1 JSON-LD block(s)
   - block #1: OK
 - paywall.html: 1 JSON-LD block(s)

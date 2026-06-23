@@ -94,8 +94,8 @@ function checkServerRiskSignals() {
     addWarning('Legacy dashboard password/cookie auth code is still present. Confirm it is required or remove it.');
   }
 
-  if (server.includes('JSON.parse(fs.readFileSync') || (server.includes('readFileSync') && server.includes('playerStatsFile'))) {
-    addWarning('Legacy JSON migration/read path still exists. Keep it temporary and remove after migration is complete.');
+  if (server.includes('playerStatsFile')) {
+    addWarning('Legacy player JSON migration/read path still exists. Keep it temporary and remove after migration is complete.');
   }
 
   if (!server.includes('validateRuntimeConfiguration()')) {

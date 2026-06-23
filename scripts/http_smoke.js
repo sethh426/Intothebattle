@@ -127,15 +127,15 @@ try {
   assert(paypalConfigBody.authenticated === false, 'unauthenticated paypal config should return safe login prompt');
   assert(!paypalConfigBody.clientId, 'unauthenticated paypal config should not expose client id');
   await expectStatus('/metrics', 401);
-  await expectStatus(`/metrics?token=${encodeURIComponent(metricsToken)}`, 200);
+  await expectStatus('/metrics', 200, { headers: { Authorization: `Bearer ${metricsToken}` } });
   await expectStatus('/api/runtime/diagnostics', 401);
-  const diagnostics = await expectStatus(`/api/runtime/diagnostics?token=${encodeURIComponent(metricsToken)}`, 200);
+  const diagnostics = await expectStatus('/api/runtime/diagnostics', 200, { headers: { Authorization: `Bearer ${metricsToken}` } });
   const diagnosticsBody = await diagnostics.json();
   assert(diagnosticsBody.ok === true, 'diagnostics should report ok');
   assert(diagnosticsBody.storage?.ok === true, 'diagnostics storage check should report ok');
   assert(diagnosticsBody.database?.mode === 'stub', 'diagnostics should report stub database in smoke mode');
   await expectStatus('/api/runtime/launch-readiness', 401);
-  const readiness = await expectStatus(`/api/runtime/launch-readiness?token=${encodeURIComponent(metricsToken)}`, 200);
+  const readiness = await expectStatus('/api/runtime/launch-readiness', 200, { headers: { Authorization: `Bearer ${metricsToken}` } });
   const readinessBody = await readiness.json();
   assert(readinessBody.ok === true, 'launch readiness should have no hard failures in smoke mode');
   assert(readinessBody.checks?.some(check => check.id === 'storage-writable' && check.status === 'pass'), 'launch readiness should include storage check');
