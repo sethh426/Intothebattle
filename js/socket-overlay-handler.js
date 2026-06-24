@@ -232,6 +232,9 @@ function initSocketOverlay(game) {
     if (settings.shotSpeed !== undefined && scene.updateLayoutConfig) {
       scene.updateLayoutConfig('shotSpeed', Number(settings.shotSpeed));
     }
+    if (settings.backgroundFit && scene.updateBackgroundFit) {
+      scene.updateBackgroundFit(settings.backgroundFit);
+    }
   });
   socket.on('laserColor', (data) => {
     const color = typeof data === 'string' ? data : data && data.color;

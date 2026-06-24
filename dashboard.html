@@ -58,7 +58,7 @@
     .btn-danger { color:#fff; background:var(--red); }
     .btn-warning { color:#170c02; background:var(--gold); }
     .btn-purple { color:#071009; background:var(--cyan); }
-    .ops-strip { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:24px; }
+    .ops-strip { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:24px; }
     .ops-stat { min-width:0; padding:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.22); border-radius:18px; }
     .ops-stat span { display:block; color:var(--muted); font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
     .ops-stat strong { display:block; margin-top:6px; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -83,6 +83,11 @@
     .setup-step span { color:var(--muted); font-size:12px; line-height:1.35; }
     .setup-step.ready { border-color:rgba(119,240,161,.28); background:rgba(119,240,161,.07); }
     .setup-step.ready span { color:#b8ffd0; }
+    .next-action-panel { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px; align-items:center; margin-top:14px; padding:16px; border-radius:18px; border:1px solid rgba(119,240,161,.24); background:linear-gradient(135deg,rgba(119,240,161,.09),rgba(85,231,255,.045)); }
+    .next-action-title { color:#fff8e6; font-size:16px; font-weight:950; line-height:1.15; }
+    .next-action-copy { margin-top:4px; color:var(--muted); font-size:13px; font-weight:800; line-height:1.4; }
+    .next-action-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+    .next-action-actions .btn { min-height:42px; padding:0 13px; }
     .copy-field { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; margin:14px 0; }
     .copy-field input { min-width:0; font-size:12px; color:#dfe8f8; }
     .overlay-v2-panel { margin-top:14px; padding:14px; border-radius:18px; border:1px solid rgba(85,231,255,.2); background:linear-gradient(180deg,rgba(85,231,255,.075),rgba(0,0,0,.16)); display:grid; gap:12px; }
@@ -168,8 +173,10 @@
     .drop-zone { position:relative; border:1px dashed rgba(246,201,91,.36); background:rgba(246,201,91,.055); border-radius:22px; padding:26px; text-align:center; margin-bottom:16px; }
     .drop-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; }
     .drop-icon { font-size:34px; margin-bottom:8px; }.drop-title { font-weight:900; }.drop-sub { color:var(--muted); font-size:12px; margin-top:5px; }
-    .background-preview { display:grid; place-items:center; min-height:180px; margin-top:14px; border-radius:20px; border:1px solid rgba(85,231,255,.18); background:linear-gradient(135deg,rgba(85,231,255,.08),rgba(246,201,91,.055)),#050810; overflow:hidden; }
-    .background-preview img { width:100%; height:100%; min-height:180px; max-height:260px; object-fit:contain; background:#02040a; display:block; }
+    .background-preview { display:grid; place-items:center; aspect-ratio:16/9; margin-top:14px; border-radius:20px; border:1px solid rgba(85,231,255,.18); background:linear-gradient(135deg,rgba(85,231,255,.08),rgba(246,201,91,.055)),#050810; overflow:hidden; }
+    .background-preview img { width:100%; height:100%; object-fit:contain; background:#02040a; display:block; }
+    .background-preview.fit-cover img { object-fit:cover; }
+    .background-preview.fit-contain img { object-fit:contain; }
     .background-preview.empty img { display:none; }
     .background-preview span { color:var(--muted); font-size:13px; font-weight:800; text-align:center; padding:20px; }
     .audio-layout,.sponsor-layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
@@ -247,6 +254,10 @@
     .audio-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:800; }
     .audio-size { color:var(--dim); font-size:11px; }
     .assign-table { width:100%; border-collapse:collapse; }.assign-table td { padding:10px 0; border-bottom:1px solid rgba(255,255,255,.06); }
+    .assign-select-cell { padding-left:14px; }
+    .assignment-meta { margin-top:6px; color:var(--dim); font-size:11px; font-weight:800; line-height:1.35; }
+    .assign-actions { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; padding-left:10px; }
+    .assign-actions .btn { min-height:36px; padding:0 11px; font-size:12px; }
     .event-pill { min-width:86px; display:inline-flex; justify-content:center; padding:7px 10px; border-radius:999px; font-size:11px; font-weight:900; text-transform:uppercase; }
     .event-attack{background:rgba(85,231,255,.12);color:var(--cyan)}.event-gift{background:rgba(246,201,91,.12);color:var(--gold2)}.event-kill{background:rgba(232,59,95,.14);color:#ff9aa8}.event-heal{background:rgba(119,240,161,.12);color:var(--green)}.event-follow{background:rgba(255,255,255,.08);color:#fff}.event-respawn{background:rgba(85,231,255,.12);color:var(--cyan)}.event-social{background:rgba(153,255,218,.12);color:#99ffda}.event-surge{background:rgba(246,201,91,.14);color:var(--gold2)}
     details.tool { border:1px solid rgba(255,255,255,.09); border-radius:22px; background:rgba(255,255,255,.035); overflow:hidden; }
@@ -262,7 +273,7 @@
     .footer-btn.primary { color:#170c02; background:linear-gradient(135deg,var(--gold),#fff0b9 52%,var(--ember)); border:0; }
     @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,.sponsor-layout,.sponsor-upgrade,.ops-strip,.session-layout,.launch-checklist{grid-template-columns:1fr}#audioManagerCard,#toolsRail,#creatorSponsorCard{order:initial}}
     @media(max-width:860px){.session-status-grid,.session-control-grid{grid-template-columns:1fr}}
-    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.dashboard-nav{position:relative;top:auto}.dashboard-nav a{flex:1 1 120px}.workflow-summary{grid-template-columns:1fr;align-items:start}.workflow-status{width:fit-content}.workflow-toggle{position:absolute;right:18px;top:18px}.workflow-body{padding:14px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}.setup-steps{grid-template-columns:1fr}}
+    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.dashboard-nav{position:relative;top:auto}.dashboard-nav a{flex:1 1 120px}.workflow-summary{grid-template-columns:1fr;align-items:start}.workflow-status{width:fit-content}.workflow-toggle{position:absolute;right:18px;top:18px}.workflow-body{padding:14px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}.setup-steps,.next-action-panel{grid-template-columns:1fr}.next-action-actions{justify-content:stretch}.footer{position:sticky;bottom:10px;z-index:35;padding:10px;border:1px solid rgba(246,201,91,.24);border-radius:20px;background:rgba(5,7,11,.9);backdrop-filter:blur(16px);box-shadow:0 18px 60px rgba(0,0,0,.38)}.footer-btn{flex:1 1 130px}}
   </style>
 </head>
 <body>
@@ -286,13 +297,14 @@
       <h2>Stream room <span id="room-id-title">loading</span></h2>
       <p id="dashboard-summary">Checking stream, overlay, and media readiness.</p>
       <div class="launch-row">
-        <button class="btn btn-primary" onclick="openOverlay()">Open Overlay</button>
-        <button class="btn btn-secondary" onclick="copyOverlayUrl()">Copy Overlay URL</button>
+        <button class="btn btn-primary" onclick="startSetupRehearsal()">Start Setup Demo</button>
+        <button class="btn btn-secondary" onclick="copyOverlayUrl()">Copy Live OBS URL</button>
         <button class="btn btn-secondary" onclick="window.open('/stats','_blank')">View Stats</button>
       </div>
       <div class="ops-strip">
         <div class="ops-stat"><span>Room</span><strong id="room-id-copy">Loading</strong></div>
         <div class="ops-stat"><span>Overlay source</span><strong id="overlay-url-state">Loading URL</strong></div>
+        <div class="ops-stat"><span>TikTok</span><strong id="tiktok-username-copy">Not connected</strong></div>
         <div class="ops-stat"><span>Plan</span><strong id="plan-label-copy">Checking</strong></div>
       </div>
     </div>
@@ -341,6 +353,13 @@
         <div class="setup-step"><b>Test overlay</b><span>Run test burst</span></div>
         <div class="setup-step"><b>Go live</b><span>Session or boss wave</span></div>
       </div>
+      <div class="next-action-panel" id="nextActionPanel">
+        <div>
+          <div class="next-action-title" id="nextActionTitle">Preparing your setup flow</div>
+          <div class="next-action-copy" id="nextActionCopy">The dashboard is checking the room and signed overlay URL.</div>
+        </div>
+        <div class="next-action-actions" id="nextActionButtons"></div>
+      </div>
     </article>
 
     <article class="card col-4" id="connectCard">
@@ -355,28 +374,28 @@
       <div class="status-chip offline" id="overlay-chip"><span class="pulse-dot"></span><span id="overlay-label">No overlay connected</span></div>
       <div class="stat-box"><span class="stat-label">Active players</span><span class="stat-value" id="player-count">—</span></div>
       <div class="stat-box"><span class="stat-label">Dev mode</span><span class="stat-value" id="dev-mode-badge">OFF</span></div>
-      <div class="copy-field"><input type="text" id="overlayUrlField" readonly value="Loading signed overlay URL"><button class="btn btn-secondary" onclick="copyOverlayUrl()">Copy</button></div>
+      <div class="copy-field"><input type="text" id="overlayUrlField" readonly value="Loading signed overlay URL"><button class="btn btn-secondary" onclick="copyOverlayUrl()">Copy Live URL</button></div>
       <div class="setup-rehearsal-panel">
         <div><strong>Pre-live setup rehearsal</strong><p>Use a signed demo before TikTok connects. Configure the source, test motion, then reset before the real stream.</p></div>
         <div class="status-chip idle" id="setup-rehearsal-chip"><span class="pulse-dot"></span><span id="setup-rehearsal-label">Ready to rehearse</span></div>
         <div class="setup-rehearsal-grid">
-          <button class="btn btn-success" onclick="startSetupRehearsal()">Start Demo</button>
-          <button class="btn btn-secondary" onclick="openSetupOverlay()">Open Demo</button>
-          <button class="btn btn-secondary" onclick="copySetupOverlayUrl()">Copy Demo URL</button>
+          <button class="btn btn-success" onclick="startSetupRehearsal()">Start Setup Demo</button>
+          <button class="btn btn-secondary" onclick="openSetupOverlay()">Open Setup</button>
+          <button class="btn btn-secondary" onclick="copySetupOverlayUrl()">Copy Setup URL</button>
           <button class="btn btn-danger" onclick="resetSetupRehearsal()">Reset Demo</button>
         </div>
       </div>
       <div class="overlay-v2-panel">
         <div><strong>Phaser V2 test overlay</strong><p>Use these for sharp browser-source testing before switching the default overlay.</p></div>
         <div class="overlay-v2-grid">
-          <button class="btn btn-secondary" onclick="copyOverlayV2SourceUrl('1080p')">Copy V2 1080p</button>
-          <button class="btn btn-secondary" onclick="copyOverlayV2SourceUrl('1440p')">Copy V2 1440p</button>
-          <button class="btn btn-secondary" onclick="openOverlayV2Preview()">Preview V2</button>
-          <button class="btn btn-primary" onclick="openOverlayV2Source('1080p')">Use V2 Test</button>
+          <button class="btn btn-secondary" onclick="copyOverlayV2SourceUrl('1080p')">Copy 1080p Source</button>
+          <button class="btn btn-secondary" onclick="copyOverlayV2SourceUrl('1440p')">Copy 1440p Source</button>
+          <button class="btn btn-secondary" onclick="openOverlayV2Preview()">Preview Phaser V2</button>
+          <button class="btn btn-primary" onclick="openOverlayV2Source('1080p')">Open V2 1080p</button>
         </div>
       </div>
       <div class="divider"></div>
-      <div class="btn-row"><button class="btn btn-primary" onclick="openOverlay()">Open Overlay</button><button class="btn btn-success" onclick="testOverlayBurst()">Test My Overlay</button><button class="btn btn-secondary" onclick="reloadOverlay()">Reload</button></div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="openOverlay()">Open Live Overlay</button><button class="btn btn-success" onclick="testOverlayBurst()">Test Live Overlay</button><button class="btn btn-secondary" onclick="reloadOverlay()">Reload Overlay</button></div>
     </article>
       </div>
     </details>
@@ -391,6 +410,7 @@
     <article class="card col-4" id="sceneCard">
       <div class="card-head"><div><div class="card-title">Step 3</div><h3>Visual polish</h3></div><span class="card-badge">Look & feel</span></div>
       <div class="form-group"><label class="input-label">Background</label><input type="file" id="bgUpload" accept="image/jpeg,image/png,image/gif,image/webp"></div>
+      <div class="form-group"><label class="input-label">Background fit</label><select id="backgroundFitInput" onchange="saveBackgroundFit()"><option value="contain">Show full image</option><option value="cover">Fill overlay frame</option></select><p class="muted" style="margin-top:8px;">Show full image prevents cropping. Fill overlay frame removes empty bars.</p></div>
       <div class="btn-row"><button class="btn btn-primary" onclick="uploadBackground()">Upload</button><button class="btn btn-warning" onclick="clearBackground()">Clear</button></div>
       <p id="bgStatus" class="muted" style="margin-top:12px;">No background set</p>
       <div class="background-preview empty" id="backgroundPreview">
@@ -519,7 +539,7 @@
                   <div class="col-6"><label class="input-label">Audio</label><select id="sponsorMutedInput"><option value="true" selected>Muted autoplay</option><option value="false">Try video audio</option></select></div>
                   <div class="col-6"><label class="input-label">Battle stats</label><select id="sponsorStatsModeInput"><option value="endcap" selected>End-cap stats (recommended)</option><option value="delayed">Side stats after intro</option><option value="hidden">Hide during video</option><option value="always">Always show</option></select></div>
                 </div>
-                <div class="btn-row" style="margin-top:16px;"><button class="btn btn-success" onclick="playSponsorScene()">Run Moment</button><button class="btn btn-secondary" onclick="openSponsorPreview()">Preview</button><button class="btn btn-danger" onclick="stopSponsorScene()">Stop</button></div>
+                <div class="btn-row" style="margin-top:16px;"><button class="btn btn-success" id="runSponsorButton" onclick="playSponsorScene()">Run Selected Moment</button><button class="btn btn-secondary" id="previewSponsorButton" onclick="openSponsorPreview()">Preview Selected</button><button class="btn btn-danger" onclick="stopSponsorScene()">Stop</button></div>
               </div>
             </div>
           </details>
@@ -558,7 +578,7 @@
           <summary>Uploaded library</summary>
           <div class="tool-body">
             <div class="section-title">Uploaded sounds</div>
-            <div class="audio-files" id="audioLibrary"><p class="muted">No audio uploaded yet.</p></div>
+            <div class="audio-files" id="audioLibrary"><p class="muted">No sounds uploaded yet. Add short MP3, WAV, or OGG files, then assign them to events.</p></div>
           </div>
         </details>
         <details class="tool subtool">
@@ -588,7 +608,7 @@
     </details>
   </section>
 
-  <div class="footer"><button class="footer-btn primary" onclick="openOverlay()">Open Overlay</button><button class="footer-btn" onclick="copyOverlayUrl()">Copy Overlay URL</button><button class="footer-btn" onclick="window.open('/stats','_blank')">Stats</button><button class="footer-btn" onclick="window.location.reload()">Refresh</button></div>
+  <div class="footer"><button class="footer-btn primary" onclick="startSetupRehearsal()">Start Demo</button><button class="footer-btn" onclick="copySetupOverlayUrl()">Copy Demo URL</button><button class="footer-btn" onclick="copyOverlayUrl()">Copy Live URL</button><button class="footer-btn" onclick="openOverlay()">Open Live</button></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -624,6 +644,7 @@ const dashboardState = {
   overlayUrlCopied: false,
   overlayTested: false,
   eventStarted: false,
+  backgroundFit: 'contain',
 };
 const WORKFLOW_STORAGE_KEY = 'intothebattle.dashboard.workflows';
 function workflowDetails() {
@@ -679,6 +700,65 @@ function updateWorkflowStatuses() {
     dashboardState.audioCount ? 'ready' : 'warn'
   );
   setWorkflowStatus('toolsWorkflowStatus', dashboardState.devTestMode ? 'Dev mode on' : 'Collapsed', dashboardState.devTestMode ? 'warn' : 'ready');
+}
+function renderNextAction() {
+  const title = document.getElementById('nextActionTitle');
+  const copy = document.getElementById('nextActionCopy');
+  const buttons = document.getElementById('nextActionButtons');
+  if (!title || !copy || !buttons) return;
+  let titleText = 'Finish setup in order';
+  let copyText = 'Start with the setup demo so OBS/TikTok Studio is configured before the live stream connects.';
+  let actions = [];
+  if (!currentOverlayUrl && !currentSetupOverlayUrl) {
+    titleText = 'Signed overlay URL is loading';
+    copyText = 'Wait a moment for the dashboard to receive a room-safe OBS URL.';
+    actions = [{ label: 'Refresh Status', className: 'btn btn-secondary', onClick: fetchStatus }];
+  } else if (!dashboardState.setupRehearsalActive && !dashboardState.overlayTested) {
+    titleText = 'Start the setup demo first';
+    copyText = 'This creates activity in the overlay before TikTok connects, so the browser source can be positioned with confidence.';
+    actions = [{ label: 'Start Setup Demo', className: 'btn btn-primary', onClick: startSetupRehearsal }];
+  } else if (!dashboardState.overlayUrlCopied) {
+    titleText = 'Copy the OBS browser-source URL';
+    copyText = 'Paste the signed URL into TikTok Studio or OBS as a browser source.';
+    actions = [
+      { label: 'Copy Live URL', className: 'btn btn-primary', onClick: copyOverlayUrl },
+      { label: 'Copy Setup URL', className: 'btn btn-secondary', onClick: copySetupOverlayUrl },
+    ];
+  } else if (!dashboardState.overlayConnected) {
+    titleText = 'Open or activate the overlay source';
+    copyText = 'The dashboard has not seen a browser source connect yet. Open the setup demo or refresh the source in TikTok Studio.';
+    actions = [
+      { label: 'Open Setup', className: 'btn btn-primary', onClick: openSetupOverlay },
+      { label: 'Open Live Overlay', className: 'btn btn-secondary', onClick: openOverlay },
+    ];
+  } else if (!dashboardState.overlayTested) {
+    titleText = 'Send one test event';
+    copyText = 'A test burst confirms comments, attacks, audio, and browser-source rendering are flowing.';
+    actions = [{ label: 'Test My Overlay', className: 'btn btn-primary', onClick: testOverlayBurst }];
+  } else if (!dashboardState.tiktokConnected) {
+    titleText = 'Connect TikTok when ready';
+    copyText = 'Now that the overlay has been tested, enter the TikTok username and connect the live stream.';
+    actions = [{ label: 'Focus Username', className: 'btn btn-primary', onClick: () => document.getElementById('username')?.focus() }];
+  } else if (!dashboardState.eventStarted) {
+    titleText = 'Ready for the first battle';
+    copyText = 'The core setup is online. Start a session or run a boss wave when the live begins.';
+    actions = [{ label: 'Start Session', className: 'btn btn-primary', onClick: () => sessionAction('/api/session/start','Session started') }];
+  } else {
+    titleText = 'Live control is ready';
+    copyText = 'Monitor the overlay, run tests carefully, and use the live controls during the stream.';
+    actions = [{ label: 'View Stats', className: 'btn btn-secondary', onClick: () => window.open('/stats','_blank') }];
+  }
+  title.textContent = titleText;
+  copy.textContent = copyText;
+  buttons.innerHTML = '';
+  actions.forEach(action => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = action.className;
+    button.textContent = action.label;
+    button.onclick = action.onClick;
+    buttons.appendChild(button);
+  });
 }
 const EVENTS = ['attack','gift','kill','respawn','heal','follow','socialBoost','engagementSurge'];
 const EVENT_LABELS = { attack:'Attack', gift:'Gift', kill:'Kill', respawn:'Respawn', heal:'Heal', follow:'Follow', socialBoost:'Share/Repost boost', engagementSurge:'Audience surge' };
@@ -796,6 +876,7 @@ function setOverlayCount(count) {
     label.textContent = 'No overlay connected';
   }
   updateReadinessChecklist();
+  updateSponsorActionState();
 }
 function setSetupRehearsalStatus(data = {}) {
   dashboardState.setupRehearsalActive = !!data.active;
@@ -812,7 +893,8 @@ function setSetupRehearsalStatus(data = {}) {
   updateSetupChecklist();
 }
 function overlayV2VariantUrl(render = '1080p', sourceMode = true) {
-  const base = currentOverlayV2Url || currentOverlayUrl || `${window.location.origin}/overlay-v2`;
+  const base = currentOverlayV2Url || currentOverlayUrl;
+  if (!base) return '';
   const url = new URL(base, window.location.origin);
   url.pathname = url.pathname.replace(/\/overlay$/, '/overlay-v2');
   url.searchParams.set('render', render === '1440p' ? '1440p' : '1080p');
@@ -821,7 +903,8 @@ function overlayV2VariantUrl(render = '1080p', sourceMode = true) {
   return url.toString();
 }
 function setupOverlayUrl() {
-  const base = currentSetupOverlayUrl || currentOverlayUrl || `${window.location.origin}/overlay`;
+  const base = currentSetupOverlayUrl || currentOverlayUrl;
+  if (!base) return '';
   const url = new URL(base, window.location.origin);
   url.pathname = url.pathname.replace(/\/overlay-v2$/, '/overlay');
   url.searchParams.set('setup', '1');
@@ -830,7 +913,8 @@ function setupOverlayUrl() {
   return url.toString();
 }
 function setupOverlayV2Url(render = '1080p') {
-  const base = currentSetupOverlayV2Url || currentOverlayV2Url || currentOverlayUrl || `${window.location.origin}/overlay-v2`;
+  const base = currentSetupOverlayV2Url || currentOverlayV2Url || currentOverlayUrl;
+  if (!base) return '';
   const url = new URL(base, window.location.origin);
   url.pathname = url.pathname.replace(/\/overlay$/, '/overlay-v2');
   url.searchParams.set('setup', '1');
@@ -849,12 +933,27 @@ function setOverlayUrl(url, v2Url = null, setupUrl = null, setupV2Url = null) {
   const display = currentOverlayUrl ? 'Signed URL ready' : 'URL unavailable';
   if (field) field.value = currentOverlayUrl || 'Signed overlay URL unavailable';
   if (label) label.textContent = display;
+  renderNextAction();
 }
 function setRoomLabel(roomId) {
   currentRoomId = roomId || currentRoomId || null;
   const value = currentRoomId || 'Loading';
   text('room-id-title', value);
   text('room-id-copy', value);
+}
+function normalizeBackgroundFit(value) {
+  return value === 'cover' ? 'cover' : 'contain';
+}
+function applyBackgroundFit(value) {
+  const fit = normalizeBackgroundFit(value);
+  dashboardState.backgroundFit = fit;
+  const input = document.getElementById('backgroundFitInput');
+  const preview = document.getElementById('backgroundPreview');
+  if (input) input.value = fit;
+  if (preview) {
+    preview.classList.toggle('fit-cover', fit === 'cover');
+    preview.classList.toggle('fit-contain', fit !== 'cover');
+  }
 }
 function readinessItem(title, detail, status, label) {
   return `<div class="readiness-item"><div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(detail)}</span></div><b class="readiness-pill ${status}">${escapeHtml(label)}</b></div>`;
@@ -894,6 +993,7 @@ function updateDashboardProgressLocks() {
   const gateReady = setupGateReady();
   const message = 'Wait for your signed overlay URL to load, then start the setup demo or copy the OBS source.';
   ['sceneCard', 'sessionDirectorCard', 'creatorSponsorCard', 'audioManagerCard', 'toolsRail'].forEach(id => setPanelLocked(id, !gateReady, message));
+  updateSponsorActionState();
 }
 function updateSetupChecklist() {
   const list = document.getElementById('setupChecklist');
@@ -926,6 +1026,7 @@ function updateSetupChecklist() {
     },
   ];
   list.innerHTML = steps.map(step => setupStep(step.title, step.detail, step.ready)).join('');
+  renderNextAction();
   updateDashboardProgressLocks();
   updateWorkflowStatuses();
 }
@@ -1107,19 +1208,24 @@ let initialLoad = true;
 function setTikTokStatus(state, username) {
   const chip = document.getElementById('tiktok-chip');
   const label = document.getElementById('tiktok-label');
+  const displayUsername = username ? `@${String(username).replace(/^@/, '')}` : '';
   dashboardState.tiktokConnected = state === 'connected';
   if (state === 'connected') {
     chip.className = 'status-chip online';
-    label.textContent = `Connected to @${username}`;
+    label.textContent = `Connected to ${displayUsername}`;
+    text('tiktok-username-copy', displayUsername);
   } else if (state === 'connecting' || state === 'reconnecting') {
     chip.className = 'status-chip idle';
-    label.textContent = state === 'reconnecting' ? `Reconnecting${username ? ` @${username}` : ''}...` : `Connecting${username ? ` @${username}` : ''}...`;
+    label.textContent = state === 'reconnecting' ? `Reconnecting${displayUsername ? ` ${displayUsername}` : ''}...` : `Connecting${displayUsername ? ` ${displayUsername}` : ''}...`;
+    text('tiktok-username-copy', displayUsername || 'Connecting');
   } else if (state === 'error') {
     chip.className = 'status-chip offline';
     label.textContent = 'Connection error';
+    text('tiktok-username-copy', displayUsername || 'Connection error');
   } else {
     chip.className = 'status-chip offline';
     label.textContent = 'Disconnected';
+    text('tiktok-username-copy', displayUsername || 'Not connected');
   }
   updateReadinessChecklist();
 }
@@ -1138,6 +1244,7 @@ function setSponsorControlsAvailability(enabled) {
     selectedSponsorFilename = '';
     renderSponsorLibrary();
   }
+  updateSponsorActionState();
 }
 function setSubscriptionChip(data) {
   const chip = document.getElementById('subscription-chip');
@@ -1186,6 +1293,7 @@ function updateBackgroundPreview(filename, label = filename, url = '') {
   const image = document.getElementById('backgroundPreviewImage');
   const empty = document.getElementById('backgroundPreviewEmpty');
   if (!wrap || !image || !empty) return;
+  applyBackgroundFit(dashboardState.backgroundFit);
   if (!filename) {
     dashboardState.backgroundReady = false;
     wrap.classList.add('empty');
@@ -1233,6 +1341,7 @@ async function fetchStatus() {
     dashboardState.playerCount = Number(data.playerCount || 0);
     dashboardState.devTestMode = !!data.devTestMode;
     text('player-count', dashboardState.playerCount);
+    applyBackgroundFit(data.overlaySettings?.backgroundFit || dashboardState.backgroundFit);
     updateBackgroundPreview(data.background?.filename || '', data.background?.originalName || data.background?.filename || '', data.background?.url || '');
     const stream = data.stream || {};
     setTikTokStatus(stream.status || (data.connected ? 'connected' : 'disconnected'), stream.username || data.username);
@@ -1248,15 +1357,16 @@ async function fetchStatus() {
   }
 }
 function openOverlay() {
-  if (!currentOverlayUrl) toast('Overlay URL is still loading', true);
-  window.open(currentOverlayUrl || '/overlay', '_blank');
+  if (!currentOverlayUrl) return toast('Signed live overlay URL is still loading', true);
+  window.open(currentOverlayUrl, '_blank');
 }
 function copyOverlayUrl() {
-  const url = currentOverlayUrl || `${window.location.origin}/overlay`;
+  if (!currentOverlayUrl) return toast('Signed live overlay URL is still loading', true);
+  const url = currentOverlayUrl;
   navigator.clipboard?.writeText(url).then(() => {
     dashboardState.overlayUrlCopied = true;
     updateSetupChecklist();
-    toast(currentOverlayUrl ? 'Overlay URL copied' : 'Fallback overlay URL copied');
+    toast('Live OBS URL copied. Paste it into TikTok Studio or OBS.');
   }).catch(() => toast('Copy failed', true));
 }
 async function startSetupRehearsal() {
@@ -1269,14 +1379,17 @@ async function startSetupRehearsal() {
   setSetupRehearsalStatus(result.setupRehearsal || { active: true });
   dashboardState.overlayTested = true;
   updateSetupChecklist();
-  toast('Setup demo started');
+  toast('Setup demo started. Open or copy the setup URL next.');
 }
 function openSetupOverlay() {
-  window.open(setupOverlayUrl(), '_blank');
+  const url = setupOverlayUrl();
+  if (!url) return toast('Setup demo URL is still loading', true);
+  window.open(url, '_blank');
   toast('Opened signed setup demo');
 }
 function copySetupOverlayUrl() {
   const url = setupOverlayUrl();
+  if (!url) return toast('Setup demo URL is still loading', true);
   navigator.clipboard?.writeText(url).then(() => {
     dashboardState.overlayUrlCopied = true;
     updateSetupChecklist();
@@ -1294,6 +1407,7 @@ async function resetSetupRehearsal() {
 }
 function copyOverlayV2SourceUrl(render = '1080p') {
   const url = overlayV2VariantUrl(render, true);
+  if (!url) return toast('Phaser V2 overlay URL is still loading', true);
   navigator.clipboard?.writeText(url).then(() => {
     dashboardState.overlayUrlCopied = true;
     updateSetupChecklist();
@@ -1301,23 +1415,37 @@ function copyOverlayV2SourceUrl(render = '1080p') {
   }).catch(() => toast('Copy failed', true));
 }
 function openOverlayV2Preview() {
-  window.open(overlayV2VariantUrl('1080p', false), '_blank');
+  const url = overlayV2VariantUrl('1080p', false);
+  if (!url) return toast('Phaser V2 overlay URL is still loading', true);
+  window.open(url, '_blank');
 }
 function openOverlayV2Source(render = '1080p') {
-  window.open(overlayV2VariantUrl(render, true), '_blank');
+  const url = overlayV2VariantUrl(render, true);
+  if (!url) return toast('Phaser V2 overlay URL is still loading', true);
+  window.open(url, '_blank');
   toast(`Opened Phaser V2 ${render === '1440p' ? '1440p' : '1080p'} test source`);
 }
 
 const usernameInput = document.getElementById('username');
 if (usernameInput) usernameInput.addEventListener('input', event => { const input = event.target; const start = input.selectionStart; const end = input.selectionEnd; const normalized = input.value.toLowerCase(); if (normalized !== input.value) { input.value = normalized; if (typeof start === 'number' && typeof end === 'number') input.setSelectionRange(start, end); } });
 function connect() { let username = document.getElementById('username').value.trim().replace(/^@/, '').toLowerCase(); if (!username) return toast('Enter a username', true); setTikTokStatus('connecting', username); fetch('/api/connect', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body:JSON.stringify({ username }) }).then(r=>r.json()).then(d=>{ if(d.success){ setTikTokStatus(d.status || 'connecting', d.username || username); toast(`Connecting to @${d.username || username}`); } else { setTikTokStatus('error'); toast(d.error || 'Connection failed', true); }}).catch(()=>{ setTikTokStatus('error'); toast('Connection failed', true); }); }
-function resetTikTok(){ apiCall('/api/reset').then(()=>{ setTikTokStatus('disconnected'); toast('Disconnected'); }); }
-function reloadOverlay(){ apiCall('/api/overlay/reload'); toast('Overlay reload signal sent'); }
-function clearPlayers(){ if(confirm('Clear all players?')) apiCall('/api/players/clear').then(()=>toast('Players cleared')); }
+function resetTikTok(){ if(dashboardState.tiktokConnected && !confirm('Disconnect TikTok LIVE for this room? The overlay stays signed, but the live feed will stop.')) return; apiCall('/api/reset').then(()=>{ setTikTokStatus('disconnected'); toast('TikTok disconnected'); }); }
+function reloadOverlay(){ if(overlayCount <= 0) return toast('No overlay source is connected to reload', true); apiCall('/api/overlay/reload'); toast('Overlay reload signal sent'); }
+function clearPlayers(){ if(confirm('Clear all players from this room now? This affects the live overlay immediately.')) apiCall('/api/players/clear').then(()=>toast('Players cleared from this room')); }
 function toggleDevMode(){ fetchStatus().then(()=>apiCall('/api/dev/test-mode','POST',{ enabled: document.getElementById('dev-mode-badge').textContent !== 'ON' })); }
-function uploadBackground(){ const file = document.getElementById('bgUpload').files[0]; if(!file) return toast('Choose an image first', true); const fd = new FormData(); fd.append('background', file); fetch('/api/background/upload', { method:'POST', credentials:'same-origin', body:fd }).then(r=>r.json()).then(d=>{ if(d.success){ updateBackgroundPreview(d.filename, file.name, d.background?.url || d.url || ''); toast('Background uploaded'); } else toast(d.error || 'Upload failed', true); }); }
-function clearBackground(){ apiCall('/api/background/clear').then(()=>{ updateBackgroundPreview(''); toast('Background cleared'); }); }
+function uploadBackground(){ const file = document.getElementById('bgUpload').files[0]; if(!file) return toast('Choose an image first', true); const fd = new FormData(); fd.append('background', file); fetch('/api/background/upload', { method:'POST', credentials:'same-origin', body:fd }).then(r=>r.json()).then(d=>{ if(d.success){ updateBackgroundPreview(d.filename, file.name, d.background?.url || d.url || ''); toast(`Background uploaded using ${dashboardState.backgroundFit === 'cover' ? 'fill frame' : 'show full image'} fit`); } else toast(d.error || 'Upload failed', true); }).catch(()=>toast('Background upload failed', true)); }
+function clearBackground(){ if(!confirm('Clear the current overlay background for this room?')) return; apiCall('/api/background/clear').then(()=>{ updateBackgroundPreview(''); toast('Background cleared'); }); }
+function saveBackgroundFit(){
+  const fit = normalizeBackgroundFit(document.getElementById('backgroundFitInput')?.value);
+  applyBackgroundFit(fit);
+  apiCall('/api/dev/overlay-settings','POST',{ backgroundFit: fit }).then(d => {
+    if (d.success) toast(`Background fit saved: ${fit === 'cover' ? 'fill overlay frame' : 'show full image'}`);
+  });
+}
 async function runOverlayTest(action){
+  if (overlayCount <= 0 && !dashboardState.setupRehearsalActive) {
+    return toast('Open the setup demo or live overlay before sending a test event', true);
+  }
   const result = await apiCall(`/api/overlay/test/${action}`);
   if (result.success) {
     dashboardState.overlayTested = true;
@@ -1335,6 +1463,7 @@ function testOverlayShare(){ runOverlayTest('share'); }
 function testOverlayRepost(){ runOverlayTest('repost'); }
 function testOverlayBurst(){ runOverlayTest('burst'); }
 async function startWeeklyBossEvent() {
+  if (!confirm('Start the weekly boss session and boss wave for this room now?')) return;
   await sessionAction('/api/session/start','Weekly boss session started');
   await sessionAction('/api/session/boss/start','Weekly boss wave started');
 }
@@ -1417,6 +1546,7 @@ function updateSponsorBreakStatus(data = {}) {
   document.querySelectorAll('[data-sponsor-step]').forEach((step, index) => {
     step.classList.toggle('active', activeIndex >= index);
   });
+  updateSponsorActionState();
 }
 function inspectSponsorFile(file) {
   const meta = document.getElementById('sponsorUploadMeta');
@@ -1500,19 +1630,57 @@ function updateSponsorSelectedSummary() {
   const file = selectedSponsorFile();
   const title = summary.querySelector('.sponsor-selected-title');
   const meta = summary.querySelector('.sponsor-selected-meta');
+  const pill = summary.querySelector('.sponsor-status-pill');
   if (!canUseCreatorSponsors) {
     if (title) title.textContent = 'Creator Pro feature';
     if (meta) meta.textContent = 'Upgrade to manage your own brand videos.';
+    if (pill) {
+      pill.className = 'sponsor-status-pill blocked';
+      pill.textContent = 'Locked';
+    }
+    updateSponsorActionState();
     return;
   }
   if (!file) {
     if (title) title.textContent = 'No sponsor video selected';
     if (meta) meta.textContent = 'Upload or select a creative.';
+    if (pill) {
+      pill.className = 'sponsor-status-pill warn';
+      pill.textContent = 'No video';
+    }
+    updateSponsorActionState();
     return;
   }
   const dimensions = file.width && file.height ? `${file.width}x${file.height}` : 'metadata pending';
   if (title) title.textContent = file.title || file.originalName || 'Power Moment';
   if (meta) meta.textContent = `${file.partner || 'Partner'} - ${sponsorReadinessLabel(file.readinessStatus)} - ${formatDuration(file.durationSeconds)} - ${dimensions}`;
+  if (pill) {
+    const issue = sponsorPlaybackIssue(file);
+    pill.className = `sponsor-status-pill ${issue ? 'warn' : String(file.readinessStatus || 'ready').toLowerCase()}`;
+    pill.textContent = issue ? 'Needs attention' : sponsorReadinessLabel(file.readinessStatus);
+  }
+  updateSponsorActionState();
+}
+function updateSponsorActionState() {
+  const runButton = document.getElementById('runSponsorButton');
+  const previewButton = document.getElementById('previewSponsorButton');
+  const file = selectedSponsorFile();
+  const playbackIssue = sponsorPlaybackIssue(file);
+  const signedUrlMissing = !currentOverlayUrl;
+  const runIssue = !canUseCreatorSponsors
+    ? 'Creator Pro or beta tester access is required.'
+    : playbackIssue || (overlayCount <= 0 ? 'Open the overlay before running a live moment.' : '');
+  const previewIssue = !canUseCreatorSponsors
+    ? 'Creator Pro or beta tester access is required.'
+    : playbackIssue || (signedUrlMissing ? 'Signed overlay URL is still loading.' : '');
+  if (runButton) {
+    runButton.disabled = Boolean(runIssue);
+    runButton.title = runIssue || 'Run the selected video on the connected overlay.';
+  }
+  if (previewButton) {
+    previewButton.disabled = Boolean(previewIssue);
+    previewButton.title = previewIssue || 'Open a signed browser preview for the selected video.';
+  }
 }
 function setSponsorInputs(file) {
   if (!file) return;
@@ -1538,7 +1706,7 @@ function renderSponsorLibrary() {
   }
   if (badge) badge.textContent = `${sponsorLibraryData.length} Video${sponsorLibraryData.length !== 1 ? 's' : ''}`;
   if (!sponsorLibraryData.length) {
-    container.innerHTML = '<p class="muted">No videos uploaded yet.</p>';
+    container.innerHTML = '<p class="muted">No videos uploaded yet. Add a 6-20 second MP4 creative, wait for it to show Ready, then preview it before running live.</p>';
     selectedSponsorFilename = '';
     updateSponsorSelectedSummary();
     updateReadinessChecklist();
@@ -1692,6 +1860,7 @@ function deleteSponsorVideo(filename) {
 }
 function openSponsorPreview() {
   if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro or beta tester access', true);
+  if (!currentOverlayUrl) return toast('Signed overlay URL is still loading', true);
   const payload = currentSponsorPayload();
   const overlayUrl = new URL(currentOverlayUrl || '/overlay', window.location.origin);
   overlayUrl.searchParams.set('sponsor_preview','1');
@@ -1723,7 +1892,7 @@ function renderAudioLibrary() {
   dashboardState.audioCount = audioLibraryData.length;
   document.getElementById('audioCountBadge').textContent = `${audioLibraryData.length} Sound${audioLibraryData.length !== 1 ? 's' : ''}`;
   if (!audioLibraryData.length) {
-    container.innerHTML = '<p class="muted">No audio uploaded yet.</p>';
+    container.innerHTML = '<p class="muted">No sounds uploaded yet. Add short MP3, WAV, or OGG files, then assign them to overlay events.</p>';
     updateReadinessChecklist();
     return;
   }
@@ -1735,8 +1904,29 @@ function renderAudioLibrary() {
   });
   updateReadinessChecklist();
 }
-function renderAssignTable(){ const tbody=document.getElementById('assignTableBody'); tbody.innerHTML=''; EVENTS.forEach(event=>{ const currentFile=audioConfigData[event] || ''; const tr=document.createElement('tr'); let options='<option value="">— None —</option>'; audioLibraryData.forEach(f=>{ options += `<option value="${f.filename}" ${currentFile===f.filename?'selected':''}>${escapeHtml(f.originalName)}</option>`; }); tr.innerHTML=`<td><span class="event-pill ${EVENT_CLASSES[event] || ''}">${EVENT_LABELS[event] || event}</span></td><td style="padding-left:14px"><select data-event="${event}" onchange="assignAudio('${event}', this.value)">${options}</select></td>`; tbody.appendChild(tr); }); }
-function assignAudio(event, filename){ fetch('/api/audio/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,filename:filename || null})}).then(r=>r.json()).then(d=>{ if(d.success) toast(`Assigned ${event} → ${filename || 'none'}`); else toast('Assignment failed', true); }); }
+function renderAssignTable(){
+  const tbody=document.getElementById('assignTableBody');
+  if (!tbody) return;
+  tbody.innerHTML='';
+  EVENTS.forEach(event=>{
+    const currentFile=audioConfigData[event] || '';
+    const selected = audioLibraryData.find(file => file.filename === currentFile);
+    const tr=document.createElement('tr');
+    let options='<option value="">No sound</option>';
+    audioLibraryData.forEach(f=>{
+      options += `<option value="${f.filename}" ${currentFile===f.filename?'selected':''}>${escapeHtml(f.originalName)}</option>`;
+    });
+    tr.innerHTML=`<td><span class="event-pill ${EVENT_CLASSES[event] || ''}">${EVENT_LABELS[event] || event}</span></td><td class="assign-select-cell"><select data-event="${event}" onchange="assignAudio('${event}', this.value)">${options}</select><div class="assignment-meta">${selected ? `Selected: ${escapeHtml(selected.originalName)}` : 'No sound assigned'}</div></td><td><div class="assign-actions"><button class="btn btn-secondary" ${selected ? '' : 'disabled'} onclick="previewAssignedAudio('${event}')">Play</button><button class="btn btn-secondary" ${selected ? '' : 'disabled'} onclick="assignAudio('${event}', '')">Clear</button></div></td>`;
+    tbody.appendChild(tr);
+  });
+}
+function previewAssignedAudio(event){
+  const filename = audioConfigData[event] || '';
+  const selected = audioLibraryData.find(file => file.filename === filename);
+  if (!selected) return toast('No sound assigned to this event yet', true);
+  playPreview(selected.filename, selected.originalName || EVENT_LABELS[event] || event);
+}
+function assignAudio(event, filename){ fetch('/api/audio/assign',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event,filename:filename || null})}).then(r=>r.json()).then(d=>{ if(d.success){ audioConfigData[event]=filename || ''; renderAssignTable(); toast(`${EVENT_LABELS[event] || event} sound ${filename ? 'assigned' : 'cleared'}`); } else toast('Assignment failed', true); }).catch(()=>toast('Assignment failed', true)); }
 function uploadAudioFile(file){ const fd=new FormData(); fd.append('audio',file); fetch('/api/audio/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData.push(d.file); renderAudioLibrary(); renderAssignTable(); toast('Audio uploaded'); } else toast('Upload failed', true); }); }
 const dropZone=document.getElementById('dropZone'); const audioFileInput=document.getElementById('audioFileInput');
 const sponsorFileInput=document.getElementById('sponsorFileInput');

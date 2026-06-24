@@ -5608,8 +5608,9 @@ app.post('/api/dev/laser-color', requireRoom, (req, res) => {
 });
 
 app.post('/api/dev/overlay-settings', requireRoom, (req, res) => {
-  const { shotType, shotSpeed, color } = req.body || {};
+  const { shotType, shotSpeed, color, backgroundFit } = req.body || {};
   const validTypes = ['beam', 'pulse', 'wave', 'burst', 'ripple'];
+  const validBackgroundFits = ['contain', 'cover'];
   if (typeof shotType === 'string' && shotType) {
     if (!validTypes.includes(shotType)) return res.status(400).json({ success: false, error: `Invalid shot type. Must be one of: ${validTypes.join(', ')}` });
     req.room.overlaySettings.shotType = shotType;
@@ -5619,6 +5620,10 @@ app.post('/api/dev/overlay-settings', requireRoom, (req, res) => {
   }
   if (typeof color === 'string' && color.trim()) {
     req.room.overlaySettings.laserColor = color.trim();
+  }
+  if (typeof backgroundFit === 'string' && backgroundFit) {
+    if (!validBackgroundFits.includes(backgroundFit)) return res.status(400).json({ success: false, error: `Invalid background fit. Must be one of: ${validBackgroundFits.join(', ')}` });
+    req.room.overlaySettings.backgroundFit = backgroundFit;
   }
   saveRoomAudioConfig(req.room);
   emitRoomEvent(req.room, 'overlaySettings', req.room.overlaySettings);

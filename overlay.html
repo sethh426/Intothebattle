@@ -1361,7 +1361,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   });
   let audioConfig     = { ...DEFAULT_OVERLAY_AUDIO_CONFIG };
   let audioCache      = {};
-  let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1 };
+  let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1, backgroundFit: 'contain' };
   let isDemoMode      = false;
   let darkMode        = true;
   let _demoTimer      = null;
@@ -2598,6 +2598,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
         height: +heightControl.value, zoom: +zoomControl.value,
         laserColor: overlaySettings.laserColor, darkMode,
         shotType: overlaySettings.shotType, shotSpeed: +shotSpeedControl.value,
+        backgroundFit: overlaySettings.backgroundFit,
       }));
     } catch (_) {}
   }
@@ -2610,6 +2611,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     overlaySettings.shotSpeed = 1;
     overlaySettings.laserColor = '#7afcff';
     overlaySettings.shotType = 'beam';
+    overlaySettings.backgroundFit = 'contain';
     gapControl.value = 0;
     offsetXControl.value = 0;
     offsetYControl.value = 0;
@@ -2646,6 +2648,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     overlaySettings.shotSpeed = (s.shotSpeed ?? 100) / 100;
     overlaySettings.laserColor = s.laserColor || '#7afcff';
     overlaySettings.shotType  = s.shotType   || 'beam';
+    overlaySettings.backgroundFit = s.backgroundFit === 'cover' ? 'cover' : (overlaySettings.backgroundFit || 'contain');
     container.style.height = heightControl.value + 'vh';
     themeToggle.checked    = darkMode;
     setActiveShotType(overlaySettings.shotType);
@@ -3622,7 +3625,10 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 
   function drawContainedBackgroundImage(img, frame) {
     if (!img?.width || !img?.height) return;
-    const scale = Math.min(frame.w / img.width, frame.h / img.height);
+    const fit = overlaySettings.backgroundFit === 'cover' ? 'cover' : 'contain';
+    const scale = fit === 'cover'
+      ? Math.max(frame.w / img.width, frame.h / img.height)
+      : Math.min(frame.w / img.width, frame.h / img.height);
     const dw = img.width * scale;
     const dh = img.height * scale;
     const dx = frame.x + (frame.w - dw) / 2;

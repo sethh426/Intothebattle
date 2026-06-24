@@ -58,6 +58,7 @@
       this.playerMap = new Map();
       this.laserColor = 0x7afcff;
       this.layoutConfig = { shotSpeed: 1 };
+      this.backgroundFit = 'contain';
       this.withOverlayAuth = null;
       this.customBackground = null;
       this.customBackgroundKey = null;
@@ -750,14 +751,28 @@
       this.load.image(key, url);
       this.load.once('complete', () => {
         if (!this.textures.exists(key)) return;
-        const image = this.add.image(this.W / 2, this.H / 2, key).setDepth(1);
-        const scale = Math.max(this.W / image.width, this.H / image.height);
+        const image = this.add.image(this.safe.x + this.safe.width / 2, this.safe.y + this.safe.height / 2, key).setDepth(1);
+        const scale = this.backgroundFit === 'cover'
+          ? Math.max(this.safe.width / image.width, this.safe.height / image.height)
+          : Math.min(this.safe.width / image.width, this.safe.height / image.height);
         image.setScale(scale);
         image.setAlpha(0.72);
         this.customBackground = image;
         this.backgroundLayer.add(image);
       });
       this.load.start();
+    }
+
+    updateBackgroundFit(value) {
+      this.backgroundFit = value === 'cover' ? 'cover' : 'contain';
+      if (this.customBackground) {
+        const scale = this.backgroundFit === 'cover'
+          ? Math.max(this.safe.width / this.customBackground.width, this.safe.height / this.customBackground.height)
+          : Math.min(this.safe.width / this.customBackground.width, this.safe.height / this.customBackground.height);
+        this.customBackground
+          .setPosition(this.safe.x + this.safe.width / 2, this.safe.y + this.safe.height / 2)
+          .setScale(scale);
+      }
     }
 
     normalizePlayer(player) {

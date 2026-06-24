@@ -11,6 +11,7 @@ export const DEFAULT_OVERLAY_SETTINGS = {
   laserColor: '#7afcff',
   shotType:   'beam',
   shotSpeed:  1,
+  backgroundFit: 'contain',
 };
 
 export const DEFAULT_AUDIO_CONFIG = {
