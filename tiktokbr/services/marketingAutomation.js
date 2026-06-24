@@ -85,6 +85,40 @@ function configuredPlatforms() {
   return platforms.length ? Array.from(new Set(platforms)) : DEFAULT_PLATFORMS;
 }
 
+function envFlag(name, fallback = false) {
+  const value = process.env[name];
+  if (value == null || value === '') return fallback;
+  return ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase());
+}
+
+function boundedNumber(value, fallback, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.max(min, Math.min(max, number));
+}
+
+export function marketingAutoPostIntervalMs() {
+  return Math.round(boundedNumber(process.env.MARKETING_AUTO_POST_INTERVAL_MS, 15 * 60 * 1000, 60 * 1000, 24 * 60 * 60 * 1000));
+}
+
+export function marketingAutoPostLimit() {
+  return Math.round(boundedNumber(process.env.MARKETING_AUTO_POST_LIMIT, 10, 1, 50));
+}
+
+export function countDueApprovedMarketingPosts() {
+  try {
+    const row = db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM marketing_posts
+      WHERE status = 'approved'
+        AND scheduled_for <= CURRENT_TIMESTAMP
+    `).get();
+    return Number(row?.count || 0);
+  } catch (_err) {
+    return 0;
+  }
+}
+
 function hashtagsForTopic(topic) {
   const tags = ['#TikTokLIVE', '#LiveStreaming', '#CreatorTools'];
   if (topic.key === 'how_to_play') tags.push('#InteractiveLive');
@@ -408,11 +442,21 @@ function webhookForPlatform(platform) {
 
 export function marketingAutomationDiagnostics() {
   const platforms = configuredPlatforms();
+  const configuredWebhooks = platforms.filter(platform => Boolean(webhookForPlatform(platform)));
+  const automationEnabled = envFlag('MARKETING_AUTOMATION_ENABLED');
+  const dryRun = process.env.MARKETING_DRY_RUN !== 'false';
+  const autoPostEnabled = envFlag('MARKETING_AUTO_POST_ENABLED') || envFlag('MARKETING_AUTOPUBLISH_ENABLED');
   return {
-    enabled: process.env.MARKETING_AUTOMATION_ENABLED === 'true',
-    dryRun: process.env.MARKETING_DRY_RUN !== 'false',
+    enabled: automationEnabled,
+    dryRun,
+    autoPostEnabled,
+    autoPostReady: autoPostEnabled && automationEnabled && !dryRun && configuredWebhooks.length > 0,
+    autoPostIntervalMs: marketingAutoPostIntervalMs(),
+    autoPostIntervalMinutes: Math.round(marketingAutoPostIntervalMs() / 60000),
+    autoPostLimit: marketingAutoPostLimit(),
+    dueApprovedCount: countDueApprovedMarketingPosts(),
     platforms,
-    configuredWebhooks: platforms.filter(platform => Boolean(webhookForPlatform(platform))),
+    configuredWebhooks,
   };
 }
 

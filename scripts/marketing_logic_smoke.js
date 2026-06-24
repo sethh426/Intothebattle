@@ -40,6 +40,11 @@ assert(drafts.find(draft => draft.platform === 'x').body.length <= 260, 'X draft
 
 const diagnostics = marketingAutomationDiagnostics();
 assert(Array.isArray(diagnostics.platforms), 'Diagnostics must report configured platforms');
+assert(diagnostics.autoPostEnabled === false, 'Auto-post scheduler should be disabled by default');
+assert(diagnostics.autoPostReady === false, 'Auto-post should not be ready without explicit env gates');
+assert(Number.isFinite(diagnostics.autoPostIntervalMs), 'Diagnostics must report auto-post interval');
+assert(Number.isFinite(diagnostics.autoPostLimit), 'Diagnostics must report auto-post batch limit');
+assert(Number.isFinite(diagnostics.dueApprovedCount), 'Diagnostics must report due approved post count');
 
 const growthDiagnostics = growthIntegrationDiagnostics();
 assert(growthDiagnostics.enabled === false, 'Growth API sync should be disabled by default');

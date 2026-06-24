@@ -34,6 +34,7 @@ import {
 import { buildLaunchReadinessReport } from './tiktokbr/services/launchReadiness.js';
 import { buildUploadDecision, getStorageUsage, uploadLimitBytes } from './tiktokbr/services/storagePolicy.js';
 import { growthIntegrationDiagnostics, syncLeadToGrowthApis } from './tiktokbr/services/growthIntegrations.js';
+import { marketingAutomationDiagnostics, publishApprovedMarketingPosts } from './tiktokbr/services/marketingAutomation.js';
 import {
   getOrCreateRoom,
   getRoom,
@@ -4696,6 +4697,7 @@ app.get('/api/runtime/diagnostics', requireDiagnosticsAccess, (req, res) => {
     },
     email: getEmailDiagnostics(),
     growth: growthIntegrationDiagnostics(),
+    marketing: marketingAutomationDiagnostics(),
     storage,
     database: dbHealth,
   });
@@ -6403,6 +6405,68 @@ function getTopPlayers(roomOrCount = 20, count = 20) {
     .slice(0, count);
 }
 
+let marketingAutoPostRunning = false;
+let marketingAutoPostTimer = null;
+
+async function runMarketingAutoPostCycle(reason = 'interval') {
+  const diagnostics = marketingAutomationDiagnostics();
+  if (!diagnostics.autoPostEnabled) return { skipped: true, reason: 'disabled' };
+  if (marketingAutoPostRunning) return { skipped: true, reason: 'already_running' };
+
+  if (!diagnostics.autoPostReady) {
+    logger.warn({
+      reason,
+      automationEnabled: diagnostics.enabled,
+      dryRun: diagnostics.dryRun,
+      configuredWebhooks: diagnostics.configuredWebhooks,
+    }, 'Marketing auto-post is enabled but not ready');
+    return { skipped: true, reason: 'not_ready', diagnostics };
+  }
+
+  marketingAutoPostRunning = true;
+  try {
+    const result = await publishApprovedMarketingPosts({
+      limit: diagnostics.autoPostLimit,
+      dryRun: false,
+    });
+    if (result.attempted > 0 || result.failed > 0) {
+      logger.info({
+        reason,
+        attempted: result.attempted,
+        published: result.published,
+        failed: result.failed,
+        skipped: result.skipped,
+      }, 'Marketing auto-post cycle complete');
+    } else {
+      logger.debug({ reason }, 'Marketing auto-post cycle found no due posts');
+    }
+    return result;
+  } catch (err) {
+    logger.error({ err, reason }, 'Marketing auto-post cycle failed');
+    return { skipped: false, failed: 1, error: err?.message || String(err) };
+  } finally {
+    marketingAutoPostRunning = false;
+  }
+}
+
+function startMarketingAutoPoster() {
+  const diagnostics = marketingAutomationDiagnostics();
+  if (!diagnostics.autoPostEnabled) return;
+  const intervalMs = diagnostics.autoPostIntervalMs;
+  logger.info({
+    ready: diagnostics.autoPostReady,
+    intervalMs,
+    limit: diagnostics.autoPostLimit,
+    platforms: diagnostics.platforms,
+    configuredWebhooks: diagnostics.configuredWebhooks,
+  }, 'Marketing auto-post scheduler enabled');
+  const initialDelayMs = Math.min(30_000, intervalMs);
+  const firstRun = setTimeout(() => runMarketingAutoPostCycle('startup'), initialDelayMs);
+  if (typeof firstRun.unref === 'function') firstRun.unref();
+  marketingAutoPostTimer = setInterval(() => runMarketingAutoPostCycle('interval'), intervalMs);
+  if (typeof marketingAutoPostTimer.unref === 'function') marketingAutoPostTimer.unref();
+}
+
 setInterval(() => {
   const cutoff = Date.now() - CFG.IDLE_TIMEOUT_MS;
   for (const room of getAllRooms().values()) {
@@ -6485,6 +6549,7 @@ httpServer.listen(PORT, HOST, () => {
   try { loadCurrentBackground(); } catch (err) { logger.error({ err }, 'Failed to load current background'); }
   try { loadAudioConfig(); } catch (err) { logger.error({ err }, 'Failed to load audio config'); }
   try { loadSponsorConfig(); } catch (err) { logger.error({ err }, 'Failed to load sponsor media config'); }
+  try { startMarketingAutoPoster(); } catch (err) { logger.error({ err }, 'Failed to start marketing auto-post scheduler'); }
 
   if (currentStreamer) {
     try { connectToStreamer(currentStreamer); } catch (err) { logger.error({ err, streamer: currentStreamer }, 'Failed to connect to streamer on startup'); }

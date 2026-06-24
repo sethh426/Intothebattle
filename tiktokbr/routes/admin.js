@@ -1704,6 +1704,20 @@ function renderMarketingAdminPage({
   }, {});
   const configuredWebhooks = diagnostics.configuredWebhooks || [];
   const growthProviders = growthDiagnostics.providers || [];
+  const autoPostStatus = diagnostics.autoPostReady ? 'ready' : (diagnostics.autoPostEnabled ? 'warn' : 'draft');
+  const autoPostLabel = diagnostics.autoPostReady ? 'Auto-post ready' : (diagnostics.autoPostEnabled ? 'Auto-post blocked' : 'Auto-post off');
+  const autoPostBlockers = [
+    diagnostics.autoPostEnabled ? '' : 'Set MARKETING_AUTO_POST_ENABLED=true to turn on the scheduler.',
+    diagnostics.enabled ? '' : 'Set MARKETING_AUTOMATION_ENABLED=true to allow outbound publishing.',
+    diagnostics.dryRun ? 'Set MARKETING_DRY_RUN=false for live outbound publishing.' : '',
+    configuredWebhooks.length ? '' : 'Configure MARKETING_WEBHOOK_<PLATFORM> or MARKETING_OUTBOUND_WEBHOOK_URL.',
+  ].filter(Boolean);
+  const engineSteps = [
+    ['1', 'Draft', 'Generate daily posts from the public pages or build variants from approved proof assets.'],
+    ['2', 'Approve', 'Review copy, UTM links, schedule, asset status, and quality score before anything can publish.'],
+    ['3', 'Auto-post', 'The server publishes only approved posts whose scheduled time has passed, then records an event.'],
+    ['4', 'Learn', 'UTM links, publish history, HubSpot, and Segment close the loop for growth tracking.'],
+  ].map(([step, title, copy]) => `<div class="engine-step"><strong>${escapeHtml(step)}</strong><b>${escapeHtml(title)}</b><span>${escapeHtml(copy)}</span></div>`).join('');
   const templateCards = renderCreativeTemplateCards(creativeTemplates);
   const creativeAssetCounts = countBy(creativeAssets, 'approval_status', 'draft');
   const creativeVariantCounts = countBy(creativeVariants, 'status', 'draft');
@@ -1810,6 +1824,11 @@ function renderMarketingAdminPage({
     .metric-card { min-width:0; padding:16px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.2); }
     .metric-card span { display:block; color:#a8afbf; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
     .metric-card strong { display:block; margin-top:6px; color:#fff8e6; font-size:clamp(26px,4vw,42px); line-height:1; }
+    .engine-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:14px; }
+    .engine-step { min-width:0; display:grid; gap:8px; align-content:start; padding:14px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.22); }
+    .engine-step strong { width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; color:#041014; background:linear-gradient(135deg,#55e7ff,#b9fbff); }
+    .engine-step b { color:#fff8e6; }
+    .engine-step span { color:#a8afbf; line-height:1.45; font-size:13px; }
     .inline-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:end; }
     .inline-grid.compact { grid-template-columns:repeat(3,minmax(0,1fr)); align-items:end; }
     label { display:block; margin:10px 0 6px; color:#a8afbf; font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
@@ -1846,8 +1865,8 @@ function renderMarketingAdminPage({
     th { background:rgba(246,201,91,0.09); color:#ffdf8a; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     small { color:#9fb2d7; }
     .post-copy { max-width:620px; white-space:pre-wrap; color:#fff8e6; line-height:1.45; }
-    @media(max-width:1100px){ .template-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
-    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid,.inline-grid,.template-grid{grid-template-columns:1fr} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:0} }
+    @media(max-width:1100px){ .template-grid,.engine-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid,.inline-grid,.template-grid,.engine-grid{grid-template-columns:1fr} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:0} }
   </style>
 </head>
 <body>
@@ -1874,10 +1893,12 @@ function renderMarketingAdminPage({
       <div class="metric-card"><span>Blocked Variants</span><strong>${numberValue(creativeQualityCounts.blocked)}</strong></div>
     </div>
     <div class="card">
-      <h2>Automation controls</h2>
-      <p>Generate SEO and UTM-tagged daily drafts from the public site pages for company-owned growth. This is not a streamer-facing feature and is only available inside the admin panel.</p>
-      <p>Publishing stays in dry-run mode unless <strong>MARKETING_AUTOMATION_ENABLED=true</strong>, <strong>MARKETING_DRY_RUN=false</strong>, and an authorized webhook is configured.</p>
+      <h2>Growth engine controls</h2>
+      <p><span class="status-pill ${escapeAttr(autoPostStatus)}">${escapeHtml(autoPostLabel)}</span> Due approved posts: <strong>${numberValue(diagnostics.dueApprovedCount)}</strong>. Check interval: <strong>${numberValue(diagnostics.autoPostIntervalMinutes)}</strong> min. Batch limit: <strong>${numberValue(diagnostics.autoPostLimit)}</strong>.</p>
+      <p>Generate SEO and UTM-tagged daily drafts from the public site pages, approve the good ones, and let the scheduler publish due posts when the engine is live.</p>
       <p>Platforms: ${escapeHtml((diagnostics.platforms || []).join(', '))}. Webhooks configured: ${escapeHtml(configuredWebhooks.length ? configuredWebhooks.join(', ') : 'none')}.</p>
+      ${autoPostBlockers.length ? `<div class="warning-note ${diagnostics.autoPostEnabled ? 'failed' : ''}">${autoPostBlockers.map(blocker => escapeHtml(blocker)).join('<br />')}</div>` : '<div class="warning-note">Auto-posting is live-gated and ready. Only approved due posts will publish.</div>'}
+      <div class="engine-grid">${engineSteps}</div>
       <p>Lead APIs: sync ${growthDiagnostics.enabled ? 'enabled' : 'disabled'}; HubSpot ${growthDiagnostics.hubspotConfigured ? 'connected' : 'not configured'}; HubSpot custom fields ${growthDiagnostics.hubspotCustomPropertiesConfigured ? 'configured' : 'not configured'}; Segment ${growthDiagnostics.segmentConfigured ? 'connected' : 'not configured'}; providers ${escapeHtml(growthProviders.length ? growthProviders.join(', ') : 'none')}.</p>
       <div class="inline-grid">
         <form method="POST" action="/admin/marketing/generate">
