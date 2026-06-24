@@ -2,7 +2,7 @@
   const params = new URLSearchParams(window.location.search);
   const requestedLayout = (params.get('layout') || 'horizontal').toLowerCase();
   const requestedRender = (params.get('render') || '1080p').toLowerCase();
-  const demoMode = params.get('demo') === '1' || params.get('preview') === '1' || window.location.pathname.includes('preview');
+  const demoMode = params.get('demo') === '1' || params.get('preview') === '1' || params.get('setup') === '1' || window.location.pathname.includes('preview');
   if (params.get('debug') === '1' || params.get('show_status') === '1') {
     document.body.classList.add('show-overlay-status');
   }
@@ -63,6 +63,7 @@
       this.customBackgroundKey = null;
       this.lastDemoEvent = 0;
       this.demoAttackStartAt = 0;
+      this.demoModeActive = false;
       this.sponsorVideo = null;
       this.sponsorTimer = null;
       this.sponsorWallClockTimer = null;
@@ -320,7 +321,7 @@
     update(_time, delta) {
       this.drawHorde();
       this.drawPlayerLinks();
-      if (demoMode && this.time.now - this.lastDemoEvent > 1650) {
+      if ((demoMode || this.demoModeActive) && this.time.now - this.lastDemoEvent > 1650) {
         this.lastDemoEvent = this.time.now;
         this.demoTick();
       }
@@ -1479,6 +1480,7 @@
     }
 
     startDemo() {
+      this.demoModeActive = true;
       const players = [
         { id: 'demo-1', name: 'NovaStrike', health: 100, kills: 3 },
         { id: 'demo-2', name: 'MiraVex', health: 86, kills: 2 },

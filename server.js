@@ -332,7 +332,7 @@ function appendOverlayAuth(urlPath, roomId, token, extraParams = {}) {
   return `${url.pathname}${url.search}`;
 }
 
-function buildOverlayUrl(req, roomId, overlayPath = '/overlay') {
+function buildOverlayUrl(req, roomId, overlayPath = '/overlay', extraParams = {}) {
   const normalizedRoomId = normalizeRoomId(roomId);
   const token = createOverlayToken(normalizedRoomId);
   if (!normalizedRoomId || !token) return null;
@@ -340,7 +340,7 @@ function buildOverlayUrl(req, roomId, overlayPath = '/overlay') {
   const configuredBase = process.env.APP_BASE_URL;
   const inferredBase = req ? `${req.protocol}://${req.get('host')}` : `http://localhost:${PORT}`;
   const base = (configuredBase || inferredBase).replace(/\/$/, '');
-  return `${base}${appendOverlayAuth(overlayPath, normalizedRoomId, token)}`;
+  return `${base}${appendOverlayAuth(overlayPath, normalizedRoomId, token, extraParams)}`;
 }
 
 function publicBaseUrl(req = null) {
@@ -1868,6 +1868,11 @@ function resetRoomLiveRuntime(room, options = {}) {
   room.lastHighIntensityBattleAt = 0;
   room.likeStats = { total: 0, lastMilestone: 0 };
   room.engagementStats = null;
+  room.setupRehearsal = {
+    active: false,
+    reason,
+    updatedAt: Date.now(),
+  };
   clearLikeRateTrackerForRoom(room.roomId);
 
   if (clearPlayers) {
@@ -1881,9 +1886,45 @@ function resetRoomLiveRuntime(room, options = {}) {
 
   markRoomPlayerPresenceOffline(room);
   setRoomMatchPhase(room, MATCH_PHASES.IDLE, reason);
+  emitRoomEvent(room, 'setupMode', room.setupRehearsal);
   emitRoomEvent(room, 'gameState', room.players);
   emitSessionStatus(room);
   updatePlayerGauge();
+}
+
+function stopRoomSetupRehearsal(room, reason = 'setup_rehearsal_reset') {
+  if (!room?.roomId) return;
+  resetRoomLiveRuntime(room, { reason, clearPlayers: true });
+  room.setupRehearsal = {
+    active: false,
+    reason,
+    updatedAt: Date.now(),
+  };
+  emitRoomEvent(room, 'setupMode', room.setupRehearsal);
+}
+
+function startRoomSetupRehearsal(room, options = {}) {
+  if (!room?.roomId) return null;
+  resetRoomLiveRuntime(room, { reason: 'setup_rehearsal_start', clearPlayers: true });
+  room.setupRehearsal = {
+    active: true,
+    startedAt: Date.now(),
+    updatedAt: Date.now(),
+    source: options.source || 'dashboard',
+  };
+  emitRoomEvent(room, 'setupMode', {
+    ...room.setupRehearsal,
+    title: 'Setup rehearsal running',
+    message: 'Demo events are isolated to this creator room.',
+  });
+  emitRoomEvent(room, 'roundEvent', {
+    type: 'setup_rehearsal_started',
+    title: 'Setup rehearsal running',
+    message: 'Previewing chat, likes, gifts, boss wave, and broadcast break before TikTok connects.',
+  });
+  const timer = setTimeout(() => runRoomOverlayTest(room, options.action || 'burst'), 450);
+  if (typeof timer.unref === 'function') timer.unref();
+  return room.setupRehearsal;
 }
 
 function createTikTokConnection(room, username) {
@@ -5079,6 +5120,7 @@ io.on('connection', (socket) => {
       socket.emit('laserColor',       room.overlaySettings.laserColor);
       socket.emit('sessionStatus',    buildSessionStatus(room));
       socket.emit('tiktokConnection',  buildTikTokConnectionStatus(room));
+      socket.emit('setupMode',         room.setupRehearsal || { active: false });
       const bossStatus = currentBossStatus(room);
       if (bossStatus?.active) socket.emit('bossWave', { type: 'started', ...bossStatus });
       const background = buildBackgroundPayload(room, { v: Date.now() });
@@ -5095,6 +5137,7 @@ io.on('connection', (socket) => {
       socket.emit('gameState',       room.players);
       socket.emit('sessionStatus',   buildSessionStatus(room));
       socket.emit('tiktokConnection', buildTikTokConnectionStatus(room));
+      socket.emit('setupMode',        room.setupRehearsal || { active: false });
     }
 
     if (typeof ack === 'function') {
@@ -5198,6 +5241,8 @@ app.get('/api/status', requireRoom, (req, res) => {
     roomId:           req.room.roomId,
     overlayUrl:       buildOverlayUrl(req, req.room.roomId),
     overlayV2Url:     buildOverlayUrl(req, req.room.roomId, '/overlay-v2'),
+    setupOverlayUrl:  buildOverlayUrl(req, req.room.roomId, '/overlay', { setup: '1', controls: '1', debug: '1' }),
+    setupOverlayV2Url: buildOverlayUrl(req, req.room.roomId, '/overlay-v2', { setup: '1', render: '1080p', source: '1', show_status: '1' }),
     plan:             buildPlanEntitlements(req.auth),
     username:         req.room.streamerUsername || '',
     connected:        stream.connected,
@@ -5208,6 +5253,7 @@ app.get('/api/status', requireRoom, (req, res) => {
     background:       buildBackgroundPayload(req.room, { v: Date.now() }),
     overlaySettings:  req.room.overlaySettings,
     devTestMode:      DEV_TEST_MODE,
+    setupRehearsal:   req.room.setupRehearsal || { active: false },
     session:          buildSessionStatus(req.room),
   });
 });
@@ -5483,6 +5529,31 @@ function runRoomOverlayTest(room, action) {
 app.post('/api/overlay/test/:action', requireRoom, (req, res) => {
   const result = runRoomOverlayTest(req.room, req.params.action);
   res.status(result.success ? 200 : 400).json(result);
+});
+
+app.post('/api/stream/setup/start', requireRoom, (req, res) => {
+  const allowedSetupActions = new Set(['attack', 'gift', 'like', 'heal', 'follow', 'share', 'repost', 'kill', 'streak', 'boss', 'sponsor', 'burst']);
+  const requestedAction = String(req.body?.action || 'burst').toLowerCase();
+  const rehearsal = startRoomSetupRehearsal(req.room, {
+    source: 'dashboard',
+    action: allowedSetupActions.has(requestedAction) ? requestedAction : 'burst',
+  });
+  res.json({
+    success: true,
+    setupRehearsal: rehearsal,
+    session: buildSessionStatus(req.room),
+    overlayUrl: buildOverlayUrl(req, req.room.roomId, '/overlay', { setup: '1', controls: '1', debug: '1' }),
+    overlayV2Url: buildOverlayUrl(req, req.room.roomId, '/overlay-v2', { setup: '1', render: '1080p', source: '1', show_status: '1' }),
+  });
+});
+
+app.post('/api/stream/setup/reset', requireRoom, (req, res) => {
+  stopRoomSetupRehearsal(req.room, 'setup_rehearsal_reset');
+  res.json({
+    success: true,
+    setupRehearsal: req.room.setupRehearsal || { active: false },
+    session: buildSessionStatus(req.room),
+  });
 });
 
 app.post('/api/dev/test-mode', blockInProduction, (req, res) => {

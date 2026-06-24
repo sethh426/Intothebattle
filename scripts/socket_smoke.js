@@ -226,6 +226,12 @@ try {
     'Content-Type': 'application/json',
   };
 
+  const dashboardStatusRes = await request('/api/status', { headers: authedHeaders });
+  assert(dashboardStatusRes.status === 200, `dashboard status should return 200, got ${dashboardStatusRes.status}`);
+  const dashboardStatus = await dashboardStatusRes.json();
+  assert(dashboardStatus.setupOverlayUrl?.includes('setup=1'), 'status should expose signed setup overlay URL');
+  assert(dashboardStatus.setupOverlayV2Url?.includes('setup=1'), 'status should expose signed setup V2 overlay URL');
+
   const sessionStartedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.active === true && payload.sessionId, 10000);
   const overlaySessionStartedPromise = waitForEvent(primaryOverlay, 'roundEvent', payload => payload.type === 'session_started', 10000);
   const sessionStartRes = await request('/api/session/start', {
@@ -407,6 +413,46 @@ try {
   await resetStreamPromise;
   await resetSessionStatusPromise;
   await resetGameStatePromise;
+
+  const setupActiveDashboardPromise = waitForEvent(dashboard, 'setupMode', payload => payload.active === true, 10000);
+  const setupActiveOverlayPromise = waitForEvent(primaryOverlay, 'setupMode', payload => payload.active === true, 10000);
+  const setupPlayersPromise = waitForEvent(
+    primaryOverlay,
+    'gameState',
+    payload => Object.values(payload || {}).filter(player => player?.alive).length > 0,
+    10000
+  );
+  const setupStartRes = await request('/api/stream/setup/start', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ action: 'attack' }),
+  });
+  assert(setupStartRes.status === 200, `setup rehearsal start should return 200, got ${setupStartRes.status}`);
+  const setupStart = await setupStartRes.json();
+  assert(setupStart.success === true && setupStart.setupRehearsal?.active === true, 'setup rehearsal should activate');
+  assert(setupStart.overlayUrl?.includes('setup=1'), 'setup start response should include setup overlay URL');
+  await setupActiveDashboardPromise;
+  await setupActiveOverlayPromise;
+  await setupPlayersPromise;
+
+  const setupResetDashboardPromise = waitForEvent(dashboard, 'setupMode', payload => payload.active === false, 10000);
+  const setupResetOverlayPromise = waitForEvent(primaryOverlay, 'setupMode', payload => payload.active === false, 10000);
+  const setupResetPlayersPromise = waitForEvent(
+    primaryOverlay,
+    'gameState',
+    payload => Object.values(payload || {}).filter(player => player?.alive).length === 0,
+    10000
+  );
+  const setupResetRes = await request('/api/stream/setup/reset', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(setupResetRes.status === 200, `setup rehearsal reset should return 200, got ${setupResetRes.status}`);
+  const setupReset = await setupResetRes.json();
+  assert(setupReset.success === true && setupReset.setupRehearsal?.active === false, 'setup rehearsal should reset');
+  await setupResetDashboardPromise;
+  await setupResetOverlayPromise;
+  await setupResetPlayersPromise;
 
   for (let index = overlaySockets.length - 1; index >= 0; index--) {
     const expectedCount = index;

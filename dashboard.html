@@ -90,6 +90,11 @@
     .overlay-v2-panel p { margin:0; color:var(--muted); font-size:12px; line-height:1.45; font-weight:800; }
     .overlay-v2-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
     .overlay-v2-grid .btn { min-height:40px; padding:0 10px; font-size:12px; }
+    .setup-rehearsal-panel { margin-top:14px; padding:14px; border-radius:18px; border:1px solid rgba(119,240,161,.2); background:linear-gradient(180deg,rgba(119,240,161,.075),rgba(0,0,0,.16)); display:grid; gap:12px; }
+    .setup-rehearsal-panel strong { color:#fff8e6; font-size:13px; text-transform:uppercase; letter-spacing:.08em; }
+    .setup-rehearsal-panel p { margin:0; color:var(--muted); font-size:12px; line-height:1.45; font-weight:800; }
+    .setup-rehearsal-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .setup-rehearsal-grid .btn { min-height:40px; padding:0 10px; font-size:12px; }
     .dashboard-nav { position:sticky; top:96px; z-index:24; display:flex; flex-wrap:wrap; gap:10px; padding:10px; border:1px solid rgba(255,255,255,.09); border-radius:22px; background:rgba(5,7,11,.78); backdrop-filter:blur(18px); box-shadow:0 20px 60px rgba(0,0,0,.24); }
     .dashboard-nav a { min-height:38px; display:inline-flex; align-items:center; justify-content:center; padding:0 13px; border-radius:999px; border:1px solid rgba(255,255,255,.09); background:rgba(255,255,255,.05); color:var(--muted); font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; }
     .dashboard-nav a:hover { color:var(--text); border-color:rgba(246,201,91,.34); background:rgba(246,201,91,.08); }
@@ -318,7 +323,7 @@
   <section class="dashboard-workflows">
     <details class="workflow" id="launchWorkflow" data-workflow-key="launch" open>
       <summary class="workflow-summary">
-        <span><span class="workflow-kicker">Launch setup</span><span class="workflow-title">Connect the stream and copy the overlay</span><span class="workflow-copy">The creator should only focus on these controls until TikTok is connected, the overlay URL is copied, and a test event has fired.</span></span>
+        <span><span class="workflow-kicker">Launch setup</span><span class="workflow-title">Connect the stream and copy the overlay</span><span class="workflow-copy">Start with the signed setup demo, configure the browser source, then connect TikTok when the overlay is ready.</span></span>
         <span class="workflow-status warn" id="launchWorkflowStatus">Setup</span>
         <span class="workflow-toggle" aria-hidden="true"></span>
       </summary>
@@ -327,7 +332,7 @@
       <div class="launch-checklist-copy">
         <div class="card-title">Setup checklist</div>
         <h3>Get live without guessing.</h3>
-        <p>Copy the overlay, open it once, run a test burst, and start the first event. These are the steps that prove the stream room is ready.</p>
+        <p>Open the setup demo, configure the source, run a test burst, then connect TikTok. These steps prove the room is ready before a real live stream starts.</p>
       </div>
       <div class="setup-steps" id="setupChecklist">
         <div class="setup-step ready"><b>Account</b><span>Room created</span></div>
@@ -351,6 +356,16 @@
       <div class="stat-box"><span class="stat-label">Active players</span><span class="stat-value" id="player-count">—</span></div>
       <div class="stat-box"><span class="stat-label">Dev mode</span><span class="stat-value" id="dev-mode-badge">OFF</span></div>
       <div class="copy-field"><input type="text" id="overlayUrlField" readonly value="Loading signed overlay URL"><button class="btn btn-secondary" onclick="copyOverlayUrl()">Copy</button></div>
+      <div class="setup-rehearsal-panel">
+        <div><strong>Pre-live setup rehearsal</strong><p>Use a signed demo before TikTok connects. Configure the source, test motion, then reset before the real stream.</p></div>
+        <div class="status-chip idle" id="setup-rehearsal-chip"><span class="pulse-dot"></span><span id="setup-rehearsal-label">Ready to rehearse</span></div>
+        <div class="setup-rehearsal-grid">
+          <button class="btn btn-success" onclick="startSetupRehearsal()">Start Demo</button>
+          <button class="btn btn-secondary" onclick="openSetupOverlay()">Open Demo</button>
+          <button class="btn btn-secondary" onclick="copySetupOverlayUrl()">Copy Demo URL</button>
+          <button class="btn btn-danger" onclick="resetSetupRehearsal()">Reset Demo</button>
+        </div>
+      </div>
       <div class="overlay-v2-panel">
         <div><strong>Phaser V2 test overlay</strong><p>Use these for sharp browser-source testing before switching the default overlay.</p></div>
         <div class="overlay-v2-grid">
@@ -583,6 +598,8 @@ let overlayCount = 0;
 let currentRoomId = null;
 let currentOverlayUrl = null;
 let currentOverlayV2Url = null;
+let currentSetupOverlayUrl = null;
+let currentSetupOverlayV2Url = null;
 let subscriptionStatusData = null;
 let audioLibraryData = [];
 let audioConfigData = {};
@@ -602,6 +619,7 @@ const dashboardState = {
   audioCount: 0,
   sponsorCount: 0,
   devTestMode: false,
+  setupRehearsalActive: false,
   planLabel: 'Checking',
   overlayUrlCopied: false,
   overlayTested: false,
@@ -634,11 +652,13 @@ function setWorkflowStatus(id, label, state = 'warn') {
   el.className = `workflow-status ${state}`;
 }
 function updateWorkflowStatuses() {
-  const launchReady = dashboardState.tiktokConnected && (dashboardState.overlayUrlCopied || dashboardState.overlayConnected);
+  const launchReady = setupGateReady();
   setWorkflowStatus(
     'launchWorkflowStatus',
-    launchReady ? (dashboardState.overlayTested ? 'Ready' : 'Test overlay') : (dashboardState.tiktokConnected ? 'Copy URL' : 'Connect'),
-    launchReady ? (dashboardState.overlayTested ? 'ready' : 'warn') : 'blocked'
+    launchReady
+      ? (dashboardState.tiktokConnected ? 'Live ready' : (dashboardState.setupRehearsalActive || dashboardState.overlayTested ? 'Demo ready' : 'Setup demo'))
+      : 'Loading URL',
+    launchReady ? (dashboardState.tiktokConnected || dashboardState.setupRehearsalActive || dashboardState.overlayTested ? 'ready' : 'warn') : 'blocked'
   );
   setWorkflowStatus(
     'overlayWorkflowStatus',
@@ -777,6 +797,20 @@ function setOverlayCount(count) {
   }
   updateReadinessChecklist();
 }
+function setSetupRehearsalStatus(data = {}) {
+  dashboardState.setupRehearsalActive = !!data.active;
+  const chip = document.getElementById('setup-rehearsal-chip');
+  const label = document.getElementById('setup-rehearsal-label');
+  if (!chip || !label) return;
+  if (dashboardState.setupRehearsalActive) {
+    chip.className = 'status-chip online';
+    label.textContent = 'Rehearsal running';
+  } else {
+    chip.className = 'status-chip idle';
+    label.textContent = 'Ready to rehearse';
+  }
+  updateSetupChecklist();
+}
 function overlayV2VariantUrl(render = '1080p', sourceMode = true) {
   const base = currentOverlayV2Url || currentOverlayUrl || `${window.location.origin}/overlay-v2`;
   const url = new URL(base, window.location.origin);
@@ -786,9 +820,30 @@ function overlayV2VariantUrl(render = '1080p', sourceMode = true) {
   else url.searchParams.delete('source');
   return url.toString();
 }
-function setOverlayUrl(url, v2Url = null) {
+function setupOverlayUrl() {
+  const base = currentSetupOverlayUrl || currentOverlayUrl || `${window.location.origin}/overlay`;
+  const url = new URL(base, window.location.origin);
+  url.pathname = url.pathname.replace(/\/overlay-v2$/, '/overlay');
+  url.searchParams.set('setup', '1');
+  url.searchParams.set('controls', '1');
+  url.searchParams.set('debug', '1');
+  return url.toString();
+}
+function setupOverlayV2Url(render = '1080p') {
+  const base = currentSetupOverlayV2Url || currentOverlayV2Url || currentOverlayUrl || `${window.location.origin}/overlay-v2`;
+  const url = new URL(base, window.location.origin);
+  url.pathname = url.pathname.replace(/\/overlay$/, '/overlay-v2');
+  url.searchParams.set('setup', '1');
+  url.searchParams.set('render', render === '1440p' ? '1440p' : '1080p');
+  url.searchParams.set('source', '1');
+  url.searchParams.set('show_status', '1');
+  return url.toString();
+}
+function setOverlayUrl(url, v2Url = null, setupUrl = null, setupV2Url = null) {
   currentOverlayUrl = url || currentOverlayUrl || null;
   currentOverlayV2Url = v2Url || currentOverlayV2Url || null;
+  currentSetupOverlayUrl = setupUrl || currentSetupOverlayUrl || null;
+  currentSetupOverlayV2Url = setupV2Url || currentSetupOverlayV2Url || null;
   const field = document.getElementById('overlayUrlField');
   const label = document.getElementById('overlay-url-state');
   const display = currentOverlayUrl ? 'Signed URL ready' : 'URL unavailable';
@@ -808,7 +863,7 @@ function setupStep(title, detail, ready) {
   return `<div class="setup-step ${ready ? 'ready' : ''}"><b>${escapeHtml(title)}</b><span>${escapeHtml(detail)}</span></div>`;
 }
 function setupGateReady() {
-  return dashboardState.tiktokConnected && (dashboardState.overlayUrlCopied || dashboardState.overlayConnected);
+  return Boolean(currentOverlayUrl || currentSetupOverlayUrl || dashboardState.overlayConnected);
 }
 function setPanelLocked(id, locked, message) {
   const el = document.getElementById(id);
@@ -837,9 +892,7 @@ function setPanelLocked(id, locked, message) {
 }
 function updateDashboardProgressLocks() {
   const gateReady = setupGateReady();
-  const message = dashboardState.tiktokConnected
-    ? 'Copy the signed overlay URL before opening advanced controls.'
-    : 'Connect TikTok first, then copy the signed overlay URL.';
+  const message = 'Wait for your signed overlay URL to load, then start the setup demo or copy the OBS source.';
   ['sceneCard', 'sessionDirectorCard', 'creatorSponsorCard', 'audioManagerCard', 'toolsRail'].forEach(id => setPanelLocked(id, !gateReady, message));
 }
 function updateSetupChecklist() {
@@ -852,9 +905,9 @@ function updateSetupChecklist() {
       detail: currentRoomId ? 'Creator room is ready' : 'Loading room',
     },
     {
-      title: 'TikTok username',
-      ready: dashboardState.tiktokConnected,
-      detail: dashboardState.tiktokConnected ? 'Stream input connected' : 'Connect your LIVE username',
+      title: 'Setup demo',
+      ready: dashboardState.setupRehearsalActive || dashboardState.overlayConnected || dashboardState.overlayTested,
+      detail: dashboardState.setupRehearsalActive ? 'Pre-live rehearsal running' : 'Start the demo before TikTok',
     },
     {
       title: 'Copy overlay',
@@ -863,13 +916,13 @@ function updateSetupChecklist() {
     },
     {
       title: 'Test overlay',
-      ready: dashboardState.overlayTested,
-      detail: dashboardState.overlayTested ? 'Test event sent' : 'Run the test burst',
+      ready: dashboardState.overlayTested || dashboardState.setupRehearsalActive,
+      detail: dashboardState.overlayTested ? 'Test event sent' : (dashboardState.setupRehearsalActive ? 'Demo burst running' : 'Run the test burst'),
     },
     {
-      title: 'Go live',
-      ready: dashboardState.eventStarted || !!sessionStatusData?.active || !!sessionStatusData?.bossWave?.active,
-      detail: dashboardState.eventStarted || sessionStatusData?.active ? 'Session activity started' : 'Start a session or boss wave',
+      title: 'Connect live',
+      ready: dashboardState.tiktokConnected,
+      detail: dashboardState.tiktokConnected ? 'Stream input connected' : 'Connect TikTok after setup',
     },
   ];
   list.innerHTML = steps.map(step => setupStep(step.title, step.detail, step.ready)).join('');
@@ -918,8 +971,12 @@ function updateReadinessChecklist() {
   const blockers = items.filter(item => item.status === 'blocked').length;
   text('readiness-score', `${readyCount}/${items.length}`);
   text('readiness-title', blockers ? 'Needs attention' : 'Ready to run');
-  text('readiness-summary', blockers ? 'Connect TikTok and open the overlay source.' : 'Core stream systems are online.');
-  text('dashboard-summary', blockers ? 'Finish the required connections before going live.' : `Room ${currentRoomId || ''} is ready for live control.`);
+  text('readiness-summary', blockers
+    ? (dashboardState.setupRehearsalActive ? 'Setup rehearsal is running. Connect TikTok when ready.' : 'Open the setup demo, then connect TikTok before going live.')
+    : 'Core stream systems are online.');
+  text('dashboard-summary', blockers
+    ? (dashboardState.setupRehearsalActive ? 'Use the rehearsal to configure OBS before connecting TikTok.' : 'Start the setup demo before connecting TikTok.')
+    : `Room ${currentRoomId || ''} is ready for live control.`);
   const list = document.getElementById('readiness-list');
   if (list) list.innerHTML = items.map(item => readinessItem(item.title, item.detail, item.status, item.label)).join('');
   updateWorkflowStatuses();
@@ -1022,6 +1079,7 @@ socket.on('devModeChanged', data => { dashboardState.devTestMode = !!data.enable
 socket.on('audioConfig', cfg => { if (cfg) audioConfigData = cfg; renderAssignTable(); });
 socket.on('sponsorBreakStatus', data => updateSponsorBreakStatus(data || {}));
 socket.on('sessionStatus', data => renderSessionStatus(data || {}));
+socket.on('setupMode', data => setSetupRehearsalStatus(data || {}));
 socket.on('tiktokConnection', data => {
   const stream = data || {};
   setTikTokStatus(stream.status || (stream.connected ? 'connected' : 'disconnected'), stream.username || '');
@@ -1166,7 +1224,8 @@ async function fetchStatus() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Unable to load dashboard status');
     setRoomLabel(data.roomId || null);
-    setOverlayUrl(data.overlayUrl || null, data.overlayV2Url || null);
+    setOverlayUrl(data.overlayUrl || null, data.overlayV2Url || null, data.setupOverlayUrl || null, data.setupOverlayV2Url || null);
+    setSetupRehearsalStatus(data.setupRehearsal || { active: false });
     if (initialLoad) {
       document.getElementById('username').value = data.username || '';
       initialLoad = false;
@@ -1199,6 +1258,39 @@ function copyOverlayUrl() {
     updateSetupChecklist();
     toast(currentOverlayUrl ? 'Overlay URL copied' : 'Fallback overlay URL copied');
   }).catch(() => toast('Copy failed', true));
+}
+async function startSetupRehearsal() {
+  const result = await apiCall('/api/stream/setup/start', 'POST', { action: 'burst' });
+  if (!result.success) return;
+  if (result.overlayUrl || result.overlayV2Url) {
+    currentSetupOverlayUrl = result.overlayUrl || currentSetupOverlayUrl;
+    currentSetupOverlayV2Url = result.overlayV2Url || currentSetupOverlayV2Url;
+  }
+  setSetupRehearsalStatus(result.setupRehearsal || { active: true });
+  dashboardState.overlayTested = true;
+  updateSetupChecklist();
+  toast('Setup demo started');
+}
+function openSetupOverlay() {
+  window.open(setupOverlayUrl(), '_blank');
+  toast('Opened signed setup demo');
+}
+function copySetupOverlayUrl() {
+  const url = setupOverlayUrl();
+  navigator.clipboard?.writeText(url).then(() => {
+    dashboardState.overlayUrlCopied = true;
+    updateSetupChecklist();
+    toast('Setup demo URL copied');
+  }).catch(() => toast('Copy failed', true));
+}
+async function resetSetupRehearsal() {
+  const result = await apiCall('/api/stream/setup/reset', 'POST');
+  if (!result.success) return;
+  setSetupRehearsalStatus(result.setupRehearsal || { active: false });
+  dashboardState.overlayTested = false;
+  dashboardState.playerCount = 0;
+  text('player-count', '0');
+  toast('Setup demo reset');
 }
 function copyOverlayV2SourceUrl(render = '1080p') {
   const url = overlayV2VariantUrl(render, true);

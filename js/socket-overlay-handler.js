@@ -78,6 +78,7 @@ function initSocketOverlay(game) {
 
     if (!playerEntries.length && !hasExplicitPlayers) return;
 
+    if (playerEntries.length && scene.demoModeActive !== undefined) scene.demoModeActive = false;
     playerEntries.forEach(([id, player]) => {
       if (!player || player.alive === false) return;
       const normalized = normalizePlayer(id, player);
@@ -194,6 +195,15 @@ function initSocketOverlay(game) {
   });
 
   socket.on('gameState', syncGameState);
+  socket.on('setupMode', (data = {}) => {
+    if (data.active) {
+      setStatus('SETUP', 'demo');
+      if (scene.startDemo) scene.startDemo();
+      if (scene.showBanner) scene.showBanner(data.title || 'Setup rehearsal running', 'event');
+    } else if (scene.demoModeActive !== undefined) {
+      scene.demoModeActive = false;
+    }
+  });
   socket.on('audioConfig', (config) => {
     Object.keys(audioConfig).forEach(key => delete audioConfig[key]);
     if (config && typeof config === 'object') {

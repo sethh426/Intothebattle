@@ -1490,6 +1490,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   const overlayRoomId = overlayParams.get('room_id') || '';
   const overlayToken  = overlayParams.get('overlay_token') || overlayParams.get('overlayToken') || '';
   const isSignedOverlay = Boolean(overlayRoomId && overlayToken);
+  const isSetupMode = overlayParams.get('setup') === '1' || overlayParams.get('rehearsal') === '1';
   const isPublicDemo = overlayParams.get('demo') === '1'
     || /^\/overlay-(demo|preview)(?:\.html)?\/?$/i.test(window.location.pathname);
   function readDemoRatio(name, fallback, min, max) {
@@ -1505,6 +1506,9 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   }
   if (isPublicDemo) {
     document.body.classList.add('public-demo-overlay');
+  }
+  if (isSetupMode) {
+    document.body.classList.add('setup-overlay');
   }
   if ((isSignedOverlay || isPublicDemo) && overlayParams.get('controls') !== '1') {
     document.body.classList.add('hide-overlay-controls');
@@ -5567,6 +5571,18 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 
   function applyGameState(state) {
     players = normalizePlayers(state);
+    if (isSetupMode && Object.keys(players).length === 0) {
+      enterDemoMode();
+      if (!stateFetchInFlight) {
+        stateFetchInFlight = true;
+        fetch(withOverlayAuth('/state'))
+          .then(r => (r.ok ? r.json() : null))
+          .then(s => { if (s && Object.keys(normalizePlayers(s)).length) receiveGameState(s); })
+          .catch(() => {})
+          .finally(() => { stateFetchInFlight = false; });
+      }
+      return;
+    }
     isDemoMode = false;
     stopDemoLoop();
     if (sponsorState !== 'battle') renderSponsorStats(true);
@@ -6196,6 +6212,19 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       });
 
       socket.on('gameState', receiveGameState);
+      socket.on('setupMode', data => {
+        if (data && data.active) {
+          statusDiv.textContent = 'SETUP MODE';
+          statusDiv.className = 'demo';
+          enterDemoMode();
+          showBattlePrompt(data.message || 'Setup rehearsal running', '', 2400, true);
+        } else if (isSetupMode) {
+          players = {};
+          isDemoMode = false;
+          stopDemoLoop();
+          showBattlePrompt('Setup rehearsal reset', '', 2200, true);
+        }
+      });
 
       socket.on('audioConfig',     cfg      => applyAudioConfig(cfg));
       socket.on('overlaySettings', settings => { if (settings && typeof settings === 'object') overlaySettings = Object.assign({}, overlaySettings, settings); });

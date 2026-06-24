@@ -113,6 +113,8 @@ try {
 
   await expectStatus('/api/status', 401);
   await expectStatus('/api/subscription/status', 401);
+  await expectStatus('/api/stream/setup/start', 401, { method: 'POST' });
+  await expectStatus('/api/stream/setup/reset', 401, { method: 'POST' });
   await expectStatus('/api/signup-intent', 403, {
     method: 'POST',
     headers: { 'content-type': 'application/json', Origin: 'https://evil.example' },
@@ -159,9 +161,11 @@ try {
   await expectStatus(`/overlay?room_id=${roomId}`, 401);
   await expectStatus(`/overlay?room_id=${roomId}&overlay_token=bad`, 401);
   await expectStatus(`/overlay?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 200);
+  await expectStatus(`/overlay?setup=1&controls=1&debug=1&room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 200);
   await expectStatus(`/overlay-v2?room_id=${roomId}`, 401);
   await expectStatus(`/overlay-v2?room_id=${roomId}&overlay_token=bad`, 401);
   await expectStatus(`/overlay-v2?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 200);
+  await expectStatus(`/overlay-v2?setup=1&render=1080p&source=1&room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 200);
   await expectStatus(`/state?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 200);
   await expectStatus(`/state?room_id=${roomId}&overlay_token=bad`, 401);
 
