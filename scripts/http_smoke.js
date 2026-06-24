@@ -93,6 +93,7 @@ try {
   for (const pathname of ['/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/overlay-scene.js', '/js/overlay-v2.js', '/vendor/phaser/phaser.min.js']) {
     await expectStatus(pathname, 200);
   }
+  await expectStatus('/growth-assets/missing-growth-asset.png', 404);
 
   const dashboard = await expectStatus('/dashboard', 302);
   assert((dashboard.headers.get('location') || '').startsWith('/login'), '/dashboard should redirect to /login');

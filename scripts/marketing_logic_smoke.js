@@ -14,9 +14,13 @@ const {
   syncLeadToGrowthApis,
 } = await import('../tiktokbr/services/growthIntegrations.js');
 const {
+  buildBlankDesignBrief,
   buildCreativeVariantDrafts,
   creativeTemplateOptions,
+  listContentGenerationPacks,
+  listBlankDesignTemplates,
   listCreativeTemplates,
+  renderBlankDesignSvg,
   runCreativeQualityGate,
 } = await import('../tiktokbr/services/creativeTemplateEngine.js');
 
@@ -83,6 +87,25 @@ const creativeOptions = creativeTemplateOptions();
 assert(creativeOptions.assetTypes.some(type => type.key === 'real_overlay_clip'), 'Creative options must include real overlay clips');
 assert(creativeOptions.assetTypes.some(type => type.key === 'generated_background'), 'Creative options must include generated backgrounds for non-proof use');
 
+const contentPacks = listContentGenerationPacks();
+assert(contentPacks.length >= 5, 'Expected guided content generation packs');
+assert(contentPacks.every(pack => pack.recipes?.length >= 4), 'Every content pack must include a multi-platform recipe');
+assert(contentPacks.every(pack => pack.acceptedAssetLabels?.length && pack.recommendedAssetLabels?.length), 'Content packs must explain accepted and recommended assets');
+assert(
+  contentPacks.some(pack => pack.key === 'sponsor_break_sales' && pack.recipes.some(recipe => recipe.templateKey === 'sponsor_broadcast')),
+  'Sponsor sales pack must generate sponsor broadcast creative'
+);
+
+const blankDesigns = listBlankDesignTemplates();
+assert(blankDesigns.length === 5, 'Expected five blank branded design templates');
+assert(blankDesigns.every(design => design.width > 0 && design.height > 0 && design.downloadSvg && design.downloadBrief), 'Blank designs must include dimensions and downloads');
+for (const design of blankDesigns) {
+  const brief = buildBlankDesignBrief(design.key);
+  const svg = renderBlankDesignSvg(design.key);
+  assert(brief.brandKit?.logoUrl && brief.seoStarter?.altText, 'Blank design brief must include brand and SEO starter data');
+  assert(svg.includes('<svg') && svg.includes('INTOTHEBATTLE'), 'Blank design SVG must render branded SVG output');
+}
+
 const creativeDrafts = buildCreativeVariantDrafts({
   templateKey: 'twelve_second_demo',
   platform: 'tiktok',
@@ -103,6 +126,22 @@ assert(
 assert(
   creativeDrafts.every(draft => JSON.parse(draft.blockJson).hashtags && JSON.parse(draft.blockJson).seoKeywords),
   'Creative variants must include hashtags and SEO metadata'
+);
+assert(
+  creativeDrafts.every(draft => {
+    const blocks = JSON.parse(draft.blockJson);
+    return blocks.brandKit?.logoUrl
+      && blocks.layoutSpec?.canvas?.width
+      && blocks.layoutSpec?.logo?.placement
+      && blocks.imageGeneration?.prompt
+      && blocks.seo?.title
+      && blocks.downloadables?.suggestedFilename;
+  }),
+  'Creative variants must include branded production package fields'
+);
+assert(
+  creativeOptions.platforms.every(platform => Number.isFinite(platform.width) && Number.isFinite(platform.height)),
+  'Every creative platform must declare export dimensions'
 );
 
 const blockedCreative = runCreativeQualityGate({
@@ -137,5 +176,7 @@ console.log(JSON.stringify({
   diagnostics,
   growth: growthDiagnostics,
   creativeTemplates: creativeTemplates.length,
+  contentPacks: contentPacks.length,
+  blankDesigns: blankDesigns.length,
   creativeDrafts: creativeDrafts.length,
 }, null, 2));

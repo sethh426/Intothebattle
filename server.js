@@ -191,6 +191,8 @@ const OVERLAY_TOKEN_PARAM = 'overlay_token';
 const OVERLAY_TOKEN_TTL = process.env.OVERLAY_TOKEN_TTL || '365d';
 const STORAGE_ROOT = process.env.DISK_PATH || __dirname;
 const PLATFORM_SPONSOR_DIR = path.join(STORAGE_ROOT, 'platform-sponsors');
+const GROWTH_ASSET_DIR = path.join(STORAGE_ROOT, 'growth-assets');
+const GROWTH_ASSET_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.webm', '.m4v', '.mov']);
 const PLATFORM_SPONSOR_ENABLED = process.env.PLATFORM_SPONSOR_ENABLED !== 'false';
 const PLATFORM_SPONSOR_INITIAL_DELAY_MS = Number(process.env.PLATFORM_SPONSOR_INITIAL_DELAY_MS || 8 * 60 * 1000);
 const PLATFORM_SPONSOR_INTERVAL_MS = Number(process.env.PLATFORM_SPONSOR_INTERVAL_MS || 12 * 60 * 1000);
@@ -3929,7 +3931,7 @@ app.use((req, res, next) => {
 
 app.use((req, _res, next) => {
   if (req.method !== 'GET') return next();
-  if (/^\/(?:api|admin|audio|background|dashboard|debug|metrics|overlay|overlay-v2|platform-sponsor|socket.io|sponsor|state|stats|vendor)(?:\/|$)/.test(req.path)) return next();
+  if (/^\/(?:api|admin|audio|background|dashboard|debug|growth-assets|metrics|overlay|overlay-v2|platform-sponsor|socket.io|sponsor|state|stats|vendor)(?:\/|$)/.test(req.path)) return next();
   const query = req.query || {};
   if (!(query.utm_source || query.utm_medium || query.utm_campaign || query.utm_content)) return next();
   recordMarketingVisit({
@@ -4898,6 +4900,15 @@ app.get('/platform-sponsor/:filename', (req, res) => {
   if (!isSafePath(PLATFORM_SPONSOR_DIR, runtimePath)) return res.status(403).send('Forbidden');
   if (!fs.existsSync(runtimePath)) return res.status(404).send('Sponsor media not found');
   return sendSponsorMedia(req, res, runtimePath, filename);
+});
+
+app.get('/growth-assets/:filename', (req, res) => {
+  const filename = path.basename(req.params.filename);
+  if (!GROWTH_ASSET_EXTS.has(path.extname(filename).toLowerCase())) return res.status(400).send('Unsupported growth asset');
+  const runtimePath = path.join(GROWTH_ASSET_DIR, filename);
+  if (!isSafePath(GROWTH_ASSET_DIR, runtimePath)) return res.status(403).send('Forbidden');
+  if (!fs.existsSync(runtimePath)) return res.status(404).send('Growth asset not found');
+  return res.sendFile(runtimePath);
 });
 
 function sanitizeSponsorText(value, fallback = '', maxLength = 120) {

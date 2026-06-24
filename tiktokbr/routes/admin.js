@@ -33,12 +33,19 @@ import {
 import { growthIntegrationDiagnostics } from '../services/growthIntegrations.js';
 import {
   addCreativeAsset,
+  buildCreativeProductionPackage,
+  buildBlankDesignBrief,
   creativeTemplateOptions,
+  generateCreativeContentPack,
   generateCreativeVariants,
+  listBlankDesignTemplates,
+  listContentGenerationPacks,
   listCreativeAssets,
   listCreativeTemplates,
   listCreativeVariants,
   queueCreativeVariantAsMarketingPost,
+  renderBlankDesignSvg,
+  renderCreativeVariantSvg,
   updateCreativeAssetStatus,
   updateCreativeVariantStatus,
 } from '../services/creativeTemplateEngine.js';
@@ -64,6 +71,10 @@ const SPONSOR_MEDIA_EXTS = new Set(['.mp4', '.webm', '.m4v', '.mov']);
 const SPONSOR_MEDIA_MIMES = new Set(['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v']);
 const PLATFORM_SPONSOR_DIR = path.join(process.env.DISK_PATH || path.resolve(__dirname, '..', '..'), 'platform-sponsors');
 const PLATFORM_SPONSOR_UPLOAD_MAX_BYTES = uploadLimitBytes('PLATFORM_SPONSOR_UPLOAD_MAX_MB', 100 * 1024 * 1024);
+const GROWTH_ASSET_DIR = path.join(process.env.DISK_PATH || path.resolve(__dirname, '..', '..'), 'growth-assets');
+const GROWTH_CREATIVE_UPLOAD_MAX_BYTES = uploadLimitBytes('GROWTH_CREATIVE_UPLOAD_MAX_MB', 25 * 1024 * 1024);
+const GROWTH_ASSET_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.webm', '.m4v', '.mov']);
+const GROWTH_ASSET_MIMES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v']);
 
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
@@ -103,6 +114,38 @@ function uploadedFileCapacityRedirect(filepath, size) {
   if (decision.ok) return '';
   deleteSponsorUploadFile(filepath);
   return `/admin/sponsors?error=${encodeURIComponent(decision.message || 'Storage capacity is too low for this upload.')}`;
+}
+
+function deleteGrowthUploadFile(filepath) {
+  try {
+    if (filepath && isSafePath(GROWTH_ASSET_DIR, filepath) && fs.existsSync(filepath)) fs.unlinkSync(filepath);
+  } catch (_err) {}
+}
+
+function growthUploadCapacityRedirect(req) {
+  try {
+    ensureDir(GROWTH_ASSET_DIR);
+  } catch (err) {
+    return `/admin/marketing?error=${encodeURIComponent(err?.message || 'Growth creative storage is not writable.')}`;
+  }
+  const incomingBytes = contentLengthBytes(req);
+  if (!incomingBytes) return '';
+  const decision = buildUploadDecision(GROWTH_ASSET_DIR, incomingBytes, { category: 'growth-creative' });
+  if (decision.ok) return '';
+  return `/admin/marketing?error=${encodeURIComponent(decision.message || 'Storage capacity is too low for this upload.')}`;
+}
+
+function uploadedGrowthFileCapacityRedirect(filepath, size) {
+  const decision = buildUploadDecision(GROWTH_ASSET_DIR, Number(size || 0), { category: 'growth-creative', alreadyWritten: true });
+  if (decision.ok) return '';
+  deleteGrowthUploadFile(filepath);
+  return `/admin/marketing?error=${encodeURIComponent(decision.message || 'Storage capacity is too low for this upload.')}`;
+}
+
+function inferGrowthAssetType(file) {
+  const mime = String(file?.mimetype || '').toLowerCase();
+  if (mime.startsWith('video/')) return 'real_overlay_clip';
+  return 'real_overlay_screenshot';
 }
 
 function escapeHtml(value) {
@@ -167,6 +210,26 @@ const sponsorUpload = multer({
     const ext = path.extname(file.originalname || '').toLowerCase();
     const ok = SPONSOR_MEDIA_EXTS.has(ext) && SPONSOR_MEDIA_MIMES.has(file.mimetype);
     cb(ok ? null : new Error('Upload MP4, WebM, M4V, or MOV video.'), ok);
+  },
+});
+
+const growthAssetUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      ensureDir(GROWTH_ASSET_DIR);
+      cb(null, GROWTH_ASSET_DIR);
+    },
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname || '').toLowerCase();
+      const safeExt = GROWTH_ASSET_EXTS.has(ext) ? ext : '.png';
+      cb(null, `growth-creative-${Date.now()}-${crypto.randomBytes(6).toString('hex')}${safeExt}`);
+    },
+  }),
+  limits: { fileSize: GROWTH_CREATIVE_UPLOAD_MAX_BYTES },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const ok = GROWTH_ASSET_EXTS.has(ext) && GROWTH_ASSET_MIMES.has(file.mimetype);
+    cb(ok ? null : new Error('Upload a PNG, JPG, WebP, GIF, MP4, WebM, M4V, or MOV creative asset.'), ok);
   },
 });
 
@@ -1584,6 +1647,57 @@ function renderCreativeTemplateCards(creativeTemplates = []) {
   </div>`).join('');
 }
 
+function renderBlankDesignCards(blankDesigns = []) {
+  return blankDesigns.map(design => `<div class="blank-design-card">
+    <div class="blank-design-preview" style="--accent:${escapeAttr(design.accent)};--secondary:${escapeAttr(design.secondary)};">
+      <span></span><i></i><em></em><strong></strong><b></b>
+    </div>
+    <div class="template-topline">
+      <span class="status-pill ready">${escapeHtml(design.format || '')}</span>
+      <small>${escapeHtml(design.bestFor || '')}</small>
+    </div>
+    <h3>${escapeHtml(design.label || design.key)}</h3>
+    <p>${escapeHtml(design.description || '')}</p>
+    <div class="inline-actions">
+      <a class="button-link download" href="${escapeAttr(design.downloadSvg)}">Download SVG</a>
+      <a class="button-link" href="${escapeAttr(design.downloadBrief)}">Brief</a>
+    </div>
+  </div>`).join('');
+}
+
+function renderContentPackCards(contentPacks = [], creativeAssets = [], creativeOptions = creativeTemplateOptions()) {
+  const approvedAssets = creativeAssets.filter(asset => String(asset.approval_status || '').toLowerCase() === 'approved');
+  return contentPacks.map(pack => {
+    const acceptedAssetTypes = new Set(pack.acceptedAssetTypes || []);
+    const matchingAssets = approvedAssets.filter(asset => acceptedAssetTypes.has(asset.asset_type));
+    const assetOptions = matchingAssets
+      .map(asset => `<option value="${escapeAttr(asset.id)}">${escapeHtml(asset.title || `Asset ${asset.id}`)} - ${escapeHtml(creativeAssetLabel(asset.asset_type, creativeOptions))}</option>`)
+      .join('');
+    const recipes = (pack.recipes || []).map(recipe => `<li>${escapeHtml(recipe.platformLabel || recipe.platform)} - ${escapeHtml(recipe.templateLabel || recipe.templateKey)}</li>`).join('');
+    return `<div class="content-pack-card">
+      <div class="template-topline">
+        <span class="status-pill ready">${escapeHtml(pack.goal || 'growth')}</span>
+        <small>${escapeHtml((pack.platforms || []).join(', '))}</small>
+      </div>
+      <h3>${escapeHtml(pack.label || pack.key)}</h3>
+      <p>${escapeHtml(pack.description || '')}</p>
+      <details class="creative-brief" open>
+        <summary>Pack outputs</summary>
+        <ul>${recipes}</ul>
+        <p><strong>Best asset:</strong> ${escapeHtml((pack.recommendedAssetLabels || []).join(', '))}</p>
+      </details>
+      <form method="POST" action="/admin/marketing/content-packs/generate">
+        <input type="hidden" name="packKey" value="${escapeAttr(pack.key)}" />
+        <label>Approved asset</label>
+        <select name="assetId" required>${assetOptions || '<option value="">No matching approved assets</option>'}</select>
+        <label>Variants per output</label>
+        <input name="countPerItem" type="number" min="1" max="3" value="1" />
+        <button type="submit" ${assetOptions ? '' : 'disabled'}>Generate Pack</button>
+      </form>
+    </div>`;
+  }).join('');
+}
+
 function countBy(items = [], field, fallback = 'unknown') {
   return items.reduce((acc, item) => {
     const key = String(item?.[field] || fallback).toLowerCase();
@@ -1642,12 +1756,16 @@ function renderCreativeVariantRows(creativeVariants = []) {
     const isBlocked = qualityStatus === 'blocked';
     const blocks = parseCreativeBlocks(variant.block_json);
     const visualDirection = blocks.visualDirection || {};
+    const layoutSpec = blocks.layoutSpec || {};
+    const seo = blocks.seo || {};
+    const imageGeneration = blocks.imageGeneration || {};
     const textBlocks = Array.isArray(blocks.textBlocks) ? blocks.textBlocks : [];
     const blockPreview = textBlocks.map(block => `<li><strong>${escapeHtml(block.time || '')}</strong> ${escapeHtml(block.slot || '')}: ${escapeHtml(block.text || '')}</li>`).join('');
+    const canvas = layoutSpec.canvas ? `${layoutSpec.canvas.width}x${layoutSpec.canvas.height} ${layoutSpec.canvas.format}` : variant.format;
     return `<tr>
       <td>
         <strong>${escapeHtml(variant.template_key || '')}</strong><br />
-        <small>${escapeHtml(String(variant.platform || '').toUpperCase())} - ${escapeHtml(variant.format || '')}</small>
+        <small>${escapeHtml(String(variant.platform || '').toUpperCase())} - ${escapeHtml(canvas || '')}</small>
       </td>
       <td>
         <span class="status-pill ${escapeAttr(status)}">${escapeHtml(status)}</span><br />
@@ -1662,9 +1780,19 @@ function renderCreativeVariantRows(creativeVariants = []) {
       <td>
         <div class="post-copy">${escapeHtml(variant.body || '')}</div>
         <a href="${escapeAttr(variant.utm_url || '#')}" target="_blank" rel="noopener">UTM landing page</a>
-        ${visualDirection.primaryVisual ? `<details class="creative-brief"><summary>Creative blocks</summary><ul>${blockPreview}</ul><p><strong>Visual:</strong> ${escapeHtml(visualDirection.primaryVisual)}</p><p><strong>Prompt:</strong> ${escapeHtml(visualDirection.imagePrompt || '')}</p></details>` : ''}
+        ${visualDirection.primaryVisual ? `<details class="creative-brief"><summary>Creative production package</summary>
+          <ul>${blockPreview}</ul>
+          <p><strong>Visual:</strong> ${escapeHtml(visualDirection.primaryVisual)}</p>
+          <p><strong>Image prompt:</strong> ${escapeHtml(imageGeneration.prompt || visualDirection.imagePrompt || '')}</p>
+          <p><strong>Negative prompt:</strong> ${escapeHtml(imageGeneration.negativePrompt || '')}</p>
+          <p><strong>SEO title:</strong> ${escapeHtml(seo.title || '')}</p>
+          <p><strong>SEO description:</strong> ${escapeHtml(seo.description || '')}</p>
+          <p><strong>Alt text:</strong> ${escapeHtml(seo.altText || '')}</p>
+        </details>` : ''}
       </td>
       <td>
+        <a class="button-link download" href="/admin/marketing/creative-variants/${escapeAttr(variant.id)}/download.svg">Download SVG</a>
+        <a class="button-link download" href="/admin/marketing/creative-variants/${escapeAttr(variant.id)}/brief.json">Download Brief</a>
         <form method="POST" action="/admin/marketing/creative-variants/${escapeAttr(variant.id)}/status">
           <input type="hidden" name="status" value="approved" />
           <button type="submit" class="test" ${status === 'approved' || isBlocked ? 'disabled' : ''}>Approve</button>
@@ -1859,6 +1987,8 @@ function renderMarketingAdminPage({
   growthDiagnostics = growthIntegrationDiagnostics(),
   filters = {},
   creativeTemplates = listCreativeTemplates(),
+  blankDesigns = listBlankDesignTemplates(),
+  contentPacks = listContentGenerationPacks(),
   creativeAssets = [],
   creativeVariants = [],
   creativeOptions = creativeTemplateOptions(),
@@ -1897,6 +2027,8 @@ function renderMarketingAdminPage({
     ['4', 'Learn', 'UTM links, publish history, HubSpot, and Segment close the loop for growth tracking.'],
   ].map(([step, title, copy]) => `<div class="engine-step"><strong>${escapeHtml(step)}</strong><b>${escapeHtml(title)}</b><span>${escapeHtml(copy)}</span></div>`).join('');
   const templateCards = renderCreativeTemplateCards(creativeTemplates);
+  const blankDesignCards = renderBlankDesignCards(blankDesigns);
+  const contentPackCards = renderContentPackCards(contentPacks, creativeAssets, creativeOptions);
   const creativeAssetCounts = countBy(creativeAssets, 'approval_status', 'draft');
   const creativeVariantCounts = countBy(creativeVariants, 'status', 'draft');
   const creativeQualityCounts = countBy(creativeVariants, 'quality_status', 'draft');
@@ -2049,6 +2181,8 @@ function renderMarketingAdminPage({
     button.test { color:#041014; background:linear-gradient(135deg,#55e7ff,#b9fbff); }
     button.secondary { color:#fff8e6; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); }
     button.danger { color:#fff; background:#d9435f; }
+    .button-link { display:inline-flex; width:100%; min-height:38px; margin-top:8px; align-items:center; justify-content:center; padding:0 12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); color:#fff8e6; background:rgba(255,255,255,.07); font-size:12px; font-weight:900; }
+    .button-link.download { color:#041014; background:linear-gradient(135deg,#55e7ff,#b9fbff); border:0; }
     .status-pill { display:inline-flex; align-items:center; min-height:30px; padding:5px 10px; border-radius:999px; font-size:11px; font-weight:900; text-transform:uppercase; border:1px solid rgba(255,255,255,.12); }
     .status-pill.draft { color:#ffdf8a; border-color:rgba(246,201,91,.34); background:rgba(246,201,91,.08); }
     .status-pill.approved { color:#9fefff; border-color:rgba(85,231,255,.32); background:rgba(85,231,255,.08); }
@@ -2059,11 +2193,23 @@ function renderMarketingAdminPage({
     .status-pill.queued { color:#9fefff; border-color:rgba(85,231,255,.32); background:rgba(85,231,255,.08); }
     .warning-note { margin-top:10px; padding:9px 10px; border-radius:12px; color:#ffdf8a; background:rgba(246,201,91,.08); border:1px solid rgba(246,201,91,.18); font-size:12px; line-height:1.4; }
     .warning-note.failed { color:#ffb6b6; background:rgba(232,59,95,.1); border-color:rgba(232,59,95,.32); }
-    .template-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:14px; }
-    .template-card { min-width:0; padding:14px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.22); }
-    .template-card h3 { margin:10px 0 8px; color:#fff8e6; font-size:17px; }
-    .template-card p { margin:0 0 10px; font-size:13px; }
+    .template-grid,.blank-design-grid,.content-pack-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:14px; }
+    .content-pack-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .template-card,.blank-design-card,.content-pack-card { min-width:0; padding:14px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.22); }
+    .content-pack-card { display:flex; flex-direction:column; }
+    .content-pack-card form { margin-top:auto; }
+    .template-card h3,.blank-design-card h3,.content-pack-card h3 { margin:10px 0 8px; color:#fff8e6; font-size:17px; }
+    .template-card p,.blank-design-card p,.content-pack-card p { margin:0 0 10px; font-size:13px; }
     .template-topline { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .blank-design-preview { position:relative; overflow:hidden; aspect-ratio:16/10; margin-bottom:12px; border-radius:16px; border:1px solid rgba(255,255,255,.12); background:radial-gradient(circle at 22% 18%, color-mix(in srgb,var(--secondary) 38%, transparent), transparent 35%),radial-gradient(circle at 78% 78%, color-mix(in srgb,var(--accent) 34%, transparent), transparent 38%),linear-gradient(135deg,#050713,#102034 55%,#1d0d20); box-shadow:inset 0 0 0 1px rgba(255,255,255,.04); }
+    .blank-design-preview::before { content:""; position:absolute; inset:12%; border:2px solid color-mix(in srgb,var(--accent) 55%, transparent); border-radius:14px; box-shadow:0 0 34px color-mix(in srgb,var(--accent) 22%, transparent); }
+    .blank-design-preview::after { content:""; position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px); background-size:32px 32px; opacity:.5; }
+    .blank-design-preview span { position:absolute; left:14px; top:14px; width:34px; height:34px; border-radius:12px; background:var(--accent); box-shadow:0 0 22px color-mix(in srgb,var(--accent) 42%, transparent); }
+    .blank-design-preview i { position:absolute; left:20%; right:12%; top:20px; height:11px; border-radius:999px; background:var(--secondary); opacity:.75; }
+    .blank-design-preview em { position:absolute; left:16%; right:16%; top:34%; height:34%; border-radius:10px; border:2px solid color-mix(in srgb,var(--accent) 62%, transparent); background:rgba(2,5,13,.62); }
+    .blank-design-preview strong { position:absolute; left:16%; right:16%; bottom:22%; height:13%; border-radius:10px; border:1px solid color-mix(in srgb,var(--secondary) 54%, transparent); background:rgba(255,255,255,.045); }
+    .blank-design-preview b { position:absolute; left:26%; right:26%; bottom:10%; height:12px; border-radius:999px; background:linear-gradient(90deg,var(--accent),var(--secondary)); opacity:.78; }
+    .inline-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
     .creative-brief { margin-top:10px; padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,.09); background:rgba(0,0,0,.18); }
     .creative-brief summary { cursor:pointer; color:#ffdf8a; font-weight:900; }
     .creative-brief ul { margin:10px 0; padding-left:18px; color:#dce7ff; }
@@ -2073,8 +2219,8 @@ function renderMarketingAdminPage({
     th { background:rgba(246,201,91,0.09); color:#ffdf8a; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     small { color:#9fb2d7; }
     .post-copy { max-width:620px; white-space:pre-wrap; color:#fff8e6; line-height:1.45; }
-    @media(max-width:1100px){ .template-grid,.engine-grid,.mode-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.calendar-grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
-    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid,.inline-grid,.template-grid,.engine-grid,.mode-grid,.calendar-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:1fr} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:0} }
+    @media(max-width:1100px){ .template-grid,.blank-design-grid,.content-pack-grid,.engine-grid,.mode-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.calendar-grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid,.inline-grid,.template-grid,.blank-design-grid,.content-pack-grid,.engine-grid,.mode-grid,.calendar-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:1fr} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:0} }
   </style>
 </head>
 <body>
@@ -2171,7 +2317,27 @@ function renderMarketingAdminPage({
       <div class="template-grid">${templateCards || '<p>No templates configured.</p>'}</div>
     </div>
     <div class="card">
+      <h2>Design template library</h2>
+      <p>Five branded, attention-heavy creative templates with logo, headline frame, picture or video frame, benefit-copy panel, and CTA button. Download the SVG as the editable design source, or download the brief for SEO notes, usage rules, and export guidance.</p>
+      <div class="blank-design-grid">${blankDesignCards || '<p>No design templates configured.</p>'}</div>
+    </div>
+    <div class="card">
       <h2>Asset vault</h2>
+      <p>Upload real overlay screenshots, sponsor clips, dashboard screenshots, approved textures, or generated backgrounds. Keep proof assets approved only when they show the real product accurately.</p>
+      <form method="POST" action="/admin/marketing/creative-assets/upload" enctype="multipart/form-data">
+        <div class="inline-grid compact">
+          <span><label>Title</label><input name="title" maxlength="120" placeholder="Real overlay action frame" required /></span>
+          <span><label>Asset type</label><select name="assetType"><option value="">Auto from file</option>${assetTypeOptions}</select></span>
+          <span><label>Status</label><select name="approvalStatus"><option value="approved">Approved</option><option value="draft">Draft</option><option value="blocked">Blocked</option></select></span>
+        </div>
+        <label>Upload image or video</label>
+        <input name="creativeAsset" type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime,video/x-m4v" required />
+        <div class="inline-grid compact">
+          <span><label>Source</label><input name="source" maxlength="80" value="admin-upload" /></span>
+          <span><label>Notes</label><input name="notes" maxlength="500" placeholder="Why this asset is approved and where it should be used" /></span>
+          <span><button type="submit">Upload Asset</button></span>
+        </div>
+      </form>
       <form method="POST" action="/admin/marketing/creative-assets">
         <div class="inline-grid compact">
           <span><label>Title</label><input name="title" maxlength="120" placeholder="Real overlay 12-second clip" required /></span>
@@ -2190,6 +2356,11 @@ function renderMarketingAdminPage({
         <thead><tr><th>Asset</th><th>Status</th><th>URL</th><th>Actions</th></tr></thead>
         <tbody>${creativeAssetRows || '<tr><td colspan="4">No creative assets saved yet.</td></tr>'}</tbody>
       </table>
+    </div>
+    <div class="card">
+      <h2>One-click content packs</h2>
+      <p>Pick one approved real asset and generate a coordinated set of platform-ready variants with hooks, proof copy, CTA, UTM links, image prompts, SEO fields, and downloadable production briefs.</p>
+      <div class="content-pack-grid">${contentPackCards || '<p>No content packs configured.</p>'}</div>
     </div>
     <div class="card" id="variant-builder">
       <h2>Variant builder</h2>
@@ -2470,6 +2641,8 @@ router.get('/marketing', requireAdminAuth, (req, res) => {
       growthDiagnostics: growthIntegrationDiagnostics(),
       filters: { status, date },
       creativeTemplates: listCreativeTemplates(),
+      blankDesigns: listBlankDesignTemplates(),
+      contentPacks: listContentGenerationPacks(),
       creativeAssets: listCreativeAssets({ limit: 60 }),
       creativeVariants: listCreativeVariants({ limit: 60 }),
       creativeOptions: creativeTemplateOptions(),
@@ -2486,6 +2659,8 @@ router.get('/marketing', requireAdminAuth, (req, res) => {
       growthDiagnostics: growthIntegrationDiagnostics(),
       filters: { status, date },
       creativeTemplates: listCreativeTemplates(),
+      blankDesigns: listBlankDesignTemplates(),
+      contentPacks: listContentGenerationPacks(),
       creativeAssets: [],
       creativeVariants: [],
       creativeOptions: creativeTemplateOptions(),
@@ -2521,12 +2696,111 @@ router.post('/marketing/creative-assets', requireAdminAuth, (req, res) => {
   }
 });
 
+router.post('/marketing/creative-assets/upload', requireAdminAuth, (req, res) => {
+  const capacityRedirect = growthUploadCapacityRedirect(req);
+  if (capacityRedirect) return res.redirect(capacityRedirect);
+  growthAssetUpload.single('creativeAsset')(req, res, (err) => {
+    if (err) {
+      const message = err?.code === 'LIMIT_FILE_SIZE'
+        ? `Creative asset is too large. Maximum growth upload size is ${Math.round(GROWTH_CREATIVE_UPLOAD_MAX_BYTES / 1024 / 1024)}MB.`
+        : err.message || 'Creative asset upload failed';
+      return res.redirect(`/admin/marketing?error=${encodeURIComponent(message)}`);
+    }
+    if (!req.file) return res.redirect(`/admin/marketing?error=${encodeURIComponent('Choose an image or video asset')}`);
+
+    const postWriteCapacityRedirect = uploadedGrowthFileCapacityRedirect(req.file.path, req.file.size);
+    if (postWriteCapacityRedirect) return res.redirect(postWriteCapacityRedirect);
+
+    try {
+      const requestedType = String(req.body.assetType || '').trim();
+      addCreativeAsset({
+        title: req.body.title || req.file.originalname,
+        assetType: requestedType || inferGrowthAssetType(req.file),
+        assetUrl: `/growth-assets/${encodeURIComponent(req.file.filename)}`,
+        source: req.body.source || 'admin-upload',
+        approvalStatus: req.body.approvalStatus,
+        notes: req.body.notes || `Uploaded ${req.file.originalname || req.file.filename}`,
+      });
+      return res.redirect('/admin/marketing?message=Creative%20asset%20uploaded');
+    } catch (saveErr) {
+      deleteGrowthUploadFile(req.file.path);
+      return res.redirect(`/admin/marketing?error=${encodeURIComponent(saveErr?.message || 'Creative asset save failed')}`);
+    }
+  });
+});
+
 router.post('/marketing/creative-assets/:id/status', requireAdminAuth, (req, res) => {
   try {
     updateCreativeAssetStatus(req.params.id, String(req.body.status || '').trim().toLowerCase());
     res.redirect('/admin/marketing?message=Creative%20asset%20status%20updated');
   } catch (err) {
     res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Creative asset status update failed')}`);
+  }
+});
+
+router.get('/marketing/creative-variants/:id/download.svg', requireAdminAuth, (req, res) => {
+  try {
+    const pkg = buildCreativeProductionPackage(req.params.id);
+    const svg = renderCreativeVariantSvg(req.params.id);
+    res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${pkg.files.svgFilename.replace(/"/g, '')}"`);
+    res.send(svg);
+  } catch (err) {
+    res.status(404).send(err?.message || 'Creative variant not found');
+  }
+});
+
+router.get('/marketing/creative-variants/:id/brief.json', requireAdminAuth, (req, res) => {
+  try {
+    const pkg = buildCreativeProductionPackage(req.params.id);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${pkg.files.briefFilename.replace(/"/g, '')}"`);
+    res.send(JSON.stringify(pkg, null, 2));
+  } catch (err) {
+    res.status(404).json({ error: err?.message || 'Creative variant not found' });
+  }
+});
+
+function sendDesignTemplateSvg(req, res) {
+  try {
+    const brief = buildBlankDesignBrief(req.params.key);
+    const svg = renderBlankDesignSvg(req.params.key);
+    res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${brief.files.svgFilename.replace(/"/g, '')}"`);
+    res.send(svg);
+  } catch (err) {
+    res.status(404).send(err?.message || 'Design template not found');
+  }
+}
+
+function sendDesignTemplateBrief(req, res) {
+  try {
+    const brief = buildBlankDesignBrief(req.params.key);
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${brief.files.briefFilename.replace(/"/g, '')}"`);
+    res.send(JSON.stringify(brief, null, 2));
+  } catch (err) {
+    res.status(404).json({ error: err?.message || 'Design template not found' });
+  }
+}
+
+router.get('/marketing/design-templates/:key/download.svg', requireAdminAuth, sendDesignTemplateSvg);
+router.get('/marketing/design-templates/:key/brief.json', requireAdminAuth, sendDesignTemplateBrief);
+router.get('/marketing/blank-designs/:key/download.svg', requireAdminAuth, sendDesignTemplateSvg);
+router.get('/marketing/blank-designs/:key/brief.json', requireAdminAuth, sendDesignTemplateBrief);
+
+router.post('/marketing/content-packs/generate', requireAdminAuth, (req, res) => {
+  try {
+    const result = generateCreativeContentPack({
+      packKey: req.body.packKey,
+      assetId: req.body.assetId,
+      countPerItem: req.body.countPerItem,
+    });
+    const duplicateText = result.skipped ? `, skipped ${result.skipped} duplicates` : '';
+    const incompatibleText = result.incompatible?.length ? `, ignored ${result.incompatible.length} incompatible outputs` : '';
+    res.redirect(`/admin/marketing?message=${encodeURIComponent(`${result.packLabel} generated ${result.count} variants from ${result.assetTitle}${duplicateText}${incompatibleText}`)}`);
+  } catch (err) {
+    res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Content pack generation failed')}`);
   }
 });
 

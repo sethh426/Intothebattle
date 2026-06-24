@@ -3,12 +3,12 @@ import db from '../db/db.js';
 
 const DEFAULT_PLATFORMS = ['tiktok', 'instagram', 'youtube_shorts', 'linkedin', 'facebook', 'x'];
 const PLATFORM_RULES = {
-  tiktok: { label: 'TikTok', format: '9:16 vertical', copyLimit: 280, safeZone: { top: 14, bottom: 22, left: 8, right: 8 } },
-  instagram: { label: 'Instagram Reels', format: '9:16 vertical', copyLimit: 1200, safeZone: { top: 14, bottom: 22, left: 8, right: 8 } },
-  youtube_shorts: { label: 'YouTube Shorts', format: '9:16 vertical', copyLimit: 420, safeZone: { top: 12, bottom: 18, left: 8, right: 8 } },
-  linkedin: { label: 'LinkedIn', format: '1:1 square or 4:5 feed', copyLimit: 1100, safeZone: { top: 8, bottom: 8, left: 8, right: 8 } },
-  facebook: { label: 'Facebook', format: '4:5 feed or 9:16 reels', copyLimit: 900, safeZone: { top: 10, bottom: 16, left: 8, right: 8 } },
-  x: { label: 'X', format: '16:9 or 1:1 feed', copyLimit: 260, safeZone: { top: 6, bottom: 6, left: 6, right: 6 } },
+  tiktok: { label: 'TikTok', format: '9:16 vertical', width: 1080, height: 1920, copyLimit: 280, safeZone: { top: 14, bottom: 22, left: 8, right: 8 } },
+  instagram: { label: 'Instagram Reels', format: '9:16 vertical', width: 1080, height: 1920, copyLimit: 1200, safeZone: { top: 14, bottom: 22, left: 8, right: 8 } },
+  youtube_shorts: { label: 'YouTube Shorts', format: '9:16 vertical', width: 1080, height: 1920, copyLimit: 420, safeZone: { top: 12, bottom: 18, left: 8, right: 8 } },
+  linkedin: { label: 'LinkedIn', format: '4:5 feed', width: 1080, height: 1350, copyLimit: 1100, safeZone: { top: 8, bottom: 8, left: 8, right: 8 } },
+  facebook: { label: 'Facebook', format: '4:5 feed', width: 1080, height: 1350, copyLimit: 900, safeZone: { top: 10, bottom: 16, left: 8, right: 8 } },
+  x: { label: 'X', format: '16:9 feed', width: 1600, height: 900, copyLimit: 260, safeZone: { top: 6, bottom: 6, left: 6, right: 6 } },
 };
 const ASSET_TYPES = {
   real_overlay_clip: 'Real overlay clip',
@@ -24,6 +24,89 @@ const VIDEO_ASSET_TYPES = new Set(['real_overlay_clip', 'sponsor_break_clip']);
 const IMAGE_ASSET_TYPES = new Set(['real_overlay_screenshot', 'dashboard_screenshot', 'product_logo', 'approved_texture', 'generated_background']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mov', '.m4v']);
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.avif', '.gif']);
+const BRAND_SYSTEM = {
+  name: 'IntoTheBattle',
+  tagline: 'TikTok LIVE Battle Overlay',
+  logoUrl: '/brand-identity-square.png',
+  fallbackLogoUrl: '/intothebattlelogo_logo_only.svg',
+  colors: {
+    void: '#03040a',
+    panel: '#0a1020',
+    cyan: '#35e7ff',
+    cyanSoft: '#9ff5ff',
+    magenta: '#ff2d88',
+    gold: '#ffd666',
+    cream: '#fff8e6',
+    muted: '#a8afbf',
+    green: '#77f0a1',
+  },
+  fonts: {
+    headline: 'Black Ops One, Impact, Arial Black, sans-serif',
+    body: 'Inter, DM Sans, Arial, sans-serif',
+  },
+};
+const BLANK_DESIGN_TEMPLATES = [
+  {
+    key: 'neon_arena_vertical',
+    label: 'Neon Arena Vertical',
+    format: '9:16 vertical',
+    width: 1080,
+    height: 1920,
+    mood: 'high-energy launch creative',
+    bestFor: 'TikTok, Reels, Shorts',
+    accent: BRAND_SYSTEM.colors.cyan,
+    secondary: BRAND_SYSTEM.colors.magenta,
+    description: 'A tall cyber arena frame with a luminous proof window, heavy top energy, and an empty CTA lane.',
+  },
+  {
+    key: 'broadcast_spotlight_wide',
+    label: 'Broadcast Spotlight Wide',
+    format: '16:9 wide',
+    width: 1600,
+    height: 900,
+    mood: 'sports broadcast sponsor moment',
+    bestFor: 'X, YouTube, landing page hero crops',
+    accent: BRAND_SYSTEM.colors.gold,
+    secondary: BRAND_SYSTEM.colors.cyan,
+    description: 'A cinematic widescreen board with a center spotlight, score-bug styling, and premium brand framing.',
+  },
+  {
+    key: 'electric_square_signal',
+    label: 'Electric Square Signal',
+    format: '1:1 square',
+    width: 1200,
+    height: 1200,
+    mood: 'feed-stopping product signal',
+    bestFor: 'LinkedIn, Instagram feed, Facebook feed',
+    accent: BRAND_SYSTEM.colors.magenta,
+    secondary: BRAND_SYSTEM.colors.cyan,
+    description: 'A square design with layered signal rings, central empty content zone, and strong thumb-stopping contrast.',
+  },
+  {
+    key: 'creator_command_panel',
+    label: 'Creator Command Panel',
+    format: '4:5 feed',
+    width: 1080,
+    height: 1350,
+    mood: 'premium creator education card',
+    bestFor: 'LinkedIn, Instagram feed, Facebook',
+    accent: BRAND_SYSTEM.colors.green,
+    secondary: BRAND_SYSTEM.colors.gold,
+    description: 'A clean command-center layout with modular empty blocks for feature callouts, proof, or steps.',
+  },
+  {
+    key: 'battle_recap_poster',
+    label: 'Battle Recap Poster',
+    format: '9:16 vertical',
+    width: 1080,
+    height: 1920,
+    mood: 'dramatic post-live recap',
+    bestFor: 'Stories, Reels, Shorts, recap assets',
+    accent: BRAND_SYSTEM.colors.gold,
+    secondary: BRAND_SYSTEM.colors.magenta,
+    description: 'A poster-style frame with a heroic empty stat zone, bottom action band, and polished arena lighting.',
+  },
+];
 const TEMPLATE_DEFINITIONS = [
   {
     key: 'twelve_second_demo',
@@ -178,6 +261,78 @@ const TEMPLATE_DEFINITIONS = [
     ctas: ['Finish your creator setup.', 'Open the upgrade page.'],
   },
 ];
+const CONTENT_GENERATION_PACKS = [
+  {
+    key: 'battle_clip_launch',
+    label: 'Battle Clip Launch Pack',
+    goal: 'creator signup',
+    description: 'Turns one real overlay clip into a short-form launch set for creators who need to instantly understand the product.',
+    recommendedAssetTypes: ['real_overlay_clip'],
+    recipes: [
+      { templateKey: 'twelve_second_demo', platform: 'tiktok' },
+      { templateKey: 'twelve_second_demo', platform: 'instagram' },
+      { templateKey: 'twelve_second_demo', platform: 'youtube_shorts' },
+      { templateKey: 'social_proof', platform: 'x' },
+      { templateKey: 'sponsor_broadcast', platform: 'linkedin' },
+    ],
+  },
+  {
+    key: 'overlay_screenshot_conversion',
+    label: 'Overlay Screenshot Conversion Pack',
+    goal: 'trial signup',
+    description: 'Builds conversion, education, and proof posts from a clean screenshot of the real overlay.',
+    recommendedAssetTypes: ['real_overlay_screenshot'],
+    recipes: [
+      { templateKey: 'signup_result', platform: 'tiktok' },
+      { templateKey: 'signup_result', platform: 'instagram' },
+      { templateKey: 'trial_unlock', platform: 'facebook' },
+      { templateKey: 'player_commands', platform: 'youtube_shorts' },
+      { templateKey: 'feature_highlight', platform: 'linkedin' },
+    ],
+  },
+  {
+    key: 'sponsor_break_sales',
+    label: 'Sponsor Break Sales Pack',
+    goal: 'partner lead',
+    description: 'Packages one real sponsor-break clip into brand-facing placements that sell the broadcast value.',
+    recommendedAssetTypes: ['sponsor_break_clip'],
+    recipes: [
+      { templateKey: 'sponsor_broadcast', platform: 'tiktok' },
+      { templateKey: 'sponsor_broadcast', platform: 'instagram' },
+      { templateKey: 'sponsor_broadcast', platform: 'linkedin' },
+      { templateKey: 'sponsor_broadcast', platform: 'facebook' },
+      { templateKey: 'sponsor_broadcast', platform: 'x' },
+    ],
+  },
+  {
+    key: 'setup_and_trial',
+    label: 'Setup and Trial Pack',
+    goal: 'activation',
+    description: 'Uses a dashboard screenshot to explain the fast setup path and push high-intent creators into the unlocked trial.',
+    recommendedAssetTypes: ['dashboard_screenshot'],
+    recipes: [
+      { templateKey: 'signup_result', platform: 'linkedin' },
+      { templateKey: 'trial_unlock', platform: 'tiktok' },
+      { templateKey: 'trial_unlock', platform: 'instagram' },
+      { templateKey: 'feature_highlight', platform: 'facebook' },
+      { templateKey: 'checkout_recovery', platform: 'x' },
+    ],
+  },
+  {
+    key: 'player_education',
+    label: 'Player Education Pack',
+    goal: 'audience education',
+    description: 'Creates command-focused content that teaches viewers how to participate before a creator goes live.',
+    recommendedAssetTypes: ['real_overlay_screenshot'],
+    recipes: [
+      { templateKey: 'player_commands', platform: 'tiktok' },
+      { templateKey: 'player_commands', platform: 'instagram' },
+      { templateKey: 'player_commands', platform: 'youtube_shorts' },
+      { templateKey: 'feature_highlight', platform: 'linkedin' },
+      { templateKey: 'social_proof', platform: 'x' },
+    ],
+  },
+];
 const AssetSchema = z.object({
   title: z.string().trim().min(2).max(120),
   assetType: z.enum(Object.keys(ASSET_TYPES)),
@@ -202,6 +357,15 @@ function normalizePlatform(platform = '') {
 
 function templateByKey(key) {
   return TEMPLATE_DEFINITIONS.find(template => template.key === key) || null;
+}
+
+function contentPackByKey(key) {
+  return CONTENT_GENERATION_PACKS.find(pack => pack.key === key) || null;
+}
+
+function templateAcceptsAsset(templateKey = '', assetType = '') {
+  const template = templateByKey(templateKey);
+  return Boolean(template?.requiredAssetTypes?.includes(assetType));
 }
 
 function isValidAssetUrl(value = '') {
@@ -331,6 +495,171 @@ function audienceForTemplate(template) {
   return template?.audience || 'TikTok LIVE creators';
 }
 
+function slugify(value = 'creative') {
+  return String(value || 'creative')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80) || 'creative';
+}
+
+function absoluteAssetUrl(value = '') {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  try {
+    return text.startsWith('/') ? new URL(text, publicBaseUrl()).toString() : new URL(text).toString();
+  } catch (_err) {
+    return text;
+  }
+}
+
+function platformCanvasSpec(platform = 'tiktok') {
+  const rules = PLATFORM_RULES[normalizePlatform(platform)] || PLATFORM_RULES.tiktok;
+  return {
+    platform: normalizePlatform(platform),
+    label: rules.label,
+    format: rules.format,
+    width: rules.width,
+    height: rules.height,
+    aspectRatio: `${rules.width}:${rules.height}`,
+    safeZonePercent: rules.safeZone,
+    safeZonePixels: {
+      top: Math.round(rules.height * (rules.safeZone.top / 100)),
+      bottom: Math.round(rules.height * (rules.safeZone.bottom / 100)),
+      left: Math.round(rules.width * (rules.safeZone.left / 100)),
+      right: Math.round(rules.width * (rules.safeZone.right / 100)),
+    },
+  };
+}
+
+function headlineForImage(hook = '') {
+  return cleanText(hook, 92).replace(/\.$/, '');
+}
+
+function seoTitleForCreative(template, hook = '') {
+  const hookText = headlineForImage(hook);
+  return trimToLimit(`${hookText} | IntoTheBattle`, 68);
+}
+
+function seoDescriptionForCreative(template, proof = '', cta = '') {
+  const base = `${cleanText(proof, 110)} ${cleanText(cta, 70)}`.trim();
+  return trimToLimit(base || `${template.label} for TikTok LIVE creators.`, 156);
+}
+
+function altTextForCreative(template, platform, assetType = '') {
+  const assetLabel = ASSET_TYPES[assetType] || 'product visual';
+  return trimToLimit(`IntoTheBattle ${template.label} creative for ${PLATFORM_RULES[platform]?.label || platform}, using ${assetLabel} to show TikTok LIVE chat becoming a playable battle arena.`, 180);
+}
+
+function layoutSpecForCreative({ template, platform, blocks, asset = {} }) {
+  const canvas = platformCanvasSpec(platform);
+  const isVertical = canvas.height > canvas.width;
+  const safe = canvas.safeZonePixels;
+  const assetUrl = absoluteAssetUrl(blocks.assetUrl);
+  const assetType = blocks.assetType || asset.asset_type || '';
+  const proofIsVideo = VIDEO_ASSET_TYPES.has(assetType);
+  const logo = {
+    placement: isVertical ? 'top-left inside safe zone' : 'top-left broadcast bug',
+    url: absoluteAssetUrl(BRAND_SYSTEM.logoUrl),
+    fallbackUrl: absoluteAssetUrl(BRAND_SYSTEM.fallbackLogoUrl),
+    minSizePx: isVertical ? 78 : 58,
+    clearSpacePx: 24,
+  };
+  return {
+    canvas,
+    brand: BRAND_SYSTEM,
+    logo,
+    composition: {
+      style: 'premium cyber broadcast, high-contrast, readable in feed, no fake product UI',
+      background: 'dark arena gradient with cyan grid lines, magenta energy accents, subtle gold highlight rail',
+      proofAsset: {
+        url: assetUrl,
+        type: assetType,
+        treatment: proofIsVideo ? 'use the strongest frame or moving clip as the central proof window' : 'use as central framed proof image',
+        fit: 'cover inside safe proof frame; never crop text-heavy UI past the safe zone',
+      },
+      hierarchy: [
+        'Logo and brand trust mark first',
+        'Short outcome-driven headline second',
+        'Real product proof third',
+        'CTA and tracked URL last',
+      ],
+      layers: [
+        { name: 'background', role: 'motion-ready cyber gradient and arena grid' },
+        { name: 'proof-frame', role: 'real overlay/dashboard/sponsor visual, centered in safe zone' },
+        { name: 'headline', role: 'large high-contrast outcome statement' },
+        { name: 'proof-caption', role: 'short product proof line' },
+        { name: 'cta', role: 'single action button with UTM URL in copy/brief' },
+        { name: 'logo', role: 'IntoTheBattle mark and wordmark visible on every export' },
+      ],
+    },
+    text: {
+      headline: headlineForImage(blocks.hook),
+      proof: cleanText(blocks.proof, isVertical ? 105 : 130),
+      cta: cleanText(blocks.cta, 70),
+      badge: template.goal === 'sponsor-lead' ? 'Brand moment' : 'Creator growth',
+    },
+    export: {
+      filenameBase: `${slugify(template.key)}-${platform}-intothebattle`,
+      preferredFormats: ['svg', 'png'],
+      uploadReady: true,
+      notes: [
+        'Use the SVG as the editable source of truth.',
+        'Export PNG at the canvas size for feed uploads.',
+        'Use the JSON brief for captions, SEO copy, alt text, and image-generation prompts.',
+      ],
+    },
+  };
+}
+
+function enhanceImagePrompt({ template, platform, blocks, layout }) {
+  const canvas = layout.canvas;
+  return [
+    blocks.visualDirection?.imagePrompt || visualDirectionForTemplate(template, blocks.assetType).imagePrompt,
+    `Create a ${canvas.width}x${canvas.height} ${canvas.format} social creative for ${PLATFORM_RULES[platform]?.label || platform}.`,
+    `Brand: ${BRAND_SYSTEM.name}, cyber arena broadcast style, colors ${BRAND_SYSTEM.colors.cyan}, ${BRAND_SYSTEM.colors.magenta}, ${BRAND_SYSTEM.colors.gold}, dark premium background.`,
+    `Must include visible IntoTheBattle logo/wordmark, one large readable headline: "${layout.text.headline}", and CTA: "${layout.text.cta}".`,
+    `Use real product proof asset when supplied: ${blocks.assetUrl || 'none supplied'}. Do not invent unrelated game screens, fake dashboards, fake TikTok UI, or illegible micro text.`,
+    `Safe zone: top ${canvas.safeZonePercent.top}%, bottom ${canvas.safeZonePercent.bottom}%, left ${canvas.safeZonePercent.left}%, right ${canvas.safeZonePercent.right}%.`,
+  ].join(' ');
+}
+
+function buildProductionBlocks({ template, platform, blocks, asset = {}, variantIndex = 0 }) {
+  const layout = layoutSpecForCreative({ template, platform, blocks, asset });
+  const seoTitle = seoTitleForCreative(template, blocks.hook);
+  const seoDescription = seoDescriptionForCreative(template, blocks.proof, blocks.cta);
+  return {
+    brandKit: {
+      name: BRAND_SYSTEM.name,
+      tagline: BRAND_SYSTEM.tagline,
+      logoUrl: absoluteAssetUrl(BRAND_SYSTEM.logoUrl),
+      fallbackLogoUrl: absoluteAssetUrl(BRAND_SYSTEM.fallbackLogoUrl),
+      colors: BRAND_SYSTEM.colors,
+      fonts: BRAND_SYSTEM.fonts,
+    },
+    layoutSpec: layout,
+    imageGeneration: {
+      provider: 'manual_or_connected_image_api',
+      prompt: enhanceImagePrompt({ template, platform, blocks, layout }),
+      negativePrompt: 'blurry text, fake app screenshots, unrelated games, extra logos, distorted UI, unreadable buttons, cropped safe-zone text, misleading product claims',
+      uploadFallback: 'Upload a real overlay screenshot, sponsor-break clip, or dashboard screenshot to the asset vault and regenerate variants.',
+    },
+    seo: {
+      title: seoTitle,
+      description: seoDescription,
+      altText: altTextForCreative(template, platform, blocks.assetType),
+      keywords: blocks.seoKeywords,
+      hashtags: blocks.hashtags,
+      canonicalUrl: blocks.url,
+    },
+    downloadables: {
+      svg: `/admin/marketing/creative-variants/{id}/download.svg`,
+      briefJson: `/admin/marketing/creative-variants/{id}/brief.json`,
+      suggestedFilename: `${layout.export.filenameBase}-v${variantIndex + 1}`,
+    },
+  };
+}
+
 function buildBlocks({ template, platform, variantIndex, asset }) {
   const hook = template.hooks[variantIndex % template.hooks.length];
   const proof = template.proofs[(variantIndex + 1) % template.proofs.length];
@@ -338,7 +667,7 @@ function buildBlocks({ template, platform, variantIndex, asset }) {
   const url = utmUrl(template.path, platform, template.key, variantIndex);
   const assetType = asset?.asset_type || asset?.assetType || '';
   const visualDirection = visualDirectionForTemplate(template, assetType);
-  return {
+  const baseBlocks = {
     hook,
     proof,
     cta,
@@ -363,6 +692,10 @@ function buildBlocks({ template, platform, variantIndex, asset }) {
       { time: '9-12s', block: 'cta', text: cta },
     ],
   };
+  return {
+    ...baseBlocks,
+    ...buildProductionBlocks({ template, platform, blocks: baseBlocks, asset, variantIndex }),
+  };
 }
 
 export function listCreativeTemplates() {
@@ -370,6 +703,33 @@ export function listCreativeTemplates() {
     ...template,
     requiredAssetLabels: template.requiredAssetTypes.map(type => ASSET_TYPES[type] || type),
   }));
+}
+
+export function listContentGenerationPacks() {
+  return CONTENT_GENERATION_PACKS.map(pack => {
+    const recipes = pack.recipes.map(recipe => {
+      const template = templateByKey(recipe.templateKey);
+      const platformKey = normalizePlatform(recipe.platform);
+      const platform = PLATFORM_RULES[platformKey];
+      return {
+        ...recipe,
+        platform: platformKey,
+        platformLabel: platform.label,
+        templateLabel: template?.label || recipe.templateKey,
+        requiredAssetTypes: template?.requiredAssetTypes || [],
+        requiredAssetLabels: (template?.requiredAssetTypes || []).map(type => ASSET_TYPES[type] || type),
+      };
+    });
+    const acceptedAssetTypes = Array.from(new Set(recipes.flatMap(recipe => recipe.requiredAssetTypes)));
+    return {
+      ...pack,
+      recipes,
+      acceptedAssetTypes,
+      acceptedAssetLabels: acceptedAssetTypes.map(type => ASSET_TYPES[type] || type),
+      recommendedAssetLabels: pack.recommendedAssetTypes.map(type => ASSET_TYPES[type] || type),
+      platforms: Array.from(new Set(recipes.map(recipe => recipe.platformLabel))),
+    };
+  });
 }
 
 export function creativeTemplateOptions() {
@@ -582,6 +942,79 @@ export function generateCreativeVariants({ templateKey, platform, assetId, count
   return { count: inserted, skipped, drafts };
 }
 
+export function generateCreativeContentPack({ packKey, assetId, countPerItem = 1 } = {}) {
+  const pack = contentPackByKey(packKey);
+  if (!pack) throw new Error('Content pack not found');
+  const safeAssetId = Number(assetId);
+  if (!Number.isFinite(safeAssetId) || safeAssetId < 1) throw new Error('Choose a creative asset');
+  const asset = db.prepare('SELECT * FROM growth_creative_assets WHERE id = ?').get(safeAssetId);
+  if (!asset) throw new Error('Creative asset not found');
+  if (String(asset.approval_status || '').toLowerCase() !== 'approved') {
+    throw new Error('Content packs require an approved creative asset');
+  }
+
+  const assetType = asset.asset_type || '';
+  const safeCount = Math.max(1, Math.min(3, Number(countPerItem) || 1));
+  const items = [];
+  const incompatible = [];
+  let inserted = 0;
+  let skipped = 0;
+
+  for (const recipe of pack.recipes) {
+    const template = templateByKey(recipe.templateKey);
+    const platform = normalizePlatform(recipe.platform);
+    if (!template) {
+      incompatible.push({ templateKey: recipe.templateKey, platform, reason: 'Template is not configured.' });
+      continue;
+    }
+    if (!templateAcceptsAsset(template.key, assetType)) {
+      incompatible.push({
+        templateKey: template.key,
+        templateLabel: template.label,
+        platform,
+        reason: `Needs ${template.requiredAssetTypes.map(type => ASSET_TYPES[type] || type).join(' or ')}.`,
+      });
+      continue;
+    }
+    const result = generateCreativeVariants({
+      templateKey: template.key,
+      platform,
+      assetId: safeAssetId,
+      count: safeCount,
+    });
+    inserted += result.count;
+    skipped += result.skipped;
+    items.push({
+      templateKey: template.key,
+      templateLabel: template.label,
+      platform,
+      platformLabel: PLATFORM_RULES[platform]?.label || platform,
+      count: result.count,
+      skipped: result.skipped,
+    });
+  }
+
+  if (!items.length) {
+    const acceptedAssetTypes = Array.from(new Set(
+      pack.recipes.flatMap(recipe => templateByKey(recipe.templateKey)?.requiredAssetTypes || [])
+    ));
+    throw new Error(`This content pack needs ${acceptedAssetTypes.map(type => ASSET_TYPES[type] || type).join(', ')}. Selected asset is ${ASSET_TYPES[assetType] || assetType || 'unknown'}.`);
+  }
+
+  return {
+    packKey: pack.key,
+    packLabel: pack.label,
+    assetId: safeAssetId,
+    assetTitle: asset.title || `Asset ${safeAssetId}`,
+    count: inserted,
+    skipped,
+    requestedItems: pack.recipes.length,
+    generatedItems: items.length,
+    incompatible,
+    items,
+  };
+}
+
 export function listCreativeVariants({ limit = 50, status = '' } = {}) {
   const safeLimit = Math.max(1, Math.min(100, Number(limit) || 50));
   const normalizedStatus = ['draft', 'approved', 'skipped', 'queued'].includes(status) ? status : '';
@@ -693,4 +1126,471 @@ export function queueCreativeVariantAsMarketingPost(id) {
         updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `).run(quality.status, quality.score, quality.notes.join(' '), safeId);
+}
+
+function svgEscape(value = '') {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function wrapWords(value = '', maxChars = 18, maxLines = 4) {
+  const words = cleanText(value, 260).split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = '';
+  words.forEach(word => {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  });
+  if (current) lines.push(current);
+  if (lines.length > maxLines) {
+    const kept = lines.slice(0, maxLines);
+    kept[maxLines - 1] = `${kept[maxLines - 1].replace(/\s+\S*$/, '')}...`.trim();
+    return kept;
+  }
+  return lines;
+}
+
+function tspanLines(lines, { x, y, lineHeight, anchor = 'start' }) {
+  return lines.map((line, index) => `<tspan x="${x}" y="${y + (index * lineHeight)}" text-anchor="${anchor}">${svgEscape(line)}</tspan>`).join('');
+}
+
+function variantQuery(id) {
+  const safeId = Number(id);
+  if (!Number.isFinite(safeId) || safeId < 1) throw new Error('Invalid creative variant id');
+  const variant = db.prepare(`
+    SELECT variants.*, assets.title AS asset_title, assets.asset_type, assets.approval_status AS asset_status, assets.notes AS asset_notes
+    FROM growth_creative_variants variants
+    LEFT JOIN growth_creative_assets assets ON assets.id = variants.asset_id
+    WHERE variants.id = ?
+  `).get(safeId);
+  if (!variant) throw new Error('Creative variant not found');
+  return variant;
+}
+
+export function buildCreativeProductionPackage(id) {
+  const variant = variantQuery(id);
+  const blocks = parseJsonObject(variant.block_json);
+  const template = templateByKey(variant.template_key);
+  if (!template) throw new Error('Creative template no longer exists');
+  const platform = normalizePlatform(variant.platform);
+  const layoutSpec = blocks.layoutSpec || layoutSpecForCreative({ template, platform, blocks, asset: variant });
+  const brandKit = blocks.brandKit || {
+    name: BRAND_SYSTEM.name,
+    tagline: BRAND_SYSTEM.tagline,
+    logoUrl: absoluteAssetUrl(BRAND_SYSTEM.logoUrl),
+    fallbackLogoUrl: absoluteAssetUrl(BRAND_SYSTEM.fallbackLogoUrl),
+    colors: BRAND_SYSTEM.colors,
+    fonts: BRAND_SYSTEM.fonts,
+  };
+  const seo = blocks.seo || {
+    title: seoTitleForCreative(template, variant.hook),
+    description: seoDescriptionForCreative(template, variant.proof, variant.cta),
+    altText: altTextForCreative(template, platform, variant.asset_type),
+    keywords: blocks.seoKeywords || seoKeywordsForCreative(variant.template_key),
+    hashtags: blocks.hashtags || hashtagsForCreative(variant.template_key, platform),
+    canonicalUrl: variant.utm_url,
+  };
+  const filenameBase = blocks.downloadables?.suggestedFilename
+    || `${slugify(variant.template_key)}-${platform}-intothebattle-${variant.id}`;
+  return {
+    id: variant.id,
+    templateKey: variant.template_key,
+    templateLabel: template.label,
+    platform,
+    format: variant.format || layoutSpec.canvas?.format,
+    status: variant.status,
+    qualityStatus: variant.quality_status,
+    qualityScore: variant.quality_score,
+    qualityNotes: variant.quality_notes,
+    asset: {
+      id: variant.asset_id,
+      title: variant.asset_title,
+      type: variant.asset_type || blocks.assetType,
+      status: variant.asset_status,
+      url: absoluteAssetUrl(variant.asset_url || blocks.assetUrl),
+      notes: variant.asset_notes || '',
+    },
+    copy: {
+      hook: variant.hook,
+      proof: variant.proof,
+      cta: variant.cta,
+      body: variant.body,
+      utmUrl: variant.utm_url,
+      frameScript: blocks.frameScript || [],
+      textBlocks: blocks.textBlocks || [],
+    },
+    brandKit,
+    layoutSpec,
+    imageGeneration: blocks.imageGeneration || {
+      provider: 'manual_or_connected_image_api',
+      prompt: enhanceImagePrompt({ template, platform, blocks, layout: layoutSpec }),
+      negativePrompt: 'blurry text, fake app screenshots, unrelated games, extra logos, distorted UI',
+    },
+    seo,
+    files: {
+      svgFilename: `${filenameBase}.svg`,
+      briefFilename: `${filenameBase}.brief.json`,
+    },
+    productionChecklist: [
+      'Logo/wordmark visible and inside the safe zone.',
+      'Headline sells the viewer outcome, not a feature list.',
+      'Real product proof asset is visible when the template is conversion or sponsor focused.',
+      'CTA matches the outbound copy.',
+      'Alt text, SEO title, SEO description, hashtags, and UTM URL are present.',
+      'Export PNG from this SVG at the exact canvas size before uploading to social platforms.',
+    ],
+  };
+}
+
+export function renderCreativeVariantSvg(id) {
+  const pkg = buildCreativeProductionPackage(id);
+  const canvas = pkg.layoutSpec.canvas || platformCanvasSpec(pkg.platform);
+  const colors = BRAND_SYSTEM.colors;
+  const width = Number(canvas.width || 1080);
+  const height = Number(canvas.height || 1920);
+  const isVertical = height > width;
+  const margin = isVertical ? Math.round(width * 0.075) : Math.round(width * 0.055);
+  const logoSize = isVertical ? 94 : 66;
+  const proofX = margin;
+  const proofW = width - margin * 2;
+  const proofY = isVertical ? Math.round(height * 0.36) : Math.round(height * 0.25);
+  const proofH = isVertical ? Math.round(height * 0.29) : Math.round(height * 0.43);
+  const headlineY = isVertical ? Math.round(height * 0.16) : Math.round(height * 0.20);
+  const headlineSize = isVertical ? Math.round(width * 0.082) : Math.round(width * 0.055);
+  const proofTextSize = isVertical ? Math.round(width * 0.036) : Math.round(width * 0.022);
+  const ctaY = isVertical ? Math.round(height * 0.82) : Math.round(height * 0.78);
+  const headlineLines = wrapWords(pkg.layoutSpec.text?.headline || pkg.copy.hook, isVertical ? 13 : 24, 4);
+  const proofLines = wrapWords(pkg.layoutSpec.text?.proof || pkg.copy.proof, isVertical ? 34 : 54, 3);
+  const ctaLines = wrapWords(pkg.layoutSpec.text?.cta || pkg.copy.cta, isVertical ? 24 : 38, 2);
+  const assetIsImage = IMAGE_ASSET_TYPES.has(pkg.asset.type) && pkg.asset.url;
+  const assetLabel = pkg.asset.title || pkg.asset.url || 'Approved product proof asset';
+  const headlineBlock = tspanLines(headlineLines, { x: margin, y: headlineY, lineHeight: Math.round(headlineSize * 1.02) });
+  const proofBlock = tspanLines(proofLines, { x: margin + 34, y: proofY + proofH + Math.round(proofTextSize * 1.7), lineHeight: Math.round(proofTextSize * 1.35) });
+  const ctaBlock = tspanLines(ctaLines, { x: width / 2, y: ctaY + 4, lineHeight: Math.round(proofTextSize * 1.25), anchor: 'middle' });
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${svgEscape(pkg.seo.altText)}">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${colors.void}"/>
+      <stop offset="0.34" stop-color="#11142b"/>
+      <stop offset="0.7" stop-color="#041d2b"/>
+      <stop offset="1" stop-color="#28101d"/>
+    </linearGradient>
+    <linearGradient id="cta" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="${colors.cyan}"/>
+      <stop offset="0.54" stop-color="${colors.gold}"/>
+      <stop offset="1" stop-color="${colors.magenta}"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="72" height="72" patternUnits="userSpaceOnUse">
+      <path d="M 72 0 L 0 0 0 72" fill="none" stroke="${colors.cyan}" stroke-opacity="0.09" stroke-width="2"/>
+    </pattern>
+  </defs>
+  <rect width="${width}" height="${height}" fill="url(#bg)"/>
+  <rect width="${width}" height="${height}" fill="url(#grid)" opacity="0.7"/>
+  <circle cx="${Math.round(width * 0.18)}" cy="${Math.round(height * 0.14)}" r="${Math.round(width * 0.36)}" fill="${colors.magenta}" opacity="0.14"/>
+  <circle cx="${Math.round(width * 0.88)}" cy="${Math.round(height * 0.28)}" r="${Math.round(width * 0.32)}" fill="${colors.cyan}" opacity="0.13"/>
+  <circle cx="${Math.round(width * 0.72)}" cy="${Math.round(height * 0.88)}" r="${Math.round(width * 0.32)}" fill="${colors.gold}" opacity="0.10"/>
+
+  <g transform="translate(${margin}, ${Math.round(margin * 0.9)})">
+    <rect width="${logoSize}" height="${logoSize}" rx="${Math.round(logoSize * 0.22)}" fill="#0a1020" stroke="${colors.gold}" stroke-opacity="0.55" stroke-width="3"/>
+    <image href="${svgEscape(pkg.brandKit.logoUrl || absoluteAssetUrl(BRAND_SYSTEM.logoUrl))}" x="8" y="8" width="${logoSize - 16}" height="${logoSize - 16}" preserveAspectRatio="xMidYMid meet"/>
+    <text x="${logoSize + 18}" y="${Math.round(logoSize * 0.42)}" fill="${colors.cream}" font-family="Arial Black, Arial, sans-serif" font-size="${isVertical ? 32 : 24}" font-weight="900" letter-spacing="1.5">${svgEscape(BRAND_SYSTEM.name.toUpperCase())}</text>
+    <text x="${logoSize + 18}" y="${Math.round(logoSize * 0.72)}" fill="${colors.cyanSoft}" font-family="Arial, sans-serif" font-size="${isVertical ? 20 : 15}" font-weight="800" letter-spacing="2">${svgEscape(BRAND_SYSTEM.tagline.toUpperCase())}</text>
+  </g>
+
+  <g filter="url(#glow)">
+    <text font-family="Arial Black, Impact, Arial, sans-serif" font-size="${headlineSize}" font-weight="900" fill="${colors.cream}" letter-spacing="0">
+      ${headlineBlock}
+    </text>
+  </g>
+  <rect x="${proofX}" y="${proofY}" width="${proofW}" height="${proofH}" rx="${isVertical ? 34 : 24}" fill="#07101f" stroke="${colors.cyan}" stroke-opacity="0.42" stroke-width="4"/>
+  <rect x="${proofX + 16}" y="${proofY + 16}" width="${proofW - 32}" height="${proofH - 32}" rx="${isVertical ? 24 : 16}" fill="#030813" stroke="${colors.gold}" stroke-opacity="0.30" stroke-width="2"/>
+  ${assetIsImage
+    ? `<image href="${svgEscape(pkg.asset.url)}" x="${proofX + 20}" y="${proofY + 20}" width="${proofW - 40}" height="${proofH - 40}" preserveAspectRatio="xMidYMid slice" opacity="0.92"/>`
+    : `<g transform="translate(${proofX + proofW / 2}, ${proofY + proofH / 2})"><circle r="${Math.round(Math.min(proofW, proofH) * 0.12)}" fill="${colors.cyan}" opacity="0.18"/><path d="M -22 -34 L 44 0 L -22 34 Z" fill="${colors.cyan}" opacity="0.92"/><text x="0" y="${Math.round(proofH * 0.22)}" text-anchor="middle" fill="${colors.muted}" font-family="Arial, sans-serif" font-size="${proofTextSize}" font-weight="800">${svgEscape(assetLabel)}</text></g>`}
+  <text x="${margin + 34}" y="${proofY + proofH + Math.round(proofTextSize * 1.7)}" fill="${colors.cyanSoft}" font-family="Arial, sans-serif" font-size="${proofTextSize}" font-weight="800">
+    ${proofBlock}
+  </text>
+  <g>
+    <rect x="${Math.round(width * 0.14)}" y="${ctaY - Math.round(proofTextSize * 1.3)}" width="${Math.round(width * 0.72)}" height="${Math.round(proofTextSize * 4)}" rx="${Math.round(proofTextSize * 1.4)}" fill="url(#cta)" filter="url(#glow)"/>
+    <text fill="#061018" font-family="Arial Black, Arial, sans-serif" font-size="${Math.round(proofTextSize * 1.18)}" font-weight="900" letter-spacing="0.5">
+      ${ctaBlock}
+    </text>
+  </g>
+  <text x="${margin}" y="${height - Math.round(margin * 0.55)}" fill="${colors.muted}" font-family="Arial, sans-serif" font-size="${isVertical ? 20 : 15}" font-weight="700">${svgEscape(pkg.seo.keywords)}</text>
+</svg>
+`;
+}
+
+function blankDesignByKey(key = '') {
+  return BLANK_DESIGN_TEMPLATES.find(template => template.key === key) || null;
+}
+
+export function listBlankDesignTemplates() {
+  return BLANK_DESIGN_TEMPLATES.map(template => ({
+    ...template,
+    logoUrl: absoluteAssetUrl(BRAND_SYSTEM.logoUrl),
+    colors: BRAND_SYSTEM.colors,
+    downloadSvg: `/admin/marketing/design-templates/${template.key}/download.svg`,
+    downloadBrief: `/admin/marketing/design-templates/${template.key}/brief.json`,
+  }));
+}
+
+export function buildBlankDesignBrief(key = '') {
+  const template = blankDesignByKey(key);
+  if (!template) throw new Error('Design template not found');
+  return {
+    ...template,
+    brandKit: {
+      name: BRAND_SYSTEM.name,
+      tagline: BRAND_SYSTEM.tagline,
+      logoUrl: absoluteAssetUrl(BRAND_SYSTEM.logoUrl),
+      fallbackLogoUrl: absoluteAssetUrl(BRAND_SYSTEM.fallbackLogoUrl),
+      colors: BRAND_SYSTEM.colors,
+      fonts: BRAND_SYSTEM.fonts,
+    },
+    usageRules: [
+      'Replace the labeled headline, proof, body, and CTA placeholders with final campaign copy.',
+      'Drop the product screenshot, sponsor moment, or generated art into the picture/clip frame.',
+      'Keep the IntoTheBattle logo visible with clear space.',
+      'Use real product screenshots or clips for proof-focused campaigns.',
+      'Export at the exact SVG canvas size for upload-ready social assets.',
+    ],
+    seoStarter: {
+      title: `${template.label} | IntoTheBattle growth creative`,
+      description: `${template.description} Use this branded design template for IntoTheBattle social, sponsor, and creator-growth campaigns.`,
+      altText: `${template.label} IntoTheBattle cyber arena design template with logo, headline frame, image frame, copy panel, and CTA for ${template.bestFor}.`,
+      keywords: 'TikTok LIVE overlay, interactive livestream, creator tools, battle arena, IntoTheBattle',
+    },
+    files: {
+      svgFilename: `${template.key}-intothebattle-template.svg`,
+      briefFilename: `${template.key}-intothebattle-template.brief.json`,
+    },
+  };
+}
+
+function svgLabel(value = '', x = 0, y = 0, size = 24, color = BRAND_SYSTEM.colors.cyanSoft, anchor = 'start') {
+  return `<text x="${x}" y="${y}" text-anchor="${anchor}" fill="${color}" font-family="Arial Black, Arial, sans-serif" font-size="${size}" font-weight="900" letter-spacing="2">${svgEscape(String(value).toUpperCase())}</text>`;
+}
+
+function svgHelper(value = '', x = 0, y = 0, size = 18, color = BRAND_SYSTEM.colors.muted, anchor = 'start') {
+  return `<text x="${x}" y="${y}" text-anchor="${anchor}" fill="${color}" font-family="Arial, sans-serif" font-size="${size}" font-weight="800" letter-spacing="0.5">${svgEscape(value)}</text>`;
+}
+
+function placeholderModules(template, box) {
+  const { width, height, accent, secondary } = template;
+  const { contentX, contentY, contentW, contentH, margin, vertical } = box;
+  const labelSize = vertical ? 26 : 18;
+  const helperSize = vertical ? 20 : 14;
+  const radius = vertical ? 22 : 16;
+  const inset = vertical ? 40 : 30;
+  const headlineH = vertical ? Math.round(height * 0.105) : Math.round(height * 0.13);
+  const mediaH = vertical ? Math.round(contentH * 0.44) : Math.round(contentH * 0.50);
+  const bodyH = vertical ? Math.round(height * 0.075) : Math.round(height * 0.10);
+  const headlineY = Math.max(contentY - headlineH - Math.round(height * 0.028), margin + Math.round(height * 0.12));
+  const mediaX = contentX + inset;
+  const mediaY = contentY + inset;
+  const mediaW = contentW - inset * 2;
+  const bodyY = mediaY + mediaH + Math.round(height * 0.025);
+  const ctaY = bodyY + bodyH + Math.round(height * 0.024);
+  const ctaH = vertical ? 68 : 46;
+  const ctaW = vertical ? Math.round(contentW * 0.62) : Math.round(contentW * 0.38);
+  const ctaX = contentX + Math.round((contentW - ctaW) / 2);
+  const headlineText = {
+    neon_arena_vertical: 'HEADLINE / HOOK',
+    broadcast_spotlight_wide: 'BROADCAST HEADLINE',
+    electric_square_signal: 'SCROLL-STOPPING HOOK',
+    creator_command_panel: 'CREATOR COMMAND TITLE',
+    battle_recap_poster: 'RECAP HEADLINE',
+  }[template.key] || 'HEADLINE';
+  const mediaText = {
+    neon_arena_vertical: 'PICTURE OR OVERLAY CLIP',
+    broadcast_spotlight_wide: 'SPONSOR VIDEO / PRODUCT IMAGE',
+    electric_square_signal: 'HERO IMAGE OR GENERATED ART',
+    creator_command_panel: 'DASHBOARD / COMMAND SCREENSHOT',
+    battle_recap_poster: 'RECAP SCREENSHOT / WINNER IMAGE',
+  }[template.key] || 'PICTURE FRAME';
+  const bodyText = {
+    neon_arena_vertical: 'BENEFIT COPY FRAME',
+    broadcast_spotlight_wide: 'SPONSOR VALUE COPY',
+    electric_square_signal: 'PROOF OR SOCIAL CAPTION',
+    creator_command_panel: 'STEP / COMMAND COPY',
+    battle_recap_poster: 'STATS / OUTCOME COPY',
+  }[template.key] || 'COPY FRAME';
+  const extras = {
+    neon_arena_vertical: `
+      <g opacity="0.95">
+        <rect x="${mediaX + 22}" y="${mediaY + 22}" width="${Math.round(mediaW * 0.34)}" height="42" rx="21" fill="${accent}" opacity="0.16" stroke="${accent}" stroke-opacity="0.55"/>
+        ${svgHelper('LIVE BATTLE', mediaX + 44, mediaY + 50, helperSize, BRAND_SYSTEM.colors.cyanSoft)}
+        <rect x="${mediaX + mediaW - Math.round(mediaW * 0.32) - 22}" y="${mediaY + mediaH - 64}" width="${Math.round(mediaW * 0.32)}" height="34" rx="17" fill="${secondary}" opacity="0.18"/>
+      </g>
+    `,
+    broadcast_spotlight_wide: `
+      <g>
+        <rect x="${contentX + 40}" y="${height - margin - 74}" width="${Math.round(contentW * 0.22)}" height="46" rx="18" fill="${accent}" opacity="0.18" stroke="${accent}" stroke-opacity="0.46"/>
+        ${svgHelper('PARTNER', contentX + 62, height - margin - 44, helperSize, BRAND_SYSTEM.colors.gold)}
+        <rect x="${contentX + Math.round(contentW * 0.74)}" y="${height - margin - 74}" width="${Math.round(contentW * 0.22)}" height="46" rx="18" fill="${secondary}" opacity="0.16" stroke="${secondary}" stroke-opacity="0.45"/>
+        ${svgHelper('ARENA SPOTLIGHT', contentX + Math.round(contentW * 0.76), height - margin - 44, helperSize, BRAND_SYSTEM.colors.cyanSoft)}
+      </g>
+    `,
+    electric_square_signal: `
+      <g opacity="0.9">
+        <circle cx="${contentX + contentW - 78}" cy="${contentY + 76}" r="30" fill="${accent}" opacity="0.18" stroke="${accent}" stroke-opacity="0.62"/>
+        ${svgHelper('01', contentX + contentW - 92, contentY + 85, helperSize, BRAND_SYSTEM.colors.cream)}
+      </g>
+    `,
+    creator_command_panel: `
+      <g>
+        ${['!fire', '!laser', '!emoji'].map((label, index) => {
+          const chipW = Math.round(contentW * 0.24);
+          const chipX = contentX + inset + index * Math.round(contentW * 0.285);
+          const chipY = contentY + contentH + Math.round(height * 0.07);
+          return `<rect x="${chipX}" y="${chipY}" width="${chipW}" height="${vertical ? 62 : 44}" rx="${vertical ? 22 : 16}" fill="${index === 0 ? accent : index === 1 ? secondary : BRAND_SYSTEM.colors.cyan}" opacity="0.16" stroke="${index === 0 ? accent : index === 1 ? secondary : BRAND_SYSTEM.colors.cyan}" stroke-opacity="0.52"/>${svgHelper(label, chipX + Math.round(chipW / 2), chipY + (vertical ? 39 : 29), helperSize, BRAND_SYSTEM.colors.cream, 'middle')}`;
+        }).join('')}
+      </g>
+    `,
+    battle_recap_poster: `
+      <g>
+        <rect x="${contentX + 64}" y="${contentY + contentH + 62}" width="${Math.round(contentW * 0.32)}" height="74" rx="20" fill="${accent}" opacity="0.16" stroke="${accent}" stroke-opacity="0.50"/>
+        <rect x="${contentX + Math.round(contentW * 0.52)}" y="${contentY + contentH + 62}" width="${Math.round(contentW * 0.34)}" height="74" rx="20" fill="${secondary}" opacity="0.16" stroke="${secondary}" stroke-opacity="0.50"/>
+        ${svgHelper('KILLS / LIKES', contentX + 92, contentY + contentH + 108, helperSize, BRAND_SYSTEM.colors.gold)}
+        ${svgHelper('WINNER / CTA', contentX + Math.round(contentW * 0.55), contentY + contentH + 108, helperSize, BRAND_SYSTEM.colors.cream)}
+      </g>
+    `,
+  }[template.key] || '';
+
+  return `
+    <rect x="${contentX}" y="${headlineY}" width="${contentW}" height="${headlineH}" rx="${radius}" fill="#07101d" opacity="0.84" stroke="${secondary}" stroke-opacity="0.42" stroke-width="3"/>
+    <path d="M ${contentX + 28} ${headlineY + 26} L ${contentX + Math.round(contentW * 0.28)} ${headlineY + 26}" stroke="${accent}" stroke-width="${vertical ? 8 : 5}" stroke-linecap="round"/>
+    ${svgLabel(headlineText, contentX + 34, headlineY + Math.round(headlineH * 0.58), labelSize, BRAND_SYSTEM.colors.cream)}
+    ${svgHelper('Replace with campaign hook', contentX + 36, headlineY + Math.round(headlineH * 0.82), helperSize, BRAND_SYSTEM.colors.muted)}
+
+    <rect x="${mediaX}" y="${mediaY}" width="${mediaW}" height="${mediaH}" rx="${radius}" fill="#020712" opacity="0.88" stroke="${accent}" stroke-opacity="0.64" stroke-width="4"/>
+    <rect x="${mediaX + 22}" y="${mediaY + 22}" width="${mediaW - 44}" height="${mediaH - 44}" rx="${radius - 6}" fill="none" stroke="${BRAND_SYSTEM.colors.gold}" stroke-opacity="0.23" stroke-width="2" stroke-dasharray="18 15"/>
+    ${svgLabel(mediaText, mediaX + mediaW / 2, mediaY + mediaH / 2 - labelSize, labelSize, BRAND_SYSTEM.colors.cyanSoft, 'middle')}
+    ${svgHelper('Drop screenshot, video frame, product image, or generated art here', mediaX + mediaW / 2, mediaY + mediaH / 2 + helperSize, helperSize, BRAND_SYSTEM.colors.muted, 'middle')}
+    ${extras}
+
+    <rect x="${mediaX}" y="${bodyY}" width="${mediaW}" height="${bodyH}" rx="${radius}" fill="#081422" opacity="0.86" stroke="${secondary}" stroke-opacity="0.45" stroke-width="3"/>
+    ${svgLabel(bodyText, mediaX + 28, bodyY + Math.round(bodyH * 0.46), Math.round(labelSize * 0.82), BRAND_SYSTEM.colors.cream)}
+    ${svgHelper('One short proof line, stat, or reason to click', mediaX + 28, bodyY + Math.round(bodyH * 0.75), helperSize, BRAND_SYSTEM.colors.muted)}
+
+    <rect x="${ctaX}" y="${ctaY}" width="${ctaW}" height="${ctaH}" rx="${Math.round(ctaH / 2)}" fill="url(#template-cta)" filter="url(#soft-glow)"/>
+    ${svgLabel('CTA BUTTON', ctaX + ctaW / 2, ctaY + Math.round(ctaH * 0.58), Math.round(labelSize * 0.72), '#041014', 'middle')}
+  `;
+}
+
+function designFrame(template) {
+  const { width, height, accent, secondary } = template;
+  const vertical = height > width;
+  const margin = Math.round(Math.min(width, height) * (vertical ? 0.065 : 0.055));
+  const contentX = margin;
+  const contentY = vertical ? Math.round(height * 0.26) : Math.round(height * 0.20);
+  const contentW = width - margin * 2;
+  const contentH = vertical ? Math.round(height * 0.45) : Math.round(height * 0.54);
+  const logo = Math.round(Math.min(width, height) * (vertical ? 0.075 : 0.065));
+  const logoX = margin;
+  const logoY = Math.round(margin * 0.78);
+  const wordmarkSize = Math.round(logo * 0.28);
+  const details = {
+    neon_arena_vertical: `
+      <path d="M ${margin} ${contentY - 70} L ${width - margin} ${contentY - 70} L ${width - margin - 42} ${contentY - 25} L ${margin + 42} ${contentY - 25} Z" fill="${accent}" opacity="0.14"/>
+      <path d="M ${margin + 28} ${contentY + contentH + 80} C ${width * 0.34} ${contentY + contentH + 145}, ${width * 0.66} ${contentY + contentH + 145}, ${width - margin - 28} ${contentY + contentH + 80}" fill="none" stroke="${secondary}" stroke-width="9" stroke-linecap="round" opacity="0.48"/>
+      <circle cx="${width * 0.5}" cy="${contentY + contentH * 0.5}" r="${Math.round(contentW * 0.42)}" fill="none" stroke="${accent}" stroke-width="3" stroke-dasharray="18 22" opacity="0.32"/>
+    `,
+    broadcast_spotlight_wide: `
+      <rect x="${margin}" y="${height - margin - 92}" width="${contentW}" height="92" rx="22" fill="#070b15" stroke="${accent}" stroke-opacity="0.44" stroke-width="3"/>
+      <path d="M ${width * 0.14} ${height * 0.16} C ${width * 0.32} ${height * 0.05}, ${width * 0.68} ${height * 0.05}, ${width * 0.86} ${height * 0.16}" fill="none" stroke="${accent}" stroke-width="5" opacity="0.42"/>
+      <circle cx="${width * 0.5}" cy="${height * 0.5}" r="${Math.round(height * 0.42)}" fill="${accent}" opacity="0.08"/>
+    `,
+    electric_square_signal: `
+      <circle cx="${width * 0.5}" cy="${height * 0.5}" r="${Math.round(width * 0.39)}" fill="none" stroke="${accent}" stroke-width="7" opacity="0.32"/>
+      <circle cx="${width * 0.5}" cy="${height * 0.5}" r="${Math.round(width * 0.30)}" fill="none" stroke="${secondary}" stroke-width="4" stroke-dasharray="26 18" opacity="0.42"/>
+      <path d="M ${margin} ${height - margin - 120} L ${width - margin} ${height - margin - 120}" stroke="${accent}" stroke-width="8" stroke-linecap="round" opacity="0.52"/>
+    `,
+    creator_command_panel: `
+      <rect x="${margin}" y="${contentY + contentH + 34}" width="${contentW}" height="${Math.round(height * 0.14)}" rx="26" fill="#071322" stroke="${secondary}" stroke-opacity="0.35" stroke-width="3"/>
+      <rect x="${margin + 28}" y="${contentY + contentH + 62}" width="${Math.round(contentW * 0.28)}" height="${Math.round(height * 0.08)}" rx="18" fill="${accent}" opacity="0.10" stroke="${accent}" stroke-opacity="0.42"/>
+      <rect x="${margin + Math.round(contentW * 0.36)}" y="${contentY + contentH + 62}" width="${Math.round(contentW * 0.28)}" height="${Math.round(height * 0.08)}" rx="18" fill="${secondary}" opacity="0.10" stroke="${secondary}" stroke-opacity="0.42"/>
+      <rect x="${margin + Math.round(contentW * 0.69)}" y="${contentY + contentH + 62}" width="${Math.round(contentW * 0.24)}" height="${Math.round(height * 0.08)}" rx="18" fill="${BRAND_SYSTEM.colors.cyan}" opacity="0.10" stroke="${BRAND_SYSTEM.colors.cyan}" stroke-opacity="0.42"/>
+    `,
+    battle_recap_poster: `
+      <path d="M ${margin} ${contentY + contentH + 30} L ${width - margin} ${contentY + contentH + 30} L ${width - margin - 80} ${contentY + contentH + 150} L ${margin + 80} ${contentY + contentH + 150} Z" fill="${accent}" opacity="0.12" stroke="${accent}" stroke-opacity="0.42"/>
+      <circle cx="${width * 0.5}" cy="${contentY + 60}" r="${Math.round(width * 0.18)}" fill="${secondary}" opacity="0.16"/>
+      <path d="M ${margin + 80} ${contentY - 44} L ${width - margin - 80} ${contentY - 44}" stroke="${accent}" stroke-width="10" stroke-linecap="round" opacity="0.56"/>
+    `,
+  }[template.key] || '';
+
+  return `
+    <g transform="translate(${logoX}, ${logoY})">
+      <rect width="${logo}" height="${logo}" rx="${Math.round(logo * 0.23)}" fill="#07101d" stroke="${BRAND_SYSTEM.colors.gold}" stroke-opacity="0.58" stroke-width="3"/>
+      <circle cx="${Math.round(logo * 0.5)}" cy="${Math.round(logo * 0.5)}" r="${Math.round(logo * 0.31)}" fill="${BRAND_SYSTEM.colors.void}" stroke="${accent}" stroke-opacity="0.75" stroke-width="3"/>
+      <path d="M ${Math.round(logo * 0.26)} ${Math.round(logo * 0.64)} L ${Math.round(logo * 0.42)} ${Math.round(logo * 0.36)} L ${Math.round(logo * 0.50)} ${Math.round(logo * 0.48)} L ${Math.round(logo * 0.58)} ${Math.round(logo * 0.36)} L ${Math.round(logo * 0.74)} ${Math.round(logo * 0.64)}" fill="none" stroke="${BRAND_SYSTEM.colors.cream}" stroke-width="${Math.max(3, Math.round(logo * 0.055))}" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="${Math.round(logo * 0.5)}" y="${Math.round(logo * 0.56)}" text-anchor="middle" fill="${BRAND_SYSTEM.colors.gold}" font-family="Arial Black, Arial, sans-serif" font-size="${Math.round(logo * 0.23)}" font-weight="900">ITB</text>
+      <text x="${logo + 18}" y="${Math.round(logo * 0.45)}" fill="${BRAND_SYSTEM.colors.cream}" font-family="Arial Black, Arial, sans-serif" font-size="${wordmarkSize}" font-weight="900" letter-spacing="1.5">${svgEscape(BRAND_SYSTEM.name.toUpperCase())}</text>
+      <text x="${logo + 18}" y="${Math.round(logo * 0.72)}" fill="${BRAND_SYSTEM.colors.cyanSoft}" font-family="Arial, sans-serif" font-size="${Math.round(wordmarkSize * 0.56)}" font-weight="800" letter-spacing="2">${svgEscape(BRAND_SYSTEM.tagline.toUpperCase())}</text>
+    </g>
+    ${details}
+    <rect x="${contentX}" y="${contentY}" width="${contentW}" height="${contentH}" rx="${vertical ? 34 : 26}" fill="#050a14" opacity="0.78" stroke="${accent}" stroke-opacity="0.48" stroke-width="4"/>
+    <rect x="${contentX + 20}" y="${contentY + 20}" width="${contentW - 40}" height="${contentH - 40}" rx="${vertical ? 24 : 18}" fill="#02050d" opacity="0.70" stroke="${BRAND_SYSTEM.colors.gold}" stroke-opacity="0.22" stroke-width="2"/>
+    <path d="M ${contentX + 36} ${contentY + 36} L ${contentX + 138} ${contentY + 36}" stroke="${accent}" stroke-width="7" stroke-linecap="round"/>
+    <path d="M ${contentX + contentW - 138} ${contentY + contentH - 36} L ${contentX + contentW - 36} ${contentY + contentH - 36}" stroke="${secondary}" stroke-width="7" stroke-linecap="round"/>
+    ${placeholderModules(template, { contentX, contentY, contentW, contentH, margin, vertical })}
+  `;
+}
+
+export function renderBlankDesignSvg(key = '') {
+  const template = blankDesignByKey(key);
+  if (!template) throw new Error('Design template not found');
+  const { width, height, accent, secondary } = template;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${svgEscape(template.label)} IntoTheBattle design template">
+  <defs>
+    <linearGradient id="blank-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="${BRAND_SYSTEM.colors.void}"/>
+      <stop offset="0.32" stop-color="#12152d"/>
+      <stop offset="0.68" stop-color="#041d2d"/>
+      <stop offset="1" stop-color="#270a1d"/>
+    </linearGradient>
+    <linearGradient id="template-cta" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="${BRAND_SYSTEM.colors.cyan}"/>
+      <stop offset="0.52" stop-color="${BRAND_SYSTEM.colors.gold}"/>
+      <stop offset="1" stop-color="${BRAND_SYSTEM.colors.magenta}"/>
+    </linearGradient>
+    <radialGradient id="core-glow" cx="50%" cy="44%" r="58%">
+      <stop offset="0" stop-color="${accent}" stop-opacity="0.24"/>
+      <stop offset="0.48" stop-color="${secondary}" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="${BRAND_SYSTEM.colors.void}" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="14" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <pattern id="grid" width="76" height="76" patternUnits="userSpaceOnUse">
+      <path d="M 76 0 L 0 0 0 76" fill="none" stroke="${accent}" stroke-opacity="0.08" stroke-width="2"/>
+    </pattern>
+  </defs>
+  <rect width="${width}" height="${height}" fill="url(#blank-bg)"/>
+  <rect width="${width}" height="${height}" fill="url(#grid)" opacity="0.95"/>
+  <rect width="${width}" height="${height}" fill="url(#core-glow)"/>
+  <circle cx="${Math.round(width * 0.18)}" cy="${Math.round(height * 0.20)}" r="${Math.round(Math.min(width, height) * 0.30)}" fill="${secondary}" opacity="0.14" filter="url(#soft-glow)"/>
+  <circle cx="${Math.round(width * 0.82)}" cy="${Math.round(height * 0.72)}" r="${Math.round(Math.min(width, height) * 0.34)}" fill="${accent}" opacity="0.12" filter="url(#soft-glow)"/>
+  <path d="M ${Math.round(width * 0.08)} ${Math.round(height * 0.12)} C ${Math.round(width * 0.28)} ${Math.round(height * 0.02)}, ${Math.round(width * 0.72)} ${Math.round(height * 0.02)}, ${Math.round(width * 0.92)} ${Math.round(height * 0.12)}" fill="none" stroke="${accent}" stroke-width="4" opacity="0.28"/>
+  <path d="M ${Math.round(width * 0.08)} ${Math.round(height * 0.88)} C ${Math.round(width * 0.28)} ${Math.round(height * 0.98)}, ${Math.round(width * 0.72)} ${Math.round(height * 0.98)}, ${Math.round(width * 0.92)} ${Math.round(height * 0.88)}" fill="none" stroke="${secondary}" stroke-width="4" opacity="0.24"/>
+  ${designFrame(template)}
+</svg>
+`;
 }
