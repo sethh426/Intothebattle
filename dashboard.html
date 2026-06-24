@@ -90,6 +90,28 @@
     .overlay-v2-panel p { margin:0; color:var(--muted); font-size:12px; line-height:1.45; font-weight:800; }
     .overlay-v2-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
     .overlay-v2-grid .btn { min-height:40px; padding:0 10px; font-size:12px; }
+    .dashboard-nav { position:sticky; top:96px; z-index:24; display:flex; flex-wrap:wrap; gap:10px; padding:10px; border:1px solid rgba(255,255,255,.09); border-radius:22px; background:rgba(5,7,11,.78); backdrop-filter:blur(18px); box-shadow:0 20px 60px rgba(0,0,0,.24); }
+    .dashboard-nav a { min-height:38px; display:inline-flex; align-items:center; justify-content:center; padding:0 13px; border-radius:999px; border:1px solid rgba(255,255,255,.09); background:rgba(255,255,255,.05); color:var(--muted); font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; }
+    .dashboard-nav a:hover { color:var(--text); border-color:rgba(246,201,91,.34); background:rgba(246,201,91,.08); }
+    .dashboard-workflows { display:grid; gap:16px; }
+    .workflow { scroll-margin-top:160px; border:1px solid rgba(255,255,255,.1); border-radius:28px; background:linear-gradient(180deg,rgba(255,255,255,.052),rgba(255,255,255,.022)); box-shadow:0 24px 80px rgba(0,0,0,.25); overflow:hidden; }
+    .workflow[open] { border-color:rgba(246,201,91,.22); }
+    .workflow-summary { cursor:pointer; list-style:none; display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:14px; align-items:center; padding:20px 22px; border-bottom:1px solid rgba(255,255,255,0); }
+    .workflow[open] .workflow-summary { border-bottom-color:rgba(255,255,255,.08); }
+    .workflow-summary::-webkit-details-marker { display:none; }
+    .workflow-kicker { display:block; color:var(--gold2); font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.14em; }
+    .workflow-title { display:block; margin-top:4px; color:var(--text); font-size:clamp(20px,2vw,30px); font-weight:900; line-height:1.08; }
+    .workflow-copy { margin-top:5px; color:var(--muted); font-size:13px; line-height:1.45; max-width:780px; }
+    .workflow-status { display:inline-flex; align-items:center; justify-content:center; min-height:34px; padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.045); color:var(--muted); font-size:11px; font-weight:900; text-transform:uppercase; white-space:nowrap; }
+    .workflow-status.ready { color:var(--green); border-color:rgba(119,240,161,.32); background:rgba(119,240,161,.08); }
+    .workflow-status.warn { color:var(--gold2); border-color:rgba(246,201,91,.32); background:rgba(246,201,91,.08); }
+    .workflow-status.blocked { color:#ff9aa8; border-color:rgba(232,59,95,.32); background:rgba(232,59,95,.1); }
+    .workflow-toggle { width:34px; height:34px; display:grid; place-items:center; border-radius:999px; border:1px solid rgba(255,255,255,.1); color:var(--gold); background:rgba(0,0,0,.16); font-weight:900; }
+    .workflow-toggle::before { content:'+'; }
+    .workflow[open] .workflow-toggle::before { content:'-'; }
+    .workflow-body { padding:20px; }
+    .workflow-body.grid { display:grid; grid-template-columns:repeat(12,1fr); gap:20px; }
+    .workflow-body.compact { display:grid; gap:16px; }
     .grid { display:grid; grid-template-columns:repeat(12,1fr); gap:20px; }
     .col-12{grid-column:span 12}.col-8{grid-column:span 8}.col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}
     .card { padding:24px; }
@@ -146,6 +168,7 @@
     .background-preview.empty img { display:none; }
     .background-preview span { color:var(--muted); font-size:13px; font-weight:800; text-align:center; padding:20px; }
     .audio-layout,.sponsor-layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    #audioManagerCard .audio-layout { grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; }
     .sponsor-layout { grid-template-columns:minmax(360px,.9fr) minmax(520px,1.1fr); align-items:start; }
     .sponsor-creative,.sponsor-controls { min-width:0; display:grid; gap:14px; }
     .sponsor-fields,.sponsor-playback,.sponsor-library-panel,.sponsor-selected {
@@ -223,7 +246,10 @@
     .event-attack{background:rgba(85,231,255,.12);color:var(--cyan)}.event-gift{background:rgba(246,201,91,.12);color:var(--gold2)}.event-kill{background:rgba(232,59,95,.14);color:#ff9aa8}.event-heal{background:rgba(119,240,161,.12);color:var(--green)}.event-follow{background:rgba(255,255,255,.08);color:#fff}.event-respawn{background:rgba(85,231,255,.12);color:var(--cyan)}.event-social{background:rgba(153,255,218,.12);color:#99ffda}.event-surge{background:rgba(246,201,91,.14);color:var(--gold2)}
     details.tool { border:1px solid rgba(255,255,255,.09); border-radius:22px; background:rgba(255,255,255,.035); overflow:hidden; }
     details.tool summary { cursor:pointer; padding:18px 20px; font-weight:900; color:#fff; list-style:none; display:flex; justify-content:space-between; gap:14px; }
-    details.tool summary::-webkit-details-marker{display:none} details.tool summary::after{content:'+';color:var(--gold)} details[open].tool summary::after{content:'−'} .tool-body{padding:0 20px 20px}
+    details.tool summary::-webkit-details-marker{display:none} details.tool summary::after{content:'+';color:var(--gold)} details[open].tool summary::after{content:'-'} .tool-body{padding:0 20px 20px}
+    .workflow details.tool { background:rgba(0,0,0,.16); }
+    .subtool summary { align-items:center; text-transform:uppercase; letter-spacing:.08em; font-size:12px; }
+    .subtool .tool-body { padding:0 16px 16px; }
     #toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(30px); z-index:100; opacity:0; pointer-events:none; padding:14px 18px; border-radius:16px; background:rgba(5,7,11,.92); border:1px solid var(--line); color:#fff; font-weight:800; transition:.2s ease; }
     #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
     .footer { display:flex; flex-wrap:wrap; gap:12px; margin:4px 0 28px; }
@@ -231,7 +257,7 @@
     .footer-btn.primary { color:#170c02; background:linear-gradient(135deg,var(--gold),#fff0b9 52%,var(--ember)); border:0; }
     @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,.sponsor-layout,.sponsor-upgrade,.ops-strip,.session-layout,.launch-checklist{grid-template-columns:1fr}#audioManagerCard,#toolsRail,#creatorSponsorCard{order:initial}}
     @media(max-width:860px){.session-status-grid,.session-control-grid{grid-template-columns:1fr}}
-    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}.setup-steps{grid-template-columns:1fr}}
+    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.dashboard-nav{position:relative;top:auto}.dashboard-nav a{flex:1 1 120px}.workflow-summary{grid-template-columns:1fr;align-items:start}.workflow-status{width:fit-content}.workflow-toggle{position:absolute;right:18px;top:18px}.workflow-body{padding:14px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}.setup-steps{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -280,7 +306,23 @@
     </aside>
   </section>
 
-  <section class="grid">
+  <nav class="dashboard-nav" aria-label="Dashboard sections">
+    <a href="#launchWorkflow">Launch</a>
+    <a href="#liveWorkflow">Live</a>
+    <a href="#overlayWorkflow">Overlay</a>
+    <a href="#brandWorkflow">Brand</a>
+    <a href="#audioWorkflow">Audio</a>
+    <a href="#toolsWorkflow">Tools</a>
+  </nav>
+
+  <section class="dashboard-workflows">
+    <details class="workflow" id="launchWorkflow" data-workflow-key="launch" open>
+      <summary class="workflow-summary">
+        <span><span class="workflow-kicker">Launch setup</span><span class="workflow-title">Connect the stream and copy the overlay</span><span class="workflow-copy">The creator should only focus on these controls until TikTok is connected, the overlay URL is copied, and a test event has fired.</span></span>
+        <span class="workflow-status warn" id="launchWorkflowStatus">Setup</span>
+        <span class="workflow-toggle" aria-hidden="true"></span>
+      </summary>
+      <div class="workflow-body grid">
     <article class="card launch-checklist" id="setupChecklistCard">
       <div class="launch-checklist-copy">
         <div class="card-title">Setup checklist</div>
@@ -321,7 +363,16 @@
       <div class="divider"></div>
       <div class="btn-row"><button class="btn btn-primary" onclick="openOverlay()">Open Overlay</button><button class="btn btn-success" onclick="testOverlayBurst()">Test My Overlay</button><button class="btn btn-secondary" onclick="reloadOverlay()">Reload</button></div>
     </article>
+      </div>
+    </details>
 
+    <details class="workflow" id="overlayWorkflow" data-workflow-key="overlay">
+      <summary class="workflow-summary">
+        <span><span class="workflow-kicker">Overlay look</span><span class="workflow-title">Scene, background, and visual polish</span><span class="workflow-copy">Keep appearance controls separate from launch controls so creators can get live first, then tune the look.</span></span>
+        <span class="workflow-status warn" id="overlayWorkflowStatus">Optional</span>
+        <span class="workflow-toggle" aria-hidden="true"></span>
+      </summary>
+      <div class="workflow-body grid">
     <article class="card col-4" id="sceneCard">
       <div class="card-head"><div><div class="card-title">Step 3</div><h3>Visual polish</h3></div><span class="card-badge">Look & feel</span></div>
       <div class="form-group"><label class="input-label">Background</label><input type="file" id="bgUpload" accept="image/jpeg,image/png,image/gif,image/webp"></div>
@@ -332,7 +383,16 @@
         <span id="backgroundPreviewEmpty">No background preview loaded</span>
       </div>
     </article>
+      </div>
+    </details>
 
+    <details class="workflow" id="liveWorkflow" data-workflow-key="live">
+      <summary class="workflow-summary">
+        <span><span class="workflow-kicker">Live controls</span><span class="workflow-title">Rounds, boss waves, commands, and recap</span><span class="workflow-copy">Everything for running the battle during a stream lives here, away from setup and media management.</span></span>
+        <span class="workflow-status warn" id="liveWorkflowStatus">Idle</span>
+        <span class="workflow-toggle" aria-hidden="true"></span>
+      </summary>
+      <div class="workflow-body grid">
     <article class="card col-12" id="sessionDirectorCard">
       <div class="card-head">
         <div>
@@ -381,7 +441,16 @@
         </div>
       </div>
     </article>
+      </div>
+    </details>
 
+    <details class="workflow" id="brandWorkflow" data-workflow-key="brand">
+      <summary class="workflow-summary">
+        <span><span class="workflow-kicker">Brand moments</span><span class="workflow-title">Sponsor videos and broadcast breaks</span><span class="workflow-copy">Upload, test, and run full-screen power moments without mixing those controls into the core stream setup.</span></span>
+        <span class="workflow-status warn" id="brandWorkflowStatus">Managed</span>
+        <span class="workflow-toggle" aria-hidden="true"></span>
+      </summary>
+      <div class="workflow-body grid">
     <article class="card col-12" id="creatorSponsorCard">
       <div class="card-head"><div><div class="card-title">Brand moments</div><h3>Full-screen power moments</h3><p class="muted">Free rooms receive platform-managed broadcast breaks. Creator Pro unlocks custom uploads, timing, previews, and live brand controls.</p></div><span class="card-badge" id="sponsorCountBadge">0 Videos</span></div>
       <div class="sponsor-upgrade" id="sponsorUpgradeNotice" hidden>
@@ -390,63 +459,118 @@
       </div>
       <div class="sponsor-layout">
         <div class="sponsor-creative">
-          <div class="sponsor-fields">
-            <div class="section-title">Creative</div>
-            <div class="form-group"><label class="input-label">Video creative</label><input type="file" id="sponsorFileInput" accept="video/mp4,video/webm,video/quicktime,video/x-m4v"><p class="muted" style="margin-top:8px;">Best: MP4 H.264/AAC, 16:9, 720p or 1080p, 6-20 seconds for live breaks.</p><div class="sponsor-upload-meta" id="sponsorUploadMeta">Choose a video to inspect duration and format before upload.</div></div>
-            <div class="form-group"><label class="input-label">Partner</label><input id="sponsorPartnerInput" type="text" maxlength="70" placeholder="Sponsor name"></div>
-            <div class="form-group"><label class="input-label">Headline</label><input id="sponsorTitleInput" type="text" maxlength="90" placeholder="Power Moment"></div>
-            <div class="form-group"><label class="input-label">Subtitle</label><input id="sponsorSubtitleInput" type="text" maxlength="140" placeholder="Stay locked in. The next fight is loading."></div>
-            <button class="btn btn-primary" style="width:100%" onclick="uploadSponsorVideo()">Upload Video</button>
-          </div>
+          <details class="tool subtool" open>
+            <summary>Upload creative</summary>
+            <div class="tool-body">
+              <div class="sponsor-fields">
+                <div class="section-title">Creative</div>
+                <div class="form-group"><label class="input-label">Video creative</label><input type="file" id="sponsorFileInput" accept="video/mp4,video/webm,video/quicktime,video/x-m4v"><p class="muted" style="margin-top:8px;">Best: MP4 H.264/AAC, 16:9, 720p or 1080p, 6-20 seconds for live breaks.</p><div class="sponsor-upload-meta" id="sponsorUploadMeta">Choose a video to inspect duration and format before upload.</div></div>
+                <div class="form-group"><label class="input-label">Partner</label><input id="sponsorPartnerInput" type="text" maxlength="70" placeholder="Sponsor name"></div>
+                <div class="form-group"><label class="input-label">Headline</label><input id="sponsorTitleInput" type="text" maxlength="90" placeholder="Power Moment"></div>
+                <div class="form-group"><label class="input-label">Subtitle</label><input id="sponsorSubtitleInput" type="text" maxlength="140" placeholder="Stay locked in. The next fight is loading."></div>
+                <button class="btn btn-primary" style="width:100%" onclick="uploadSponsorVideo()">Upload Video</button>
+              </div>
+            </div>
+          </details>
         </div>
         <div class="sponsor-controls">
           <div class="sponsor-selected" id="sponsorSelectedSummary">
             <div><div class="sponsor-selected-title">No sponsor video selected</div><div class="sponsor-selected-meta">Upload or select a creative.</div></div>
             <span class="sponsor-status-pill">Selected</span>
           </div>
-          <div class="sponsor-playback">
-            <div class="section-title">Playback</div>
-            <div class="sponsor-readiness" id="sponsorReadiness">
-              <div class="sponsor-readiness-head">
-                <div class="sponsor-readiness-title">Playback readiness</div>
-                <span class="sponsor-readiness-pill idle" id="sponsorReadinessPill">Idle</span>
-              </div>
-              <div class="sponsor-readiness-message" id="sponsorReadinessMessage">Send a power moment to see overlay loading and playback status.</div>
-              <div class="sponsor-step-track" aria-label="Power moment progress">
-                <span class="sponsor-step" data-sponsor-step="preparing">Preparing</span>
-                <span class="sponsor-step" data-sponsor-step="decoded">Decoded</span>
-                <span class="sponsor-step" data-sponsor-step="ready">Ready</span>
-                <span class="sponsor-step" data-sponsor-step="first_frame">First Frame</span>
-                <span class="sponsor-step" data-sponsor-step="completed">Proof</span>
+          <details class="tool subtool" open>
+            <summary>Playback controls</summary>
+            <div class="tool-body">
+              <div class="sponsor-playback">
+                <div class="section-title">Playback</div>
+                <div class="sponsor-readiness" id="sponsorReadiness">
+                  <div class="sponsor-readiness-head">
+                    <div class="sponsor-readiness-title">Playback readiness</div>
+                    <span class="sponsor-readiness-pill idle" id="sponsorReadinessPill">Idle</span>
+                  </div>
+                  <div class="sponsor-readiness-message" id="sponsorReadinessMessage">Send a power moment to see overlay loading and playback status.</div>
+                  <div class="sponsor-step-track" aria-label="Power moment progress">
+                    <span class="sponsor-step" data-sponsor-step="preparing">Preparing</span>
+                    <span class="sponsor-step" data-sponsor-step="decoded">Decoded</span>
+                    <span class="sponsor-step" data-sponsor-step="ready">Ready</span>
+                    <span class="sponsor-step" data-sponsor-step="first_frame">First Frame</span>
+                    <span class="sponsor-step" data-sponsor-step="completed">Proof</span>
+                  </div>
+                </div>
+                <div class="grid" style="gap:12px;">
+                  <div class="col-6"><label class="input-label">Break format</label><select id="sponsorTimingProfileInput"><option value="bumper">6s bumper</option><option value="spotlight" selected>12s spotlight</option><option value="feature">20s feature</option><option value="full">Full creative</option></select></div>
+                  <div class="col-6"><label class="input-label">Break length</label><select id="sponsorDurationInput"><option value="6000">6 seconds</option><option value="12000" selected>12 seconds</option><option value="20000">20 seconds</option><option value="30000">30 seconds</option><option value="60000">60 seconds</option></select></div>
+                  <div class="col-6"><label class="input-label">Video fit</label><select id="sponsorFitInput"><option value="contain" selected>Show full video</option><option value="cover">Fill screen</option></select></div>
+                  <div class="col-6"><label class="input-label">Audio</label><select id="sponsorMutedInput"><option value="true" selected>Muted autoplay</option><option value="false">Try video audio</option></select></div>
+                  <div class="col-6"><label class="input-label">Battle stats</label><select id="sponsorStatsModeInput"><option value="endcap" selected>End-cap stats (recommended)</option><option value="delayed">Side stats after intro</option><option value="hidden">Hide during video</option><option value="always">Always show</option></select></div>
+                </div>
+                <div class="btn-row" style="margin-top:16px;"><button class="btn btn-success" onclick="playSponsorScene()">Run Moment</button><button class="btn btn-secondary" onclick="openSponsorPreview()">Preview</button><button class="btn btn-danger" onclick="stopSponsorScene()">Stop</button></div>
               </div>
             </div>
-            <div class="grid" style="gap:12px;">
-              <div class="col-6"><label class="input-label">Break format</label><select id="sponsorTimingProfileInput"><option value="bumper">6s bumper</option><option value="spotlight" selected>12s spotlight</option><option value="feature">20s feature</option><option value="full">Full creative</option></select></div>
-              <div class="col-6"><label class="input-label">Break length</label><select id="sponsorDurationInput"><option value="6000">6 seconds</option><option value="12000" selected>12 seconds</option><option value="20000">20 seconds</option><option value="30000">30 seconds</option><option value="60000">60 seconds</option></select></div>
-              <div class="col-6"><label class="input-label">Video fit</label><select id="sponsorFitInput"><option value="contain" selected>Show full video</option><option value="cover">Fill screen</option></select></div>
-              <div class="col-6"><label class="input-label">Audio</label><select id="sponsorMutedInput"><option value="true" selected>Muted autoplay</option><option value="false">Try video audio</option></select></div>
-              <div class="col-6"><label class="input-label">Battle stats</label><select id="sponsorStatsModeInput"><option value="endcap" selected>End-cap stats (recommended)</option><option value="delayed">Side stats after intro</option><option value="hidden">Hide during video</option><option value="always">Always show</option></select></div>
+          </details>
+          <details class="tool subtool">
+            <summary>Creative library</summary>
+            <div class="tool-body">
+              <div class="sponsor-library-panel">
+                <div class="section-title">Creative library</div><div class="audio-files" id="sponsorLibrary"><p class="muted">No videos uploaded yet.</p></div>
+              </div>
             </div>
-            <div class="btn-row" style="margin-top:16px;"><button class="btn btn-success" onclick="playSponsorScene()">Run Moment</button><button class="btn btn-secondary" onclick="openSponsorPreview()">Preview</button><button class="btn btn-danger" onclick="stopSponsorScene()">Stop</button></div>
-          </div>
-          <div class="sponsor-library-panel">
-            <div class="section-title">Creative library</div><div class="audio-files" id="sponsorLibrary"><p class="muted">No videos uploaded yet.</p></div>
-          </div>
+          </details>
         </div>
       </div>
     </article>
+      </div>
+    </details>
 
-    <article class="card col-8" id="audioManagerCard">
+    <details class="workflow" id="audioWorkflow" data-workflow-key="audio">
+      <summary class="workflow-summary">
+        <span><span class="workflow-kicker">Sound effects</span><span class="workflow-title">Audio library and event assignments</span><span class="workflow-copy">Upload sounds and map them to overlay events after the core stream is ready.</span></span>
+        <span class="workflow-status warn" id="audioWorkflowStatus">Optional</span>
+        <span class="workflow-toggle" aria-hidden="true"></span>
+      </summary>
+      <div class="workflow-body grid">
+    <article class="card col-12" id="audioManagerCard">
       <div class="card-head"><div><div class="card-title">Audio manager</div><h3>Sound library</h3><p class="muted">Upload sounds and assign them to live overlay events.</p></div><span class="card-badge" id="audioCountBadge">0 Sounds Loaded</span></div>
-      <div class="drop-zone" id="dropZone"><input type="file" id="audioFileInput" accept="audio/*"><div class="drop-icon">🎵</div><div class="drop-title">Drop audio files here</div><div class="drop-sub">MP3 • WAV • OGG • AAC • FLAC • WEBM</div></div>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:18px" onclick="document.getElementById('audioFileInput').click()">Browse Audio Files</button>
-      <div class="audio-layout"><div><div class="section-title">Uploaded sounds</div><div class="audio-files" id="audioLibrary"><p class="muted">No audio uploaded yet.</p></div></div><div><div class="section-title">Event assignments</div><table class="assign-table"><tbody id="assignTableBody"></tbody></table></div></div>
+      <div class="audio-layout">
+        <details class="tool subtool" open>
+          <summary>Upload sounds</summary>
+          <div class="tool-body">
+            <div class="drop-zone" id="dropZone"><input type="file" id="audioFileInput" accept="audio/*"><div class="drop-icon">🎵</div><div class="drop-title">Drop audio files here</div><div class="drop-sub">MP3 • WAV • OGG • AAC • FLAC • WEBM</div></div>
+            <button class="btn btn-primary" style="width:100%" onclick="document.getElementById('audioFileInput').click()">Browse Audio Files</button>
+          </div>
+        </details>
+        <details class="tool subtool" open>
+          <summary>Uploaded library</summary>
+          <div class="tool-body">
+            <div class="section-title">Uploaded sounds</div>
+            <div class="audio-files" id="audioLibrary"><p class="muted">No audio uploaded yet.</p></div>
+          </div>
+        </details>
+        <details class="tool subtool">
+          <summary>Event assignments</summary>
+          <div class="tool-body">
+            <div class="section-title">Event assignments</div>
+            <table class="assign-table"><tbody id="assignTableBody"></tbody></table>
+          </div>
+        </details>
+      </div>
     </article>
+      </div>
+    </details>
 
+    <details class="workflow" id="toolsWorkflow" data-workflow-key="tools">
+      <summary class="workflow-summary">
+        <span><span class="workflow-kicker">Testing and maintenance</span><span class="workflow-title">Test events, cleanup, and raw diagnostics</span><span class="workflow-copy">Keep setup-only and danger-adjacent controls collapsed until the creator needs them.</span></span>
+        <span class="workflow-status warn" id="toolsWorkflowStatus">Tools</span>
+        <span class="workflow-toggle" aria-hidden="true"></span>
+      </summary>
+      <div class="workflow-body compact">
     <aside class="col-4" id="toolsRail" style="display:grid;gap:20px;">
       <details class="tool" open><summary>Live testing controls</summary><div class="tool-body"><p class="muted" style="margin-bottom:14px;">Use these during setup only. They trigger test overlay events.</p><div class="btn-row"><button class="btn btn-success" onclick="testOverlayAttack()">Attack</button><button class="btn btn-warning" onclick="testOverlayGift()">Gift</button><button class="btn btn-purple" onclick="testOverlayHeal()">Heal</button><button class="btn btn-danger" onclick="testOverlayKill()">Kill</button><button class="btn btn-primary" onclick="testStreak()">Streak</button><button class="btn btn-secondary" onclick="testOverlayFollow()">Follow</button><button class="btn btn-secondary" onclick="testOverlayShare()">Share</button><button class="btn btn-secondary" onclick="testOverlayRepost()">Repost</button></div></div></details>
       <details class="tool"><summary>Maintenance</summary><div class="tool-body"><div class="btn-row"><button class="btn btn-secondary" onclick="clearPlayers()">Clear Players</button><button class="btn btn-secondary" onclick="toggleDevMode()">Toggle Dev Mode</button><button class="btn btn-secondary" onclick="window.open('/api/status','_blank')">Raw JSON</button></div></div></details>
     </aside>
+      </div>
+    </details>
   </section>
 
   <div class="footer"><button class="footer-btn primary" onclick="openOverlay()">Open Overlay</button><button class="footer-btn" onclick="copyOverlayUrl()">Copy Overlay URL</button><button class="footer-btn" onclick="window.open('/stats','_blank')">Stats</button><button class="footer-btn" onclick="window.location.reload()">Refresh</button></div>
@@ -483,6 +607,59 @@ const dashboardState = {
   overlayTested: false,
   eventStarted: false,
 };
+const WORKFLOW_STORAGE_KEY = 'intothebattle.dashboard.workflows';
+function workflowDetails() {
+  return Array.from(document.querySelectorAll('details.workflow[data-workflow-key]'));
+}
+function savedWorkflowState() {
+  try { return JSON.parse(localStorage.getItem(WORKFLOW_STORAGE_KEY) || '{}'); } catch (_err) { return {}; }
+}
+function persistWorkflowState() {
+  const state = {};
+  workflowDetails().forEach(details => { state[details.dataset.workflowKey] = details.open; });
+  try { localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(state)); } catch (_err) {}
+}
+function initDashboardWorkflows() {
+  const state = savedWorkflowState();
+  workflowDetails().forEach(details => {
+    const key = details.dataset.workflowKey;
+    if (Object.prototype.hasOwnProperty.call(state, key)) details.open = !!state[key];
+    details.addEventListener('toggle', persistWorkflowState);
+  });
+}
+function setWorkflowStatus(id, label, state = 'warn') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = label;
+  el.className = `workflow-status ${state}`;
+}
+function updateWorkflowStatuses() {
+  const launchReady = dashboardState.tiktokConnected && (dashboardState.overlayUrlCopied || dashboardState.overlayConnected);
+  setWorkflowStatus(
+    'launchWorkflowStatus',
+    launchReady ? (dashboardState.overlayTested ? 'Ready' : 'Test overlay') : (dashboardState.tiktokConnected ? 'Copy URL' : 'Connect'),
+    launchReady ? (dashboardState.overlayTested ? 'ready' : 'warn') : 'blocked'
+  );
+  setWorkflowStatus(
+    'overlayWorkflowStatus',
+    dashboardState.backgroundReady ? 'Background ready' : 'Default scene',
+    dashboardState.backgroundReady ? 'ready' : 'warn'
+  );
+  const bossActive = !!sessionStatusData?.bossWave?.active;
+  const sessionActive = !!sessionStatusData?.active;
+  setWorkflowStatus('liveWorkflowStatus', bossActive ? 'Boss live' : sessionActive ? 'Session live' : 'Idle', bossActive || sessionActive ? 'ready' : 'warn');
+  setWorkflowStatus(
+    'brandWorkflowStatus',
+    canUseCreatorSponsors ? (dashboardState.sponsorCount ? `${dashboardState.sponsorCount} video${dashboardState.sponsorCount === 1 ? '' : 's'}` : 'No videos') : 'Platform managed',
+    !canUseCreatorSponsors || dashboardState.sponsorCount ? 'ready' : 'warn'
+  );
+  setWorkflowStatus(
+    'audioWorkflowStatus',
+    dashboardState.audioCount ? `${dashboardState.audioCount} sound${dashboardState.audioCount === 1 ? '' : 's'}` : 'No sounds',
+    dashboardState.audioCount ? 'ready' : 'warn'
+  );
+  setWorkflowStatus('toolsWorkflowStatus', dashboardState.devTestMode ? 'Dev mode on' : 'Collapsed', dashboardState.devTestMode ? 'warn' : 'ready');
+}
 const EVENTS = ['attack','gift','kill','respawn','heal','follow','socialBoost','engagementSurge'];
 const EVENT_LABELS = { attack:'Attack', gift:'Gift', kill:'Kill', respawn:'Respawn', heal:'Heal', follow:'Follow', socialBoost:'Share/Repost boost', engagementSurge:'Audience surge' };
 const EVENT_CLASSES = { attack:'event-attack', gift:'event-gift', kill:'event-kill', respawn:'event-respawn', heal:'event-heal', follow:'event-follow', socialBoost:'event-social', engagementSurge:'event-surge' };
@@ -697,6 +874,7 @@ function updateSetupChecklist() {
   ];
   list.innerHTML = steps.map(step => setupStep(step.title, step.detail, step.ready)).join('');
   updateDashboardProgressLocks();
+  updateWorkflowStatuses();
 }
 function updateReadinessChecklist() {
   const items = [
@@ -744,6 +922,7 @@ function updateReadinessChecklist() {
   text('dashboard-summary', blockers ? 'Finish the required connections before going live.' : `Room ${currentRoomId || ''} is ready for live control.`);
   const list = document.getElementById('readiness-list');
   if (list) list.innerHTML = items.map(item => readinessItem(item.title, item.detail, item.status, item.label)).join('');
+  updateWorkflowStatuses();
   updateSetupChecklist();
 }
 function formatClock(ms) {
@@ -1477,6 +1656,7 @@ dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classLis
 dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', e=>{ e.preventDefault(); dropZone.classList.remove('dragover'); const file=e.dataTransfer.files[0]; if(file) uploadAudioFile(file); });
 fetch('/api/audio').then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData=d.library || []; audioConfigData=d.config || {}; renderAudioLibrary(); renderAssignTable(); }}).catch(()=>{});
+initDashboardWorkflows();
 fetchStatus(); fetchSubscriptionStatus(); setInterval(fetchStatus,10000); setInterval(fetchSubscriptionStatus,60000); setInterval(tickSessionClock,1000);
 </script>
 </body>
