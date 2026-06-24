@@ -240,6 +240,47 @@ const HIGH_INTENSITY_BATTLE_EVENTS = new Set([
   'engagementSurge',
   'bossWave',
 ]);
+const MATCH_PHASES = Object.freeze({
+  IDLE: 'idle',
+  SETUP: 'setup',
+  LIVE: 'live',
+  BOSS_WAVE: 'bossWave',
+  FINAL_RUSH: 'finalRush',
+  RECAP: 'recap',
+  RESET: 'reset',
+});
+const MATCH_PHASE_VALUES = new Set(Object.values(MATCH_PHASES));
+const ROOM_EVENT_QUEUE_TYPES = new Set([
+  'attack',
+  'commentDamage',
+  'giftAttack',
+  'giftEffect',
+  'giftCelebration',
+  'like',
+  'heal',
+  'playerCommand',
+  'killEvent',
+  'streakEvent',
+  'follow',
+  'socialBoost',
+  'engagementSurge',
+  'bossWave',
+  'respawn',
+  'sponsorPrepare',
+  'sponsorScene',
+  'soundEvent',
+]);
+const ROOM_EVENT_QUEUE_MAX = 180;
+const ROOM_EVENT_FLUSH_DELAY_MS = 18;
+const ROOM_EVENT_LANE_BUDGETS = Object.freeze({
+  exclusive: 2,
+  state: 8,
+  celebration: 3,
+  gameplay: 8,
+  ambient: 4,
+  sound: 2,
+});
+const ROOM_EVENT_LANE_ORDER = ['exclusive', 'state', 'celebration', 'gameplay', 'ambient', 'sound'];
 
 function getOverlayTokenSecret() {
   return process.env.OVERLAY_TOKEN_SECRET || process.env.JWT_SECRET || '';
@@ -471,14 +512,215 @@ function recordRoomBattleAction(room, type) {
   }
 }
 
-function emitRoomEvent(room, type, payload = {}) {
+function sanitizeMatchPhase(value, fallback = MATCH_PHASES.IDLE) {
+  const phase = String(value || '').trim();
+  return MATCH_PHASE_VALUES.has(phase) ? phase : fallback;
+}
+
+function currentRoomSessionId(room) {
+  return room?.liveSession?.sessionId || room?.tiktokConnection?.sessionId || null;
+}
+
+function currentRoomPhase(room) {
+  if (room?.matchLifecycle?.phase) return sanitizeMatchPhase(room.matchLifecycle.phase);
+  if (room?.bossWave?.active) return MATCH_PHASES.BOSS_WAVE;
+  if (room?.liveSession?.status === 'active') return MATCH_PHASES.LIVE;
+  if (room?.lastSessionRecap) return MATCH_PHASES.RECAP;
+  return MATCH_PHASES.IDLE;
+}
+
+function setRoomMatchPhase(room, phase, reason = '', detail = {}) {
+  if (!room?.roomId) return null;
+  const safePhase = sanitizeMatchPhase(phase, MATCH_PHASES.IDLE);
+  room.matchLifecycle = {
+    phase: safePhase,
+    reason: String(reason || '').slice(0, 80),
+    sessionId: detail.sessionId || currentRoomSessionId(room),
+    updatedAt: Date.now(),
+    detail: detail.detail || null,
+  };
+  return room.matchLifecycle;
+}
+
+function roomRuntimeEpoch(room) {
+  if (!room) return 0;
+  if (!Number.isFinite(Number(room.runtimeEpoch))) room.runtimeEpoch = 1;
+  return room.runtimeEpoch;
+}
+
+function clearRoomEventQueue(room) {
+  if (!room) return;
+  if (room.eventQueueTimer) {
+    clearTimeout(room.eventQueueTimer);
+    room.eventQueueTimer = null;
+  }
+  room.eventQueue = [];
+}
+
+function advanceRoomRuntimeEpoch(room, reason = 'reset') {
+  if (!room) return 0;
+  clearRoomEventQueue(room);
+  room.runtimeEpoch = roomRuntimeEpoch(room) + 1;
+  setRoomMatchPhase(room, MATCH_PHASES.RESET, reason);
+  return room.runtimeEpoch;
+}
+
+function roomEventLane(type, payload = {}) {
+  if (type === 'sponsorPrepare' || type === 'sponsorScene') return 'exclusive';
+  if (type === 'soundEvent') return 'sound';
+  if (type === 'like' || type === 'giftEffect') return 'ambient';
+  if (type === 'killEvent' || type === 'streakEvent' || type === 'giftCelebration' || type === 'follow' || type === 'engagementSurge') return 'celebration';
+  if (type === 'bossWave') return ['started', 'defeated', 'expired', 'ended'].includes(payload?.type) ? 'celebration' : 'gameplay';
+  return 'gameplay';
+}
+
+function roomEventPriority(type, payload = {}) {
+  if (type === 'sponsorScene') return payload.action === 'hide' ? 125 : 120;
+  if (type === 'sponsorPrepare') return 112;
+  if (type === 'bossWave') return payload.type === 'defeated' ? 104 : payload.type === 'started' ? 98 : 86;
+  if (type === 'killEvent' || type === 'streakEvent') return 94;
+  if (type === 'giftCelebration' || type === 'engagementSurge') return 88;
+  if (type === 'giftAttack') return 82;
+  if (type === 'attack' || type === 'commentDamage') return payload.critical || payload.killed ? 78 : 68;
+  if (type === 'follow' || type === 'socialBoost' || type === 'playerCommand') return 62;
+  if (type === 'heal' || type === 'respawn') return 58;
+  if (type === 'like') return payload.milestone ? 55 : 34;
+  if (type === 'soundEvent') return Number(payload.priority) || 30;
+  return 50;
+}
+
+function roomEventTtl(type) {
+  if (type === 'sponsorPrepare' || type === 'sponsorScene') return 120000;
+  if (type === 'bossWave') return 30000;
+  if (type === 'attack' || type === 'commentDamage' || type === 'giftAttack') return 9000;
+  if (type === 'like' || type === 'soundEvent') return 3500;
+  return 15000;
+}
+
+function roomEventMergeKey(type, payload = {}) {
+  if (type === 'soundEvent') return `sound:${payload.event || 'sound'}`;
+  if (type === 'like' && payload.milestone) return `like:${payload.milestone}`;
+  if (type === 'sponsorPrepare' || type === 'sponsorScene') return `${type}:${payload.breakId || payload.filename || payload.action || 'active'}`;
+  if (type === 'bossWave' && payload.type !== 'attack') return `boss:${payload.type || 'status'}`;
+  if (type === 'playerCommand') return `cmd:${payload.type || 'command'}:${payload.uniqueId || payload.nickname || ''}`;
+  return '';
+}
+
+function roomEventEnvelope(room, type, payload = {}, meta = {}) {
+  return {
+    ...payload,
+    _ts: Date.now(),
+    _seq: meta.seq,
+    _event: type,
+    _sessionId: meta.sessionId || currentRoomSessionId(room),
+    _phase: currentRoomPhase(room),
+    _epoch: roomRuntimeEpoch(room),
+    _priority: meta.priority,
+    _lane: meta.lane,
+  };
+}
+
+function dispatchRoomEvent(room, type, payload = {}, meta = {}) {
   try {
     recordRoomBattleAction(room, type);
     room.eventSeq = (room.eventSeq || 0) + 1;
-    io.to(room.roomId).emit(type, { ...payload, _ts: Date.now(), _seq: room.eventSeq, _event: type });
+    if (type === 'gameState') {
+      io.to(room.roomId).emit(type, payload);
+      return;
+    }
+    const priority = meta.priority == null ? roomEventPriority(type, payload) : meta.priority;
+    const lane = meta.lane || roomEventLane(type, payload);
+    io.to(room.roomId).emit(type, roomEventEnvelope(room, type, payload, {
+      ...meta,
+      seq: room.eventSeq,
+      priority,
+      lane,
+    }));
   } catch (err) {
-    logger.error({ err, type, room: room.roomId }, 'emitRoomEvent failed');
+    logger.error({ err, type, room: room?.roomId }, 'emitRoomEvent failed');
   }
+}
+
+function scheduleRoomEventQueue(room) {
+  if (!room || room.eventQueueTimer) return;
+  room.eventQueueTimer = setTimeout(() => {
+    room.eventQueueTimer = null;
+    processRoomEventQueue(room);
+  }, ROOM_EVENT_FLUSH_DELAY_MS);
+  if (typeof room.eventQueueTimer.unref === 'function') room.eventQueueTimer.unref();
+}
+
+function processRoomEventQueue(room) {
+  if (!room?.eventQueue?.length) return;
+  const now = Date.now();
+  const epoch = roomRuntimeEpoch(room);
+  const budgets = { ...ROOM_EVENT_LANE_BUDGETS };
+  const pending = room.eventQueue
+    .filter(item => item.epoch === epoch && now - item.createdAt <= item.ttlMs)
+    .sort((a, b) => (b.priority - a.priority) || (a.createdAt - b.createdAt));
+
+  const remaining = [];
+  let emitted = 0;
+  const maxThisFlush = ROOM_EVENT_LANE_ORDER.reduce((sum, lane) => sum + (budgets[lane] || 0), 0);
+
+  for (const item of pending) {
+    const lane = item.lane || 'gameplay';
+    if (emitted < maxThisFlush && (budgets[lane] || 0) > 0) {
+      budgets[lane] -= 1;
+      emitted += 1;
+      dispatchRoomEvent(room, item.type, item.payload, {
+        priority: item.priority,
+        lane,
+        sessionId: item.sessionId,
+      });
+    } else {
+      remaining.push(item);
+    }
+  }
+
+  room.eventQueue = remaining;
+  if (room.eventQueue.length) scheduleRoomEventQueue(room);
+}
+
+function enqueueRoomEvent(room, type, payload = {}, options = {}) {
+  if (!room?.roomId) return;
+  if (!Array.isArray(room.eventQueue)) room.eventQueue = [];
+
+  const lane = options.lane || roomEventLane(type, payload);
+  const priority = options.priority == null ? roomEventPriority(type, payload) : options.priority;
+  const mergeKey = options.mergeKey === undefined ? roomEventMergeKey(type, payload) : options.mergeKey;
+  const item = {
+    type,
+    payload,
+    lane,
+    priority,
+    mergeKey,
+    sessionId: options.sessionId || currentRoomSessionId(room),
+    epoch: roomRuntimeEpoch(room),
+    ttlMs: Math.max(1000, Number(options.ttlMs) || roomEventTtl(type)),
+    createdAt: Date.now(),
+  };
+
+  if (mergeKey) {
+    const existingIndex = room.eventQueue.findIndex(existing => existing.type === type && existing.mergeKey === mergeKey);
+    if (existingIndex >= 0) room.eventQueue.splice(existingIndex, 1);
+  }
+
+  room.eventQueue.push(item);
+  if (room.eventQueue.length > ROOM_EVENT_QUEUE_MAX) {
+    room.eventQueue.sort((a, b) => (a.priority - b.priority) || (a.createdAt - b.createdAt));
+    room.eventQueue.splice(0, room.eventQueue.length - ROOM_EVENT_QUEUE_MAX);
+  }
+  scheduleRoomEventQueue(room);
+}
+
+function emitRoomEvent(room, type, payload = {}, options = {}) {
+  if (!room?.roomId) return;
+  if (options.immediate || !ROOM_EVENT_QUEUE_TYPES.has(type)) {
+    dispatchRoomEvent(room, type, payload, options);
+    return;
+  }
+  enqueueRoomEvent(room, type, payload, options);
 }
 
 function createSponsorBreakId(source = 'sponsor') {
@@ -493,6 +735,7 @@ function sanitizeSponsorEventType(value) {
 function sponsorBreakStatusPayload(record, status, detail = {}) {
   return {
     breakId: record.breakId,
+    sessionId: record.sessionId || null,
     status,
     source: record.source,
     creativeId: record.creativeId || null,
@@ -717,6 +960,10 @@ function getRoomSponsorPacingDecision(room) {
   const settings = getPlatformSponsorScheduleSettings();
   if (!room?.roomId) return { ok: false, reason: 'missing_room', retryMs: settings.retryDelayMs };
   if ((room.overlayCount || 0) <= 0) return { ok: false, reason: 'no_overlay', retryMs: settings.retryDelayMs };
+  if (room.liveSession?.status !== 'active') return { ok: false, reason: 'no_active_session', retryMs: settings.retryDelayMs };
+  if ([MATCH_PHASES.SETUP, MATCH_PHASES.RECAP, MATCH_PHASES.RESET, MATCH_PHASES.IDLE].includes(currentRoomPhase(room))) {
+    return { ok: false, reason: 'session_not_playing', retryMs: settings.retryDelayMs };
+  }
   if (roomHasActiveSponsorBreak(room.roomId)) return { ok: false, reason: 'active_break', retryMs: settings.retryDelayMs };
   if (!isWithinPlatformSponsorActiveHours(new Date(), settings)) return { ok: false, reason: 'outside_active_hours', retryMs: settings.intervalMs };
 
@@ -1078,11 +1325,19 @@ function buildSessionStatus(room) {
   const active = session?.status === 'active';
   const now = Date.now();
   const recap = room?.lastSessionRecap || null;
+  const phase = currentRoomPhase(room);
   return {
     success: true,
     active,
     sessionId: session?.sessionId || null,
-    status: active ? 'active' : 'idle',
+    status: active ? 'active' : phase,
+    phase,
+    lifecycle: room?.matchLifecycle || {
+      phase,
+      sessionId: currentRoomSessionId(room),
+      updatedAt: null,
+      reason: '',
+    },
     startedAt: session?.startedAt || null,
     elapsedMs: active ? Math.max(0, now - Number(session.startedAt || now)) : 0,
     round: currentRoundStatus(room),
@@ -1108,11 +1363,12 @@ function clearRoundTimer(room) {
   }
 }
 
-function ensureLiveSession(room, source = 'dashboard') {
+function ensureLiveSession(room, source = 'dashboard', options = {}) {
   if (!room?.roomId) return null;
   if (room.liveSession?.status === 'active') return room.liveSession;
+  const sessionId = options.sessionId || room?.tiktokConnection?.sessionId || sessionIdForRoom(room);
   const session = {
-    sessionId: sessionIdForRoom(room),
+    sessionId,
     status: 'active',
     source,
     startedAt: Date.now(),
@@ -1122,9 +1378,11 @@ function ensureLiveSession(room, source = 'dashboard') {
     bossDefeats: 0,
   };
   room.liveSession = session;
+  setRoomMatchPhase(room, options.phase || MATCH_PHASES.LIVE, 'session_started', { sessionId, detail: { source } });
   persistLiveSessionStart(room, session);
   emitRoomEvent(room, 'roundEvent', {
     type: 'session_started',
+    sessionId,
     title: 'Battle session started',
     message: 'The arena is live.',
   });
@@ -1132,8 +1390,9 @@ function ensureLiveSession(room, source = 'dashboard') {
   return session;
 }
 
-function startLiveSession(room, source = 'dashboard') {
-  const session = ensureLiveSession(room, source);
+function startLiveSession(room, source = 'dashboard', options = {}) {
+  const session = ensureLiveSession(room, source, options);
+  if (session) setRoomMatchPhase(room, options.phase || MATCH_PHASES.LIVE, 'session_active', { sessionId: session.sessionId, detail: { source } });
   emitSessionStatus(room);
   return session;
 }
@@ -1147,6 +1406,9 @@ function endBattleRound(room, reason = 'manual') {
   round.endedAt = Date.now();
   if (room.liveSession?.status === 'active') {
     room.liveSession.roundsCompleted = (Number(room.liveSession.roundsCompleted) || 0) + 1;
+  }
+  if (room.liveSession?.status === 'active') {
+    setRoomMatchPhase(room, room.bossWave?.active ? MATCH_PHASES.BOSS_WAVE : MATCH_PHASES.LIVE, 'round_ended', { sessionId: room.liveSession.sessionId });
   }
   const topPlayers = topSessionPlayers(room, 3);
   emitRoomEvent(room, 'roundEvent', {
@@ -1163,12 +1425,13 @@ function endBattleRound(room, reason = 'manual') {
 }
 
 function startBattleRound(room, options = {}) {
-  const session = ensureLiveSession(room, options.source || 'dashboard');
+  const session = ensureLiveSession(room, options.source || 'dashboard', { phase: MATCH_PHASES.LIVE, sessionId: options.sessionId });
   if (!session) return null;
   if (room.roundState?.active) endBattleRound(room, 'new_round');
   const durationMs = clampSessionNumber(options.durationMs, BATTLE_ROUND_DURATION_MS, 30000, 30 * 60 * 1000);
   const number = (Number(session.roundsStarted) || 0) + 1;
   session.roundsStarted = number;
+  setRoomMatchPhase(room, MATCH_PHASES.LIVE, 'round_started', { sessionId: session.sessionId, detail: { number } });
   room.roundState = {
     active: true,
     status: 'live',
@@ -1262,6 +1525,7 @@ function applyBossDamageToPlayer(room, target, damage) {
 function runBossWaveAttack(room, reason = 'pulse') {
   const boss = room?.bossWave;
   if (!boss?.active) return [];
+  if (boss.sessionId && currentRoomSessionId(room) && boss.sessionId !== currentRoomSessionId(room)) return [];
   const targets = bossWaveTargets(room);
   const attacks = [];
   const baseDamage = Math.max(4, Math.round(Number(boss.attackDamage) || BOSS_WAVE_ATTACK_DAMAGE));
@@ -1319,6 +1583,7 @@ function scheduleBossWaveAttack(room, delayMs = BOSS_WAVE_ATTACK_INTERVAL_MS) {
   const boss = room?.bossWave;
   if (!boss?.active) return;
   if (boss.attackTimer) clearTimeout(boss.attackTimer);
+  const scheduledSessionId = boss.sessionId || currentRoomSessionId(room);
   const remaining = boss.endsAt ? boss.endsAt - Date.now() : delayMs;
   if (remaining <= 0) {
     completeBossWave(room, null, 'expired');
@@ -1329,6 +1594,7 @@ function scheduleBossWaveAttack(room, delayMs = BOSS_WAVE_ATTACK_INTERVAL_MS) {
   boss.attackTimer = setTimeout(() => {
     boss.attackTimer = null;
     if (!room?.bossWave?.active) return;
+    if (scheduledSessionId && currentRoomSessionId(room) !== scheduledSessionId) return;
     runBossWaveAttack(room);
     scheduleBossWaveAttack(room, room.bossWave.attackIntervalMs || BOSS_WAVE_ATTACK_INTERVAL_MS);
   }, nextDelay);
@@ -1361,6 +1627,9 @@ function completeBossWave(room, finalHit = null, reason = 'defeated') {
   if (reason === 'defeated' && room.liveSession?.status === 'active') {
     room.liveSession.bossDefeats = (Number(room.liveSession.bossDefeats) || 0) + 1;
   }
+  if (room.liveSession?.status === 'active') {
+    setRoomMatchPhase(room, MATCH_PHASES.LIVE, `boss_${reason}`, { sessionId: room.liveSession.sessionId });
+  }
   emitRoomEvent(room, 'bossWave', {
     type: reason,
     active: false,
@@ -1385,16 +1654,18 @@ function completeBossWave(room, finalHit = null, reason = 'defeated') {
 }
 
 function startBossWave(room, options = {}) {
-  const session = ensureLiveSession(room, options.source || 'dashboard');
+  const session = ensureLiveSession(room, options.source || 'dashboard', { phase: MATCH_PHASES.BOSS_WAVE, sessionId: options.sessionId });
   if (!session) return null;
   if (room.bossWave?.active) completeBossWave(room, null, 'restarted');
   const maxHp = clampSessionNumber(options.maxHp, BOSS_WAVE_HP, 200, 50000);
   const durationMs = clampSessionNumber(options.durationMs, BOSS_WAVE_DURATION_MS, 15000, 10 * 60 * 1000);
   const attackIntervalMs = clampSessionNumber(options.attackIntervalMs, BOSS_WAVE_ATTACK_INTERVAL_MS, 4000, 60000);
   const startedAt = Date.now();
+  setRoomMatchPhase(room, MATCH_PHASES.BOSS_WAVE, 'boss_started', { sessionId: session.sessionId });
   room.bossWave = {
     active: true,
     status: 'live',
+    sessionId: session.sessionId,
     hp: maxHp,
     maxHp,
     hits: 0,
@@ -1438,6 +1709,9 @@ function damageBossWave(room, attackerId, attackerNick, multiplier = 1, effect =
   const boss = room?.bossWave;
   const attacker = room?.players?.[attackerId];
   if (!boss?.active || !attacker?.alive) return { handled: false, reason: 'Boss wave is not active' };
+  if (boss.sessionId && currentRoomSessionId(room) && boss.sessionId !== currentRoomSessionId(room)) {
+    return { handled: false, reason: 'Boss wave belongs to a previous session' };
+  }
   const variance = 1 - CFG.ATTACK_VARIANCE / 2 + Math.random() * CFG.ATTACK_VARIANCE;
   const damage = Math.max(4, Math.floor((Number(attacker.strength) || CFG.BASE_STRENGTH) * multiplier * variance));
   boss.hp = Math.max(0, (Number(boss.hp) || 0) - damage);
@@ -1508,6 +1782,7 @@ function endLiveSession(room, reason = 'manual_end') {
   session.endedAt = Date.now();
   const recap = buildSessionRecap(room, session, reason);
   room.lastSessionRecap = recap;
+  setRoomMatchPhase(room, MATCH_PHASES.RECAP, 'session_ended', { sessionId: session.sessionId, detail: { reason } });
   persistLiveSessionEnd(room, recap);
   emitRoomEvent(room, 'roundEvent', {
     type: 'session_ended',
@@ -1537,6 +1812,7 @@ function buildTikTokConnectionStatus(room) {
   const status = connection.status || 'disconnected';
   return {
     connectionId: connection.id || null,
+    sessionId: connection.sessionId || null,
     username: connection.username || room?.streamerUsername || '',
     status,
     connected: Boolean(status === 'connected' && room?.tiktokClient?.connected),
@@ -1568,6 +1844,7 @@ function resetRoomLiveRuntime(room, options = {}) {
   const reason = options.reason || 'stream_reset';
   const clearPlayers = options.clearPlayers !== false;
 
+  clearRoomEventQueue(room);
   if (room.liveSession?.status === 'active') {
     endLiveSession(room, reason);
   } else {
@@ -1582,6 +1859,7 @@ function resetRoomLiveRuntime(room, options = {}) {
     emitSessionStatus(room);
   }
 
+  advanceRoomRuntimeEpoch(room, reason);
   stopSponsorBreaksForRoom(room, reason);
   clearPlatformSponsorSchedule(room.roomId);
   room.recentBattleActionAt = [];
@@ -1601,6 +1879,7 @@ function resetRoomLiveRuntime(room, options = {}) {
   }
 
   markRoomPlayerPresenceOffline(room);
+  setRoomMatchPhase(room, MATCH_PHASES.IDLE, reason);
   emitRoomEvent(room, 'gameState', room.players);
   emitSessionStatus(room);
   updatePlayerGauge();
@@ -1608,9 +1887,13 @@ function resetRoomLiveRuntime(room, options = {}) {
 
 function createTikTokConnection(room, username) {
   const id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const sessionId = sessionIdForRoom(room);
   room.staleTikTokEventsDropped = 0;
+  room.lastSessionRecap = null;
+  setRoomMatchPhase(room, MATCH_PHASES.SETUP, 'stream_connecting', { sessionId, detail: { username } });
   room.tiktokConnection = {
     id,
+    sessionId,
     username,
     status: 'connecting',
     startedAt: Date.now(),
@@ -1628,11 +1911,12 @@ function createTikTokConnection(room, username) {
   return room.tiktokConnection;
 }
 
-function isActiveTikTokConnection(room, tiktokClient, connectionId) {
+function isActiveTikTokConnection(room, tiktokClient, connectionId, sessionId = '') {
   return Boolean(
     room?.tiktokClient &&
     room.tiktokClient === tiktokClient &&
-    room.tiktokConnection?.id === connectionId
+    room.tiktokConnection?.id === connectionId &&
+    (!sessionId || room.tiktokConnection?.sessionId === sessionId)
   );
 }
 
@@ -1645,7 +1929,7 @@ function markTikTokEventAccepted(room, eventType) {
 
 function markTikTokEventDropped(room, connectionId, eventType) {
   if (room) room.staleTikTokEventsDropped = (Number(room.staleTikTokEventsDropped) || 0) + 1;
-  logger.warn({ roomId: room?.roomId, connectionId, eventType }, 'Dropped stale TikTok event from inactive connection');
+  logger.warn({ roomId: room?.roomId, connectionId, eventType, activeSessionId: currentRoomSessionId(room) }, 'Dropped stale TikTok event from inactive connection');
 }
 
 function maybeTriggerMilestoneSponsorBreak(room, trigger = 'milestone') {
@@ -1667,6 +1951,12 @@ function maybeTriggerMilestoneSponsorBreak(room, trigger = 'milestone') {
 
 function startPreparedSponsorBreak(room, record, reason = 'ready') {
   if (!room || !record || !sponsorBreaks.has(record.breakId)) return null;
+  if (record.runtimeEpoch !== roomRuntimeEpoch(room)) {
+    record.status = 'stopped';
+    recordSponsorPlaybackEvent(record, 'stale_runtime', { reason });
+    cleanupSponsorBreakLater(record.breakId);
+    return record;
+  }
   if (SPONSOR_FINAL_STATUSES.has(record.status)) return record;
   if (record.status === 'starting' || record.status === 'playing') return record;
   if (record.prepareTimer) {
@@ -1697,6 +1987,8 @@ function startSponsorBreak(room, payload = {}, options = {}) {
   const record = {
     breakId,
     roomId: room.roomId,
+    sessionId: currentRoomSessionId(room),
+    runtimeEpoch: roomRuntimeEpoch(room),
     source,
     creativeId: scenePayload.creativeId || null,
     filename: scenePayload.filename || null,
@@ -1773,6 +2065,11 @@ function handleSponsorPlaybackEvent(socket, room, event = {}) {
     mediaHeight: event.mediaHeight,
     mediaDurationMs: event.mediaDurationMs,
   };
+
+  if (record.runtimeEpoch !== roomRuntimeEpoch(room)) {
+    recordSponsorPlaybackEvent(record, 'stale_runtime_ack', detail);
+    return;
+  }
 
   recordSponsorPlaybackEvent(record, eventType, detail);
 
@@ -5622,9 +5919,10 @@ app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) =>
 // TIKTOK EVENT HANDLING
 // ────────────────────────────────
 function setupTikTokEvents(tiktokClient, room, connectionId) {
+  const connectionSessionId = room?.tiktokConnection?.sessionId || '';
   const onTikTok = (eventType, handler) => {
     tiktokClient.on(eventType, (...args) => {
-      if (!isActiveTikTokConnection(room, tiktokClient, connectionId)) {
+      if (!isActiveTikTokConnection(room, tiktokClient, connectionId, connectionSessionId)) {
         markTikTokEventDropped(room, connectionId, eventType);
         return;
       }
@@ -5634,6 +5932,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
   };
 
   onTikTok('connected', () => {
+    startLiveSession(room, 'tiktok', { sessionId: connectionSessionId, phase: MATCH_PHASES.LIVE });
     emitTikTokConnectionStatus(room, {
       status: 'connected',
       connectedAt: Date.now(),
@@ -5653,6 +5952,11 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
 
   onTikTok('disconnected', (code, reason) => {
     const willReconnect = !tiktokClient.intentionalClose && TIKTOK_AUTO_RECONNECT;
+    if (willReconnect) {
+      setRoomMatchPhase(room, MATCH_PHASES.SETUP, 'stream_reconnecting', { sessionId: connectionSessionId });
+    } else if (room.liveSession?.status === 'active') {
+      endLiveSession(room, 'stream_disconnected');
+    }
     emitTikTokConnectionStatus(room, {
       status: willReconnect ? 'reconnecting' : 'disconnected',
       disconnectedAt: Date.now(),
@@ -5883,6 +6187,7 @@ function safeDisconnectClient(room = getDefaultRoom(), reason = 'operator_discon
     return;
   }
   try {
+    targetClient.intentionalClose = true;
     if (typeof targetClient.destroy === 'function') targetClient.destroy();
     else targetClient.disconnect();
   } catch (err) {
@@ -5924,7 +6229,8 @@ function connectToStreamer(username, room = getDefaultRoom(), options = {}) {
   room.tiktokConnectPromise = tiktokClient.connect().catch(err => {
     console.error('❌ Could not connect:', err?.message || err);
     console.error(`   Make sure @${normalizedUsername} is currently LIVE on TikTok`);
-    if (isActiveTikTokConnection(room, tiktokClient, connection.id)) {
+    if (isActiveTikTokConnection(room, tiktokClient, connection.id, connection.sessionId)) {
+      setRoomMatchPhase(room, MATCH_PHASES.IDLE, 'stream_connect_failed', { sessionId: connection.sessionId });
       emitTikTokConnectionStatus(room, {
         status: 'error',
         disconnectedAt: Date.now(),

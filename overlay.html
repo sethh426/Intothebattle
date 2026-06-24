@@ -2900,23 +2900,28 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     const frame = arenaFrame();
     const liveBoardY = frame.y + frame.h * 0.39;
     const baseY = isPublicDemo ? H * demoPlayerYRatio : liveBoardY;
-    return {
+    const desired = {
       x: (W - totalWidth) / 2 + offsetX + index * spacing + cardW / 2,
       y: baseY + offsetY + H * 0.16 * (1 - layoutZoom),
     };
+    const safe = arenaSafeFrame(frame, 0.045);
+    return clampRectPositionToFrame(desired, getPlayerCardDrawMetrics(desired, total), safe);
   }
 
   function getHordeLayout() {
     const W = cw(), H = ch();
     const frame = arenaFrame();
+    const safe = arenaSafeFrame(frame, 0.045);
     const ui = canvasUiScale();
     const pad = Math.max(20 * ui, Math.min(W, H) * 0.04);
-    const barW = Math.min(frame.w - pad * 2, frame.w * 0.68 + Math.min(130, frame.h * 0.09));
+    const barW = Math.min(safe.w, frame.w * 0.68 + Math.min(130, frame.h * 0.09));
     const barH = Math.max(58 * ui, Math.min(104 * ui, frame.h * 0.118 * layoutZoom));
-    const centerX = Math.max(frame.x + pad + barW / 2, Math.min(frame.x + frame.w - pad - barW / 2, frame.x + frame.w / 2 + offsetX * 0.45));
+    const centerX = clampNumber(frame.x + frame.w / 2 + offsetX * 0.45, safe.x + barW / 2, safe.right - barW / 2);
     const liveHordeTopY = frame.y + frame.h * 0.79;
     const desiredTopY = isPublicDemo ? H * demoHordeTopRatio : liveHordeTopY + offsetY * 0.34;
-    const topY = Math.max(frame.y + frame.h * 0.55, Math.min(frame.y + frame.h - pad - barH, desiredTopY));
+    const minTopY = Math.max(safe.y + safe.h * 0.53, frame.y + frame.h * 0.55);
+    const maxTopY = safe.bottom - barH;
+    const topY = clampNumber(desiredTopY, minTopY, maxTopY);
     return {
       x: centerX,
       y: topY + barH * 0.46,
@@ -2950,22 +2955,25 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 
   function getBossLayout() {
     const frame = arenaFrame();
+    const safe = arenaSafeFrame(frame, 0.055);
     const ui = canvasUiScale();
     const hordeLayout = getHordeLayout();
     const r = Math.max(34 * ui, Math.min(64 * ui, frame.h * 0.088));
-    const x = frame.x + frame.w * 0.5;
+    const x = clampNumber(frame.x + frame.w * 0.5, safe.x + r * 1.4, safe.right - r * 1.4);
     const desiredY = frame.y + frame.h * 0.595;
     const maxY = hordeLayout.barY - r * 1.8;
-    const minY = frame.y + frame.h * 0.49;
+    const minY = Math.max(safe.y + r * 1.3, frame.y + frame.h * 0.49);
     const y = Math.max(minY, Math.min(maxY, desiredY));
     const panelW = Math.max(250 * ui, Math.min(frame.w * 0.46, 430 * ui));
     const panelH = Math.max(62 * ui, 74 * ui);
+    const panelX = clampNumber(x - panelW / 2, safe.x, safe.right - panelW);
+    const panelY = clampNumber(y + r * 0.72, safe.y, safe.bottom - panelH);
     return {
       x,
       y,
       r,
-      panelX: x - panelW / 2,
-      panelY: y + r * 0.72,
+      panelX,
+      panelY,
       panelW,
       panelH,
     };
@@ -3445,6 +3453,14 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     return Math.max(0, Math.min(1, Number(value) || 0));
   }
 
+  function clampNumber(value, min, max) {
+    const n = Number(value);
+    const lo = Math.min(min, max);
+    const hi = Math.max(min, max);
+    if (!Number.isFinite(n)) return lo;
+    return Math.max(lo, Math.min(hi, n));
+  }
+
   function easeOutCubic(t) {
     return 1 - Math.pow(1 - clamp01(t), 3);
   }
@@ -3491,6 +3507,31 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       h: Math.max(1, H - inset * 2),
       r: Math.max(12, Math.min(W, H) * 0.018),
     };
+  }
+
+  function arenaSafeFrame(frame = arenaFrame(), padRatio = 0.035) {
+    const ui = canvasUiScale();
+    const pad = Math.max(10 * ui, Math.min(frame.w, frame.h) * padRatio);
+    return {
+      x: frame.x + pad,
+      y: frame.y + pad,
+      w: Math.max(1, frame.w - pad * 2),
+      h: Math.max(1, frame.h - pad * 2),
+      pad,
+      right: frame.x + frame.w - pad,
+      bottom: frame.y + frame.h - pad,
+    };
+  }
+
+  function clampRectPositionToFrame(pos, bounds, safeFrame = arenaSafeFrame()) {
+    if (!pos || !bounds) return pos;
+    let dx = 0;
+    let dy = 0;
+    if (bounds.left < safeFrame.x) dx = safeFrame.x - bounds.left;
+    if (bounds.right > safeFrame.right) dx = safeFrame.right - bounds.right;
+    if (bounds.top < safeFrame.y) dy = safeFrame.y - bounds.top;
+    if (bounds.bottom > safeFrame.bottom) dy = safeFrame.bottom - bounds.bottom;
+    return { x: pos.x + dx, y: pos.y + dy };
   }
 
   function clipArenaFrame(frame = arenaFrame()) {
@@ -5420,8 +5461,11 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       (horde.memberIds || []).forEach(id => rememberPosition(id, pos, 'horde'));
       const layout = getHordeLayout();
       legacyLayoutHorde = {
+        id: HORDE_ID,
         x: layout.x,
         y: layout.y,
+        left: layout.barX,
+        right: layout.barX + layout.barW,
         top: layout.barY,
         bottom: layout.barY + layout.barH,
         width: layout.barW,
@@ -5434,10 +5478,21 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       rememberPosition(BOSS_ID, bossPos, 'boss');
       drawBossWave();
     }
+    const frame = arenaFrame();
+    const safeFrame = arenaSafeFrame(frame, 0.035);
+    const containedObjects = legacyLayoutPlayers.concat(legacyLayoutHorde ? [legacyLayoutHorde] : []);
+    const layoutLeaks = containedObjects.filter(item => (
+      item.left < frame.x - 1 ||
+      item.right > frame.x + frame.w + 1 ||
+      item.top < frame.y - 1 ||
+      item.bottom > frame.y + frame.h + 1
+    )).map(item => item.id || 'horde');
     window.__overlayLegacyLayout = {
-      frame: arenaFrame(),
+      frame,
+      safeFrame,
       players: legacyLayoutPlayers,
       horde: legacyLayoutHorde,
+      leaks: layoutLeaks,
     };
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     attacks = attacks.filter(a => { const alive = a.update(); if (alive) a.draw(); return alive; });

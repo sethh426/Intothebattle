@@ -235,8 +235,10 @@ try {
   assert(sessionStartRes.status === 200, `session start should return 200, got ${sessionStartRes.status}`);
   const sessionStart = await sessionStartRes.json();
   assert(sessionStart.success === true && sessionStart.session?.active === true, 'session start should activate the session');
-  await sessionStartedStatusPromise;
-  await overlaySessionStartedPromise;
+  const sessionStartedStatus = await sessionStartedStatusPromise;
+  const overlaySessionStarted = await overlaySessionStartedPromise;
+  assert(sessionStartedStatus.phase === 'live', `session phase should be live, got ${sessionStartedStatus.phase}`);
+  assert(overlaySessionStarted._sessionId === sessionStartedStatus.sessionId, 'roundEvent should carry active session id');
 
   const roundStartedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.round?.active === true, 10000);
   const overlayRoundStartedPromise = waitForEvent(primaryOverlay, 'roundEvent', payload => payload.type === 'round_started', 10000);
@@ -248,8 +250,10 @@ try {
   assert(roundStartRes.status === 200, `round start should return 200, got ${roundStartRes.status}`);
   const roundStart = await roundStartRes.json();
   assert(roundStart.success === true && roundStart.session?.round?.active === true, 'round start should activate a timed round');
-  await roundStartedStatusPromise;
-  await overlayRoundStartedPromise;
+  const roundStartedStatus = await roundStartedStatusPromise;
+  const overlayRoundStarted = await overlayRoundStartedPromise;
+  assert(roundStartedStatus.phase === 'live', `round phase should remain live, got ${roundStartedStatus.phase}`);
+  assert(overlayRoundStarted._sessionId === sessionStartedStatus.sessionId, 'round started event should stay in the same session');
 
   const bossStartedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.bossWave?.active === true, 10000);
   const overlayBossStartedPromise = waitForEvent(primaryOverlay, 'bossWave', payload => payload.type === 'started' && payload.active === true, 10000);
@@ -261,8 +265,10 @@ try {
   assert(bossStartRes.status === 200, `boss start should return 200, got ${bossStartRes.status}`);
   const bossStart = await bossStartRes.json();
   assert(bossStart.success === true && bossStart.session?.bossWave?.active === true, 'boss start should activate boss wave state');
-  await bossStartedStatusPromise;
-  await overlayBossStartedPromise;
+  const bossStartedStatus = await bossStartedStatusPromise;
+  const overlayBossStarted = await overlayBossStartedPromise;
+  assert(bossStartedStatus.phase === 'bossWave', `boss phase should be bossWave, got ${bossStartedStatus.phase}`);
+  assert(overlayBossStarted._sessionId === sessionStartedStatus.sessionId, 'boss event should carry active session id');
 
   const bossStoppedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.bossWave?.active === false && payload.bossWave?.status === 'stopped', 10000);
   const overlayBossStoppedPromise = waitForEvent(primaryOverlay, 'bossWave', payload => payload.type === 'stopped' && payload.active === false, 10000);
@@ -315,6 +321,7 @@ try {
   assert(sponsorPlay.success === true && sponsorPlay.breakId, 'sponsor play should return a break id');
   const prepared = await preparePromise;
   assert(prepared.breakId === sponsorPlay.breakId, 'overlay should receive sponsor prepare before playback starts');
+  assert(prepared._epoch >= 1, 'sponsor prepare should carry a runtime epoch');
 
   const decodedStatusPromise = waitForEvent(dashboard, 'sponsorBreakStatus', payload => payload.status === 'decoded' && payload.breakId === sponsorPlay.breakId, 10000);
   primaryOverlay.emit('sponsorPlaybackEvent', {
@@ -327,6 +334,7 @@ try {
   });
   const decodedStatus = await decodedStatusPromise;
   assert(decodedStatus.decodedAt, 'decoded sponsor status should include decodedAt');
+  assert(decodedStatus.sessionId === null || typeof decodedStatus.sessionId === 'string', 'sponsor status should include session identity shape');
 
   const readyStatusPromise = waitForEvent(dashboard, 'sponsorBreakStatus', payload => payload.status === 'ready' && payload.breakId === sponsorPlay.breakId, 10000);
   const startingStatusPromise = waitForEvent(dashboard, 'sponsorBreakStatus', payload => payload.status === 'starting' && payload.breakId === sponsorPlay.breakId, 10000);
@@ -384,6 +392,7 @@ try {
   await livePlayersPromise;
 
   const resetStreamPromise = waitForEvent(dashboard, 'tiktokConnection', payload => payload.status === 'disconnected', 10000);
+  const resetSessionStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.active === false && payload.phase === 'idle', 10000);
   const resetGameStatePromise = waitForEvent(
     primaryOverlay,
     'gameState',
@@ -396,6 +405,7 @@ try {
   });
   assert(resetRes.status === 200, `stream reset should return 200, got ${resetRes.status}`);
   await resetStreamPromise;
+  await resetSessionStatusPromise;
   await resetGameStatePromise;
 
   for (let index = overlaySockets.length - 1; index >= 0; index--) {

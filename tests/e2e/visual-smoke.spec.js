@@ -61,7 +61,7 @@ async function expectNoHorizontalOverflow(page) {
 }
 
 async function capture(page, testInfo, name) {
-  await page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true });
+  await page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true, timeout: 30000 });
 }
 
 async function expectHealthyPage(page, testInfo, pathname, selector, name) {
@@ -169,6 +169,7 @@ test('signed overlay renders a nonblank canvas', async ({ page }, testInfo) => {
   });
   expect(hasVisiblePixels).toBe(true);
   const legacyLayout = await page.evaluate(() => window.__overlayLegacyLayout);
+  expect(legacyLayout.leaks || []).toEqual([]);
   const playerTop = Math.min(...legacyLayout.players.map(player => player.top));
   const playerBottom = Math.max(...legacyLayout.players.map(player => player.bottom));
   const frameTop = legacyLayout.frame.y;
