@@ -33,6 +33,7 @@ import {
 } from './tiktokbr/services/entitlements.js';
 import { buildLaunchReadinessReport } from './tiktokbr/services/launchReadiness.js';
 import { buildUploadDecision, getStorageUsage, uploadLimitBytes } from './tiktokbr/services/storagePolicy.js';
+import { growthIntegrationDiagnostics, syncLeadToGrowthApis } from './tiktokbr/services/growthIntegrations.js';
 import {
   getOrCreateRoom,
   getRoom,
@@ -4042,7 +4043,7 @@ app.post('/api/public/comments', (req, res) => {
   }
 });
 
-app.post('/api/signup-intent', (req, res) => {
+app.post('/api/signup-intent', async (req, res) => {
   const result = upsertSignupIntent({
     email: req.body?.email,
     name: req.body?.name,
@@ -4050,6 +4051,21 @@ app.post('/api/signup-intent', (req, res) => {
     source: req.body?.source || 'signup',
     lastPath: req.body?.lastPath || req.path,
   });
+  if (result.ok) {
+    syncLeadToGrowthApis({
+      email: req.body?.email,
+      name: req.body?.name,
+      tiktokUsername: req.body?.tiktokUsername,
+      source: req.body?.source || 'signup',
+      lastPath: req.body?.lastPath || req.path,
+      eventName: 'Signup Intent Captured',
+      properties: {
+        endpoint: '/api/signup-intent',
+      },
+    }).catch(err => {
+      logger.warn({ err: err?.message || err }, 'Growth API signup-intent sync failed');
+    });
+  }
   res.status(result.ok ? 200 : 400).json({ success: result.ok, error: result.error || undefined });
 });
 
@@ -4638,6 +4654,7 @@ app.get('/api/runtime/diagnostics', requireDiagnosticsAccess, (req, res) => {
       platformSponsorEnabled: PLATFORM_SPONSOR_ENABLED,
     },
     email: getEmailDiagnostics(),
+    growth: growthIntegrationDiagnostics(),
     storage,
     database: dbHealth,
   });
@@ -4710,6 +4727,33 @@ app.post('/api/runtime/signup-followups', requireDiagnosticsAccess, async (req, 
       error: err.message || 'Unable to process signup follow-ups.',
     });
   }
+});
+
+app.post('/api/runtime/growth-sync-test', requireDiagnosticsAccess, async (req, res) => {
+  const email = cleanEmail(req.body?.email || process.env.POSTMARK_TEST_EMAIL || '');
+  if (!email) {
+    return res.status(400).json({
+      success: false,
+      error: 'Set POSTMARK_TEST_EMAIL or send {"email":"you@example.com"} in the request body.',
+      growth: growthIntegrationDiagnostics(),
+    });
+  }
+
+  const result = await syncLeadToGrowthApis({
+    email,
+    name: req.body?.name || 'IntoTheBattle Test Lead',
+    tiktokUsername: req.body?.tiktokUsername || 'growth_test',
+    source: 'runtime-diagnostics',
+    lastPath: '/api/runtime/growth-sync-test',
+    eventName: 'Growth Integration Test',
+    properties: { manualTest: true },
+  });
+
+  return res.status(result.ok ? 200 : 502).json({
+    success: result.ok,
+    ...result,
+    growth: growthIntegrationDiagnostics(),
+  });
 });
 
 app.get('/audio/:filename', (req, res) => {

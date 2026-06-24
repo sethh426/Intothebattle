@@ -143,6 +143,16 @@ CREATE TABLE IF NOT EXISTS marketing_publish_events (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS growth_api_events (
+  id SERIAL PRIMARY KEY,
+  provider TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  subject_email TEXT,
+  status TEXT DEFAULT 'skipped',
+  detail TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS platform_sponsor_creatives (
   id SERIAL PRIMARY KEY,
   filename TEXT UNIQUE NOT NULL,

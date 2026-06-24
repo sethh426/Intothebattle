@@ -154,6 +154,12 @@ MARKETING_PLATFORMS=x,linkedin,facebook,instagram,tiktok,youtube_shorts
 MARKETING_AUTOMATION_ENABLED=false
 MARKETING_DRY_RUN=true
 MARKETING_OUTBOUND_WEBHOOK_URL=
+GROWTH_API_SYNC_ENABLED=false
+HUBSPOT_PRIVATE_APP_TOKEN=
+HUBSPOT_SOURCE_PROPERTY=
+HUBSPOT_LAST_PATH_PROPERTY=
+HUBSPOT_TIKTOK_PROPERTY=
+SEGMENT_WRITE_KEY=
 ```
 
 `CLARITY_PROJECT_ID` enables Microsoft Clarity only in production. Leave it blank to disable browser analytics.
@@ -201,6 +207,14 @@ npm run marketing:publish
 ```
 
 The scheduled GitHub workflow `.github/workflows/marketing-automation.yml` runs daily at 14:00 UTC. It skips safely unless the `MARKETING_DATABASE_URL` repository secret is configured. For live publishing, configure authorized outbound webhook secrets and set repository variables `MARKETING_AUTOMATION_ENABLED=true` and `MARKETING_DRY_RUN=false`.
+
+Optional company growth APIs:
+
+- `HUBSPOT_PRIVATE_APP_TOKEN` syncs signup-intent leads into HubSpot CRM contacts.
+- HubSpot sync sends only standard contact fields by default. Set `HUBSPOT_SOURCE_PROPERTY`, `HUBSPOT_LAST_PATH_PROPERTY`, and `HUBSPOT_TIKTOK_PROPERTY` only after creating matching custom contact properties in HubSpot.
+- `SEGMENT_WRITE_KEY` sends server-side identify/track events for signup-intent and manual growth tests.
+- `GROWTH_API_SYNC_ENABLED=true` must be set before any provider calls are made.
+- `POST /api/runtime/growth-sync-test` lets an admin test the integration with `Authorization: Bearer <DIAGNOSTICS_TOKEN>` or `METRICS_TOKEN`.
 
 ### Run locally with Node
 
@@ -251,6 +265,7 @@ The schema includes:
 - `room_settings`
 - `marketing_posts`
 - `marketing_publish_events`
+- `growth_api_events`
 - `platform_sponsor_creatives`
 - `sponsor_playback_events`
 - `live_sessions`
@@ -316,6 +331,7 @@ GET /api/subscription/status
 GET /metrics (requires METRICS_TOKEN in production)
 GET /api/runtime/diagnostics (requires DIAGNOSTICS_TOKEN or METRICS_TOKEN in production)
 POST /api/runtime/email-test (requires DIAGNOSTICS_TOKEN or METRICS_TOKEN in production)
+POST /api/runtime/growth-sync-test (requires DIAGNOSTICS_TOKEN or METRICS_TOKEN in production)
 ```
 
 ## Route Security Direction
@@ -381,6 +397,12 @@ MARKETING_PLATFORMS=x,linkedin,facebook,instagram,tiktok,youtube_shorts
 MARKETING_AUTOMATION_ENABLED=false
 MARKETING_DRY_RUN=true
 MARKETING_OUTBOUND_WEBHOOK_URL=<optional authorized outbound webhook>
+GROWTH_API_SYNC_ENABLED=false
+HUBSPOT_PRIVATE_APP_TOKEN=<optional HubSpot private app token>
+HUBSPOT_SOURCE_PROPERTY=<optional custom contact property internal name>
+HUBSPOT_LAST_PATH_PROPERTY=<optional custom contact property internal name>
+HUBSPOT_TIKTOK_PROPERTY=<optional custom contact property internal name>
+SEGMENT_WRITE_KEY=<optional Segment source write key>
 ```
 
 `ENABLE_ROOM_SCOPED` defaults to `true` in production when unset. Set it explicitly if your host makes env behavior easier to audit.

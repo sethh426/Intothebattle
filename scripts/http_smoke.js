@@ -137,11 +137,24 @@ try {
   assert(diagnosticsBody.ok === true, 'diagnostics should report ok');
   assert(diagnosticsBody.storage?.ok === true, 'diagnostics storage check should report ok');
   assert(diagnosticsBody.database?.mode === 'stub', 'diagnostics should report stub database in smoke mode');
+  assert(diagnosticsBody.growth?.enabled === false, 'growth API sync should be disabled by default');
   await expectStatus('/api/runtime/launch-readiness', 401);
   const readiness = await expectStatus('/api/runtime/launch-readiness', 200, { headers: { Authorization: `Bearer ${metricsToken}` } });
   const readinessBody = await readiness.json();
   assert(readinessBody.ok === true, 'launch readiness should have no hard failures in smoke mode');
   assert(readinessBody.checks?.some(check => check.id === 'storage-writable' && check.status === 'pass'), 'launch readiness should include storage check');
+  await expectStatus('/api/runtime/growth-sync-test', 401, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'growth-smoke@example.com' }),
+  });
+  const growthTest = await expectStatus('/api/runtime/growth-sync-test', 200, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', Authorization: `Bearer ${metricsToken}` },
+    body: JSON.stringify({ email: 'growth-smoke@example.com' }),
+  });
+  const growthTestBody = await growthTest.json();
+  assert(growthTestBody.success === true && growthTestBody.skipped === true, 'growth sync test should skip safely when disabled');
 
   await expectStatus(`/overlay?room_id=${roomId}`, 401);
   await expectStatus(`/overlay?room_id=${roomId}&overlay_token=bad`, 401);

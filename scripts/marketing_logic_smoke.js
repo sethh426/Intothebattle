@@ -6,6 +6,10 @@ const {
   marketingAutomationDiagnostics,
   readSiteMarketingFacts,
 } = await import('../tiktokbr/services/marketingAutomation.js');
+const {
+  growthIntegrationDiagnostics,
+  syncLeadToGrowthApis,
+} = await import('../tiktokbr/services/growthIntegrations.js');
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -31,9 +35,21 @@ assert(drafts.find(draft => draft.platform === 'x').body.length <= 260, 'X draft
 const diagnostics = marketingAutomationDiagnostics();
 assert(Array.isArray(diagnostics.platforms), 'Diagnostics must report configured platforms');
 
+const growthDiagnostics = growthIntegrationDiagnostics();
+assert(growthDiagnostics.enabled === false, 'Growth API sync should be disabled by default');
+const growthDryRun = await syncLeadToGrowthApis({
+  email: 'growth-smoke@example.com',
+  name: 'Growth Smoke',
+  tiktokUsername: 'growth_smoke',
+  source: 'smoke-test',
+  lastPath: '/signup',
+});
+assert(growthDryRun.ok === true && growthDryRun.skipped === true, 'Disabled growth API sync should skip safely');
+
 console.log(JSON.stringify({
   ok: true,
   facts: facts.length,
   drafts: drafts.length,
   diagnostics,
+  growth: growthDiagnostics,
 }, null, 2));

@@ -108,6 +108,46 @@ function trimToPlatform(text, platform) {
   return `${text.slice(0, Math.max(0, max - 3)).replace(/\s+\S*$/, '')}...`;
 }
 
+function platformLimit(platform) {
+  return PLATFORM_LIMITS[normalizePlatform(platform)] || 700;
+}
+
+export function marketingPlatformCharacterLimit(platform) {
+  return platformLimit(platform);
+}
+
+function ensureHttpUrl(value, fallback = '') {
+  const text = String(value || '').trim();
+  if (!text) return fallback;
+  try {
+    const parsed = new URL(text);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return fallback;
+    return parsed.toString();
+  } catch (_err) {
+    return fallback;
+  }
+}
+
+function normalizeScheduledFor(value, fallback = null) {
+  const text = String(value || '').trim();
+  if (!text) return fallback;
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toISOString();
+}
+
+function validateMarketingPostRow(row, nextStatus = row?.status) {
+  if (!row) throw new Error('Marketing post not found');
+  const status = String(nextStatus || '').toLowerCase();
+  if (status !== 'approved' && status !== 'published') return;
+  const body = String(row.body || '').trim();
+  const url = ensureHttpUrl(row.utm_url || row.url, '');
+  if (!body) throw new Error('Marketing post body is required before approval');
+  if (!url) throw new Error('Marketing post needs a valid http/https URL before approval');
+  if (!normalizeScheduledFor(row.scheduled_for, null)) throw new Error('Marketing post needs a valid scheduled time before approval');
+  if (body.length > platformLimit(row.platform)) throw new Error(`Marketing post is over the ${platformLimit(row.platform)} character limit for ${row.platform}`);
+}
+
 function composePlatformContent({ body, cta, url, tags, platform }) {
   const max = PLATFORM_LIMITS[platform] || 700;
   const tagText = tags.length ? `\n\n${tags.join(' ')}` : '';
@@ -294,11 +334,54 @@ export function listMarketingPublishEvents({ limit = 30 } = {}) {
   `).all(safeLimit);
 }
 
+export function updateMarketingPostDraft(id, patch = {}) {
+  const safeId = Number(id);
+  if (!Number.isFinite(safeId) || safeId < 1) throw new Error('Invalid marketing post id');
+  const existing = db.prepare('SELECT * FROM marketing_posts WHERE id = ?').get(safeId);
+  if (!existing) throw new Error('Marketing post not found');
+  if (String(existing.status || '').toLowerCase() === 'published') throw new Error('Published marketing posts cannot be edited');
+
+  const limit = platformLimit(existing.platform);
+  const body = String(patch.body || '').replace(/\r\n/g, '\n').trim();
+  if (!body) throw new Error('Marketing post body is required');
+  if (body.length > limit) throw new Error(`Marketing post is over the ${limit} character limit for ${existing.platform}`);
+
+  const nextUrl = ensureHttpUrl(patch.utmUrl || patch.utm_url || existing.utm_url || existing.url, '');
+  if (!nextUrl) throw new Error('Marketing post needs a valid http/https URL');
+
+  const scheduledFor = normalizeScheduledFor(patch.scheduledFor || patch.scheduled_for || existing.scheduled_for, null);
+  if (!scheduledFor) throw new Error('Marketing post needs a valid scheduled time');
+
+  db.prepare(`
+    UPDATE marketing_posts
+    SET body = ?,
+        cta = ?,
+        utm_url = ?,
+        hashtags = ?,
+        seo_keywords = ?,
+        scheduled_for = ?,
+        status = 'draft',
+        error_message = '',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(
+    body,
+    cleanText(patch.cta || existing.cta || '', 180),
+    nextUrl,
+    cleanText(patch.hashtags || existing.hashtags || '', 220),
+    cleanText(patch.seoKeywords || patch.seo_keywords || existing.seo_keywords || '', 260),
+    scheduledFor,
+    safeId
+  );
+}
+
 export function updateMarketingPostStatus(id, status, errorMessage = '') {
   const safeId = Number(id);
   const allowed = new Set(['draft', 'approved', 'published', 'failed', 'skipped']);
   if (!Number.isFinite(safeId) || safeId < 1) throw new Error('Invalid marketing post id');
   if (!allowed.has(status)) throw new Error('Invalid marketing post status');
+  const row = db.prepare('SELECT * FROM marketing_posts WHERE id = ?').get(safeId);
+  validateMarketingPostRow(row, status);
   db.prepare(`
     UPDATE marketing_posts
     SET status = ?,

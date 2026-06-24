@@ -471,6 +471,20 @@ async function initDb() {
     `);
 
     await safeExec(`
+      CREATE TABLE IF NOT EXISTS growth_api_events (
+        id SERIAL PRIMARY KEY,
+        provider TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        subject_email TEXT,
+        status TEXT DEFAULT 'skipped',
+        detail TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await safeExec("ALTER TABLE growth_api_events ADD COLUMN status TEXT DEFAULT 'skipped'");
+    await safeExec('ALTER TABLE growth_api_events ADD COLUMN detail TEXT');
+
+    await safeExec(`
       CREATE TABLE IF NOT EXISTS sponsor_playback_events (
         id SERIAL PRIMARY KEY,
         break_id TEXT NOT NULL,

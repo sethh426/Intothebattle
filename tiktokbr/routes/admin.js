@@ -22,9 +22,12 @@ import {
   listMarketingPublishEvents,
   listMarketingPosts,
   marketingAutomationDiagnostics,
+  marketingPlatformCharacterLimit,
   publishApprovedMarketingPosts,
+  updateMarketingPostDraft,
   updateMarketingPostStatus,
 } from '../services/marketingAutomation.js';
+import { growthIntegrationDiagnostics } from '../services/growthIntegrations.js';
 import { getAllRooms } from '../../roomManager.js';
 
 const router = express.Router();
@@ -1408,14 +1411,20 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
 </html>`;
 }
 
-function renderMarketingAdminPage({ message = '', error = '', posts = [], events = [], diagnostics = marketingAutomationDiagnostics() } = {}) {
+function renderMarketingAdminPage({ message = '', error = '', posts = [], events = [], diagnostics = marketingAutomationDiagnostics(), growthDiagnostics = growthIntegrationDiagnostics(), filters = {} } = {}) {
   const nowDate = new Date().toISOString().slice(0, 10);
+  const selectedStatus = String(filters.status || '').toLowerCase();
+  const selectedDate = String(filters.date || '');
+  const statusOptions = ['', 'draft', 'approved', 'published', 'failed', 'skipped']
+    .map(status => `<option value="${escapeAttr(status)}" ${selectedStatus === status ? 'selected' : ''}>${escapeHtml(status || 'all')}</option>`)
+    .join('');
   const statusCounts = posts.reduce((acc, post) => {
     const status = String(post.status || 'draft');
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {});
   const configuredWebhooks = diagnostics.configuredWebhooks || [];
+  const growthProviders = growthDiagnostics.providers || [];
   const eventRows = events.map(event => `<tr>
     <td><strong>${escapeHtml(event.event_type || '')}</strong><br /><small>${escapeHtml(formatSponsorDate(event.created_at))}</small></td>
     <td>${escapeHtml(String(event.platform || '').toUpperCase())}</td>
@@ -1424,6 +1433,10 @@ function renderMarketingAdminPage({ message = '', error = '', posts = [], events
   </tr>`).join('');
   const rows = posts.map((post) => {
     const status = String(post.status || 'draft').toLowerCase();
+    const isPublished = status === 'published';
+    const editDisabled = isPublished ? 'disabled' : '';
+    const characterLimit = marketingPlatformCharacterLimit(post.platform);
+    const bodyLength = String(post.body || '').length;
     const approveDisabled = status === 'approved' ? 'disabled' : '';
     const draftDisabled = status === 'draft' ? 'disabled' : '';
     const skipDisabled = status === 'skipped' ? 'disabled' : '';
@@ -1438,9 +1451,20 @@ function renderMarketingAdminPage({ message = '', error = '', posts = [], events
         ${post.error_message ? `<div class="warning-note failed">${escapeHtml(post.error_message)}</div>` : ''}
       </td>
       <td>
-        <div class="post-copy">${escapeHtml(post.body || '')}</div>
-        <small>${escapeHtml(post.seo_keywords || '')}</small><br />
-        <a href="${escapeAttr(post.utm_url || post.url || '#')}" target="_blank" rel="noopener">${escapeHtml(post.utm_url || post.url || '')}</a>
+        <form method="POST" action="/admin/marketing/${escapeAttr(post.id)}/update">
+          <label>Outbound copy <small>${bodyLength}/${characterLimit}</small></label>
+          <textarea name="body" maxlength="${escapeAttr(characterLimit)}" required ${editDisabled}>${escapeHtml(post.body || '')}</textarea>
+          <div class="inline-grid compact">
+            <span><label>Schedule</label><input name="scheduledFor" type="datetime-local" value="${escapeAttr(formatDateTimeInput(post.scheduled_for))}" ${editDisabled} /></span>
+            <span><label>CTA</label><input name="cta" value="${escapeAttr(post.cta || '')}" ${editDisabled} /></span>
+            <span><label>UTM link</label><input name="utmUrl" value="${escapeAttr(post.utm_url || post.url || '')}" ${editDisabled} /></span>
+          </div>
+          <label>Hashtags</label>
+          <input name="hashtags" value="${escapeAttr(post.hashtags || '')}" ${editDisabled} />
+          <label>SEO keywords</label>
+          <input name="seoKeywords" value="${escapeAttr(post.seo_keywords || '')}" ${editDisabled} />
+          <button type="submit" class="secondary" ${editDisabled}>Save as Draft</button>
+        </form>
       </td>
       <td>
         <form method="POST" action="/admin/marketing/${escapeAttr(post.id)}/status">
@@ -1489,8 +1513,11 @@ function renderMarketingAdminPage({ message = '', error = '', posts = [], events
     .metric-card span { display:block; color:#a8afbf; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
     .metric-card strong { display:block; margin-top:6px; color:#fff8e6; font-size:clamp(26px,4vw,42px); line-height:1; }
     .inline-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:end; }
+    .inline-grid.compact { grid-template-columns:repeat(3,minmax(0,1fr)); align-items:end; }
     label { display:block; margin:10px 0 6px; color:#a8afbf; font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
-    input { width:100%; min-height:46px; padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:#111827; color:#fff8e6; }
+    input, select, textarea { width:100%; min-height:46px; padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:#111827; color:#fff8e6; }
+    textarea { min-height:180px; resize:vertical; line-height:1.45; }
+    select option { background:#111827; color:#fff8e6; }
     input[type="checkbox"] { width:auto; min-height:0; margin-right:8px; }
     button { margin-top:12px; width:100%; min-height:44px; padding:0 14px; border:none; border-radius:14px; background:linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color:#170c02; cursor:pointer; font-weight:900; }
     button:disabled { opacity:.45; cursor:not-allowed; }
@@ -1534,6 +1561,7 @@ function renderMarketingAdminPage({ message = '', error = '', posts = [], events
       <p>Generate SEO and UTM-tagged daily drafts from the public site pages for company-owned growth. This is not a streamer-facing feature and is only available inside the admin panel.</p>
       <p>Publishing stays in dry-run mode unless <strong>MARKETING_AUTOMATION_ENABLED=true</strong>, <strong>MARKETING_DRY_RUN=false</strong>, and an authorized webhook is configured.</p>
       <p>Platforms: ${escapeHtml((diagnostics.platforms || []).join(', '))}. Webhooks configured: ${escapeHtml(configuredWebhooks.length ? configuredWebhooks.join(', ') : 'none')}.</p>
+      <p>Lead APIs: sync ${growthDiagnostics.enabled ? 'enabled' : 'disabled'}; HubSpot ${growthDiagnostics.hubspotConfigured ? 'connected' : 'not configured'}; HubSpot custom fields ${growthDiagnostics.hubspotCustomPropertiesConfigured ? 'configured' : 'not configured'}; Segment ${growthDiagnostics.segmentConfigured ? 'connected' : 'not configured'}; providers ${escapeHtml(growthProviders.length ? growthProviders.join(', ') : 'none')}.</p>
       <div class="inline-grid">
         <form method="POST" action="/admin/marketing/generate">
           <label>Date</label>
@@ -1554,6 +1582,16 @@ function renderMarketingAdminPage({ message = '', error = '', posts = [], events
           <button type="submit" class="test">Publish Approved</button>
         </form>
       </div>
+    </div>
+    <div class="card">
+      <h2>Queue filters</h2>
+      <form method="GET" action="/admin/marketing">
+        <div class="inline-grid compact">
+          <span><label>Status</label><select name="status">${statusOptions}</select></span>
+          <span><label>Date</label><input name="date" type="date" value="${escapeAttr(selectedDate)}" /></span>
+          <span><button type="submit">Filter Queue</button></span>
+        </div>
+      </form>
     </div>
     <div class="card">
       <h2>Daily content queue</h2>
@@ -1790,13 +1828,17 @@ router.post('/sponsors/:id/delete', requireAdminAuth, (req, res) => {
 });
 
 router.get('/marketing', requireAdminAuth, (req, res) => {
+  const status = String(req.query.status || '').trim().toLowerCase();
+  const date = String(req.query.date || '').trim();
   try {
     res.send(renderMarketingAdminPage({
       message: String(req.query.message || ''),
       error: String(req.query.error || ''),
-      posts: listMarketingPosts({ limit: 80 }),
+      posts: listMarketingPosts({ limit: 80, status, date }),
       events: listMarketingPublishEvents({ limit: 30 }),
       diagnostics: marketingAutomationDiagnostics(),
+      growthDiagnostics: growthIntegrationDiagnostics(),
+      filters: { status, date },
     }));
   } catch (err) {
     res.status(500).send(renderMarketingAdminPage({
@@ -1804,6 +1846,8 @@ router.get('/marketing', requireAdminAuth, (req, res) => {
       posts: [],
       events: [],
       diagnostics: marketingAutomationDiagnostics(),
+      growthDiagnostics: growthIntegrationDiagnostics(),
+      filters: { status, date },
     }));
   }
 });
@@ -1817,6 +1861,23 @@ router.post('/marketing/generate', requireAdminAuth, (req, res) => {
     res.redirect(`/admin/marketing?message=${encodeURIComponent(`Generated ${result.count} marketing drafts for ${result.date}`)}`);
   } catch (err) {
     res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Marketing draft generation failed')}`);
+  }
+});
+
+router.post('/marketing/:id/update', requireAdminAuth, (req, res) => {
+  const id = Number(req.params.id);
+  try {
+    updateMarketingPostDraft(id, {
+      body: req.body.body,
+      cta: req.body.cta,
+      utmUrl: req.body.utmUrl,
+      hashtags: req.body.hashtags,
+      seoKeywords: req.body.seoKeywords,
+      scheduledFor: req.body.scheduledFor,
+    });
+    res.redirect('/admin/marketing?message=Marketing%20draft%20saved%20for%20review');
+  } catch (err) {
+    res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Marketing draft update failed')}`);
   }
 });
 
