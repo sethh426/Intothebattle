@@ -216,6 +216,14 @@ Optional company growth APIs:
 - `GROWTH_API_SYNC_ENABLED=true` must be set before any provider calls are made.
 - `POST /api/runtime/growth-sync-test` lets an admin test the integration with `Authorization: Bearer <DIAGNOSTICS_TOKEN>` or `METRICS_TOKEN`.
 
+The Company Growth page also includes a creative template engine for admin-owned content:
+
+- Template library: repeatable hooks, proof blocks, CTAs, landing pages, platform copy limits, and safe-zone guidance.
+- Asset vault: approved real overlay clips, screenshots, sponsor-break clips, dashboard shots, logos, and generated backgrounds.
+- Quality gate: conversion templates require approved proof assets, tracked UTM URLs, CTA presence, and matching image/video asset types before queueing.
+- Variant builder: creates structured hook/proof/CTA drafts with UTM links, frame timing, safe zones, visual prompts, hashtags, and SEO metadata, then requires admin approval before sending anything into the marketing queue.
+- Queue guardrails: duplicate variants are skipped, queued variants are revalidated against the latest asset status, and published creative posts are not overwritten.
+
 ### Run locally with Node
 
 ```bash
@@ -266,6 +274,8 @@ The schema includes:
 - `marketing_posts`
 - `marketing_publish_events`
 - `growth_api_events`
+- `growth_creative_assets`
+- `growth_creative_variants`
 - `platform_sponsor_creatives`
 - `sponsor_playback_events`
 - `live_sessions`

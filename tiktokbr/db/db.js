@@ -485,6 +485,62 @@ async function initDb() {
     await safeExec('ALTER TABLE growth_api_events ADD COLUMN detail TEXT');
 
     await safeExec(`
+      CREATE TABLE IF NOT EXISTS growth_creative_assets (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        asset_type TEXT NOT NULL,
+        asset_url TEXT NOT NULL,
+        source TEXT DEFAULT 'manual',
+        approval_status TEXT DEFAULT 'approved',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await safeExec('ALTER TABLE growth_creative_assets ADD COLUMN source TEXT DEFAULT \'manual\'');
+    await safeExec("ALTER TABLE growth_creative_assets ADD COLUMN approval_status TEXT DEFAULT 'approved'");
+    await safeExec('ALTER TABLE growth_creative_assets ADD COLUMN notes TEXT');
+    await safeExec('ALTER TABLE growth_creative_assets ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS growth_creative_variants (
+        id SERIAL PRIMARY KEY,
+        template_key TEXT NOT NULL,
+        platform TEXT NOT NULL,
+        format TEXT,
+        status TEXT DEFAULT 'draft',
+        asset_id INTEGER,
+        asset_url TEXT,
+        hook TEXT,
+        proof TEXT,
+        cta TEXT,
+        body TEXT NOT NULL,
+        utm_url TEXT,
+        block_json TEXT,
+        safe_zone_json TEXT,
+        quality_status TEXT DEFAULT 'draft',
+        quality_score INTEGER DEFAULT 0,
+        quality_notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await safeExec('ALTER TABLE growth_creative_variants ADD COLUMN format TEXT');
+    await safeExec("ALTER TABLE growth_creative_variants ADD COLUMN status TEXT DEFAULT 'draft'");
+    await safeExec('ALTER TABLE growth_creative_variants ADD COLUMN asset_id INTEGER');
+    await safeExec('ALTER TABLE growth_creative_variants ADD COLUMN asset_url TEXT');
+    await safeExec('ALTER TABLE growth_creative_variants ADD COLUMN hook TEXT');
+    await safeExec('ALTER TABLE growth_creative_variants ADD COLUMN proof TEXT');
+    await safeExec('ALTER TABLE growth_creative_variants ADD COLUMN cta TEXT');
+    await safeExec('ALTER TABLE growth_creative_variants ADD COLUMN utm_url TEXT');
+    await safeExec('ALTER TABLE growth_creative_variants ADD COLUMN block_json TEXT');
+    await safeExec('ALTER TABLE growth_creative_variants ADD COLUMN safe_zone_json TEXT');
+    await safeExec("ALTER TABLE growth_creative_variants ADD COLUMN quality_status TEXT DEFAULT 'draft'");
+    await safeExec('ALTER TABLE growth_creative_variants ADD COLUMN quality_score INTEGER DEFAULT 0');
+    await safeExec('ALTER TABLE growth_creative_variants ADD COLUMN quality_notes TEXT');
+    await safeExec('ALTER TABLE growth_creative_variants ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+
+    await safeExec(`
       CREATE TABLE IF NOT EXISTS sponsor_playback_events (
         id SERIAL PRIMARY KEY,
         break_id TEXT NOT NULL,

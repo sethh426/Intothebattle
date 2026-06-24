@@ -35,7 +35,7 @@
     "@hubspot/api-client": "^13.5.0",
     "@microsoft/clarity": "^1.0.2",
     "@segment/analytics-node": "^3.1.0",
-    "@sentry/node": "^8.15.0",
+    "@sentry/node": "^10.60.0",
     "@socket.io/redis-adapter": "^7.1.0",
     "@tiktool/live": "2.7.1",
     "bcryptjs": "^2.4.3",

@@ -153,6 +153,40 @@ CREATE TABLE IF NOT EXISTS growth_api_events (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS growth_creative_assets (
+  id SERIAL PRIMARY KEY,
+  title TEXT NOT NULL,
+  asset_type TEXT NOT NULL,
+  asset_url TEXT NOT NULL,
+  source TEXT DEFAULT 'manual',
+  approval_status TEXT DEFAULT 'approved',
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS growth_creative_variants (
+  id SERIAL PRIMARY KEY,
+  template_key TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  format TEXT,
+  status TEXT DEFAULT 'draft',
+  asset_id INTEGER,
+  asset_url TEXT,
+  hook TEXT,
+  proof TEXT,
+  cta TEXT,
+  body TEXT NOT NULL,
+  utm_url TEXT,
+  block_json TEXT,
+  safe_zone_json TEXT,
+  quality_status TEXT DEFAULT 'draft',
+  quality_score INTEGER DEFAULT 0,
+  quality_notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS platform_sponsor_creatives (
   id SERIAL PRIMARY KEY,
   filename TEXT UNIQUE NOT NULL,

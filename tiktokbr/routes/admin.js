@@ -28,6 +28,17 @@ import {
   updateMarketingPostStatus,
 } from '../services/marketingAutomation.js';
 import { growthIntegrationDiagnostics } from '../services/growthIntegrations.js';
+import {
+  addCreativeAsset,
+  creativeTemplateOptions,
+  generateCreativeVariants,
+  listCreativeAssets,
+  listCreativeTemplates,
+  listCreativeVariants,
+  queueCreativeVariantAsMarketingPost,
+  updateCreativeAssetStatus,
+  updateCreativeVariantStatus,
+} from '../services/creativeTemplateEngine.js';
 import { getAllRooms } from '../../roomManager.js';
 
 const router = express.Router();
@@ -1411,7 +1422,132 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
 </html>`;
 }
 
-function renderMarketingAdminPage({ message = '', error = '', posts = [], events = [], diagnostics = marketingAutomationDiagnostics(), growthDiagnostics = growthIntegrationDiagnostics(), filters = {} } = {}) {
+function creativeAssetLabel(assetType, creativeOptions = creativeTemplateOptions()) {
+  return creativeOptions.assetTypes.find(item => item.key === assetType)?.label || assetType || 'asset';
+}
+
+function renderCreativeTemplateCards(creativeTemplates = []) {
+  return creativeTemplates.map(template => `<div class="template-card">
+    <div class="template-topline">
+      <span class="status-pill draft">${escapeHtml(template.goal || '')}</span>
+      <small>${escapeHtml(template.audience || '')}</small>
+    </div>
+    <h3>${escapeHtml(template.label || template.key)}</h3>
+    <p>${escapeHtml(template.hooks?.[0] || '')}</p>
+    <small>Assets: ${escapeHtml((template.requiredAssetLabels || []).join(', '))}</small>
+  </div>`).join('');
+}
+
+function countBy(items = [], field, fallback = 'unknown') {
+  return items.reduce((acc, item) => {
+    const key = String(item?.[field] || fallback).toLowerCase();
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function renderCreativeAssetRows(creativeAssets = [], creativeOptions = creativeTemplateOptions()) {
+  return creativeAssets.map(asset => {
+    const status = String(asset.approval_status || 'draft').toLowerCase();
+    return `<tr>
+      <td>
+        <strong>${escapeHtml(asset.title || '')}</strong><br />
+        <small>${escapeHtml(creativeAssetLabel(asset.asset_type, creativeOptions))}</small>
+      </td>
+      <td>
+        <span class="status-pill ${escapeAttr(status)}">${escapeHtml(status)}</span><br />
+        <small>${escapeHtml(asset.source || 'manual')}</small>
+      </td>
+      <td>
+        <a href="${escapeAttr(asset.asset_url || '#')}" target="_blank" rel="noopener">${escapeHtml(asset.asset_url || '')}</a>
+        ${asset.notes ? `<div class="warning-note">${escapeHtml(asset.notes)}</div>` : ''}
+      </td>
+      <td>
+        <form method="POST" action="/admin/marketing/creative-assets/${escapeAttr(asset.id)}/status">
+          <input type="hidden" name="status" value="approved" />
+          <button type="submit" class="test" ${status === 'approved' ? 'disabled' : ''}>Approve</button>
+        </form>
+        <form method="POST" action="/admin/marketing/creative-assets/${escapeAttr(asset.id)}/status">
+          <input type="hidden" name="status" value="draft" />
+          <button type="submit" class="secondary" ${status === 'draft' ? 'disabled' : ''}>Draft</button>
+        </form>
+        <form method="POST" action="/admin/marketing/creative-assets/${escapeAttr(asset.id)}/status">
+          <input type="hidden" name="status" value="blocked" />
+          <button type="submit" class="danger" ${status === 'blocked' ? 'disabled' : ''}>Block</button>
+        </form>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function parseCreativeBlocks(blockJson = '') {
+  try {
+    const blocks = JSON.parse(blockJson || '{}');
+    return blocks && typeof blocks === 'object' ? blocks : {};
+  } catch (_err) {
+    return {};
+  }
+}
+
+function renderCreativeVariantRows(creativeVariants = []) {
+  return creativeVariants.map(variant => {
+    const status = String(variant.status || 'draft').toLowerCase();
+    const qualityStatus = String(variant.quality_status || 'draft').toLowerCase();
+    const isBlocked = qualityStatus === 'blocked';
+    const blocks = parseCreativeBlocks(variant.block_json);
+    const visualDirection = blocks.visualDirection || {};
+    const textBlocks = Array.isArray(blocks.textBlocks) ? blocks.textBlocks : [];
+    const blockPreview = textBlocks.map(block => `<li><strong>${escapeHtml(block.time || '')}</strong> ${escapeHtml(block.slot || '')}: ${escapeHtml(block.text || '')}</li>`).join('');
+    return `<tr>
+      <td>
+        <strong>${escapeHtml(variant.template_key || '')}</strong><br />
+        <small>${escapeHtml(String(variant.platform || '').toUpperCase())} - ${escapeHtml(variant.format || '')}</small>
+      </td>
+      <td>
+        <span class="status-pill ${escapeAttr(status)}">${escapeHtml(status)}</span><br />
+        <span class="status-pill ${escapeAttr(qualityStatus)}">quality ${escapeHtml(qualityStatus)}</span><br />
+        <small>Score ${numberValue(variant.quality_score)}/100</small>
+      </td>
+      <td>
+        <strong>${escapeHtml(variant.asset_title || 'Asset')}</strong><br />
+        <small>${escapeHtml(variant.asset_url || '')}</small>
+        ${variant.quality_notes ? `<div class="warning-note ${isBlocked ? 'failed' : ''}">${escapeHtml(variant.quality_notes)}</div>` : ''}
+      </td>
+      <td>
+        <div class="post-copy">${escapeHtml(variant.body || '')}</div>
+        <a href="${escapeAttr(variant.utm_url || '#')}" target="_blank" rel="noopener">UTM landing page</a>
+        ${visualDirection.primaryVisual ? `<details class="creative-brief"><summary>Creative blocks</summary><ul>${blockPreview}</ul><p><strong>Visual:</strong> ${escapeHtml(visualDirection.primaryVisual)}</p><p><strong>Prompt:</strong> ${escapeHtml(visualDirection.imagePrompt || '')}</p></details>` : ''}
+      </td>
+      <td>
+        <form method="POST" action="/admin/marketing/creative-variants/${escapeAttr(variant.id)}/status">
+          <input type="hidden" name="status" value="approved" />
+          <button type="submit" class="test" ${status === 'approved' || isBlocked ? 'disabled' : ''}>Approve</button>
+        </form>
+        <form method="POST" action="/admin/marketing/creative-variants/${escapeAttr(variant.id)}/queue">
+          <button type="submit" ${status !== 'approved' || isBlocked ? 'disabled' : ''}>Send to Queue</button>
+        </form>
+        <form method="POST" action="/admin/marketing/creative-variants/${escapeAttr(variant.id)}/status">
+          <input type="hidden" name="status" value="skipped" />
+          <button type="submit" class="danger" ${status === 'skipped' ? 'disabled' : ''}>Skip</button>
+        </form>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderMarketingAdminPage({
+  message = '',
+  error = '',
+  posts = [],
+  events = [],
+  diagnostics = marketingAutomationDiagnostics(),
+  growthDiagnostics = growthIntegrationDiagnostics(),
+  filters = {},
+  creativeTemplates = listCreativeTemplates(),
+  creativeAssets = [],
+  creativeVariants = [],
+  creativeOptions = creativeTemplateOptions(),
+} = {}) {
   const nowDate = new Date().toISOString().slice(0, 10);
   const selectedStatus = String(filters.status || '').toLowerCase();
   const selectedDate = String(filters.date || '');
@@ -1425,6 +1561,25 @@ function renderMarketingAdminPage({ message = '', error = '', posts = [], events
   }, {});
   const configuredWebhooks = diagnostics.configuredWebhooks || [];
   const growthProviders = growthDiagnostics.providers || [];
+  const templateCards = renderCreativeTemplateCards(creativeTemplates);
+  const creativeAssetCounts = countBy(creativeAssets, 'approval_status', 'draft');
+  const creativeVariantCounts = countBy(creativeVariants, 'status', 'draft');
+  const creativeQualityCounts = countBy(creativeVariants, 'quality_status', 'draft');
+  const assetTypeOptions = creativeOptions.assetTypes
+    .map(item => `<option value="${escapeAttr(item.key)}">${escapeHtml(item.label)}</option>`)
+    .join('');
+  const platformOptions = creativeOptions.platforms
+    .map(item => `<option value="${escapeAttr(item.key)}">${escapeHtml(item.label)} - ${escapeHtml(item.format)}</option>`)
+    .join('');
+  const templateOptions = creativeTemplates
+    .map(template => `<option value="${escapeAttr(template.key)}">${escapeHtml(template.label)}</option>`)
+    .join('');
+  const approvedAssetOptions = creativeAssets
+    .filter(asset => String(asset.approval_status || '').toLowerCase() === 'approved')
+    .map(asset => `<option value="${escapeAttr(asset.id)}">${escapeHtml(asset.title || `Asset ${asset.id}`)} - ${escapeHtml(creativeAssetLabel(asset.asset_type, creativeOptions))}</option>`)
+    .join('');
+  const creativeAssetRows = renderCreativeAssetRows(creativeAssets, creativeOptions);
+  const creativeVariantRows = renderCreativeVariantRows(creativeVariants);
   const eventRows = events.map(event => `<tr>
     <td><strong>${escapeHtml(event.event_type || '')}</strong><br /><small>${escapeHtml(formatSponsorDate(event.created_at))}</small></td>
     <td>${escapeHtml(String(event.platform || '').toUpperCase())}</td>
@@ -1528,15 +1683,28 @@ function renderMarketingAdminPage({ message = '', error = '', posts = [], events
     .status-pill.draft { color:#ffdf8a; border-color:rgba(246,201,91,.34); background:rgba(246,201,91,.08); }
     .status-pill.approved { color:#9fefff; border-color:rgba(85,231,255,.32); background:rgba(85,231,255,.08); }
     .status-pill.published { color:#c6ffc3; border-color:rgba(119,240,161,.34); background:rgba(119,240,161,.08); }
-    .status-pill.failed, .status-pill.skipped { color:#ffb6b6; border-color:rgba(232,59,95,.36); background:rgba(232,59,95,.1); }
+    .status-pill.failed, .status-pill.skipped, .status-pill.blocked { color:#ffb6b6; border-color:rgba(232,59,95,.36); background:rgba(232,59,95,.1); }
+    .status-pill.ready { color:#c6ffc3; border-color:rgba(119,240,161,.34); background:rgba(119,240,161,.08); }
+    .status-pill.warn { color:#ffdf8a; border-color:rgba(246,201,91,.34); background:rgba(246,201,91,.08); }
+    .status-pill.queued { color:#9fefff; border-color:rgba(85,231,255,.32); background:rgba(85,231,255,.08); }
     .warning-note { margin-top:10px; padding:9px 10px; border-radius:12px; color:#ffdf8a; background:rgba(246,201,91,.08); border:1px solid rgba(246,201,91,.18); font-size:12px; line-height:1.4; }
     .warning-note.failed { color:#ffb6b6; background:rgba(232,59,95,.1); border-color:rgba(232,59,95,.32); }
+    .template-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:14px; }
+    .template-card { min-width:0; padding:14px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.22); }
+    .template-card h3 { margin:10px 0 8px; color:#fff8e6; font-size:17px; }
+    .template-card p { margin:0 0 10px; font-size:13px; }
+    .template-topline { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .creative-brief { margin-top:10px; padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,.09); background:rgba(0,0,0,.18); }
+    .creative-brief summary { cursor:pointer; color:#ffdf8a; font-weight:900; }
+    .creative-brief ul { margin:10px 0; padding-left:18px; color:#dce7ff; }
+    .creative-brief p { margin:8px 0 0; font-size:12px; }
     table { width:100%; border-collapse:collapse; margin-top:12px; overflow:hidden; border-radius:16px; }
     th, td { vertical-align:top; border-bottom:1px solid rgba(255,255,255,0.08); padding:12px; font-size:13px; }
     th { background:rgba(246,201,91,0.09); color:#ffdf8a; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     small { color:#9fb2d7; }
     .post-copy { max-width:620px; white-space:pre-wrap; color:#fff8e6; line-height:1.45; }
-    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid,.inline-grid{grid-template-columns:1fr} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:0} }
+    @media(max-width:1100px){ .template-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid,.inline-grid,.template-grid{grid-template-columns:1fr} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:0} }
   </style>
 </head>
 <body>
@@ -1555,6 +1723,12 @@ function renderMarketingAdminPage({ message = '', error = '', posts = [], events
       <div class="metric-card"><span>Approved</span><strong>${numberValue(statusCounts.approved)}</strong></div>
       <div class="metric-card"><span>Published</span><strong>${numberValue(statusCounts.published)}</strong></div>
       <div class="metric-card"><span>Failed</span><strong>${numberValue(statusCounts.failed)}</strong></div>
+    </div>
+    <div class="metrics-grid">
+      <div class="metric-card"><span>Approved Assets</span><strong>${numberValue(creativeAssetCounts.approved)}</strong></div>
+      <div class="metric-card"><span>Ready Variants</span><strong>${numberValue(creativeQualityCounts.ready)}</strong></div>
+      <div class="metric-card"><span>Queued Variants</span><strong>${numberValue(creativeVariantCounts.queued)}</strong></div>
+      <div class="metric-card"><span>Blocked Variants</span><strong>${numberValue(creativeQualityCounts.blocked)}</strong></div>
     </div>
     <div class="card">
       <h2>Automation controls</h2>
@@ -1582,6 +1756,51 @@ function renderMarketingAdminPage({ message = '', error = '', posts = [], events
           <button type="submit" class="test">Publish Approved</button>
         </form>
       </div>
+    </div>
+    <div class="card">
+      <h2>Creative template engine</h2>
+      <p>Build repeatable posts from approved proof assets. The flow is deliberate: save an asset, generate variants from a template, approve the best one, then send it into the daily queue. Duplicate variants are skipped and every queued variant is rechecked against the latest asset approval.</p>
+      <div class="template-grid">${templateCards || '<p>No templates configured.</p>'}</div>
+    </div>
+    <div class="card">
+      <h2>Asset vault</h2>
+      <form method="POST" action="/admin/marketing/creative-assets">
+        <div class="inline-grid compact">
+          <span><label>Title</label><input name="title" maxlength="120" placeholder="Real overlay 12-second clip" required /></span>
+          <span><label>Asset type</label><select name="assetType" required>${assetTypeOptions}</select></span>
+          <span><label>Status</label><select name="approvalStatus"><option value="approved">Approved</option><option value="draft">Draft</option><option value="blocked">Blocked</option></select></span>
+        </div>
+        <label>Asset URL</label>
+        <input name="assetUrl" maxlength="700" placeholder="/assets/battle-demo.mp4 or https://..." required />
+        <div class="inline-grid compact">
+          <span><label>Source</label><input name="source" maxlength="80" value="manual" /></span>
+          <span><label>Notes</label><input name="notes" maxlength="500" placeholder="Where this came from and why it is approved" /></span>
+          <span><button type="submit">Save Asset</button></span>
+        </div>
+      </form>
+      <table>
+        <thead><tr><th>Asset</th><th>Status</th><th>URL</th><th>Actions</th></tr></thead>
+        <tbody>${creativeAssetRows || '<tr><td colspan="4">No creative assets saved yet.</td></tr>'}</tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>Variant builder</h2>
+      <p>Generated variants are structured as hook, proof, CTA, UTM URL, frame script, and safe-zone guidance. Blocked variants cannot be approved or queued.</p>
+      <form method="POST" action="/admin/marketing/creative-variants/generate">
+        <div class="inline-grid compact">
+          <span><label>Template</label><select name="templateKey" required>${templateOptions}</select></span>
+          <span><label>Platform</label><select name="platform" required>${platformOptions}</select></span>
+          <span><label>Approved asset</label><select name="assetId" required>${approvedAssetOptions || '<option value="">No approved assets</option>'}</select></span>
+        </div>
+        <div class="inline-grid compact">
+          <span><label>Variant count</label><input name="count" type="number" min="1" max="5" value="3" /></span>
+          <span><button type="submit" ${approvedAssetOptions ? '' : 'disabled'}>Generate Variants</button></span>
+        </div>
+      </form>
+      <table>
+        <thead><tr><th>Template</th><th>Status</th><th>Asset</th><th>Copy</th><th>Actions</th></tr></thead>
+        <tbody>${creativeVariantRows || '<tr><td colspan="5">No creative variants generated yet.</td></tr>'}</tbody>
+      </table>
     </div>
     <div class="card">
       <h2>Queue filters</h2>
@@ -1839,6 +2058,10 @@ router.get('/marketing', requireAdminAuth, (req, res) => {
       diagnostics: marketingAutomationDiagnostics(),
       growthDiagnostics: growthIntegrationDiagnostics(),
       filters: { status, date },
+      creativeTemplates: listCreativeTemplates(),
+      creativeAssets: listCreativeAssets({ limit: 60 }),
+      creativeVariants: listCreativeVariants({ limit: 60 }),
+      creativeOptions: creativeTemplateOptions(),
     }));
   } catch (err) {
     res.status(500).send(renderMarketingAdminPage({
@@ -1848,6 +2071,10 @@ router.get('/marketing', requireAdminAuth, (req, res) => {
       diagnostics: marketingAutomationDiagnostics(),
       growthDiagnostics: growthIntegrationDiagnostics(),
       filters: { status, date },
+      creativeTemplates: listCreativeTemplates(),
+      creativeAssets: [],
+      creativeVariants: [],
+      creativeOptions: creativeTemplateOptions(),
     }));
   }
 });
@@ -1861,6 +2088,65 @@ router.post('/marketing/generate', requireAdminAuth, (req, res) => {
     res.redirect(`/admin/marketing?message=${encodeURIComponent(`Generated ${result.count} marketing drafts for ${result.date}`)}`);
   } catch (err) {
     res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Marketing draft generation failed')}`);
+  }
+});
+
+router.post('/marketing/creative-assets', requireAdminAuth, (req, res) => {
+  try {
+    addCreativeAsset({
+      title: req.body.title,
+      assetType: req.body.assetType,
+      assetUrl: req.body.assetUrl,
+      source: req.body.source,
+      approvalStatus: req.body.approvalStatus,
+      notes: req.body.notes,
+    });
+    res.redirect('/admin/marketing?message=Creative%20asset%20saved');
+  } catch (err) {
+    res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Creative asset save failed')}`);
+  }
+});
+
+router.post('/marketing/creative-assets/:id/status', requireAdminAuth, (req, res) => {
+  try {
+    updateCreativeAssetStatus(req.params.id, String(req.body.status || '').trim().toLowerCase());
+    res.redirect('/admin/marketing?message=Creative%20asset%20status%20updated');
+  } catch (err) {
+    res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Creative asset status update failed')}`);
+  }
+});
+
+router.post('/marketing/creative-variants/generate', requireAdminAuth, (req, res) => {
+  try {
+    const result = generateCreativeVariants({
+      templateKey: req.body.templateKey,
+      platform: req.body.platform,
+      assetId: req.body.assetId,
+      count: req.body.count,
+    });
+    const skippedMessage = result.skipped ? `, skipped ${result.skipped} duplicates` : '';
+    res.redirect(`/admin/marketing?message=${encodeURIComponent(`Generated ${result.count} creative variants${skippedMessage}`)}`);
+  } catch (err) {
+    res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Creative variant generation failed')}`);
+  }
+});
+
+router.post('/marketing/creative-variants/:id/status', requireAdminAuth, (req, res) => {
+  try {
+    const status = String(req.body.status || '').trim().toLowerCase();
+    updateCreativeVariantStatus(req.params.id, status);
+    res.redirect(`/admin/marketing?message=${encodeURIComponent(`Creative variant ${status}`)}`);
+  } catch (err) {
+    res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Creative variant status update failed')}`);
+  }
+});
+
+router.post('/marketing/creative-variants/:id/queue', requireAdminAuth, (req, res) => {
+  try {
+    queueCreativeVariantAsMarketingPost(req.params.id);
+    res.redirect('/admin/marketing?message=Creative%20variant%20sent%20to%20marketing%20queue');
+  } catch (err) {
+    res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Creative variant queue failed')}`);
   }
 });
 
