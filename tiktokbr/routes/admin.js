@@ -118,6 +118,20 @@ function sanitizeSponsorText(value, fallback = '', maxLength = 140) {
   return (cleaned || fallback).slice(0, maxLength);
 }
 
+function normalizeTikTokUsername(value = '') {
+  return String(value || '')
+    .replace(/^@+/, '')
+    .replace(/[^A-Za-z0-9._-]/g, '')
+    .trim()
+    .slice(0, 80);
+}
+
+function normalizeAdminEmail(value = '') {
+  const email = String(value || '').trim().toLowerCase().slice(0, 220);
+  if (!email) return '';
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
+}
+
 function parseDurationMs(value) {
   const duration = Number(value);
   return Number.isFinite(duration) ? Math.max(5000, Math.min(120000, Math.round(duration))) : 15000;
@@ -249,7 +263,7 @@ function strongerTier(current, next) {
 
 function emptyAdminUserMetrics() {
   return {
-    accounts: { free: 0, paid: 0, trialBeta: 0, total: 0 },
+    accounts: { free: 0, paid: 0, trialBeta: 0, beta: 0, total: 0 },
     live: { free: 0, paid: 0, trialBeta: 0, total: 0, overlays: 0 },
     updatedAt: new Date().toISOString(),
   };
@@ -276,6 +290,7 @@ function buildAdminUserMetrics() {
 
     codes.forEach(code => {
       const tier = classifyAccessCodeTier(code, now);
+      if (isBetaTesterAccessCode(code)) metrics.accounts.beta += 1;
       incrementTier(metrics.accounts, tier);
       if (code?.room_id && ['paid', 'trialBeta', 'free'].includes(tier)) {
         roomTierById.set(code.room_id, strongerTier(roomTierById.get(code.room_id) || 'free', tier));
@@ -327,13 +342,27 @@ function listRecentAdminUsers(limit = 80) {
         u.last_login,
         s.plan_type,
         s.status AS subscription_status,
-        s.expires_at
+        s.expires_at,
+        ac.code AS access_code,
+        ac.code_type AS access_code_type,
+        ac.subscription_status AS access_subscription_status,
+        ac.tiktok_username AS access_tiktok_username,
+        ac.is_revoked AS access_is_revoked,
+        ac.is_promo AS access_is_promo
       FROM users u
       LEFT JOIN subscriptions s ON s.id = (
         SELECT id
         FROM subscriptions
         WHERE user_id = u.id
         ORDER BY updated_at DESC, id DESC
+        LIMIT 1
+      )
+      LEFT JOIN access_codes ac ON ac.id = (
+        SELECT ac2.id
+        FROM access_codes ac2
+        WHERE ac2.user_id = u.id
+           OR (ac2.email IS NOT NULL AND LOWER(ac2.email) = LOWER(u.email))
+        ORDER BY ac2.created_at DESC, ac2.id DESC
         LIMIT 1
       )
       ORDER BY u.created_at DESC, u.id DESC
@@ -450,26 +479,101 @@ function buildAdminLiveActivity() {
     .sort((a, b) => b.overlayCount - a.overlayCount || b.playerCount - a.playerCount || a.roomId.localeCompare(b.roomId));
 }
 
-function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [], roomRequirementEnabled = true, userMetrics = buildAdminUserMetrics(), users = [], comments = [], liveActivity = buildAdminLiveActivity() } = {}) {
-  const codeRows = codes.map((code) => {
-    const status = code.is_revoked ? 'Revoked' : new Date(code.expires_at) < new Date() ? 'Expired' : 'Active';
-    const actionLabel = code.is_revoked ? 'Enable' : 'Disable';
+function adminAccessCodeStatus(code) {
+  if (Number(code?.is_revoked) === 1) return 'Revoked';
+  const expiresAt = parseAdminDate(code?.expires_at);
+  if (expiresAt && expiresAt < new Date()) return 'Expired';
+  return 'Active';
+}
+
+function adminAccessCodeTypeLabel(code) {
+  if (Number(code?.is_promo) === 1) return 'Promo';
+  if (isBetaTesterAccessCode(code)) return 'Beta Tester';
+  if (isPaidAccessCode(code)) return 'Paid';
+  return code?.code_type || code?.subscription_status || 'Free / Trial';
+}
+
+function accountTikTokUsername(account = {}) {
+  return normalizeTikTokUsername(account.tiktok_username || account.access_tiktok_username || '');
+}
+
+function isAdminBetaUser(user = {}) {
+  if (!user) return false;
+  if (String(user.plan_type || '').toLowerCase().includes('beta')) return true;
+  if (String(user.subscription_status || '').toLowerCase().includes('beta')) return true;
+  return isBetaTesterAccessCode({
+    code: user.access_code,
+    email: user.email,
+    code_type: user.access_code_type,
+    subscription_status: user.access_subscription_status,
+    tiktok_username: user.access_tiktok_username,
+    is_revoked: user.access_is_revoked,
+    is_promo: user.access_is_promo,
+  });
+}
+
+function renderAccessCodeRows(codes = [], emptyMessage = 'No access codes found.') {
+  return codes.map((code) => {
+    const status = adminAccessCodeStatus(code);
+    const actionLabel = Number(code.is_revoked) === 1 ? 'Enable' : 'Disable';
+    const tiktokUsername = normalizeTikTokUsername(code.tiktok_username || '');
     return `<tr>
-      <td>${escapeHtml(code.code)}</td>
-      <td>${escapeHtml(code.owner_name || code.email || '')}</td>
-      <td>${escapeHtml(code.created_at)}</td>
-      <td>${escapeHtml(code.expires_at)}</td>
-      <td>${status}</td>
-      <td>${code.is_promo ? 'Promo' : 'Paid'}</td>
-      <td>${escapeHtml(code.last_seen || '')}</td>
+      <td><strong>${escapeHtml(code.code)}</strong><br><span class="muted">${escapeHtml(code.room_id ? `Room ${code.room_id}` : 'No room')}</span></td>
+      <td>${escapeHtml(code.owner_name || code.streamer_name || code.email || '')}<br><span class="muted">${escapeHtml(code.email || '')}</span></td>
+      <td>${escapeHtml(tiktokUsername ? `@${tiktokUsername}` : '')}</td>
+      <td>${escapeHtml(adminAccessCodeTypeLabel(code))}<br><span class="muted">${escapeHtml(code.subscription_status || '')}</span></td>
+      <td>${escapeHtml(status)}</td>
+      <td>${escapeHtml(formatSponsorDate(code.expires_at))}</td>
+      <td>${escapeHtml(formatSponsorDate(code.last_seen))}</td>
       <td>
-        <form method="POST" action="/admin/toggle-code" style="display:inline">
-          <input type="hidden" name="code" value="${escapeHtml(code.code)}" />
+        <form method="POST" action="/admin/update-code-profile" class="mini-form">
+          <input type="hidden" name="code" value="${escapeAttr(code.code)}" />
+          <input name="ownerName" value="${escapeAttr(code.owner_name || '')}" placeholder="Owner" />
+          <input name="email" value="${escapeAttr(code.email || '')}" placeholder="Email" />
+          <input name="tiktokUsername" value="${escapeAttr(tiktokUsername)}" placeholder="TikTok username" />
+          <button type="submit" class="secondary-button">Save Profile</button>
+        </form>
+      </td>
+      <td>
+        <form method="POST" action="/admin/toggle-code">
+          <input type="hidden" name="code" value="${escapeAttr(code.code)}" />
           <button type="submit">${actionLabel}</button>
+        </form>
+        <form method="POST" action="/admin/reset-device">
+          <input type="hidden" name="code" value="${escapeAttr(code.code)}" />
+          <button type="submit" class="secondary-button">Reset Device</button>
         </form>
       </td>
     </tr>`;
-  }).join('');
+  }).join('') || `<tr><td colspan="9">${escapeHtml(emptyMessage)}</td></tr>`;
+}
+
+function renderUserRows(users = [], emptyMessage = 'No users found yet.') {
+  return users.map((user) => {
+    const verified = Number(user.email_verified) === 1 ? 'Verified' : 'Unverified';
+    const active = Number(user.is_active) === 0 ? 'Disabled' : 'Active';
+    const plan = user.plan_type || user.subscription_status || user.access_code_type || 'Free / pending';
+    const tiktokUsername = accountTikTokUsername(user);
+    const beta = isAdminBetaUser(user);
+    return `<tr>
+      <td>${escapeHtml(String(user.id))}<br><span class="muted">${beta ? 'Beta tester' : 'Standard'}</span></td>
+      <td><strong>${escapeHtml(user.email || '')}</strong><br><span class="muted">${escapeHtml(user.name || '')}</span></td>
+      <td>${escapeHtml(tiktokUsername ? `@${tiktokUsername}` : '')}</td>
+      <td>${escapeHtml(plan)}${user.access_code ? `<br><span class="muted">Code ${escapeHtml(user.access_code)}</span>` : ''}</td>
+      <td>${escapeHtml(`${active} / ${verified}`)}</td>
+      <td>${escapeHtml(formatSponsorDate(user.created_at))}</td>
+      <td>${escapeHtml(formatSponsorDate(user.last_login))}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="7">${escapeHtml(emptyMessage)}</td></tr>`;
+}
+
+function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [], roomRequirementEnabled = true, userMetrics = buildAdminUserMetrics(), users = [], comments = [], liveActivity = buildAdminLiveActivity() } = {}) {
+  const betaCodes = codes.filter(code => isBetaTesterAccessCode(code));
+  const standardCodes = codes.filter(code => !isBetaTesterAccessCode(code));
+  const betaUsers = users.filter(isAdminBetaUser);
+  const standardUsers = users.filter(user => !isAdminBetaUser(user));
+  const codeRows = renderAccessCodeRows(standardCodes, 'No standard access codes found.');
+  const betaCodeRows = renderAccessCodeRows(betaCodes, 'No beta tester access codes found.');
 
   const promoRows = promos.map((promo) => {
     return `<tr>
@@ -480,20 +584,8 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       <td>${escapeHtml(promo.created_at)}</td>
     </tr>`;
   }).join('');
-  const userRows = users.map((user) => {
-    const verified = Number(user.email_verified) === 1 ? 'Verified' : 'Unverified';
-    const active = Number(user.is_active) === 0 ? 'Disabled' : 'Active';
-    const plan = user.plan_type || user.subscription_status || 'Free / pending';
-    return `<tr>
-      <td>${escapeHtml(String(user.id))}</td>
-      <td><strong>${escapeHtml(user.email || '')}</strong><br><span class="muted">${escapeHtml(user.name || '')}</span></td>
-      <td>${escapeHtml(user.tiktok_username ? `@${user.tiktok_username}` : '')}</td>
-      <td>${escapeHtml(plan)}</td>
-      <td>${escapeHtml(`${active} / ${verified}`)}</td>
-      <td>${escapeHtml(formatSponsorDate(user.created_at))}</td>
-      <td>${escapeHtml(formatSponsorDate(user.last_login))}</td>
-    </tr>`;
-  }).join('') || '<tr><td colspan="7">No users found yet.</td></tr>';
+  const userRows = renderUserRows(standardUsers, 'No standard user accounts found yet.');
+  const betaUserRows = renderUserRows(betaUsers, 'No beta tester user accounts found yet.');
   const commentRows = comments.map((comment) => {
     return `<tr>
       <td>${escapeHtml(formatSponsorDate(comment.created_at))}</td>
@@ -530,6 +622,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     adminMetricCard('Free accounts', 'accounts.free', metrics.accounts.free, 'Active free creator accounts and free access-code rooms'),
     adminMetricCard('Paid accounts', 'accounts.paid', metrics.accounts.paid, 'Active Creator Pro users and paid access codes'),
     adminMetricCard('Trial / beta', 'accounts.trialBeta', metrics.accounts.trialBeta, 'Full-access trials and beta tester access'),
+    adminMetricCard('Beta testers', 'accounts.beta', metrics.accounts.beta || betaCodes.length + betaUsers.length, 'Dedicated beta tester access codes and accounts'),
     adminMetricCard('Live free rooms', 'live.free', metrics.live.free, 'Connected overlay rooms on free access'),
     adminMetricCard('Live paid rooms', 'live.paid', metrics.live.paid, 'Connected overlay rooms on paid access'),
     adminMetricCard('Live overlays', 'live.overlays', metrics.live.overlays, 'Total connected overlay browser sources'),
@@ -570,6 +663,10 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     input[type="checkbox"] { width:auto; min-height:0; margin-right:8px; }
     button { margin-top: 12px; width: 100%; min-height:44px; padding: 0 14px; border: none; border-radius: 14px; background: linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color: #170c02; cursor: pointer; font-weight: 900; }
     .danger-button { background: rgba(232,59,95,.16); color:#ffb7c1; border:1px solid rgba(232,59,95,.32); }
+    .secondary-button { background: rgba(255,255,255,.07); color:#fff8e6; border:1px solid rgba(255,255,255,.12); }
+    .mini-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; min-width:260px; }
+    .mini-form input { min-height:38px; padding:8px 10px; border-radius:10px; font-size:12px; }
+    .mini-form button { grid-column:1 / -1; min-height:36px; margin-top:0; }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; overflow:hidden; border-radius:16px; }
     th, td { border-bottom: 1px solid rgba(255,255,255,0.08); padding: 12px; font-size: 13px; vertical-align:top; }
     th { background: rgba(246,201,91,0.09); color:#ffdf8a; text-align: left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
@@ -580,7 +677,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     .admin-nav { display:flex; gap:10px; flex-wrap:wrap; }
     .admin-nav a { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:999px; border:1px solid rgba(255,255,255,.1); color:#fff8e6; background:rgba(255,255,255,.055); }
     @media(max-width:1100px){ .metrics-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
-    @media(max-width:720px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid{grid-template-columns:1fr}.metrics-footnote{text-align:left} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} }
+    @media(max-width:720px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid{grid-template-columns:1fr}.metrics-footnote{text-align:left}.mini-form{grid-template-columns:1fr;min-width:0} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} }
   </style>
 </head>
 <body>
@@ -605,6 +702,10 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         <form method="POST" action="/admin/issue-code">
           <label>Name (optional, stored for tracking only)</label>
           <input name="name" type="text" placeholder="Customer or buyer name" />
+          <label>Email (optional)</label>
+          <input name="email" type="email" placeholder="creator@example.com" />
+          <label>TikTok username (optional)</label>
+          <input name="tiktokUsername" type="text" placeholder="creatorhandle" />
           <label>Days</label>
           <input name="days" type="number" min="0" value="30" />
           <label><input name="permanent" type="checkbox" value="1" /> Permanent code (no expiry)</label>
@@ -657,10 +758,19 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       </div>
     </div>
     <div class="card" style="margin-top: 24px;">
-      <h2>Access codes</h2>
+      <h2>Standard access codes</h2>
+      <p class="muted">Paid, trial, promo, and standard access codes. TikTok usernames can be saved here for routing and account auditing.</p>
       <table>
-        <thead><tr><th>Code</th><th>Name / Email</th><th>Created</th><th>Expires</th><th>Status</th><th>Type</th><th>Last Seen</th><th>Action</th></tr></thead>
+        <thead><tr><th>Code / Room</th><th>Owner / Email</th><th>TikTok</th><th>Type</th><th>Status</th><th>Expires</th><th>Last Seen</th><th>Profile</th><th>Actions</th></tr></thead>
         <tbody>${codeRows}</tbody>
+      </table>
+    </div>
+    <div class="card" style="margin-top: 18px;">
+      <h2>Beta tester access codes</h2>
+      <p class="muted">Dedicated beta tester codes are separated so they do not get mixed into paid or standard creator operations.</p>
+      <table>
+        <thead><tr><th>Code / Room</th><th>Owner / Email</th><th>TikTok</th><th>Type</th><th>Status</th><th>Expires</th><th>Last Seen</th><th>Profile</th><th>Actions</th></tr></thead>
+        <tbody>${betaCodeRows}</tbody>
       </table>
     </div>
     <div class="card" style="margin-top: 18px;">
@@ -671,11 +781,19 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       </table>
     </div>
     <div class="card" style="margin-top: 18px;">
-      <h2>Recent user emails</h2>
-      <p class="muted">Newest creator accounts, email status, TikTok handle, plan, and last login.</p>
+      <h2>Standard user accounts</h2>
+      <p class="muted">Newest non-beta creator accounts, email status, TikTok handle, plan, and last login.</p>
       <table>
         <thead><tr><th>ID</th><th>Email / Name</th><th>TikTok</th><th>Plan</th><th>Status</th><th>Created</th><th>Last Login</th></tr></thead>
         <tbody>${userRows}</tbody>
+      </table>
+    </div>
+    <div class="card" style="margin-top: 18px;">
+      <h2>Beta tester user accounts</h2>
+      <p class="muted">Registered user accounts linked to beta tester codes or beta status.</p>
+      <table>
+        <thead><tr><th>ID</th><th>Email / Name</th><th>TikTok</th><th>Plan</th><th>Status</th><th>Created</th><th>Last Login</th></tr></thead>
+        <tbody>${betaUserRows}</tbody>
       </table>
     </div>
     <div class="card" style="margin-top: 18px;">
@@ -703,6 +821,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       'accounts.free': data => data.accounts && data.accounts.free,
       'accounts.paid': data => data.accounts && data.accounts.paid,
       'accounts.trialBeta': data => data.accounts && data.accounts.trialBeta,
+      'accounts.beta': data => data.accounts && data.accounts.beta,
       'live.free': data => data.live && data.live.free,
       'live.paid': data => data.live && data.live.paid,
       'live.overlays': data => data.live && data.live.overlays,
@@ -862,6 +981,9 @@ router.post('/toggle-room-requirement', requireAdminAuth, (req, res) => {
 
 router.post('/issue-code', requireAdminAuth, (req, res) => {
   const ownerName = String(req.body.name || '').trim() || null;
+  const email = normalizeAdminEmail(req.body.email || '');
+  if (email === null) return res.redirect(`/admin?error=${encodeURIComponent('Enter a valid email address')}`);
+  const tiktokUsername = normalizeTikTokUsername(req.body.tiktokUsername || '') || null;
   const days = Number(req.body.days);
   const permanent = req.body.permanent === '1';
   const code = uuidv4().replace(/-/g, '').toUpperCase();
@@ -871,8 +993,29 @@ router.post('/issue-code', requireAdminAuth, (req, res) => {
       .toISOString().slice(0, 19).replace('T', ' ');
 
   const roomId = Math.random().toString(36).slice(2, 10);
-  db.prepare('INSERT INTO access_codes (code, owner_name, expires_at, room_id) VALUES (?, ?, ?, ?)').run(code, ownerName, expiresAt, roomId);
+  db.prepare('INSERT INTO access_codes (code, owner_name, email, tiktok_username, expires_at, room_id) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(code, ownerName, email || null, tiktokUsername, expiresAt, roomId);
   res.redirect(`/admin?message=${encodeURIComponent('Issued new access code')}&createdCode=${encodeURIComponent(code)}`);
+});
+
+router.post('/update-code-profile', requireAdminAuth, (req, res) => {
+  const code = String(req.body.code || '').trim().toUpperCase();
+  const row = db.prepare('SELECT * FROM access_codes WHERE code = ?').get(code);
+  if (!row) return res.redirect(`/admin?error=${encodeURIComponent('Code not found')}`);
+
+  const ownerName = String(req.body.ownerName || '').replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140) || null;
+  const email = normalizeAdminEmail(req.body.email || '');
+  if (email === null) return res.redirect(`/admin?error=${encodeURIComponent('Enter a valid email address')}`);
+  const tiktokUsername = normalizeTikTokUsername(req.body.tiktokUsername || '') || null;
+  db.prepare(`
+    UPDATE access_codes
+    SET owner_name = ?,
+        email = ?,
+        streamer_name = COALESCE(NULLIF(streamer_name, ''), ?),
+        tiktok_username = ?
+    WHERE id = ?
+  `).run(ownerName, email || null, ownerName, tiktokUsername, row.id);
+  res.redirect(`/admin?message=${encodeURIComponent(`Updated profile for ${code}`)}`);
 });
 
 router.post('/extend-code', requireAdminAuth, (req, res) => {
