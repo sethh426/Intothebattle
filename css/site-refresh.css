@@ -1,0 +1,260 @@
+/*
+  IntoTheBattle public-site refresh.
+  Loaded after page-local styles so the public marketing surface has one visual system.
+*/
+
+:root {
+  --itb-void: #03040a;
+  --itb-ink: #070917;
+  --itb-panel: rgba(12, 16, 31, .82);
+  --itb-panel-strong: rgba(9, 12, 25, .94);
+  --itb-cream: #fff8e6;
+  --itb-muted: #c0c9da;
+  --itb-dim: #7d879a;
+  --itb-gold: #ffd666;
+  --itb-amber: #ff9f3d;
+  --itb-pink: #ff2d88;
+  --itb-cyan: #00e5ff;
+  --itb-green: #70ffb8;
+  --itb-violet: #8b5cf6;
+  --itb-line: rgba(255, 255, 255, .13);
+  --itb-gold-line: rgba(255, 214, 102, .34);
+  --itb-shadow: 0 34px 100px rgba(0, 0, 0, .55);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  color: var(--itb-cream);
+  background:
+    linear-gradient(115deg, rgba(255, 45, 136, .20), transparent 28%),
+    linear-gradient(245deg, rgba(0, 229, 255, .18), transparent 34%),
+    radial-gradient(circle at 50% 96%, rgba(255, 214, 102, .18), transparent 34%),
+    linear-gradient(180deg, #050711 0%, #111733 46%, #05070d 100%) !important;
+}
+
+body::before {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .04) 1px, transparent 1px) !important;
+  background-size: 42px 42px !important;
+  opacity: .8;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    linear-gradient(90deg, rgba(255, 45, 136, .13), transparent 18%, transparent 82%, rgba(0, 229, 255, .12)),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .025) 0 1px, transparent 1px 6px);
+  opacity: .52;
+}
+
+::selection {
+  color: #03040a;
+  background: var(--itb-cyan);
+}
+
+.nav-wrap nav,
+nav.main-nav,
+nav {
+  border-color: rgba(255, 214, 102, .38) !important;
+  border-radius: 18px !important;
+  background: linear-gradient(135deg, rgba(12, 16, 31, .9), rgba(5, 7, 14, .8)) !important;
+  box-shadow: 0 22px 80px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .1) !important;
+}
+
+.brand img,
+.brand-mark,
+.brand-logo,
+.logo {
+  border-radius: 14px !important;
+  border-color: rgba(255, 214, 102, .55) !important;
+  background: linear-gradient(145deg, rgba(255, 214, 102, .16), rgba(0, 229, 255, .08)) !important;
+  box-shadow: 0 0 38px rgba(0, 229, 255, .14), 0 0 34px rgba(255, 214, 102, .16) !important;
+}
+
+.nav-links a,
+.nav-link {
+  color: #d6deed !important;
+  transition: transform .16s ease, color .16s ease, background .16s ease, border-color .16s ease;
+}
+
+.nav-links a:hover,
+.nav-link:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, .075) !important;
+  transform: translateY(-1px);
+}
+
+.nav-links .cta,
+.nav-cta,
+.btn.primary,
+.primary,
+.btn-primary,
+button.primary {
+  color: #071018 !important;
+  border: 0 !important;
+  background: linear-gradient(135deg, var(--itb-cyan), #f2fbff 42%, var(--itb-gold) 72%, var(--itb-pink)) !important;
+  box-shadow: 0 18px 44px rgba(0, 229, 255, .18), 0 12px 38px rgba(255, 45, 136, .15) !important;
+}
+
+.btn.secondary,
+.secondary,
+.btn-secondary {
+  color: #fff8e6 !important;
+  border: 1px solid rgba(255, 255, 255, .16) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .035)) !important;
+}
+
+.btn,
+.nav-links .cta,
+.nav-cta,
+.hero-links a,
+.actions a,
+button {
+  border-radius: 12px !important;
+}
+
+.btn:hover,
+.actions a:hover,
+.hero-links a:hover,
+button:hover {
+  filter: saturate(1.08) brightness(1.05);
+}
+
+.kicker,
+.eyebrow,
+.price-label {
+  color: #b9fbff !important;
+  border-color: rgba(0, 229, 255, .42) !important;
+  background: rgba(0, 229, 255, .09) !important;
+}
+
+h1,
+.hero h1 {
+  color: var(--itb-cream);
+  letter-spacing: 0 !important;
+  text-shadow: 0 10px 46px rgba(0, 0, 0, .55);
+}
+
+h1 span,
+.hero h1 span {
+  background: linear-gradient(110deg, #fff8e6 0%, var(--itb-cyan) 35%, var(--itb-gold) 68%, var(--itb-pink) 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+.lede,
+.sub,
+.hero p,
+.section > p,
+.card p,
+.format p,
+.feature,
+.period,
+.footer,
+footer {
+  color: var(--itb-muted) !important;
+}
+
+.hero,
+.hero-card,
+.card,
+.signal,
+.format,
+.feature,
+.form-card,
+.pricing-card,
+.demo-shell,
+.battle-clip-frame,
+.command-card,
+.map-card,
+.page-card {
+  border-color: var(--itb-line) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .078), rgba(255, 255, 255, .028)) !important;
+  box-shadow: var(--itb-shadow), inset 0 1px 0 rgba(255, 255, 255, .08) !important;
+}
+
+.demo-shell,
+.battle-clip-frame,
+iframe {
+  border-color: rgba(0, 229, 255, .28) !important;
+}
+
+.proof-list span,
+.proof,
+.stat,
+.signal,
+.card b,
+.format h3 {
+  color: #fff8e6 !important;
+}
+
+.proof-list span,
+.proof {
+  background: rgba(0, 229, 255, .08) !important;
+  border-color: rgba(0, 229, 255, .22) !important;
+}
+
+.grid .card:nth-child(2n),
+.formats .format:nth-child(2n) {
+  border-color: rgba(255, 45, 136, .22) !important;
+}
+
+.grid .card:nth-child(3n),
+.formats .format:nth-child(3n) {
+  border-color: rgba(112, 255, 184, .22) !important;
+}
+
+input,
+select,
+textarea {
+  color: #fff8e6 !important;
+  border-color: rgba(255, 255, 255, .14) !important;
+  background: rgba(2, 4, 10, .62) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: rgba(0, 229, 255, .65) !important;
+  box-shadow: 0 0 0 4px rgba(0, 229, 255, .11) !important;
+}
+
+.cta-band {
+  border-color: rgba(255, 214, 102, .26) !important;
+  background: linear-gradient(90deg, rgba(255, 45, 136, .12), rgba(0, 229, 255, .10), rgba(255, 214, 102, .10)) !important;
+}
+
+@media (max-width: 860px) {
+  .nav-wrap {
+    padding-top: 12px !important;
+  }
+
+  nav,
+  nav.main-nav {
+    border-radius: 16px !important;
+  }
+
+  h1,
+  .hero h1 {
+    font-size: clamp(42px, 13vw, 72px) !important;
+  }
+
+  .section-head {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 14px !important;
+  }
+
+  .section-head p {
+    max-width: 100% !important;
+  }
+}

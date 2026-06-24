@@ -4602,6 +4602,8 @@ app.use((req, res, next) => {
 const publicAssetFiles = new Map([
   ['/logo.svg', 'logo.svg'],
   ['/intothebattlelogo_logo_only.svg', 'intothebattlelogo_logo_only.svg'],
+  ['/og-intothebattle.png', 'og-intothebattle.png'],
+  ['/brand-identity-square.png', 'brand-identity-square.png'],
   ['/robots.txt', 'robots.txt'],
   ['/sitemap.xml', 'sitemap.xml'],
 ]);
@@ -4612,6 +4614,14 @@ app.get([...publicAssetFiles.keys()], (req, res) => {
 });
 
 app.use('/js', express.static(path.join(__dirname, 'js'), {
+  dotfiles: 'deny',
+  etag: true,
+  fallthrough: false,
+  index: false,
+  maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
+}));
+
+app.use('/css', express.static(path.join(__dirname, 'css'), {
   dotfiles: 'deny',
   etag: true,
   fallthrough: false,

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IntoTheBattle | TikTok LIVE Battle Overlay</title>
-  <meta name="description" content="Turn your TikTok LIVE chat into a playable battle arena with a stream-ready overlay, dashboard controls, and viewer-powered combat moments." />
+  <title>IntoTheBattle | Turn TikTok LIVE Chat Into a Battle Arena</title>
+  <meta name="description" content="IntoTheBattle turns TikTok LIVE comments, likes, gifts, follows, shares, and chat commands into a playable stream overlay viewers can see instantly." />
   <meta name="robots" content="index, follow" />
   <meta name="msvalidate.01" content="D93A25FD52146A9F37A13489C571A918" />
   <link rel="canonical" href="https://intothebattle.com/" />
@@ -14,11 +14,18 @@
   <meta property="og:description" content="Turn your TikTok LIVE chat into a playable battle arena with a stream-ready overlay, dashboard controls, and viewer-powered combat moments." />
   <meta property="og:url" content="https://intothebattle.com/" />
   <meta property="og:image" content="https://intothebattle.com/og-intothebattle.png" />
+  <meta property="og:image:secure_url" content="https://intothebattle.com/og-intothebattle.png" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="IntoTheBattle TikTok LIVE battle overlay preview showing chat becoming combat." />
   <meta property="og:site_name" content="IntoTheBattle" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="IntoTheBattle | TikTok LIVE Battle Overlay" />
   <meta name="twitter:description" content="Turn your TikTok LIVE chat into a playable battle arena with a stream-ready overlay and viewer-powered combat moments." />
   <meta name="twitter:image" content="https://intothebattle.com/og-intothebattle.png" />
+  <meta name="twitter:image:alt" content="IntoTheBattle TikTok LIVE battle overlay preview showing chat becoming combat." />
+  <link rel="image_src" href="https://intothebattle.com/og-intothebattle.png" />
   <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
   <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
   <script type="module" src="/js/clarity-loader.js"></script>
@@ -32,9 +39,20 @@
         "@id": "https://intothebattle.com/#organization",
         "name": "IntoTheBattle",
         "url": "https://intothebattle.com/",
-        "logo": "https://intothebattle.com/intothebattlelogo_logo_only.svg",
-        "image": "https://intothebattle.com/og-intothebattle.png",
-        "description": "IntoTheBattle turns TikTok LIVE chat into a playable battle arena for creators."
+        "logo": {
+          "@type": "ImageObject",
+          "@id": "https://intothebattle.com/#logo",
+          "url": "https://intothebattle.com/brand-identity-square.png",
+          "contentUrl": "https://intothebattle.com/brand-identity-square.png",
+          "width": 1200,
+          "height": 1200
+        },
+        "image": [
+          "https://intothebattle.com/brand-identity-square.png",
+          "https://intothebattle.com/og-intothebattle.png"
+        ],
+        "description": "IntoTheBattle turns TikTok LIVE chat into a playable battle arena for creators.",
+        "email": "support@intothebattle.com"
       },
       {
         "@type": "WebSite",
@@ -68,12 +86,18 @@
         "@id": "https://intothebattle.com/#webpage",
         "url": "https://intothebattle.com/",
         "name": "IntoTheBattle | TikTok LIVE Battle Overlay",
-        "description": "Turn your TikTok LIVE chat into a playable battle arena with a stream-ready overlay, dashboard controls, and viewer-powered combat moments.",
+        "description": "IntoTheBattle turns TikTok LIVE comments, likes, gifts, follows, shares, and chat commands into a playable stream overlay viewers can see instantly.",
         "isPartOf": {
           "@id": "https://intothebattle.com/#website"
         },
         "about": {
           "@id": "https://intothebattle.com/#software"
+        },
+        "primaryImageOfPage": {
+          "@type": "ImageObject",
+          "url": "https://intothebattle.com/og-intothebattle.png",
+          "width": 1200,
+          "height": 630
         }
       }
     ]
@@ -513,6 +537,7 @@
       .comment-card blockquote { font-size: 16px; }
     }
   </style>
+  <link rel="stylesheet" href="/css/site-refresh.css" />
 </head>
 <body>
   <div class="nav-wrap">
@@ -534,16 +559,16 @@
   <main>
     <section class="hero" aria-labelledby="hero-title">
       <div>
-        <div class="eyebrow">Launch in under 5 minutes</div>
-        <h1 id="hero-title">Turn your TikTok LIVE chat into <span>a playable battle arena.</span></h1>
-        <p class="lede">Create your room, copy the OBS URL, run a test attack, and launch your first battle overlay before your next LIVE starts.</p>
+        <div class="eyebrow">Your chat becomes the game</div>
+        <h1 id="hero-title">Make chat <span>the battle.</span></h1>
+        <p class="lede">IntoTheBattle turns comments, likes, gifts, follows, shares, and chat commands into a playable arena viewers can see on stream.</p>
         <div class="actions">
-          <a class="btn primary" href="/signup">Create free account -></a>
+          <a class="btn primary" href="/signup">Launch your free arena -></a>
           <a class="btn secondary" href="/how-to-play">See player commands</a>
         </div>
         <div class="proof-list" aria-label="Included features">
-          <span>OBS browser source ready</span>
-          <span>Dashboard controls</span>
+          <span>Setup in under 5 minutes</span>
+          <span>OBS and TikTok Studio ready</span>
           <span>7-day everything unlocked</span>
         </div>
       </div>
@@ -551,29 +576,29 @@
       <aside class="demo-shell" aria-label="Live overlay demo preview">
         <div class="demo-head">
           <div><strong>Watch chat become combat</strong><span>Commands, effects, stats, video</span></div>
-          <div class="demo-status">18 sec</div>
+          <div class="demo-status">Demo</div>
         </div>
         <div class="frame-wrap">
-          <iframe src="/battle-clip" title="IntoTheBattle 18-second battle clip" loading="eager"></iframe>
+          <iframe src="/battle-clip" title="IntoTheBattle battle clip" loading="eager"></iframe>
         </div>
       </aside>
     </section>
 
     <div class="quick-panel" aria-label="Quick value summary">
-      <article class="quick-item"><b>Launch fast</b><p>Create the room, add your TikTok username, copy the overlay URL, and test the first event.</p></article>
-      <article class="quick-item"><b>Add the overlay</b><p>Use the signed overlay URL in OBS or capture it into TikTok Studio.</p></article>
-      <article class="quick-item"><b>Let viewers play</b><p>Chat, likes, gifts, follows, and commands like !emoji, !shield, !fire, and !laser become visible action.</p></article>
+      <article class="quick-item"><b>Hook the room</b><p>Viewers do not just watch. They join, attack, heal, and push the battle forward from chat.</p></article>
+      <article class="quick-item"><b>Launch clean</b><p>Copy one signed browser-source URL, test it, then connect TikTok when the arena is ready.</p></article>
+      <article class="quick-item"><b>Keep attention</b><p>Boss waves, live stats, sounds, effects, and broadcast-style video moments make the stream feel produced.</p></article>
     </div>
 
     <section id="how" class="section" aria-labelledby="how-title">
       <div class="section-head">
-        <h2 id="how-title">A simpler live setup.</h2>
-        <p>Keep the stream focused on the show. IntoTheBattle handles the room state, overlay URL, test controls, and visual moments from the dashboard.</p>
+        <h2 id="how-title">From empty chat to active arena.</h2>
+        <p>The setup path is designed to reduce hesitation: create the room, prove the overlay works, then bring viewers into a game they understand instantly.</p>
       </div>
       <div class="steps">
-        <article class="step"><span class="step-num">1</span><h3>Create your room</h3><p>Sign up, claim your creator room, and open the dashboard when you are ready to go live.</p></article>
-        <article class="step"><span class="step-num">2</span><h3>Add your source</h3><p>Copy the overlay URL into OBS or TikTok Studio and keep it open while your LIVE runs.</p></article>
-        <article class="step"><span class="step-num">3</span><h3>Test the moment</h3><p>Preview attacks, audio, backgrounds, and video breaks before viewers arrive.</p></article>
+        <article class="step"><span class="step-num">1</span><h3>Create your arena</h3><p>Sign up, claim your creator room, and start the setup demo before your real LIVE connects.</p></article>
+        <article class="step"><span class="step-num">2</span><h3>Copy the source</h3><p>Paste the signed overlay URL into OBS or TikTok Studio and keep the browser source stable.</p></article>
+        <article class="step"><span class="step-num">3</span><h3>Prove the action</h3><p>Run test attacks, sounds, boss waves, and video moments so the first viewer sees a finished show.</p></article>
       </div>
     </section>
 
@@ -606,8 +631,8 @@
 
     <section class="cta-band" aria-label="Create account">
       <div>
-        <h2>Build the arena before your next LIVE.</h2>
-        <p>Start free, test the overlay, and upgrade only when you want creator-controlled video moments and advanced presentation controls.</p>
+        <h2>Launch the arena before your next LIVE.</h2>
+        <p>Start free, test the overlay, and keep everything unlocked for 7 days. Upgrade only when you want creator-controlled video moments and advanced presentation controls.</p>
       </div>
       <a class="btn primary" href="/signup">Start setup -></a>
     </section>

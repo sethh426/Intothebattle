@@ -90,7 +90,7 @@ try {
   for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/how-to-play', '/site-map', '/overlay-preview', '/overlay-v2-preview', '/overlay-phaser.html']) {
     await expectStatus(pathname, 200);
   }
-  for (const pathname of ['/intothebattlelogo_logo_only.svg', '/logo.svg', '/robots.txt', '/sitemap.xml', '/js/overlay-scene.js', '/js/overlay-v2.js', '/vendor/phaser/phaser.min.js']) {
+  for (const pathname of ['/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/overlay-scene.js', '/js/overlay-v2.js', '/vendor/phaser/phaser.min.js']) {
     await expectStatus(pathname, 200);
   }
 

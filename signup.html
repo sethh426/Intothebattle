@@ -15,12 +15,18 @@
   <meta property="og:description" content="Turn your TikTok LIVE chat into a playable battle arena and launch your first overlay in under 5 minutes." />
   <meta property="og:url" content="https://intothebattle.com/signup" />
   <meta property="og:image" content="https://intothebattle.com/og-intothebattle.png" />
+  <meta property="og:image:secure_url" content="https://intothebattle.com/og-intothebattle.png" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="IntoTheBattle TikTok LIVE battle overlay preview." />
   <meta property="og:site_name" content="IntoTheBattle" />
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Create Your Free IntoTheBattle Account" />
   <meta name="twitter:description" content="Launch your first TikTok LIVE battle overlay in under 5 minutes." />
   <meta name="twitter:image" content="https://intothebattle.com/og-intothebattle.png" />
+  <meta name="twitter:image:alt" content="IntoTheBattle TikTok LIVE battle overlay preview." />
 
   <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
   <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
@@ -45,6 +51,12 @@
         },
         "about": {
           "@id": "https://intothebattle.com/#software"
+        },
+        "primaryImageOfPage": {
+          "@type": "ImageObject",
+          "url": "https://intothebattle.com/og-intothebattle.png",
+          "width": 1200,
+          "height": 630
         }
       },
       {
@@ -793,6 +805,7 @@
       .preview-frame { border-radius: 18px; }
     }
   </style>
+  <link rel="stylesheet" href="/css/site-refresh.css" />
 </head>
 <body>
   <div class="orb orb-a" aria-hidden="true"></div>
@@ -906,9 +919,9 @@
     <section class="signup-preview-panel" aria-label="Live battle demo preview">
       <div class="battle-preview">
         <div class="battle-preview-inner">
-          <div class="preview-top"><span>18-second battle clip</span><span>Comment to KO</span></div>
+          <div class="preview-top"><span>Battle clip</span><span>Comment to KO</span></div>
           <div class="preview-frame">
-            <iframe src="/battle-clip" title="IntoTheBattle 18-second battle clip" loading="eager"></iframe>
+            <iframe data-src="/battle-clip" src="about:blank" title="IntoTheBattle battle clip" loading="lazy"></iframe>
           </div>
         </div>
       </div>
@@ -974,6 +987,18 @@
     if (previewFrame) {
       previewFrame.addEventListener('pointerenter', trackPreviewInterest, { once: true });
       previewFrame.addEventListener('focusin', trackPreviewInterest, { once: true });
+    }
+
+    function hydrateBattleClip() {
+      const frame = document.querySelector('.preview-frame iframe[data-src]');
+      if (!frame || frame.src !== 'about:blank') return;
+      frame.src = frame.dataset.src;
+    }
+
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(hydrateBattleClip, { timeout: 1200 });
+    } else {
+      window.addEventListener('load', () => setTimeout(hydrateBattleClip, 250), { once: true });
     }
 
     trackSignupEvent('signup_page_view');
