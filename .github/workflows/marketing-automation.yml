@@ -1,0 +1,66 @@
+name: Marketing Automation
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 14 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "marketing-automation"
+  cancel-in-progress: false
+
+jobs:
+  daily-outbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      NODE_ENV: production
+      DATABASE_URL: ${{ secrets.MARKETING_DATABASE_URL }}
+      APP_BASE_URL: ${{ vars.APP_BASE_URL }}
+      MARKETING_PLATFORMS: ${{ vars.MARKETING_PLATFORMS }}
+      MARKETING_AUTOMATION_ENABLED: ${{ vars.MARKETING_AUTOMATION_ENABLED }}
+      MARKETING_DRY_RUN: ${{ vars.MARKETING_DRY_RUN }}
+      MARKETING_OUTBOUND_WEBHOOK_URL: ${{ secrets.MARKETING_OUTBOUND_WEBHOOK_URL }}
+      MARKETING_WEBHOOK_X: ${{ secrets.MARKETING_WEBHOOK_X }}
+      MARKETING_WEBHOOK_LINKEDIN: ${{ secrets.MARKETING_WEBHOOK_LINKEDIN }}
+      MARKETING_WEBHOOK_FACEBOOK: ${{ secrets.MARKETING_WEBHOOK_FACEBOOK }}
+      MARKETING_WEBHOOK_INSTAGRAM: ${{ secrets.MARKETING_WEBHOOK_INSTAGRAM }}
+      MARKETING_WEBHOOK_TIKTOK: ${{ secrets.MARKETING_WEBHOOK_TIKTOK }}
+      MARKETING_WEBHOOK_YOUTUBE_SHORTS: ${{ secrets.MARKETING_WEBHOOK_YOUTUBE_SHORTS }}
+
+    steps:
+      - name: Skip when marketing database secret is absent
+        if: env.DATABASE_URL == ''
+        run: echo "MARKETING_DATABASE_URL is not configured; skipping daily marketing outbox."
+
+      - name: Checkout
+        if: env.DATABASE_URL != ''
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        if: env.DATABASE_URL != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        if: env.DATABASE_URL != ''
+        run: npm ci
+
+      - name: Generate daily drafts
+        if: env.DATABASE_URL != ''
+        run: npm run marketing:generate
+
+      - name: Publish approved due posts
+        if: env.DATABASE_URL != ''
+        run: |
+          if [ "$MARKETING_AUTOMATION_ENABLED" = "true" ] && [ "$MARKETING_DRY_RUN" = "false" ]; then
+            npm run marketing:publish
+          else
+            npm run marketing:publish:dry-run
+          fi

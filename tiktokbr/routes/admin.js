@@ -17,6 +17,14 @@ import {
   isFullAccessTrialSubscription,
   isPaidAccessCode,
 } from '../services/entitlements.js';
+import {
+  ensureMarketingPostsForDate,
+  listMarketingPublishEvents,
+  listMarketingPosts,
+  marketingAutomationDiagnostics,
+  publishApprovedMarketingPosts,
+  updateMarketingPostStatus,
+} from '../services/marketingAutomation.js';
 import { getAllRooms } from '../../roomManager.js';
 
 const router = express.Router();
@@ -568,7 +576,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
         <div><h1>Admin Panel</h1><p>Access, promos, and room controls</p></div>
       </div>
-      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/logout">Logout</a></div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/logout">Logout</a></div>
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${createdCode ? `<div class="notice success">New access code created: <strong>${escapeHtml(createdCode)}</strong> <button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(createdCode)}')">Copy</button></div>` : ''}
@@ -1234,7 +1242,7 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
         <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
         <div><h1>Video Platform</h1><p>Company-controlled creative inventory</p></div>
       </div>
-      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/logout">Logout</a></div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/logout">Logout</a></div>
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
@@ -1396,6 +1404,172 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
       video.src = objectUrl;
     });
   </script>
+</body>
+</html>`;
+}
+
+function renderMarketingAdminPage({ message = '', error = '', posts = [], events = [], diagnostics = marketingAutomationDiagnostics() } = {}) {
+  const nowDate = new Date().toISOString().slice(0, 10);
+  const statusCounts = posts.reduce((acc, post) => {
+    const status = String(post.status || 'draft');
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+  const configuredWebhooks = diagnostics.configuredWebhooks || [];
+  const eventRows = events.map(event => `<tr>
+    <td><strong>${escapeHtml(event.event_type || '')}</strong><br /><small>${escapeHtml(formatSponsorDate(event.created_at))}</small></td>
+    <td>${escapeHtml(String(event.platform || '').toUpperCase())}</td>
+    <td>${escapeHtml(event.topic_key || '')}</td>
+    <td><small>${escapeHtml(event.detail || '')}</small></td>
+  </tr>`).join('');
+  const rows = posts.map((post) => {
+    const status = String(post.status || 'draft').toLowerCase();
+    const approveDisabled = status === 'approved' ? 'disabled' : '';
+    const draftDisabled = status === 'draft' ? 'disabled' : '';
+    const skipDisabled = status === 'skipped' ? 'disabled' : '';
+    return `<tr>
+      <td>
+        <strong>${escapeHtml(String(post.platform || '').toUpperCase())}</strong><br />
+        <small>${escapeHtml(post.campaign_date || '')} - ${escapeHtml(post.topic_key || '')}</small>
+      </td>
+      <td>
+        <span class="status-pill ${escapeAttr(status)}">${escapeHtml(status)}</span><br />
+        <small>Scheduled: ${escapeHtml(formatSponsorDate(post.scheduled_for))}</small>
+        ${post.error_message ? `<div class="warning-note failed">${escapeHtml(post.error_message)}</div>` : ''}
+      </td>
+      <td>
+        <div class="post-copy">${escapeHtml(post.body || '')}</div>
+        <small>${escapeHtml(post.seo_keywords || '')}</small><br />
+        <a href="${escapeAttr(post.utm_url || post.url || '#')}" target="_blank" rel="noopener">${escapeHtml(post.utm_url || post.url || '')}</a>
+      </td>
+      <td>
+        <form method="POST" action="/admin/marketing/${escapeAttr(post.id)}/status">
+          <input type="hidden" name="status" value="approved" />
+          <button type="submit" class="test" ${approveDisabled}>Approve</button>
+        </form>
+        <form method="POST" action="/admin/marketing/${escapeAttr(post.id)}/status">
+          <input type="hidden" name="status" value="draft" />
+          <button type="submit" class="secondary" ${draftDisabled}>Back to Draft</button>
+        </form>
+        <form method="POST" action="/admin/marketing/${escapeAttr(post.id)}/status">
+          <input type="hidden" name="status" value="skipped" />
+          <button type="submit" class="danger" ${skipDisabled}>Skip</button>
+        </form>
+      </td>
+    </tr>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Company Growth - Admin</title>
+  <style>
+    * { box-sizing:border-box; }
+    body { min-height:100vh; font-family: Inter, Arial, sans-serif; background:radial-gradient(circle at 16% 0,rgba(246,201,91,.18),transparent 30%),radial-gradient(circle at 88% 12%,rgba(232,59,95,.14),transparent 28%),linear-gradient(180deg,#050608,#030406); color:#fff8e6; margin:0; padding:24px; }
+    body::before { content:""; position:fixed; inset:0; pointer-events:none; background-image:linear-gradient(rgba(246,201,91,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(246,201,91,.035) 1px,transparent 1px); background-size:58px 58px; mask-image:radial-gradient(circle at top,black,transparent 72%); z-index:-1; }
+    .wrapper { max-width:1240px; margin:0 auto; display:grid; gap:18px; }
+    .admin-hero { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:18px; border:1px solid rgba(246,201,91,.24); border-radius:26px; background:rgba(5,7,11,.78); box-shadow:0 28px 80px rgba(0,0,0,.38); }
+    .admin-brand { display:flex; align-items:center; gap:14px; min-width:0; }
+    .admin-brand img { width:58px; height:58px; border-radius:18px; border:1px solid rgba(246,201,91,.34); background:rgba(246,201,91,.08); object-fit:cover; }
+    h1 { margin:0; font-size:clamp(28px,4vw,48px); line-height:1; text-transform:uppercase; }
+    h2 { margin:0 0 12px; font-size:22px; }
+    p { color:#a8afbf; line-height:1.55; }
+    .admin-brand p { margin:6px 0 0; color:#a8afbf; font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+    .admin-nav { display:flex; gap:10px; flex-wrap:wrap; }
+    .admin-nav a { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:999px; border:1px solid rgba(255,255,255,.1); color:#fff8e6; background:rgba(255,255,255,.055); }
+    a { color:#ffdf8a; text-decoration:none; font-weight:800; word-break:break-word; }
+    .notice { padding:14px 16px; border-radius:16px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,0.06); }
+    .error { color:#ffb6b6; }
+    .success { color:#c6ffc3; }
+    .card { background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.24); }
+    .metrics-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .metric-card { min-width:0; padding:16px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.2); }
+    .metric-card span { display:block; color:#a8afbf; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+    .metric-card strong { display:block; margin-top:6px; color:#fff8e6; font-size:clamp(26px,4vw,42px); line-height:1; }
+    .inline-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:end; }
+    label { display:block; margin:10px 0 6px; color:#a8afbf; font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+    input { width:100%; min-height:46px; padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,0.12); background:#111827; color:#fff8e6; }
+    input[type="checkbox"] { width:auto; min-height:0; margin-right:8px; }
+    button { margin-top:12px; width:100%; min-height:44px; padding:0 14px; border:none; border-radius:14px; background:linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color:#170c02; cursor:pointer; font-weight:900; }
+    button:disabled { opacity:.45; cursor:not-allowed; }
+    button.test { color:#041014; background:linear-gradient(135deg,#55e7ff,#b9fbff); }
+    button.secondary { color:#fff8e6; background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12); }
+    button.danger { color:#fff; background:#d9435f; }
+    .status-pill { display:inline-flex; align-items:center; min-height:30px; padding:5px 10px; border-radius:999px; font-size:11px; font-weight:900; text-transform:uppercase; border:1px solid rgba(255,255,255,.12); }
+    .status-pill.draft { color:#ffdf8a; border-color:rgba(246,201,91,.34); background:rgba(246,201,91,.08); }
+    .status-pill.approved { color:#9fefff; border-color:rgba(85,231,255,.32); background:rgba(85,231,255,.08); }
+    .status-pill.published { color:#c6ffc3; border-color:rgba(119,240,161,.34); background:rgba(119,240,161,.08); }
+    .status-pill.failed, .status-pill.skipped { color:#ffb6b6; border-color:rgba(232,59,95,.36); background:rgba(232,59,95,.1); }
+    .warning-note { margin-top:10px; padding:9px 10px; border-radius:12px; color:#ffdf8a; background:rgba(246,201,91,.08); border:1px solid rgba(246,201,91,.18); font-size:12px; line-height:1.4; }
+    .warning-note.failed { color:#ffb6b6; background:rgba(232,59,95,.1); border-color:rgba(232,59,95,.32); }
+    table { width:100%; border-collapse:collapse; margin-top:12px; overflow:hidden; border-radius:16px; }
+    th, td { vertical-align:top; border-bottom:1px solid rgba(255,255,255,0.08); padding:12px; font-size:13px; }
+    th { background:rgba(246,201,91,0.09); color:#ffdf8a; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
+    small { color:#9fb2d7; }
+    .post-copy { max-width:620px; white-space:pre-wrap; color:#fff8e6; line-height:1.45; }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid,.inline-grid{grid-template-columns:1fr} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:0} }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <header class="admin-hero">
+      <div class="admin-brand">
+        <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
+        <div><h1>Company Growth</h1><p>Admin-only sales workflow</p></div>
+      </div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/logout">Logout</a></div>
+    </header>
+    ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
+    ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
+    <div class="metrics-grid">
+      <div class="metric-card"><span>Drafts</span><strong>${numberValue(statusCounts.draft)}</strong></div>
+      <div class="metric-card"><span>Approved</span><strong>${numberValue(statusCounts.approved)}</strong></div>
+      <div class="metric-card"><span>Published</span><strong>${numberValue(statusCounts.published)}</strong></div>
+      <div class="metric-card"><span>Failed</span><strong>${numberValue(statusCounts.failed)}</strong></div>
+    </div>
+    <div class="card">
+      <h2>Automation controls</h2>
+      <p>Generate SEO and UTM-tagged daily drafts from the public site pages for company-owned growth. This is not a streamer-facing feature and is only available inside the admin panel.</p>
+      <p>Publishing stays in dry-run mode unless <strong>MARKETING_AUTOMATION_ENABLED=true</strong>, <strong>MARKETING_DRY_RUN=false</strong>, and an authorized webhook is configured.</p>
+      <p>Platforms: ${escapeHtml((diagnostics.platforms || []).join(', '))}. Webhooks configured: ${escapeHtml(configuredWebhooks.length ? configuredWebhooks.join(', ') : 'none')}.</p>
+      <div class="inline-grid">
+        <form method="POST" action="/admin/marketing/generate">
+          <label>Date</label>
+          <input name="date" type="date" value="${escapeAttr(nowDate)}" />
+          <label><input name="force" type="checkbox" value="1" /> Rebuild existing drafts</label>
+          <button type="submit">Generate Daily Drafts</button>
+        </form>
+        <form method="POST" action="/admin/marketing/publish">
+          <input type="hidden" name="dryRun" value="1" />
+          <label>Dry-run approved posts</label>
+          <input name="limit" type="number" min="1" max="50" value="10" />
+          <button type="submit" class="secondary">Dry Run Publish</button>
+        </form>
+        <form method="POST" action="/admin/marketing/publish" onsubmit="return confirm('Publish approved due posts to configured outbound webhooks?')">
+          <input type="hidden" name="dryRun" value="0" />
+          <label>Live publish approved posts</label>
+          <input name="limit" type="number" min="1" max="50" value="10" />
+          <button type="submit" class="test">Publish Approved</button>
+        </form>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Daily content queue</h2>
+      <table>
+        <thead><tr><th>Platform</th><th>Status</th><th>Draft</th><th>Actions</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="4">No marketing posts generated yet.</td></tr>'}</tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>Recent publish events</h2>
+      <table>
+        <thead><tr><th>Event</th><th>Platform</th><th>Topic</th><th>Detail</th></tr></thead>
+        <tbody>${eventRows || '<tr><td colspan="4">No publish events recorded yet.</td></tr>'}</tbody>
+      </table>
+    </div>
+  </div>
 </body>
 </html>`;
 }
@@ -1613,6 +1787,62 @@ router.post('/sponsors/:id/delete', requireAdminAuth, (req, res) => {
     if (isSafePath(PLATFORM_SPONSOR_DIR, filepath) && fs.existsSync(filepath)) fs.unlinkSync(filepath);
   } catch (_) {}
   res.redirect('/admin/sponsors?message=Creative%20deleted');
+});
+
+router.get('/marketing', requireAdminAuth, (req, res) => {
+  try {
+    res.send(renderMarketingAdminPage({
+      message: String(req.query.message || ''),
+      error: String(req.query.error || ''),
+      posts: listMarketingPosts({ limit: 80 }),
+      events: listMarketingPublishEvents({ limit: 30 }),
+      diagnostics: marketingAutomationDiagnostics(),
+    }));
+  } catch (err) {
+    res.status(500).send(renderMarketingAdminPage({
+      error: err?.message || 'Marketing page failed to load',
+      posts: [],
+      events: [],
+      diagnostics: marketingAutomationDiagnostics(),
+    }));
+  }
+});
+
+router.post('/marketing/generate', requireAdminAuth, (req, res) => {
+  const dateValue = String(req.body.date || '').trim();
+  const date = dateValue || new Date();
+  const force = req.body.force === '1';
+  try {
+    const result = ensureMarketingPostsForDate({ date, force });
+    res.redirect(`/admin/marketing?message=${encodeURIComponent(`Generated ${result.count} marketing drafts for ${result.date}`)}`);
+  } catch (err) {
+    res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Marketing draft generation failed')}`);
+  }
+});
+
+router.post('/marketing/:id/status', requireAdminAuth, (req, res) => {
+  const id = Number(req.params.id);
+  const status = String(req.body.status || '').trim().toLowerCase();
+  try {
+    updateMarketingPostStatus(id, status);
+    res.redirect(`/admin/marketing?message=${encodeURIComponent(`Marketing post ${status}`)}`);
+  } catch (err) {
+    res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Marketing status update failed')}`);
+  }
+});
+
+router.post('/marketing/publish', requireAdminAuth, async (req, res) => {
+  const limit = Math.max(1, Math.min(50, Number(req.body.limit) || 10));
+  const dryRun = req.body.dryRun !== '0';
+  try {
+    const result = await publishApprovedMarketingPosts({ limit, dryRun });
+    const message = dryRun
+      ? `Dry run checked ${result.attempted} approved posts`
+      : `Published ${result.published}, failed ${result.failed}, skipped ${result.skipped}`;
+    res.redirect(`/admin/marketing?message=${encodeURIComponent(message)}`);
+  } catch (err) {
+    res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Marketing publish failed')}`);
+  }
 });
 
 router.get('/codes', requireAdminAuth, (req, res) => {

@@ -111,6 +111,38 @@ CREATE TABLE IF NOT EXISTS creator_comments (
   deleted_at TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS marketing_posts (
+  id SERIAL PRIMARY KEY,
+  campaign_date DATE NOT NULL,
+  platform TEXT NOT NULL,
+  topic_key TEXT NOT NULL,
+  audience TEXT,
+  goal TEXT DEFAULT 'sales',
+  hook TEXT,
+  body TEXT NOT NULL,
+  cta TEXT,
+  url TEXT,
+  utm_url TEXT,
+  hashtags TEXT,
+  seo_keywords TEXT,
+  scheduled_for TIMESTAMP,
+  status TEXT DEFAULT 'draft',
+  error_message TEXT,
+  published_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(campaign_date, platform, topic_key)
+);
+
+CREATE TABLE IF NOT EXISTS marketing_publish_events (
+  id SERIAL PRIMARY KEY,
+  marketing_post_id INTEGER,
+  platform TEXT,
+  event_type TEXT NOT NULL,
+  detail TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS platform_sponsor_creatives (
   id SERIAL PRIMARY KEY,
   filename TEXT UNIQUE NOT NULL,

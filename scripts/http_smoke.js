@@ -103,6 +103,9 @@ try {
   const profileHtml = await expectStatus('/profile.html', 302);
   assert((profileHtml.headers.get('location') || '').startsWith('/profile'), '/profile.html should redirect to /profile');
 
+  const adminMarketing = await expectStatus('/admin/marketing', 302);
+  assert((adminMarketing.headers.get('location') || '').startsWith('/admin/login'), '/admin/marketing should redirect to /admin/login');
+
   await expectStatus('/server.js', 404);
   await expectStatus('/package.json', 404);
   await expectStatus('/package-lock.json', 404);

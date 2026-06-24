@@ -421,6 +421,56 @@ async function initDb() {
     await safeExec('ALTER TABLE creator_comments ADD COLUMN deleted_at TIMESTAMP');
 
     await safeExec(`
+      CREATE TABLE IF NOT EXISTS marketing_posts (
+        id SERIAL PRIMARY KEY,
+        campaign_date DATE NOT NULL,
+        platform TEXT NOT NULL,
+        topic_key TEXT NOT NULL,
+        audience TEXT,
+        goal TEXT DEFAULT 'sales',
+        hook TEXT,
+        body TEXT NOT NULL,
+        cta TEXT,
+        url TEXT,
+        utm_url TEXT,
+        hashtags TEXT,
+        seo_keywords TEXT,
+        scheduled_for TIMESTAMP,
+        status TEXT DEFAULT 'draft',
+        error_message TEXT,
+        published_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(campaign_date, platform, topic_key)
+      )
+    `);
+    await safeExec('ALTER TABLE marketing_posts ADD COLUMN audience TEXT');
+    await safeExec("ALTER TABLE marketing_posts ADD COLUMN goal TEXT DEFAULT 'sales'");
+    await safeExec('ALTER TABLE marketing_posts ADD COLUMN hook TEXT');
+    await safeExec('ALTER TABLE marketing_posts ADD COLUMN cta TEXT');
+    await safeExec('ALTER TABLE marketing_posts ADD COLUMN url TEXT');
+    await safeExec('ALTER TABLE marketing_posts ADD COLUMN utm_url TEXT');
+    await safeExec('ALTER TABLE marketing_posts ADD COLUMN hashtags TEXT');
+    await safeExec('ALTER TABLE marketing_posts ADD COLUMN seo_keywords TEXT');
+    await safeExec('ALTER TABLE marketing_posts ADD COLUMN scheduled_for TIMESTAMP');
+    await safeExec("ALTER TABLE marketing_posts ADD COLUMN status TEXT DEFAULT 'draft'");
+    await safeExec('ALTER TABLE marketing_posts ADD COLUMN error_message TEXT');
+    await safeExec('ALTER TABLE marketing_posts ADD COLUMN published_at TIMESTAMP');
+    await safeExec('ALTER TABLE marketing_posts ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+    await safeExec('CREATE UNIQUE INDEX IF NOT EXISTS marketing_posts_daily_platform_topic ON marketing_posts(campaign_date, platform, topic_key)');
+
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS marketing_publish_events (
+        id SERIAL PRIMARY KEY,
+        marketing_post_id INTEGER,
+        platform TEXT,
+        event_type TEXT NOT NULL,
+        detail TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await safeExec(`
       CREATE TABLE IF NOT EXISTS sponsor_playback_events (
         id SERIAL PRIMARY KEY,
         break_id TEXT NOT NULL,

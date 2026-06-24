@@ -73,6 +73,9 @@ jobs:
       - name: Business logic smoke tests
         run: npm run test:logic
 
+      - name: Marketing automation smoke tests
+        run: npm run test:marketing
+
       - name: Launch readiness script sanity check
         run: npm run launch:check:local
 

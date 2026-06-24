@@ -150,6 +150,10 @@ TRUST_PROXY_HOPS=1
 CLARITY_PROJECT_ID=
 METRICS_TOKEN=replace_with_a_metrics_scrape_token
 DIAGNOSTICS_TOKEN=
+MARKETING_PLATFORMS=x,linkedin,facebook,instagram,tiktok,youtube_shorts
+MARKETING_AUTOMATION_ENABLED=false
+MARKETING_DRY_RUN=true
+MARKETING_OUTBOUND_WEBHOOK_URL=
 ```
 
 `CLARITY_PROJECT_ID` enables Microsoft Clarity only in production. Leave it blank to disable browser analytics.
@@ -175,6 +179,28 @@ SPONSOR_VIDEO_MIN_HEIGHT=720
 ```
 
 With those tools available, uploaded sponsor videos are normalized to MP4 H.264/AAC at 16:9 720p, probed for duration/codec/resolution, and given server-side thumbnails. In production, the media gate blocks empty files, oversized videos, videos longer than the configured max, very low-resolution uploads, and unsafe formats that cannot be normalized before OBS sees them. Non-ideal but playable files stay usable with dashboard/admin quality warnings and recommendations.
+
+### Company Growth Outbox
+
+The app includes an admin-only company growth workflow at `/admin/marketing`. It is for IntoTheBattle-owned sales channels and outreach, not streamer accounts or creator dashboard controls. It generates daily SEO and UTM-tagged post drafts from public site pages, then requires approval before anything can be published. Live publishing is intentionally disabled unless all of these are true:
+
+```text
+MARKETING_AUTOMATION_ENABLED=true
+MARKETING_DRY_RUN=false
+MARKETING_OUTBOUND_WEBHOOK_URL=<authorized Make/Zapier/n8n/webhook>
+```
+
+You can also use platform-specific webhooks such as `MARKETING_WEBHOOK_X`, `MARKETING_WEBHOOK_LINKEDIN`, `MARKETING_WEBHOOK_INSTAGRAM`, `MARKETING_WEBHOOK_TIKTOK`, and `MARKETING_WEBHOOK_YOUTUBE_SHORTS`.
+
+Useful commands:
+
+```bash
+npm run marketing:generate
+npm run marketing:publish:dry-run
+npm run marketing:publish
+```
+
+The scheduled GitHub workflow `.github/workflows/marketing-automation.yml` runs daily at 14:00 UTC. It skips safely unless the `MARKETING_DATABASE_URL` repository secret is configured. For live publishing, configure authorized outbound webhook secrets and set repository variables `MARKETING_AUTOMATION_ENABLED=true` and `MARKETING_DRY_RUN=false`.
 
 ### Run locally with Node
 
@@ -223,6 +249,11 @@ The schema includes:
 - `subscriptions`
 - `admin_sessions`
 - `room_settings`
+- `marketing_posts`
+- `marketing_publish_events`
+- `platform_sponsor_creatives`
+- `sponsor_playback_events`
+- `live_sessions`
 - `room_player_stats`
 - `global_player_stats`
 
@@ -273,6 +304,8 @@ Admin pages:
 ```text
 GET /admin/login
 GET /admin
+GET /admin/sponsors
+GET /admin/marketing
 ```
 
 Health/monitoring:
@@ -344,6 +377,10 @@ OVERLAY_TOKEN_SECRET=<long random overlay signing secret>
 ENABLE_ROOM_SCOPED=true
 METRICS_TOKEN=<long random metrics scrape token>
 DIAGNOSTICS_TOKEN=<optional separate diagnostics token>
+MARKETING_PLATFORMS=x,linkedin,facebook,instagram,tiktok,youtube_shorts
+MARKETING_AUTOMATION_ENABLED=false
+MARKETING_DRY_RUN=true
+MARKETING_OUTBOUND_WEBHOOK_URL=<optional authorized outbound webhook>
 ```
 
 `ENABLE_ROOM_SCOPED` defaults to `true` in production when unset. Set it explicitly if your host makes env behavior easier to audit.
