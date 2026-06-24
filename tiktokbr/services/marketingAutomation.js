@@ -119,6 +119,79 @@ export function countDueApprovedMarketingPosts() {
   }
 }
 
+export function recordMarketingVisit(input = {}) {
+  const utmSource = cleanText(input.utmSource || input.utm_source || '', 80).toLowerCase();
+  const utmMedium = cleanText(input.utmMedium || input.utm_medium || '', 80).toLowerCase();
+  const utmCampaign = cleanText(input.utmCampaign || input.utm_campaign || '', 160);
+  const utmContent = cleanText(input.utmContent || input.utm_content || '', 160);
+  if (!utmSource && !utmMedium && !utmCampaign && !utmContent) return { recorded: false, reason: 'missing_utm' };
+
+  const pathValue = cleanText(input.path || '/', 260) || '/';
+  const referrer = cleanText(input.referrer || '', 500);
+  const userAgent = cleanText(input.userAgent || '', 260);
+  try {
+    db.prepare(`
+      INSERT INTO growth_utm_events (
+        utm_source, utm_medium, utm_campaign, utm_content,
+        path, referrer, user_agent, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `).run(utmSource, utmMedium, utmCampaign, utmContent, pathValue, referrer, userAgent);
+    return { recorded: true };
+  } catch (_err) {
+    return { recorded: false, reason: 'db_error' };
+  }
+}
+
+export function marketingPerformanceSummary({ days = 14 } = {}) {
+  const safeDays = Math.max(1, Math.min(90, Number(days) || 14));
+  try {
+    const totals = db.prepare(`
+      SELECT COUNT(*) AS visits, MAX(created_at) AS last_visit
+      FROM growth_utm_events
+      WHERE created_at >= CURRENT_TIMESTAMP - (? * INTERVAL '1 day')
+    `).get(safeDays) || {};
+    const grouped = (field, limit = 6) => db.prepare(`
+      SELECT COALESCE(NULLIF(${field}, ''), 'unknown') AS key, COUNT(*) AS visits, MAX(created_at) AS last_visit
+      FROM growth_utm_events
+      WHERE created_at >= CURRENT_TIMESTAMP - (? * INTERVAL '1 day')
+      GROUP BY COALESCE(NULLIF(${field}, ''), 'unknown')
+      ORDER BY visits DESC, last_visit DESC
+      LIMIT ?
+    `).all(safeDays, Math.max(1, Math.min(12, Number(limit) || 6)));
+    return {
+      days: safeDays,
+      visits: Number(totals.visits || 0),
+      lastVisit: totals.last_visit || null,
+      topSources: grouped('utm_source'),
+      topCampaigns: grouped('utm_campaign'),
+      topContent: grouped('utm_content'),
+    };
+  } catch (_err) {
+    return {
+      days: safeDays,
+      visits: 0,
+      lastVisit: null,
+      topSources: [],
+      topCampaigns: [],
+      topContent: [],
+    };
+  }
+}
+
+export function listRecentMarketingVisits({ limit = 30 } = {}) {
+  const safeLimit = Math.max(1, Math.min(100, Number(limit) || 30));
+  try {
+    return db.prepare(`
+      SELECT *
+      FROM growth_utm_events
+      ORDER BY created_at DESC, id DESC
+      LIMIT ?
+    `).all(safeLimit);
+  } catch (_err) {
+    return [];
+  }
+}
+
 function hashtagsForTopic(topic) {
   const tags = ['#TikTokLIVE', '#LiveStreaming', '#CreatorTools'];
   if (topic.key === 'how_to_play') tags.push('#InteractiveLive');
@@ -433,6 +506,29 @@ function recordMarketingPublishEvent(postId, platform, eventType, detail = '') {
       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
     `).run(Number(postId) || null, platform || '', eventType, detail || '');
   } catch (_err) {}
+}
+
+export function recoverFailedMarketingPosts({ limit = 10 } = {}) {
+  const safeLimit = Math.max(1, Math.min(50, Number(limit) || 10));
+  const rows = db.prepare(`
+    SELECT id, platform
+    FROM marketing_posts
+    WHERE status = 'failed'
+    ORDER BY updated_at DESC, id DESC
+    LIMIT ?
+  `).all(safeLimit);
+  const update = db.prepare(`
+    UPDATE marketing_posts
+    SET status = 'draft',
+        error_message = '',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `);
+  rows.forEach(row => {
+    update.run(row.id);
+    recordMarketingPublishEvent(row.id, row.platform, 'recovered', 'Failed post moved back to draft for review');
+  });
+  return { count: rows.length };
 }
 
 function webhookForPlatform(platform) {

@@ -153,6 +153,21 @@ CREATE TABLE IF NOT EXISTS growth_api_events (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS growth_utm_events (
+  id SERIAL PRIMARY KEY,
+  utm_source TEXT,
+  utm_medium TEXT,
+  utm_campaign TEXT,
+  utm_content TEXT,
+  path TEXT,
+  referrer TEXT,
+  user_agent TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS growth_utm_events_created_at_idx ON growth_utm_events(created_at);
+CREATE INDEX IF NOT EXISTS growth_utm_events_campaign_idx ON growth_utm_events(utm_campaign, utm_source);
+
 CREATE TABLE IF NOT EXISTS growth_creative_assets (
   id SERIAL PRIMARY KEY,
   title TEXT NOT NULL,

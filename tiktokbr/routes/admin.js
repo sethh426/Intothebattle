@@ -19,11 +19,14 @@ import {
 } from '../services/entitlements.js';
 import {
   ensureMarketingPostsForDate,
+  listRecentMarketingVisits,
   listMarketingPublishEvents,
   listMarketingPosts,
   marketingAutomationDiagnostics,
+  marketingPerformanceSummary,
   marketingPlatformCharacterLimit,
   publishApprovedMarketingPosts,
+  recoverFailedMarketingPosts,
   updateMarketingPostDraft,
   updateMarketingPostStatus,
 } from '../services/marketingAutomation.js';
@@ -1678,11 +1681,180 @@ function renderCreativeVariantRows(creativeVariants = []) {
   }).join('');
 }
 
+function dateKey(value) {
+  if (!value) return '';
+  if (/^\d{4}-\d{2}-\d{2}/.test(String(value))) return String(value).slice(0, 10);
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+}
+
+function dayLabel(key) {
+  const date = new Date(`${key}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return key || 'Unscheduled';
+  return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function renderAutopilotModes(diagnostics = {}, statusCounts = {}) {
+  const modeCards = [
+    {
+      key: 'off',
+      title: 'Off',
+      active: !diagnostics.autoPostEnabled,
+      copy: 'Nothing posts automatically. Use manual draft, approve, and publish controls.',
+    },
+    {
+      key: 'draft',
+      title: 'Draft only',
+      active: diagnostics.autoPostEnabled && diagnostics.dryRun,
+      copy: 'Generate and dry-run safely while webhooks, copy, and scheduling are being tuned.',
+    },
+    {
+      key: 'auto',
+      title: 'Approved auto-post',
+      active: diagnostics.autoPostReady,
+      copy: 'Only approved posts whose scheduled time has passed can publish through configured webhooks.',
+    },
+    {
+      key: 'recovery',
+      title: 'Recovery',
+      active: numberValue(statusCounts.failed) > 0,
+      copy: 'Failed posts are held for review and can be moved back to draft after the issue is fixed.',
+    },
+  ];
+  return modeCards.map(mode => `<div class="mode-card ${mode.active ? 'active' : ''}">
+    <span class="status-pill ${mode.active ? 'ready' : 'draft'}">${mode.active ? 'active' : 'available'}</span>
+    <h3>${escapeHtml(mode.title)}</h3>
+    <p>${escapeHtml(mode.copy)}</p>
+  </div>`).join('');
+}
+
+function renderCampaignCalendar(posts = []) {
+  const today = new Date();
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() + index);
+    return date.toISOString().slice(0, 10);
+  });
+  const grouped = posts.reduce((acc, post) => {
+    const key = dateKey(post.scheduled_for || post.campaign_date) || 'unscheduled';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(post);
+    return acc;
+  }, {});
+  return days.map(key => {
+    const dayPosts = (grouped[key] || []).slice(0, 9);
+    const chips = dayPosts.map(post => {
+      const status = String(post.status || 'draft').toLowerCase();
+      return `<span class="calendar-chip ${escapeAttr(status)}"><b>${escapeHtml(String(post.platform || '').toUpperCase())}</b>${escapeHtml(status)}</span>`;
+    }).join('');
+    return `<div class="calendar-day">
+      <strong>${escapeHtml(dayLabel(key))}</strong>
+      <span>${numberValue((grouped[key] || []).length)} post${(grouped[key] || []).length === 1 ? '' : 's'}</span>
+      <div class="calendar-chips">${chips || '<small>No posts scheduled.</small>'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderPerformanceSummary(summary = {}) {
+  const sourceRows = (summary.topSources || []).slice(0, 5).map(row => `<div class="rank-row"><b>${escapeHtml(row.key || 'unknown')}</b><span>${numberValue(row.visits)} visits</span></div>`).join('');
+  const campaignRows = (summary.topCampaigns || []).slice(0, 5).map(row => `<div class="rank-row"><b>${escapeHtml(row.key || 'unknown')}</b><span>${numberValue(row.visits)} visits</span></div>`).join('');
+  const contentRows = (summary.topContent || []).slice(0, 5).map(row => `<div class="rank-row"><b>${escapeHtml(row.key || 'unknown')}</b><span>${numberValue(row.visits)} visits</span></div>`).join('');
+  return `<div class="performance-grid">
+    <div class="performance-panel"><h3>Top sources</h3>${sourceRows || '<p>No UTM visits yet.</p>'}</div>
+    <div class="performance-panel"><h3>Top campaigns</h3>${campaignRows || '<p>No campaigns tracked yet.</p>'}</div>
+    <div class="performance-panel"><h3>Top content</h3>${contentRows || '<p>No content winners yet.</p>'}</div>
+  </div>`;
+}
+
+function renderRecentVisitRows(visits = []) {
+  return visits.map(visit => `<tr>
+    <td><strong>${escapeHtml(visit.utm_source || 'unknown')}</strong><br /><small>${escapeHtml(formatSponsorDate(visit.created_at))}</small></td>
+    <td>${escapeHtml(visit.utm_campaign || '')}<br /><small>${escapeHtml(visit.utm_content || '')}</small></td>
+    <td><small>${escapeHtml(visit.path || '')}</small></td>
+  </tr>`).join('');
+}
+
+function renderPostPreviewCards(posts = []) {
+  const previewPosts = posts
+    .filter(post => !['published', 'skipped'].includes(String(post.status || '').toLowerCase()))
+    .slice(0, 6);
+  return previewPosts.map(post => {
+    const platform = String(post.platform || '').toUpperCase();
+    const status = String(post.status || 'draft').toLowerCase();
+    return `<div class="preview-card">
+      <div class="preview-top"><span>${escapeHtml(platform)}</span><span class="status-pill ${escapeAttr(status)}">${escapeHtml(status)}</span></div>
+      <div class="preview-body">${escapeHtml(post.body || '')}</div>
+      <a href="${escapeAttr(post.utm_url || post.url || '#')}" target="_blank" rel="noopener">Landing URL</a>
+    </div>`;
+  }).join('');
+}
+
+function renderContentIdeaCards(creativeTemplates = []) {
+  return creativeTemplates.slice(0, 8).map(template => `<div class="idea-card">
+    <span class="status-pill draft">${escapeHtml(template.goal || 'growth')}</span>
+    <h3>${escapeHtml(template.label || template.key)}</h3>
+    <p>${escapeHtml(template.hooks?.[0] || '')}</p>
+    <small>Path: ${escapeHtml(template.path || '/')} · Assets: ${escapeHtml((template.requiredAssetLabels || []).join(', '))}</small>
+    <a href="#variant-builder">Build variants</a>
+  </div>`).join('');
+}
+
+function renderGrowthGuardrails(posts = [], diagnostics = {}, performance = {}) {
+  const duplicateBodies = new Set();
+  const seenBodies = new Set();
+  let missingUtm = 0;
+  let overLimit = 0;
+  posts.forEach(post => {
+    const body = String(post.body || '').trim();
+    if (body) {
+      if (seenBodies.has(body)) duplicateBodies.add(body);
+      seenBodies.add(body);
+    }
+    if (!String(post.utm_url || post.body || '').includes('utm_source=')) missingUtm++;
+    if (body.length > marketingPlatformCharacterLimit(post.platform)) overLimit++;
+  });
+  const checks = [
+    {
+      label: 'Outbound gate',
+      status: diagnostics.autoPostReady ? 'ready' : 'warn',
+      detail: diagnostics.autoPostReady ? 'Auto-post can publish approved due posts.' : 'Live auto-post is blocked until env/webhook gates are complete.',
+    },
+    {
+      label: 'Duplicate copy',
+      status: duplicateBodies.size ? 'warn' : 'ready',
+      detail: duplicateBodies.size ? `${duplicateBodies.size} duplicate post bod${duplicateBodies.size === 1 ? 'y' : 'ies'} found.` : 'No duplicate post bodies in the loaded queue.',
+    },
+    {
+      label: 'UTM links',
+      status: missingUtm ? 'warn' : 'ready',
+      detail: missingUtm ? `${missingUtm} loaded posts are missing UTM tracking.` : 'Loaded posts include UTM tracking.',
+    },
+    {
+      label: 'Character limits',
+      status: overLimit ? 'blocked' : 'ready',
+      detail: overLimit ? `${overLimit} loaded posts exceed platform character limits.` : 'Loaded posts fit platform character limits.',
+    },
+    {
+      label: 'Learning loop',
+      status: numberValue(performance.visits) > 0 ? 'ready' : 'warn',
+      detail: numberValue(performance.visits) > 0 ? `${numberValue(performance.visits)} tracked visits in ${numberValue(performance.days)} days.` : 'No UTM visits tracked yet.',
+    },
+  ];
+  return checks.map(check => `<div class="guardrail-card ${escapeAttr(check.status)}">
+    <span class="status-pill ${escapeAttr(check.status)}">${escapeHtml(check.status)}</span>
+    <h3>${escapeHtml(check.label)}</h3>
+    <p>${escapeHtml(check.detail)}</p>
+  </div>`).join('');
+}
+
 function renderMarketingAdminPage({
   message = '',
   error = '',
   posts = [],
+  calendarPosts = [],
   events = [],
+  performanceSummary = marketingPerformanceSummary(),
+  recentVisits = [],
   diagnostics = marketingAutomationDiagnostics(),
   growthDiagnostics = growthIntegrationDiagnostics(),
   filters = {},
@@ -1698,6 +1870,12 @@ function renderMarketingAdminPage({
     .map(status => `<option value="${escapeAttr(status)}" ${selectedStatus === status ? 'selected' : ''}>${escapeHtml(status || 'all')}</option>`)
     .join('');
   const statusCounts = posts.reduce((acc, post) => {
+    const status = String(post.status || 'draft');
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+  const calendarQueuePosts = calendarPosts.length ? calendarPosts : posts;
+  const overallStatusCounts = calendarQueuePosts.reduce((acc, post) => {
     const status = String(post.status || 'draft');
     acc[status] = (acc[status] || 0) + 1;
     return acc;
@@ -1737,6 +1915,13 @@ function renderMarketingAdminPage({
     .join('');
   const creativeAssetRows = renderCreativeAssetRows(creativeAssets, creativeOptions);
   const creativeVariantRows = renderCreativeVariantRows(creativeVariants);
+  const autopilotModes = renderAutopilotModes(diagnostics, overallStatusCounts);
+  const campaignCalendar = renderCampaignCalendar(calendarQueuePosts);
+  const performancePanels = renderPerformanceSummary(performanceSummary);
+  const recentVisitRows = renderRecentVisitRows(recentVisits);
+  const postPreviewCards = renderPostPreviewCards(posts);
+  const ideaCards = renderContentIdeaCards(creativeTemplates);
+  const guardrailCards = renderGrowthGuardrails(posts, diagnostics, performanceSummary);
   const eventRows = events.map(event => `<tr>
     <td><strong>${escapeHtml(event.event_type || '')}</strong><br /><small>${escapeHtml(formatSponsorDate(event.created_at))}</small></td>
     <td>${escapeHtml(String(event.platform || '').toUpperCase())}</td>
@@ -1829,6 +2014,29 @@ function renderMarketingAdminPage({
     .engine-step strong { width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; color:#041014; background:linear-gradient(135deg,#55e7ff,#b9fbff); }
     .engine-step b { color:#fff8e6; }
     .engine-step span { color:#a8afbf; line-height:1.45; font-size:13px; }
+    .mode-grid,.calendar-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid { display:grid; gap:12px; }
+    .mode-grid { grid-template-columns:repeat(4,minmax(0,1fr)); }
+    .calendar-grid { grid-template-columns:repeat(7,minmax(0,1fr)); }
+    .preview-grid,.idea-grid,.guardrail-grid,.performance-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .mode-card,.calendar-day,.preview-card,.idea-card,.guardrail-card,.performance-panel { min-width:0; padding:14px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.2); }
+    .mode-card.active,.guardrail-card.ready { border-color:rgba(119,240,161,.3); background:rgba(119,240,161,.065); }
+    .guardrail-card.warn { border-color:rgba(246,201,91,.28); background:rgba(246,201,91,.065); }
+    .guardrail-card.blocked { border-color:rgba(232,59,95,.34); background:rgba(232,59,95,.08); }
+    .mode-card h3,.idea-card h3,.guardrail-card h3,.performance-panel h3 { margin:10px 0 8px; color:#fff8e6; font-size:17px; }
+    .mode-card p,.idea-card p,.guardrail-card p,.performance-panel p { margin:0; font-size:13px; }
+    .calendar-day strong { display:block; color:#fff8e6; }
+    .calendar-day > span { display:block; margin:4px 0 10px; color:#a8afbf; font-size:12px; font-weight:900; }
+    .calendar-chips { display:flex; flex-direction:column; gap:6px; }
+    .calendar-chip { display:flex; justify-content:space-between; gap:8px; min-height:28px; padding:6px 8px; border-radius:10px; color:#fff8e6; background:rgba(255,255,255,.06); font-size:11px; text-transform:uppercase; }
+    .calendar-chip.approved { color:#9fefff; background:rgba(85,231,255,.09); }
+    .calendar-chip.published { color:#c6ffc3; background:rgba(119,240,161,.08); }
+    .calendar-chip.failed { color:#ffb6b6; background:rgba(232,59,95,.1); }
+    .preview-top,.rank-row { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .preview-top span:first-child { color:#ffdf8a; font-size:12px; font-weight:950; letter-spacing:.08em; }
+    .preview-body { margin:12px 0; white-space:pre-wrap; color:#fff8e6; line-height:1.45; font-size:13px; }
+    .rank-row { padding:9px 0; border-bottom:1px solid rgba(255,255,255,.07); }
+    .rank-row b { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .rank-row span { color:#9fb2d7; font-size:12px; font-weight:900; white-space:nowrap; }
     .inline-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; align-items:end; }
     .inline-grid.compact { grid-template-columns:repeat(3,minmax(0,1fr)); align-items:end; }
     label { display:block; margin:10px 0 6px; color:#a8afbf; font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
@@ -1865,8 +2073,8 @@ function renderMarketingAdminPage({
     th { background:rgba(246,201,91,0.09); color:#ffdf8a; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     small { color:#9fb2d7; }
     .post-copy { max-width:620px; white-space:pre-wrap; color:#fff8e6; line-height:1.45; }
-    @media(max-width:1100px){ .template-grid,.engine-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
-    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid,.inline-grid,.template-grid,.engine-grid{grid-template-columns:1fr} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:0} }
+    @media(max-width:1100px){ .template-grid,.engine-grid,.mode-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.calendar-grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid,.inline-grid,.template-grid,.engine-grid,.mode-grid,.calendar-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:1fr} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:0} }
   </style>
 </head>
 <body>
@@ -1893,6 +2101,15 @@ function renderMarketingAdminPage({
       <div class="metric-card"><span>Blocked Variants</span><strong>${numberValue(creativeQualityCounts.blocked)}</strong></div>
     </div>
     <div class="card">
+      <h2>Growth pulse</h2>
+      <p>Tracked UTM visits in the last ${numberValue(performanceSummary.days)} days: <strong>${numberValue(performanceSummary.visits)}</strong>. Last tracked visit: <strong>${escapeHtml(formatSponsorDate(performanceSummary.lastVisit))}</strong>.</p>
+      ${performancePanels}
+      <table>
+        <thead><tr><th>Source</th><th>Campaign</th><th>Landing path</th></tr></thead>
+        <tbody>${recentVisitRows || '<tr><td colspan="3">No UTM visits recorded yet.</td></tr>'}</tbody>
+      </table>
+    </div>
+    <div class="card">
       <h2>Growth engine controls</h2>
       <p><span class="status-pill ${escapeAttr(autoPostStatus)}">${escapeHtml(autoPostLabel)}</span> Due approved posts: <strong>${numberValue(diagnostics.dueApprovedCount)}</strong>. Check interval: <strong>${numberValue(diagnostics.autoPostIntervalMinutes)}</strong> min. Batch limit: <strong>${numberValue(diagnostics.autoPostLimit)}</strong>.</p>
       <p>Generate SEO and UTM-tagged daily drafts from the public site pages, approve the good ones, and let the scheduler publish due posts when the engine is live.</p>
@@ -1900,6 +2117,8 @@ function renderMarketingAdminPage({
       ${autoPostBlockers.length ? `<div class="warning-note ${diagnostics.autoPostEnabled ? 'failed' : ''}">${autoPostBlockers.map(blocker => escapeHtml(blocker)).join('<br />')}</div>` : '<div class="warning-note">Auto-posting is live-gated and ready. Only approved due posts will publish.</div>'}
       <div class="engine-grid">${engineSteps}</div>
       <p>Lead APIs: sync ${growthDiagnostics.enabled ? 'enabled' : 'disabled'}; HubSpot ${growthDiagnostics.hubspotConfigured ? 'connected' : 'not configured'}; HubSpot custom fields ${growthDiagnostics.hubspotCustomPropertiesConfigured ? 'configured' : 'not configured'}; Segment ${growthDiagnostics.segmentConfigured ? 'connected' : 'not configured'}; providers ${escapeHtml(growthProviders.length ? growthProviders.join(', ') : 'none')}.</p>
+      <h2>Autopilot modes</h2>
+      <div class="mode-grid">${autopilotModes}</div>
       <div class="inline-grid">
         <form method="POST" action="/admin/marketing/generate">
           <label>Date</label>
@@ -1919,7 +2138,32 @@ function renderMarketingAdminPage({
           <input name="limit" type="number" min="1" max="50" value="10" />
           <button type="submit" class="test">Publish Approved</button>
         </form>
+        <form method="POST" action="/admin/marketing/recover-failed">
+          <label>Recovery mode</label>
+          <input name="limit" type="number" min="1" max="50" value="10" />
+          <button type="submit" class="danger">Move Failed to Draft</button>
+        </form>
       </div>
+    </div>
+    <div class="card">
+      <h2>Campaign calendar</h2>
+      <p>The next seven days of scheduled growth posts. This keeps the queue readable before the detailed editor gets involved.</p>
+      <div class="calendar-grid">${campaignCalendar}</div>
+    </div>
+    <div class="card">
+      <h2>Post preview cards</h2>
+      <p>Fast visual review of the next editable posts before approval. The detailed editor below remains the source of truth.</p>
+      <div class="preview-grid">${postPreviewCards || '<p>No draft or approved posts to preview.</p>'}</div>
+    </div>
+    <div class="card">
+      <h2>Content idea engine</h2>
+      <p>Use these repeatable angles to keep growth content tied to the product, proof assets, and landing pages instead of drifting into generic marketing soup.</p>
+      <div class="idea-grid">${ideaCards || '<p>No content ideas configured.</p>'}</div>
+    </div>
+    <div class="card">
+      <h2>Guardrails</h2>
+      <p>These checks catch the boring problems that quietly break growth engines: duplicate copy, missing tracking, bad character limits, and posting gates.</p>
+      <div class="guardrail-grid">${guardrailCards}</div>
     </div>
     <div class="card">
       <h2>Creative template engine</h2>
@@ -1947,7 +2191,7 @@ function renderMarketingAdminPage({
         <tbody>${creativeAssetRows || '<tr><td colspan="4">No creative assets saved yet.</td></tr>'}</tbody>
       </table>
     </div>
-    <div class="card">
+    <div class="card" id="variant-builder">
       <h2>Variant builder</h2>
       <p>Generated variants are structured as hook, proof, CTA, UTM URL, frame script, and safe-zone guidance. Blocked variants cannot be approved or queued.</p>
       <form method="POST" action="/admin/marketing/creative-variants/generate">
@@ -2218,7 +2462,10 @@ router.get('/marketing', requireAdminAuth, (req, res) => {
       message: String(req.query.message || ''),
       error: String(req.query.error || ''),
       posts: listMarketingPosts({ limit: 80, status, date }),
+      calendarPosts: listMarketingPosts({ limit: 200 }),
       events: listMarketingPublishEvents({ limit: 30 }),
+      performanceSummary: marketingPerformanceSummary({ days: 14 }),
+      recentVisits: listRecentMarketingVisits({ limit: 25 }),
       diagnostics: marketingAutomationDiagnostics(),
       growthDiagnostics: growthIntegrationDiagnostics(),
       filters: { status, date },
@@ -2231,7 +2478,10 @@ router.get('/marketing', requireAdminAuth, (req, res) => {
     res.status(500).send(renderMarketingAdminPage({
       error: err?.message || 'Marketing page failed to load',
       posts: [],
+      calendarPosts: [],
       events: [],
+      performanceSummary: marketingPerformanceSummary({ days: 14 }),
+      recentVisits: [],
       diagnostics: marketingAutomationDiagnostics(),
       growthDiagnostics: growthIntegrationDiagnostics(),
       filters: { status, date },
@@ -2353,6 +2603,16 @@ router.post('/marketing/publish', requireAdminAuth, async (req, res) => {
     res.redirect(`/admin/marketing?message=${encodeURIComponent(message)}`);
   } catch (err) {
     res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Marketing publish failed')}`);
+  }
+});
+
+router.post('/marketing/recover-failed', requireAdminAuth, (req, res) => {
+  const limit = Math.max(1, Math.min(50, Number(req.body.limit) || 10));
+  try {
+    const result = recoverFailedMarketingPosts({ limit });
+    res.redirect(`/admin/marketing?message=${encodeURIComponent(`Moved ${result.count} failed post${result.count === 1 ? '' : 's'} back to draft`)}`);
+  } catch (err) {
+    res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Marketing recovery failed')}`);
   }
 });
 

@@ -3,7 +3,10 @@ process.env.APP_BASE_URL = process.env.APP_BASE_URL || 'https://www.intothebattl
 
 const {
   buildMarketingPostDrafts,
+  listRecentMarketingVisits,
   marketingAutomationDiagnostics,
+  marketingPerformanceSummary,
+  recordMarketingVisit,
   readSiteMarketingFacts,
 } = await import('../tiktokbr/services/marketingAutomation.js');
 const {
@@ -45,6 +48,21 @@ assert(diagnostics.autoPostReady === false, 'Auto-post should not be ready witho
 assert(Number.isFinite(diagnostics.autoPostIntervalMs), 'Diagnostics must report auto-post interval');
 assert(Number.isFinite(diagnostics.autoPostLimit), 'Diagnostics must report auto-post batch limit');
 assert(Number.isFinite(diagnostics.dueApprovedCount), 'Diagnostics must report due approved post count');
+
+const trackedVisit = recordMarketingVisit({
+  utmSource: 'tiktok',
+  utmMedium: 'social',
+  utmCampaign: 'smoke',
+  utmContent: 'demo',
+  path: '/signup?utm_source=tiktok',
+});
+assert(trackedVisit.recorded === true, 'UTM tracking should accept valid campaign visits');
+const ignoredVisit = recordMarketingVisit({ path: '/signup' });
+assert(ignoredVisit.recorded === false, 'UTM tracking should ignore visits without UTM fields');
+const performance = marketingPerformanceSummary({ days: 14 });
+assert(Number.isFinite(performance.visits), 'Performance summary must report visit count');
+assert(Array.isArray(performance.topSources), 'Performance summary must include top sources');
+assert(Array.isArray(listRecentMarketingVisits({ limit: 5 })), 'Recent marketing visits must return an array');
 
 const growthDiagnostics = growthIntegrationDiagnostics();
 assert(growthDiagnostics.enabled === false, 'Growth API sync should be disabled by default');

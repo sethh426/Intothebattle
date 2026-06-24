@@ -34,7 +34,7 @@ import {
 import { buildLaunchReadinessReport } from './tiktokbr/services/launchReadiness.js';
 import { buildUploadDecision, getStorageUsage, uploadLimitBytes } from './tiktokbr/services/storagePolicy.js';
 import { growthIntegrationDiagnostics, syncLeadToGrowthApis } from './tiktokbr/services/growthIntegrations.js';
-import { marketingAutomationDiagnostics, publishApprovedMarketingPosts } from './tiktokbr/services/marketingAutomation.js';
+import { marketingAutomationDiagnostics, publishApprovedMarketingPosts, recordMarketingVisit } from './tiktokbr/services/marketingAutomation.js';
 import {
   getOrCreateRoom,
   getRoom,
@@ -3925,6 +3925,23 @@ app.use((req, res, next) => {
   }
   logger.warn({ method: req.method, path: req.path, origin: origin || null, referer: referer || null }, 'Blocked cross-origin state-changing request');
   return res.status(403).json({ success: false, error: 'Cross-origin request blocked' });
+});
+
+app.use((req, _res, next) => {
+  if (req.method !== 'GET') return next();
+  if (/^\/(?:api|admin|audio|background|dashboard|debug|metrics|overlay|overlay-v2|platform-sponsor|socket.io|sponsor|state|stats|vendor)(?:\/|$)/.test(req.path)) return next();
+  const query = req.query || {};
+  if (!(query.utm_source || query.utm_medium || query.utm_campaign || query.utm_content)) return next();
+  recordMarketingVisit({
+    utmSource: query.utm_source,
+    utmMedium: query.utm_medium,
+    utmCampaign: query.utm_campaign,
+    utmContent: query.utm_content,
+    path: req.originalUrl || req.url || req.path,
+    referrer: req.get('referer') || '',
+    userAgent: req.get('user-agent') || '',
+  });
+  next();
 });
 
 // Request debug logging middleware
