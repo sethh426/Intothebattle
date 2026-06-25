@@ -91,8 +91,8 @@ const creativeTemplates = listCreativeTemplates();
 assert(creativeTemplates.length >= 7, 'Expected a complete creative template library');
 assert(creativeTemplates.every(template => template.requiredAssetLabels?.length), 'Every template must define asset requirements');
 assert(
-  creativeTemplates.some(template => template.key === 'complete_battle_demo' && /18-second/i.test(template.label)),
-  'Creative template library must include the complete 18-second battle demo'
+  creativeTemplates.some(template => template.key === 'complete_battle_demo' && /24-second/i.test(template.label)),
+  'Creative template library must include the complete 24-second battle demo'
 );
 
 const creativeOptions = creativeTemplateOptions();
@@ -101,7 +101,7 @@ assert(creativeOptions.assetTypes.some(type => type.key === 'generated_backgroun
 
 const battleDemoAssets = listBattleDemoContentAssets();
 assert(battleDemoAssets.length >= 8, 'Battle demo content folder must expose each slide and clip as individual assets');
-assert(battleDemoAssets.every(asset => asset.folderKey === '18-second-battle-demo'), 'Every battle demo asset must belong to the canonical folder');
+assert(battleDemoAssets.every(asset => asset.folderKey === '24-second-battle-demo'), 'Every battle demo asset must belong to the canonical folder');
 assert(battleDemoAssets.some(asset => asset.key === 'sphere-slide' && asset.assetUrl.includes('asset=sphere-slide')), 'Battle demo folder must include a direct sphere slide asset URL');
 assert(battleDemoAssets.some(asset => asset.key === 'comet-slide' && asset.assetUrl.includes('asset=comet-slide')), 'Battle demo folder must include a direct comet slide asset URL');
 assert(battleDemoAssets.some(asset => asset.key === 'broadcast-break-clip' && asset.assetType === 'sponsor_break_clip'), 'Battle demo folder must include a sponsor break clip asset');
@@ -169,10 +169,10 @@ assert(
       && blocks.frameScript.some(block => block.block === 'sphere-slide')
       && blocks.frameScript.some(block => block.block === 'comet-slide')
       && blocks.frameScript[5]?.block === 'broadcast-break'
-      && blocks.textBlocks?.some(block => block.time === '14.4-16.7s')
-      && blocks.frameScript.every(block => parseTimeWindowSeconds(block.time) >= 1.3);
+      && blocks.textBlocks?.some(block => block.time === '20.2-22.2s')
+      && blocks.frameScript.every(block => parseTimeWindowSeconds(block.time) >= 1.8);
   }),
-  'Complete battle demo variants must include readable 18-second battle, effects, break, recap, and CTA timing'
+  'Complete battle demo variants must include readable 24-second battle, effects, break, recap, and CTA timing'
 );
 assert(
   creativeDrafts.every(draft => {

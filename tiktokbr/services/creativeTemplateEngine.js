@@ -24,7 +24,7 @@ const VIDEO_ASSET_TYPES = new Set(['real_overlay_clip', 'sponsor_break_clip']);
 const IMAGE_ASSET_TYPES = new Set(['real_overlay_screenshot', 'dashboard_screenshot', 'product_logo', 'approved_texture', 'generated_background']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mov', '.m4v']);
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.avif', '.gif']);
-const BATTLE_DEMO_FOLDER_KEY = '18-second-battle-demo';
+const BATTLE_DEMO_FOLDER_KEY = '24-second-battle-demo';
 const BRAND_SYSTEM = {
   name: 'IntoTheBattle',
   tagline: 'TikTok LIVE Battle Overlay',
@@ -50,9 +50,9 @@ const BATTLE_DEMO_CONTENT_ASSETS = [
   {
     key: 'full-loop-clip',
     folderKey: BATTLE_DEMO_FOLDER_KEY,
-    title: '18s Demo / Full Conversion Loop',
+    title: '24s Demo / Full Conversion Loop',
     phase: 'Full loop',
-    timing: '0-18s',
+    timing: '0-24s',
     assetType: 'real_overlay_clip',
     assetUrl: '/battle-clip?asset=full-loop',
     useCase: 'Homepage, signup, paywall, sponsor page hero proof.',
@@ -61,9 +61,9 @@ const BATTLE_DEMO_CONTENT_ASSETS = [
   {
     key: 'hook-enter-slide',
     folderKey: BATTLE_DEMO_FOLDER_KEY,
-    title: '18s Demo / Hook and Players Enter',
+    title: '24s Demo / Hook and Players Enter',
     phase: 'Hook',
-    timing: '0-2.2s',
+    timing: '0-3.2s',
     assetType: 'real_overlay_screenshot',
     assetUrl: '/battle-clip?asset=hook-enter-slide',
     useCase: 'Above-the-fold proof frame and creator setup promise.',
@@ -72,9 +72,9 @@ const BATTLE_DEMO_CONTENT_ASSETS = [
   {
     key: 'laser-ko-slide',
     folderKey: BATTLE_DEMO_FOLDER_KEY,
-    title: '18s Demo / Laser KO Player Slide',
+    title: '24s Demo / Laser KO Player Slide',
     phase: 'Attack',
-    timing: '2.2-5.4s',
+    timing: '3.2-6.8s',
     assetType: 'real_overlay_screenshot',
     assetUrl: '/battle-clip?asset=laser-ko-slide',
     useCase: 'Show the clearest viewer command to visible attack moment.',
@@ -83,9 +83,9 @@ const BATTLE_DEMO_CONTENT_ASSETS = [
   {
     key: 'sphere-slide',
     folderKey: BATTLE_DEMO_FOLDER_KEY,
-    title: '18s Demo / Sphere Attack Slide',
+    title: '24s Demo / Sphere Attack Slide',
     phase: 'Effect',
-    timing: '5.4-7.2s',
+    timing: '6.8-10.2s',
     assetType: 'real_overlay_screenshot',
     assetUrl: '/battle-clip?asset=sphere-slide',
     useCase: 'Show premium effect variety without leaving the player context.',
@@ -94,9 +94,9 @@ const BATTLE_DEMO_CONTENT_ASSETS = [
   {
     key: 'comet-slide',
     folderKey: BATTLE_DEMO_FOLDER_KEY,
-    title: '18s Demo / Comet Horde Slide',
+    title: '24s Demo / Comet Horde Slide',
     phase: 'Effect',
-    timing: '7.2-9.2s',
+    timing: '10.2-13.6s',
     assetType: 'real_overlay_screenshot',
     assetUrl: '/battle-clip?asset=comet-slide',
     useCase: 'Show horde interaction and larger battle pressure.',
@@ -105,9 +105,9 @@ const BATTLE_DEMO_CONTENT_ASSETS = [
   {
     key: 'effect-strip-slide',
     folderKey: BATTLE_DEMO_FOLDER_KEY,
-    title: '18s Demo / Effect Strip Slide',
+    title: '24s Demo / Effect Strip Slide',
     phase: 'Effect',
-    timing: '9.2-10.6s',
+    timing: '13.6-15.8s',
     assetType: 'real_overlay_screenshot',
     assetUrl: '/battle-clip?asset=effect-strip-slide',
     useCase: 'Quick proof that the effect library has variety.',
@@ -116,9 +116,9 @@ const BATTLE_DEMO_CONTENT_ASSETS = [
   {
     key: 'broadcast-break-clip',
     folderKey: BATTLE_DEMO_FOLDER_KEY,
-    title: '18s Demo / Broadcast Break Clip',
+    title: '24s Demo / Broadcast Break Clip',
     phase: 'Video break',
-    timing: '10.6-14.4s',
+    timing: '15.8-20.2s',
     assetType: 'sponsor_break_clip',
     assetUrl: '/battle-clip?asset=broadcast-break-clip',
     useCase: 'Sponsor and paid-user custom video control proof.',
@@ -127,9 +127,9 @@ const BATTLE_DEMO_CONTENT_ASSETS = [
   {
     key: 'stats-recap-slide',
     folderKey: BATTLE_DEMO_FOLDER_KEY,
-    title: '18s Demo / Shareable Stats Recap',
+    title: '24s Demo / Shareable Stats Recap',
     phase: 'Recap',
-    timing: '14.4-16.7s',
+    timing: '20.2-22.2s',
     assetType: 'real_overlay_screenshot',
     assetUrl: '/battle-clip?asset=stats-recap-slide',
     useCase: 'Show creators the after-stream proof they can post.',
@@ -138,9 +138,9 @@ const BATTLE_DEMO_CONTENT_ASSETS = [
   {
     key: 'cta-slide',
     folderKey: BATTLE_DEMO_FOLDER_KEY,
-    title: '18s Demo / 7-Day CTA Slide',
+    title: '24s Demo / 7-Day CTA Slide',
     phase: 'CTA',
-    timing: '16.7-18s',
+    timing: '22.2-24s',
     assetType: 'real_overlay_screenshot',
     assetUrl: '/battle-clip?asset=cta-slide',
     useCase: 'End card for ads, short-form clips, and signup retargeting.',
@@ -163,7 +163,7 @@ const BLANK_DESIGN_TEMPLATES = [
   },
   {
     key: 'battle_clip_video_launch',
-    label: '18-Second Battle Clip Video',
+    label: '24-Second Battle Clip Video',
     format: '9:16 vertical',
     width: 1080,
     height: 1920,
@@ -261,7 +261,7 @@ const TEMPLATE_DEFINITIONS = [
   },
   {
     key: 'complete_battle_demo',
-    label: '18-second battle clip video demo',
+    label: '24-second battle clip video demo',
     featured: true,
     demoUrl: '/battle-clip',
     audience: 'TikTok LIVE creators',
@@ -607,7 +607,7 @@ function visualDirectionForTemplate(template, assetType = '') {
     : 'Use only as a supporting texture; this cannot replace real product proof.';
   const directions = {
     twelve_second_demo: 'Show a real battle overlay in motion, tight on chat-to-attack action, with the CTA landing after the kill/sponsor beat.',
-    complete_battle_demo: 'Show the full 18-second demo arc: chat command, players, attack effects, horde pressure, broadcast-style video break, centered stats recap, and CTA.',
+    complete_battle_demo: 'Show the full 24-second demo arc: chat command, players, attack effects, horde pressure, broadcast-style video break, centered stats recap, and CTA.',
     signup_result: 'Show the dashboard setup path and the overlay result together so the promise feels achievable in minutes.',
     sponsor_broadcast: 'Use a sports-broadcast composition: full-screen brand moment, arena frame, stats end-cap, and return-to-battle energy.',
     player_commands: 'Show command examples beside the live overlay reaction, with simple visual callouts for attack, emoji, likes, and gifts.',
@@ -826,14 +826,14 @@ function buildProductionBlocks({ template, platform, blocks, asset = {}, variant
 function frameScriptForTemplate(template, hook, proof, cta) {
   if (template.key === 'complete_battle_demo') {
     return [
-      { time: '0-2.2s', block: 'hook', text: hook },
-      { time: '2.2-5.4s', block: 'laser-ko-slide', text: 'Show comments creating a laser attack, aligned player cards, damage, horde pressure, and a visible KO.' },
-      { time: '5.4-7.2s', block: 'sphere-slide', text: 'Show a sphere attack as a readable player-vs-player moment.' },
-      { time: '7.2-9.2s', block: 'comet-slide', text: 'Show a comet attack hitting the horde pressure bar.' },
-      { time: '9.2-10.6s', block: 'effect-strip-slide', text: 'Show the support effect strip for beam, fire, bullet, railgun, arc, and gift moments.' },
-      { time: '10.6-14.4s', block: 'broadcast-break', text: 'Show the premium video-break moment as part of the battle, not as a generic ad.' },
-      { time: '14.4-16.7s', block: 'stats-recap', text: proof },
-      { time: '16.7-18s', block: 'cta', text: cta },
+      { time: '0-3.2s', block: 'hook', text: hook },
+      { time: '3.2-6.8s', block: 'laser-ko-slide', text: 'Show comments creating a laser attack, aligned player cards, damage, horde pressure, and a visible KO.' },
+      { time: '6.8-10.2s', block: 'sphere-slide', text: 'Show a sphere attack as a readable player-vs-player moment.' },
+      { time: '10.2-13.6s', block: 'comet-slide', text: 'Show a comet attack hitting the horde pressure bar.' },
+      { time: '13.6-15.8s', block: 'effect-strip-slide', text: 'Show the support effect strip for beam, fire, bullet, railgun, arc, and gift moments.' },
+      { time: '15.8-20.2s', block: 'broadcast-break', text: 'Show the premium video-break moment as part of the battle, not as a generic ad.' },
+      { time: '20.2-22.2s', block: 'stats-recap', text: proof },
+      { time: '22.2-24s', block: 'cta', text: cta },
     ];
   }
   return [
@@ -919,7 +919,7 @@ export function listBattleDemoContentAssets() {
   return BATTLE_DEMO_CONTENT_ASSETS.map(asset => ({
     ...asset,
     assetTypeLabel: ASSET_TYPES[asset.assetType] || asset.assetType,
-    folderLabel: '18-second battle demo',
+    folderLabel: '24-second battle demo',
   }));
 }
 
