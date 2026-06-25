@@ -111,6 +111,20 @@ CREATE TABLE IF NOT EXISTS creator_comments (
   deleted_at TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS battleground_posts (
+  id SERIAL PRIMARY KEY,
+  creator_name TEXT NOT NULL,
+  tiktok_username TEXT NOT NULL,
+  battle_title TEXT NOT NULL,
+  scheduled_for TIMESTAMP,
+  timezone TEXT,
+  description TEXT,
+  battle_url TEXT,
+  status TEXT DEFAULT 'approved',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS marketing_posts (
   id SERIAL PRIMARY KEY,
   campaign_date DATE NOT NULL,

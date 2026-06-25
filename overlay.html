@@ -1264,9 +1264,11 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
               <button class="shot-btn active" data-shot="beam">Beam</button>
               <button class="shot-btn" data-shot="laser">Laser</button>
               <button class="shot-btn" data-shot="neon">Neon</button>
-              <button class="shot-btn" data-shot="ripple">Ripple</button>
               <button class="shot-btn" data-shot="fire">Fire</button>
-              <button class="shot-btn" data-shot="bubble">Bubble</button>
+              <button class="shot-btn" data-shot="bullet">Bullet</button>
+              <button class="shot-btn" data-shot="railgun">Rail</button>
+              <button class="shot-btn" data-shot="comet">Comet</button>
+              <button class="shot-btn" data-shot="arc">Arc</button>
               <button class="shot-btn" data-shot="sphere">Sphere</button>
               <button class="shot-btn" data-shot="projectile">Proj.</button>
             </div>
@@ -3833,7 +3835,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       this._impacted      = false;
 
       const speed = Math.max(0.5, options.shotSpeed || overlaySettings.shotSpeed || 1);
-      const durations = { static:1800, projectile:760, gift:900, explosion:780, beam:430, laser:520, neon:640, ripple:650, fire:780, bubble:720, sphere:780 };
+      const durations = { static:1800, projectile:760, gift:900, explosion:780, beam:430, laser:520, neon:640, fire:780, sphere:780, bullet:620, railgun:480, comet:820, arc:560 };
       this.duration = Math.round((durations[type] || 500) / speed);
 
       if (type === 'fire') {
@@ -3869,12 +3871,14 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
         case 'laser':      this.drawLaser();      break;
         case 'beam':       this.drawBeam();       break;
         case 'projectile': this.drawProjectile(); break;
+        case 'bullet':     this.drawBullet();     break;
+        case 'railgun':    this.drawRailgun();    break;
+        case 'comet':      this.drawComet();      break;
+        case 'arc':        this.drawArc();        break;
         case 'gift':       this.drawGift();       break;
         case 'explosion':  this.drawExplosion();  break;
         case 'neon':       this.drawNeon();       break;
-        case 'ripple':     this.drawRipple();     break;
         case 'fire':       this.drawFire();       break;
-        case 'bubble':     this.drawBubble();     break;
         case 'sphere':     this.drawSphere();     break;
         case 'static':     break;
         default:           this.drawLaser();
@@ -4031,6 +4035,182 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       }
     }
 
+    drawBullet() {
+      const { from: f, to: t, progress: pg } = this;
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const nx = -uy, ny = ux;
+      const headT = easeOutCubic(pg);
+      const px = f.x + dx * headT, py = f.y + dy * headT;
+      const ui = canvasUiScale();
+      const body = (24 + this.intensity * 10) * ui;
+      const radius = (5.5 + this.intensity * 2) * ui;
+      const fade = pg < 0.82 ? 1 : Math.max(0, 1 - (pg - 0.82) / 0.18);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = 0.34 * fade;
+      ctx.strokeStyle = '#f6c95b';
+      ctx.lineWidth = Math.max(3, 6 * ui);
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y);
+      ctx.lineTo(px - ux * body * 0.8, py - uy * body * 0.8);
+      ctx.stroke();
+      ctx.globalAlpha = 0.72 * fade;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1, 2 * ui);
+      ctx.beginPath();
+      ctx.moveTo(f.x + nx * 5 * ui, f.y + ny * 5 * ui);
+      ctx.lineTo(px - ux * body * 1.2 + nx * 5 * ui, py - uy * body * 1.2 + ny * 5 * ui);
+      ctx.stroke();
+
+      ctx.translate(px, py);
+      ctx.rotate(Math.atan2(dy, dx));
+      const casingT = clamp01(pg * 2.4);
+      const shellX = -Math.min(dist * 0.18, 92 * ui) * casingT;
+      const shellY = (-18 - 20 * casingT) * ui;
+      ctx.save();
+      ctx.translate(shellX, shellY);
+      ctx.rotate(-0.72 - casingT * 1.3);
+      ctx.globalAlpha = Math.max(0, 0.72 - pg * 0.38);
+      ctx.fillStyle = '#c58428';
+      ctx.strokeStyle = '#fff0b9';
+      ctx.lineWidth = Math.max(1, 1.5 * ui);
+      ctx.beginPath();
+      ctx.rect(-8 * ui, -3 * ui, 16 * ui, 6 * ui);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = '#b87928';
+      ctx.strokeStyle = '#fff0b9';
+      ctx.lineWidth = Math.max(1, 1.5 * ui);
+      ctx.beginPath();
+      ctx.moveTo(body * 0.52, 0);
+      ctx.lineTo(body * 0.12, -radius);
+      ctx.lineTo(-body * 0.5, -radius);
+      ctx.quadraticCurveTo(-body * 0.74, 0, -body * 0.5, radius);
+      ctx.lineTo(body * 0.12, radius);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.globalAlpha = 0.85 * fade;
+      ctx.fillStyle = '#fff8d7';
+      ctx.beginPath();
+      ctx.moveTo(body * 0.35, -radius * 0.35);
+      ctx.lineTo(body * 0.02, -radius * 0.74);
+      ctx.lineTo(-body * 0.42, -radius * 0.62);
+      ctx.lineTo(-body * 0.18, -radius * 0.16);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    drawRailgun() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const x = f.x + (t.x - f.x) * p, y = f.y + (t.y - f.y) * p;
+      const ui = canvasUiScale();
+      const fade = pg < 0.58 ? 1 : Math.max(0, 1 - (pg - 0.58) / 0.42);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = 0.42 * fade;
+      ctx.strokeStyle = '#8ff7ff';
+      ctx.lineWidth = Math.max(8, 18 * ui + this.intensity * 8 * ui);
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y); ctx.stroke();
+      ctx.globalAlpha = 0.95 * fade;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(2, 4 * ui);
+      ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y); ctx.stroke();
+      for (let i = 1; i <= 4; i += 1) {
+        const rt = Math.max(0, p - i * 0.12);
+        if (!rt) continue;
+        const rx = f.x + (t.x - f.x) * rt;
+        const ry = f.y + (t.y - f.y) * rt;
+        ctx.globalAlpha = fade * (0.42 - i * 0.06);
+        ctx.strokeStyle = i % 2 ? '#f6c95b' : '#55e7ff';
+        ctx.lineWidth = Math.max(1, 2 * ui);
+        ctx.beginPath();
+        ctx.arc(rx, ry, (13 + i * 5 + this.intensity * 5) * ui, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    drawComet() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const x = f.x + (t.x - f.x) * p, y = f.y + (t.y - f.y) * p;
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const ui = canvasUiScale();
+      const fade = pg < 0.78 ? 1 : Math.max(0, 1 - (pg - 0.78) / 0.22);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      const tail = 66 * ui + this.intensity * 46 * ui;
+      const grad = ctx.createLinearGradient(x - ux * tail, y - uy * tail, x, y);
+      grad.addColorStop(0, 'rgba(255,70,30,0)');
+      grad.addColorStop(0.38, 'rgba(255,106,61,0.62)');
+      grad.addColorStop(1, 'rgba(255,240,185,0.96)');
+      ctx.globalAlpha = fade;
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = Math.max(10, 21 * ui + this.intensity * 7 * ui);
+      ctx.beginPath();
+      ctx.moveTo(x - ux * tail, y - uy * tail);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      const r = (14 + this.intensity * 14) * ui;
+      const core = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 1, x, y, r);
+      core.addColorStop(0, '#fff8d7');
+      core.addColorStop(0.32, '#f6c95b');
+      core.addColorStop(0.7, '#ff6a3d');
+      core.addColorStop(1, 'rgba(232,59,95,0)');
+      ctx.fillStyle = core;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    drawArc() {
+      const { from: f, to: t, progress: pg } = this;
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const nx = -uy, ny = ux;
+      const p = easeOutCubic(pg);
+      const segments = 7;
+      const ui = canvasUiScale();
+      const fade = pg < 0.7 ? 1 : Math.max(0, 1 - (pg - 0.7) / 0.3);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.globalAlpha = 0.72 * fade;
+      ctx.strokeStyle = '#99ffda';
+      ctx.lineWidth = Math.max(3, 6 * ui);
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y);
+      for (let i = 1; i <= segments; i += 1) {
+        const local = Math.min(p, i / segments);
+        if (local <= (i - 1) / segments) break;
+        const offset = Math.sin((i * 2.31 + Date.now() * 0.018)) * (12 + this.intensity * 10) * ui;
+        const x = f.x + dx * local + nx * offset;
+        const y = f.y + dy * local + ny * offset;
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 0.95 * fade;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1, 2 * ui);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     drawGift() {
       if (!this.spawned) {
         this.spawned = true;
@@ -4167,6 +4347,25 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     boss:'neon', bosswave:'neon',
     meteor:'fire', tsunami:'ripple', nuke:'explosion', nukes:'explosion',
   };
+  Object.assign(TYPE_MAP, {
+    bubble: 'arc',
+    bubbles: 'arc',
+    water: 'arc',
+    ripple: 'arc',
+    wave: 'arc',
+    shock: 'arc',
+    arc: 'arc',
+    shot: 'bullet',
+    bullet: 'bullet',
+    shell: 'bullet',
+    rail: 'railgun',
+    railgun: 'railgun',
+    comet: 'comet',
+    meteor: 'comet',
+    boss: 'railgun',
+    bosswave: 'railgun',
+    projectile: 'projectile',
+  });
 
   function attackKey(attackerId, targetId, effect) {
     return `${String(attackerId || '').toLowerCase()}|${String(targetId || '').toLowerCase()}|${String(effect || '').toLowerCase()}`;
@@ -4237,7 +4436,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     else if (killed) { type = 'explosion'; }
     else {
       const s = overlaySettings.shotType;
-      type = s === 'beam' ? 'beam' : s === 'pulse' ? 'fire' : s === 'wave' ? 'ripple' : s === 'burst' ? 'explosion' : s === 'ripple' ? 'ripple' : 'laser';
+      type = TYPE_MAP[String(s || '').toLowerCase()] || (s === 'pulse' ? 'fire' : s === 'burst' ? 'explosion' : 'laser');
     }
 
     const attackIntensity = meta.intensity != null ? meta.intensity : 0.5;
@@ -4424,7 +4623,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     const pos = getPositionForPlayer(data.uniqueId);
     const center = getHordePosition();
     const origin = pos || center;
-    const atk = new Attack(origin, center, isRepost ? 'ripple' : 'static', {
+    const atk = new Attack(origin, center, isRepost ? 'arc' : 'static', {
       intensity: isRepost ? 0.9 : 0.62,
       color: data.color || (isRepost ? THEME.gold : THEME.cyan),
     });
@@ -4467,7 +4666,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     const center = { x: frame.x + frame.w * 0.5, y: frame.y + frame.h * 0.58 };
     const horde = getHordePosition();
     const color = data.color || (isTakeover ? THEME.gold : THEME.cyan);
-    const atk = new Attack(center, horde, isTakeover ? 'sphere' : isViral ? 'ripple' : 'neon', {
+    const atk = new Attack(center, horde, isTakeover ? 'sphere' : isViral ? 'railgun' : 'neon', {
       intensity: isTakeover ? 1 : isViral ? 0.84 : 0.68,
       color,
       critical: isTakeover,
@@ -4824,7 +5023,8 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       barY,
       hpTextY,
     } = getPlayerCardDrawMetrics(pos, total);
-    const accent = rank === 1 ? THEME.gold : THEME.cyan;
+    const teamAccent = player.teamColor || '';
+    const accent = teamAccent || (rank === 1 ? THEME.gold : THEME.cyan);
     const pulse = 0.55 + Math.sin(Date.now() / 310 + rank) * 0.45;
     const cardAccent = getCardAccent(player);
 
@@ -4849,11 +5049,11 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 
     ctx.save();
     const glow = ctx.createRadialGradient(pos.x, avatarY, 0, pos.x, avatarY, avatarR * 3.2);
-    glow.addColorStop(0, rank === 1 ? 'rgba(246,201,91,0.2)' : 'rgba(85,231,255,0.16)');
+    glow.addColorStop(0, colorWithAlpha(accent, teamAccent ? 0.22 : rank === 1 ? 0.2 : 0.16));
     glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(pos.x, avatarY, avatarR * 2.6, 0, Math.PI * 2); ctx.fill();
 
-    ctx.shadowColor = rank === 1 ? 'rgba(246,201,91,0.24)' : 'rgba(85,231,255,0.18)';
+    ctx.shadowColor = colorWithAlpha(accent, teamAccent ? 0.28 : rank === 1 ? 0.24 : 0.18);
     if (cardAccent) {
       ctx.shadowColor = cardAccent.color;
       ctx.shadowBlur = cardAccent.type === 'kill' ? 38 : 28;
@@ -4864,18 +5064,18 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       start: 'rgba(7,12,24,0.92)',
       mid: 'rgba(18,25,39,0.74)',
       end: 'rgba(4,7,14,0.94)',
-      stroke: rank === 1 ? 'rgba(246,201,91,0.5)' : 'rgba(85,231,255,0.32)',
+      stroke: colorWithAlpha(accent, teamAccent ? 0.62 : rank === 1 ? 0.5 : 0.32),
       lineWidth: 1.3,
     });
     ctx.shadowBlur = 0;
 
-    ctx.fillStyle = rank === 1 ? 'rgba(246,201,91,0.9)' : 'rgba(85,231,255,0.82)';
+    ctx.fillStyle = colorWithAlpha(accent, teamAccent ? 0.92 : rank === 1 ? 0.9 : 0.82);
     roundedRectPath(ctx, plateX + cardW * 0.08, plateY + plateH * 0.09, cardW * 0.84, Math.max(3, plateH * 0.025), 4);
     ctx.fill();
 
     const railX = plateX + 9;
     const railH = plateH * 0.58;
-    ctx.fillStyle = nearDeath ? `rgba(232,59,95,${0.52 + pulse * 0.25})` : (rank === 1 ? 'rgba(246,201,91,0.44)' : 'rgba(85,231,255,0.28)');
+    ctx.fillStyle = nearDeath ? `rgba(232,59,95,${0.52 + pulse * 0.25})` : colorWithAlpha(accent, teamAccent ? 0.46 : rank === 1 ? 0.44 : 0.28);
     roundedRectPath(ctx, railX, plateY + plateH * 0.24, 4, railH, 3);
     ctx.fill();
 
@@ -4917,7 +5117,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#fff';
       ctx.fillText(customIcon, pos.x, avatarY);
     } else {
-      drawBattleInsignia(pos.x, avatarY, avatarR * 0.936, rank === 1 ? '#ffd451' : '#7afcff');
+      drawBattleInsignia(pos.x, avatarY, avatarR * 0.936, accent);
     }
 
     const name = (player.nickname || player.uniqueId || 'Player').slice(0, 20);
@@ -5517,8 +5717,8 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   // ═══════════════════════════════════════
   // DEMO MODE
   // ═══════════════════════════════════════
-  const ALL_EFFECTS = ['laser','beam','projectile','neon','ripple','fire','bubble','sphere','explosion'];
-  const PREVIEW_EFFECTS = ['laser','beam','neon','ripple','bubble','sphere'];
+  const ALL_EFFECTS = ['laser','beam','projectile','neon','fire','sphere','explosion','bullet','railgun','comet','arc'];
+  const PREVIEW_EFFECTS = ['laser','beam','neon','sphere','bullet','railgun','comet','arc'];
 
   function stopDemoLoop() { if (_demoTimer) { clearInterval(_demoTimer); _demoTimer = null; } }
 
@@ -5829,7 +6029,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   function handleGiftAttackEvent(data) {
     if (!data) return;
     const s = overlaySettings.shotType;
-    const forcedEffect = s === 'beam' ? 'beam' : s === 'pulse' ? 'fire' : s === 'wave' ? 'ripple' : s === 'burst' ? 'explosion' : s === 'ripple' ? 'ripple' : 'laser';
+    const forcedEffect = TYPE_MAP[String(s || '').toLowerCase()] || (s === 'pulse' ? 'fire' : s === 'burst' ? 'explosion' : 'laser');
     const fired = fireAttack(data.attacker, data.target, data.damage, data.killed, true, forcedEffect, {
       intensity: data.intensity || 0.5, giftBoosted: true,
       remainingHpPct: data.killed ? 0 : 1,

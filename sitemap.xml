@@ -39,6 +39,16 @@
     </image:image>
   </url>
   <url>
+    <loc>https://intothebattle.com/battlegrounds</loc>
+    <lastmod>2026-06-24</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://intothebattle.com/og-intothebattle.png</image:loc>
+      <image:title>The Battlegrounds public live battle board</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://intothebattle.com/sponsors</loc>
     <lastmod>2026-06-24</lastmod>
     <changefreq>weekly</changefreq>

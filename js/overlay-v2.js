@@ -500,23 +500,131 @@
       return false;
     }
 
+    normalizeEffectName(input) {
+      const value = String(input || '').trim().toLowerCase();
+      const map = {
+        bubble: 'arc',
+        bubbles: 'arc',
+        water: 'arc',
+        ripple: 'arc',
+        wave: 'arc',
+        shock: 'arc',
+        arc: 'arc',
+        shot: 'bullet',
+        shell: 'bullet',
+        bullet: 'bullet',
+        projectile: 'projectile',
+        rail: 'railgun',
+        railgun: 'railgun',
+        comet: 'comet',
+        meteor: 'comet',
+        fire: 'fire',
+        laser: 'laser',
+        beam: 'beam',
+        neon: 'neon',
+        gift: 'gift',
+        explosion: 'explosion',
+        boss: 'railgun',
+        bosswave: 'railgun',
+      };
+      return map[value] || 'laser';
+    }
+
     fireBeam(from, to, damage, type = 'normal', options = {}) {
       const start = from || this.getHordePosition();
       const end = to || this.getHordePosition();
       const color = options.color || (type === 'kill' ? 0xf6c95b : type === 'critical' ? 0xff315f : this.laserColor);
       const beam = this.add.graphics();
-      const width = options.special ? 11 * this.scaleUnit : 7 * this.scaleUnit;
-      beam.lineStyle(Math.max(4, width), color, 0.82);
-      beam.lineBetween(start.x, start.y, end.x, end.y);
-      beam.lineStyle(Math.max(1, 2 * this.scaleUnit), 0xffffff, 0.95);
-      beam.lineBetween(start.x, start.y, end.x, end.y);
-      beam.fillStyle(color, 0.36);
-      beam.fillCircle(end.x, end.y, Math.max(12, 18 * this.scaleUnit));
+      const effect = this.normalizeEffectName(options.effect || options.shotType || type);
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist;
+      const uy = dy / dist;
+      const nx = -uy;
+      const ny = ux;
+      const unit = this.scaleUnit || 1;
+      const width = options.special ? 11 * unit : 7 * unit;
+      const line = (strokeWidth, strokeColor, alpha, sx = start.x, sy = start.y, ex = end.x, ey = end.y) => {
+        beam.lineStyle(Math.max(1, strokeWidth), strokeColor, alpha);
+        beam.lineBetween(sx, sy, ex, ey);
+      };
+
+      if (effect === 'bullet') {
+        const body = Math.max(24, 34 * unit);
+        const radius = Math.max(6, 8 * unit);
+        const tailX = end.x - ux * body;
+        const tailY = end.y - uy * body;
+        line(Math.max(4, width * 0.8), 0xf6c95b, 0.42, start.x, start.y, tailX, tailY);
+        line(Math.max(1, 2 * unit), 0xffffff, 0.72, start.x + nx * 5 * unit, start.y + ny * 5 * unit, tailX + nx * 5 * unit, tailY + ny * 5 * unit);
+        beam.fillStyle(0xb87928, 0.98);
+        beam.fillTriangle(end.x, end.y, tailX + nx * radius, tailY + ny * radius, tailX - nx * radius, tailY - ny * radius);
+        beam.fillStyle(0xfff0b9, 0.9);
+        beam.fillTriangle(end.x - ux * body * 0.22, end.y - uy * body * 0.22, tailX + nx * radius * 0.5, tailY + ny * radius * 0.5, tailX + nx * radius * 0.05, tailY + ny * radius * 0.05);
+        const shellCenterX = start.x + dx * 0.18 + nx * 24 * unit;
+        const shellCenterY = start.y + dy * 0.18 + ny * 24 * unit;
+        const shellL = 18 * unit;
+        const shellW = 5 * unit;
+        beam.fillStyle(0xc58428, 0.9);
+        beam.fillTriangle(
+          shellCenterX - ux * shellL - nx * shellW,
+          shellCenterY - uy * shellL - ny * shellW,
+          shellCenterX + ux * shellL - nx * shellW,
+          shellCenterY + uy * shellL - ny * shellW,
+          shellCenterX + ux * shellL + nx * shellW,
+          shellCenterY + uy * shellL + ny * shellW
+        );
+        beam.fillTriangle(
+          shellCenterX - ux * shellL - nx * shellW,
+          shellCenterY - uy * shellL - ny * shellW,
+          shellCenterX + ux * shellL + nx * shellW,
+          shellCenterY + uy * shellL + ny * shellW,
+          shellCenterX - ux * shellL + nx * shellW,
+          shellCenterY - uy * shellL + ny * shellW
+        );
+      } else if (effect === 'railgun') {
+        line(Math.max(10, width * 1.8), 0x55e7ff, 0.38);
+        line(Math.max(3, width * 0.48), 0xffffff, 0.95);
+        [0.22, 0.42, 0.62, 0.82].forEach((ratio, index) => {
+          const x = start.x + dx * ratio;
+          const y = start.y + dy * ratio;
+          beam.lineStyle(Math.max(1, 2 * unit), index % 2 ? 0xf6c95b : 0x99ffda, 0.55);
+          beam.strokeCircle(x, y, (16 + index * 5) * unit);
+        });
+      } else if (effect === 'comet' || effect === 'fire') {
+        line(Math.max(12, width * 2), 0xff6a3d, 0.34, start.x, start.y, end.x - ux * 12 * unit, end.y - uy * 12 * unit);
+        line(Math.max(5, width * 0.88), 0xf6c95b, 0.72, start.x + nx * 2 * unit, start.y + ny * 2 * unit, end.x, end.y);
+        beam.fillStyle(0xff6a3d, 0.45);
+        beam.fillCircle(end.x, end.y, Math.max(18, 28 * unit));
+        beam.fillStyle(0xfff0b9, 0.94);
+        beam.fillCircle(end.x, end.y, Math.max(8, 12 * unit));
+      } else if (effect === 'arc') {
+        const segments = 7;
+        let lastX = start.x;
+        let lastY = start.y;
+        for (let i = 1; i <= segments; i += 1) {
+          const ratio = i / segments;
+          const jitter = Math.sin((Date.now() * 0.018) + i * 2.17) * (16 + Number(options.special) * 5) * unit;
+          const x = start.x + dx * ratio + nx * jitter;
+          const y = start.y + dy * ratio + ny * jitter;
+          line(Math.max(4, width * 0.82), 0x99ffda, 0.66, lastX, lastY, x, y);
+          line(Math.max(1, 2 * unit), 0xffffff, 0.86, lastX, lastY, x, y);
+          lastX = x;
+          lastY = y;
+        }
+      } else {
+        beam.lineStyle(Math.max(4, width), color, 0.82);
+        beam.lineBetween(start.x, start.y, end.x, end.y);
+        beam.lineStyle(Math.max(1, 2 * unit), 0xffffff, 0.95);
+        beam.lineBetween(start.x, start.y, end.x, end.y);
+        beam.fillStyle(color, 0.36);
+        beam.fillCircle(end.x, end.y, Math.max(12, 18 * unit));
+      }
       this.effectLayer.add(beam);
       this.tweens.add({
         targets: beam,
         alpha: 0,
-        duration: type === 'kill' ? 420 : 270,
+        duration: effect === 'bullet' ? 520 : effect === 'comet' ? 760 : type === 'kill' ? 420 : 300,
         ease: 'Cubic.easeOut',
         onComplete: () => beam.destroy(),
       });
@@ -548,6 +656,7 @@
       const to = this.getEntityPosition(data.target || data.targetId, data.targetScope) || this.getHordePosition();
       this.fireBeam(from, to, data.damage || 'HIT', type, {
         special: Boolean(data.special || data.giftBoosted),
+        effect: data.effect || data.commandDescription || data.shotType,
         color: data.laserColor ? hexToNumber(data.laserColor, this.laserColor) : undefined,
       });
       if (data.attacker || data.attackerId) this.pulseCard(data.attacker || data.attackerId, type === 'kill' ? 0xf6c95b : this.laserColor);
@@ -827,6 +936,11 @@
         health: clamp(Number(player.health ?? player.hp ?? 100), 0, 100),
         kills: Number(player.kills || 0),
         deaths: Number(player.deaths || 0),
+        color: player.color || '',
+        teamId: player.teamId || '',
+        teamName: player.teamName || '',
+        teamColor: player.teamColor || '',
+        iconEmoji: player.iconEmoji || '',
       };
     }
 
@@ -985,23 +1099,25 @@
       const top = -h / 2;
       const left = -w / 2;
       const healthColor = health > 66 ? 0x99ffda : health > 34 ? 0xf6c95b : 0xff5566;
+      const teamColor = record.data.teamColor ? hexToNumber(record.data.teamColor, healthColor) : null;
+      const accentColor = teamColor || healthColor;
 
       record.gfx.clear();
       record.gfx.fillStyle(0x000000, 0.32);
       record.gfx.fillRoundedRect(left + 7 * this.scaleUnit, top + 9 * this.scaleUnit, w, h, r);
       record.gfx.fillStyle(0x050811, 0.92);
       record.gfx.fillRoundedRect(left, top, w, h, r);
-      record.gfx.fillStyle(healthColor, 0.08);
+      record.gfx.fillStyle(accentColor, 0.08);
       record.gfx.fillRoundedRect(left + 7 * this.scaleUnit, top + 7 * this.scaleUnit, w - 14 * this.scaleUnit, h - 14 * this.scaleUnit, r * 0.72);
       record.gfx.fillStyle(0xffffff, 0.06);
       record.gfx.fillRoundedRect(left + 12 * this.scaleUnit, top + 12 * this.scaleUnit, w - 24 * this.scaleUnit, h * 0.38, r * 0.52);
-      record.gfx.lineStyle(Math.max(2, 3 * this.scaleUnit), healthColor, 0.86);
+      record.gfx.lineStyle(Math.max(2, 3 * this.scaleUnit), accentColor, 0.86);
       record.gfx.strokeRoundedRect(left, top, w, h, r);
       record.gfx.lineStyle(Math.max(1, 1.5 * this.scaleUnit), 0xffffff, 0.18);
       record.gfx.strokeRoundedRect(left + 6 * this.scaleUnit, top + 6 * this.scaleUnit, w - 12 * this.scaleUnit, h - 12 * this.scaleUnit, r * 0.64);
-      record.gfx.fillStyle(healthColor, 0.88);
+      record.gfx.fillStyle(accentColor, 0.88);
       record.gfx.fillRoundedRect(left + 18 * this.scaleUnit, top + 12 * this.scaleUnit, w - 36 * this.scaleUnit, 4 * this.scaleUnit, 2 * this.scaleUnit);
-      record.gfx.fillStyle(healthColor, 0.92);
+      record.gfx.fillStyle(accentColor, 0.92);
       record.gfx.fillRoundedRect(left + 12 * this.scaleUnit, top + 22 * this.scaleUnit, 46 * this.scaleUnit, 26 * this.scaleUnit, 13 * this.scaleUnit);
       record.gfx.fillStyle(0x02040a, 0.2);
       record.gfx.fillRoundedRect(left + 16 * this.scaleUnit, top + 26 * this.scaleUnit, 38 * this.scaleUnit, 18 * this.scaleUnit, 9 * this.scaleUnit);
@@ -1011,9 +1127,9 @@
       record.gfx.fillRoundedRect(left + 20 * this.scaleUnit, top + h - 34 * this.scaleUnit, hpW * (health / 100), hpH, hpH / 2);
 
       record.avatar.clear();
-      record.avatar.fillStyle(healthColor, 0.18);
+      record.avatar.fillStyle(accentColor, 0.18);
       record.avatar.fillCircle(0, top + 40 * this.scaleUnit, 30 * this.scaleUnit);
-      record.avatar.lineStyle(Math.max(2, 3 * this.scaleUnit), healthColor, 0.75);
+      record.avatar.lineStyle(Math.max(2, 3 * this.scaleUnit), accentColor, 0.75);
       record.avatar.strokeCircle(0, top + 40 * this.scaleUnit, 30 * this.scaleUnit);
       record.avatar.fillStyle(0xffffff, 0.86);
       record.avatar.fillCircle(0, top + 34 * this.scaleUnit, 9 * this.scaleUnit);

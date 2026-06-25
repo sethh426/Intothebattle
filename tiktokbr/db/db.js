@@ -453,6 +453,27 @@ async function initDb() {
     await safeExec('ALTER TABLE creator_comments ADD COLUMN deleted_at TIMESTAMP');
 
     await safeExec(`
+      CREATE TABLE IF NOT EXISTS battleground_posts (
+        id SERIAL PRIMARY KEY,
+        creator_name TEXT NOT NULL,
+        tiktok_username TEXT NOT NULL,
+        battle_title TEXT NOT NULL,
+        scheduled_for TIMESTAMP,
+        timezone TEXT,
+        description TEXT,
+        battle_url TEXT,
+        status TEXT DEFAULT 'approved',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        deleted_at TIMESTAMP
+      )
+    `);
+    await safeExec('ALTER TABLE battleground_posts ADD COLUMN timezone TEXT');
+    await safeExec('ALTER TABLE battleground_posts ADD COLUMN battle_url TEXT');
+    await safeExec("ALTER TABLE battleground_posts ADD COLUMN status TEXT DEFAULT 'approved'");
+    await safeExec('ALTER TABLE battleground_posts ADD COLUMN deleted_at TIMESTAMP');
+    await safeExec('CREATE INDEX IF NOT EXISTS battleground_posts_status_time_idx ON battleground_posts(status, scheduled_for)');
+
+    await safeExec(`
       CREATE TABLE IF NOT EXISTS marketing_posts (
         id SERIAL PRIMARY KEY,
         campaign_date DATE NOT NULL,

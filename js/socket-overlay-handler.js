@@ -57,7 +57,12 @@ function initSocketOverlay(game) {
       name: player.nickname || player.name || player.uniqueId || id,
       health,
       kills: Number(player.kills || 0),
-      deaths: Number(player.deaths || 0)
+      deaths: Number(player.deaths || 0),
+      color: player.color || player.teamColor || '',
+      teamId: player.teamId || '',
+      teamName: player.teamName || '',
+      teamColor: player.teamColor || '',
+      iconEmoji: player.iconEmoji || '',
     };
   }
 

@@ -210,6 +210,7 @@ const PLATFORM_SPONSOR_ACTIVE_HOURS_UTC = String(process.env.PLATFORM_SPONSOR_AC
 const SPONSOR_PREPARE_TIMEOUT_MS = Number(process.env.SPONSOR_PREPARE_TIMEOUT_MS || 8000);
 const SERVER_HORDE_ID = '__HORDE__';
 const SERVER_BOSS_ID = '__BOSS__';
+const TEAM_COLORS = ['#7afcff', '#f6c95b', '#ff6a3d', '#99ffda', '#c77dff', '#ff78b2', '#ffffff'];
 const BATTLE_ROUND_DURATION_MS = Number(process.env.BATTLE_ROUND_DURATION_MS || 4 * 60 * 1000);
 const BOSS_WAVE_HP = Number(process.env.BOSS_WAVE_HP || 1200);
 const BOSS_WAVE_DURATION_MS = Number(process.env.BOSS_WAVE_DURATION_MS || 90 * 1000);
@@ -1217,6 +1218,76 @@ function listPublicCreatorComments(limit = 12) {
   } catch (err) {
     logger.warn({ err }, 'Failed to load public creator comments');
     return [];
+  }
+}
+
+function listPublicBattlegroundPosts(limit = 18) {
+  const safeLimit = Math.max(1, Math.min(40, Number(limit) || 18));
+  try {
+    return db.prepare(`
+      SELECT id, creator_name, tiktok_username, battle_title, scheduled_for, timezone, description, battle_url, created_at
+      FROM battleground_posts
+      WHERE COALESCE(status, 'approved') = 'approved'
+        AND deleted_at IS NULL
+      ORDER BY
+        CASE WHEN scheduled_for IS NULL THEN 1 ELSE 0 END,
+        scheduled_for ASC,
+        created_at DESC,
+        id DESC
+      LIMIT ?
+    `).all(safeLimit).map(row => ({
+      id: row.id,
+      creatorName: row.creator_name,
+      tiktokUsername: row.tiktok_username,
+      battleTitle: row.battle_title,
+      scheduledFor: row.scheduled_for,
+      timezone: row.timezone || '',
+      description: row.description || '',
+      battleUrl: row.battle_url || '',
+      createdAt: row.created_at,
+    }));
+  } catch (err) {
+    logger.warn({ err }, 'Failed to load battleground posts');
+    return [];
+  }
+}
+
+function normalizeBattleUrl(value = '') {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    const parsed = new URL(raw);
+    if (!['https:', 'http:'].includes(parsed.protocol)) return '';
+    return parsed.toString().slice(0, 240);
+  } catch (_err) {
+    return '';
+  }
+}
+
+function createBattlegroundPost(body = {}) {
+  const creatorName = cleanPublicText(body.creatorName || body.creator_name || body.name, 70) || 'Creator';
+  const tiktokUsername = cleanPublicText(body.tiktokUsername || body.tiktok_username || body.username, 80).replace(/^@+/, '');
+  const battleTitle = cleanPublicText(body.battleTitle || body.battle_title || body.title, 120);
+  const timezone = cleanPublicText(body.timezone, 60);
+  const description = cleanPublicText(body.description, 260);
+  const battleUrl = normalizeBattleUrl(body.battleUrl || body.battle_url || body.url);
+  const scheduledRaw = String(body.scheduledFor || body.scheduled_for || '').trim();
+  const scheduledDate = scheduledRaw ? new Date(scheduledRaw) : null;
+  const scheduledFor = scheduledDate && Number.isFinite(scheduledDate.getTime()) ? scheduledDate.toISOString() : null;
+
+  if (!tiktokUsername) return { ok: false, status: 400, error: 'Enter a TikTok username.' };
+  if (battleTitle.length < 6) return { ok: false, status: 400, error: 'Give the battle a clear title.' };
+  if (scheduledRaw && !scheduledFor) return { ok: false, status: 400, error: 'Enter a valid battle time.' };
+
+  try {
+    db.prepare(`
+      INSERT INTO battleground_posts (creator_name, tiktok_username, battle_title, scheduled_for, timezone, description, battle_url, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 'approved', CURRENT_TIMESTAMP)
+    `).run(creatorName, tiktokUsername, battleTitle, scheduledFor, timezone, description, battleUrl);
+    return { ok: true, posts: listPublicBattlegroundPosts(18) };
+  } catch (err) {
+    logger.warn({ err }, 'Failed to create battleground post');
+    return { ok: false, status: 500, error: 'Unable to post your battle right now.' };
   }
 }
 
@@ -2520,7 +2591,25 @@ const EFFECT_COMMANDS = {
 };
 
 // Pool of effects for random non‑command attacks (fire, water, wind, laser)
-const RANDOM_ATTACK_EFFECTS = ['fire', 'bubble', 'ripple', 'laser'];
+for (const deprecatedEffectCommand of ['bubble', 'bubbles', 'water', 'ripple']) {
+  delete EFFECT_COMMANDS[deprecatedEffectCommand];
+}
+
+Object.assign(EFFECT_COMMANDS, {
+  wave:     { effect: 'arc',       multiplier: 2.5, description: 'SHOCK WAVE' },
+  spiral:   { effect: 'arc',       multiplier: 3.4, description: 'ARC SPIRAL' },
+  shock:    { effect: 'arc',       multiplier: 2.5, description: 'SHOCK ARC' },
+  arc:      { effect: 'arc',       multiplier: 2.5, description: 'ARC STRIKE' },
+  bullet:   { effect: 'bullet',    multiplier: 1.8, description: 'BULLET' },
+  shell:    { effect: 'bullet',    multiplier: 1.8, description: 'SHELL SHOT' },
+  shot:     { effect: 'bullet',    multiplier: 1.8, description: 'SHOT' },
+  rail:     { effect: 'railgun',   multiplier: 2.8, description: 'RAIL SHOT' },
+  railgun:  { effect: 'railgun',   multiplier: 2.8, description: 'RAILGUN' },
+  comet:    { effect: 'comet',     multiplier: 3.2, description: 'COMET' },
+  meteor:   { effect: 'comet',     multiplier: 4.2, description: 'METEOR' },
+});
+
+const RANDOM_ATTACK_EFFECTS = ['laser', 'beam', 'fire', 'bullet', 'railgun', 'comet', 'arc'];
 
 // ────────────────────────────────
 // HELPER FUNCTIONS (unchanged)
@@ -3218,6 +3307,9 @@ function spawnPlayer(room, uniqueId, nickname) {
     vx: (Math.random() - 0.5) * 2,
     vy: (Math.random() - 0.5) * 2,
     color:               ex?.color               || randomColor(),
+    teamId:              ex?.teamId              || '',
+    teamName:            ex?.teamName            || '',
+    teamColor:           ex?.teamColor           || '',
     iconEmoji:           ex?.iconEmoji           || '💎',
     messageBoostExpires: ex?.messageBoostExpires || 0,
     shieldUntil:         ex?.shieldUntil         || 0,
@@ -3410,7 +3502,7 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
   let bossPressure = false;
   if (room.bossWave?.active) {
     bossPressure = true;
-    damageBossWave(room, uniqueId, nickname, isRepost ? CFG.REPOST_BOSS_MULTIPLIER : CFG.SHARE_BOSS_MULTIPLIER, isRepost ? 'explosion' : 'ripple', `${type} surge`);
+    damageBossWave(room, uniqueId, nickname, isRepost ? CFG.REPOST_BOSS_MULTIPLIER : CFG.SHARE_BOSS_MULTIPLIER, isRepost ? 'explosion' : 'arc', `${type} surge`);
   }
   emitSoundAndSync(room, 'socialBoost', { intensity: isRepost ? 0.92 : 0.66, tier: isRepost ? 'rare' : 'common' });
   const payload = {
@@ -3611,6 +3703,148 @@ function healPlayer(room, targetId, amount) {
   return Math.max(0, player.hp - before);
 }
 
+function getBattleSideSnapshot(room) {
+  const topPlayers = getTopPlayers(room, 5)
+    .filter(player => player?.alive && isPersistablePlayerId(player.uniqueId))
+    .slice(0, 5);
+  const topIds = new Set(topPlayers.map(player => String(player.uniqueId)));
+  const hordePlayers = Object.values(room?.players || {})
+    .filter(player => player?.alive && isPersistablePlayerId(player.uniqueId) && !topIds.has(String(player.uniqueId)));
+  return { topPlayers, topIds, hordePlayers };
+}
+
+function battleScopeForPlayer(room, playerId, snapshot = null) {
+  const sides = snapshot || getBattleSideSnapshot(room);
+  return sides.topIds.has(String(playerId)) ? 'top' : 'horde';
+}
+
+function chooseTopBattleTarget(room, attackerId, snapshot = null) {
+  const sides = snapshot || getBattleSideSnapshot(room);
+  const options = sides.topPlayers.filter(player => player.uniqueId !== attackerId && player.alive);
+  if (!options.length) return null;
+  const weakestFirst = [...options].sort((a, b) => (Number(a.hp) || 0) - (Number(b.hp) || 0));
+  return Math.random() < 0.55
+    ? weakestFirst[0]
+    : options[Math.floor(Math.random() * options.length)];
+}
+
+function chooseHordeDamageTarget(room, attackerId, snapshot = null) {
+  const sides = snapshot || getBattleSideSnapshot(room);
+  const options = sides.hordePlayers.filter(player => player.uniqueId !== attackerId && player.alive);
+  if (!options.length) return null;
+  const recentlyActive = [...options].sort((a, b) => (Number(b.lastActive) || 0) - (Number(a.lastActive) || 0));
+  return Math.random() < 0.5
+    ? recentlyActive[0]
+    : options[Math.floor(Math.random() * options.length)];
+}
+
+function chooseGiftAttackTargets(room, attackerId, limit = 3) {
+  const snapshot = getBattleSideSnapshot(room);
+  const attackerScope = battleScopeForPlayer(room, attackerId, snapshot);
+  const pool = attackerScope === 'top' ? snapshot.hordePlayers : snapshot.topPlayers;
+  const available = pool.filter(player => player?.alive && player.uniqueId !== attackerId);
+  const targets = [];
+  while (targets.length < limit && available.length) {
+    const idx = Math.floor(Math.random() * available.length);
+    targets.push(available.splice(idx, 1)[0]);
+  }
+  return { attackerScope, targets, snapshot };
+}
+
+function applyGiftAttackToTarget(room, attackerId, target, options = {}) {
+  if (!room?.players?.[attackerId] || !target?.uniqueId || !room.players[target.uniqueId]?.alive) return null;
+  const diamonds = Math.max(1, Math.round(Number(options.diamonds) || 1));
+  const damage = diamonds;
+  const snapshot = options.snapshot || getBattleSideSnapshot(room);
+  const attackerScope = battleScopeForPlayer(room, attackerId, snapshot);
+  const actualTargetScope = battleScopeForPlayer(room, target.uniqueId, snapshot);
+  const visualizesHorde = attackerScope === 'top' && actualTargetScope === 'horde';
+  const visualTargetId = visualizesHorde ? SERVER_HORDE_ID : target.uniqueId;
+  const visualTargetNick = visualizesHorde ? 'The Horde' : (target.nickname || target.uniqueId);
+
+  target.hp = Math.max(0, Number(target.hp) - damage);
+  target.lastActive = Date.now();
+  let killed = false;
+
+  if (target.hp === 0) {
+    killed = true;
+    target.alive = false;
+    room.players[attackerId].kills++;
+    setTimeout(() => {
+      spawnPlayer(room, target.uniqueId, target.nickname);
+      emitRoomEvent(room, 'respawn', {
+        uniqueId: target.uniqueId,
+        nickname: target.nickname,
+        respawnEffect: 'beam_down',
+      });
+      emitSoundAndSync(room, 'respawn', { intensity: 0.5, tier: 'common' });
+      emitRoomEvent(room, 'gameState', room.players);
+    }, CFG.RESPAWN_DELAY_MS);
+  }
+
+  return {
+    attacker: attackerId,
+    target: visualTargetId,
+    targetNick: visualTargetNick,
+    actualTarget: target.uniqueId,
+    actualTargetNick: target.nickname || target.uniqueId,
+    damage,
+    killed,
+    diamonds,
+    effect: options.effect || 'laser',
+    intensity: options.intensity || 0.7,
+    giftColor: options.giftColor || '#7afcff',
+    attackerScope,
+    targetScope: visualizesHorde ? 'horde' : actualTargetScope,
+  };
+}
+
+function mentionTargetsHorde(value = '') {
+  return ['horde', 'thehorde', normalizeName(SERVER_HORDE_ID)].includes(normalizeName(value));
+}
+
+function normalizeTeamName(value = '') {
+  return cleanPublicText(value, 28)
+    .replace(/^@+/, '')
+    .replace(/[^a-z0-9 _-]/gi, '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .slice(0, 20);
+}
+
+function teamColorForName(teamName = '') {
+  const clean = normalizeTeamName(teamName).toLowerCase();
+  if (!clean) return '';
+  let hash = 0;
+  for (let i = 0; i < clean.length; i += 1) {
+    hash = ((hash << 5) - hash + clean.charCodeAt(i)) | 0;
+  }
+  return TEAM_COLORS[Math.abs(hash) % TEAM_COLORS.length];
+}
+
+function setPlayerTeam(room, playerId, nickname, teamName) {
+  if (!room.players[playerId]?.alive) spawnPlayer(room, playerId, nickname);
+  const player = room.players[playerId];
+  if (!player) return null;
+  const cleanTeam = normalizeTeamName(teamName);
+  if (!cleanTeam) {
+    delete player.teamId;
+    delete player.teamName;
+    delete player.teamColor;
+    player.lastActive = Date.now();
+    player.forceSpawn = true;
+    return { teamName: '', teamColor: '', cleared: true };
+  }
+  const teamColor = teamColorForName(cleanTeam);
+  player.teamId = normalizeName(cleanTeam);
+  player.teamName = cleanTeam;
+  player.teamColor = teamColor;
+  player.color = teamColor;
+  player.lastActive = Date.now();
+  player.forceSpawn = true;
+  return { teamName: cleanTeam, teamColor, cleared: false };
+}
+
 function handlePlayerUtilityCommand(room, playerId, nickname, comment) {
   const text = String(comment || '').trim();
   if (!text) return { handled: false, stop: false };
@@ -3634,11 +3868,32 @@ function handlePlayerUtilityCommand(room, playerId, nickname, comment) {
     return { handled: true, stop: true };
   }
 
-  const commandMatch = text.match(/^\s*(?:!|\/)?(join|spawn|play|help|commands|heal|shield|guard|block)\b(?:\s+(.+))?/i);
+  const commandMatch = text.match(/^\s*(?:!|\/)?(join|spawn|play|help|commands|team|heal|shield|guard|block)\b(?:\s+(.+))?/i);
   if (!commandMatch) return { handled: false, stop: false };
 
   const command = commandMatch[1].toLowerCase();
   const rest = commandMatch[2] || '';
+
+  if (command === 'team') {
+    const normalizedRest = rest.replace(/^\s*(?:join|set|create)\s+/i, '').trim();
+    const clearing = /^(?:clear|leave|none|solo)$/i.test(normalizedRest);
+    const assignment = setPlayerTeam(room, playerId, nickname, clearing ? '' : normalizedRest);
+    if (!assignment) return { handled: true, stop: true, reason: 'Unable to update team' };
+    emitRoomEvent(room, 'playerCommand', {
+      type: 'team',
+      uniqueId: playerId,
+      nickname,
+      teamName: assignment.teamName,
+      teamColor: assignment.teamColor,
+      cleared: assignment.cleared,
+      message: assignment.cleared
+        ? `${nickname} left their team`
+        : `${nickname} joined Team ${assignment.teamName}`,
+    });
+    emitRoomEvent(room, 'gameState', room.players);
+    return { handled: true, stop: true };
+  }
+
   if (['join', 'spawn', 'play'].includes(command)) {
     const wasAlive = Boolean(room.players[playerId]?.alive);
     if (!wasAlive) spawnPlayer(room, playerId, nickname);
@@ -3826,6 +4081,147 @@ function handleMentionAttack(room, attackerId, attackerNick, comment) {
 // ────────────────────────────────
 // APP & SOCKET.IO SETUP
 // ────────────────────────────────
+function handleBattleAttack(room, attackerId, attackerNick, comment) {
+  const text = String(comment || '');
+  const mentions = extractMentions(text);
+  const bossMentioned = Boolean(room?.bossWave?.active && textTargetsBossWave(text, mentions));
+  const hordeRequested = /\b(?:horde|the\s+horde)\b/i.test(text) || mentions.some(mentionTargetsHorde);
+
+  const attackCommand = parseAttackCommand(text);
+  let requestedEffect = null;
+  let commandMultiplier = 1;
+  let commandDescription = null;
+  let isSpecialCommand = false;
+
+  if (attackCommand) {
+    requestedEffect = attackCommand.effect;
+    commandMultiplier = attackCommand.multiplier;
+    commandDescription = attackCommand.description;
+    isSpecialCommand = commandMultiplier > 1.5;
+  } else {
+    requestedEffect = RANDOM_ATTACK_EFFECTS[Math.floor(Math.random() * RANDOM_ATTACK_EFFECTS.length)];
+    commandMultiplier = CFG.MESSAGE_LASER_MULTIPLIER;
+  }
+
+  if (!room.players[attackerId]?.alive) {
+    spawnPlayer(room, attackerId, attackerNick);
+    if (room.players[attackerId]) room.players[attackerId].forceSpawn = true;
+  }
+  if (room.players[attackerId]) {
+    room.players[attackerId].lastActive = Date.now();
+    room.players[attackerId].forceSpawn = true;
+  }
+
+  const attacker = room.players[attackerId];
+  const boostActive = attacker && attacker.messageBoostExpires > Date.now();
+  let multiplier = commandMultiplier;
+  if (boostActive) multiplier *= CFG.GIFT_MESSAGE_BOOST_MULTIPLIER;
+
+  if (bossMentioned) {
+    return damageBossWave(room, attackerId, attackerNick, multiplier, requestedEffect || 'laser', text);
+  }
+
+  const emitResolvedAttack = (actualTarget, visualTarget = null, snapshot = null) => {
+    if (!actualTarget?.uniqueId || actualTarget.uniqueId === attackerId) return null;
+    if (!room.players[actualTarget.uniqueId]?.alive) {
+      spawnPlayer(room, actualTarget.uniqueId, actualTarget.nickname);
+      if (room.players[actualTarget.uniqueId]) room.players[actualTarget.uniqueId].forceSpawn = true;
+    }
+    const sides = snapshot || getBattleSideSnapshot(room);
+    const attackerScope = battleScopeForPlayer(room, attackerId, sides);
+    const actualTargetScope = battleScopeForPlayer(room, actualTarget.uniqueId, sides);
+    const visualId = visualTarget?.id || actualTarget.uniqueId;
+    const visualNick = visualTarget?.nickname || actualTarget.nickname || actualTarget.uniqueId;
+    const targetScope = visualTarget?.scope || actualTargetScope;
+    const result = dealDamage(room, attackerId, actualTarget.uniqueId, multiplier);
+    if (!result) return null;
+
+    result.effect = requestedEffect;
+    result.special = isSpecialCommand;
+    result.commandDescription = commandDescription || requestedEffect;
+    result.giftBoosted = boostActive;
+    result.attackerNick = attackerNick;
+    result.targetNick = visualNick;
+    result.attackerScope = attackerScope;
+    result.targetScope = targetScope;
+    if (visualId !== actualTarget.uniqueId) {
+      result.actualTarget = actualTarget.uniqueId;
+      result.actualTargetNick = actualTarget.nickname || actualTarget.uniqueId;
+      result.target = visualId;
+    }
+
+    emitAttackAndSync(room, result);
+    emitSoundAndSync(room, isSpecialCommand ? 'gift' : 'attack');
+    emitRoomEvent(room, 'commentDamage', {
+      attacker: attackerId,
+      attackerNick,
+      target: visualId,
+      targetNick: visualNick,
+      actualTarget: actualTarget.uniqueId,
+      actualTargetNick: actualTarget.nickname || actualTarget.uniqueId,
+      damage: result.damage,
+      killed: result.killed,
+      comment,
+      special: isSpecialCommand,
+      effect: requestedEffect,
+      intensity: result.intensity,
+      critical: result.critical,
+      giftBoosted: boostActive,
+      commandDescription: commandDescription || requestedEffect,
+      laserColor: result.laserColor,
+      shotSpeed: result.shotSpeed,
+      attackerScope,
+      targetScope,
+    });
+
+    const cmdLabel = commandDescription || requestedEffect || 'MESSAGE';
+    console.log(`Chat attack: ${attackerNick} ${cmdLabel} -> ${visualNick} for ${result.damage} hp${boostActive ? ' (gift boost)' : ''}`);
+    return { handled: true, result, target: visualId, actualTarget: actualTarget.uniqueId };
+  };
+
+  const baseSnapshot = getBattleSideSnapshot(room);
+  const attackerScope = battleScopeForPlayer(room, attackerId, baseSnapshot);
+
+  if (!mentions.length) {
+    if (attackerScope === 'horde') {
+      const target = chooseTopBattleTarget(room, attackerId, baseSnapshot);
+      const result = emitResolvedAttack(target, null, baseSnapshot);
+      return result || { handled: false, reason: 'No top-five target available' };
+    }
+    if (hordeRequested) {
+      const target = chooseHordeDamageTarget(room, attackerId, baseSnapshot);
+      const result = emitResolvedAttack(target, { id: SERVER_HORDE_ID, nickname: 'The Horde', scope: 'horde' }, baseSnapshot);
+      return result || { handled: false, reason: 'No horde target available' };
+    }
+    return { handled: false, reason: 'No @mention found' };
+  }
+
+  for (const mention of mentions) {
+    const snapshot = getBattleSideSnapshot(room);
+    const currentAttackerScope = battleScopeForPlayer(room, attackerId, snapshot);
+    let target = mentionTargetsHorde(mention) ? null : findTarget(room, mention);
+    let visualTarget = null;
+
+    if (currentAttackerScope === 'horde') {
+      target = chooseTopBattleTarget(room, attackerId, snapshot);
+    } else if (mentionTargetsHorde(mention)) {
+      target = chooseHordeDamageTarget(room, attackerId, snapshot);
+      visualTarget = { id: SERVER_HORDE_ID, nickname: 'The Horde', scope: 'horde' };
+    } else if (target && !snapshot.topIds.has(String(target.uniqueId))) {
+      visualTarget = { id: SERVER_HORDE_ID, nickname: 'The Horde', scope: 'horde' };
+    }
+
+    if (!target) {
+      console.log(`Mention target not found: @${mention} from comment: ${comment}`);
+      continue;
+    }
+    const result = emitResolvedAttack(target, visualTarget, snapshot);
+    if (result) return result;
+  }
+
+  return { handled: false, reason: 'No valid attack target found' };
+}
+
 const app        = express();
 const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 1);
 app.set('trust proxy', trustProxyHops);
@@ -3899,7 +4295,9 @@ const io         = new Server(httpServer, {
 
 function emitAttackAndSync(room, result) {
   if (!result) return;
-  if (!room.players[result.attacker] || !room.players[result.target]) {
+  const attackerIsAggregate = [SERVER_HORDE_ID, SERVER_BOSS_ID].includes(result.attacker);
+  const targetIsAggregate = [SERVER_HORDE_ID, SERVER_BOSS_ID].includes(result.target);
+  if ((!attackerIsAggregate && !room.players[result.attacker]) || (!targetIsAggregate && !room.players[result.target])) {
     logger.warn({ attacker: result.attacker, target: result.target, room: room.roomId }, 'Emitting attack for player(s) not present in room state');
   }
   emitRoomEvent(room, 'attack', result);
@@ -4055,6 +4453,7 @@ app.get('/', (req, res) => {
 app.get('/home', (_req, res) => res.sendFile(path.join(__dirname, 'home.html')));
 app.get(['/sponsors', '/sponsors.html'], (_req, res) => res.sendFile(path.join(__dirname, 'sponsors.html')));
 app.get(['/how-to-play', '/how-to-play.html', '/players', '/game-guide'], (_req, res) => res.sendFile(path.join(__dirname, 'how-to-play.html')));
+app.get(['/battlegrounds', '/battlegrounds.html', '/the-battlegrounds'], (_req, res) => res.sendFile(path.join(__dirname, 'battlegrounds.html')));
 app.get(['/site-map', '/site-map.html', '/sitemap'], (_req, res) => res.sendFile(path.join(__dirname, 'sitemap.html')));
 app.get('/verify-email', (_req, res) => res.sendFile(path.join(__dirname, 'verify-email.html')));
 app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));
@@ -4145,6 +4544,17 @@ app.post('/api/public/comments', (req, res) => {
     logger.warn({ err }, 'Failed to save creator comment');
     return res.status(500).json({ success: false, error: 'Unable to save comment.' });
   }
+});
+
+app.get('/api/public/battlegrounds', (_req, res) => {
+  res.set('Cache-Control', 'public, max-age=30');
+  res.json({ success: true, posts: listPublicBattlegroundPosts(18) });
+});
+
+app.post('/api/public/battlegrounds', (req, res) => {
+  const result = createBattlegroundPost(req.body || {});
+  if (!result.ok) return res.status(result.status || 400).json({ success: false, error: result.error });
+  return res.json({ success: true, posts: result.posts });
 });
 
 app.post('/api/signup-intent', async (req, res) => {
@@ -5457,7 +5867,7 @@ function runRoomOverlayTest(room, action) {
   const supportId = 'arena_nova';
 
   if (normalizedAction === 'attack') {
-    const result = handleMentionAttack(room, attackerId, 'Orion', '!laser @arena_blaze');
+    const result = handleBattleAttack(room, attackerId, 'Orion', '!laser @arena_blaze');
     emitRoomEvent(room, 'gameState', room.players);
     return { success: true, action: normalizedAction, result };
   }
@@ -5681,7 +6091,7 @@ app.post('/api/dev/laser-color', requireRoom, (req, res) => {
 
 app.post('/api/dev/overlay-settings', requireRoom, (req, res) => {
   const { shotType, shotSpeed, color, backgroundFit } = req.body || {};
-  const validTypes = ['beam', 'pulse', 'wave', 'burst', 'ripple'];
+  const validTypes = ['beam', 'pulse', 'wave', 'burst', 'laser', 'fire', 'sphere', 'projectile', 'bullet', 'railgun', 'comet', 'arc', 'explosion'];
   const validBackgroundFits = ['contain', 'cover'];
   if (typeof shotType === 'string' && shotType) {
     if (!validTypes.includes(shotType)) return res.status(400).json({ success: false, error: `Invalid shot type. Must be one of: ${validTypes.join(', ')}` });
@@ -6008,7 +6418,7 @@ app.post('/api/test/spawn', blockInProduction, requireDevTestMode, (_req, res) =
 app.post('/api/test/attack', blockInProduction, requireDevTestMode, (_req, res) => {
   ensureTestPlayers();
   const room = getDefaultRoom();
-  const result = handleMentionAttack(room, 'test_alpha', 'Alpha', '@test_bravo');
+  const result = handleBattleAttack(room, 'test_alpha', 'Alpha', '@test_bravo');
   emitRoomEvent(room, 'gameState', room.players);
   res.json({ success: true, result });
 });
@@ -6016,7 +6426,7 @@ app.post('/api/test/attack', blockInProduction, requireDevTestMode, (_req, res) 
 app.post('/api/test/horde-attack', blockInProduction, requireDevTestMode, (_req, res) => {
   ensureTestPlayers();
   const room = getDefaultRoom();
-  const result = handleMentionAttack(room, 'test_foxtrot', 'Foxtrot', '@test_alpha !laser');
+  const result = handleBattleAttack(room, 'test_foxtrot', 'Foxtrot', '@test_alpha !laser');
   emitRoomEvent(room, 'gameState', room.players);
   res.json({ success: true, result });
 });
@@ -6225,7 +6635,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
       if (room.players[id]) room.players[id].forceSpawn = true;
     }
 
-    const attackResult = handleMentionAttack(room, id, nickname, comment);
+    const attackResult = handleBattleAttack(room, id, nickname, comment);
     if (!attackResult.handled && attackResult.reason !== 'No @mention found') {
       console.log(`⚠️ Chat attack not handled: ${attackResult.reason}`);
     }
@@ -6259,7 +6669,22 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
     const giftEffect = diamonds > 100 ? 'fire' : 'laser';
     const giftIntensity = diamonds > 100 ? 1.0 : Math.min(diamonds / 100, 0.8);
 
-    const aliveTargets = Object.values(room.players).filter(p => p.alive && p.uniqueId !== id);
+    const giftTargets = chooseGiftAttackTargets(room, id, 3);
+    giftTargets.targets.forEach(target => {
+      const giftAttack = applyGiftAttackToTarget(room, id, target, {
+        diamonds,
+        effect: giftEffect,
+        intensity: giftIntensity,
+        giftColor: diamonds > 100 ? '#FF4500' : '#7afcff',
+        snapshot: giftTargets.snapshot,
+      });
+      if (!giftAttack) return;
+      emitGiftAttackAndSync(room, giftAttack);
+      emitSoundAndSync(room, giftAttack.killed ? 'kill' : 'gift', { intensity: giftIntensity, tier: diamonds > 100 ? 'legendary' : 'common' });
+      console.log(`Gift attack: @${id} -> ${giftAttack.targetNick || giftAttack.target} for ${giftAttack.damage} dmg${giftAttack.killed ? ' (KILL!)' : ''}`);
+    });
+
+    const aliveTargets = [];
 
     if (aliveTargets.length > 0) {
       const targetsToAttack = [];

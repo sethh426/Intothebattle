@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Battlegrounds | IntoTheBattle</title>
+  <meta name="description" content="Find creators hosting IntoTheBattle live battles and post when your TikTok LIVE arena is going live." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://intothebattle.com/battlegrounds" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="The Battlegrounds | IntoTheBattle" />
+  <meta property="og:description" content="A public board for creators announcing upcoming IntoTheBattle live battles." />
+  <meta property="og:url" content="https://intothebattle.com/battlegrounds" />
+  <meta property="og:image" content="https://intothebattle.com/og-intothebattle.png" />
+  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
+  <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
+  <script type="module" src="/js/clarity-loader.js"></script>
+  <script type="module" src="/js/site-breadcrumbs.js"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": "https://intothebattle.com/battlegrounds#webpage",
+    "url": "https://intothebattle.com/battlegrounds",
+    "name": "The Battlegrounds",
+    "description": "A public board for creators announcing upcoming IntoTheBattle live battles.",
+    "isPartOf": { "@id": "https://intothebattle.com/#website" }
+  }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --gold: #f6c95b;
+      --gold2: #fff0b9;
+      --ember: #ff6a3d;
+      --cyan: #55e7ff;
+      --red: #e83b5f;
+      --ink: #050608;
+      --muted: #a8afbf;
+      --text: #fff8e6;
+      --line: rgba(255,255,255,.12);
+      --max: 1180px;
+    }
+    body {
+      min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 0, rgba(246,201,91,.18), transparent 30%),
+        radial-gradient(circle at 82% 14%, rgba(85,231,255,.12), transparent 32%),
+        linear-gradient(180deg, #050608 0%, #030406 66%, #020307 100%);
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(246,201,91,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(85,231,255,.035) 1px, transparent 1px);
+      background-size: 58px 58px;
+      mask-image: radial-gradient(circle at top, black, transparent 76%);
+    }
+    a { color: inherit; text-decoration: none; }
+    .nav-wrap { position: sticky; top: 0; z-index: 10; padding: 18px clamp(16px,4vw,42px) 0; }
+    nav {
+      max-width: var(--max);
+      margin: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 12px 14px;
+      border: 1px solid rgba(246,201,91,.22);
+      border-radius: 24px;
+      background: rgba(5,7,11,.78);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 70px rgba(0,0,0,.32);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .brand img { width: 48px; height: 48px; border-radius: 16px; transform: scale(1.1); }
+    .brand strong { display: block; text-transform: uppercase; letter-spacing: .08em; }
+    .brand span span { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .nav-links { display: flex; align-items: center; gap: 10px; }
+    .nav-links a {
+      padding: 11px 14px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-weight: 850;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .nav-links .cta { color: #160d02; background: linear-gradient(135deg, var(--gold), var(--gold2) 52%, var(--ember)); }
+    main { max-width: var(--max); margin: auto; padding: clamp(48px,7vw,86px) clamp(18px,4vw,42px) 78px; }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, .95fr) minmax(320px, .6fr);
+      gap: clamp(24px,4vw,52px);
+      align-items: end;
+      margin-bottom: 38px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      margin-bottom: 18px;
+      padding: 9px 13px;
+      border: 1px solid rgba(85,231,255,.28);
+      border-radius: 999px;
+      background: rgba(85,231,255,.08);
+      color: #9ff5ff;
+      font-size: 12px;
+      font-weight: 950;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    h1 {
+      max-width: 840px;
+      margin-bottom: 20px;
+      font-size: clamp(48px,7vw,92px);
+      line-height: .9;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+    h1 span {
+      color: transparent;
+      background: linear-gradient(100deg, #fff7d7, var(--gold), #ff7a48);
+      -webkit-background-clip: text;
+      background-clip: text;
+    }
+    .lede { color: #c4ccdb; font-size: clamp(17px,2vw,21px); line-height: 1.68; }
+    .pulse-panel {
+      position: relative;
+      overflow: hidden;
+      min-height: 246px;
+      border: 1px solid rgba(246,201,91,.26);
+      border-radius: 8px;
+      background: linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.025));
+    }
+    .pulse-panel::before {
+      content: "";
+      position: absolute;
+      inset: 18px;
+      border: 1px solid rgba(85,231,255,.18);
+      border-radius: 8px;
+    }
+    .pulse-line {
+      position: absolute;
+      left: 9%;
+      right: 9%;
+      height: 3px;
+      top: 44%;
+      background: linear-gradient(90deg, transparent, rgba(85,231,255,.8), rgba(246,201,91,.9), transparent);
+      box-shadow: 0 0 28px rgba(85,231,255,.35);
+      animation: scan 2.8s ease-in-out infinite;
+    }
+    .pulse-copy {
+      position: absolute;
+      inset: auto 28px 26px;
+      display: grid;
+      gap: 7px;
+    }
+    .pulse-copy strong { font-size: 24px; text-transform: uppercase; letter-spacing: .08em; }
+    .pulse-copy span { color: var(--muted); line-height: 1.5; }
+    @keyframes scan {
+      0%, 100% { transform: translateY(-44px); opacity: .4; }
+      50% { transform: translateY(44px); opacity: 1; }
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+      gap: 22px;
+      align-items: start;
+    }
+    .section-head { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin-bottom: 16px; }
+    .section-head h2 { font-size: clamp(28px,4vw,42px); text-transform: uppercase; line-height: 1; }
+    .section-head p { max-width: 520px; color: var(--muted); line-height: 1.55; }
+    .battle-list { display: grid; gap: 14px; }
+    .battle-card, .form-panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255,255,255,.065), rgba(255,255,255,.025));
+      box-shadow: 0 18px 58px rgba(0,0,0,.24);
+    }
+    .battle-card {
+      display: grid;
+      grid-template-columns: minmax(130px, .24fr) minmax(0, 1fr);
+      overflow: hidden;
+    }
+    .time-box {
+      display: grid;
+      align-content: center;
+      gap: 7px;
+      padding: 22px;
+      border-right: 1px solid rgba(255,255,255,.09);
+      background: linear-gradient(160deg, rgba(85,231,255,.1), rgba(246,201,91,.06));
+    }
+    .time-box b { color: var(--gold2); font-size: 26px; line-height: 1; }
+    .time-box span { color: var(--muted); font-size: 12px; font-weight: 850; text-transform: uppercase; letter-spacing: .12em; }
+    .battle-copy { padding: 22px; display: grid; gap: 10px; }
+    .handle { color: #9ff5ff; font-weight: 900; letter-spacing: .04em; }
+    .battle-copy h3 { font-size: clamp(22px,3vw,30px); line-height: 1.05; text-transform: uppercase; }
+    .battle-copy p { color: #cbd3df; line-height: 1.55; }
+    .battle-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 4px; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 11px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 999px;
+      color: #dce8f3;
+      background: rgba(0,0,0,.2);
+      font-size: 13px;
+      font-weight: 850;
+    }
+    .form-panel {
+      position: sticky;
+      top: 96px;
+      padding: 22px;
+    }
+    .form-panel h2 { margin-bottom: 8px; font-size: 28px; text-transform: uppercase; }
+    .form-panel p { margin-bottom: 18px; color: var(--muted); line-height: 1.55; }
+    form { display: grid; gap: 12px; }
+    label { display: grid; gap: 7px; color: #dbe4ef; font-size: 13px; font-weight: 850; text-transform: uppercase; letter-spacing: .08em; }
+    input, textarea {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 8px;
+      background: rgba(0,0,0,.28);
+      color: var(--text);
+      padding: 12px 13px;
+      font: inherit;
+      outline: none;
+    }
+    textarea { min-height: 96px; resize: vertical; }
+    input:focus, textarea:focus { border-color: rgba(85,231,255,.55); box-shadow: 0 0 0 3px rgba(85,231,255,.08); }
+    button {
+      min-height: 50px;
+      border: 0;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--gold), var(--gold2) 52%, var(--ember));
+      color: #160d02;
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      cursor: pointer;
+    }
+    .status { min-height: 22px; color: #9ff5ff; font-size: 13px; font-weight: 800; }
+    .empty {
+      padding: 28px;
+      border: 1px dashed rgba(246,201,91,.28);
+      border-radius: 8px;
+      color: #cbd3df;
+      line-height: 1.6;
+      background: rgba(246,201,91,.045);
+    }
+    footer {
+      max-width: var(--max);
+      margin: auto;
+      padding: 30px clamp(18px,4vw,42px);
+      color: #7e8799;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    @media (max-width: 900px) {
+      .hero, .layout { grid-template-columns: 1fr; }
+      .form-panel { position: relative; top: auto; }
+    }
+    @media (max-width: 680px) {
+      .nav-links a:not(.cta) { display: none; }
+      .brand span span { display: none; }
+      h1 { font-size: clamp(42px,14vw,68px); }
+      .battle-card { grid-template-columns: 1fr; }
+      .time-box { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.09); }
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-wrap">
+    <nav aria-label="Main navigation">
+      <a class="brand" href="/">
+        <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
+        <span><strong>IntoTheBattle</strong><span>Live battle arena</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="/how-to-play">Players</a>
+        <a href="/sponsors">Sponsors</a>
+        <a href="/login">Login</a>
+        <a class="cta" href="/signup">Start Free</a>
+      </div>
+    </nav>
+  </div>
+
+  <main>
+    <section class="hero">
+      <div>
+        <span class="eyebrow">The Battlegrounds</span>
+        <h1>Find the next <span>live arena.</span></h1>
+        <p class="lede">Creators can post when they are going live with an IntoTheBattle arena so players know where to show up, join the horde, and fight for the top five.</p>
+      </div>
+      <div class="pulse-panel" aria-hidden="true">
+        <div class="pulse-line"></div>
+        <div class="pulse-copy">
+          <strong>Live battle board</strong>
+          <span>Upcoming rooms, creator handles, and battle windows in one public place.</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section aria-labelledby="battle-list-title">
+        <div class="section-head">
+          <div>
+            <h2 id="battle-list-title">Upcoming Battles</h2>
+            <p>Newest approved posts appear here for viewers looking for a stream to play in.</p>
+          </div>
+        </div>
+        <div id="battle-list" class="battle-list">
+          <div class="empty">Loading battle posts...</div>
+        </div>
+      </section>
+
+      <aside class="form-panel" aria-labelledby="post-battle-title">
+        <h2 id="post-battle-title">Post a battle</h2>
+        <p>Add your TikTok LIVE battle window so players can find you before the arena starts.</p>
+        <form id="battle-form">
+          <label>Creator name
+            <input name="creatorName" maxlength="70" autocomplete="name" required />
+          </label>
+          <label>TikTok username
+            <input name="tiktokUsername" maxlength="80" placeholder="@yourhandle" autocomplete="username" required />
+          </label>
+          <label>Battle title
+            <input name="battleTitle" maxlength="120" placeholder="Friday night boss wave" required />
+          </label>
+          <label>Scheduled time
+            <input name="scheduledFor" type="datetime-local" />
+          </label>
+          <label>Timezone
+            <input name="timezone" maxlength="60" placeholder="Eastern Time" />
+          </label>
+          <label>Stream or profile URL
+            <input name="battleUrl" type="url" maxlength="240" placeholder="https://www.tiktok.com/@yourhandle/live" />
+          </label>
+          <label>Description
+            <textarea name="description" maxlength="260" placeholder="Tell players what kind of battle you are running."></textarea>
+          </label>
+          <button type="submit">Post Battle</button>
+          <div id="form-status" class="status" role="status" aria-live="polite"></div>
+        </form>
+      </aside>
+    </div>
+  </main>
+
+  <footer>
+    <span>IntoTheBattle</span>
+  </footer>
+
+  <script>
+    const list = document.getElementById('battle-list');
+    const form = document.getElementById('battle-form');
+    const statusEl = document.getElementById('form-status');
+
+    const fallbackPosts = [
+      {
+        creatorName: 'Arena Host',
+        tiktokUsername: 'intothebattle',
+        battleTitle: 'Open horde practice',
+        scheduledFor: '',
+        timezone: '',
+        description: 'A sample battle post will disappear once creators start posting live sessions.',
+        battleUrl: '/signup'
+      }
+    ];
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[char]);
+    }
+
+    function formatTime(value, timezone) {
+      if (!value) return { day: 'Soon', time: timezone || 'Time TBA' };
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return { day: 'Soon', time: timezone || 'Time TBA' };
+      return {
+        day: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
+        time: `${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}${timezone ? ` ${timezone}` : ''}`
+      };
+    }
+
+    function renderPosts(posts) {
+      const safePosts = Array.isArray(posts) && posts.length ? posts : fallbackPosts;
+      list.innerHTML = safePosts.map(post => {
+        const when = formatTime(post.scheduledFor, post.timezone);
+        const url = post.battleUrl || `https://www.tiktok.com/@${encodeURIComponent(post.tiktokUsername || '')}`;
+        return `
+          <article class="battle-card">
+            <div class="time-box">
+              <b>${escapeHtml(when.day)}</b>
+              <span>${escapeHtml(when.time)}</span>
+            </div>
+            <div class="battle-copy">
+              <div class="handle">@${escapeHtml(post.tiktokUsername)}</div>
+              <h3>${escapeHtml(post.battleTitle)}</h3>
+              <p>${escapeHtml(post.description || 'Battle details coming soon.')}</p>
+              <div class="battle-actions">
+                <a class="chip" href="${escapeHtml(url)}" rel="noopener">Open stream</a>
+                <span class="chip">${escapeHtml(post.creatorName || 'Creator')}</span>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    async function loadPosts() {
+      try {
+        const res = await fetch('/api/public/battlegrounds');
+        const json = await res.json();
+        renderPosts(json.posts || []);
+      } catch (_err) {
+        renderPosts(fallbackPosts);
+      }
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      statusEl.textContent = 'Posting battle...';
+      const body = Object.fromEntries(new FormData(form).entries());
+      try {
+        const res = await fetch('/api/public/battlegrounds', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const json = await res.json();
+        if (!res.ok || !json.success) throw new Error(json.error || 'Unable to post battle.');
+        renderPosts(json.posts || []);
+        form.reset();
+        statusEl.textContent = 'Battle posted.';
+      } catch (err) {
+        statusEl.textContent = err.message || 'Unable to post battle.';
+      }
+    });
+
+    loadPosts();
+  </script>
+</body>
+</html>

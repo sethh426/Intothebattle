@@ -87,7 +87,7 @@ try {
   await waitForHealth();
 
   await expectStatus('/healthz', 200);
-  for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/how-to-play', '/site-map', '/overlay-preview', '/overlay-v2-preview', '/overlay-phaser.html']) {
+  for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/how-to-play', '/battlegrounds', '/site-map', '/overlay-preview', '/overlay-v2-preview', '/overlay-phaser.html']) {
     await expectStatus(pathname, 200);
   }
   for (const pathname of ['/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/overlay-scene.js', '/js/overlay-v2.js', '/vendor/phaser/phaser.min.js']) {
@@ -128,6 +128,22 @@ try {
   });
   const sameOriginSignupBody = await sameOriginSignup.json();
   assert(sameOriginSignupBody.success === true, 'same-origin signup intent should remain allowed');
+  const battlegrounds = await expectStatus('/api/public/battlegrounds', 200);
+  const battlegroundsBody = await battlegrounds.json();
+  assert(Array.isArray(battlegroundsBody.posts), 'battlegrounds list should return posts array');
+  const battlegroundPost = await expectStatus('/api/public/battlegrounds', 200, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', Origin: baseUrl },
+    body: JSON.stringify({
+      creatorName: 'Smoke Creator',
+      tiktokUsername: 'smoke_creator',
+      battleTitle: 'Smoke Test Battle',
+      description: 'Smoke test battle post.',
+      battleUrl: 'https://www.tiktok.com/@smoke_creator/live',
+    }),
+  });
+  const battlegroundPostBody = await battlegroundPost.json();
+  assert(battlegroundPostBody.success === true, 'battlegrounds post should be accepted');
   const paypalConfig = await expectStatus('/api/paypal/config', 200);
   const paypalConfigBody = await paypalConfig.json();
   assert(paypalConfigBody.authenticated === false, 'unauthenticated paypal config should return safe login prompt');
