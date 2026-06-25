@@ -16,12 +16,13 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg:#030406; --panel:rgba(13,18,30,.82); --panel2:rgba(20,26,42,.72); --line:rgba(246,201,91,.22);
-      --line2:rgba(255,255,255,.1); --gold:#f6c95b; --gold2:#ffdf8a; --ember:#ff6a3d; --red:#e83b5f;
-      --cyan:#55e7ff; --green:#77f0a1; --text:#fff8e6; --muted:#a8afbf; --dim:#677083; --shadow:0 32px 90px rgba(0,0,0,.45);
+      --bg:#070b1f; --panel:rgba(16,28,58,.76); --panel2:rgba(25,38,76,.64); --line:rgba(167,227,255,.34);
+      --line2:rgba(230,239,255,.16); --gold:#bfeeff; --gold2:#f6f4ff; --ember:#c99cff; --red:#ff4f8c;
+      --cyan:#78e8ff; --green:#80ffd2; --text:#f8fbff; --muted:#b8c8ee; --dim:#7285b5; --shadow:0 34px 110px rgba(8,16,54,.48);
     }
-    body { min-height:100vh; padding:22px; font-family:'DM Sans',system-ui,sans-serif; color:var(--text); background:radial-gradient(circle at 14% 2%,rgba(246,201,91,.16),transparent 28%),radial-gradient(circle at 86% 10%,rgba(232,59,95,.13),transparent 30%),linear-gradient(180deg,#050608,#030406); overflow-x:hidden; }
-    body::before { content:''; position:fixed; inset:0; pointer-events:none; background-image:linear-gradient(rgba(246,201,91,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(246,201,91,.035) 1px,transparent 1px); background-size:58px 58px; mask-image:radial-gradient(circle at top,black,transparent 72%); z-index:-1; }
+    body { min-height:100vh; padding:22px; font-family:'DM Sans',system-ui,sans-serif; color:var(--text); background:radial-gradient(circle at 18% -8%,rgba(120,232,255,.28),transparent 32%),radial-gradient(circle at 86% 0%,rgba(201,156,255,.22),transparent 35%),radial-gradient(circle at 50% 55%,rgba(246,244,255,.08),transparent 48%),linear-gradient(180deg,#0c1230 0%,#070b1f 52%,#030614 100%); overflow-x:hidden; }
+    body::before { content:''; position:fixed; inset:0; pointer-events:none; background-image:linear-gradient(rgba(191,238,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(201,156,255,.052) 1px,transparent 1px); background-size:54px 54px; mask-image:radial-gradient(circle at top,black,transparent 78%); z-index:-2; }
+    body::after { content:''; position:fixed; inset:-20%; pointer-events:none; background:conic-gradient(from 140deg at 50% 38%,transparent 0deg,rgba(120,232,255,.18) 65deg,rgba(246,244,255,.12) 112deg,rgba(201,156,255,.17) 168deg,transparent 236deg,transparent 360deg); filter:blur(64px); opacity:.64; z-index:-3; }
     a { color:inherit; text-decoration:none; }
     button,input,select,textarea { font-family:inherit; }
     .shell { max-width:1500px; margin:0 auto; display:grid; gap:20px; }
@@ -58,6 +59,14 @@
     .btn-danger { color:#fff; background:var(--red); }
     .btn-warning { color:#170c02; background:var(--gold); }
     .btn-purple { color:#071009; background:var(--cyan); }
+    .stream-coach { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; align-items:center; margin-top:22px; padding:18px; border-radius:22px; border:1px solid rgba(119,240,161,.26); background:linear-gradient(135deg,rgba(119,240,161,.12),rgba(85,231,255,.055)); box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
+    .coach-label { display:inline-flex; width:fit-content; min-height:26px; align-items:center; margin-bottom:8px; padding:4px 9px; border-radius:999px; color:#071009; background:linear-gradient(135deg,var(--green),#bcffd1); font-size:10px; font-weight:950; text-transform:uppercase; letter-spacing:.1em; }
+    .coach-copy strong { display:block; color:#fff; font-size:20px; line-height:1.08; }
+    .coach-copy p { margin-top:6px; max-width:680px; color:#cbd3df; font-size:13px; line-height:1.5; font-weight:800; }
+    .coach-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+    .coach-actions .btn { min-height:42px; padding:0 13px; }
+    .secondary-launch-actions { margin-top:12px; }
+    .secondary-launch-actions .btn { min-height:40px; color:var(--muted); }
     .ops-strip { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:24px; }
     .ops-stat { min-width:0; padding:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.22); border-radius:18px; }
     .ops-stat span { display:block; color:var(--muted); font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
@@ -83,6 +92,19 @@
     .setup-step span { color:var(--muted); font-size:12px; line-height:1.35; }
     .setup-step.ready { border-color:rgba(119,240,161,.28); background:rgba(119,240,161,.07); }
     .setup-step.ready span { color:#b8ffd0; }
+    .launch-action-grid { grid-column:1 / -1; display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:10px; margin-top:14px; }
+    .launch-action { min-width:0; position:relative; display:grid; gap:8px; align-content:start; padding:14px; border-radius:18px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.18); color:var(--text); text-align:left; cursor:pointer; transition:.16s ease; }
+    .launch-action:hover { transform:translateY(-1px); border-color:rgba(246,201,91,.28); }
+    .launch-action b { width:28px; height:28px; display:grid; place-items:center; border-radius:999px; color:#061016; background:var(--dim); font-size:12px; font-weight:950; }
+    .launch-action strong { font-size:13px; line-height:1.15; }
+    .launch-action span { color:var(--muted); font-size:12px; line-height:1.35; font-weight:800; }
+    .launch-action.done { border-color:rgba(119,240,161,.28); background:rgba(119,240,161,.07); }
+    .launch-action.done b { background:var(--green); }
+    .launch-action.active { border-color:rgba(246,201,91,.48); background:rgba(246,201,91,.1); box-shadow:0 0 0 3px rgba(246,201,91,.06); }
+    .launch-action.active b { background:linear-gradient(135deg,var(--gold),#fff0b9); }
+    .launch-action.locked { opacity:.58; }
+    .launch-action:disabled { cursor:not-allowed; transform:none; }
+    .launch-action:disabled:hover { transform:none; border-color:rgba(255,255,255,.08); }
     .next-action-panel { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px; align-items:center; margin-top:14px; padding:16px; border-radius:18px; border:1px solid rgba(119,240,161,.24); background:linear-gradient(135deg,rgba(119,240,161,.09),rgba(85,231,255,.045)); }
     .next-action-title { color:#fff8e6; font-size:16px; font-weight:950; line-height:1.15; }
     .next-action-copy { margin-top:4px; color:var(--muted); font-size:13px; font-weight:800; line-height:1.4; }
@@ -125,6 +147,9 @@
     .grid { display:grid; grid-template-columns:repeat(12,1fr); gap:20px; }
     .col-12{grid-column:span 12}.col-8{grid-column:span 8}.col-6{grid-column:span 6}.col-4{grid-column:span 4}.col-3{grid-column:span 3}
     .card { padding:24px; }
+    #setupChecklistCard { order:0; }
+    #overlayCard { order:1; }
+    #connectCard { order:2; }
     #audioManagerCard { order:2; }
     #toolsRail { order:3; }
     #creatorSponsorCard { order:4; }
@@ -271,9 +296,61 @@
     .footer { display:flex; flex-wrap:wrap; gap:12px; margin:4px 0 28px; }
     .footer-btn { display:inline-flex; min-height:46px; align-items:center; justify-content:center; padding:0 16px; border-radius:15px; font-weight:900; cursor:pointer; border:1px solid var(--line2); background:rgba(255,255,255,.06); color:#fff; }
     .footer-btn.primary { color:#170c02; background:linear-gradient(135deg,var(--gold),#fff0b9 52%,var(--ember)); border:0; }
+
+    /* Futuristic creator cockpit theme */
+    .topbar { border-color:rgba(190,235,255,.32); background:linear-gradient(135deg,rgba(10,20,54,.78),rgba(31,39,84,.62)); box-shadow:0 24px 90px rgba(5,12,42,.48), inset 0 1px 0 rgba(255,255,255,.16); }
+    .brand-logo { border-color:rgba(190,235,255,.52); background:linear-gradient(135deg,rgba(255,255,255,.14),rgba(120,232,255,.14)); box-shadow:0 0 38px rgba(120,232,255,.24), inset 0 1px 0 rgba(255,255,255,.24); }
+    .brand h1,.workflow-title,.card-head h3 { color:#ffffff; text-shadow:0 0 24px rgba(120,232,255,.18); }
+    .brand p,.workflow-kicker,.card-title,.section-title { color:#dcd5ff; }
+    .chip,.status-chip,.subscription-chip,.workflow-status,.card-badge,.readiness-pill,.sponsor-status-pill,.sponsor-readiness-pill { border-color:rgba(218,230,255,.18); background:linear-gradient(135deg,rgba(255,255,255,.09),rgba(120,232,255,.045)); color:#d3e3ff; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
+    .chip.live,.subscription-chip.active,.status-chip.online,.readiness-pill.ready,.workflow-status.ready { color:#84ffd8; border-color:rgba(128,255,210,.36); background:rgba(128,255,210,.1); }
+    .chip.idle,.subscription-chip.free,.status-chip.idle,.readiness-pill.warn,.workflow-status.warn { color:#f6f4ff; border-color:rgba(201,156,255,.34); background:rgba(201,156,255,.12); }
+    .chip.offline,.subscription-chip.attention,.status-chip.offline,.readiness-pill.blocked,.workflow-status.blocked { color:#ff9ec1; border-color:rgba(255,79,140,.36); background:rgba(255,79,140,.1); }
+    .hero-card,.card,.workflow,details.tool { position:relative; border-color:rgba(218,230,255,.14); background:linear-gradient(145deg,rgba(255,255,255,.105),rgba(120,232,255,.045) 42%,rgba(201,156,255,.04)); box-shadow:0 28px 90px rgba(4,9,36,.34), inset 0 1px 0 rgba(255,255,255,.13); backdrop-filter:blur(18px); }
+    .hero-card::before,.card::before,.workflow::before { content:''; position:absolute; inset:0; pointer-events:none; background:linear-gradient(115deg,rgba(255,255,255,.16),transparent 24%,transparent 76%,rgba(120,232,255,.08)); opacity:.55; }
+    .hero-card > *,.card > *,.workflow > * { position:relative; z-index:1; }
+    .hero-card { border-color:rgba(190,235,255,.34); background:radial-gradient(circle at 12% 0%,rgba(120,232,255,.22),transparent 34%),radial-gradient(circle at 92% 10%,rgba(201,156,255,.18),transparent 34%),linear-gradient(145deg,rgba(255,255,255,.12),rgba(18,34,80,.54)); }
+    .kicker { border-color:rgba(190,235,255,.42); color:#f8f5ff; background:linear-gradient(135deg,rgba(120,232,255,.16),rgba(201,156,255,.13)); }
+    .kicker::before { background:#80ffd2; box-shadow:0 0 18px rgba(128,255,210,.92); }
+    .hero h2 span { color:transparent; background:linear-gradient(100deg,#ffffff 0%,#bfeeff 42%,#d8c8ff 72%,#ffffff 100%); -webkit-background-clip:text; background-clip:text; }
+    .hero p,.muted,.workflow-copy,.readiness-item span,.setup-step span,.launch-action span,.next-action-copy,.coach-copy p,.overlay-v2-panel p,.setup-rehearsal-panel p,.weekly-event p,.sponsor-selected-meta,.sponsor-warning,.assignment-meta { color:#c5d3f5; }
+    .btn,.footer-btn { border-radius:16px; letter-spacing:0; box-shadow:inset 0 1px 0 rgba(255,255,255,.12); }
+    .btn-primary,.footer-btn.primary { color:#07101f; background:linear-gradient(135deg,#ffffff 0%,#bfeeff 38%,#d8c8ff 72%,#ffffff 100%); box-shadow:0 18px 42px rgba(120,232,255,.22),0 0 0 1px rgba(255,255,255,.14) inset; }
+    .btn-secondary,.footer-btn { color:#edf7ff; border-color:rgba(218,230,255,.18); background:linear-gradient(135deg,rgba(255,255,255,.09),rgba(120,232,255,.055)); }
+    .btn-success { color:#07101f; background:linear-gradient(135deg,#80ffd2,#bffff0); box-shadow:0 16px 34px rgba(128,255,210,.16); }
+    .btn-danger { color:#fff; background:linear-gradient(135deg,#ff4f8c,#bf72ff); box-shadow:0 16px 34px rgba(255,79,140,.16); }
+    .btn-warning { color:#07101f; background:linear-gradient(135deg,#d8c8ff,#ffffff); }
+    .btn-purple { color:#07101f; background:linear-gradient(135deg,#78e8ff,#d8c8ff); }
+    .stream-coach,.next-action-panel,.launch-checklist,.setup-rehearsal-panel,.overlay-v2-panel,.sponsor-readiness { border-color:rgba(190,235,255,.3); background:linear-gradient(135deg,rgba(120,232,255,.14),rgba(246,244,255,.07) 48%,rgba(201,156,255,.11)); box-shadow:0 18px 48px rgba(8,18,58,.24), inset 0 1px 0 rgba(255,255,255,.14); }
+    .coach-label { color:#07101f; background:linear-gradient(135deg,#ffffff,#bfeeff 48%,#d8c8ff); }
+    .coach-copy strong,.next-action-title,.overlay-v2-panel strong,.setup-rehearsal-panel strong,.sponsor-selected-title,.session-stat strong,.weekly-event strong { color:#ffffff; }
+    .ops-stat,.readiness-item,.setup-step,.launch-action,.session-panel,.session-stat,.sponsor-fields,.sponsor-playback,.sponsor-library-panel,.sponsor-selected,.audio-row,.recap-row { border-color:rgba(218,230,255,.13); background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(12,22,54,.28)); box-shadow:inset 0 1px 0 rgba(255,255,255,.07); }
+    .ops-stat strong,.stat-value,.setup-step b,.launch-action strong,.audio-name,.recap-row strong { color:#ffffff; }
+    .readiness-score,.launch-action b { color:#07101f; background:linear-gradient(135deg,#ffffff,#bfeeff 48%,#d8c8ff); box-shadow:0 0 24px rgba(120,232,255,.18); }
+    .setup-step.ready,.launch-action.done { border-color:rgba(128,255,210,.3); background:linear-gradient(145deg,rgba(128,255,210,.13),rgba(255,255,255,.055)); }
+    .launch-action.active { border-color:rgba(190,235,255,.52); background:linear-gradient(145deg,rgba(120,232,255,.18),rgba(201,156,255,.12)); box-shadow:0 0 0 3px rgba(120,232,255,.08),0 16px 44px rgba(120,232,255,.12); }
+    .launch-action.active b { background:linear-gradient(135deg,#ffffff,#bfeeff,#d8c8ff); }
+    .dashboard-nav { border-color:rgba(218,230,255,.15); background:linear-gradient(135deg,rgba(9,18,48,.8),rgba(24,34,78,.68)); box-shadow:0 18px 70px rgba(4,9,36,.34), inset 0 1px 0 rgba(255,255,255,.12); }
+    .dashboard-nav a { color:#d6e6ff; border-color:rgba(218,230,255,.14); background:rgba(255,255,255,.06); }
+    .dashboard-nav a:hover { color:#07101f; border-color:transparent; background:linear-gradient(135deg,#ffffff,#bfeeff,#d8c8ff); }
+    .workflow[open] { border-color:rgba(190,235,255,.35); }
+    .workflow[open] .workflow-summary { border-bottom-color:rgba(218,230,255,.12); background:linear-gradient(135deg,rgba(120,232,255,.055),rgba(201,156,255,.05)); }
+    .workflow-toggle { color:#f8f5ff; border-color:rgba(218,230,255,.18); background:rgba(255,255,255,.07); }
+    input[type=text],input[type=file],input[type=color],select,textarea { border-color:rgba(218,230,255,.18); background:rgba(255,255,255,.085); color:#ffffff; box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
+    select { background-color:#111a3b; }
+    select option,select optgroup { background:#111a3b; color:#f8fbff; }
+    textarea,.copy-field input { color:#f1f7ff; }
+    input:focus,select:focus,textarea:focus { border-color:rgba(120,232,255,.68); box-shadow:0 0 0 4px rgba(120,232,255,.12),0 0 28px rgba(120,232,255,.1); }
+    .drop-zone { border-color:rgba(190,235,255,.46); background:linear-gradient(135deg,rgba(120,232,255,.1),rgba(201,156,255,.09)); }
+    .background-preview { border-color:rgba(190,235,255,.28); background:linear-gradient(135deg,rgba(120,232,255,.12),rgba(201,156,255,.1)),#070d22; }
+    .boss-fill { background:linear-gradient(90deg,#ff4f8c,#bf72ff,#78e8ff); box-shadow:0 0 22px rgba(120,232,255,.24); }
+    .weekly-event { border-color:rgba(190,235,255,.24); background:linear-gradient(135deg,rgba(120,232,255,.08),rgba(201,156,255,.08)); }
+    #toast { border-color:rgba(190,235,255,.34); background:linear-gradient(135deg,rgba(9,18,48,.94),rgba(31,39,84,.9)); box-shadow:0 18px 70px rgba(4,9,36,.42); }
+    .footer { padding:10px; border:1px solid rgba(218,230,255,.14); border-radius:22px; background:linear-gradient(135deg,rgba(9,18,48,.68),rgba(24,34,78,.48)); box-shadow:0 18px 70px rgba(4,9,36,.28), inset 0 1px 0 rgba(255,255,255,.1); }
     @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,.sponsor-layout,.sponsor-upgrade,.ops-strip,.session-layout,.launch-checklist{grid-template-columns:1fr}#audioManagerCard,#toolsRail,#creatorSponsorCard{order:initial}}
     @media(max-width:860px){.session-status-grid,.session-control-grid{grid-template-columns:1fr}}
-    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.dashboard-nav{position:relative;top:auto}.dashboard-nav a{flex:1 1 120px}.workflow-summary{grid-template-columns:1fr;align-items:start}.workflow-status{width:fit-content}.workflow-toggle{position:absolute;right:18px;top:18px}.workflow-body{padding:14px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}.setup-steps,.next-action-panel{grid-template-columns:1fr}.next-action-actions{justify-content:stretch}.footer{position:sticky;bottom:10px;z-index:35;padding:10px;border:1px solid rgba(246,201,91,.24);border-radius:20px;background:rgba(5,7,11,.9);backdrop-filter:blur(16px);box-shadow:0 18px 60px rgba(0,0,0,.38)}.footer-btn{flex:1 1 130px}}
+    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.dashboard-nav{position:relative;top:auto}.dashboard-nav a{flex:1 1 120px}.workflow-summary{grid-template-columns:1fr;align-items:start}.workflow-status{width:fit-content}.workflow-toggle{position:absolute;right:18px;top:18px}.workflow-body{padding:14px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.stream-coach{grid-template-columns:1fr}.coach-actions{justify-content:stretch}.coach-actions .btn,.secondary-launch-actions .btn{width:100%}.launch-action-grid{grid-template-columns:1fr}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}.setup-steps,.next-action-panel{grid-template-columns:1fr}.next-action-actions{justify-content:stretch}.footer{position:sticky;bottom:10px;z-index:35;padding:10px;border:1px solid rgba(246,201,91,.24);border-radius:20px;background:rgba(5,7,11,.9);backdrop-filter:blur(16px);box-shadow:0 18px 60px rgba(0,0,0,.38)}.footer-btn{flex:1 1 130px}}
+    @media(max-width:700px){.launch-action{grid-template-columns:32px minmax(0,1fr); gap:3px 10px; padding:12px}.launch-action b{grid-row:1 / span 2}.launch-action strong{font-size:14px}.launch-action span{font-size:11px}.secondary-launch-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.secondary-launch-actions .btn:last-child{grid-column:1 / -1}}
   </style>
 </head>
 <body>
@@ -296,9 +373,19 @@
       <div class="kicker">Creator command center</div>
       <h2>Stream room <span id="room-id-title">loading</span></h2>
       <p id="dashboard-summary">Checking stream, overlay, and media readiness.</p>
-      <div class="launch-row">
-        <button class="btn btn-primary" onclick="startSetupRehearsal()">Start Setup Demo</button>
-        <button class="btn btn-secondary" onclick="copyOverlayUrl()">Copy Live OBS URL</button>
+      <div class="stream-coach" id="streamCoach">
+        <div class="coach-copy">
+          <span class="coach-label">Do this next</span>
+          <strong id="heroNextActionTitle">Preparing your stream path</strong>
+          <p id="heroNextActionCopy">The dashboard is checking your room, overlay URL, and setup status.</p>
+        </div>
+        <div class="coach-actions" id="heroNextActionButtons">
+          <button class="btn btn-primary" onclick="startSetupRehearsal()">Start Setup Demo</button>
+        </div>
+      </div>
+      <div class="launch-row secondary-launch-actions">
+        <button class="btn btn-secondary" onclick="copySetupOverlayUrl()">Copy Setup Source</button>
+        <button class="btn btn-secondary" onclick="openSetupOverlay()">Open Setup Preview</button>
         <button class="btn btn-secondary" onclick="window.open('/stats','_blank')">View Stats</button>
       </div>
       <div class="ops-strip">
@@ -360,17 +447,25 @@
         </div>
         <div class="next-action-actions" id="nextActionButtons"></div>
       </div>
+      <div class="launch-action-grid" id="launchActionGrid" aria-label="Streaming setup actions">
+        <button type="button" class="launch-action active" data-launch-action="demo" onclick="startSetupRehearsal()"><b>1</b><strong>Start demo</strong><span>Generate motion before the live stream connects.</span></button>
+        <button type="button" class="launch-action locked" data-launch-action="copy" onclick="copySetupOverlayUrl()"><b>2</b><strong>Copy source</strong><span>Paste the signed browser source into TikTok Studio.</span></button>
+        <button type="button" class="launch-action locked" data-launch-action="source" onclick="openSetupOverlay()"><b>3</b><strong>Open source</strong><span>Confirm the source is visible and connected.</span></button>
+        <button type="button" class="launch-action locked" data-launch-action="test" onclick="testOverlayBurst()"><b>4</b><strong>Test overlay</strong><span>Send chat, likes, gifts, and battle events.</span></button>
+        <button type="button" class="launch-action locked" data-launch-action="connect" onclick="focusTikTokUsername()"><b>5</b><strong>Connect TikTok</strong><span>Attach the real live feed after setup passes.</span></button>
+        <button type="button" class="launch-action locked" data-launch-action="live" onclick="sessionAction('/api/session/start','Session started')"><b>6</b><strong>Start session</strong><span>Begin the first live battle round.</span></button>
+      </div>
     </article>
 
     <article class="card col-4" id="connectCard">
-      <div class="card-head"><div><div class="card-title">Step 1</div><h3>Connect TikTok LIVE</h3></div><span class="card-badge">Stream input</span></div>
+      <div class="card-head"><div><div class="card-title">Step 5</div><h3>Connect TikTok LIVE</h3><p class="muted">Connect after the setup demo is visible in TikTok Studio or OBS.</p></div><span class="card-badge">Stream input</span></div>
       <div class="status-chip offline" id="tiktok-chip"><span class="pulse-dot"></span><span id="tiktok-label">Disconnected</span></div>
       <div class="form-group"><label class="input-label">TikTok username</label><input type="text" id="username" placeholder="@yourusername" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
       <div class="btn-row"><button class="btn btn-success" style="flex:1" onclick="connect()">Connect</button><button class="btn btn-danger" onclick="resetTikTok()">Disconnect</button></div>
     </article>
 
     <article class="card col-4" id="overlayCard">
-      <div class="card-head"><div><div class="card-title">Step 2</div><h3>Overlay launch</h3></div><span class="card-badge">OBS / TikTok Studio</span></div>
+      <div class="card-head"><div><div class="card-title">Steps 2-4</div><h3>Browser source setup</h3><p class="muted">Copy the source, open the setup preview, and run one test burst before going live.</p></div><span class="card-badge">OBS / TikTok Studio</span></div>
       <div class="status-chip offline" id="overlay-chip"><span class="pulse-dot"></span><span id="overlay-label">No overlay connected</span></div>
       <div class="stat-box"><span class="stat-label">Active players</span><span class="stat-value" id="player-count">—</span></div>
       <div class="stat-box"><span class="stat-label">Dev mode</span><span class="stat-value" id="dev-mode-badge">OFF</span></div>
@@ -608,7 +703,7 @@
     </details>
   </section>
 
-  <div class="footer"><button class="footer-btn primary" onclick="startSetupRehearsal()">Start Demo</button><button class="footer-btn" onclick="copySetupOverlayUrl()">Copy Demo URL</button><button class="footer-btn" onclick="copyOverlayUrl()">Copy Live URL</button><button class="footer-btn" onclick="openOverlay()">Open Live</button></div>
+  <div class="footer"><button class="footer-btn primary" onclick="startSetupRehearsal()">Start Demo</button><button class="footer-btn" onclick="copySetupOverlayUrl()">Copy Source</button><button class="footer-btn" onclick="testOverlayBurst()">Test Overlay</button><button class="footer-btn" onclick="focusTikTokUsername()">Connect TikTok</button></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -672,6 +767,40 @@ function setWorkflowStatus(id, label, state = 'warn') {
   el.textContent = label;
   el.className = `workflow-status ${state}`;
 }
+function renderActionButtons(actions = [], container, limit = actions.length) {
+  if (!container) return;
+  container.innerHTML = '';
+  actions.slice(0, limit).forEach(action => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = action.className;
+    button.textContent = action.label;
+    button.onclick = action.onClick;
+    container.appendChild(button);
+  });
+}
+function setLaunchActionState(action, state) {
+  const el = document.querySelector(`[data-launch-action="${action}"]`);
+  if (!el) return;
+  el.classList.remove('done', 'active', 'locked');
+  el.classList.add(state);
+  el.disabled = state === 'locked';
+  el.setAttribute('aria-disabled', state === 'locked' ? 'true' : 'false');
+}
+function updateLaunchActionGrid() {
+  const demoDone = dashboardState.setupRehearsalActive || dashboardState.overlayTested;
+  const copyDone = dashboardState.overlayUrlCopied || dashboardState.overlayConnected;
+  const sourceDone = dashboardState.overlayConnected;
+  const testDone = dashboardState.overlayTested;
+  const connectDone = dashboardState.tiktokConnected;
+  const liveDone = dashboardState.eventStarted || Boolean(sessionStatusData?.active);
+  setLaunchActionState('demo', demoDone ? 'done' : 'active');
+  setLaunchActionState('copy', copyDone ? 'done' : demoDone ? 'active' : 'locked');
+  setLaunchActionState('source', sourceDone ? 'done' : copyDone ? 'active' : 'locked');
+  setLaunchActionState('test', testDone ? 'done' : (sourceDone || dashboardState.setupRehearsalActive) ? 'active' : 'locked');
+  setLaunchActionState('connect', connectDone ? 'done' : testDone ? 'active' : 'locked');
+  setLaunchActionState('live', liveDone ? 'done' : connectDone ? 'active' : 'locked');
+}
 function updateWorkflowStatuses() {
   const launchReady = setupGateReady();
   setWorkflowStatus(
@@ -705,6 +834,9 @@ function renderNextAction() {
   const title = document.getElementById('nextActionTitle');
   const copy = document.getElementById('nextActionCopy');
   const buttons = document.getElementById('nextActionButtons');
+  const heroTitle = document.getElementById('heroNextActionTitle');
+  const heroCopy = document.getElementById('heroNextActionCopy');
+  const heroButtons = document.getElementById('heroNextActionButtons');
   if (!title || !copy || !buttons) return;
   let titleText = 'Finish setup in order';
   let copyText = 'Start with the setup demo so OBS/TikTok Studio is configured before the live stream connects.';
@@ -738,7 +870,7 @@ function renderNextAction() {
   } else if (!dashboardState.tiktokConnected) {
     titleText = 'Connect TikTok when ready';
     copyText = 'Now that the overlay has been tested, enter the TikTok username and connect the live stream.';
-    actions = [{ label: 'Focus Username', className: 'btn btn-primary', onClick: () => document.getElementById('username')?.focus() }];
+    actions = [{ label: 'Connect TikTok', className: 'btn btn-primary', onClick: focusTikTokUsername }];
   } else if (!dashboardState.eventStarted) {
     titleText = 'Ready for the first battle';
     copyText = 'The core setup is online. Start a session or run a boss wave when the live begins.';
@@ -750,15 +882,11 @@ function renderNextAction() {
   }
   title.textContent = titleText;
   copy.textContent = copyText;
-  buttons.innerHTML = '';
-  actions.forEach(action => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = action.className;
-    button.textContent = action.label;
-    button.onclick = action.onClick;
-    buttons.appendChild(button);
-  });
+  if (heroTitle) heroTitle.textContent = titleText;
+  if (heroCopy) heroCopy.textContent = copyText;
+  renderActionButtons(actions, buttons);
+  renderActionButtons(actions, heroButtons, 2);
+  updateLaunchActionGrid();
 }
 const EVENTS = ['attack','gift','kill','respawn','heal','follow','socialBoost','engagementSurge'];
 const EVENT_LABELS = { attack:'Attack', gift:'Gift', kill:'Kill', respawn:'Respawn', heal:'Heal', follow:'Follow', socialBoost:'Share/Repost boost', engagementSurge:'Audience surge' };
@@ -1368,6 +1496,15 @@ function copyOverlayUrl() {
     updateSetupChecklist();
     toast('Live OBS URL copied. Paste it into TikTok Studio or OBS.');
   }).catch(() => toast('Copy failed', true));
+}
+function focusTikTokUsername() {
+  const input = document.getElementById('username');
+  if (!input) return;
+  document.getElementById('launchWorkflow')?.setAttribute('open', '');
+  setTimeout(() => {
+    input.focus();
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 80);
 }
 async function startSetupRehearsal() {
   const result = await apiCall('/api/stream/setup/start', 'POST', { action: 'burst' });
