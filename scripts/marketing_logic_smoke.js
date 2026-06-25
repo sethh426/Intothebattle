@@ -18,10 +18,12 @@ const {
   buildCreativeVariantDrafts,
   creativeTemplateOptions,
   listContentGenerationPacks,
+  listBattleDemoContentAssets,
   listBlankDesignTemplates,
   listCreativeTemplates,
   renderBlankDesignSvg,
   runCreativeQualityGate,
+  saveBattleDemoContentAssets,
 } = await import('../tiktokbr/services/creativeTemplateEngine.js');
 
 function assert(condition, message) {
@@ -91,6 +93,15 @@ const creativeOptions = creativeTemplateOptions();
 assert(creativeOptions.assetTypes.some(type => type.key === 'real_overlay_clip'), 'Creative options must include real overlay clips');
 assert(creativeOptions.assetTypes.some(type => type.key === 'generated_background'), 'Creative options must include generated backgrounds for non-proof use');
 
+const battleDemoAssets = listBattleDemoContentAssets();
+assert(battleDemoAssets.length >= 8, 'Battle demo content folder must expose each slide and clip as individual assets');
+assert(battleDemoAssets.every(asset => asset.folderKey === '18-second-battle-demo'), 'Every battle demo asset must belong to the canonical folder');
+assert(battleDemoAssets.some(asset => asset.key === 'sphere-slide' && asset.assetUrl.includes('asset=sphere-slide')), 'Battle demo folder must include a direct sphere slide asset URL');
+assert(battleDemoAssets.some(asset => asset.key === 'comet-slide' && asset.assetUrl.includes('asset=comet-slide')), 'Battle demo folder must include a direct comet slide asset URL');
+assert(battleDemoAssets.some(asset => asset.key === 'broadcast-break-clip' && asset.assetType === 'sponsor_break_clip'), 'Battle demo folder must include a sponsor break clip asset');
+const savedDemoAsset = saveBattleDemoContentAssets(['laser-ko-slide']);
+assert(savedDemoAsset.inserted === 1 && savedDemoAsset.skipped === 0, 'Saving a single battle demo asset should insert it once');
+
 const contentPacks = listContentGenerationPacks();
 assert(contentPacks.length >= 5, 'Expected guided content generation packs');
 assert(contentPacks.every(pack => pack.recipes?.length >= 4), 'Every content pack must include a multi-platform recipe');
@@ -147,8 +158,11 @@ assert(
 assert(
   creativeDrafts.every(draft => {
     const blocks = JSON.parse(draft.blockJson);
-    return blocks.frameScript?.length === 6
-      && blocks.frameScript[3]?.block === 'broadcast-break'
+    return blocks.frameScript?.length === 8
+      && blocks.frameScript.some(block => block.block === 'laser-ko-slide')
+      && blocks.frameScript.some(block => block.block === 'sphere-slide')
+      && blocks.frameScript.some(block => block.block === 'comet-slide')
+      && blocks.frameScript[5]?.block === 'broadcast-break'
       && blocks.textBlocks?.some(block => block.time === '14.8-17.2s');
   }),
   'Complete battle demo variants must include the 18-second battle, effects, break, recap, and CTA timing'

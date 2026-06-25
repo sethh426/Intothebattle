@@ -24,6 +24,7 @@ const VIDEO_ASSET_TYPES = new Set(['real_overlay_clip', 'sponsor_break_clip']);
 const IMAGE_ASSET_TYPES = new Set(['real_overlay_screenshot', 'dashboard_screenshot', 'product_logo', 'approved_texture', 'generated_background']);
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.webm', '.mov', '.m4v']);
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.avif', '.gif']);
+const BATTLE_DEMO_FOLDER_KEY = '18-second-battle-demo';
 const BRAND_SYSTEM = {
   name: 'IntoTheBattle',
   tagline: 'TikTok LIVE Battle Overlay',
@@ -45,6 +46,107 @@ const BRAND_SYSTEM = {
     body: 'Inter, DM Sans, Arial, sans-serif',
   },
 };
+const BATTLE_DEMO_CONTENT_ASSETS = [
+  {
+    key: 'full-loop-clip',
+    folderKey: BATTLE_DEMO_FOLDER_KEY,
+    title: '18s Demo / Full Conversion Loop',
+    phase: 'Full loop',
+    timing: '0-18s',
+    assetType: 'real_overlay_clip',
+    assetUrl: '/battle-clip?asset=full-loop',
+    useCase: 'Homepage, signup, paywall, sponsor page hero proof.',
+    notes: 'Full canonical demo loop: hook, players, attack, effects, broadcast break, recap, and CTA.',
+  },
+  {
+    key: 'hook-enter-slide',
+    folderKey: BATTLE_DEMO_FOLDER_KEY,
+    title: '18s Demo / Hook and Players Enter',
+    phase: 'Hook',
+    timing: '0-2.2s',
+    assetType: 'real_overlay_screenshot',
+    assetUrl: '/battle-clip?asset=hook-enter-slide',
+    useCase: 'Above-the-fold proof frame and creator setup promise.',
+    notes: 'Opening promise frame showing chat-driven combat and live product context.',
+  },
+  {
+    key: 'laser-ko-slide',
+    folderKey: BATTLE_DEMO_FOLDER_KEY,
+    title: '18s Demo / Laser KO Player Slide',
+    phase: 'Attack',
+    timing: '2.2-5.4s',
+    assetType: 'real_overlay_screenshot',
+    assetUrl: '/battle-clip?asset=laser-ko-slide',
+    useCase: 'Show the clearest viewer command to visible attack moment.',
+    notes: 'Player cards, comments, laser hit, KO result, and horde pressure in one clean frame.',
+  },
+  {
+    key: 'sphere-slide',
+    folderKey: BATTLE_DEMO_FOLDER_KEY,
+    title: '18s Demo / Sphere Attack Slide',
+    phase: 'Effect',
+    timing: '5.4-7.2s',
+    assetType: 'real_overlay_screenshot',
+    assetUrl: '/battle-clip?asset=sphere-slide',
+    useCase: 'Show premium effect variety without leaving the player context.',
+    notes: 'Sphere attack framed as a readable player-vs-player moment.',
+  },
+  {
+    key: 'comet-slide',
+    folderKey: BATTLE_DEMO_FOLDER_KEY,
+    title: '18s Demo / Comet Horde Slide',
+    phase: 'Effect',
+    timing: '7.2-9.2s',
+    assetType: 'real_overlay_screenshot',
+    assetUrl: '/battle-clip?asset=comet-slide',
+    useCase: 'Show horde interaction and larger battle pressure.',
+    notes: 'Comet attack targets the horde bar with a visible projectile and clear result.',
+  },
+  {
+    key: 'effect-strip-slide',
+    folderKey: BATTLE_DEMO_FOLDER_KEY,
+    title: '18s Demo / Effect Strip Slide',
+    phase: 'Effect',
+    timing: '9.2-10.8s',
+    assetType: 'real_overlay_screenshot',
+    assetUrl: '/battle-clip?asset=effect-strip-slide',
+    useCase: 'Quick proof that the effect library has variety.',
+    notes: 'Beam, fire, bullet, railgun, arc, and gift support effects in a compact strip.',
+  },
+  {
+    key: 'broadcast-break-clip',
+    folderKey: BATTLE_DEMO_FOLDER_KEY,
+    title: '18s Demo / Broadcast Break Clip',
+    phase: 'Video break',
+    timing: '10.8-14.8s',
+    assetType: 'sponsor_break_clip',
+    assetUrl: '/battle-clip?asset=broadcast-break-clip',
+    useCase: 'Sponsor and paid-user custom video control proof.',
+    notes: 'Premium video-break moment with theatrical framing and progress.',
+  },
+  {
+    key: 'stats-recap-slide',
+    folderKey: BATTLE_DEMO_FOLDER_KEY,
+    title: '18s Demo / Shareable Stats Recap',
+    phase: 'Recap',
+    timing: '14.8-17.2s',
+    assetType: 'real_overlay_screenshot',
+    assetUrl: '/battle-clip?asset=stats-recap-slide',
+    useCase: 'Show creators the after-stream proof they can post.',
+    notes: 'Labeled battle recap with fighters joined, chat KOs, active chat rate, and activity bars.',
+  },
+  {
+    key: 'cta-slide',
+    folderKey: BATTLE_DEMO_FOLDER_KEY,
+    title: '18s Demo / 7-Day CTA Slide',
+    phase: 'CTA',
+    timing: '17.2-18s',
+    assetType: 'real_overlay_screenshot',
+    assetUrl: '/battle-clip?asset=cta-slide',
+    useCase: 'End card for ads, short-form clips, and signup retargeting.',
+    notes: 'Everything-unlocked promise and launch-before-tonight CTA frame.',
+  },
+];
 const BLANK_DESIGN_TEMPLATES = [
   {
     key: 'blank_brand_starter',
@@ -456,6 +558,9 @@ function parseJsonObject(value = '') {
 }
 
 function assetUrlCompatibility(assetUrl = '', assetType = '') {
+  if (isCanonicalBattleDemoAssetUrl(assetUrl) && ['real_overlay_clip', 'real_overlay_screenshot', 'sponsor_break_clip'].includes(assetType)) {
+    return { status: 'match', note: '' };
+  }
   const extension = fileExtensionForAssetUrl(assetUrl);
   if (!extension) return { status: 'unknown', note: 'Asset URL has no file extension, so media type cannot be verified from the path.' };
   if (VIDEO_ASSET_TYPES.has(assetType) && !VIDEO_EXTENSIONS.has(extension)) {
@@ -465,6 +570,10 @@ function assetUrlCompatibility(assetUrl = '', assetType = '') {
     return { status: 'mismatch', note: 'Image templates should use PNG, JPG, WebP, AVIF, or GIF assets.' };
   }
   return { status: 'match', note: '' };
+}
+
+function isCanonicalBattleDemoAssetUrl(value = '') {
+  return pathnameForAssetUrl(value) === '/battle-clip';
 }
 
 function utmUrl(path, platform, templateKey, variantIndex = 0) {
@@ -718,8 +827,10 @@ function frameScriptForTemplate(template, hook, proof, cta) {
   if (template.key === 'complete_battle_demo') {
     return [
       { time: '0-2.2s', block: 'hook', text: hook },
-      { time: '2.2-5.4s', block: 'battle-action', text: 'Show comments creating attacks, player damage, horde pressure, and a visible KO.' },
-      { time: '5.4-10.8s', block: 'effect-montage', text: 'Show the official effect set cleanly: laser, beam, neon, fire, sphere, projectile, bullet, railgun, comet, arc, explosion, and gift energy.' },
+      { time: '2.2-5.4s', block: 'laser-ko-slide', text: 'Show comments creating a laser attack, aligned player cards, damage, horde pressure, and a visible KO.' },
+      { time: '5.4-7.2s', block: 'sphere-slide', text: 'Show a sphere attack as a readable player-vs-player moment.' },
+      { time: '7.2-9.2s', block: 'comet-slide', text: 'Show a comet attack hitting the horde pressure bar.' },
+      { time: '9.2-10.8s', block: 'effect-strip-slide', text: 'Show the support effect strip for beam, fire, bullet, railgun, arc, and gift moments.' },
       { time: '10.8-14.8s', block: 'broadcast-break', text: 'Show the premium video-break moment as part of the battle, not as a generic ad.' },
       { time: '14.8-17.2s', block: 'stats-recap', text: proof },
       { time: '17.2-18s', block: 'cta', text: cta },
@@ -801,6 +912,55 @@ export function creativeTemplateOptions() {
   return {
     platforms: DEFAULT_PLATFORMS.map(key => ({ key, ...PLATFORM_RULES[key] })),
     assetTypes: Object.entries(ASSET_TYPES).map(([key, label]) => ({ key, label })),
+  };
+}
+
+export function listBattleDemoContentAssets() {
+  return BATTLE_DEMO_CONTENT_ASSETS.map(asset => ({
+    ...asset,
+    assetTypeLabel: ASSET_TYPES[asset.assetType] || asset.assetType,
+    folderLabel: '18-second battle demo',
+  }));
+}
+
+export function saveBattleDemoContentAssets(keys = []) {
+  const requestedKeys = Array.isArray(keys) ? keys.map(key => String(key || '').trim()).filter(Boolean) : [];
+  const keySet = new Set(requestedKeys);
+  const selectedAssets = keySet.size
+    ? BATTLE_DEMO_CONTENT_ASSETS.filter(asset => keySet.has(asset.key))
+    : BATTLE_DEMO_CONTENT_ASSETS;
+  if (!selectedAssets.length) throw new Error('Choose at least one battle demo asset');
+
+  let inserted = 0;
+  let skipped = 0;
+  const saved = [];
+  const skippedKeys = [];
+  selectedAssets.forEach(asset => {
+    const existing = db.prepare('SELECT id FROM growth_creative_assets WHERE asset_url = ? LIMIT 1').get(asset.assetUrl);
+    if (existing) {
+      skipped += 1;
+      skippedKeys.push(asset.key);
+      return;
+    }
+    addCreativeAsset({
+      title: asset.title,
+      assetType: asset.assetType,
+      assetUrl: asset.assetUrl,
+      source: `admin-folder:${asset.folderKey}`,
+      approvalStatus: 'approved',
+      notes: `${asset.folderKey} | ${asset.timing} | ${asset.notes} Use: ${asset.useCase}`,
+    });
+    inserted += 1;
+    saved.push(asset.key);
+  });
+
+  return {
+    folderKey: BATTLE_DEMO_FOLDER_KEY,
+    inserted,
+    skipped,
+    saved,
+    skippedKeys,
+    total: selectedAssets.length,
   };
 }
 

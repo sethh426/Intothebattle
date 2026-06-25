@@ -30,7 +30,7 @@ import {
   updateMarketingPostDraft,
   updateMarketingPostStatus,
 } from '../services/marketingAutomation.js';
-import { growthIntegrationDiagnostics } from '../services/growthIntegrations.js';
+import { growthIntegrationDiagnostics, syncLeadToGrowthApis } from '../services/growthIntegrations.js';
 import {
   addCreativeAsset,
   buildCreativeProductionPackage,
@@ -38,6 +38,7 @@ import {
   creativeTemplateOptions,
   generateCreativeContentPack,
   generateCreativeVariants,
+  listBattleDemoContentAssets,
   listBlankDesignTemplates,
   listContentGenerationPacks,
   listCreativeAssets,
@@ -46,6 +47,7 @@ import {
   queueCreativeVariantAsMarketingPost,
   renderBlankDesignSvg,
   renderCreativeVariantSvg,
+  saveBattleDemoContentAssets,
   updateCreativeAssetStatus,
   updateCreativeVariantStatus,
 } from '../services/creativeTemplateEngine.js';
@@ -1753,6 +1755,52 @@ function renderContentPackCards(contentPacks = [], creativeAssets = [], creative
   }).join('');
 }
 
+function renderBattleDemoAssetFolder(demoAssets = [], creativeAssets = [], creativeOptions = creativeTemplateOptions()) {
+  const savedUrls = new Set(creativeAssets.map(asset => String(asset.asset_url || '').trim()));
+  const savedCount = demoAssets.filter(asset => savedUrls.has(asset.assetUrl)).length;
+  const cards = demoAssets.map(asset => {
+    const isSaved = savedUrls.has(asset.assetUrl);
+    const status = isSaved ? 'ready' : 'draft';
+    return `<div class="demo-asset-card ${escapeAttr(status)}">
+      <div class="template-topline">
+        <span class="status-pill ${escapeAttr(status)}">${escapeHtml(isSaved ? 'saved' : 'not saved')}</span>
+        <small>${escapeHtml(asset.timing || '')}</small>
+      </div>
+      <h3>${escapeHtml(asset.title || asset.key)}</h3>
+      <p>${escapeHtml(asset.useCase || '')}</p>
+      <small>${escapeHtml(asset.phase || '')} - ${escapeHtml(asset.assetTypeLabel || creativeAssetLabel(asset.assetType, creativeOptions))}</small>
+      <div class="inline-actions">
+        <a class="button-link" href="${escapeAttr(asset.assetUrl || '#')}" target="_blank" rel="noopener">Open Frame</a>
+        <form method="POST" action="/admin/marketing/demo-assets/save">
+          <input type="hidden" name="assetKey" value="${escapeAttr(asset.key)}" />
+          <button type="submit" class="secondary" ${isSaved ? 'disabled' : ''}>${isSaved ? 'Saved' : 'Save Asset'}</button>
+        </form>
+      </div>
+      <div class="warning-note">${escapeHtml(asset.notes || '')}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="demo-asset-folder">
+    <div class="folder-head">
+      <div>
+        <span class="status-pill ${savedCount === demoAssets.length ? 'ready' : 'warn'}">content folder</span>
+        <h2>18-second battle demo assets</h2>
+        <p>Each slide and clip is saved as its own content asset so posts, templates, and smoke checks can point to the exact proof frame instead of the whole demo.</p>
+      </div>
+      <form method="POST" action="/admin/marketing/demo-assets/save">
+        <input type="hidden" name="assetKey" value="all" />
+        <button type="submit" class="test">${savedCount === demoAssets.length ? 'Refresh Folder' : 'Save Missing Assets'}</button>
+      </form>
+    </div>
+    <div class="folder-status">
+      <span>${numberValue(savedCount)} / ${numberValue(demoAssets.length)} saved</span>
+      <span>Folder: 18-second-battle-demo</span>
+      <span>Canonical source: /battle-clip</span>
+    </div>
+    <div class="demo-asset-grid">${cards}</div>
+  </div>`;
+}
+
 function countBy(items = [], field, fallback = 'unknown') {
   return items.reduce((acc, item) => {
     const key = String(item?.[field] || fallback).toLowerCase();
@@ -2171,6 +2219,8 @@ function renderMarketingAdminPage({
   const templateCards = renderCreativeTemplateCards(creativeTemplates);
   const blankDesignCards = renderBlankDesignCards(blankDesigns);
   const contentPackCards = renderContentPackCards(contentPacks, creativeAssets, creativeOptions);
+  const battleDemoAssets = listBattleDemoContentAssets();
+  const battleDemoAssetFolder = renderBattleDemoAssetFolder(battleDemoAssets, creativeAssets, creativeOptions);
   const creativeAssetCounts = countBy(creativeAssets, 'approval_status', 'draft');
   const creativeVariantCounts = countBy(creativeVariants, 'status', 'draft');
   const creativeQualityCounts = countBy(creativeVariants, 'quality_status', 'draft');
@@ -2375,6 +2425,22 @@ function renderMarketingAdminPage({
     .template-card h3,.blank-design-card h3,.content-pack-card h3 { margin:10px 0 8px; color:#fff8e6; font-size:17px; }
     .template-card p,.blank-design-card p,.content-pack-card p { margin:0 0 10px; font-size:13px; }
     .template-topline { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .demo-asset-folder { display:grid; gap:14px; margin:0 0 18px; padding:16px; border:1px solid rgba(53,231,255,.22); border-radius:20px; background:linear-gradient(180deg,rgba(53,231,255,.08),rgba(255,255,255,.035)); }
+    .folder-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+    .folder-head h2 { margin:8px 0 6px; }
+    .folder-head p { margin:0; max-width:760px; }
+    .folder-status { display:flex; flex-wrap:wrap; gap:8px; }
+    .folder-status span { display:inline-flex; align-items:center; min-height:30px; padding:0 10px; border:1px solid rgba(255,255,255,.1); border-radius:999px; color:#dce7ff; background:rgba(0,0,0,.18); font-size:12px; font-weight:900; text-transform:uppercase; }
+    .demo-asset-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .demo-asset-card { min-width:0; display:grid; gap:10px; padding:14px; border:1px solid rgba(255,255,255,.1); border-radius:16px; background:rgba(2,5,13,.52); }
+    .demo-asset-card.ready { border-color:rgba(119,240,161,.24); }
+    .demo-asset-card h3 { margin:0; color:#fff8e6; font-size:15px; }
+    .demo-asset-card p { margin:0; font-size:12px; }
+    .demo-asset-card form { margin:0; }
+    .demo-asset-card button { width:100%; }
+    .connect-smoke { display:grid; gap:12px; margin:16px 0; padding:16px; border:1px solid rgba(85,231,255,.18); border-radius:18px; background:rgba(85,231,255,.055); }
+    .connect-smoke h2 { margin:0; }
+    .connect-smoke p { margin:0; }
     .blank-design-preview { position:relative; overflow:hidden; aspect-ratio:16/10; margin-bottom:12px; border-radius:16px; border:1px solid rgba(255,255,255,.12); background:radial-gradient(circle at 22% 18%, color-mix(in srgb,var(--secondary) 38%, transparent), transparent 35%),radial-gradient(circle at 78% 78%, color-mix(in srgb,var(--accent) 34%, transparent), transparent 38%),linear-gradient(135deg,#050713,#102034 55%,#1d0d20); box-shadow:inset 0 0 0 1px rgba(255,255,255,.04); }
     .blank-design-preview::before { content:""; position:absolute; inset:12%; border:2px solid color-mix(in srgb,var(--accent) 55%, transparent); border-radius:14px; box-shadow:0 0 34px color-mix(in srgb,var(--accent) 22%, transparent); }
     .blank-design-preview::after { content:""; position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px); background-size:32px 32px; opacity:.5; }
@@ -2394,8 +2460,8 @@ function renderMarketingAdminPage({
     th { background:rgba(246,201,91,0.09); color:#ffdf8a; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     small { color:#9fb2d7; }
     .post-copy { max-width:620px; white-space:pre-wrap; color:#fff8e6; line-height:1.45; }
-    @media(max-width:1100px){ .growth-command-deck,.growth-shell{grid-template-columns:1fr}.command-links,.template-grid,.blank-design-grid,.content-pack-grid,.engine-grid,.mode-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.calendar-grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
-    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-brand img{width:46px;height:46px}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.admin-nav a{padding:0 10px}.metrics-grid,.inline-grid,.focus-actions,.command-links,.command-grid,.template-grid,.blank-design-grid,.content-pack-grid,.engine-grid,.mode-grid,.calendar-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:1fr}.growth-command-deck{padding:14px}.page-section summary{align-items:flex-start;flex-direction:column}.page-section summary small{text-align:left}.page-section summary::after{align-self:flex-start}.section-body{padding:0 12px 14px} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
+    @media(max-width:1100px){ .growth-command-deck,.growth-shell{grid-template-columns:1fr}.command-links,.template-grid,.blank-design-grid,.content-pack-grid,.demo-asset-grid,.engine-grid,.mode-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.calendar-grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-brand img{width:46px;height:46px}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.admin-nav a{padding:0 10px}.metrics-grid,.inline-grid,.focus-actions,.command-links,.command-grid,.template-grid,.blank-design-grid,.content-pack-grid,.demo-asset-grid,.engine-grid,.mode-grid,.calendar-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:1fr}.folder-head{display:grid}.growth-command-deck{padding:14px}.page-section summary{align-items:flex-start;flex-direction:column}.page-section summary small{text-align:left}.page-section summary::after{align-self:flex-start}.section-body{padding:0 12px 14px} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
     @media(max-width:420px){ .admin-nav{grid-template-columns:1fr}.metrics-grid{grid-template-columns:1fr} }
   </style>
 </head>
@@ -2451,6 +2517,18 @@ function renderMarketingAdminPage({
       <p>Lead APIs: sync ${growthDiagnostics.enabled ? 'enabled' : 'disabled'}; HubSpot ${growthDiagnostics.hubspotConfigured ? 'connected' : 'not configured'}; HubSpot custom fields ${growthDiagnostics.hubspotCustomPropertiesConfigured ? 'configured' : 'not configured'}; Segment ${growthDiagnostics.segmentConfigured ? 'connected' : 'not configured'}; providers ${escapeHtml(growthProviders.length ? growthProviders.join(', ') : 'none')}.</p>
       <h2>Autopilot modes</h2>
       <div class="mode-grid">${autopilotModes}</div>
+      <div class="connect-smoke">
+        <h2>Connection smoke test</h2>
+        <p>Send one admin test lead through the same HubSpot/Segment growth-sync path used by signup intent. If sync is disabled, this safely returns a skipped result so you know the route and validation still work.</p>
+        <form method="POST" action="/admin/marketing/growth-sync-smoke">
+          <div class="inline-grid compact">
+            <span><label>Test email</label><input name="email" type="email" value="growth-smoke@example.com" required /></span>
+            <span><label>Name</label><input name="name" value="Growth Smoke" maxlength="120" /></span>
+            <span><label>TikTok username</label><input name="tiktokUsername" value="growth_smoke" maxlength="80" /></span>
+          </div>
+          <button type="submit" class="secondary">Run Connection Smoke Test</button>
+        </form>
+      </div>
       <div class="focus-actions">
         <form method="POST" action="/admin/marketing/generate">
           <label>Date</label>
@@ -2516,6 +2594,7 @@ function renderMarketingAdminPage({
       <summary><span>Asset vault</span><small>Upload or save the real proof assets used by growth creative.</small></summary>
       <div class="section-body">
       <p>Upload real overlay screenshots, sponsor clips, dashboard screenshots, approved textures, or generated backgrounds. Keep proof assets approved only when they show the real product accurately.</p>
+      ${battleDemoAssetFolder}
       <form method="POST" action="/admin/marketing/creative-assets/upload" enctype="multipart/form-data">
         <div class="inline-grid compact">
           <span><label>Title</label><input name="title" maxlength="120" placeholder="Real overlay action frame" required /></span>
@@ -2896,6 +2975,44 @@ router.post('/marketing/creative-assets', requireAdminAuth, (req, res) => {
     res.redirect('/admin/marketing?message=Creative%20asset%20saved');
   } catch (err) {
     res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Creative asset save failed')}`);
+  }
+});
+
+router.post('/marketing/demo-assets/save', requireAdminAuth, (req, res) => {
+  try {
+    const assetKey = String(req.body.assetKey || '').trim();
+    const keys = assetKey && assetKey !== 'all' ? [assetKey] : [];
+    const result = saveBattleDemoContentAssets(keys);
+    const skippedText = result.skipped ? `, skipped ${result.skipped} already saved` : '';
+    res.redirect(`/admin/marketing?message=${encodeURIComponent(`Saved ${result.inserted} battle demo content asset${result.inserted === 1 ? '' : 's'}${skippedText}`)}#asset-vault`);
+  } catch (err) {
+    res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Battle demo asset save failed')}#asset-vault`);
+  }
+});
+
+router.post('/marketing/growth-sync-smoke', requireAdminAuth, async (req, res) => {
+  try {
+    const result = await syncLeadToGrowthApis({
+      email: req.body.email,
+      name: req.body.name || 'Growth Smoke',
+      tiktokUsername: req.body.tiktokUsername || 'growth_smoke',
+      source: 'admin-marketing-smoke',
+      lastPath: '/admin/marketing',
+      eventName: 'Admin Growth Connection Smoke Test',
+      properties: {
+        smokeTest: true,
+        adminPage: 'company-growth',
+      },
+    });
+    if (!result.ok) {
+      return res.redirect(`/admin/marketing?error=${encodeURIComponent(result.error || 'Growth connection smoke test failed')}#growth-controls`);
+    }
+    const providerSummary = Array.isArray(result.providers) && result.providers.length
+      ? result.providers.map(provider => `${provider.provider || 'provider'}:${provider.status || provider.reason || 'unknown'}`).join(', ')
+      : (result.skipped ? 'skipped: growth sync disabled' : 'no providers configured');
+    res.redirect(`/admin/marketing?message=${encodeURIComponent(`Connection smoke test ${result.skipped ? 'skipped safely' : 'completed'} (${providerSummary})`)}#growth-controls`);
+  } catch (err) {
+    res.redirect(`/admin/marketing?error=${encodeURIComponent(err?.message || 'Growth connection smoke test failed')}#growth-controls`);
   }
 });
 

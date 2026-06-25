@@ -78,6 +78,16 @@
       box-shadow: inset 0 0 0 1px rgba(246, 201, 91, .13), 0 0 42px rgba(85, 231, 255, .1);
     }
 
+    .clip.is-asset-frame,
+    .clip.is-asset-frame *,
+    .clip.is-asset-frame::before,
+    .clip.is-asset-frame::after,
+    .clip.is-asset-frame *::before,
+    .clip.is-asset-frame *::after {
+      animation-delay: calc(var(--asset-time, 0) * -1s) !important;
+      animation-play-state: paused !important;
+    }
+
     .grid {
       position: absolute;
       inset: 0;
@@ -2447,5 +2457,29 @@
       </div>
     </section>
   </div>
+  <script>
+    (() => {
+      const assetTimes = {
+        "hook-enter-slide": 1.1,
+        "laser-ko-slide": 3,
+        "sphere-slide": 7.7,
+        "comet-slide": 9.6,
+        "effect-strip-slide": 10.1,
+        "broadcast-break-clip": 12.2,
+        "stats-recap-slide": 15.5,
+        "cta-slide": 17.55
+      };
+      const params = new URLSearchParams(window.location.search);
+      const asset = params.get("asset") || params.get("slide") || "";
+      if (!asset || asset === "full-loop") return;
+      const time = assetTimes[asset];
+      if (!Number.isFinite(time)) return;
+      const clip = document.querySelector(".clip");
+      if (!clip) return;
+      clip.classList.add("is-asset-frame");
+      clip.style.setProperty("--asset-time", String(time));
+      clip.setAttribute("aria-label", `IntoTheBattle demo asset: ${asset}`);
+    })();
+  </script>
 </body>
 </html>
