@@ -2340,7 +2340,7 @@ function renderMarketingAdminPage({
       </form>
       <form method="POST" action="/admin/marketing/creative-assets">
         <div class="inline-grid compact">
-          <span><label>Title</label><input name="title" maxlength="120" placeholder="Real overlay 12-second clip" required /></span>
+          <span><label>Title</label><input name="title" maxlength="120" placeholder="Real overlay demo clip" required /></span>
           <span><label>Asset type</label><select name="assetType" required>${assetTypeOptions}</select></span>
           <span><label>Status</label><select name="approvalStatus"><option value="approved">Approved</option><option value="draft">Draft</option><option value="blocked">Blocked</option></select></span>
         </div>

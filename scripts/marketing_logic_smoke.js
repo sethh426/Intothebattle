@@ -82,6 +82,10 @@ assert(growthDryRun.ok === true && growthDryRun.skipped === true, 'Disabled grow
 const creativeTemplates = listCreativeTemplates();
 assert(creativeTemplates.length >= 7, 'Expected a complete creative template library');
 assert(creativeTemplates.every(template => template.requiredAssetLabels?.length), 'Every template must define asset requirements');
+assert(
+  creativeTemplates.some(template => template.key === 'complete_battle_demo' && /18-second/i.test(template.label)),
+  'Creative template library must include the complete 18-second battle demo'
+);
 
 const creativeOptions = creativeTemplateOptions();
 assert(creativeOptions.assetTypes.some(type => type.key === 'real_overlay_clip'), 'Creative options must include real overlay clips');
@@ -95,6 +99,10 @@ assert(
   contentPacks.some(pack => pack.key === 'sponsor_break_sales' && pack.recipes.some(recipe => recipe.templateKey === 'sponsor_broadcast')),
   'Sponsor sales pack must generate sponsor broadcast creative'
 );
+assert(
+  contentPacks.some(pack => pack.key === 'battle_clip_launch' && pack.recipes.some(recipe => recipe.templateKey === 'complete_battle_demo')),
+  'Battle clip launch pack must use the complete battle demo template'
+);
 
 const blankDesigns = listBlankDesignTemplates();
 assert(blankDesigns.length === 5, 'Expected five blank branded design templates');
@@ -107,7 +115,7 @@ for (const design of blankDesigns) {
 }
 
 const creativeDrafts = buildCreativeVariantDrafts({
-  templateKey: 'twelve_second_demo',
+  templateKey: 'complete_battle_demo',
   platform: 'tiktok',
   asset: {
     asset_url: '/assets/demo-overlay.mp4',
@@ -126,6 +134,15 @@ assert(
 assert(
   creativeDrafts.every(draft => JSON.parse(draft.blockJson).hashtags && JSON.parse(draft.blockJson).seoKeywords),
   'Creative variants must include hashtags and SEO metadata'
+);
+assert(
+  creativeDrafts.every(draft => {
+    const blocks = JSON.parse(draft.blockJson);
+    return blocks.frameScript?.length === 6
+      && blocks.frameScript[3]?.block === 'broadcast-break'
+      && blocks.textBlocks?.some(block => block.time === '14.8-17.2s');
+  }),
+  'Complete battle demo variants must include the 18-second battle, effects, break, recap, and CTA timing'
 );
 assert(
   creativeDrafts.every(draft => {

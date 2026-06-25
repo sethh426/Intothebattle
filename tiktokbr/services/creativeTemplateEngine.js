@@ -128,6 +128,25 @@ const TEMPLATE_DEFINITIONS = [
     ctas: ['Launch your first battle in under 5 minutes.', 'Try the battle overlay free today.'],
   },
   {
+    key: 'complete_battle_demo',
+    label: 'Complete 18-second battle demo',
+    audience: 'TikTok LIVE creators',
+    goal: 'conversion',
+    path: '/signup',
+    requiredAssetTypes: ['real_overlay_clip', 'real_overlay_screenshot'],
+    hooks: [
+      'Turn your TikTok LIVE chat into a playable battle arena.',
+      'Show creators the full loop: chat, attacks, effects, video break, recap.',
+      'Your viewers can fight, react, and create moments inside the stream.',
+    ],
+    proofs: [
+      'The complete demo shows player cards, horde pressure, battle effects, a broadcast-style video break, and stats recap in one loop.',
+      'Comments, likes, gifts, follows, shares, and attacks become visible moments instead of passive chat.',
+      'The pitch is simple: viewers type, the overlay reacts, the creator gets a show worth sharing.',
+    ],
+    ctas: ['Launch your first battle in under 5 minutes.', 'Start with everything unlocked for 7 days.'],
+  },
+  {
     key: 'signup_result',
     label: 'Signup result post',
     audience: 'new creators',
@@ -269,9 +288,9 @@ const CONTENT_GENERATION_PACKS = [
     description: 'Turns one real overlay clip into a short-form launch set for creators who need to instantly understand the product.',
     recommendedAssetTypes: ['real_overlay_clip'],
     recipes: [
-      { templateKey: 'twelve_second_demo', platform: 'tiktok' },
-      { templateKey: 'twelve_second_demo', platform: 'instagram' },
-      { templateKey: 'twelve_second_demo', platform: 'youtube_shorts' },
+      { templateKey: 'complete_battle_demo', platform: 'tiktok' },
+      { templateKey: 'complete_battle_demo', platform: 'instagram' },
+      { templateKey: 'complete_battle_demo', platform: 'youtube_shorts' },
       { templateKey: 'social_proof', platform: 'x' },
       { templateKey: 'sponsor_broadcast', platform: 'linkedin' },
     ],
@@ -447,6 +466,7 @@ function visualDirectionForTemplate(template, assetType = '') {
     : 'Use only as a supporting texture; this cannot replace real product proof.';
   const directions = {
     twelve_second_demo: 'Show a real battle overlay in motion, tight on chat-to-attack action, with the CTA landing after the kill/sponsor beat.',
+    complete_battle_demo: 'Show the full 18-second demo arc: chat command, players, attack effects, horde pressure, broadcast-style video break, centered stats recap, and CTA.',
     signup_result: 'Show the dashboard setup path and the overlay result together so the promise feels achievable in minutes.',
     sponsor_broadcast: 'Use a sports-broadcast composition: full-screen brand moment, arena frame, stats end-cap, and return-to-battle energy.',
     player_commands: 'Show command examples beside the live overlay reaction, with simple visual callouts for attack, emoji, likes, and gifts.',
@@ -466,6 +486,7 @@ function hashtagsForCreative(templateKey = '', platform = '') {
   const common = ['#TikTokLIVE', '#CreatorTools', '#LiveStreaming'];
   const templateTags = {
     twelve_second_demo: ['#InteractiveLive', '#StreamerTools'],
+    complete_battle_demo: ['#InteractiveLive', '#StreamerTools', '#TikTokGame'],
     signup_result: ['#StreamerTools', '#OBS'],
     sponsor_broadcast: ['#BrandActivation', '#SportsMarketing'],
     player_commands: ['#InteractiveLive', '#LiveGame'],
@@ -481,6 +502,7 @@ function hashtagsForCreative(templateKey = '', platform = '') {
 function seoKeywordsForCreative(templateKey = '') {
   const keywords = ['TikTok LIVE overlay', 'interactive livestream', 'creator tools', 'battle arena'];
   const extra = {
+    complete_battle_demo: ['TikTok live battle demo', 'interactive overlay demo', 'livestream game demo'],
     sponsor_broadcast: ['brand activation', 'live stream sponsorship', 'broadcast sponsor moments'],
     player_commands: ['TikTok chat commands', 'interactive live game'],
     trial_unlock: ['TikTok live trial', 'OBS overlay setup'],
@@ -660,6 +682,24 @@ function buildProductionBlocks({ template, platform, blocks, asset = {}, variant
   };
 }
 
+function frameScriptForTemplate(template, hook, proof, cta) {
+  if (template.key === 'complete_battle_demo') {
+    return [
+      { time: '0-2.2s', block: 'hook', text: hook },
+      { time: '2.2-5.4s', block: 'battle-action', text: 'Show comments creating attacks, player damage, horde pressure, and a visible KO.' },
+      { time: '5.4-10.8s', block: 'effect-montage', text: 'Show the official effect set cleanly: laser, beam, neon, fire, sphere, projectile, bullet, railgun, comet, arc, explosion, and gift energy.' },
+      { time: '10.8-14.8s', block: 'broadcast-break', text: 'Show the premium video-break moment as part of the battle, not as a generic ad.' },
+      { time: '14.8-17.2s', block: 'stats-recap', text: proof },
+      { time: '17.2-18s', block: 'cta', text: cta },
+    ];
+  }
+  return [
+    { time: '0-2s', block: 'hook', text: hook },
+    { time: '2-9s', block: 'proof', text: proof },
+    { time: '9-12s', block: 'cta', text: cta },
+  ];
+}
+
 function buildBlocks({ template, platform, variantIndex, asset }) {
   const hook = template.hooks[variantIndex % template.hooks.length];
   const proof = template.proofs[(variantIndex + 1) % template.proofs.length];
@@ -667,6 +707,7 @@ function buildBlocks({ template, platform, variantIndex, asset }) {
   const url = utmUrl(template.path, platform, template.key, variantIndex);
   const assetType = asset?.asset_type || asset?.assetType || '';
   const visualDirection = visualDirectionForTemplate(template, assetType);
+  const frameScript = frameScriptForTemplate(template, hook, proof, cta);
   const baseBlocks = {
     hook,
     proof,
@@ -676,21 +717,13 @@ function buildBlocks({ template, platform, variantIndex, asset }) {
     assetType,
     requiredAssetTypes: template.requiredAssetTypes,
     safeZone: PLATFORM_RULES[platform]?.safeZone || PLATFORM_RULES.tiktok.safeZone,
-    textBlocks: [
-      { slot: 'hook', time: '0-2s', text: hook },
-      { slot: 'proof', time: '2-9s', text: proof },
-      { slot: 'cta', time: '9-12s', text: cta },
-    ],
+    textBlocks: frameScript.map(item => ({ slot: item.block, time: item.time, text: item.text })),
     visualDirection,
     hashtags: hashtagsForCreative(template.key, platform),
     seoKeywords: seoKeywordsForCreative(template.key),
     audience: audienceForTemplate(template),
     goal: template.goal,
-    frameScript: [
-      { time: '0-2s', block: 'hook', text: hook },
-      { time: '2-9s', block: 'proof', text: proof },
-      { time: '9-12s', block: 'cta', text: cta },
-    ],
+    frameScript,
   };
   return {
     ...baseBlocks,
