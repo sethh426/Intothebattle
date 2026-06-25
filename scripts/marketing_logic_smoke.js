@@ -30,6 +30,12 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function parseTimeWindowSeconds(value) {
+  const match = String(value || '').match(/^(\d+(?:\.\d+)?)s?-(\d+(?:\.\d+)?)s$/);
+  if (!match) return null;
+  return Number(match[2]) - Number(match[1]);
+}
+
 const facts = readSiteMarketingFacts();
 assert(facts.length >= 3, 'Expected marketing facts from public site pages');
 assert(facts.every(fact => fact.title && fact.url), 'Every marketing fact must include title and URL');
@@ -163,9 +169,10 @@ assert(
       && blocks.frameScript.some(block => block.block === 'sphere-slide')
       && blocks.frameScript.some(block => block.block === 'comet-slide')
       && blocks.frameScript[5]?.block === 'broadcast-break'
-      && blocks.textBlocks?.some(block => block.time === '14.8-17.2s');
+      && blocks.textBlocks?.some(block => block.time === '14.4-16.7s')
+      && blocks.frameScript.every(block => parseTimeWindowSeconds(block.time) >= 1.3);
   }),
-  'Complete battle demo variants must include the 18-second battle, effects, break, recap, and CTA timing'
+  'Complete battle demo variants must include readable 18-second battle, effects, break, recap, and CTA timing'
 );
 assert(
   creativeDrafts.every(draft => {
