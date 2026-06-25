@@ -923,10 +923,12 @@
     }
 
     .broadcast-frame {
+      position: relative;
       width: min(86%, 1040px);
+      min-height: clamp(230px, 62vh, 520px);
       display: grid;
-      grid-template-columns: minmax(0, 1.08fr) minmax(220px, .92fr);
-      gap: clamp(12px, 1.9vw, 28px);
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0;
       align-items: stretch;
       padding: clamp(13px, 2vw, 26px);
       border: 1px solid rgba(246, 201, 91, .38);
@@ -939,7 +941,7 @@
 
     .video-window {
       position: relative;
-      min-height: clamp(152px, 38vh, 310px);
+      min-height: clamp(202px, 54vh, 456px);
       overflow: hidden;
       border: 1px solid rgba(85, 231, 255, .28);
       border-radius: 14px;
@@ -971,6 +973,10 @@
       border: 1px solid rgba(246, 201, 91, .26);
       border-radius: 10px;
       box-shadow: 0 0 38px rgba(246, 201, 91, .12), inset 0 0 34px rgba(85, 231, 255, .09);
+    }
+
+    .video-window .video-headline {
+      filter: drop-shadow(0 18px 24px rgba(0, 0, 0, .32));
     }
 
     .video-badge,
@@ -1068,28 +1074,57 @@
     .video-sparks i:nth-child(3) { left: 82%; top: 34%; animation-delay: .94s; }
 
     .break-stats {
+      position: absolute;
+      left: clamp(18px, 3.2vw, 46px);
+      right: clamp(18px, 3.2vw, 46px);
+      bottom: clamp(18px, 3.4vw, 42px);
+      z-index: 6;
       min-width: 0;
       display: grid;
-      align-content: center;
+      grid-template-columns: minmax(190px, .9fr) repeat(3, minmax(0, 1fr));
       gap: clamp(9px, 1.2vw, 15px);
+      align-items: stretch;
+      padding: clamp(9px, 1.2vw, 16px);
+      border: 1px solid rgba(255, 255, 255, .14);
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(2, 6, 14, .88), rgba(7, 18, 32, .78));
+      box-shadow: 0 18px 54px rgba(0, 0, 0, .36), inset 0 1px 0 rgba(255, 255, 255, .08);
+      backdrop-filter: blur(14px) saturate(1.1);
+      animation: breakStatsEndcap var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
     }
 
     .break-stats .scene-title {
-      font-size: clamp(24px, 3.6vw, 58px);
+      grid-column: 1;
+      grid-row: 2;
+      font-size: clamp(17px, 2.3vw, 38px);
+      align-self: center;
+    }
+
+    .break-stats .scene-kicker {
+      grid-column: 1;
+      grid-row: 1;
+      align-self: start;
     }
 
     .stat-tile {
       min-width: 0;
+      grid-row: 1 / span 2;
+      display: grid;
+      align-content: center;
       padding: clamp(9px, 1.3vw, 15px);
       border: 1px solid rgba(255, 255, 255, .11);
       border-radius: 12px;
-      background: rgba(255, 255, 255, .055);
+      background: rgba(255, 255, 255, .075);
     }
+
+    .stat-tile:nth-of-type(1) { grid-column: 2; }
+    .stat-tile:nth-of-type(2) { grid-column: 3; }
+    .stat-tile:nth-of-type(3) { grid-column: 4; }
 
     .stat-tile strong {
       display: block;
       color: #fff8e6;
-      font-size: clamp(24px, 3.4vw, 54px);
+      font-size: clamp(25px, 3.6vw, 58px);
       line-height: .9;
       font-weight: 950;
     }
@@ -1430,6 +1465,12 @@
       100% { width: 100%; }
     }
 
+    @keyframes breakStatsEndcap {
+      0%, 73.5% { opacity: 0; transform: translateY(16px) scale(.985); }
+      76%, 81% { opacity: 1; transform: translateY(0) scale(1); }
+      82.4%, 100% { opacity: 0; transform: translateY(-10px) scale(.992); }
+    }
+
     @keyframes sparkDrop {
       0% { opacity: 0; transform: translateY(-18px) rotate(32deg); }
       34% { opacity: 1; }
@@ -1437,14 +1478,14 @@
     }
 
     @keyframes recapScene {
-      0%, 82.2% { visibility: hidden; opacity: 0; transform: translateY(14px) scale(1.02); }
-      83.4%, 94% { visibility: visible; opacity: 1; transform: translateY(0) scale(1); }
-      95%, 100% { visibility: hidden; opacity: 0; transform: translateY(-10px) scale(.995); }
+      0%, 81.8% { visibility: hidden; opacity: 0; transform: translateY(14px) scale(1.02); }
+      83%, 91.2% { visibility: visible; opacity: 1; transform: translateY(0) scale(1); }
+      92.4%, 100% { visibility: hidden; opacity: 0; transform: translateY(-10px) scale(.995); }
     }
 
     @keyframes ctaScene {
-      0%, 94.8% { visibility: hidden; opacity: 0; transform: scale(1.02); }
-      95.8%, 99.6% { visibility: visible; opacity: 1; transform: scale(1); }
+      0%, 90.8% { visibility: hidden; opacity: 0; transform: scale(1.02); }
+      92.4%, 99.7% { visibility: visible; opacity: 1; transform: scale(1); }
       100% { visibility: hidden; opacity: 0; transform: scale(1.01); }
     }
 
@@ -1564,13 +1605,22 @@
       }
       .broadcast-frame {
         width: 86%;
-        grid-template-columns: minmax(0, 1fr) minmax(122px, .62fr);
-        gap: 10px;
+        min-height: clamp(168px, 50vh, 310px);
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
         padding: 10px;
       }
-      .video-window { min-height: clamp(120px, 34vh, 220px); }
+      .video-window { min-height: clamp(150px, 42vh, 270px); }
       .video-headline strong { font-size: clamp(21px, 5vw, 42px); }
-      .break-stats .scene-title { font-size: clamp(18px, 4.2vw, 34px); }
+      .break-stats {
+        left: 18px;
+        right: 18px;
+        bottom: 16px;
+        grid-template-columns: minmax(108px, .9fr) repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        padding: 7px;
+      }
+      .break-stats .scene-title { font-size: clamp(11px, 3.2vw, 20px); }
       .stat-tile { padding: 8px; }
       .stat-tile strong { font-size: clamp(19px, 4.6vw, 34px); }
       .recap-card {
@@ -1706,11 +1756,12 @@
       }
       .broadcast-frame {
         width: 88%;
+        min-height: clamp(136px, 45vh, 220px);
         grid-template-columns: 1fr;
-        gap: 7px;
+        gap: 0;
         padding: 8px;
       }
-      .video-window { min-height: clamp(100px, 32vh, 170px); }
+      .video-window { min-height: clamp(124px, 40vh, 190px); }
       .video-badge {
         left: 10px;
         top: 9px;
@@ -1730,12 +1781,11 @@
         font-size: 6px;
       }
       .break-stats {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 5px;
+        display: none;
       }
-      .break-stats .scene-kicker,
-      .break-stats .scene-title { display: none; }
       .stat-tile {
+        grid-row: auto;
+        grid-column: auto !important;
         padding: 6px 4px;
         border-radius: 8px;
         text-align: center;
@@ -1797,8 +1847,8 @@
       </header>
 
       <div class="hook-panel">
-        <h1>Chat becomes the arena</h1>
-        <p>Comments, likes, gifts, follows, shares, and attacks all create live battle moments.</p>
+        <h1>Comment. Attack. Watch it land.</h1>
+        <p>A viewer types <strong>!laser</strong>, the target gets hit, and the whole room sees the battle react.</p>
       </div>
 
       <div class="chat-stack">
@@ -1882,17 +1932,17 @@
     <section class="scene sponsor-scene" aria-hidden="true">
       <div class="broadcast-frame">
         <div class="video-window">
-          <div class="video-badge">Arena spotlight</div>
+          <div class="video-badge">Battle break</div>
           <div class="video-sparks"><i></i><i></i><i></i></div>
           <div class="video-headline">
-            <strong>Power Moment</strong>
-            <span>Video break plays inside the battle</span>
+            <strong>Arena Spotlight</strong>
+            <span>Full-screen video between rounds</span>
           </div>
           <div class="video-progress"><span></span></div>
         </div>
         <div class="break-stats">
-          <span class="scene-kicker">Broadcast break</span>
-          <h2 class="scene-title">Full-screen video, <em>then stats</em></h2>
+          <span class="scene-kicker">End-cap stats</span>
+          <h2 class="scene-title">The action comes back with <em>proof</em></h2>
           <div class="stat-tile"><strong>247</strong><span>fighters joined</span></div>
           <div class="stat-tile"><strong>18</strong><span>KOs triggered</span></div>
           <div class="stat-tile"><strong>92%</strong><span>chat engaged</span></div>
@@ -1904,8 +1954,8 @@
       <div class="recap-card">
         <div class="recap-copy">
           <span class="scene-kicker">Stats recap</span>
-          <h2 class="scene-title">Every live ends with <em>proof</em></h2>
-          <p class="scene-copy">Creators get a clean recap they can share after the battle ends.</p>
+          <h2 class="scene-title">Shareable proof after <em>every fight</em></h2>
+          <p class="scene-copy">Creators get a clean battle recap they can post, reuse, and send viewers back to the next LIVE.</p>
         </div>
         <div class="stats-window">
           <header><span>Battle analytics</span><b>Round 04</b></header>
@@ -1925,9 +1975,9 @@
 
     <section class="scene cta-scene" aria-hidden="true">
       <div class="cta-box">
-        <span class="scene-kicker">Launch in minutes</span>
-        <h2 class="scene-title">Turn your next LIVE <em>into a battle</em></h2>
-        <div class="cta-button">Create free account</div>
+        <span class="scene-kicker">Everything unlocked for 7 days</span>
+        <h2 class="scene-title">Launch your first arena <em>before tonight&apos;s LIVE</em></h2>
+        <div class="cta-button">Start free setup</div>
       </div>
     </section>
   </div>

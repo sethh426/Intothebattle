@@ -258,3 +258,23 @@ textarea:focus {
     max-width: 100% !important;
   }
 }
+
+@media (max-width: 620px) {
+  .proof-list {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .proof-list span,
+  .proof {
+    width: 100% !important;
+    min-height: 42px !important;
+    justify-content: center !important;
+    text-align: center !important;
+    line-height: 1.22 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+  }
+}

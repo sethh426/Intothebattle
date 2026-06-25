@@ -2030,6 +2030,82 @@ function renderGrowthGuardrails(posts = [], diagnostics = {}, performance = {}) 
   </div>`).join('');
 }
 
+function renderGrowthCommandDeck({
+  posts = [],
+  calendarPosts = [],
+  diagnostics = {},
+  growthDiagnostics = {},
+  performanceSummary = {},
+  creativeAssets = [],
+  creativeVariants = [],
+  contentPacks = [],
+  autoPostBlockers = [],
+} = {}) {
+  const queue = calendarPosts.length ? calendarPosts : posts;
+  const counts = countBy(queue, 'status', 'draft');
+  const approvedAssets = creativeAssets.filter(asset => String(asset.approval_status || '').toLowerCase() === 'approved');
+  const proofAssets = approvedAssets.filter(asset => ['real_overlay_clip', 'real_overlay_screenshot', 'sponsor_break_clip', 'dashboard_screenshot'].includes(String(asset.asset_type || '').toLowerCase()));
+  const readyVariants = creativeVariants.filter(variant => String(variant.quality_status || '').toLowerCase() === 'ready');
+  const queuedVariants = creativeVariants.filter(variant => String(variant.status || '').toLowerCase() === 'queued');
+  const draftCount = numberValue(counts.draft);
+  const approvedCount = numberValue(counts.approved);
+  const dueApproved = numberValue(diagnostics.dueApprovedCount);
+  const visits = numberValue(performanceSummary.visits);
+  const battlePack = contentPacks.find(pack => pack.key === 'battle_clip_launch') || contentPacks[0];
+  const nextMove = autoPostBlockers.length
+    ? 'Fix the publishing gate before relying on automation.'
+    : draftCount > 0
+      ? `Review and approve ${draftCount} draft${draftCount === 1 ? '' : 's'} before generating more.`
+      : proofAssets.length === 0
+        ? 'Add one approved real overlay clip or screenshot so creative is based on proof.'
+        : 'Generate the battle-clip launch pack, approve winners, then publish the due queue.';
+  const primaryStatus = autoPostBlockers.length ? 'blocked' : dueApproved ? 'ready' : draftCount ? 'warn' : 'draft';
+  const cards = [
+    ['Next best move', nextMove, primaryStatus],
+    ['Proof asset health', `${proofAssets.length} approved proof asset${proofAssets.length === 1 ? '' : 's'} available for conversion creative.`, proofAssets.length ? 'ready' : 'warn'],
+    ['Publishing queue', `${approvedCount} approved, ${dueApproved} due now, ${numberValue(counts.failed)} failed needing recovery.`, numberValue(counts.failed) ? 'blocked' : approvedCount ? 'ready' : 'warn'],
+    ['Learning signal', visits ? `${visits} tracked UTM visit${visits === 1 ? '' : 's'} in ${numberValue(performanceSummary.days)} days.` : 'No tracked visits yet. Every public growth link needs UTM proof.', visits ? 'ready' : 'warn'],
+    ['Creative pipeline', `${readyVariants.length} ready variant${readyVariants.length === 1 ? '' : 's'}, ${queuedVariants.length} queued for posting.`, readyVariants.length || queuedVariants.length ? 'ready' : 'draft'],
+    ['Lead sync', growthDiagnostics.enabled ? 'Growth API sync is enabled for lead capture and follow-up data.' : 'Lead sync is disabled; keep CTA links UTM-clean until API keys are connected.', growthDiagnostics.enabled ? 'ready' : 'warn'],
+  ];
+  const cardHtml = cards.map(([title, detail, status]) => `<div class="command-card ${escapeAttr(status)}">
+    <span class="status-pill ${escapeAttr(status)}">${escapeHtml(status)}</span>
+    <h3>${escapeHtml(title)}</h3>
+    <p>${escapeHtml(detail)}</p>
+  </div>`).join('');
+  const battlePackRecipe = (battlePack?.recipes || []).slice(0, 3).map(recipe => `<li>${escapeHtml(recipe.platformLabel || recipe.platform)}: ${escapeHtml(recipe.templateLabel || recipe.templateKey)}</li>`).join('');
+  const blockerHtml = autoPostBlockers.length
+    ? `<div class="growth-blockers">${autoPostBlockers.map(blocker => `<span>${escapeHtml(blocker)}</span>`).join('')}</div>`
+    : '<div class="growth-blockers ready"><span>Automation gate is clean. Approved due posts can publish through configured webhooks.</span></div>';
+  return `<section class="growth-command-deck">
+    <div class="command-hero">
+      <span class="status-pill ${escapeAttr(primaryStatus)}">operator focus</span>
+      <h2>Today&apos;s growth mission</h2>
+      <p>${escapeHtml(nextMove)}</p>
+      <div class="command-links">
+        <a href="/battle-clip" target="_blank" rel="noopener">Open 18s demo</a>
+        <a href="#content-packs">Generate content pack</a>
+        <a href="#daily-queue">Review queue</a>
+        <a href="#asset-vault">Proof assets</a>
+      </div>
+    </div>
+    <div class="proof-brief">
+      <span class="status-pill ready">primary asset</span>
+      <h3>Use the 18-second battle demo as the main sales proof.</h3>
+      <p>Daily content should sell one promise: comments become visible action, the battle creates a produced moment, and the creator can launch quickly.</p>
+      <ul>
+        <li>Hook: Turn your TikTok LIVE chat into a playable battle arena.</li>
+        <li>Proof: chat command, attack, KO, effect montage, broadcast break, stats recap.</li>
+        <li>CTA: Launch your first battle room in under 5 minutes.</li>
+      </ul>
+      <small>${battlePack ? `Recommended pack: ${escapeHtml(battlePack.label || battlePack.key)}.` : 'Generate the battle clip launch pack after approving one real proof asset.'}</small>
+      ${battlePackRecipe ? `<ol>${battlePackRecipe}</ol>` : ''}
+    </div>
+    ${blockerHtml}
+    <div class="command-grid">${cardHtml}</div>
+  </section>`;
+}
+
 function renderMarketingAdminPage({
   message = '',
   error = '',
@@ -2075,6 +2151,17 @@ function renderMarketingAdminPage({
     diagnostics.dryRun ? 'Set MARKETING_DRY_RUN=false for live outbound publishing.' : '',
     configuredWebhooks.length ? '' : 'Configure MARKETING_WEBHOOK_<PLATFORM> or MARKETING_OUTBOUND_WEBHOOK_URL.',
   ].filter(Boolean);
+  const commandDeck = renderGrowthCommandDeck({
+    posts,
+    calendarPosts: calendarQueuePosts,
+    diagnostics,
+    growthDiagnostics,
+    performanceSummary,
+    creativeAssets,
+    creativeVariants,
+    contentPacks,
+    autoPostBlockers,
+  });
   const engineSteps = [
     ['1', 'Draft', 'Generate daily posts from the public pages or build variants from approved proof assets.'],
     ['2', 'Approve', 'Review copy, UTM links, schedule, asset status, and quality score before anything can publish.'],
@@ -2192,6 +2279,26 @@ function renderMarketingAdminPage({
     .error { color:#ffb6b6; }
     .success { color:#c6ffc3; }
     .card { background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.24); }
+    .growth-command-deck { display:grid; grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr); gap:16px; padding:20px; border:1px solid rgba(85,231,255,.24); border-radius:28px; background:radial-gradient(circle at 10% 0,rgba(85,231,255,.14),transparent 38%),radial-gradient(circle at 88% 8%,rgba(246,201,91,.12),transparent 36%),linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.026)); box-shadow:0 30px 90px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.08); }
+    .command-hero,.proof-brief { min-width:0; padding:18px; border-radius:22px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.18); }
+    .command-hero h2 { margin:10px 0 8px; font-size:clamp(30px,4.8vw,58px); line-height:.94; text-transform:uppercase; }
+    .command-hero p,.proof-brief p { margin:0; color:#dce7ff; font-size:16px; line-height:1.55; }
+    .command-links { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin-top:16px; }
+    .command-links a { min-height:42px; display:inline-flex; align-items:center; justify-content:center; padding:0 12px; border-radius:14px; color:#041014; background:linear-gradient(135deg,#55e7ff,#fff0b9 62%,#ff6a3d); font-size:12px; text-align:center; }
+    .proof-brief h3 { margin:10px 0 8px; color:#fff8e6; font-size:24px; line-height:1.05; }
+    .proof-brief ul,.proof-brief ol { margin:12px 0 0; padding-left:20px; color:#dce7ff; line-height:1.5; }
+    .proof-brief li { margin:5px 0; }
+    .proof-brief small { display:block; margin-top:12px; color:#9fefff; font-weight:900; }
+    .growth-blockers { grid-column:1 / -1; display:grid; gap:8px; padding:14px; border-radius:18px; border:1px solid rgba(246,201,91,.22); background:rgba(246,201,91,.075); }
+    .growth-blockers.ready { border-color:rgba(119,240,161,.28); background:rgba(119,240,161,.075); }
+    .growth-blockers span { color:#fff8e6; font-size:13px; font-weight:800; line-height:1.4; }
+    .command-grid { grid-column:1 / -1; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .command-card { min-width:0; padding:14px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.2); }
+    .command-card.ready { border-color:rgba(119,240,161,.28); background:rgba(119,240,161,.06); }
+    .command-card.warn { border-color:rgba(246,201,91,.28); background:rgba(246,201,91,.06); }
+    .command-card.blocked { border-color:rgba(232,59,95,.32); background:rgba(232,59,95,.08); }
+    .command-card h3 { margin:10px 0 8px; color:#fff8e6; font-size:17px; }
+    .command-card p { margin:0; font-size:13px; }
     .growth-shell { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr); gap:18px; align-items:start; }
     .focus-card { border-color:rgba(85,231,255,.2); background:linear-gradient(180deg,rgba(85,231,255,.09),rgba(255,255,255,.025)); }
     .focus-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:14px; }
@@ -2287,8 +2394,8 @@ function renderMarketingAdminPage({
     th { background:rgba(246,201,91,0.09); color:#ffdf8a; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     small { color:#9fb2d7; }
     .post-copy { max-width:620px; white-space:pre-wrap; color:#fff8e6; line-height:1.45; }
-    @media(max-width:1100px){ .growth-shell{grid-template-columns:1fr}.template-grid,.blank-design-grid,.content-pack-grid,.engine-grid,.mode-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.calendar-grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
-    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-brand img{width:46px;height:46px}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.admin-nav a{padding:0 10px}.metrics-grid,.inline-grid,.focus-actions,.template-grid,.blank-design-grid,.content-pack-grid,.engine-grid,.mode-grid,.calendar-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:1fr}.page-section summary{align-items:flex-start;flex-direction:column}.page-section summary small{text-align:left}.page-section summary::after{align-self:flex-start}.section-body{padding:0 12px 14px} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
+    @media(max-width:1100px){ .growth-command-deck,.growth-shell{grid-template-columns:1fr}.command-links,.template-grid,.blank-design-grid,.content-pack-grid,.engine-grid,.mode-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.calendar-grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-brand img{width:46px;height:46px}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.admin-nav a{padding:0 10px}.metrics-grid,.inline-grid,.focus-actions,.command-links,.command-grid,.template-grid,.blank-design-grid,.content-pack-grid,.engine-grid,.mode-grid,.calendar-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:1fr}.growth-command-deck{padding:14px}.page-section summary{align-items:flex-start;flex-direction:column}.page-section summary small{text-align:left}.page-section summary::after{align-self:flex-start}.section-body{padding:0 12px 14px} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
     @media(max-width:420px){ .admin-nav{grid-template-columns:1fr}.metrics-grid{grid-template-columns:1fr} }
   </style>
 </head>
@@ -2303,6 +2410,7 @@ function renderMarketingAdminPage({
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
+    ${commandDeck}
     <div class="metrics-grid">
       <div class="metric-card"><span>Drafts</span><strong>${numberValue(statusCounts.draft)}</strong></div>
       <div class="metric-card"><span>Approved</span><strong>${numberValue(statusCounts.approved)}</strong></div>
@@ -2333,7 +2441,7 @@ function renderMarketingAdminPage({
         </div>
       </div>
     </details>
-    <div class="card focus-card">
+    <div class="card focus-card" id="growth-controls">
       <h2>Growth engine controls</h2>
       <p><span class="status-pill ${escapeAttr(autoPostStatus)}">${escapeHtml(autoPostLabel)}</span> Due approved posts: <strong>${numberValue(diagnostics.dueApprovedCount)}</strong>. Check interval: <strong>${numberValue(diagnostics.autoPostIntervalMinutes)}</strong> min. Batch limit: <strong>${numberValue(diagnostics.autoPostLimit)}</strong>.</p>
       <p>Generate SEO and UTM-tagged daily drafts from the public site pages, approve the good ones, and let the scheduler publish due posts when the engine is live.</p>
@@ -2369,14 +2477,14 @@ function renderMarketingAdminPage({
         </form>
       </div>
     </div>
-    <details class="card page-section">
+    <details class="card page-section" open>
       <summary><span>Campaign calendar</span><small>Seven-day view of scheduled drafts and approved posts.</small></summary>
       <div class="section-body">
         <p>The next seven days of scheduled growth posts. This keeps the queue readable before the detailed editor gets involved.</p>
         <div class="calendar-grid">${campaignCalendar}</div>
       </div>
     </details>
-    <details class="card page-section">
+    <details class="card page-section" open>
       <summary><span>Post preview cards</span><small>Fast review of what is closest to approval.</small></summary>
       <div class="section-body">
         <p>Fast visual review of the next editable posts before approval. The detailed editor below remains the source of truth.</p>
@@ -2404,7 +2512,7 @@ function renderMarketingAdminPage({
         <div class="blank-design-grid">${blankDesignCards || '<p>No design templates configured.</p>'}</div>
       </div>
     </details>
-    <details class="card page-section">
+    <details class="card page-section" id="asset-vault">
       <summary><span>Asset vault</span><small>Upload or save the real proof assets used by growth creative.</small></summary>
       <div class="section-body">
       <p>Upload real overlay screenshots, sponsor clips, dashboard screenshots, approved textures, or generated backgrounds. Keep proof assets approved only when they show the real product accurately.</p>
@@ -2444,7 +2552,7 @@ function renderMarketingAdminPage({
       </div>
       </div>
     </details>
-    <details class="card page-section">
+    <details class="card page-section" id="content-packs" open>
       <summary><span>Content packs and variants</span><small>Generate, approve, and queue structured creative packages.</small></summary>
       <div class="section-body">
       <h2>One-click content packs</h2>
@@ -2471,7 +2579,7 @@ function renderMarketingAdminPage({
       </div>
       </div>
     </details>
-    <details class="card page-section">
+    <details class="card page-section" id="daily-queue" open>
       <summary><span>Daily content queue</span><small>Detailed editor for generated post drafts.</small></summary>
       <div class="section-body">
       <h2>Queue filters</h2>
