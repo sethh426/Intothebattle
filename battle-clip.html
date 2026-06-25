@@ -215,12 +215,31 @@
       animation: battleScene var(--cycle) linear infinite;
     }
 
+    .battle-scene::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 28.5%;
+      z-index: 5;
+      width: min(86%, 1180px);
+      height: min(60%, 540px);
+      border: 1px solid rgba(85, 231, 255, .22);
+      border-radius: 18px;
+      background:
+        linear-gradient(90deg, rgba(246, 201, 91, .22) 0 1px, transparent 1px calc(100% - 1px), rgba(246, 201, 91, .22) calc(100% - 1px)),
+        linear-gradient(180deg, rgba(246, 201, 91, .18) 0 1px, transparent 1px calc(100% - 1px), rgba(246, 201, 91, .18) calc(100% - 1px)),
+        radial-gradient(circle at 50% 34%, rgba(85, 231, 255, .13), transparent 38%),
+        linear-gradient(180deg, rgba(7, 18, 32, .56), rgba(2, 6, 14, .3));
+      box-shadow: 0 28px 90px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .06);
+      transform: translateX(-50%);
+    }
+
     .hook-panel {
       position: absolute;
       left: 50%;
-      top: 16.5%;
+      top: 14.4%;
       z-index: 32;
-      width: min(62%, 760px);
+      width: min(70%, 840px);
       display: grid;
       grid-template-columns: auto minmax(0, 1fr);
       gap: clamp(8px, 1.1vw, 13px);
@@ -256,9 +275,9 @@
     .chat-stack {
       position: absolute;
       left: 50%;
-      top: 31.5%;
+      top: 28.3%;
       z-index: 28;
-      width: min(72%, 840px);
+      width: min(78%, 980px);
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: clamp(5px, .7vw, 8px);
@@ -306,7 +325,7 @@
     .command-card {
       position: absolute;
       left: 50%;
-      top: 39%;
+      top: 36.5%;
       z-index: 34;
       width: min(42%, 470px);
       min-height: clamp(32px, 7.5%, 54px);
@@ -346,9 +365,9 @@
     .player-row {
       position: absolute;
       left: 50%;
-      top: 50%;
+      top: 48.5%;
       z-index: 24;
-      width: min(72%, 920px);
+      width: min(82%, 1100px);
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: clamp(7px, 1.15vw, 16px);
@@ -358,7 +377,7 @@
     .player-card {
       position: relative;
       min-width: 0;
-      min-height: clamp(84px, 21vh, 150px);
+      min-height: clamp(112px, 25vh, 190px);
       display: grid;
       grid-template-rows: auto 1fr auto;
       align-items: center;
@@ -390,7 +409,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       color: #fff8e6;
-      font-size: clamp(8px, 1.1vw, 15px);
+      font-size: clamp(10px, 1.18vw, 17px);
       line-height: 1;
       font-weight: 950;
       text-align: center;
@@ -399,7 +418,7 @@
     }
 
     .player-icon {
-      width: clamp(34px, 7.4vh, 64px);
+      width: clamp(48px, 10vh, 88px);
       aspect-ratio: 1;
       display: grid;
       place-items: center;
@@ -411,7 +430,7 @@
         linear-gradient(145deg, rgba(13, 34, 60, .95), rgba(2, 6, 14, .98));
       box-shadow: 0 0 24px rgba(85, 231, 255, .2), inset 0 0 20px rgba(85, 231, 255, .11);
       color: var(--cyan2);
-      font-size: clamp(17px, 4.7vh, 34px);
+      font-size: clamp(23px, 6.4vh, 46px);
       font-weight: 950;
     }
 
@@ -474,7 +493,7 @@
     .engagement-burst {
       position: absolute;
       left: 74%;
-      top: 40%;
+      top: 38%;
       z-index: 33;
       width: clamp(90px, 14vw, 170px);
       height: clamp(48px, 9vh, 90px);
@@ -500,9 +519,9 @@
     .event-banner {
       position: absolute;
       left: 50%;
-      top: 72.5%;
+      top: 71.5%;
       z-index: 35;
-      width: min(50%, 620px);
+      width: min(58%, 720px);
       min-height: clamp(42px, 10%, 76px);
       display: grid;
       grid-template-columns: minmax(58px, .22fr) minmax(0, 1fr);
@@ -560,10 +579,10 @@
     .horde {
       position: absolute;
       left: 50%;
-      top: 84%;
+      top: 82.5%;
       z-index: 27;
-      width: min(58%, 690px);
-      height: clamp(40px, 9%, 68px);
+      width: min(68%, 820px);
+      height: clamp(50px, 10.5%, 82px);
       overflow: hidden;
       border: 1px solid rgba(246, 201, 91, .34);
       border-radius: 12px;
@@ -641,9 +660,10 @@
     }
 
     .effects-card {
-      width: min(86%, 1080px);
+      position: relative;
+      width: min(92%, 1220px);
       display: grid;
-      grid-template-columns: minmax(0, .48fr) minmax(0, 1.52fr);
+      grid-template-columns: minmax(0, .4fr) minmax(0, 1.6fr);
       gap: clamp(12px, 1.8vw, 26px);
       align-items: center;
       padding: clamp(13px, 2vw, 26px);
@@ -658,7 +678,7 @@
     .duel-reel {
       position: relative;
       min-width: 0;
-      min-height: clamp(250px, 54vh, 462px);
+      min-height: clamp(300px, 62vh, 560px);
       overflow: hidden;
       border: 1px solid rgba(85, 231, 255, .2);
       border-radius: 13px;
@@ -1002,15 +1022,38 @@
     }
 
     .clip[data-demo-asset="effect-strip-slide"] .duel-reel {
+      min-height: clamp(320px, 60vh, 540px);
       background:
         radial-gradient(circle at 50% 50%, rgba(246, 201, 91, .12), transparent 38%),
         radial-gradient(circle at 22% 28%, rgba(85, 231, 255, .1), transparent 32%),
         linear-gradient(180deg, rgba(2, 8, 18, .88), rgba(3, 9, 18, .96));
     }
 
+    .clip[data-demo-asset="effect-strip-slide"] .effects-card {
+      width: min(88%, 1120px);
+      grid-template-columns: 1fr;
+      padding: clamp(16px, 2.4vw, 30px);
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .effects-copy {
+      position: absolute;
+      left: clamp(22px, 3vw, 40px);
+      top: clamp(18px, 2.5vw, 34px);
+      z-index: 12;
+      width: min(34%, 360px);
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .effects-copy .scene-title {
+      font-size: clamp(28px, 3.5vw, 58px);
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .effects-copy .scene-copy {
+      max-width: 28ch;
+    }
+
     .clip[data-demo-asset="effect-strip-slide"] .effect-strip {
-      left: clamp(14px, 2vw, 26px);
-      right: clamp(14px, 2vw, 26px);
+      left: min(38%, 420px);
+      right: clamp(18px, 2.4vw, 34px);
       top: 50%;
       bottom: auto;
       grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1019,7 +1062,7 @@
     }
 
     .clip[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip {
-      min-height: clamp(86px, 18vh, 148px);
+      min-height: clamp(104px, 20vh, 172px);
       border-color: rgba(85, 231, 255, .18);
       border-radius: 14px;
       background:
@@ -1036,6 +1079,29 @@
     .clip[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip b {
       font-size: clamp(9px, 1vw, 14px);
       top: clamp(8px, 1vw, 12px);
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .fx-beam span,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-fire span,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-bullet span,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-railgun span,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-arc span {
+      top: 62%;
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .fx-beam span,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-beam span::before,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-beam span::after,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-fire span::before,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-fire span::after,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-bullet span::before,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-bullet span::after,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-railgun span::before,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-railgun span::after,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-arc span::before,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-arc span::after,
+    .clip[data-demo-asset="effect-strip-slide"] .fx-gift span {
+      animation: none !important;
     }
 
     .effect-chip::before,
@@ -1152,6 +1218,20 @@
       opacity: .72;
     }
 
+    .clip[data-demo-asset="effect-strip-slide"] .fx-fire span::before {
+      left: 50%;
+      width: clamp(40px, 5.6vw, 70px);
+      height: clamp(31px, 4.7vw, 56px);
+      transform: translate(-50%, -50%);
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .fx-fire span::after {
+      left: 50%;
+      width: clamp(70px, 9vw, 118px);
+      height: clamp(16px, 2.4vw, 26px);
+      transform: translate(-64%, -50%);
+    }
+
     .fx-bullet span {
       left: 12%;
       right: 12%;
@@ -1179,6 +1259,13 @@
       animation: fxBullet 1.45s ease-in-out infinite;
     }
 
+    .clip[data-demo-asset="effect-strip-slide"] .fx-bullet span::before {
+      left: 50%;
+      width: clamp(62px, 8vw, 108px);
+      height: clamp(22px, 3.2vw, 36px);
+      transform: translate(-50%, -50%);
+    }
+
     .fx-bullet span::after {
       content: "";
       position: absolute;
@@ -1193,6 +1280,14 @@
       box-shadow: 0 0 12px rgba(246, 201, 91, .35);
       opacity: 0;
       animation: fxShell 1.45s ease-out infinite;
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .fx-bullet span::after {
+      left: 29%;
+      width: clamp(22px, 3vw, 38px);
+      height: clamp(15px, 2vw, 25px);
+      opacity: 1;
+      transform: translate(-50%, -132%) rotate(-28deg);
     }
 
     .fx-railgun span {
@@ -1222,6 +1317,14 @@
 
     .fx-railgun span::before { transform: translateY(calc(-50% - 8px)); }
     .fx-railgun span::after { transform: translateY(calc(-50% + 8px)); }
+
+    .clip[data-demo-asset="effect-strip-slide"] .fx-railgun span::before {
+      transform: translateY(calc(-50% - 11px));
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .fx-railgun span::after {
+      transform: translateY(calc(-50% + 11px));
+    }
 
     .fx-railgun i,
     .fx-railgun span i {
@@ -1977,6 +2080,12 @@
       .brand span,
       .hud-right span,
       .scene-copy { display: none; }
+      .battle-scene::before {
+        top: 27%;
+        width: 90%;
+        height: 58%;
+        border-radius: 14px;
+      }
       .hud { top: 4.7%; left: 5%; right: 5%; }
       .hook-panel {
         top: 16%;
@@ -2049,12 +2158,12 @@
       .sponsor-scene,
       .recap-scene { padding: 8%; }
       .effects-card {
-        width: 84%;
-        grid-template-columns: minmax(0, .56fr) minmax(0, 1.44fr);
+        width: 88%;
+        grid-template-columns: minmax(0, .46fr) minmax(0, 1.54fr);
         gap: 9px;
         padding: 10px;
       }
-      .duel-reel { min-height: clamp(198px, 50vh, 322px); }
+      .duel-reel { min-height: clamp(216px, 52vh, 344px); }
       .duel-shot {
         left: 8px;
         right: 8px;
@@ -2097,8 +2206,21 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 7px;
       }
+      .clip[data-demo-asset="effect-strip-slide"] .effects-card {
+        width: 90%;
+        grid-template-columns: 1fr;
+      }
+      .clip[data-demo-asset="effect-strip-slide"] .effects-copy {
+        left: 14px;
+        top: 12px;
+        width: 36%;
+      }
+      .clip[data-demo-asset="effect-strip-slide"] .effect-strip {
+        left: 42%;
+        right: 12px;
+      }
       .clip[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip {
-        min-height: clamp(56px, 14vh, 98px);
+        min-height: clamp(68px, 15vh, 106px);
       }
       .effect-strip .effect-chip {
         min-height: 36px;
@@ -2179,6 +2301,11 @@
 
     @media (max-width: 520px) {
       .clip::after { inset: 4%; }
+      .battle-scene::before {
+        top: 28%;
+        width: 90%;
+        height: 55%;
+      }
       .hud {
         top: 4%;
         min-height: 30px;
@@ -2271,7 +2398,7 @@
         gap: 5px;
         padding: 8px;
       }
-      .duel-reel { min-height: clamp(178px, 46vh, 236px); }
+      .duel-reel { min-height: clamp(190px, 48vh, 252px); }
       .duel-shot {
         left: 7px;
         right: 7px;
@@ -2323,8 +2450,19 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 5px;
       }
+      .clip[data-demo-asset="effect-strip-slide"] .effects-card {
+        width: 88%;
+        grid-template-columns: 1fr;
+      }
+      .clip[data-demo-asset="effect-strip-slide"] .effects-copy {
+        display: none;
+      }
+      .clip[data-demo-asset="effect-strip-slide"] .effect-strip {
+        left: 11px;
+        right: 11px;
+      }
       .clip[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip {
-        min-height: clamp(48px, 12vh, 74px);
+        min-height: clamp(58px, 13vh, 86px);
       }
       .effect-chip {
         min-height: 22px;
