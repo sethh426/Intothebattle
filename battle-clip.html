@@ -305,8 +305,8 @@
       animation: chatLines var(--cycle) ease-out infinite;
     }
 
-    .chat-line:nth-child(2) { animation-delay: .22s; }
-    .chat-line:nth-child(3) { animation-delay: .44s; }
+    .chat-line:nth-child(2),
+    .chat-line:nth-child(3) { animation-delay: 0s; }
 
     .chat-line strong {
       min-width: 0;
@@ -394,10 +394,10 @@
       animation: playerEnter var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
     }
 
-    .player-card:nth-child(2) { animation-delay: .08s; }
-    .player-card:nth-child(3) { animation-delay: .16s; }
-    .player-card:nth-child(4) { animation-delay: .24s; }
-    .player-card:nth-child(5) { animation-delay: .32s; }
+    .player-card:nth-child(2),
+    .player-card:nth-child(3),
+    .player-card:nth-child(4),
+    .player-card:nth-child(5) { animation-delay: 0s; }
 
     .player-card.is-target {
       border-color: rgba(255, 45, 136, .42);
@@ -1867,14 +1867,12 @@
     }
 
     @keyframes hookPanel {
-      0%, 2% { opacity: 0; transform: translate(-50%, 14px) scale(.98); }
-      5%, 13% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      0%, 13% { opacity: 1; transform: translate(-50%, 0) scale(1); }
       16%, 100% { opacity: 0; transform: translate(-50%, -8px) scale(.995); }
     }
 
     @keyframes chatLines {
-      0%, 3% { opacity: 0; transform: translateY(-14px); }
-      7%, 23% { opacity: 1; transform: translateY(0); }
+      0%, 23% { opacity: 1; transform: translateY(0); }
       28%, 100% { opacity: 0; transform: translateY(-8px); }
     }
 
@@ -1885,8 +1883,7 @@
     }
 
     @keyframes playerEnter {
-      0%, 2% { opacity: 0; transform: translateY(10px) scale(.98); }
-      6%, 30% { opacity: 1; transform: translateY(0) scale(1); }
+      0%, 30% { opacity: 1; transform: translateY(0) scale(1); }
       32%, 100% { opacity: 0; transform: translateY(-6px) scale(.99); }
     }
 
