@@ -6178,7 +6178,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     socket.emit('register', { type: 'overlay' }, ack => {
       if (ack && ack.success) {
         registerAcked = true;
-        if (Number.isFinite(Number(ack.eventSeq))) lastVisualEventSeq = Math.max(lastVisualEventSeq, Number(ack.eventSeq) - 1);
+        if (Number.isFinite(Number(ack.eventSeq))) lastVisualEventSeq = Math.max(lastVisualEventSeq, Number(ack.eventSeq));
         fetch(withOverlayAuth('/state')).then(r => (r.ok ? r.json() : null)).then(s => { if (s) receiveGameState(s); }).catch(() => {});
       }
     });

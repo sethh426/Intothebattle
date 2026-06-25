@@ -59,6 +59,23 @@ export function getDbHealthSnapshot() {
   return { ...dbHealth };
 }
 
+export async function waitForDbReady(options = {}) {
+  const timeoutMs = Number(options.timeoutMs || process.env.DB_STARTUP_TIMEOUT_MS || 20000);
+  if (useStubDb) return getDbHealthSnapshot();
+  if (!initializationPromise) throw new Error('Database initialization has not started');
+
+  await Promise.race([
+    initializationPromise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`Database initialization timed out after ${timeoutMs}ms`)), timeoutMs)),
+  ]);
+
+  const snapshot = getDbHealthSnapshot();
+  if (!snapshot.initialized) {
+    throw new Error(snapshot.lastError || 'Database initialization did not complete');
+  }
+  return snapshot;
+}
+
 // Initiate connection asynchronously without blocking the event loop
 // Only attempt once to avoid "Client has already been connected" error
 let connectionAttempted = false;
@@ -222,6 +239,21 @@ async function initDb() {
 
     const safeExec = async (sql) => {
       try { await client.query(sql); } catch (_) {}
+    };
+
+    const requireColumnType = async (tableName, columnName, expectedType) => {
+      const result = await client.query(
+        `SELECT data_type
+         FROM information_schema.columns
+         WHERE table_schema = current_schema()
+           AND table_name = $1
+           AND column_name = $2`,
+        [tableName, columnName]
+      );
+      const actualType = result.rows?.[0]?.data_type;
+      if (actualType !== expectedType) {
+        throw new Error(`Expected ${tableName}.${columnName} to be ${expectedType}, found ${actualType || 'missing'}`);
+      }
     };
 
     await safeExec("ALTER TABLE access_codes ADD COLUMN owner_name TEXT");
@@ -664,6 +696,10 @@ async function initDb() {
     await safeExec('ALTER TABLE room_player_stats ALTER COLUMN last_active TYPE BIGINT USING last_active::bigint');
     await safeExec('ALTER TABLE room_player_stats ALTER COLUMN message_boost_expires TYPE BIGINT USING message_boost_expires::bigint');
     await safeExec('ALTER TABLE global_player_stats ALTER COLUMN last_active TYPE BIGINT USING last_active::bigint');
+    await requireColumnType('room_player_stats', 'last_kill_time', 'bigint');
+    await requireColumnType('room_player_stats', 'last_active', 'bigint');
+    await requireColumnType('room_player_stats', 'message_boost_expires', 'bigint');
+    await requireColumnType('global_player_stats', 'last_active', 'bigint');
 
     // Seed beta access codes
     try {

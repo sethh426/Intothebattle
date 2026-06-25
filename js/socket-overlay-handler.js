@@ -169,11 +169,263 @@ function initSocketOverlay(game) {
 
   if (scene.setSponsorPlaybackReporter) scene.setSponsorPlaybackReporter(reportSponsorPlayback);
 
+  const SCENE_EVENT_LANES = Object.freeze({
+    exclusive: { cooldownMs: 110, ttlMs: 120000, maxQueued: 8, sponsorPolicy: 'allow' },
+    celebration: { cooldownMs: 190, ttlMs: 15000, maxQueued: 28, sponsorPolicy: 'hold' },
+    gameplay: { cooldownMs: 70, ttlMs: 9000, maxQueued: 72, sponsorPolicy: 'hold' },
+    ambient: { cooldownMs: 130, ttlMs: 4500, maxQueued: 36, sponsorPolicy: 'drop' },
+    sound: { cooldownMs: 120, ttlMs: 3500, maxQueued: 16, sponsorPolicy: 'drop' },
+  });
+  const SCENE_EVENT_LANE_ORDER = ['exclusive', 'celebration', 'gameplay', 'ambient', 'sound'];
+  const sceneEventQueue = [];
+  const seenSceneSeqs = new Set();
+  const seenSceneSeqOrder = [];
+  const sceneLaneReadyAt = {};
+  let sceneEventScheduled = false;
+  let sceneSeqFloor = 0;
+  let sceneRuntimeEpoch = 0;
+
+  function queueClamp(value, min, max) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return min;
+    return Math.max(min, Math.min(max, parsed));
+  }
+
+  function eventSeq(data) {
+    const seq = Number(data && data._seq);
+    return Number.isFinite(seq) && seq > 0 ? seq : 0;
+  }
+
+  function seedSceneSeqFloor(value) {
+    const seq = Number(value);
+    if (Number.isFinite(seq) && seq > sceneSeqFloor) sceneSeqFloor = seq;
+  }
+
+  function seedSceneRegistration(ack = {}) {
+    seedSceneSeqFloor(ack.eventSeq);
+    const epoch = Number(ack.runtimeEpoch);
+    if (Number.isFinite(epoch) && epoch > sceneRuntimeEpoch) sceneRuntimeEpoch = epoch;
+  }
+
+  function acceptSceneEpoch(data = {}) {
+    const epoch = Number(data._epoch);
+    if (!Number.isFinite(epoch) || epoch <= 0) return true;
+    if (sceneRuntimeEpoch && epoch < sceneRuntimeEpoch) return false;
+    if (epoch > sceneRuntimeEpoch) sceneRuntimeEpoch = epoch;
+    return true;
+  }
+
+  function rememberSceneSeq(seq) {
+    if (!seq) return;
+    seenSceneSeqs.add(seq);
+    seenSceneSeqOrder.push(seq);
+    if (seenSceneSeqOrder.length > 360) {
+      const removed = seenSceneSeqOrder.splice(0, seenSceneSeqOrder.length - 360);
+      removed.forEach(value => seenSceneSeqs.delete(value));
+    }
+  }
+
+  function eventPriority(type, data = {}) {
+    const explicit = Number(data._priority);
+    if (Number.isFinite(explicit)) return explicit;
+    if (data.killed || data.killingBlow) return 100;
+    if (type === 'sponsorScene') return data.action === 'hide' ? 118 : 112;
+    if (type === 'sponsorPrepare') return 108;
+    if (type === 'bossWave') return data.type === 'defeated' ? 98 : data.type === 'started' ? 92 : 84;
+    if (type === 'killEvent' || type === 'streakEvent') return 95;
+    if (type === 'engagementSurge') return data.tier === 'takeover' ? 99 : data.tier === 'viral' ? 92 : 84;
+    if (type === 'giftAttack' || type === 'giftCelebration') return 88;
+    if (type === 'attack' || type === 'commentDamage') return data.special || data.critical ? 82 : 70;
+    if (type === 'like' && data.milestoneTier === 'mega') return 90;
+    if (type === 'like' && data.milestone) return 66;
+    if (type === 'follow' || type === 'socialBoost' || type === 'respawn' || type === 'playerCommand') return 58;
+    if (type === 'heal') return 46;
+    if (type === 'soundEvent') return Number(data.priority) || 44;
+    if (type === 'like') return 24;
+    return 40;
+  }
+
+  function eventLane(type, data = {}, options = {}) {
+    if (options.lane && SCENE_EVENT_LANES[options.lane]) return options.lane;
+    if (data._lane && SCENE_EVENT_LANES[data._lane]) return data._lane;
+    if (type === 'sponsorPrepare' || type === 'sponsorScene') return 'exclusive';
+    if (type === 'soundEvent') return 'sound';
+    if (type === 'like' && data.milestone) return 'celebration';
+    if (type === 'engagementSurge' || type === 'killEvent' || type === 'streakEvent' || type === 'giftCelebration' || type === 'follow' || type === 'roundEvent' || type === 'bossWave') return 'celebration';
+    if (type === 'like' || type === 'heal' || type === 'socialBoost') return 'ambient';
+    return 'gameplay';
+  }
+
+  function laneConfig(lane) {
+    return SCENE_EVENT_LANES[lane] || SCENE_EVENT_LANES.gameplay;
+  }
+
+  function queueTextPart(value) {
+    return String(value || '').trim().toLowerCase().replace(/[^a-z0-9_@.-]+/g, '').slice(0, 80);
+  }
+
+  function attackMergeKey(data = {}) {
+    const attacker = queueTextPart(data.attacker || data.attackerId || data.uniqueId || data.userId || data.nickname);
+    const target = queueTextPart(data.target || data.targetId || data.victim || data.targetNick || data.targetScope);
+    const effect = queueTextPart(data.effect || data.commandDescription || data.shotType || (data.giftId ? 'gift' : 'attack'));
+    return attacker || target ? `attack:${attacker}:${target}:${effect}` : '';
+  }
+
+  function eventMergeKey(type, data = {}, options = {}) {
+    if (typeof options.mergeKey === 'function') return options.mergeKey(data);
+    if (options.mergeKey) return String(options.mergeKey);
+    if (type === 'attack' || type === 'commentDamage' || type === 'giftAttack') return attackMergeKey(data);
+    if (type === 'soundEvent') return `sound:${queueTextPart(data.event || data.filename || 'sound')}`;
+    if (type === 'like') return data.milestone ? `like:${data.milestone}` : `like:${queueTextPart(data.uniqueId || data.userId || data.nickname || 'crowd')}`;
+    if (type === 'bossWave' && data.type !== 'attack') return `boss:${queueTextPart(data.type || 'status')}`;
+    if (type === 'playerCommand') return `cmd:${queueTextPart(data.type || 'command')}:${queueTextPart(data.uniqueId || data.nickname)}`;
+    if (type === 'sponsorPrepare' || type === 'sponsorScene') return `${type}:${queueTextPart(data.breakId || data.filename || data.action || 'active')}`;
+    return '';
+  }
+
+  function mergeScenePayload(previous = {}, next = {}) {
+    const merged = { ...previous, ...next };
+    const previousHearts = Number(previous.hearts) || 0;
+    const nextHearts = Number(next.hearts) || 0;
+    if (previousHearts || nextHearts) merged.hearts = Math.min(12, previousHearts + Math.max(1, nextHearts));
+    merged.intensity = Math.max(Number(previous.intensity) || 0, Number(next.intensity) || 0);
+    merged.amount = Math.max(Number(previous.amount) || 0, Number(next.amount) || 0);
+    merged.damage = Math.max(Number(previous.damage) || 0, Number(next.damage) || 0) || merged.damage;
+    merged._seq = Math.max(eventSeq(previous), eventSeq(next)) || merged._seq;
+    return merged;
+  }
+
+  function trimSceneLane(lane) {
+    const config = laneConfig(lane);
+    const laneItems = [];
+    for (let index = 0; index < sceneEventQueue.length; index += 1) {
+      if (sceneEventQueue[index].lane === lane) laneItems.push({ index, item: sceneEventQueue[index] });
+    }
+    if (laneItems.length <= config.maxQueued) return;
+    laneItems.sort((a, b) => (a.item.priority - b.item.priority) || (a.item.queuedAt - b.item.queuedAt));
+    const drop = new Set(laneItems.slice(0, laneItems.length - config.maxQueued).map(entry => entry.index));
+    for (let index = sceneEventQueue.length - 1; index >= 0; index -= 1) {
+      if (drop.has(index)) sceneEventQueue.splice(index, 1);
+    }
+  }
+
+  function sponsorIsActive() {
+    return document.body.classList.contains('sponsor-active');
+  }
+
+  function pruneSceneEventQueue(now = Date.now()) {
+    const activeSponsor = sponsorIsActive();
+    for (let index = sceneEventQueue.length - 1; index >= 0; index -= 1) {
+      const queued = sceneEventQueue[index];
+      const config = laneConfig(queued.lane);
+      const expired = now - queued.queuedAt > config.ttlMs;
+      const shouldDropDuringSponsor = activeSponsor && config.sponsorPolicy === 'drop' && queued.lane !== 'exclusive';
+      if (expired || shouldDropDuringSponsor) sceneEventQueue.splice(index, 1);
+    }
+  }
+
+  function eventComparator(a, b) {
+    const priorityDiff = (b.priority || 0) - (a.priority || 0);
+    if (priorityDiff) return priorityDiff;
+    if (a.seq && b.seq && a.seq !== b.seq) return a.seq - b.seq;
+    return a.queuedAt - b.queuedAt;
+  }
+
+  function pickNextSceneEvent(lane, now = Date.now()) {
+    const config = laneConfig(lane);
+    if (now < (sceneLaneReadyAt[lane] || 0)) return null;
+    if (sponsorIsActive() && config.sponsorPolicy !== 'allow') return null;
+
+    let bestIndex = -1;
+    for (let index = 0; index < sceneEventQueue.length; index += 1) {
+      const queued = sceneEventQueue[index];
+      if (queued.lane !== lane) continue;
+      if (bestIndex === -1 || eventComparator(queued, sceneEventQueue[bestIndex]) < 0) bestIndex = index;
+    }
+    if (bestIndex === -1) return null;
+    sceneLaneReadyAt[lane] = now + config.cooldownMs;
+    return sceneEventQueue.splice(bestIndex, 1)[0];
+  }
+
+  function runQueuedSceneEvent(queued) {
+    if (!queued) return;
+    if (queued.seq) rememberSceneSeq(queued.seq);
+    const delayMs = ['attack', 'commentDamage', 'giftAttack'].includes(queued.type)
+      ? queueClamp(queued.data.impactDelayMs, 0, 1400)
+      : 0;
+    const execute = () => {
+      try {
+        queued.handler(queued.data);
+      } catch (err) {
+        console.error('Overlay event handler failed:', queued.type, err);
+      }
+    };
+    if (delayMs > 0) setTimeout(execute, delayMs);
+    else execute();
+  }
+
+  function processSceneEvents() {
+    sceneEventScheduled = false;
+    if (!sceneEventQueue.length) return;
+    const now = Date.now();
+    pruneSceneEventQueue(now);
+    for (const lane of SCENE_EVENT_LANE_ORDER) {
+      const next = pickNextSceneEvent(lane, now);
+      if (!next) continue;
+      if (next.seq && (next.seq <= sceneSeqFloor || seenSceneSeqs.has(next.seq))) continue;
+      runQueuedSceneEvent(next);
+    }
+    if (sceneEventQueue.length) scheduleSceneEvents();
+  }
+
+  function scheduleSceneEvents() {
+    if (sceneEventScheduled) return;
+    sceneEventScheduled = true;
+    const delay = sponsorIsActive() ? 180 : 45;
+    setTimeout(() => {
+      if (typeof requestAnimationFrame === 'function') requestAnimationFrame(processSceneEvents);
+      else processSceneEvents();
+    }, delay);
+  }
+
+  function enqueueSceneEvent(type, data, handler, options = {}) {
+    if (!data || typeof handler !== 'function') return;
+    if (!acceptSceneEpoch(data)) return;
+    const seq = eventSeq(data);
+    if (seq && (seq <= sceneSeqFloor || seenSceneSeqs.has(seq))) return;
+    const now = Date.now();
+    const lane = eventLane(type, data, options);
+    const priority = options.priority != null ? Number(options.priority) : eventPriority(type, data);
+    const mergeKey = eventMergeKey(type, data, options);
+
+    if (mergeKey) {
+      for (let index = sceneEventQueue.length - 1; index >= 0; index -= 1) {
+        const queued = sceneEventQueue[index];
+        if (queued.lane === lane && queued.mergeKey === mergeKey && now - queued.queuedAt <= 360) {
+          queued.type = type;
+          queued.handler = handler;
+          queued.data = mergeScenePayload(queued.data, data);
+          queued.seq = Math.max(queued.seq || 0, seq || 0);
+          queued.priority = Math.max(queued.priority || 0, priority || 0);
+          queued.queuedAt = now;
+          scheduleSceneEvents();
+          return;
+        }
+      }
+    }
+
+    sceneEventQueue.push({ type, data, handler, seq, lane, priority, mergeKey, queuedAt: now });
+    trimSceneLane(lane);
+    scheduleSceneEvents();
+  }
+
   // Status updates
   socket.on('connect', () => {
     console.log('Socket connected');
     setStatus('CONNECTED', 'connected');
-    socket.emit('register', { type: 'overlay' });
+    socket.emit('register', { type: 'overlay' }, ack => {
+      if (ack && ack.success) seedSceneRegistration(ack);
+    });
     fetch(withOverlayAuth('/state'))
       .then(response => response.ok ? response.json() : null)
       .then(syncGameState)
@@ -241,25 +493,31 @@ function initSocketOverlay(game) {
     if (color && scene.updateLaserColor) scene.updateLaserColor(color);
   });
   socket.on('soundEvent', (data) => {
-    playSound(data || {}, { force: Boolean(data?.force || data?.priority >= 90) });
-    if (scene.showSoundPulse && data?.event) scene.showSoundPulse(data.event);
+    enqueueSceneEvent('soundEvent', data || {}, payload => {
+      playSound(payload || {}, { force: Boolean(payload?.force || payload?.priority >= 90) });
+      if (scene.showSoundPulse && payload?.event) scene.showSoundPulse(payload.event);
+    }, { lane: 'sound' });
   });
   socket.on('sponsorPrepare', (payload) => {
-    const scenePayload = resolveSponsorPayload(payload || {});
-    if (scene.prepareSponsorBreak) {
-      scene.prepareSponsorBreak(scenePayload);
-    } else {
-      reportSponsorPlayback(scenePayload, scenePayload.videoUrl ? 'failed' : 'ready', scenePayload.videoUrl ? 'Phaser sponsor prepare handler unavailable' : 'No media required');
-    }
+    enqueueSceneEvent('sponsorPrepare', payload || {}, queuedPayload => {
+      const scenePayload = resolveSponsorPayload(queuedPayload || {});
+      if (scene.prepareSponsorBreak) {
+        scene.prepareSponsorBreak(scenePayload);
+      } else {
+        reportSponsorPlayback(scenePayload, scenePayload.videoUrl ? 'failed' : 'ready', scenePayload.videoUrl ? 'Phaser sponsor prepare handler unavailable' : 'No media required');
+      }
+    }, { lane: 'exclusive' });
   });
   socket.on('sponsorScene', (payload) => {
-    if (!scene.playSponsorBreak || !scene.stopSponsorBreak) return;
-    if (payload && payload.action === 'hide') {
-      scene.stopSponsorBreak('stopped');
-      return;
-    }
-    const scenePayload = resolveSponsorPayload(payload || {});
-    scene.playSponsorBreak(scenePayload);
+    enqueueSceneEvent('sponsorScene', payload || {}, queuedPayload => {
+      if (!scene.playSponsorBreak || !scene.stopSponsorBreak) return;
+      if (queuedPayload && queuedPayload.action === 'hide') {
+        scene.stopSponsorBreak('stopped');
+        return;
+      }
+      const scenePayload = resolveSponsorPayload(queuedPayload || {});
+      scene.playSponsorBreak(scenePayload);
+    }, { lane: 'exclusive' });
   });
 
   // Overlay events
@@ -295,71 +553,100 @@ function initSocketOverlay(game) {
   });
 
   socket.on('attack', (data) => {
-    if (!data) return;
-    if (scene.handleAttackEvent) scene.handleAttackEvent(data);
-    else scene.showDamage(game.scale.width / 2, game.scale.height * 0.35, data.damage || 'HIT', data.killed ? 'kill' : data.critical ? 'critical' : 'normal');
-    playSound('attack');
+    enqueueSceneEvent('attack', data || {}, payload => {
+      if (scene.handleAttackEvent) scene.handleAttackEvent(payload);
+      else scene.showDamage(game.scale.width / 2, game.scale.height * 0.35, payload.damage || 'HIT', payload.killed ? 'kill' : payload.critical ? 'critical' : 'normal');
+      playSound(payload.killed ? 'kill' : 'attack');
+    });
   });
   socket.on('commentDamage', (data) => {
-    if (!data) return;
-    if (scene.handleAttackEvent) scene.handleAttackEvent(data);
-    else scene.showDamage(game.scale.width / 2, game.scale.height * 0.35, data.damage || 'HIT', data.killed ? 'kill' : data.critical ? 'critical' : 'normal');
-    playSound(data.killed ? 'kill' : 'attack');
+    enqueueSceneEvent('commentDamage', data || {}, payload => {
+      if (scene.handleAttackEvent) scene.handleAttackEvent(payload);
+      else scene.showDamage(game.scale.width / 2, game.scale.height * 0.35, payload.damage || 'HIT', payload.killed ? 'kill' : payload.critical ? 'critical' : 'normal');
+      playSound(payload.killed ? 'kill' : 'attack');
+    });
   });
 
   socket.on('giftAttack', (data) => {
-    if (!data) return;
-    if (scene.handleGiftAttackEvent) scene.handleGiftAttackEvent(data);
-    else scene.showDamage(game.scale.width / 2, game.scale.height * 0.32, data.damage || 'GIFT', data.killed ? 'kill' : data.tier === 'legendary' ? 'critical' : 'normal');
-    playSound(data.killed ? 'kill' : 'gift');
+    enqueueSceneEvent('giftAttack', data || {}, payload => {
+      if (scene.handleGiftAttackEvent) scene.handleGiftAttackEvent(payload);
+      else scene.showDamage(game.scale.width / 2, game.scale.height * 0.32, payload.damage || 'GIFT', payload.killed ? 'kill' : payload.tier === 'legendary' ? 'critical' : 'normal');
+      playSound(payload.killed ? 'kill' : 'gift');
+    });
   });
 
   socket.on('like', (data) => {
-    if (scene.handleLikeEvent) scene.handleLikeEvent(data || {});
+    enqueueSceneEvent('like', data || {}, payload => {
+      if (scene.handleLikeEvent) scene.handleLikeEvent(payload || {});
+    });
   });
   socket.on('heal', (data) => {
-    if (scene.handleHealEvent) scene.handleHealEvent(data || {});
-    playSound('heal');
+    enqueueSceneEvent('heal', data || {}, payload => {
+      if (scene.handleHealEvent) scene.handleHealEvent(payload || {});
+      playSound('heal');
+    });
   });
   socket.on('spawn', (data) => {
-    if (scene.spawnRespawnEffect) scene.spawnRespawnEffect(data?.uniqueId || data?.id || data?.userId);
-    playSound('respawn');
+    enqueueSceneEvent('spawn', data || {}, payload => {
+      if (scene.spawnRespawnEffect) scene.spawnRespawnEffect(payload?.uniqueId || payload?.id || payload?.userId);
+      playSound('respawn');
+    });
   });
   socket.on('respawn', (data) => {
-    if (scene.spawnRespawnEffect) scene.spawnRespawnEffect(data?.uniqueId || data?.id || data?.userId);
-    playSound('respawn');
+    enqueueSceneEvent('respawn', data || {}, payload => {
+      if (scene.spawnRespawnEffect) scene.spawnRespawnEffect(payload?.uniqueId || payload?.id || payload?.userId);
+      playSound('respawn');
+    });
   });
   socket.on('playerCommand', (data) => {
-    if (scene.handlePlayerCommand) scene.handlePlayerCommand(data || {});
+    enqueueSceneEvent('playerCommand', data || {}, payload => {
+      if (scene.handlePlayerCommand) scene.handlePlayerCommand(payload || {});
+    });
   });
   socket.on('roundEvent', (data) => {
-    if (scene.handleRoundEvent) scene.handleRoundEvent(data || {});
+    enqueueSceneEvent('roundEvent', data || {}, payload => {
+      if (scene.handleRoundEvent) scene.handleRoundEvent(payload || {});
+    });
   });
   socket.on('bossWave', (data) => {
-    if (scene.handleBossWave) scene.handleBossWave(data || {});
+    enqueueSceneEvent('bossWave', data || {}, payload => {
+      if (scene.handleBossWave) scene.handleBossWave(payload || {});
+    });
   });
   socket.on('killEvent', (data) => {
-    if (scene.handleKillEvent) scene.handleKillEvent(data || {});
-    playSound('kill');
+    enqueueSceneEvent('killEvent', data || {}, payload => {
+      if (scene.handleKillEvent) scene.handleKillEvent(payload || {});
+      playSound('kill');
+    });
   });
   socket.on('streakEvent', (data) => {
-    if (scene.handleStreakEvent) scene.handleStreakEvent(data || {});
+    enqueueSceneEvent('streakEvent', data || {}, payload => {
+      if (scene.handleStreakEvent) scene.handleStreakEvent(payload || {});
+    });
   });
   socket.on('giftCelebration', (data) => {
-    if (scene.handleGiftCelebration) scene.handleGiftCelebration(data || {});
-    playSound('gift');
+    enqueueSceneEvent('giftCelebration', data || {}, payload => {
+      if (scene.handleGiftCelebration) scene.handleGiftCelebration(payload || {});
+      playSound('gift');
+    });
   });
   socket.on('follow', (data) => {
-    if (scene.handleFollowEvent) scene.handleFollowEvent(data || {});
-    playSound('follow');
+    enqueueSceneEvent('follow', data || {}, payload => {
+      if (scene.handleFollowEvent) scene.handleFollowEvent(payload || {});
+      playSound('follow');
+    });
   });
   socket.on('socialBoost', (data) => {
-    if (scene.showSocialBoost) scene.showSocialBoost(data || {});
-    playSound('socialBoost');
+    enqueueSceneEvent('socialBoost', data || {}, payload => {
+      if (scene.showSocialBoost) scene.showSocialBoost(payload || {});
+      playSound('socialBoost');
+    });
   });
   socket.on('engagementSurge', (data) => {
-    if (scene.handleEngagementSurge) scene.handleEngagementSurge(data || {});
-    playSound('engagementSurge');
+    enqueueSceneEvent('engagementSurge', data || {}, payload => {
+      if (scene.handleEngagementSurge) scene.handleEngagementSurge(payload || {});
+      playSound('engagementSurge');
+    });
   });
   socket.on('layoutUpdate', (data = {}) => {
     if (!scene.updateLayoutConfig) return;

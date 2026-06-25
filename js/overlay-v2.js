@@ -47,6 +47,15 @@
     return Number.isFinite(parsed) ? parsed : fallback;
   }
 
+  function formatClockMs(value) {
+    const ms = Number(value);
+    if (!Number.isFinite(ms) || ms <= 0) return '0:00';
+    const totalSeconds = Math.ceil(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+  }
+
   function escapeName(value) {
     return String(value || 'Player').trim().slice(0, 18) || 'Player';
   }
@@ -77,6 +86,7 @@
       this.bossState = null;
       this.bannerQueue = [];
       this.bannerActive = false;
+      this.recentAttackKeys = new Map();
     }
 
     create() {
@@ -280,8 +290,12 @@
       this.hordeTitle.setText(bossActive ? 'BOSS WAVE' : 'HORDE');
       this.hordeTitle.setPosition(x + w * 0.18, y + h / 2);
       this.hordeMeta.setPosition(x + w * 0.58, y + h / 2);
+      const bossRemainingMs = bossActive
+        ? (Number.isFinite(Number(this.bossState?.endsAt)) ? Math.max(0, Number(this.bossState.endsAt) - Date.now()) : Number(this.bossState?.remainingMs))
+        : 0;
+      const bossClock = bossActive && Number.isFinite(bossRemainingMs) ? ` | ${formatClockMs(bossRemainingMs)}` : '';
       this.hordeMeta.setText(bossActive
-        ? `${Math.round(bossPct * 100)}% HP | TARGET @BOSS`
+        ? `${Math.round(bossPct * 100)}% HP${bossClock} | TARGET @BOSS`
         : reserve > 0 ? `${reserve} RESERVE | ${alive} ACTIVE` : `${alive || 0} ACTIVE FIGHTERS`);
       this.hordeBounds = { x, y, width: w, height: h };
     }
@@ -465,6 +479,27 @@
       });
     }
 
+    attackEventKey(data = {}) {
+      const normalize = value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9_@.-]+/g, '').slice(0, 80);
+      const attacker = normalize(data.attacker || data.attackerId || data.uniqueId || data.userId || data.nickname);
+      const target = normalize(data.target || data.targetId || data.victim || data.targetNick || data.targetScope);
+      const effect = normalize(data.effect || data.commandDescription || data.shotType || (data.giftId ? 'gift' : 'attack'));
+      return attacker || target ? `${attacker}:${target}:${effect}` : '';
+    }
+
+    shouldSuppressAttackEvent(data = {}) {
+      const key = this.attackEventKey(data);
+      if (!key) return false;
+      const now = Date.now();
+      for (const [storedKey, storedAt] of this.recentAttackKeys.entries()) {
+        if (now - storedAt > 1250) this.recentAttackKeys.delete(storedKey);
+      }
+      const previousAt = this.recentAttackKeys.get(key);
+      if (previousAt && now - previousAt <= 430) return true;
+      this.recentAttackKeys.set(key, now);
+      return false;
+    }
+
     fireBeam(from, to, damage, type = 'normal', options = {}) {
       const start = from || this.getHordePosition();
       const end = to || this.getHordePosition();
@@ -507,6 +542,7 @@
     }
 
     handleAttackEvent(data = {}) {
+      if (this.shouldSuppressAttackEvent(data)) return;
       const type = data.killed || data.killingBlow ? 'kill' : data.critical ? 'critical' : 'normal';
       const from = this.getEntityPosition(data.attacker || data.attackerId, data.attackerScope) || this.getHordePosition();
       const to = this.getEntityPosition(data.target || data.targetId, data.targetScope) || this.getHordePosition();
@@ -678,24 +714,32 @@
 
     handleBossWave(data = {}) {
       const type = String(data.type || '').toLowerCase();
-      if (type === 'started' || data.active === true) {
+      if (type === 'started' || (data.active === true && !type)) {
         this.bossState = {
           active: true,
           hp: Number(data.hp || data.maxHp || 100),
           maxHp: Number(data.maxHp || data.hp || 100),
+          endsAt: Number(data.endsAt) || null,
+          remainingMs: Number(data.remainingMs) || null,
+          nextAttackAt: Number(data.nextAttackAt) || null,
+          attackIntervalMs: Number(data.attackIntervalMs) || null,
         };
-        this.showBanner('Boss wave incoming', 'legendary');
+        this.showBanner(type === 'attack' ? 'Boss wave strike' : 'Boss wave incoming', 'legendary');
         this.pulseHorde(0xf6c95b);
         return;
       }
-      if (type === 'damaged') {
+      if (type === 'damaged' || type === 'attack') {
         this.bossState = {
           active: true,
           hp: Number(data.hp || 0),
           maxHp: Number(data.maxHp || 1),
+          endsAt: Number(data.endsAt) || this.bossState?.endsAt || null,
+          remainingMs: Number(data.remainingMs) || this.bossState?.remainingMs || null,
+          nextAttackAt: Number(data.nextAttackAt) || this.bossState?.nextAttackAt || null,
+          attackIntervalMs: Number(data.attackIntervalMs) || this.bossState?.attackIntervalMs || null,
         };
         const hitter = data.lastHitBy?.nickname || data.lastHitBy?.uniqueId || 'Viewer';
-        this.showBanner(`${hitter} hit the boss wave`, Number(data.hp || 0) <= Number(data.maxHp || 1) * 0.25 ? 'legendary' : 'kill');
+        this.showBanner(type === 'attack' ? 'Boss wave strikes the arena' : `${hitter} hit the boss wave`, Number(data.hp || 0) <= Number(data.maxHp || 1) * 0.25 ? 'legendary' : 'kill');
         this.pulseHorde(0xff6a3d);
         return;
       }

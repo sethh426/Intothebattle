@@ -15,7 +15,7 @@ import fs from 'fs';
 import multer from 'multer';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import db, { getDbHealthSnapshot } from './tiktokbr/db/db.js';
+import db, { getDbHealthSnapshot, waitForDbReady } from './tiktokbr/db/db.js';
 import authRoutes from './tiktokbr/routes/auth.js';
 import adminRoutes from './tiktokbr/routes/admin.js';
 import paypalRoutes from './tiktokbr/routes/paypal.js';
@@ -187,6 +187,7 @@ const API_KEY = process.env.API_KEY;
 let DEV_TEST_MODE = process.env.DEV_TEST_MODE === 'true';
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || '0.0.0.0';
+const DB_STARTUP_TIMEOUT_MS = Number(process.env.DB_STARTUP_TIMEOUT_MS || 20000);
 const OVERLAY_TOKEN_PARAM = 'overlay_token';
 const OVERLAY_TOKEN_TTL = process.env.OVERLAY_TOKEN_TTL || '365d';
 const STORAGE_ROOT = process.env.DISK_PATH || __dirname;
@@ -2548,33 +2549,45 @@ function loadRoomPlayerStats(room) {
     const rows = db.prepare('SELECT * FROM room_player_stats WHERE room_id = ?').all(room.roomId);
 
     for (const row of rows) {
-      const id = row.unique_id;
+      const id = safePlayerText(row.unique_id, '', 80);
+      if (!isPersistablePlayerId(id)) continue;
+      const maxHp = safeStatInt(row.max_hp, CFG.BASE_HP, 1, 1_000_000);
+      const hp = safeStatInt(row.hp, maxHp, 0, maxHp);
+      const strength = safeStatInt(row.strength, CFG.BASE_STRENGTH, 1, 1_000_000);
+      const kills = safeStatInt(row.kills, 0, 0, 1_000_000);
+      const killStreak = safeStatInt(row.kill_streak, 0, 0, 1_000_000);
+      const lastKillTime = safeEpochMs(row.last_kill_time, 0);
+      const lastActive = safeEpochMs(row.last_active, Date.now());
+      const messageBoostExpires = safeEpochMs(row.message_boost_expires, 0);
       if (!room.players[id]) {
         room.players[id] = {
           uniqueId: id,
-          nickname: row.nickname || id,
-          hp:       row.hp || CFG.BASE_HP,
-          maxHp:    row.max_hp || CFG.BASE_HP,
-          strength: row.strength || CFG.BASE_STRENGTH,
-          kills:    row.kills || 0,
-          killStreak: row.kill_streak || 0,
-          lastKillTime: row.last_kill_time || 0,
+          nickname: safePlayerText(row.nickname, id, 80),
+          hp,
+          maxHp,
+          strength,
+          kills,
+          killStreak,
+          lastKillTime,
           alive:    false,
-          lastActive: row.last_active || Date.now(),
+          lastActive,
           x: 0, y: 0, vx: 0, vy: 0,
-          color: row.color || randomColor(),
-          messageBoostExpires: row.message_boost_expires || 0,
+          color: /^#[0-9a-f]{6}$/i.test(String(row.color || '')) ? row.color : randomColor(),
+          messageBoostExpires,
           forceSpawn: false,
         };
       } else {
         const target = room.players[id];
         target.uniqueId = target.uniqueId || id;
-        target.nickname = target.nickname || row.nickname || id;
-        target.maxHp = Math.max(target.maxHp || CFG.BASE_HP, row.max_hp || CFG.BASE_HP);
-        target.strength = Math.max(target.strength || CFG.BASE_STRENGTH, row.strength || CFG.BASE_STRENGTH);
-        target.kills = row.kills || target.kills || 0;
-        target.killStreak = target.killStreak || row.kill_streak || 0;
-        target.lastKillTime = target.lastKillTime || row.last_kill_time || 0;
+        target.nickname = safePlayerText(target.nickname || row.nickname, id, 80);
+        target.maxHp = Math.max(safeStatInt(target.maxHp, CFG.BASE_HP, 1, 1_000_000), maxHp);
+        target.hp = safeStatInt(target.hp, target.maxHp, 0, target.maxHp);
+        target.strength = Math.max(safeStatInt(target.strength, CFG.BASE_STRENGTH, 1, 1_000_000), strength);
+        target.kills = Math.max(safeStatInt(target.kills, 0, 0, 1_000_000), kills);
+        target.killStreak = Math.max(safeStatInt(target.killStreak, 0, 0, 1_000_000), killStreak);
+        target.lastKillTime = Math.max(safeEpochMs(target.lastKillTime, 0), lastKillTime);
+        target.lastActive = Math.max(safeEpochMs(target.lastActive, 0), lastActive);
+        target.messageBoostExpires = Math.max(safeEpochMs(target.messageBoostExpires, 0), messageBoostExpires);
       }
     }
 
@@ -2609,20 +2622,28 @@ function saveRoomPlayerStats(room) {
     const tx = db.transaction(() => {
       for (const id in room.players) {
         const player = room.players[id];
+        const uniqueId = safePlayerText(player?.uniqueId || id, '', 80);
+        if (!player || !isPersistablePlayerId(uniqueId)) continue;
+        const maxHp = safeStatInt(player.maxHp, CFG.BASE_HP, 1, 1_000_000);
+        const hp = safeStatInt(player.hp, maxHp, 0, maxHp);
+        const strength = safeStatInt(player.strength, CFG.BASE_STRENGTH, 1, 1_000_000);
+        const kills = safeStatInt(player.kills, 0, 0, 1_000_000);
+        const killStreak = safeStatInt(player.killStreak, 0, 0, 1_000_000);
+        const color = /^#[0-9a-f]{6}$/i.test(String(player.color || '')) ? player.color : randomColor();
         stmt.run(
           room.roomId,
-          id,
-          player.nickname,
-          player.hp,
-          player.maxHp,
-          player.strength,
-          player.kills,
-          player.killStreak || 0,
-          player.lastKillTime || 0,
+          uniqueId,
+          safePlayerText(player.nickname, uniqueId, 80),
+          hp,
+          maxHp,
+          strength,
+          kills,
+          killStreak,
+          safeEpochMs(player.lastKillTime, 0),
           0,
-          player.lastActive || Date.now(),
-          player.color || randomColor(),
-          player.messageBoostExpires || 0,
+          safeEpochMs(player.lastActive, Date.now()),
+          color,
+          safeEpochMs(player.messageBoostExpires, 0),
           0
         );
       }
@@ -3101,6 +3122,28 @@ function rejectUploadedFileIfStorageLow(req, res, file, category) {
 function randomColor() {
   const palette = ['#FF6B6B','#FFD93D','#6BCB77','#4D96FF','#FF6BB5','#C77DFF','#00C9A7','#FF9F43'];
   return palette[Math.floor(Math.random() * palette.length)];
+}
+
+function safeStatInt(value, fallback = 0, min = 0, max = 2_000_000_000) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, Math.round(parsed)));
+}
+
+function safeEpochMs(value, fallback = 0) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return fallback;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.round(parsed));
+}
+
+function safePlayerText(value, fallback = '', maxLength = 120) {
+  const text = String(value || fallback || '').trim();
+  return text.slice(0, maxLength) || String(fallback || '').slice(0, maxLength);
+}
+
+function isPersistablePlayerId(id) {
+  const value = String(id || '').trim();
+  return Boolean(value && value !== SERVER_HORDE_ID && value !== SERVER_BOSS_ID);
 }
 
 function normalizeTikTokId(user) {
@@ -5181,7 +5224,15 @@ io.on('connection', (socket) => {
     }
 
     if (typeof ack === 'function') {
-      ack({ success: true, type: clientType, roomId: room.roomId, overlayCount: room.overlayCount, eventSeq: room.eventSeq || 0 });
+      ack({
+        success: true,
+        type: clientType,
+        roomId: room.roomId,
+        overlayCount: room.overlayCount,
+        eventSeq: room.eventSeq || 0,
+        runtimeEpoch: roomRuntimeEpoch(room),
+        sessionId: currentRoomSessionId(room),
+      });
     }
   });
 
@@ -6579,7 +6630,20 @@ app.use((err, req, res, next) => {
   res.status(500).send('Internal server error');
 });
 
-httpServer.listen(PORT, HOST, () => {
+async function startServer() {
+  try {
+    const dbHealth = await waitForDbReady({ timeoutMs: DB_STARTUP_TIMEOUT_MS });
+    logger.info({ database: dbHealth.mode, initialized: dbHealth.initialized }, 'Database ready before server listen');
+  } catch (err) {
+    const message = 'Database initialization failed before server listen';
+    if (process.env.NODE_ENV === 'production') {
+      logger.fatal({ err }, message);
+      process.exit(1);
+    }
+    logger.warn({ err }, `${message}; continuing in non-production`);
+  }
+
+  httpServer.listen(PORT, HOST, () => {
   logger.info('\n🎮 PvP Game Server running!');
   logger.info({ host: HOST, port: PORT, envPort: process.env.PORT }, 'Server bind info');
   logger.info({ url: `http://localhost:${PORT}/overlay.html` }, 'Overlay URL');
@@ -6597,4 +6661,10 @@ httpServer.listen(PORT, HOST, () => {
   if (currentStreamer) {
     try { connectToStreamer(currentStreamer); } catch (err) { logger.error({ err, streamer: currentStreamer }, 'Failed to connect to streamer on startup'); }
   }
+  });
+}
+
+startServer().catch(err => {
+  logger.fatal({ err }, 'Server startup failed');
+  process.exit(1);
 });
