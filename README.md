@@ -152,6 +152,7 @@ METRICS_TOKEN=replace_with_a_metrics_scrape_token
 DIAGNOSTICS_TOKEN=
 MARKETING_PLATFORMS=x,linkedin,facebook,instagram,tiktok,youtube_shorts
 MARKETING_AUTOMATION_ENABLED=false
+MARKETING_AUTO_POST_ENABLED=true
 MARKETING_DRY_RUN=true
 MARKETING_OUTBOUND_WEBHOOK_URL=
 GROWTH_API_SYNC_ENABLED=false
@@ -192,9 +193,12 @@ The app includes an admin-only company growth workflow at `/admin/marketing`. It
 
 ```text
 MARKETING_AUTOMATION_ENABLED=true
+MARKETING_AUTO_POST_ENABLED=true
 MARKETING_DRY_RUN=false
 MARKETING_OUTBOUND_WEBHOOK_URL=<authorized Make/Zapier/n8n/webhook>
 ```
+
+`MARKETING_AUTO_POST_ENABLED` defaults to the same value as `MARKETING_AUTOMATION_ENABLED`. In production that means the scheduler starts automatically once live publishing is configured; set `MARKETING_AUTO_POST_ENABLED=false` to keep manual publishing only.
 
 You can also use platform-specific webhooks such as `MARKETING_WEBHOOK_X`, `MARKETING_WEBHOOK_LINKEDIN`, `MARKETING_WEBHOOK_INSTAGRAM`, `MARKETING_WEBHOOK_TIKTOK`, and `MARKETING_WEBHOOK_YOUTUBE_SHORTS`.
 
@@ -405,6 +409,7 @@ METRICS_TOKEN=<long random metrics scrape token>
 DIAGNOSTICS_TOKEN=<optional separate diagnostics token>
 MARKETING_PLATFORMS=x,linkedin,facebook,instagram,tiktok,youtube_shorts
 MARKETING_AUTOMATION_ENABLED=false
+MARKETING_AUTO_POST_ENABLED=true
 MARKETING_DRY_RUN=true
 MARKETING_OUTBOUND_WEBHOOK_URL=<optional authorized outbound webhook>
 GROWTH_API_SYNC_ENABLED=false

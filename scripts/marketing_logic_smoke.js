@@ -105,13 +105,22 @@ assert(
 );
 
 const blankDesigns = listBlankDesignTemplates();
-assert(blankDesigns.length === 5, 'Expected five blank branded design templates');
-assert(blankDesigns.every(design => design.width > 0 && design.height > 0 && design.downloadSvg && design.downloadBrief), 'Blank designs must include dimensions and downloads');
+assert(blankDesigns.length === 5, 'Expected five design templates');
+assert(blankDesigns.filter(design => design.templateType === 'blank').length === 1, 'Design library must include exactly one blank starter');
+assert(blankDesigns.filter(design => design.templateType !== 'blank').length === 4, 'All non-blank designs must be fully branded campaign templates');
+assert(
+  blankDesigns.some(design => design.key === 'battle_clip_video_launch' && design.demoHref === '/battle-clip' && design.templateType === 'branded-video'),
+  'Design library must include the branded battle clip video template'
+);
+assert(blankDesigns.every(design => design.width > 0 && design.height > 0 && design.downloadSvg && design.downloadBrief), 'Design templates must include dimensions and downloads');
 for (const design of blankDesigns) {
   const brief = buildBlankDesignBrief(design.key);
   const svg = renderBlankDesignSvg(design.key);
-  assert(brief.brandKit?.logoUrl && brief.seoStarter?.altText, 'Blank design brief must include brand and SEO starter data');
-  assert(svg.includes('<svg') && svg.includes('INTOTHEBATTLE'), 'Blank design SVG must render branded SVG output');
+  assert(brief.brandKit?.logoUrl && brief.seoStarter?.altText, 'Design brief must include brand and SEO starter data');
+  assert(svg.includes('<svg') && svg.includes('INTOTHEBATTLE'), 'Design SVG must render branded SVG output');
+  if (design.templateType !== 'blank') {
+    assert(svg.includes(design.headline.toUpperCase().slice(0, 18)), 'Branded design SVG must include finished campaign copy');
+  }
 }
 
 const creativeDrafts = buildCreativeVariantDrafts({

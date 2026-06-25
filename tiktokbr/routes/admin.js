@@ -304,6 +304,7 @@ function latestSubscriptionByUser(subscriptions = []) {
 }
 
 function classifySubscriptionTier(subscription, now = new Date()) {
+  if (isBetaSubscription(subscription)) return 'beta';
   if (isActiveSubscription(subscription)) return 'paid';
   if (isFullAccessTrialSubscription(subscription, now)) return 'trialBeta';
   return 'free';
@@ -312,53 +313,70 @@ function classifySubscriptionTier(subscription, now = new Date()) {
 function classifyAccessCodeTier(code, now = new Date()) {
   if (!isActiveAccessCode(code, now)) return 'inactive';
   if (isPaidAccessCode(code)) return 'paid';
-  if (isBetaTesterAccessCode(code)) return 'trialBeta';
+  if (isBetaTesterAccessCode(code)) return 'beta';
   return 'free';
 }
 
 function incrementTier(target, tier) {
   if (tier === 'paid') target.paid += 1;
   else if (tier === 'trialBeta') target.trialBeta += 1;
+  else if (tier === 'beta' && typeof target.beta === 'number') target.beta += 1;
   else if (tier === 'free') target.free += 1;
 }
 
 function strongerTier(current, next) {
-  const rank = { free: 1, trialBeta: 2, paid: 3 };
+  const rank = { free: 1, trialBeta: 2, beta: 2, paid: 3 };
   return (rank[next] || 0) > (rank[current] || 0) ? next : current;
 }
 
 function emptyAdminUserMetrics() {
   return {
     accounts: { free: 0, paid: 0, trialBeta: 0, beta: 0, total: 0 },
-    live: { free: 0, paid: 0, trialBeta: 0, total: 0, overlays: 0 },
+    live: { free: 0, paid: 0, trialBeta: 0, beta: 0, total: 0, overlays: 0 },
     updatedAt: new Date().toISOString(),
   };
+}
+
+function isBetaSubscription(subscription = {}) {
+  const text = `${subscription?.plan_type || ''} ${subscription?.status || ''}`.toLowerCase();
+  return text.includes('beta');
 }
 
 function buildAdminUserMetrics() {
   const metrics = emptyAdminUserMetrics();
   try {
     const now = new Date();
-    const users = db.prepare('SELECT id, is_active FROM users').all();
+    const users = db.prepare('SELECT id, email, is_active FROM users').all();
     const subscriptions = db.prepare('SELECT * FROM subscriptions ORDER BY updated_at DESC, id DESC').all();
     const codes = db.prepare('SELECT * FROM access_codes').all();
     const userRooms = db.prepare('SELECT room_id, user_id FROM user_rooms').all();
     const latestByUser = latestSubscriptionByUser(subscriptions);
     const userTierById = new Map();
     const roomTierById = new Map();
+    const betaUserIds = new Set();
+    const betaEmails = new Set();
+
+    codes.forEach(code => {
+      if (!isBetaTesterAccessCode(code)) return;
+      const userId = Number(code.user_id);
+      if (Number.isFinite(userId) && userId > 0) betaUserIds.add(userId);
+      const email = String(code.email || '').trim().toLowerCase();
+      if (email) betaEmails.add(email);
+    });
 
     users.forEach(user => {
       if (!user?.id || Number(user.is_active) === 0) return;
-      const tier = classifySubscriptionTier(latestByUser.get(user.id), now);
+      const email = String(user.email || '').trim().toLowerCase();
+      const isBetaUser = betaUserIds.has(Number(user.id)) || (email && betaEmails.has(email));
+      const tier = isBetaUser ? 'beta' : classifySubscriptionTier(latestByUser.get(user.id), now);
       userTierById.set(user.id, tier);
       incrementTier(metrics.accounts, tier);
     });
 
     codes.forEach(code => {
       const tier = classifyAccessCodeTier(code, now);
-      if (isBetaTesterAccessCode(code)) metrics.accounts.beta += 1;
       incrementTier(metrics.accounts, tier);
-      if (code?.room_id && ['paid', 'trialBeta', 'free'].includes(tier)) {
+      if (code?.room_id && ['paid', 'trialBeta', 'beta', 'free'].includes(tier)) {
         roomTierById.set(code.room_id, strongerTier(roomTierById.get(code.room_id) || 'free', tier));
       }
     });
@@ -369,7 +387,7 @@ function buildAdminUserMetrics() {
       roomTierById.set(row.room_id, strongerTier(roomTierById.get(row.room_id) || 'free', tier));
     });
 
-    metrics.accounts.total = metrics.accounts.free + metrics.accounts.paid + metrics.accounts.trialBeta;
+    metrics.accounts.total = metrics.accounts.free + metrics.accounts.paid + metrics.accounts.trialBeta + metrics.accounts.beta;
 
     for (const room of getAllRooms().values()) {
       const overlayCount = Number(room?.overlayCount) || 0;
@@ -584,14 +602,14 @@ function renderAccessCodeRows(codes = [], emptyMessage = 'No access codes found.
     const actionLabel = Number(code.is_revoked) === 1 ? 'Enable' : 'Disable';
     const tiktokUsername = normalizeTikTokUsername(code.tiktok_username || '');
     return `<tr>
-      <td><strong>${escapeHtml(code.code)}</strong><br><span class="muted">${escapeHtml(code.room_id ? `Room ${code.room_id}` : 'No room')}</span></td>
-      <td>${escapeHtml(code.owner_name || code.streamer_name || code.email || '')}<br><span class="muted">${escapeHtml(code.email || '')}</span></td>
-      <td>${escapeHtml(tiktokUsername ? `@${tiktokUsername}` : '')}</td>
-      <td>${escapeHtml(adminAccessCodeTypeLabel(code))}<br><span class="muted">${escapeHtml(code.subscription_status || '')}</span></td>
-      <td>${escapeHtml(status)}</td>
-      <td>${escapeHtml(formatSponsorDate(code.expires_at))}</td>
-      <td>${escapeHtml(formatSponsorDate(code.last_seen))}</td>
-      <td>
+      <td data-label="Code / Room"><strong>${escapeHtml(code.code)}</strong><br><span class="muted">${escapeHtml(code.room_id ? `Room ${code.room_id}` : 'No room')}</span></td>
+      <td data-label="Owner / Email">${escapeHtml(code.owner_name || code.streamer_name || code.email || '')}<br><span class="muted">${escapeHtml(code.email || '')}</span></td>
+      <td data-label="TikTok">${escapeHtml(tiktokUsername ? `@${tiktokUsername}` : '')}</td>
+      <td data-label="Type">${escapeHtml(adminAccessCodeTypeLabel(code))}<br><span class="muted">${escapeHtml(code.subscription_status || '')}</span></td>
+      <td data-label="Status">${escapeHtml(status)}</td>
+      <td data-label="Expires">${escapeHtml(formatSponsorDate(code.expires_at))}</td>
+      <td data-label="Last Seen">${escapeHtml(formatSponsorDate(code.last_seen))}</td>
+      <td data-label="Profile">
         <form method="POST" action="/admin/update-code-profile" class="mini-form">
           <input type="hidden" name="code" value="${escapeAttr(code.code)}" />
           <input name="ownerName" value="${escapeAttr(code.owner_name || '')}" placeholder="Owner" />
@@ -600,7 +618,7 @@ function renderAccessCodeRows(codes = [], emptyMessage = 'No access codes found.
           <button type="submit" class="secondary-button">Save Profile</button>
         </form>
       </td>
-      <td>
+      <td data-label="Actions">
         <form method="POST" action="/admin/toggle-code">
           <input type="hidden" name="code" value="${escapeAttr(code.code)}" />
           <button type="submit">${actionLabel}</button>
@@ -622,13 +640,13 @@ function renderUserRows(users = [], emptyMessage = 'No users found yet.') {
     const tiktokUsername = accountTikTokUsername(user);
     const beta = isAdminBetaUser(user);
     return `<tr>
-      <td>${escapeHtml(String(user.id))}<br><span class="muted">${beta ? 'Beta tester' : 'Standard'}</span></td>
-      <td><strong>${escapeHtml(user.email || '')}</strong><br><span class="muted">${escapeHtml(user.name || '')}</span></td>
-      <td>${escapeHtml(tiktokUsername ? `@${tiktokUsername}` : '')}</td>
-      <td>${escapeHtml(plan)}${user.access_code ? `<br><span class="muted">Code ${escapeHtml(user.access_code)}</span>` : ''}</td>
-      <td>${escapeHtml(`${active} / ${verified}`)}</td>
-      <td>${escapeHtml(formatSponsorDate(user.created_at))}</td>
-      <td>${escapeHtml(formatSponsorDate(user.last_login))}</td>
+      <td data-label="ID">${escapeHtml(String(user.id))}<br><span class="muted">${beta ? 'Beta tester' : 'Standard'}</span></td>
+      <td data-label="Email / Name"><strong>${escapeHtml(user.email || '')}</strong><br><span class="muted">${escapeHtml(user.name || '')}</span></td>
+      <td data-label="TikTok">${escapeHtml(tiktokUsername ? `@${tiktokUsername}` : '')}</td>
+      <td data-label="Plan">${escapeHtml(plan)}${user.access_code ? `<br><span class="muted">Code ${escapeHtml(user.access_code)}</span>` : ''}</td>
+      <td data-label="Status">${escapeHtml(`${active} / ${verified}`)}</td>
+      <td data-label="Created">${escapeHtml(formatSponsorDate(user.created_at))}</td>
+      <td data-label="Last Login">${escapeHtml(formatSponsorDate(user.last_login))}</td>
     </tr>`;
   }).join('') || `<tr><td colspan="7">${escapeHtml(emptyMessage)}</td></tr>`;
 }
@@ -643,22 +661,22 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
 
   const promoRows = promos.map((promo) => {
     return `<tr>
-      <td>${escapeHtml(promo.code)}</td>
-      <td>${escapeHtml(String(promo.uses_remaining))}</td>
-      <td>${escapeHtml(String(promo.days_granted))}</td>
-      <td>${escapeHtml(promo.expires_at || 'Never')}</td>
-      <td>${escapeHtml(promo.created_at)}</td>
+      <td data-label="Promo">${escapeHtml(promo.code)}</td>
+      <td data-label="Uses">${escapeHtml(String(promo.uses_remaining))}</td>
+      <td data-label="Days">${escapeHtml(String(promo.days_granted))}</td>
+      <td data-label="Expires">${escapeHtml(promo.expires_at || 'Never')}</td>
+      <td data-label="Created">${escapeHtml(promo.created_at)}</td>
     </tr>`;
   }).join('');
   const userRows = renderUserRows(standardUsers, 'No standard user accounts found yet.');
   const betaUserRows = renderUserRows(betaUsers, 'No beta tester user accounts found yet.');
   const commentRows = comments.map((comment) => {
     return `<tr>
-      <td>${escapeHtml(formatSponsorDate(comment.created_at))}</td>
-      <td><strong>${escapeHtml(comment.name || 'Creator')}</strong><br><span class="muted">${escapeHtml(comment.role || 'TikTok LIVE creator')}</span></td>
-      <td>${escapeHtml(comment.email || '')}</td>
-      <td>${escapeHtml(comment.comment || '')}</td>
-      <td>
+      <td data-label="Created">${escapeHtml(formatSponsorDate(comment.created_at))}</td>
+      <td data-label="Name"><strong>${escapeHtml(comment.name || 'Creator')}</strong><br><span class="muted">${escapeHtml(comment.role || 'TikTok LIVE creator')}</span></td>
+      <td data-label="Email">${escapeHtml(comment.email || '')}</td>
+      <td data-label="Comment">${escapeHtml(comment.comment || '')}</td>
+      <td data-label="Action">
         <form method="POST" action="/admin/comments/${escapeAttr(comment.id)}/delete" onsubmit="return confirm('Delete this public comment?')">
           <button class="danger-button" type="submit">Delete</button>
         </form>
@@ -675,20 +693,20 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       ? `${item.lastEventType || 'event'} ${formatSponsorDate(item.lastEventAt)}`
       : (item.staleEventsDropped ? `${item.staleEventsDropped} stale event(s) dropped` : 'No live events yet');
     return `<tr data-live-room-row>
-      <td><strong>${escapeHtml(item.roomId)}</strong><br><span class="muted">${escapeHtml(owner.accountType || 'Room')}</span></td>
-      <td><strong>${escapeHtml(owner.email || owner.name || 'Unknown owner')}</strong><br><span class="muted">${escapeHtml(owner.tiktok ? `@${owner.tiktok}` : owner.plan || '')}</span></td>
-      <td>${escapeHtml(item.streamerUsername ? `@${item.streamerUsername}` : '')}<br><span class="muted">${escapeHtml(status)} - ${escapeHtml(lastEvent)}</span></td>
-      <td>${escapeHtml(String(item.overlayCount))}</td>
-      <td>${escapeHtml(String(item.playerCount))}</td>
-      <td>${escapeHtml(topPlayers || 'No active players')}</td>
+      <td data-label="Room"><strong>${escapeHtml(item.roomId)}</strong><br><span class="muted">${escapeHtml(owner.accountType || 'Room')}</span></td>
+      <td data-label="Owner"><strong>${escapeHtml(owner.email || owner.name || 'Unknown owner')}</strong><br><span class="muted">${escapeHtml(owner.tiktok ? `@${owner.tiktok}` : owner.plan || '')}</span></td>
+      <td data-label="Stream">${escapeHtml(item.streamerUsername ? `@${item.streamerUsername}` : '')}<br><span class="muted">${escapeHtml(status)} - ${escapeHtml(lastEvent)}</span></td>
+      <td data-label="Overlays">${escapeHtml(String(item.overlayCount))}</td>
+      <td data-label="Players">${escapeHtml(String(item.playerCount))}</td>
+      <td data-label="Top players">${escapeHtml(topPlayers || 'No active players')}</td>
     </tr>`;
   }).join('') || '<tr data-live-empty><td colspan="6">No live room activity right now.</td></tr>';
   const metrics = userMetrics || emptyAdminUserMetrics();
   const metricCards = [
     adminMetricCard('Free accounts', 'accounts.free', metrics.accounts.free, 'Active free creator accounts and free access-code rooms'),
     adminMetricCard('Paid accounts', 'accounts.paid', metrics.accounts.paid, 'Active Creator Pro users and paid access codes'),
-    adminMetricCard('Trial / beta', 'accounts.trialBeta', metrics.accounts.trialBeta, 'Full-access trials and beta tester access'),
-    adminMetricCard('Beta testers', 'accounts.beta', metrics.accounts.beta || betaCodes.length + betaUsers.length, 'Dedicated beta tester access codes and accounts'),
+    adminMetricCard('Trial accounts', 'accounts.trialBeta', metrics.accounts.trialBeta, 'Real 7-day full-access trial accounts only'),
+    adminMetricCard('Beta testers', 'accounts.beta', metrics.accounts.beta || betaCodes.length + betaUsers.length, 'Dedicated beta tester access codes and accounts, separated from trials'),
     adminMetricCard('Live free rooms', 'live.free', metrics.live.free, 'Connected overlay rooms on free access'),
     adminMetricCard('Live paid rooms', 'live.paid', metrics.live.paid, 'Connected overlay rooms on paid access'),
     adminMetricCard('Live overlays', 'live.overlays', metrics.live.overlays, 'Total connected overlay browser sources'),
@@ -723,6 +741,17 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     .metrics-footnote { margin-top:-8px; color:#8590a4; font-size:12px; text-align:right; }
     .card { background: linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); border: 1px solid rgba(255,255,255,.1); border-radius: 24px; padding: 20px; box-shadow:0 20px 60px rgba(0,0,0,.24); }
     .card h2 { margin:0 0 12px; font-size:20px; }
+    .control-panel { min-width:0; padding:16px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.2); }
+    .control-panel h2 { margin:0 0 12px; font-size:18px; }
+    .section-grid { display:grid; gap:14px; }
+    .admin-section { padding:0; overflow:hidden; }
+    .admin-section summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 20px; cursor:pointer; }
+    .admin-section summary::-webkit-details-marker { display:none; }
+    .admin-section summary span { color:#fff8e6; font-size:20px; font-weight:900; }
+    .admin-section summary small { color:#a8afbf; font-size:12px; font-weight:800; line-height:1.4; text-align:right; }
+    .admin-section summary::after { content:"Open"; min-width:58px; min-height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; color:#ffdf8a; background:rgba(246,201,91,.08); border:1px solid rgba(246,201,91,.22); font-size:11px; font-weight:900; text-transform:uppercase; }
+    .admin-section[open] summary::after { content:"Hide"; }
+    .section-body { padding:0 20px 20px; }
     label { display: block; margin: 10px 0 6px; color: #a8afbf; font-size: 12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
     input, select { width: 100%; min-height:46px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.12); background: #111827; color: #fff8e6; }
     select option, select optgroup { background:#111827; color:#fff8e6; }
@@ -733,6 +762,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     .mini-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; min-width:260px; }
     .mini-form input { min-height:38px; padding:8px 10px; border-radius:10px; font-size:12px; }
     .mini-form button { grid-column:1 / -1; min-height:36px; margin-top:0; }
+    .table-shell { width:100%; overflow-x:auto; }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; overflow:hidden; border-radius:16px; }
     th, td { border-bottom: 1px solid rgba(255,255,255,0.08); padding: 12px; font-size: 13px; vertical-align:top; }
     th { background: rgba(246,201,91,0.09); color:#ffdf8a; text-align: left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
@@ -743,7 +773,8 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     .admin-nav { display:flex; gap:10px; flex-wrap:wrap; }
     .admin-nav a { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:999px; border:1px solid rgba(255,255,255,.1); color:#fff8e6; background:rgba(255,255,255,.055); }
     @media(max-width:1100px){ .metrics-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
-    @media(max-width:720px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid{grid-template-columns:1fr}.metrics-footnote{text-align:left}.mini-form{grid-template-columns:1fr;min-width:0} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} }
+    @media(max-width:720px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-brand img{width:46px;height:46px}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.admin-nav a{padding:0 10px}.metrics-grid{grid-template-columns:1fr 1fr}.metrics-footnote{text-align:left}.mini-form{grid-template-columns:1fr;min-width:0}.admin-section summary{align-items:flex-start;flex-direction:column}.admin-section summary small{text-align:left}.admin-section summary::after{align-self:flex-start}.section-body{padding:0 12px 14px}.grid{grid-template-columns:1fr} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
+    @media(max-width:420px){ .metrics-grid{grid-template-columns:1fr}.admin-nav{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
@@ -762,8 +793,11 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       ${metricCards}
     </section>
     <div class="metrics-footnote">Counts refresh every 15 seconds. Last updated <span data-count-key="updatedAt">${escapeHtml(formatSponsorDate(metrics.updatedAt))}</span>.</div>
-    <div class="grid">
-      <div class="card">
+    <details class="card admin-section">
+      <summary><span>Account controls</span><small>Issue access, extend users, revoke or reset devices, change room mode, and create promo codes.</small></summary>
+      <div class="section-body">
+        <div class="grid">
+          <div class="control-panel">
         <h2>Issue access code</h2>
         <form method="POST" action="/admin/issue-code">
           <label>Name (optional, stored for tracking only)</label>
@@ -777,8 +811,8 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
           <label><input name="permanent" type="checkbox" value="1" /> Permanent code (no expiry)</label>
           <button type="submit">Issue Code</button>
         </form>
-      </div>
-      <div class="card">
+          </div>
+          <div class="control-panel">
         <h2>Extend code</h2>
         <form method="POST" action="/admin/extend-code">
           <label>Access code</label>
@@ -787,8 +821,8 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
           <input name="days" type="number" min="1" value="30" required />
           <button type="submit">Extend</button>
         </form>
-      </div>
-      <div class="card">
+          </div>
+          <div class="control-panel">
         <h2>Revoke / reset</h2>
         <form method="POST" action="/admin/revoke-code">
           <label>Access code</label>
@@ -800,15 +834,15 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
           <input name="code" type="text" required />
           <button type="submit">Reset Device</button>
         </form>
-      </div>
-      <div class="card">
+          </div>
+          <div class="control-panel">
         <h2>Room ID requirement</h2>
         <p>Current behavior: <strong>${roomRequirementEnabled ? 'Room ID required' : 'Room ID not required'}</strong></p>
         <form method="POST" action="/admin/toggle-room-requirement">
           <button type="submit">${roomRequirementEnabled ? 'Disable room ID requirement' : 'Enable room ID requirement'}</button>
         </form>
-      </div>
-      <div class="card">
+          </div>
+          <div class="control-panel">
         <h2>Create promo code</h2>
         <form method="POST" action="/admin/create-promo">
           <label>Promo code</label>
@@ -821,63 +855,75 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
           <input name="expires_at" type="date" />
           <button type="submit">Create Promo</button>
         </form>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="card" style="margin-top: 24px;">
-      <h2>Standard access codes</h2>
-      <p class="muted">Paid, trial, promo, and standard access codes. TikTok usernames can be saved here for routing and account auditing.</p>
-      <table>
-        <thead><tr><th>Code / Room</th><th>Owner / Email</th><th>TikTok</th><th>Type</th><th>Status</th><th>Expires</th><th>Last Seen</th><th>Profile</th><th>Actions</th></tr></thead>
-        <tbody>${codeRows}</tbody>
-      </table>
-    </div>
-    <div class="card" style="margin-top: 18px;">
-      <h2>Beta tester access codes</h2>
-      <p class="muted">Dedicated beta tester codes are separated so they do not get mixed into paid or standard creator operations.</p>
-      <table>
-        <thead><tr><th>Code / Room</th><th>Owner / Email</th><th>TikTok</th><th>Type</th><th>Status</th><th>Expires</th><th>Last Seen</th><th>Profile</th><th>Actions</th></tr></thead>
-        <tbody>${betaCodeRows}</tbody>
-      </table>
-    </div>
-    <div class="card" style="margin-top: 18px;">
-      <h2>Promo codes</h2>
-      <table>
-        <thead><tr><th>Promo</th><th>Uses</th><th>Days</th><th>Expires</th><th>Created</th></tr></thead>
-        <tbody>${promoRows}</tbody>
-      </table>
-    </div>
-    <div class="card" style="margin-top: 18px;">
-      <h2>Standard user accounts</h2>
-      <p class="muted">Newest non-beta creator accounts, email status, TikTok handle, plan, and last login.</p>
-      <table>
-        <thead><tr><th>ID</th><th>Email / Name</th><th>TikTok</th><th>Plan</th><th>Status</th><th>Created</th><th>Last Login</th></tr></thead>
-        <tbody>${userRows}</tbody>
-      </table>
-    </div>
-    <div class="card" style="margin-top: 18px;">
-      <h2>Beta tester user accounts</h2>
-      <p class="muted">Registered user accounts linked to beta tester codes or beta status.</p>
-      <table>
-        <thead><tr><th>ID</th><th>Email / Name</th><th>TikTok</th><th>Plan</th><th>Status</th><th>Created</th><th>Last Login</th></tr></thead>
-        <tbody>${betaUserRows}</tbody>
-      </table>
-    </div>
-    <div class="card" style="margin-top: 18px;">
-      <h2>Live room activity</h2>
-      <p class="muted">Room-scoped activity for spotting bad routing fast. Another creator's players should never appear in the wrong room.</p>
-      <table>
-        <thead><tr><th>Room</th><th>Owner</th><th>Stream</th><th>Overlays</th><th>Players</th><th>Top players</th></tr></thead>
-        <tbody id="liveActivityRows">${liveActivityRows}</tbody>
-      </table>
-    </div>
-    <div class="card" style="margin-top: 18px;">
-      <h2>Homepage comments</h2>
-      <p class="muted">Approved public comments shown in the homepage scroll. Delete removes the comment from public view.</p>
-      <table>
-        <thead><tr><th>Created</th><th>Name</th><th>Email</th><th>Comment</th><th>Action</th></tr></thead>
-        <tbody>${commentRows}</tbody>
-      </table>
-    </div>
+    </details>
+    <section class="section-grid" aria-label="Admin data sections">
+      <details class="card admin-section" open>
+        <summary><span>Live room activity</span><small>Fast room-scoped audit for active overlays and player leakage.</small></summary>
+        <div class="section-body table-shell">
+          <table>
+            <thead><tr><th>Room</th><th>Owner</th><th>Stream</th><th>Overlays</th><th>Players</th><th>Top players</th></tr></thead>
+            <tbody id="liveActivityRows">${liveActivityRows}</tbody>
+          </table>
+        </div>
+      </details>
+      <details class="card admin-section">
+        <summary><span>Standard access codes</span><small>Paid, trial, promo, and standard creator access.</small></summary>
+        <div class="section-body table-shell">
+          <table>
+            <thead><tr><th>Code / Room</th><th>Owner / Email</th><th>TikTok</th><th>Type</th><th>Status</th><th>Expires</th><th>Last Seen</th><th>Profile</th><th>Actions</th></tr></thead>
+            <tbody>${codeRows}</tbody>
+          </table>
+        </div>
+      </details>
+      <details class="card admin-section">
+        <summary><span>Beta tester access codes</span><small>Dedicated beta access separated from paid operations.</small></summary>
+        <div class="section-body table-shell">
+          <table>
+            <thead><tr><th>Code / Room</th><th>Owner / Email</th><th>TikTok</th><th>Type</th><th>Status</th><th>Expires</th><th>Last Seen</th><th>Profile</th><th>Actions</th></tr></thead>
+            <tbody>${betaCodeRows}</tbody>
+          </table>
+        </div>
+      </details>
+      <details class="card admin-section">
+        <summary><span>Creator accounts</span><small>Newest non-beta accounts with email, TikTok handle, plan, and login status.</small></summary>
+        <div class="section-body table-shell">
+          <table>
+            <thead><tr><th>ID</th><th>Email / Name</th><th>TikTok</th><th>Plan</th><th>Status</th><th>Created</th><th>Last Login</th></tr></thead>
+            <tbody>${userRows}</tbody>
+          </table>
+        </div>
+      </details>
+      <details class="card admin-section">
+        <summary><span>Beta tester accounts</span><small>Registered users linked to beta tester codes or beta status.</small></summary>
+        <div class="section-body table-shell">
+          <table>
+            <thead><tr><th>ID</th><th>Email / Name</th><th>TikTok</th><th>Plan</th><th>Status</th><th>Created</th><th>Last Login</th></tr></thead>
+            <tbody>${betaUserRows}</tbody>
+          </table>
+        </div>
+      </details>
+      <details class="card admin-section">
+        <summary><span>Promo codes</span><small>Reusable offer codes and remaining redemptions.</small></summary>
+        <div class="section-body table-shell">
+          <table>
+            <thead><tr><th>Promo</th><th>Uses</th><th>Days</th><th>Expires</th><th>Created</th></tr></thead>
+            <tbody>${promoRows}</tbody>
+          </table>
+        </div>
+      </details>
+      <details class="card admin-section">
+        <summary><span>Homepage comments</span><small>Public comments shown in the homepage scroll.</small></summary>
+        <div class="section-body table-shell">
+          <table>
+            <thead><tr><th>Created</th><th>Name</th><th>Email</th><th>Comment</th><th>Action</th></tr></thead>
+            <tbody>${commentRows}</tbody>
+          </table>
+        </div>
+      </details>
+    </section>
     <div style="margin-top: 18px;">
       <a href="/admin/logout">Logout</a>
     </div>
@@ -929,12 +975,12 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
           ? ((item.lastEventType || 'event') + ' ' + new Date(item.lastEventAt).toLocaleString())
           : (item.staleEventsDropped ? item.staleEventsDropped + ' stale event(s) dropped' : 'No live events yet');
         return '<tr data-live-room-row>'
-          + '<td><strong>' + escapeCell(item.roomId) + '</strong><br><span class="muted">' + escapeCell(owner.accountType || 'Room') + '</span></td>'
-          + '<td><strong>' + escapeCell(owner.email || owner.name || 'Unknown owner') + '</strong><br><span class="muted">' + escapeCell(owner.tiktok ? '@' + owner.tiktok : owner.plan || '') + '</span></td>'
-          + '<td>' + escapeCell(item.streamerUsername ? '@' + item.streamerUsername : '') + '<br><span class="muted">' + escapeCell(status + ' - ' + lastEvent) + '</span></td>'
-          + '<td>' + escapeCell(item.overlayCount) + '</td>'
-          + '<td>' + escapeCell(item.playerCount) + '</td>'
-          + '<td>' + escapeCell(players) + '</td>'
+          + '<td data-label="Room"><strong>' + escapeCell(item.roomId) + '</strong><br><span class="muted">' + escapeCell(owner.accountType || 'Room') + '</span></td>'
+          + '<td data-label="Owner"><strong>' + escapeCell(owner.email || owner.name || 'Unknown owner') + '</strong><br><span class="muted">' + escapeCell(owner.tiktok ? '@' + owner.tiktok : owner.plan || '') + '</span></td>'
+          + '<td data-label="Stream">' + escapeCell(item.streamerUsername ? '@' + item.streamerUsername : '') + '<br><span class="muted">' + escapeCell(status + ' - ' + lastEvent) + '</span></td>'
+          + '<td data-label="Overlays">' + escapeCell(item.overlayCount) + '</td>'
+          + '<td data-label="Players">' + escapeCell(item.playerCount) + '</td>'
+          + '<td data-label="Top players">' + escapeCell(players) + '</td>'
           + '</tr>';
       }).join('');
     }
@@ -1636,33 +1682,42 @@ function creativeAssetLabel(assetType, creativeOptions = creativeTemplateOptions
 }
 
 function renderCreativeTemplateCards(creativeTemplates = []) {
-  return creativeTemplates.map(template => `<div class="template-card">
+  return [...creativeTemplates].sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured))).map(template => `<div class="template-card">
     <div class="template-topline">
-      <span class="status-pill draft">${escapeHtml(template.goal || '')}</span>
+      <span class="status-pill ${template.featured ? 'ready' : 'draft'}">${escapeHtml(template.featured ? 'featured' : template.goal || '')}</span>
       <small>${escapeHtml(template.audience || '')}</small>
     </div>
     <h3>${escapeHtml(template.label || template.key)}</h3>
     <p>${escapeHtml(template.hooks?.[0] || '')}</p>
     <small>Assets: ${escapeHtml((template.requiredAssetLabels || []).join(', '))}</small>
+    ${template.demoUrl ? `<a class="button-link" href="${escapeAttr(template.demoUrl)}" target="_blank" rel="noopener">Open Demo</a>` : ''}
   </div>`).join('');
 }
 
 function renderBlankDesignCards(blankDesigns = []) {
-  return blankDesigns.map(design => `<div class="blank-design-card">
+  return blankDesigns.map(design => {
+    const typeLabel = design.templateType === 'blank' ? 'Blank starter' : design.templateType === 'branded-video' ? 'Branded video' : 'Branded';
+    const demoLink = design.demoHref
+      ? `<a class="button-link" href="${escapeAttr(design.demoHref)}" target="_blank" rel="noopener">Open Demo</a>`
+      : '';
+    return `<div class="blank-design-card">
     <div class="blank-design-preview" style="--accent:${escapeAttr(design.accent)};--secondary:${escapeAttr(design.secondary)};">
       <span></span><i></i><em></em><strong></strong><b></b>
     </div>
     <div class="template-topline">
-      <span class="status-pill ready">${escapeHtml(design.format || '')}</span>
+      <span class="status-pill ready">${escapeHtml(typeLabel)}</span>
       <small>${escapeHtml(design.bestFor || '')}</small>
     </div>
     <h3>${escapeHtml(design.label || design.key)}</h3>
     <p>${escapeHtml(design.description || '')}</p>
+    <small>${escapeHtml(design.format || '')}${design.recommendedAssetType ? ` - ${escapeHtml(creativeAssetLabel(design.recommendedAssetType))}` : ''}</small>
     <div class="inline-actions">
       <a class="button-link download" href="${escapeAttr(design.downloadSvg)}">Download SVG</a>
       <a class="button-link" href="${escapeAttr(design.downloadBrief)}">Brief</a>
     </div>
-  </div>`).join('');
+    ${demoLink}
+  </div>`;
+  }).join('');
 }
 
 function renderContentPackCards(contentPacks = [], creativeAssets = [], creativeOptions = creativeTemplateOptions()) {
@@ -1681,7 +1736,7 @@ function renderContentPackCards(contentPacks = [], creativeAssets = [], creative
       </div>
       <h3>${escapeHtml(pack.label || pack.key)}</h3>
       <p>${escapeHtml(pack.description || '')}</p>
-      <details class="creative-brief" open>
+      <details class="creative-brief">
         <summary>Pack outputs</summary>
         <ul>${recipes}</ul>
         <p><strong>Best asset:</strong> ${escapeHtml((pack.recommendedAssetLabels || []).join(', '))}</p>
@@ -1710,19 +1765,19 @@ function renderCreativeAssetRows(creativeAssets = [], creativeOptions = creative
   return creativeAssets.map(asset => {
     const status = String(asset.approval_status || 'draft').toLowerCase();
     return `<tr>
-      <td>
+      <td data-label="Asset">
         <strong>${escapeHtml(asset.title || '')}</strong><br />
         <small>${escapeHtml(creativeAssetLabel(asset.asset_type, creativeOptions))}</small>
       </td>
-      <td>
+      <td data-label="Status">
         <span class="status-pill ${escapeAttr(status)}">${escapeHtml(status)}</span><br />
         <small>${escapeHtml(asset.source || 'manual')}</small>
       </td>
-      <td>
+      <td data-label="URL">
         <a href="${escapeAttr(asset.asset_url || '#')}" target="_blank" rel="noopener">${escapeHtml(asset.asset_url || '')}</a>
         ${asset.notes ? `<div class="warning-note">${escapeHtml(asset.notes)}</div>` : ''}
       </td>
-      <td>
+      <td data-label="Actions">
         <form method="POST" action="/admin/marketing/creative-assets/${escapeAttr(asset.id)}/status">
           <input type="hidden" name="status" value="approved" />
           <button type="submit" class="test" ${status === 'approved' ? 'disabled' : ''}>Approve</button>
@@ -1763,21 +1818,21 @@ function renderCreativeVariantRows(creativeVariants = []) {
     const blockPreview = textBlocks.map(block => `<li><strong>${escapeHtml(block.time || '')}</strong> ${escapeHtml(block.slot || '')}: ${escapeHtml(block.text || '')}</li>`).join('');
     const canvas = layoutSpec.canvas ? `${layoutSpec.canvas.width}x${layoutSpec.canvas.height} ${layoutSpec.canvas.format}` : variant.format;
     return `<tr>
-      <td>
+      <td data-label="Template">
         <strong>${escapeHtml(variant.template_key || '')}</strong><br />
         <small>${escapeHtml(String(variant.platform || '').toUpperCase())} - ${escapeHtml(canvas || '')}</small>
       </td>
-      <td>
+      <td data-label="Status">
         <span class="status-pill ${escapeAttr(status)}">${escapeHtml(status)}</span><br />
         <span class="status-pill ${escapeAttr(qualityStatus)}">quality ${escapeHtml(qualityStatus)}</span><br />
         <small>Score ${numberValue(variant.quality_score)}/100</small>
       </td>
-      <td>
+      <td data-label="Asset">
         <strong>${escapeHtml(variant.asset_title || 'Asset')}</strong><br />
         <small>${escapeHtml(variant.asset_url || '')}</small>
         ${variant.quality_notes ? `<div class="warning-note ${isBlocked ? 'failed' : ''}">${escapeHtml(variant.quality_notes)}</div>` : ''}
       </td>
-      <td>
+      <td data-label="Copy">
         <div class="post-copy">${escapeHtml(variant.body || '')}</div>
         <a href="${escapeAttr(variant.utm_url || '#')}" target="_blank" rel="noopener">UTM landing page</a>
         ${visualDirection.primaryVisual ? `<details class="creative-brief"><summary>Creative production package</summary>
@@ -1790,7 +1845,7 @@ function renderCreativeVariantRows(creativeVariants = []) {
           <p><strong>Alt text:</strong> ${escapeHtml(seo.altText || '')}</p>
         </details>` : ''}
       </td>
-      <td>
+      <td data-label="Actions">
         <a class="button-link download" href="/admin/marketing/creative-variants/${escapeAttr(variant.id)}/download.svg">Download SVG</a>
         <a class="button-link download" href="/admin/marketing/creative-variants/${escapeAttr(variant.id)}/brief.json">Download Brief</a>
         <form method="POST" action="/admin/marketing/creative-variants/${escapeAttr(variant.id)}/status">
@@ -1896,9 +1951,9 @@ function renderPerformanceSummary(summary = {}) {
 
 function renderRecentVisitRows(visits = []) {
   return visits.map(visit => `<tr>
-    <td><strong>${escapeHtml(visit.utm_source || 'unknown')}</strong><br /><small>${escapeHtml(formatSponsorDate(visit.created_at))}</small></td>
-    <td>${escapeHtml(visit.utm_campaign || '')}<br /><small>${escapeHtml(visit.utm_content || '')}</small></td>
-    <td><small>${escapeHtml(visit.path || '')}</small></td>
+    <td data-label="Source"><strong>${escapeHtml(visit.utm_source || 'unknown')}</strong><br /><small>${escapeHtml(formatSponsorDate(visit.created_at))}</small></td>
+    <td data-label="Campaign">${escapeHtml(visit.utm_campaign || '')}<br /><small>${escapeHtml(visit.utm_content || '')}</small></td>
+    <td data-label="Landing path"><small>${escapeHtml(visit.path || '')}</small></td>
   </tr>`).join('');
 }
 
@@ -2013,9 +2068,9 @@ function renderMarketingAdminPage({
   const configuredWebhooks = diagnostics.configuredWebhooks || [];
   const growthProviders = growthDiagnostics.providers || [];
   const autoPostStatus = diagnostics.autoPostReady ? 'ready' : (diagnostics.autoPostEnabled ? 'warn' : 'draft');
-  const autoPostLabel = diagnostics.autoPostReady ? 'Auto-post ready' : (diagnostics.autoPostEnabled ? 'Auto-post blocked' : 'Auto-post off');
+  const autoPostLabel = diagnostics.autoPostReady ? 'Auto-post live' : (diagnostics.autoPostEnabled ? 'Auto-post waiting' : 'Manual only');
   const autoPostBlockers = [
-    diagnostics.autoPostEnabled ? '' : 'Set MARKETING_AUTO_POST_ENABLED=true to turn on the scheduler.',
+    diagnostics.autoPostEnabled ? '' : 'Set MARKETING_AUTO_POST_ENABLED=true, or remove the explicit false value, to let the scheduler run.',
     diagnostics.enabled ? '' : 'Set MARKETING_AUTOMATION_ENABLED=true to allow outbound publishing.',
     diagnostics.dryRun ? 'Set MARKETING_DRY_RUN=false for live outbound publishing.' : '',
     configuredWebhooks.length ? '' : 'Configure MARKETING_WEBHOOK_<PLATFORM> or MARKETING_OUTBOUND_WEBHOOK_URL.',
@@ -2055,10 +2110,10 @@ function renderMarketingAdminPage({
   const ideaCards = renderContentIdeaCards(creativeTemplates);
   const guardrailCards = renderGrowthGuardrails(posts, diagnostics, performanceSummary);
   const eventRows = events.map(event => `<tr>
-    <td><strong>${escapeHtml(event.event_type || '')}</strong><br /><small>${escapeHtml(formatSponsorDate(event.created_at))}</small></td>
-    <td>${escapeHtml(String(event.platform || '').toUpperCase())}</td>
-    <td>${escapeHtml(event.topic_key || '')}</td>
-    <td><small>${escapeHtml(event.detail || '')}</small></td>
+    <td data-label="Event"><strong>${escapeHtml(event.event_type || '')}</strong><br /><small>${escapeHtml(formatSponsorDate(event.created_at))}</small></td>
+    <td data-label="Platform">${escapeHtml(String(event.platform || '').toUpperCase())}</td>
+    <td data-label="Topic">${escapeHtml(event.topic_key || '')}</td>
+    <td data-label="Detail"><small>${escapeHtml(event.detail || '')}</small></td>
   </tr>`).join('');
   const rows = posts.map((post) => {
     const status = String(post.status || 'draft').toLowerCase();
@@ -2070,16 +2125,16 @@ function renderMarketingAdminPage({
     const draftDisabled = status === 'draft' ? 'disabled' : '';
     const skipDisabled = status === 'skipped' ? 'disabled' : '';
     return `<tr>
-      <td>
+      <td data-label="Platform">
         <strong>${escapeHtml(String(post.platform || '').toUpperCase())}</strong><br />
         <small>${escapeHtml(post.campaign_date || '')} - ${escapeHtml(post.topic_key || '')}</small>
       </td>
-      <td>
+      <td data-label="Status">
         <span class="status-pill ${escapeAttr(status)}">${escapeHtml(status)}</span><br />
         <small>Scheduled: ${escapeHtml(formatSponsorDate(post.scheduled_for))}</small>
         ${post.error_message ? `<div class="warning-note failed">${escapeHtml(post.error_message)}</div>` : ''}
       </td>
-      <td>
+      <td data-label="Draft">
         <form method="POST" action="/admin/marketing/${escapeAttr(post.id)}/update">
           <label>Outbound copy <small>${bodyLength}/${characterLimit}</small></label>
           <textarea name="body" maxlength="${escapeAttr(characterLimit)}" required ${editDisabled}>${escapeHtml(post.body || '')}</textarea>
@@ -2095,7 +2150,7 @@ function renderMarketingAdminPage({
           <button type="submit" class="secondary" ${editDisabled}>Save as Draft</button>
         </form>
       </td>
-      <td>
+      <td data-label="Actions">
         <form method="POST" action="/admin/marketing/${escapeAttr(post.id)}/status">
           <input type="hidden" name="status" value="approved" />
           <button type="submit" class="test" ${approveDisabled}>Approve</button>
@@ -2137,6 +2192,18 @@ function renderMarketingAdminPage({
     .error { color:#ffb6b6; }
     .success { color:#c6ffc3; }
     .card { background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.24); }
+    .growth-shell { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr); gap:18px; align-items:start; }
+    .focus-card { border-color:rgba(85,231,255,.2); background:linear-gradient(180deg,rgba(85,231,255,.09),rgba(255,255,255,.025)); }
+    .focus-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:14px; }
+    .focus-actions form { min-width:0; padding:14px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.2); }
+    .page-section { padding:0; overflow:hidden; }
+    .page-section summary { list-style:none; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 20px; cursor:pointer; }
+    .page-section summary::-webkit-details-marker { display:none; }
+    .page-section summary span { color:#fff8e6; font-size:21px; font-weight:900; }
+    .page-section summary small { color:#a8afbf; font-size:12px; font-weight:800; line-height:1.4; text-align:right; }
+    .page-section summary::after { content:"Open"; min-width:58px; min-height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; color:#ffdf8a; background:rgba(246,201,91,.08); border:1px solid rgba(246,201,91,.22); font-size:11px; font-weight:900; text-transform:uppercase; }
+    .page-section[open] summary::after { content:"Hide"; }
+    .section-body { padding:0 20px 20px; }
     .metrics-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
     .metric-card { min-width:0; padding:16px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.2); }
     .metric-card span { display:block; color:#a8afbf; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
@@ -2214,13 +2281,15 @@ function renderMarketingAdminPage({
     .creative-brief summary { cursor:pointer; color:#ffdf8a; font-weight:900; }
     .creative-brief ul { margin:10px 0; padding-left:18px; color:#dce7ff; }
     .creative-brief p { margin:8px 0 0; font-size:12px; }
+    .table-shell { width:100%; overflow-x:auto; }
     table { width:100%; border-collapse:collapse; margin-top:12px; overflow:hidden; border-radius:16px; }
     th, td { vertical-align:top; border-bottom:1px solid rgba(255,255,255,0.08); padding:12px; font-size:13px; }
     th { background:rgba(246,201,91,0.09); color:#ffdf8a; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     small { color:#9fb2d7; }
     .post-copy { max-width:620px; white-space:pre-wrap; color:#fff8e6; line-height:1.45; }
-    @media(max-width:1100px){ .template-grid,.blank-design-grid,.content-pack-grid,.engine-grid,.mode-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.calendar-grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
-    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.metrics-grid,.inline-grid,.template-grid,.blank-design-grid,.content-pack-grid,.engine-grid,.mode-grid,.calendar-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:1fr} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:0} }
+    @media(max-width:1100px){ .growth-shell{grid-template-columns:1fr}.template-grid,.blank-design-grid,.content-pack-grid,.engine-grid,.mode-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.calendar-grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-brand img{width:46px;height:46px}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.admin-nav a{padding:0 10px}.metrics-grid,.inline-grid,.focus-actions,.template-grid,.blank-design-grid,.content-pack-grid,.engine-grid,.mode-grid,.calendar-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:1fr}.page-section summary{align-items:flex-start;flex-direction:column}.page-section summary small{text-align:left}.page-section summary::after{align-self:flex-start}.section-body{padding:0 12px 14px} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
+    @media(max-width:420px){ .admin-nav{grid-template-columns:1fr}.metrics-grid{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
@@ -2240,22 +2309,31 @@ function renderMarketingAdminPage({
       <div class="metric-card"><span>Published</span><strong>${numberValue(statusCounts.published)}</strong></div>
       <div class="metric-card"><span>Failed</span><strong>${numberValue(statusCounts.failed)}</strong></div>
     </div>
-    <div class="metrics-grid">
-      <div class="metric-card"><span>Approved Assets</span><strong>${numberValue(creativeAssetCounts.approved)}</strong></div>
-      <div class="metric-card"><span>Ready Variants</span><strong>${numberValue(creativeQualityCounts.ready)}</strong></div>
-      <div class="metric-card"><span>Queued Variants</span><strong>${numberValue(creativeVariantCounts.queued)}</strong></div>
-      <div class="metric-card"><span>Blocked Variants</span><strong>${numberValue(creativeQualityCounts.blocked)}</strong></div>
-    </div>
-    <div class="card">
-      <h2>Growth pulse</h2>
-      <p>Tracked UTM visits in the last ${numberValue(performanceSummary.days)} days: <strong>${numberValue(performanceSummary.visits)}</strong>. Last tracked visit: <strong>${escapeHtml(formatSponsorDate(performanceSummary.lastVisit))}</strong>.</p>
-      ${performancePanels}
-      <table>
-        <thead><tr><th>Source</th><th>Campaign</th><th>Landing path</th></tr></thead>
-        <tbody>${recentVisitRows || '<tr><td colspan="3">No UTM visits recorded yet.</td></tr>'}</tbody>
-      </table>
-    </div>
-    <div class="card">
+    <details class="card page-section">
+      <summary><span>Creative production metrics</span><small>Asset, variant, and quality queue health.</small></summary>
+      <div class="section-body">
+        <div class="metrics-grid">
+          <div class="metric-card"><span>Approved Assets</span><strong>${numberValue(creativeAssetCounts.approved)}</strong></div>
+          <div class="metric-card"><span>Ready Variants</span><strong>${numberValue(creativeQualityCounts.ready)}</strong></div>
+          <div class="metric-card"><span>Queued Variants</span><strong>${numberValue(creativeVariantCounts.queued)}</strong></div>
+          <div class="metric-card"><span>Blocked Variants</span><strong>${numberValue(creativeQualityCounts.blocked)}</strong></div>
+        </div>
+      </div>
+    </details>
+    <details class="card page-section">
+      <summary><span>Growth pulse</span><small>UTM traffic, channel mix, and recent landing visits.</small></summary>
+      <div class="section-body">
+        <p>Tracked UTM visits in the last ${numberValue(performanceSummary.days)} days: <strong>${numberValue(performanceSummary.visits)}</strong>. Last tracked visit: <strong>${escapeHtml(formatSponsorDate(performanceSummary.lastVisit))}</strong>.</p>
+        ${performancePanels}
+        <div class="table-shell">
+          <table>
+            <thead><tr><th>Source</th><th>Campaign</th><th>Landing path</th></tr></thead>
+            <tbody>${recentVisitRows || '<tr><td colspan="3">No UTM visits recorded yet.</td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <div class="card focus-card">
       <h2>Growth engine controls</h2>
       <p><span class="status-pill ${escapeAttr(autoPostStatus)}">${escapeHtml(autoPostLabel)}</span> Due approved posts: <strong>${numberValue(diagnostics.dueApprovedCount)}</strong>. Check interval: <strong>${numberValue(diagnostics.autoPostIntervalMinutes)}</strong> min. Batch limit: <strong>${numberValue(diagnostics.autoPostLimit)}</strong>.</p>
       <p>Generate SEO and UTM-tagged daily drafts from the public site pages, approve the good ones, and let the scheduler publish due posts when the engine is live.</p>
@@ -2265,7 +2343,7 @@ function renderMarketingAdminPage({
       <p>Lead APIs: sync ${growthDiagnostics.enabled ? 'enabled' : 'disabled'}; HubSpot ${growthDiagnostics.hubspotConfigured ? 'connected' : 'not configured'}; HubSpot custom fields ${growthDiagnostics.hubspotCustomPropertiesConfigured ? 'configured' : 'not configured'}; Segment ${growthDiagnostics.segmentConfigured ? 'connected' : 'not configured'}; providers ${escapeHtml(growthProviders.length ? growthProviders.join(', ') : 'none')}.</p>
       <h2>Autopilot modes</h2>
       <div class="mode-grid">${autopilotModes}</div>
-      <div class="inline-grid">
+      <div class="focus-actions">
         <form method="POST" action="/admin/marketing/generate">
           <label>Date</label>
           <input name="date" type="date" value="${escapeAttr(nowDate)}" />
@@ -2291,38 +2369,44 @@ function renderMarketingAdminPage({
         </form>
       </div>
     </div>
-    <div class="card">
-      <h2>Campaign calendar</h2>
-      <p>The next seven days of scheduled growth posts. This keeps the queue readable before the detailed editor gets involved.</p>
-      <div class="calendar-grid">${campaignCalendar}</div>
-    </div>
-    <div class="card">
-      <h2>Post preview cards</h2>
-      <p>Fast visual review of the next editable posts before approval. The detailed editor below remains the source of truth.</p>
-      <div class="preview-grid">${postPreviewCards || '<p>No draft or approved posts to preview.</p>'}</div>
-    </div>
-    <div class="card">
-      <h2>Content idea engine</h2>
-      <p>Use these repeatable angles to keep growth content tied to the product, proof assets, and landing pages instead of drifting into generic marketing soup.</p>
-      <div class="idea-grid">${ideaCards || '<p>No content ideas configured.</p>'}</div>
-    </div>
-    <div class="card">
-      <h2>Guardrails</h2>
-      <p>These checks catch the boring problems that quietly break growth engines: duplicate copy, missing tracking, bad character limits, and posting gates.</p>
-      <div class="guardrail-grid">${guardrailCards}</div>
-    </div>
-    <div class="card">
-      <h2>Creative template engine</h2>
-      <p>Build repeatable posts from approved proof assets. The flow is deliberate: save an asset, generate variants from a template, approve the best one, then send it into the daily queue. Duplicate variants are skipped and every queued variant is rechecked against the latest asset approval.</p>
-      <div class="template-grid">${templateCards || '<p>No templates configured.</p>'}</div>
-    </div>
-    <div class="card">
-      <h2>Design template library</h2>
-      <p>Five branded, attention-heavy creative templates with logo, headline frame, picture or video frame, benefit-copy panel, and CTA button. Download the SVG as the editable design source, or download the brief for SEO notes, usage rules, and export guidance.</p>
-      <div class="blank-design-grid">${blankDesignCards || '<p>No design templates configured.</p>'}</div>
-    </div>
-    <div class="card">
-      <h2>Asset vault</h2>
+    <details class="card page-section">
+      <summary><span>Campaign calendar</span><small>Seven-day view of scheduled drafts and approved posts.</small></summary>
+      <div class="section-body">
+        <p>The next seven days of scheduled growth posts. This keeps the queue readable before the detailed editor gets involved.</p>
+        <div class="calendar-grid">${campaignCalendar}</div>
+      </div>
+    </details>
+    <details class="card page-section">
+      <summary><span>Post preview cards</span><small>Fast review of what is closest to approval.</small></summary>
+      <div class="section-body">
+        <p>Fast visual review of the next editable posts before approval. The detailed editor below remains the source of truth.</p>
+        <div class="preview-grid">${postPreviewCards || '<p>No draft or approved posts to preview.</p>'}</div>
+      </div>
+    </details>
+    <details class="card page-section">
+      <summary><span>Guardrails and content ideas</span><small>Quality checks plus reusable content angles.</small></summary>
+      <div class="section-body">
+        <p>These checks catch duplicate copy, missing tracking, bad character limits, and posting gates before the engine publishes.</p>
+        <div class="guardrail-grid">${guardrailCards}</div>
+        <h2 style="margin-top:18px;">Content idea engine</h2>
+        <p>Use these repeatable angles to keep growth content tied to the product, proof assets, and landing pages.</p>
+        <div class="idea-grid">${ideaCards || '<p>No content ideas configured.</p>'}</div>
+      </div>
+    </details>
+    <details class="card page-section">
+      <summary><span>Creative templates</span><small>Approved proof assets, downloadable designs, and variant generation.</small></summary>
+      <div class="section-body">
+        <h2>Creative template engine</h2>
+        <p>Build repeatable posts from approved proof assets. Duplicate variants are skipped and every queued variant is rechecked against the latest asset approval.</p>
+        <div class="template-grid">${templateCards || '<p>No templates configured.</p>'}</div>
+        <h2 style="margin-top:18px;">Design template library</h2>
+        <p>One blank starter plus branded campaign templates with the IntoTheBattle logo, finished copy blocks, proof/video frames, and CTA placement. The battle clip video template links directly to the canonical /battle-clip demo.</p>
+        <div class="blank-design-grid">${blankDesignCards || '<p>No design templates configured.</p>'}</div>
+      </div>
+    </details>
+    <details class="card page-section">
+      <summary><span>Asset vault</span><small>Upload or save the real proof assets used by growth creative.</small></summary>
+      <div class="section-body">
       <p>Upload real overlay screenshots, sponsor clips, dashboard screenshots, approved textures, or generated backgrounds. Keep proof assets approved only when they show the real product accurately.</p>
       <form method="POST" action="/admin/marketing/creative-assets/upload" enctype="multipart/form-data">
         <div class="inline-grid compact">
@@ -2352,18 +2436,21 @@ function renderMarketingAdminPage({
           <span><button type="submit">Save Asset</button></span>
         </div>
       </form>
-      <table>
-        <thead><tr><th>Asset</th><th>Status</th><th>URL</th><th>Actions</th></tr></thead>
-        <tbody>${creativeAssetRows || '<tr><td colspan="4">No creative assets saved yet.</td></tr>'}</tbody>
-      </table>
-    </div>
-    <div class="card">
+      <div class="table-shell">
+        <table>
+          <thead><tr><th>Asset</th><th>Status</th><th>URL</th><th>Actions</th></tr></thead>
+          <tbody>${creativeAssetRows || '<tr><td colspan="4">No creative assets saved yet.</td></tr>'}</tbody>
+        </table>
+      </div>
+      </div>
+    </details>
+    <details class="card page-section">
+      <summary><span>Content packs and variants</span><small>Generate, approve, and queue structured creative packages.</small></summary>
+      <div class="section-body">
       <h2>One-click content packs</h2>
       <p>Pick one approved real asset and generate a coordinated set of platform-ready variants with hooks, proof copy, CTA, UTM links, image prompts, SEO fields, and downloadable production briefs.</p>
       <div class="content-pack-grid">${contentPackCards || '<p>No content packs configured.</p>'}</div>
-    </div>
-    <div class="card" id="variant-builder">
-      <h2>Variant builder</h2>
+      <h2 id="variant-builder" style="margin-top:18px;">Variant builder</h2>
       <p>Generated variants are structured as hook, proof, CTA, UTM URL, frame script, and safe-zone guidance. Blocked variants cannot be approved or queued.</p>
       <form method="POST" action="/admin/marketing/creative-variants/generate">
         <div class="inline-grid compact">
@@ -2376,12 +2463,17 @@ function renderMarketingAdminPage({
           <span><button type="submit" ${approvedAssetOptions ? '' : 'disabled'}>Generate Variants</button></span>
         </div>
       </form>
-      <table>
-        <thead><tr><th>Template</th><th>Status</th><th>Asset</th><th>Copy</th><th>Actions</th></tr></thead>
-        <tbody>${creativeVariantRows || '<tr><td colspan="5">No creative variants generated yet.</td></tr>'}</tbody>
-      </table>
-    </div>
-    <div class="card">
+      <div class="table-shell">
+        <table>
+          <thead><tr><th>Template</th><th>Status</th><th>Asset</th><th>Copy</th><th>Actions</th></tr></thead>
+          <tbody>${creativeVariantRows || '<tr><td colspan="5">No creative variants generated yet.</td></tr>'}</tbody>
+        </table>
+      </div>
+      </div>
+    </details>
+    <details class="card page-section">
+      <summary><span>Daily content queue</span><small>Detailed editor for generated post drafts.</small></summary>
+      <div class="section-body">
       <h2>Queue filters</h2>
       <form method="GET" action="/admin/marketing">
         <div class="inline-grid compact">
@@ -2390,21 +2482,24 @@ function renderMarketingAdminPage({
           <span><button type="submit">Filter Queue</button></span>
         </div>
       </form>
-    </div>
-    <div class="card">
       <h2>Daily content queue</h2>
-      <table>
-        <thead><tr><th>Platform</th><th>Status</th><th>Draft</th><th>Actions</th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="4">No marketing posts generated yet.</td></tr>'}</tbody>
-      </table>
-    </div>
-    <div class="card">
-      <h2>Recent publish events</h2>
-      <table>
-        <thead><tr><th>Event</th><th>Platform</th><th>Topic</th><th>Detail</th></tr></thead>
-        <tbody>${eventRows || '<tr><td colspan="4">No publish events recorded yet.</td></tr>'}</tbody>
-      </table>
-    </div>
+      <div class="table-shell">
+        <table>
+          <thead><tr><th>Platform</th><th>Status</th><th>Draft</th><th>Actions</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="4">No marketing posts generated yet.</td></tr>'}</tbody>
+        </table>
+      </div>
+      </div>
+    </details>
+    <details class="card page-section">
+      <summary><span>Recent publish events</span><small>Audit trail for dry-runs, posts, failures, and recovery.</small></summary>
+      <div class="section-body table-shell">
+        <table>
+          <thead><tr><th>Event</th><th>Platform</th><th>Topic</th><th>Detail</th></tr></thead>
+          <tbody>${eventRows || '<tr><td colspan="4">No publish events recorded yet.</td></tr>'}</tbody>
+        </table>
+      </div>
+    </details>
   </div>
 </body>
 </html>`;

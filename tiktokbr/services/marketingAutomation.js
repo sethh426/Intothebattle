@@ -541,7 +541,7 @@ export function marketingAutomationDiagnostics() {
   const configuredWebhooks = platforms.filter(platform => Boolean(webhookForPlatform(platform)));
   const automationEnabled = envFlag('MARKETING_AUTOMATION_ENABLED');
   const dryRun = process.env.MARKETING_DRY_RUN !== 'false';
-  const autoPostEnabled = envFlag('MARKETING_AUTO_POST_ENABLED') || envFlag('MARKETING_AUTOPUBLISH_ENABLED');
+  const autoPostEnabled = envFlag('MARKETING_AUTO_POST_ENABLED', automationEnabled) || envFlag('MARKETING_AUTOPUBLISH_ENABLED');
   return {
     enabled: automationEnabled,
     dryRun,

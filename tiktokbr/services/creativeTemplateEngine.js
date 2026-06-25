@@ -47,64 +47,94 @@ const BRAND_SYSTEM = {
 };
 const BLANK_DESIGN_TEMPLATES = [
   {
-    key: 'neon_arena_vertical',
-    label: 'Neon Arena Vertical',
+    key: 'blank_brand_starter',
+    label: 'Blank Brand Starter',
     format: '9:16 vertical',
     width: 1080,
     height: 1920,
-    mood: 'high-energy launch creative',
-    bestFor: 'TikTok, Reels, Shorts',
+    templateType: 'blank',
+    mood: 'custom campaign starter',
+    bestFor: 'Any channel that needs a custom build',
     accent: BRAND_SYSTEM.colors.cyan,
     secondary: BRAND_SYSTEM.colors.magenta,
-    description: 'A tall cyber arena frame with a luminous proof window, heavy top energy, and an empty CTA lane.',
+    description: 'The only blank starter: branded frame, logo, safe zones, headline slot, media slot, proof slot, and CTA lane.',
   },
   {
-    key: 'broadcast_spotlight_wide',
-    label: 'Broadcast Spotlight Wide',
+    key: 'battle_clip_video_launch',
+    label: '18-Second Battle Clip Video',
+    format: '9:16 vertical',
+    width: 1080,
+    height: 1920,
+    templateType: 'branded-video',
+    mood: 'homepage conversion demo',
+    bestFor: 'TikTok, Reels, Shorts, signup hero',
+    accent: BRAND_SYSTEM.colors.cyan,
+    secondary: BRAND_SYSTEM.colors.cyan,
+    demoUrl: '/battle-clip',
+    recommendedAssetType: 'real_overlay_clip',
+    headline: 'Turn TikTok LIVE chat into a battle arena',
+    mediaLabel: '18-SECOND BATTLE CLIP VIDEO',
+    mediaHelper: 'Use the polished /battle-clip loop here',
+    bodyCopy: 'Chat. Attacks. Break. Recap.',
+    cta: 'Launch your first battle in under 5 minutes',
+    description: 'A finished branded vertical template built around the complete demo video we made.',
+  },
+  {
+    key: 'sponsor_broadcast_moment',
+    label: 'Sponsor Broadcast Moment',
     format: '16:9 wide',
     width: 1600,
     height: 900,
-    mood: 'sports broadcast sponsor moment',
-    bestFor: 'X, YouTube, landing page hero crops',
+    templateType: 'branded',
+    mood: 'premium partner pitch',
+    bestFor: 'Sponsor page, X, YouTube, sales outreach',
     accent: BRAND_SYSTEM.colors.gold,
     secondary: BRAND_SYSTEM.colors.cyan,
-    description: 'A cinematic widescreen board with a center spotlight, score-bug styling, and premium brand framing.',
+    recommendedAssetType: 'sponsor_break_clip',
+    headline: 'Brand moments that feel like the show',
+    mediaLabel: 'SPONSOR VIDEO FRAME',
+    mediaHelper: 'Drop a sponsor break clip or first frame here',
+    bodyCopy: 'Video first. Stats end-cap.',
+    cta: 'Put your brand inside the battle',
+    description: 'A widescreen sports-broadcast creative for sponsor video placements and sales outreach.',
   },
   {
-    key: 'electric_square_signal',
-    label: 'Electric Square Signal',
-    format: '1:1 square',
-    width: 1200,
-    height: 1200,
-    mood: 'feed-stopping product signal',
-    bestFor: 'LinkedIn, Instagram feed, Facebook feed',
-    accent: BRAND_SYSTEM.colors.magenta,
-    secondary: BRAND_SYSTEM.colors.cyan,
-    description: 'A square design with layered signal rings, central empty content zone, and strong thumb-stopping contrast.',
-  },
-  {
-    key: 'creator_command_panel',
-    label: 'Creator Command Panel',
+    key: 'creator_signup_conversion',
+    label: 'Creator Signup Conversion',
     format: '4:5 feed',
     width: 1080,
     height: 1350,
-    mood: 'premium creator education card',
-    bestFor: 'LinkedIn, Instagram feed, Facebook',
-    accent: BRAND_SYSTEM.colors.green,
-    secondary: BRAND_SYSTEM.colors.gold,
-    description: 'A clean command-center layout with modular empty blocks for feature callouts, proof, or steps.',
+    templateType: 'branded',
+    mood: 'high-intent creator signup',
+    bestFor: 'Instagram feed, Facebook, LinkedIn',
+    accent: BRAND_SYSTEM.colors.magenta,
+    secondary: BRAND_SYSTEM.colors.cyan,
+    recommendedAssetType: 'real_overlay_screenshot',
+    headline: 'Your viewers can play the stream',
+    mediaLabel: 'REAL OVERLAY SCREENSHOT',
+    mediaHelper: 'Use a centered overlay screenshot, not a fake mockup',
+    bodyCopy: 'Comments attack. Likes spark effects.',
+    cta: 'Start 7 days unlocked',
+    description: 'A branded conversion template for turning site visitors and social traffic into new creator accounts.',
   },
   {
-    key: 'battle_recap_poster',
-    label: 'Battle Recap Poster',
+    key: 'player_command_showcase',
+    label: 'Player Command Showcase',
     format: '9:16 vertical',
     width: 1080,
     height: 1920,
-    mood: 'dramatic post-live recap',
-    bestFor: 'Stories, Reels, Shorts, recap assets',
-    accent: BRAND_SYSTEM.colors.gold,
-    secondary: BRAND_SYSTEM.colors.magenta,
-    description: 'A poster-style frame with a heroic empty stat zone, bottom action band, and polished arena lighting.',
+    templateType: 'branded',
+    mood: 'audience education',
+    bestFor: 'TikTok, Reels, Shorts, how-to-play page',
+    accent: BRAND_SYSTEM.colors.green,
+    secondary: BRAND_SYSTEM.colors.gold,
+    recommendedAssetType: 'real_overlay_screenshot',
+    headline: 'Type commands. Watch the arena react.',
+    mediaLabel: '!FIRE  !LASER  !EMOJI',
+    mediaHelper: 'Show command chips beside the real overlay',
+    bodyCopy: 'Join. Attack. Support. Return.',
+    cta: 'Learn how to play',
+    description: 'A branded player-education template for explaining commands without looking like a plain help card.',
   },
 ];
 const TEMPLATE_DEFINITIONS = [
@@ -129,7 +159,9 @@ const TEMPLATE_DEFINITIONS = [
   },
   {
     key: 'complete_battle_demo',
-    label: 'Complete 18-second battle demo',
+    label: '18-second battle clip video demo',
+    featured: true,
+    demoUrl: '/battle-clip',
     audience: 'TikTok LIVE creators',
     goal: 'conversion',
     path: '/signup',
@@ -1377,6 +1409,7 @@ export function listBlankDesignTemplates() {
     ...template,
     logoUrl: absoluteAssetUrl(BRAND_SYSTEM.logoUrl),
     colors: BRAND_SYSTEM.colors,
+    demoHref: template.demoUrl || '',
     downloadSvg: `/admin/marketing/design-templates/${template.key}/download.svg`,
     downloadBrief: `/admin/marketing/design-templates/${template.key}/brief.json`,
   }));
@@ -1395,18 +1428,28 @@ export function buildBlankDesignBrief(key = '') {
       colors: BRAND_SYSTEM.colors,
       fonts: BRAND_SYSTEM.fonts,
     },
-    usageRules: [
-      'Replace the labeled headline, proof, body, and CTA placeholders with final campaign copy.',
-      'Drop the product screenshot, sponsor moment, or generated art into the picture/clip frame.',
-      'Keep the IntoTheBattle logo visible with clear space.',
-      'Use real product screenshots or clips for proof-focused campaigns.',
-      'Export at the exact SVG canvas size for upload-ready social assets.',
-    ],
+    usageRules: template.templateType === 'blank'
+      ? [
+          'Replace the labeled headline, proof, body, and CTA placeholders with final campaign copy.',
+          'Drop the product screenshot, sponsor moment, or generated art into the picture/clip frame.',
+          'Keep the IntoTheBattle logo visible with clear space.',
+          'Use real product screenshots or clips for proof-focused campaigns.',
+          'Export at the exact SVG canvas size for upload-ready social assets.',
+        ]
+      : [
+          'Keep the supplied branded headline, proof, and CTA unless the campaign angle changes.',
+          'Use the recommended proof asset type so the creative matches the promise.',
+          'Keep the IntoTheBattle logo visible with clear space.',
+          template.demoUrl ? `Use ${template.demoUrl} as the canonical demo video reference for this design.` : 'Use real product screenshots or clips for proof-focused campaigns.',
+          'Export at the exact SVG canvas size for upload-ready social assets.',
+        ],
     seoStarter: {
       title: `${template.label} | IntoTheBattle growth creative`,
       description: `${template.description} Use this branded design template for IntoTheBattle social, sponsor, and creator-growth campaigns.`,
       altText: `${template.label} IntoTheBattle cyber arena design template with logo, headline frame, image frame, copy panel, and CTA for ${template.bestFor}.`,
       keywords: 'TikTok LIVE overlay, interactive livestream, creator tools, battle arena, IntoTheBattle',
+      canonicalDemoUrl: template.demoUrl ? new URL(template.demoUrl, publicBaseUrl()).toString() : '',
+      recommendedAssetType: template.recommendedAssetType || '',
     },
     files: {
       svgFilename: `${template.key}-intothebattle-template.svg`,
@@ -1426,6 +1469,7 @@ function svgHelper(value = '', x = 0, y = 0, size = 18, color = BRAND_SYSTEM.col
 function placeholderModules(template, box) {
   const { width, height, accent, secondary } = template;
   const { contentX, contentY, contentW, contentH, margin, vertical } = box;
+  const isBlank = template.templateType === 'blank';
   const labelSize = vertical ? 26 : 18;
   const helperSize = vertical ? 20 : 14;
   const radius = vertical ? 22 : 16;
@@ -1442,36 +1486,31 @@ function placeholderModules(template, box) {
   const ctaH = vertical ? 68 : 46;
   const ctaW = vertical ? Math.round(contentW * 0.62) : Math.round(contentW * 0.38);
   const ctaX = contentX + Math.round((contentW - ctaW) / 2);
-  const headlineText = {
-    neon_arena_vertical: 'HEADLINE / HOOK',
-    broadcast_spotlight_wide: 'BROADCAST HEADLINE',
-    electric_square_signal: 'SCROLL-STOPPING HOOK',
-    creator_command_panel: 'CREATOR COMMAND TITLE',
-    battle_recap_poster: 'RECAP HEADLINE',
-  }[template.key] || 'HEADLINE';
-  const mediaText = {
-    neon_arena_vertical: 'PICTURE OR OVERLAY CLIP',
-    broadcast_spotlight_wide: 'SPONSOR VIDEO / PRODUCT IMAGE',
-    electric_square_signal: 'HERO IMAGE OR GENERATED ART',
-    creator_command_panel: 'DASHBOARD / COMMAND SCREENSHOT',
-    battle_recap_poster: 'RECAP SCREENSHOT / WINNER IMAGE',
-  }[template.key] || 'PICTURE FRAME';
-  const bodyText = {
-    neon_arena_vertical: 'BENEFIT COPY FRAME',
-    broadcast_spotlight_wide: 'SPONSOR VALUE COPY',
-    electric_square_signal: 'PROOF OR SOCIAL CAPTION',
-    creator_command_panel: 'STEP / COMMAND COPY',
-    battle_recap_poster: 'STATS / OUTCOME COPY',
-  }[template.key] || 'COPY FRAME';
+  const headlineText = isBlank ? 'HEADLINE / HOOK' : (template.headline || 'HEADLINE');
+  const headlineHelper = isBlank ? 'Replace with campaign hook' : 'Branded campaign headline';
+  const mediaText = isBlank ? 'PICTURE OR VIDEO FRAME' : (template.mediaLabel || 'PRODUCT PROOF FRAME');
+  const mediaHelper = isBlank ? 'Drop screenshot, video frame, product image, or generated art here' : (template.mediaHelper || 'Use approved product proof here');
+  const bodyText = isBlank ? 'BENEFIT COPY FRAME' : (template.bodyCopy || 'Proof line or campaign benefit');
+  const bodyHelper = isBlank ? 'One short proof line, stat, or reason to click' : (template.recommendedAssetType ? `Best asset: ${ASSET_TYPES[template.recommendedAssetType] || template.recommendedAssetType}` : 'Ready-to-post branded copy');
+  const ctaText = isBlank ? 'CTA BUTTON' : (template.cta || 'CREATE YOUR BATTLE');
   const extras = {
-    neon_arena_vertical: `
+    blank_brand_starter: `
       <g opacity="0.95">
         <rect x="${mediaX + 22}" y="${mediaY + 22}" width="${Math.round(mediaW * 0.34)}" height="42" rx="21" fill="${accent}" opacity="0.16" stroke="${accent}" stroke-opacity="0.55"/>
         ${svgHelper('LIVE BATTLE', mediaX + 44, mediaY + 50, helperSize, BRAND_SYSTEM.colors.cyanSoft)}
         <rect x="${mediaX + mediaW - Math.round(mediaW * 0.32) - 22}" y="${mediaY + mediaH - 64}" width="${Math.round(mediaW * 0.32)}" height="34" rx="17" fill="${secondary}" opacity="0.18"/>
       </g>
     `,
-    broadcast_spotlight_wide: `
+    battle_clip_video_launch: `
+      <g>
+        <circle cx="${mediaX + mediaW / 2}" cy="${mediaY + mediaH / 2}" r="${Math.round(Math.min(mediaW, mediaH) * 0.11)}" fill="${accent}" opacity="0.18" filter="url(#soft-glow)"/>
+        <path d="M ${mediaX + mediaW / 2 - 24} ${mediaY + mediaH / 2 - 38} L ${mediaX + mediaW / 2 + 52} ${mediaY + mediaH / 2} L ${mediaX + mediaW / 2 - 24} ${mediaY + mediaH / 2 + 38} Z" fill="${BRAND_SYSTEM.colors.cream}" opacity="0.92"/>
+        <rect x="${mediaX + 28}" y="${mediaY + mediaH - 78}" width="${mediaW - 56}" height="34" rx="17" fill="#03040a" opacity="0.84"/>
+        <rect x="${mediaX + 40}" y="${mediaY + mediaH - 66}" width="${Math.round((mediaW - 80) * 0.62)}" height="10" rx="5" fill="${accent}"/>
+        ${svgHelper('0:00 CHAT  0:05 EFFECTS  0:12 BREAK  0:15 RECAP', mediaX + mediaW / 2, mediaY + mediaH - 96, helperSize, BRAND_SYSTEM.colors.cyanSoft, 'middle')}
+      </g>
+    `,
+    sponsor_broadcast_moment: `
       <g>
         <rect x="${contentX + 40}" y="${height - margin - 74}" width="${Math.round(contentW * 0.22)}" height="46" rx="18" fill="${accent}" opacity="0.18" stroke="${accent}" stroke-opacity="0.46"/>
         ${svgHelper('PARTNER', contentX + 62, height - margin - 44, helperSize, BRAND_SYSTEM.colors.gold)}
@@ -1479,13 +1518,13 @@ function placeholderModules(template, box) {
         ${svgHelper('ARENA SPOTLIGHT', contentX + Math.round(contentW * 0.76), height - margin - 44, helperSize, BRAND_SYSTEM.colors.cyanSoft)}
       </g>
     `,
-    electric_square_signal: `
+    creator_signup_conversion: `
       <g opacity="0.9">
         <circle cx="${contentX + contentW - 78}" cy="${contentY + 76}" r="30" fill="${accent}" opacity="0.18" stroke="${accent}" stroke-opacity="0.62"/>
-        ${svgHelper('01', contentX + contentW - 92, contentY + 85, helperSize, BRAND_SYSTEM.colors.cream)}
+        ${svgHelper('SIGNUP', contentX + contentW - 118, contentY + 85, helperSize, BRAND_SYSTEM.colors.cream)}
       </g>
     `,
-    creator_command_panel: `
+    player_command_showcase: `
       <g>
         ${['!fire', '!laser', '!emoji'].map((label, index) => {
           const chipW = Math.round(contentW * 0.24);
@@ -1509,20 +1548,20 @@ function placeholderModules(template, box) {
     <rect x="${contentX}" y="${headlineY}" width="${contentW}" height="${headlineH}" rx="${radius}" fill="#07101d" opacity="0.84" stroke="${secondary}" stroke-opacity="0.42" stroke-width="3"/>
     <path d="M ${contentX + 28} ${headlineY + 26} L ${contentX + Math.round(contentW * 0.28)} ${headlineY + 26}" stroke="${accent}" stroke-width="${vertical ? 8 : 5}" stroke-linecap="round"/>
     ${svgLabel(headlineText, contentX + 34, headlineY + Math.round(headlineH * 0.58), labelSize, BRAND_SYSTEM.colors.cream)}
-    ${svgHelper('Replace with campaign hook', contentX + 36, headlineY + Math.round(headlineH * 0.82), helperSize, BRAND_SYSTEM.colors.muted)}
+    ${svgHelper(headlineHelper, contentX + 36, headlineY + Math.round(headlineH * 0.82), helperSize, BRAND_SYSTEM.colors.muted)}
 
     <rect x="${mediaX}" y="${mediaY}" width="${mediaW}" height="${mediaH}" rx="${radius}" fill="#020712" opacity="0.88" stroke="${accent}" stroke-opacity="0.64" stroke-width="4"/>
     <rect x="${mediaX + 22}" y="${mediaY + 22}" width="${mediaW - 44}" height="${mediaH - 44}" rx="${radius - 6}" fill="none" stroke="${BRAND_SYSTEM.colors.gold}" stroke-opacity="0.23" stroke-width="2" stroke-dasharray="18 15"/>
     ${svgLabel(mediaText, mediaX + mediaW / 2, mediaY + mediaH / 2 - labelSize, labelSize, BRAND_SYSTEM.colors.cyanSoft, 'middle')}
-    ${svgHelper('Drop screenshot, video frame, product image, or generated art here', mediaX + mediaW / 2, mediaY + mediaH / 2 + helperSize, helperSize, BRAND_SYSTEM.colors.muted, 'middle')}
+    ${svgHelper(mediaHelper, mediaX + mediaW / 2, mediaY + mediaH / 2 + helperSize, helperSize, BRAND_SYSTEM.colors.muted, 'middle')}
     ${extras}
 
     <rect x="${mediaX}" y="${bodyY}" width="${mediaW}" height="${bodyH}" rx="${radius}" fill="#081422" opacity="0.86" stroke="${secondary}" stroke-opacity="0.45" stroke-width="3"/>
     ${svgLabel(bodyText, mediaX + 28, bodyY + Math.round(bodyH * 0.46), Math.round(labelSize * 0.82), BRAND_SYSTEM.colors.cream)}
-    ${svgHelper('One short proof line, stat, or reason to click', mediaX + 28, bodyY + Math.round(bodyH * 0.75), helperSize, BRAND_SYSTEM.colors.muted)}
+    ${svgHelper(bodyHelper, mediaX + 28, bodyY + Math.round(bodyH * 0.75), helperSize, BRAND_SYSTEM.colors.muted)}
 
     <rect x="${ctaX}" y="${ctaY}" width="${ctaW}" height="${ctaH}" rx="${Math.round(ctaH / 2)}" fill="url(#template-cta)" filter="url(#soft-glow)"/>
-    ${svgLabel('CTA BUTTON', ctaX + ctaW / 2, ctaY + Math.round(ctaH * 0.58), Math.round(labelSize * 0.72), '#041014', 'middle')}
+    ${svgLabel(ctaText, ctaX + ctaW / 2, ctaY + Math.round(ctaH * 0.58), Math.round(labelSize * 0.72), '#041014', 'middle')}
   `;
 }
 
@@ -1539,31 +1578,32 @@ function designFrame(template) {
   const logoY = Math.round(margin * 0.78);
   const wordmarkSize = Math.round(logo * 0.28);
   const details = {
-    neon_arena_vertical: `
+    blank_brand_starter: `
       <path d="M ${margin} ${contentY - 70} L ${width - margin} ${contentY - 70} L ${width - margin - 42} ${contentY - 25} L ${margin + 42} ${contentY - 25} Z" fill="${accent}" opacity="0.14"/>
       <path d="M ${margin + 28} ${contentY + contentH + 80} C ${width * 0.34} ${contentY + contentH + 145}, ${width * 0.66} ${contentY + contentH + 145}, ${width - margin - 28} ${contentY + contentH + 80}" fill="none" stroke="${secondary}" stroke-width="9" stroke-linecap="round" opacity="0.48"/>
       <circle cx="${width * 0.5}" cy="${contentY + contentH * 0.5}" r="${Math.round(contentW * 0.42)}" fill="none" stroke="${accent}" stroke-width="3" stroke-dasharray="18 22" opacity="0.32"/>
     `,
-    broadcast_spotlight_wide: `
+    battle_clip_video_launch: `
+      <path d="M ${margin} ${contentY - 70} L ${width - margin} ${contentY - 70} L ${width - margin - 42} ${contentY - 25} L ${margin + 42} ${contentY - 25} Z" fill="${accent}" opacity="0.16"/>
+      <path d="M ${margin + 28} ${contentY + contentH + 78} C ${width * 0.32} ${contentY + contentH + 142}, ${width * 0.68} ${contentY + contentH + 142}, ${width - margin - 28} ${contentY + contentH + 78}" fill="none" stroke="${secondary}" stroke-width="9" stroke-linecap="round" opacity="0.44"/>
+      <rect x="${margin + 52}" y="${contentY + contentH + 38}" width="${contentW - 104}" height="58" rx="24" fill="#03040a" stroke="${accent}" stroke-opacity="0.30" stroke-width="2"/>
+      ${svgHelper('CANONICAL DEMO VIDEO: /battle-clip', width / 2, contentY + contentH + 75, vertical ? 20 : 14, BRAND_SYSTEM.colors.cyanSoft, 'middle')}
+    `,
+    sponsor_broadcast_moment: `
       <rect x="${margin}" y="${height - margin - 92}" width="${contentW}" height="92" rx="22" fill="#070b15" stroke="${accent}" stroke-opacity="0.44" stroke-width="3"/>
       <path d="M ${width * 0.14} ${height * 0.16} C ${width * 0.32} ${height * 0.05}, ${width * 0.68} ${height * 0.05}, ${width * 0.86} ${height * 0.16}" fill="none" stroke="${accent}" stroke-width="5" opacity="0.42"/>
       <circle cx="${width * 0.5}" cy="${height * 0.5}" r="${Math.round(height * 0.42)}" fill="${accent}" opacity="0.08"/>
     `,
-    electric_square_signal: `
+    creator_signup_conversion: `
       <circle cx="${width * 0.5}" cy="${height * 0.5}" r="${Math.round(width * 0.39)}" fill="none" stroke="${accent}" stroke-width="7" opacity="0.32"/>
       <circle cx="${width * 0.5}" cy="${height * 0.5}" r="${Math.round(width * 0.30)}" fill="none" stroke="${secondary}" stroke-width="4" stroke-dasharray="26 18" opacity="0.42"/>
       <path d="M ${margin} ${height - margin - 120} L ${width - margin} ${height - margin - 120}" stroke="${accent}" stroke-width="8" stroke-linecap="round" opacity="0.52"/>
     `,
-    creator_command_panel: `
+    player_command_showcase: `
       <rect x="${margin}" y="${contentY + contentH + 34}" width="${contentW}" height="${Math.round(height * 0.14)}" rx="26" fill="#071322" stroke="${secondary}" stroke-opacity="0.35" stroke-width="3"/>
       <rect x="${margin + 28}" y="${contentY + contentH + 62}" width="${Math.round(contentW * 0.28)}" height="${Math.round(height * 0.08)}" rx="18" fill="${accent}" opacity="0.10" stroke="${accent}" stroke-opacity="0.42"/>
       <rect x="${margin + Math.round(contentW * 0.36)}" y="${contentY + contentH + 62}" width="${Math.round(contentW * 0.28)}" height="${Math.round(height * 0.08)}" rx="18" fill="${secondary}" opacity="0.10" stroke="${secondary}" stroke-opacity="0.42"/>
       <rect x="${margin + Math.round(contentW * 0.69)}" y="${contentY + contentH + 62}" width="${Math.round(contentW * 0.24)}" height="${Math.round(height * 0.08)}" rx="18" fill="${BRAND_SYSTEM.colors.cyan}" opacity="0.10" stroke="${BRAND_SYSTEM.colors.cyan}" stroke-opacity="0.42"/>
-    `,
-    battle_recap_poster: `
-      <path d="M ${margin} ${contentY + contentH + 30} L ${width - margin} ${contentY + contentH + 30} L ${width - margin - 80} ${contentY + contentH + 150} L ${margin + 80} ${contentY + contentH + 150} Z" fill="${accent}" opacity="0.12" stroke="${accent}" stroke-opacity="0.42"/>
-      <circle cx="${width * 0.5}" cy="${contentY + 60}" r="${Math.round(width * 0.18)}" fill="${secondary}" opacity="0.16"/>
-      <path d="M ${margin + 80} ${contentY - 44} L ${width - margin - 80} ${contentY - 44}" stroke="${accent}" stroke-width="10" stroke-linecap="round" opacity="0.56"/>
     `,
   }[template.key] || '';
 
