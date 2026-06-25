@@ -245,12 +245,14 @@
 
     .chat-stack {
       position: absolute;
-      left: 6.5%;
-      top: 35%;
+      left: 50%;
+      top: 31.5%;
       z-index: 28;
-      width: min(25%, 300px);
+      width: min(72%, 840px);
       display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: clamp(5px, .7vw, 8px);
+      transform: translateX(-50%);
     }
 
     .chat-line {
@@ -270,7 +272,7 @@
       font-weight: 900;
       white-space: nowrap;
       opacity: 0;
-      transform: translateX(-18px);
+      transform: translateY(-14px);
       animation: chatLines var(--cycle) ease-out infinite;
     }
 
@@ -294,7 +296,7 @@
     .command-card {
       position: absolute;
       left: 50%;
-      top: 31%;
+      top: 39%;
       z-index: 34;
       width: min(42%, 470px);
       min-height: clamp(32px, 7.5%, 54px);
@@ -334,9 +336,9 @@
     .player-row {
       position: absolute;
       left: 50%;
-      top: 46%;
+      top: 50%;
       z-index: 24;
-      width: min(78%, 980px);
+      width: min(72%, 920px);
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: clamp(7px, 1.15vw, 16px);
@@ -427,8 +429,8 @@
 
     .attack-beam {
       position: absolute;
-      left: 26%;
-      top: 56%;
+      left: 25%;
+      top: 61%;
       z-index: 29;
       width: 0;
       height: clamp(5px, 1.1vh, 10px);
@@ -441,8 +443,8 @@
 
     .impact {
       position: absolute;
-      left: 74%;
-      top: 56%;
+      left: 65.5%;
+      top: 61%;
       z-index: 31;
       width: clamp(45px, 8vw, 92px);
       aspect-ratio: 1;
@@ -461,8 +463,8 @@
 
     .engagement-burst {
       position: absolute;
-      left: 41%;
-      top: 36%;
+      left: 74%;
+      top: 40%;
       z-index: 33;
       width: clamp(90px, 14vw, 170px);
       height: clamp(48px, 9vh, 90px);
@@ -488,9 +490,9 @@
     .event-banner {
       position: absolute;
       left: 50%;
-      top: 71%;
+      top: 72.5%;
       z-index: 35;
-      width: min(54%, 640px);
+      width: min(50%, 620px);
       min-height: clamp(42px, 10%, 76px);
       display: grid;
       grid-template-columns: minmax(58px, .22fr) minmax(0, 1fr);
@@ -631,7 +633,7 @@
     .effects-card {
       width: min(86%, 1080px);
       display: grid;
-      grid-template-columns: minmax(0, .58fr) minmax(0, 1.42fr);
+      grid-template-columns: minmax(0, .48fr) minmax(0, 1.52fr);
       gap: clamp(12px, 1.8vw, 26px);
       align-items: center;
       padding: clamp(13px, 2vw, 26px);
@@ -641,6 +643,236 @@
         linear-gradient(180deg, rgba(7, 18, 32, .97), rgba(2, 6, 14, .95)),
         radial-gradient(circle at top left, rgba(246, 201, 91, .13), transparent 42%);
       box-shadow: 0 30px 100px rgba(0, 0, 0, .46), inset 0 1px 0 rgba(255, 255, 255, .08);
+    }
+
+    .duel-reel {
+      position: relative;
+      min-width: 0;
+      min-height: clamp(250px, 54vh, 462px);
+      overflow: hidden;
+      border: 1px solid rgba(85, 231, 255, .2);
+      border-radius: 13px;
+      background:
+        radial-gradient(circle at 50% 38%, rgba(85, 231, 255, .14), transparent 38%),
+        linear-gradient(180deg, rgba(2, 8, 18, .88), rgba(3, 9, 18, .96));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07);
+    }
+
+    .duel-shot {
+      position: absolute;
+      left: clamp(10px, 1.4vw, 18px);
+      right: clamp(10px, 1.4vw, 18px);
+      top: clamp(10px, 1.4vw, 18px);
+      bottom: clamp(67px, 13vh, 98px);
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      gap: clamp(8px, 1vw, 12px);
+      padding: clamp(10px, 1.5vw, 18px);
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 12px;
+      background:
+        linear-gradient(180deg, rgba(10, 23, 41, .94), rgba(2, 7, 16, .92)),
+        radial-gradient(circle at 50% 12%, rgba(246, 201, 91, .1), transparent 48%);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, .34);
+      opacity: 0;
+      transform: translateY(14px) scale(.985);
+    }
+
+    .duel-shot-laser { animation: duelShotLaser var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite; }
+    .duel-shot-sphere { animation: duelShotSphere var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite; }
+    .duel-shot-comet { animation: duelShotComet var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite; }
+
+    .duel-command {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: clamp(28px, 5vh, 42px);
+      padding: 0 clamp(9px, 1.2vw, 15px);
+      border: 1px solid rgba(85, 231, 255, .24);
+      border-radius: 999px;
+      color: #fff8e6;
+      background: rgba(255, 255, 255, .055);
+      font-size: clamp(8px, .95vw, 13px);
+      font-weight: 950;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .duel-command span {
+      color: var(--gold2);
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .duel-arena {
+      min-width: 0;
+      display: grid;
+      grid-template-columns: minmax(88px, .36fr) minmax(0, .72fr) minmax(88px, .36fr);
+      align-items: center;
+      gap: clamp(8px, 1.3vw, 18px);
+    }
+
+    .duel-player {
+      min-width: 0;
+      display: grid;
+      gap: clamp(5px, .7vw, 8px);
+      justify-items: center;
+      padding: clamp(8px, 1.1vw, 13px);
+      border: 1px solid rgba(85, 231, 255, .26);
+      border-radius: 12px;
+      background:
+        linear-gradient(180deg, rgba(9, 25, 44, .82), rgba(3, 8, 17, .9)),
+        radial-gradient(circle at 50% 24%, rgba(85, 231, 255, .12), transparent 58%);
+    }
+
+    .duel-player.is-winner {
+      border-color: rgba(246, 201, 91, .42);
+      box-shadow: 0 0 26px rgba(246, 201, 91, .12);
+    }
+
+    .duel-player.is-hit {
+      border-color: rgba(255, 45, 136, .4);
+      animation: duelTargetHit 1.35s ease-in-out infinite;
+    }
+
+    .duel-name {
+      max-width: 100%;
+      overflow: hidden;
+      color: #fff8e6;
+      font-size: clamp(9px, 1.05vw, 14px);
+      font-weight: 950;
+      line-height: 1;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .duel-icon {
+      width: clamp(42px, 8vh, 72px);
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border: 2px solid rgba(85, 231, 255, .52);
+      border-radius: 50%;
+      color: var(--cyan2);
+      background:
+        radial-gradient(circle, rgba(255, 255, 255, .16), transparent 62%),
+        linear-gradient(145deg, rgba(13, 34, 60, .95), rgba(2, 6, 14, .98));
+      box-shadow: 0 0 24px rgba(85, 231, 255, .2), inset 0 0 20px rgba(85, 231, 255, .11);
+      font-size: clamp(21px, 5vh, 38px);
+      font-weight: 950;
+    }
+
+    .duel-hp {
+      width: 100%;
+      height: clamp(6px, 1.2vh, 10px);
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 999px;
+      background: rgba(0, 0, 0, .42);
+    }
+
+    .duel-hp span {
+      display: block;
+      width: var(--hp);
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--green), var(--gold2), var(--ember));
+    }
+
+    .duel-lane {
+      position: relative;
+      min-width: 0;
+      min-height: clamp(86px, 18vh, 150px);
+      overflow: hidden;
+      border-radius: 999px;
+      background:
+        linear-gradient(90deg, rgba(85, 231, 255, .08), rgba(255, 255, 255, .035), rgba(255, 45, 136, .08));
+    }
+
+    .duel-lane::before {
+      content: "";
+      position: absolute;
+      left: 7%;
+      right: 7%;
+      top: 50%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(85, 231, 255, .38), rgba(246, 201, 91, .38), transparent);
+    }
+
+    .duel-effect {
+      position: absolute;
+      left: 8%;
+      top: 50%;
+      width: 82%;
+      transform: translateY(-50%);
+    }
+
+    .duel-effect-laser {
+      height: clamp(7px, 1.3vh, 12px);
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, var(--cyan), #fff, var(--magenta), transparent);
+      box-shadow: 0 0 24px rgba(85, 231, 255, .7), 0 0 42px rgba(255, 45, 136, .36);
+      animation: duelLaserBeam 1.35s ease-in-out infinite;
+    }
+
+    .duel-effect-sphere,
+    .duel-effect-comet {
+      height: clamp(34px, 7vh, 62px);
+    }
+
+    .duel-effect-sphere::before,
+    .duel-effect-comet::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      animation: duelTravel 1.35s cubic-bezier(.16, 1, .3, 1) infinite;
+    }
+
+    .duel-effect-sphere::before {
+      width: clamp(35px, 6.4vh, 58px);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 28%, #fff, #d8f9ff 18%, rgba(177, 108, 255, .95) 42%, rgba(85, 231, 255, .2) 70%, transparent 72%);
+      box-shadow: 0 0 34px rgba(177, 108, 255, .65), 0 0 54px rgba(85, 231, 255, .26);
+    }
+
+    .duel-effect-comet::before {
+      width: clamp(58px, 10vh, 96px);
+      height: clamp(28px, 5vh, 48px);
+      border-radius: 999px 45% 45% 999px;
+      background:
+        radial-gradient(circle at 78% 50%, #fff 0 13%, var(--gold2) 14% 28%, transparent 30%),
+        linear-gradient(90deg, transparent, rgba(85, 231, 255, .32), rgba(246, 201, 91, .82), var(--ember));
+      box-shadow: -26px 0 36px rgba(85, 231, 255, .24), 0 0 34px rgba(246, 201, 91, .5);
+    }
+
+    .duel-result {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: clamp(7px, 1vw, 12px);
+      color: #fff8e6;
+      font-size: clamp(10px, 1.25vw, 17px);
+      font-weight: 950;
+      line-height: 1;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .duel-result b {
+      color: #140a02;
+      padding: .38em .7em;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--gold), var(--gold2));
+      box-shadow: 0 0 20px rgba(246, 201, 91, .18);
     }
 
     .scene-kicker {
@@ -676,6 +908,10 @@
       background-clip: text;
     }
 
+    .effects-copy .scene-title {
+      font-size: clamp(24px, 3.45vw, 54px);
+    }
+
     .scene-copy {
       margin-top: clamp(7px, 1vw, 12px);
       color: #d7f5ff;
@@ -702,6 +938,27 @@
       background:
         linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .035)),
         radial-gradient(circle at center, rgba(85, 231, 255, .07), transparent 60%);
+    }
+
+    .effect-strip {
+      position: absolute;
+      left: clamp(10px, 1.4vw, 18px);
+      right: clamp(10px, 1.4vw, 18px);
+      bottom: clamp(10px, 1.4vw, 18px);
+      z-index: 8;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .effect-strip .effect-chip {
+      min-height: clamp(44px, 9vh, 72px);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .035)),
+        radial-gradient(circle at center, rgba(246, 201, 91, .08), transparent 62%);
+    }
+
+    .effect-strip .effect-chip::before,
+    .effect-strip .effect-chip::after {
+      display: none;
     }
 
     .effect-chip::before,
@@ -1202,6 +1459,8 @@
 
     .recap-stat {
       min-width: 0;
+      display: grid;
+      gap: 4px;
       padding: clamp(8px, 1.4vw, 16px);
       border: 1px solid rgba(255, 255, 255, .1);
       border-radius: 10px;
@@ -1219,12 +1478,22 @@
 
     .recap-stat span {
       display: block;
-      margin-top: 4px;
       color: var(--cyan2);
       font-size: clamp(7px, .9vw, 12px);
       font-weight: 950;
       text-transform: uppercase;
       white-space: nowrap;
+    }
+
+    .recap-stat em {
+      display: block;
+      color: rgba(217, 232, 245, .82);
+      font-size: clamp(6px, .76vw, 10px);
+      font-style: normal;
+      font-weight: 900;
+      line-height: 1.1;
+      text-transform: uppercase;
+      white-space: normal;
     }
 
     .stats-bars {
@@ -1234,7 +1503,7 @@
 
     .stats-bar {
       display: grid;
-      grid-template-columns: minmax(62px, .4fr) minmax(0, 1fr);
+      grid-template-columns: minmax(104px, .46fr) minmax(0, 1fr);
       gap: 9px;
       align-items: center;
       color: var(--soft);
@@ -1242,6 +1511,17 @@
       font-weight: 950;
       text-transform: uppercase;
       white-space: nowrap;
+    }
+
+    .stats-bar span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .stats-bar b {
+      color: var(--gold2);
+      font-weight: 950;
     }
 
     .stats-bar i {
@@ -1329,9 +1609,9 @@
     }
 
     @keyframes chatLines {
-      0%, 3% { opacity: 0; transform: translateX(-18px); }
-      7%, 25% { opacity: 1; transform: translateX(0); }
-      30%, 100% { opacity: 0; transform: translateX(10px); }
+      0%, 3% { opacity: 0; transform: translateY(-14px); }
+      7%, 23% { opacity: 1; transform: translateY(0); }
+      28%, 100% { opacity: 0; transform: translateY(-8px); }
     }
 
     @keyframes commandCue {
@@ -1348,8 +1628,8 @@
 
     @keyframes attackBeam {
       0%, 17% { opacity: 0; width: 0; }
-      20% { opacity: 1; width: 48%; }
-      24% { opacity: 1; width: 48%; }
+      20% { opacity: 1; width: 40.5%; }
+      24% { opacity: 1; width: 40.5%; }
       28%, 100% { opacity: 0; width: 0; }
     }
 
@@ -1393,6 +1673,43 @@
       0%, 29.8% { visibility: hidden; opacity: 0; transform: translateY(16px) scale(1.02); }
       31%, 58.8% { visibility: visible; opacity: 1; transform: translateY(0) scale(1); }
       60%, 100% { visibility: hidden; opacity: 0; transform: translateY(-10px) scale(.995); }
+    }
+
+    @keyframes duelShotLaser {
+      0%, 31% { opacity: 0; transform: translateY(14px) scale(.985); }
+      33%, 39% { opacity: 1; transform: translateY(0) scale(1); }
+      40.6%, 100% { opacity: 0; transform: translateY(-10px) scale(.99); }
+    }
+
+    @keyframes duelShotSphere {
+      0%, 39.2% { opacity: 0; transform: translateY(14px) scale(.985); }
+      41.1%, 47.5% { opacity: 1; transform: translateY(0) scale(1); }
+      49.1%, 100% { opacity: 0; transform: translateY(-10px) scale(.99); }
+    }
+
+    @keyframes duelShotComet {
+      0%, 47.8% { opacity: 0; transform: translateY(14px) scale(.985); }
+      49.8%, 57.7% { opacity: 1; transform: translateY(0) scale(1); }
+      59.2%, 100% { opacity: 0; transform: translateY(-10px) scale(.99); }
+    }
+
+    @keyframes duelLaserBeam {
+      0% { opacity: 0; clip-path: inset(0 100% 0 0); }
+      24%, 70% { opacity: 1; clip-path: inset(0 0 0 0); }
+      100% { opacity: 0; clip-path: inset(0 0 0 100%); }
+    }
+
+    @keyframes duelTravel {
+      0% { left: 3%; opacity: .92; transform: translateY(-50%) scale(.84); }
+      22% { left: 18%; opacity: 1; transform: translateY(-50%) scale(1); }
+      72% { left: 82%; opacity: 1; transform: translate(-88%, -50%) scale(1); }
+      100% { left: 92%; opacity: .92; transform: translate(-100%, -50%) scale(.88); }
+    }
+
+    @keyframes duelTargetHit {
+      0%, 42% { filter: none; }
+      56%, 84% { filter: drop-shadow(0 0 24px rgba(255, 45, 136, .72)) brightness(1.08); }
+      100% { filter: none; }
     }
 
     @keyframes fxLaser {
@@ -1504,9 +1821,10 @@
       .hook-panel h1 { font-size: clamp(12px, 3.5vw, 24px); }
       .hook-panel p { font-size: clamp(7px, 2vw, 11px); }
       .chat-stack {
-        left: 5%;
-        top: 34%;
-        width: 28%;
+        left: 50%;
+        top: 31%;
+        width: 78%;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 4px;
       }
       .chat-line {
@@ -1517,15 +1835,15 @@
       }
       .chat-line b { font-size: 8px; }
       .command-card {
-        top: 29.5%;
-        width: 48%;
+        top: 38.5%;
+        width: 50%;
         min-height: 31px;
       }
       .command-card b { display: none; }
       .command-card strong { font-size: clamp(13px, 4vw, 20px); }
       .player-row {
-        top: 46%;
-        width: 82%;
+        top: 49.5%;
+        width: 78%;
         gap: 5px;
       }
       .player-card {
@@ -1540,13 +1858,13 @@
       }
       .hp { height: 5px; }
       .attack-beam {
-        left: 28%;
-        top: 57%;
+        left: 25%;
+        top: 60%;
         height: 5px;
       }
       .impact {
-        left: 75%;
-        top: 57%;
+        left: 65.5%;
+        top: 60%;
         width: clamp(33px, 8vw, 58px);
       }
       .event-banner {
@@ -1569,6 +1887,49 @@
         gap: 9px;
         padding: 10px;
       }
+      .duel-reel { min-height: clamp(198px, 50vh, 322px); }
+      .duel-shot {
+        left: 8px;
+        right: 8px;
+        top: 8px;
+        bottom: 54px;
+        gap: 6px;
+        padding: 8px;
+      }
+      .duel-command {
+        min-height: 24px;
+        padding: 0 8px;
+        font-size: 6px;
+      }
+      .duel-arena {
+        grid-template-columns: minmax(58px, .36fr) minmax(0, .72fr) minmax(58px, .36fr);
+        gap: 6px;
+      }
+      .duel-player {
+        gap: 4px;
+        padding: 6px 5px;
+        border-radius: 9px;
+      }
+      .duel-name { font-size: 6px; }
+      .duel-icon {
+        width: clamp(27px, 8vh, 44px);
+        font-size: clamp(14px, 4.4vh, 23px);
+      }
+      .duel-lane { min-height: clamp(54px, 14vh, 94px); }
+      .duel-result {
+        gap: 5px;
+        font-size: 7px;
+      }
+      .effect-strip {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        gap: 4px;
+      }
+      .effect-strip .effect-chip {
+        min-height: 36px;
+        padding: 4px;
+      }
       .scene-kicker {
         min-height: 18px;
         margin-bottom: 6px;
@@ -1582,6 +1943,9 @@
       .effect-demo-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 4px;
+      }
+      .effect-demo-grid.effect-strip {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
       }
       .effect-chip {
         min-height: 32px;
@@ -1632,7 +1996,7 @@
       .stats-window { gap: 6px; padding: 8px; }
       .stats-window header { font-size: 7px; }
       .stats-bar {
-        grid-template-columns: 52px minmax(0, 1fr);
+        grid-template-columns: 82px minmax(0, 1fr);
         gap: 6px;
         font-size: 6px;
       }
@@ -1663,13 +2027,20 @@
       .hook-panel h1 { font-size: clamp(12px, 4.2vw, 17px); }
       .hook-panel p { font-size: 7px; }
       .chat-stack {
-        top: 32.5%;
-        width: 33%;
+        left: 50%;
+        top: 30.5%;
+        width: 88%;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
       }
-      .chat-line:nth-child(3) { display: none; }
+      .chat-line {
+        min-height: 20px;
+        padding: 0 5px;
+        font-size: 5.5px;
+      }
+      .chat-line b { font-size: 6.5px; }
       .command-card { display: none; }
       .player-row {
-        top: 43%;
+        top: 42.5%;
         width: 86%;
         grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 4px;
@@ -1685,17 +2056,17 @@
       }
       .attack-beam {
         left: 25%;
-        top: 53%;
+        top: 52.5%;
       }
       @keyframes attackBeam {
         0%, 17% { opacity: 0; width: 0; }
-        20% { opacity: 1; width: 51%; }
-        24% { opacity: 1; width: 51%; }
+        20% { opacity: 1; width: 42.5%; }
+        24% { opacity: 1; width: 42.5%; }
         28%, 100% { opacity: 0; width: 0; }
       }
       .impact {
-        left: 76%;
-        top: 53%;
+        left: 67.5%;
+        top: 52.5%;
       }
       .engagement-burst { display: none; }
       .event-banner { display: none; }
@@ -1727,12 +2098,53 @@
         gap: 5px;
         padding: 8px;
       }
+      .duel-reel { min-height: clamp(178px, 46vh, 236px); }
+      .duel-shot {
+        left: 7px;
+        right: 7px;
+        top: 7px;
+        bottom: 44px;
+        gap: 5px;
+        padding: 7px;
+      }
+      .duel-command {
+        min-height: 20px;
+        padding: 0 7px;
+        font-size: 5.5px;
+      }
+      .duel-arena {
+        grid-template-columns: minmax(48px, .36fr) minmax(0, .72fr) minmax(48px, .36fr);
+        gap: 5px;
+      }
+      .duel-player {
+        gap: 3px;
+        padding: 5px 4px;
+        border-radius: 8px;
+      }
+      .duel-name { font-size: 5.5px; }
+      .duel-icon {
+        width: clamp(23px, 7vh, 34px);
+        font-size: clamp(12px, 3.7vh, 18px);
+      }
+      .duel-hp { height: 5px; }
+      .duel-lane { min-height: clamp(45px, 12vh, 72px); }
+      .duel-result {
+        gap: 4px;
+        font-size: 6px;
+      }
+      .duel-result b { padding: .35em .55em; }
       .effects-copy .scene-title {
         font-size: clamp(13px, 4.8vw, 18px);
       }
       .effect-demo-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 3px;
+      }
+      .effect-strip {
+        left: 7px;
+        right: 7px;
+        bottom: 7px;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
       }
       .effect-chip {
         min-height: 22px;
@@ -1814,7 +2226,11 @@
         border-radius: 8px;
       }
       .recap-stat strong { font-size: clamp(13px, 5vw, 20px); }
-      .recap-stat span { display: none; }
+      .recap-stat span {
+        display: block;
+        font-size: 5px;
+      }
+      .recap-stat em { display: none; }
       .stats-bars { display: none; }
       .cta-box {
         width: 86%;
@@ -1908,23 +2324,73 @@
     <section class="scene effects-scene" aria-hidden="true">
       <div class="effects-card">
         <div class="effects-copy">
-          <span class="scene-kicker">Effect library</span>
-          <h2 class="scene-title">Every action has <em>screen energy</em></h2>
-          <p class="scene-copy">A fast montage of the official battle effects: clean, readable, and contained inside the broadcast frame.</p>
+          <span class="scene-kicker">Battle effects in context</span>
+          <h2 class="scene-title">Every attack gets <em>its moment</em></h2>
+          <p class="scene-copy">Laser, sphere, and comet attacks resolve as readable player moments before the fast effect strip hits.</p>
         </div>
-        <div class="effect-demo-grid">
-          <div class="effect-chip fx-laser"><b>Laser</b><span></span></div>
-          <div class="effect-chip fx-beam"><b>Beam</b><span></span></div>
-          <div class="effect-chip fx-neon"><b>Neon</b><span></span></div>
-          <div class="effect-chip fx-fire"><b>Fire</b><span></span></div>
-          <div class="effect-chip fx-sphere"><b>Sphere</b><span></span></div>
-          <div class="effect-chip fx-projectile"><b>Projectile</b><span></span></div>
-          <div class="effect-chip fx-bullet"><b>Bullet</b><span></span></div>
-          <div class="effect-chip fx-railgun"><b>Railgun</b><span></span></div>
-          <div class="effect-chip fx-comet"><b>Comet</b><span></span></div>
-          <div class="effect-chip fx-arc"><b>Arc</b><span></span></div>
-          <div class="effect-chip fx-explosion"><b>Explosion</b><span></span></div>
-          <div class="effect-chip fx-gift"><b>Gift</b><span></span></div>
+        <div class="duel-reel">
+          <article class="duel-shot duel-shot-laser">
+            <div class="duel-command"><strong>@mira_live</strong><span>!laser Blaze</span></div>
+            <div class="duel-arena">
+              <div class="duel-player is-winner">
+                <div class="duel-name">Mira</div>
+                <div class="duel-icon">&#10022;</div>
+                <div class="duel-hp"><span style="--hp: 74%"></span></div>
+              </div>
+              <div class="duel-lane"><div class="duel-effect duel-effect-laser"></div></div>
+              <div class="duel-player is-hit">
+                <div class="duel-name">Blaze</div>
+                <div class="duel-icon">&#128293;</div>
+                <div class="duel-hp"><span style="--hp: 18%"></span></div>
+              </div>
+            </div>
+            <div class="duel-result"><b>KO</b><span>Laser lands clean</span></div>
+          </article>
+
+          <article class="duel-shot duel-shot-sphere">
+            <div class="duel-command"><strong>@westside</strong><span>!sphere NovaX</span></div>
+            <div class="duel-arena">
+              <div class="duel-player is-winner">
+                <div class="duel-name">West</div>
+                <div class="duel-icon">&#9876;</div>
+                <div class="duel-hp"><span style="--hp: 82%"></span></div>
+              </div>
+              <div class="duel-lane"><div class="duel-effect duel-effect-sphere"></div></div>
+              <div class="duel-player is-hit">
+                <div class="duel-name">NovaX</div>
+                <div class="duel-icon">&#9889;</div>
+                <div class="duel-hp"><span style="--hp: 46%"></span></div>
+              </div>
+            </div>
+            <div class="duel-result"><b>Guard break</b><span>Sphere pressure drops HP</span></div>
+          </article>
+
+          <article class="duel-shot duel-shot-comet">
+            <div class="duel-command"><strong>@ashstorm</strong><span>!comet Horde</span></div>
+            <div class="duel-arena">
+              <div class="duel-player is-winner">
+                <div class="duel-name">Ashlee</div>
+                <div class="duel-icon">&#10084;</div>
+                <div class="duel-hp"><span style="--hp: 88%"></span></div>
+              </div>
+              <div class="duel-lane"><div class="duel-effect duel-effect-comet"></div></div>
+              <div class="duel-player is-hit">
+                <div class="duel-name">Horde</div>
+                <div class="duel-icon">&#9679;</div>
+                <div class="duel-hp"><span style="--hp: 42%"></span></div>
+              </div>
+            </div>
+            <div class="duel-result"><b>Pressure swing</b><span>Comet hits the horde bar</span></div>
+          </article>
+
+          <div class="effect-demo-grid effect-strip">
+            <div class="effect-chip fx-beam"><b>Beam</b><span></span></div>
+            <div class="effect-chip fx-fire"><b>Fire</b><span></span></div>
+            <div class="effect-chip fx-bullet"><b>Bullet</b><span></span></div>
+            <div class="effect-chip fx-railgun"><b>Railgun</b><span></span></div>
+            <div class="effect-chip fx-arc"><b>Arc</b><span></span></div>
+            <div class="effect-chip fx-gift"><b>Gift</b><span></span></div>
+          </div>
         </div>
       </div>
     </section>
@@ -1954,20 +2420,20 @@
       <div class="recap-card">
         <div class="recap-copy">
           <span class="scene-kicker">Stats recap</span>
-          <h2 class="scene-title">Shareable proof after <em>every fight</em></h2>
-          <p class="scene-copy">Creators get a clean battle recap they can post, reuse, and send viewers back to the next LIVE.</p>
+          <h2 class="scene-title">Shareable proof, <em>clearly labeled</em></h2>
+          <p class="scene-copy">Creators get a clean recap that explains what happened, why it mattered, and what to post after the LIVE.</p>
         </div>
         <div class="stats-window">
-          <header><span>Battle analytics</span><b>Round 04</b></header>
+          <header><span>Battle recap card</span><b>Ready to post</b></header>
           <div class="recap-stats">
-            <div class="recap-stat"><strong>247</strong><span>fighters joined</span></div>
-            <div class="recap-stat"><strong>18</strong><span>KOs triggered</span></div>
-            <div class="recap-stat"><strong>92%</strong><span>chat engaged</span></div>
+            <div class="recap-stat"><span>Fighters joined</span><strong>247</strong><em>unique viewers entered the arena</em></div>
+            <div class="recap-stat"><span>Chat KOs</span><strong>18</strong><em>players eliminated by commands</em></div>
+            <div class="recap-stat"><span>Active chat rate</span><strong>92%</strong><em>viewers who sent battle actions</em></div>
           </div>
           <div class="stats-bars">
-            <div class="stats-bar"><span>Commands</span><i style="--w: 86%"></i></div>
-            <div class="stats-bar"><span>Gifts</span><i style="--w: 62%"></i></div>
-            <div class="stats-bar"><span>Returns</span><i style="--w: 74%"></i></div>
+            <div class="stats-bar"><span>Attack commands <b>86%</b></span><i style="--w: 86%"></i></div>
+            <div class="stats-bar"><span>Gift/like boosts <b>62%</b></span><i style="--w: 62%"></i></div>
+            <div class="stats-bar"><span>Return viewers <b>74%</b></span><i style="--w: 74%"></i></div>
           </div>
         </div>
       </div>
