@@ -3083,8 +3083,33 @@
     .hook-panel {
       top: 14.8%;
       width: min(66%, 790px);
+      grid-template-columns: minmax(0, 1fr);
+      justify-items: center;
+      gap: clamp(5px, .75vw, 9px);
+      text-align: center;
       border-color: rgba(85, 231, 255, .28);
       background: linear-gradient(180deg, rgba(4, 13, 25, .96), rgba(2, 6, 14, .93));
+    }
+
+    .hook-panel h1 {
+      max-width: 100%;
+      display: block;
+      white-space: normal;
+      text-wrap: balance;
+      letter-spacing: .02em;
+    }
+
+    .hook-panel h1 span {
+      display: inline-block;
+      margin-inline: .08em;
+      white-space: nowrap;
+    }
+
+    .hook-panel p {
+      max-width: 58ch;
+      font-size: clamp(9px, 1vw, 14px);
+      line-height: 1.24;
+      text-wrap: balance;
     }
 
     .chat-stack {
@@ -3346,6 +3371,12 @@
       .hook-panel {
         width: 74%;
         text-align: center;
+      }
+
+      .hook-panel p {
+        max-width: 31ch;
+        font-size: clamp(8px, 2.25vw, 10px);
+        line-height: 1.18;
       }
 
       .player-row {
@@ -3709,8 +3740,8 @@
       </header>
 
       <div class="hook-panel">
-        <h1>Comment. Attack. Watch it land.</h1>
-        <p>A viewer types <strong>!laser</strong>, the target gets hit, and the whole room sees the battle react.</p>
+        <h1><span>Comment.</span> <span>Attack.</span> <span>Watch it land.</span></h1>
+        <p>Viewer types <strong>!laser</strong>. The attack lands live on screen.</p>
       </div>
 
       <div class="chat-stack">
