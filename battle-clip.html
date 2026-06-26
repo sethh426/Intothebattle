@@ -3034,6 +3034,661 @@
         min-height: 118px;
       }
     }
+
+    /* Final demo correction layer: one broadcast board, consistent spacing, no clipped scenes. */
+    .clip {
+      background:
+        radial-gradient(circle at 18% 24%, rgba(246, 201, 91, .16), transparent 29%),
+        radial-gradient(circle at 78% 32%, rgba(85, 231, 255, .17), transparent 33%),
+        linear-gradient(180deg, #07111f 0%, #030813 72%, #02040a 100%);
+    }
+
+    .clip::after {
+      inset: clamp(12px, 3vw, 34px);
+      border-color: rgba(246, 201, 91, .28);
+      border-radius: clamp(12px, 1.6vw, 20px);
+      box-shadow:
+        inset 0 0 0 1px rgba(85, 231, 255, .13),
+        inset 0 0 34px rgba(85, 231, 255, .045),
+        0 0 42px rgba(246, 201, 91, .08);
+    }
+
+    .corners span {
+      border-color: rgba(246, 201, 91, .72);
+      filter: drop-shadow(0 0 12px rgba(246, 201, 91, .28));
+    }
+
+    .battle-scene::before,
+    .effects-card,
+    .broadcast-frame,
+    .recap-card,
+    .cta-box {
+      border-color: rgba(85, 231, 255, .26);
+      border-radius: clamp(12px, 1.4vw, 18px);
+      background:
+        linear-gradient(180deg, rgba(7, 18, 32, .94), rgba(2, 6, 14, .92)),
+        radial-gradient(circle at top left, rgba(246, 201, 91, .12), transparent 42%);
+      box-shadow:
+        0 28px 90px rgba(0, 0, 0, .42),
+        inset 0 1px 0 rgba(255, 255, 255, .08),
+        inset 0 0 0 1px rgba(255, 255, 255, .035);
+    }
+
+    .battle-scene::before {
+      top: 26%;
+      width: min(88%, 1120px);
+      height: min(62%, 520px);
+    }
+
+    .hook-panel {
+      top: 14.8%;
+      width: min(66%, 790px);
+      border-color: rgba(85, 231, 255, .28);
+      background: linear-gradient(180deg, rgba(4, 13, 25, .96), rgba(2, 6, 14, .93));
+    }
+
+    .chat-stack {
+      top: 30%;
+      width: min(76%, 940px);
+    }
+
+    .command-card {
+      top: 38.6%;
+      width: min(40%, 440px);
+    }
+
+    .player-row {
+      top: 50%;
+      width: min(80%, 1040px);
+      gap: clamp(8px, 1vw, 14px);
+    }
+
+    .player-card,
+    .duel-player,
+    .recap-stat,
+    .stat-tile,
+    .effect-chip {
+      border-color: rgba(85, 231, 255, .2);
+      background:
+        linear-gradient(180deg, rgba(11, 26, 45, .84), rgba(3, 9, 18, .92)),
+        radial-gradient(circle at 50% 18%, rgba(85, 231, 255, .1), transparent 60%);
+    }
+
+    .event-banner {
+      top: 70.5%;
+      width: min(54%, 680px);
+      min-height: clamp(40px, 8.8%, 66px);
+    }
+
+    .horde {
+      top: 82%;
+      width: min(64%, 780px);
+      height: clamp(44px, 9.4%, 72px);
+    }
+
+    .effects-card {
+      width: min(86%, 1080px);
+      grid-template-columns: minmax(190px, .34fr) minmax(0, 1.66fr);
+      padding: clamp(14px, 2vw, 24px);
+    }
+
+    .duel-reel {
+      min-height: clamp(240px, 48vh, 430px);
+    }
+
+    .duel-shot {
+      bottom: clamp(58px, 10vh, 84px);
+    }
+
+    .duel-lane {
+      min-height: clamp(78px, 15vh, 132px);
+    }
+
+    .duel-effect-sphere::before {
+      width: clamp(44px, 7.2vh, 68px);
+    }
+
+    .duel-effect-sphere::after {
+      width: clamp(64px, 10.5vh, 92px);
+      height: clamp(22px, 4vh, 34px);
+    }
+
+    .duel-effect-comet::before {
+      width: clamp(72px, 12vh, 112px);
+      height: clamp(32px, 5.6vh, 54px);
+    }
+
+    .duel-effect-comet::after {
+      width: clamp(96px, 15.5vh, 148px);
+    }
+
+    .effect-strip .effect-chip {
+      min-height: clamp(50px, 9.4vh, 76px);
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .effects-card {
+      width: min(84%, 980px);
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: clamp(10px, 1.4vw, 16px);
+      padding: clamp(14px, 2vw, 24px);
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .effects-copy {
+      position: static;
+      width: auto;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      column-gap: clamp(10px, 1.4vw, 16px);
+      align-items: center;
+      text-align: left;
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .effects-copy .scene-kicker {
+      margin: 0;
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .effects-copy .scene-title {
+      font-size: clamp(20px, 3vw, 42px);
+      line-height: .94;
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .effects-copy .scene-copy {
+      display: none;
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .duel-reel {
+      min-height: clamp(230px, 54vh, 430px);
+      display: grid;
+      align-items: center;
+      padding: clamp(12px, 1.8vw, 20px);
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .effect-strip {
+      position: static;
+      left: auto;
+      right: auto;
+      top: auto;
+      bottom: auto;
+      transform: none;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(8px, 1.2vw, 14px);
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip {
+      min-height: clamp(92px, 19vh, 160px);
+      border-radius: 14px;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .08),
+        0 16px 36px rgba(0, 0, 0, .24);
+    }
+
+    .clip[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip b {
+      font-size: clamp(8px, 1vw, 13px);
+    }
+
+    .broadcast-frame {
+      width: min(82%, 980px);
+      min-height: clamp(224px, 57vh, 500px);
+      padding: clamp(12px, 1.8vw, 22px);
+      border-color: rgba(246, 201, 91, .34);
+    }
+
+    .broadcast-frame::before {
+      content: "Arena Partner";
+      position: absolute;
+      right: clamp(22px, 3.2vw, 44px);
+      top: clamp(22px, 3vw, 40px);
+      z-index: 5;
+      min-height: clamp(22px, 4.2vh, 32px);
+      display: inline-flex;
+      align-items: center;
+      padding: 0 clamp(10px, 1.2vw, 14px);
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 999px;
+      color: #fff8e6;
+      background: rgba(2, 6, 14, .62);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07);
+      font-size: clamp(7px, .9vw, 12px);
+      font-weight: 950;
+      text-transform: uppercase;
+      pointer-events: none;
+    }
+
+    .video-window {
+      min-height: clamp(198px, 50vh, 442px);
+      border-color: rgba(246, 201, 91, .24);
+      background:
+        radial-gradient(circle at 50% 48%, rgba(255, 240, 185, .25), transparent 18%),
+        radial-gradient(circle at 32% 42%, rgba(85, 231, 255, .18), transparent 30%),
+        linear-gradient(135deg, rgba(6, 19, 36, .96), rgba(35, 9, 33, .9) 52%, rgba(3, 8, 18, .96));
+    }
+
+    .video-window::after {
+      inset: 6%;
+    }
+
+    .video-badge {
+      left: clamp(18px, 2.4vw, 32px);
+      top: clamp(18px, 2.4vw, 32px);
+      color: var(--gold2);
+      border-color: rgba(246, 201, 91, .32);
+      background: rgba(12, 12, 7, .66);
+    }
+
+    .video-headline {
+      left: 9%;
+      right: 9%;
+      bottom: 28%;
+      text-align: left;
+    }
+
+    .video-headline strong {
+      font-size: clamp(30px, 4.7vw, 68px);
+      line-height: .9;
+    }
+
+    .video-headline span {
+      font-size: clamp(8px, 1vw, 13px);
+    }
+
+    .video-progress {
+      left: 9%;
+      right: 9%;
+      bottom: 12%;
+    }
+
+    .break-stats {
+      left: 9%;
+      right: 9%;
+      bottom: 10%;
+      grid-template-columns: minmax(160px, .85fr) repeat(3, minmax(0, 1fr));
+    }
+
+    .recap-card {
+      width: min(82%, 960px);
+      grid-template-columns: minmax(0, .58fr) minmax(0, 1.42fr);
+      gap: clamp(12px, 1.8vw, 22px);
+      padding: clamp(14px, 2vw, 24px);
+    }
+
+    .recap-card .scene-title {
+      font-size: clamp(24px, 3.4vw, 52px);
+    }
+
+    .stats-window {
+      overflow: hidden;
+      gap: clamp(8px, 1vw, 12px);
+      padding: clamp(10px, 1.4vw, 16px);
+    }
+
+    .recap-stat {
+      min-height: clamp(72px, 14vh, 118px);
+      align-content: center;
+    }
+
+    .recap-stat strong {
+      font-size: clamp(24px, 3.4vw, 52px);
+    }
+
+    .cta-box {
+      width: min(72%, 860px);
+    }
+
+    @media (max-width: 760px) {
+      .battle-scene::before {
+        top: 27%;
+        width: 90%;
+        height: 58%;
+      }
+
+      .hook-panel {
+        width: 74%;
+        text-align: center;
+      }
+
+      .player-row {
+        width: 84%;
+      }
+
+      .effects-card,
+      .broadcast-frame,
+      .recap-card {
+        width: 88%;
+      }
+
+      .broadcast-frame::before {
+        right: 18px;
+        top: 17px;
+      }
+
+      .video-headline {
+        left: 8%;
+        right: 8%;
+        bottom: 27%;
+      }
+
+      .recap-card {
+        grid-template-columns: 1fr;
+        text-align: center;
+      }
+
+      .recap-copy .scene-copy {
+        display: none;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .clip::after {
+        inset: 3.2%;
+      }
+
+      .effects-card,
+      .broadcast-frame,
+      .recap-card {
+        width: 90%;
+      }
+
+      .clip[data-demo-asset="effect-strip-slide"] .effects-copy {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+      }
+
+      .clip[data-demo-asset="effect-strip-slide"] .duel-reel {
+        min-height: clamp(184px, 42vh, 240px);
+        padding: 8px;
+      }
+
+      .clip[data-demo-asset="effect-strip-slide"] .effect-strip {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .clip[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip {
+        min-height: clamp(58px, 13vh, 88px);
+      }
+
+      .broadcast-frame {
+        min-height: clamp(152px, 44vh, 230px);
+      }
+
+      .video-window {
+        min-height: clamp(134px, 40vh, 202px);
+      }
+
+      .video-headline {
+        bottom: 25%;
+      }
+
+      .video-headline strong {
+        font-size: clamp(20px, 6.2vw, 30px);
+      }
+
+      .broadcast-frame::before {
+        min-height: 18px;
+        padding: 0 7px;
+        font-size: 6px;
+      }
+
+      .recap-card {
+        gap: 8px;
+      }
+
+      .recap-card .scene-title {
+        font-size: clamp(18px, 5.2vw, 26px);
+      }
+
+      .recap-stats {
+        gap: 5px;
+      }
+
+      .recap-stat {
+        min-height: 58px;
+        padding: 7px 5px;
+      }
+
+      .recap-stat strong {
+        font-size: clamp(16px, 5.2vw, 24px);
+      }
+
+      .recap-stat span {
+        font-size: 5.5px;
+      }
+    }
+
+    @media (max-height: 430px) and (min-aspect-ratio: 4 / 3) {
+      .clip::after {
+        inset: 2.4%;
+      }
+
+      .battle-scene::before {
+        top: 24%;
+        width: 90%;
+        height: 66%;
+      }
+
+      .clip.is-embedded .battle-scene::before {
+        top: 22.8%;
+        width: 93%;
+        height: 69%;
+      }
+
+      .effects-scene,
+      .sponsor-scene,
+      .recap-scene {
+        padding: 2.5%;
+      }
+
+      .effects-card {
+        width: min(94%, 980px);
+        grid-template-columns: minmax(148px, .32fr) minmax(0, 1.68fr);
+        padding: 10px;
+      }
+
+      .duel-reel {
+        min-height: clamp(190px, 68vh, 284px);
+      }
+
+      .clip[data-demo-asset="effect-strip-slide"] .effects-card {
+        width: min(90%, 900px);
+        gap: 8px;
+        padding: 10px;
+      }
+
+      .clip[data-demo-asset="effect-strip-slide"] .duel-reel {
+        min-height: clamp(174px, 61vh, 244px);
+        padding: 8px;
+      }
+
+      .clip[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip {
+        min-height: clamp(64px, 20vh, 88px);
+      }
+
+      .broadcast-frame {
+        width: min(84%, 860px);
+        min-height: clamp(188px, 68vh, 292px);
+        padding: 10px;
+      }
+
+      .clip.is-embedded .broadcast-frame {
+        width: min(92%, 940px);
+      }
+
+      .video-window {
+        min-height: clamp(166px, 62vh, 270px);
+      }
+
+      .video-headline strong {
+        font-size: clamp(24px, 5vw, 42px);
+      }
+
+      .recap-card {
+        width: min(88%, 880px);
+        grid-template-columns: minmax(0, .54fr) minmax(0, 1.46fr);
+        padding: 10px;
+      }
+
+      .recap-card .scene-title {
+        font-size: clamp(18px, 3.3vw, 30px);
+      }
+
+      .stats-window {
+        padding: 8px;
+      }
+
+      .recap-stat {
+        min-height: clamp(54px, 18vh, 78px);
+      }
+    }
+
+    @media (max-width: 520px) and (max-height: 430px) and (min-aspect-ratio: 4 / 3) {
+      .battle-scene::before {
+        top: 22%;
+        width: 93%;
+        height: 70%;
+      }
+
+      .player-row {
+        top: 47.5%;
+        width: 85%;
+      }
+
+      .attack-beam,
+      .impact {
+        top: 58%;
+      }
+
+      .horde {
+        top: 78%;
+        width: 72%;
+        height: 29px;
+      }
+
+      .horde::before {
+        width: 25%;
+        font-size: 11px;
+      }
+
+      .horde-label {
+        left: 29%;
+        right: 6%;
+        top: 14%;
+        font-size: 5.5px;
+      }
+
+      .horde-track {
+        left: 29%;
+        right: 6%;
+        bottom: 18%;
+        height: 6px;
+      }
+
+      .clip.is-embedded .effects-card,
+      .clip:not(.is-embedded) .effects-card {
+        width: 96%;
+        padding: 7px;
+      }
+
+      .clip.is-embedded .duel-reel,
+      .clip:not(.is-embedded) .duel-reel {
+        min-height: calc(100vh - 34px);
+      }
+
+      .clip[data-demo-asset="effect-strip-slide"] .effects-copy {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+      }
+
+      .clip[data-demo-asset="effect-strip-slide"] .effects-copy .scene-title {
+        font-size: 17px;
+      }
+
+      .clip[data-demo-asset="effect-strip-slide"] .duel-reel {
+        min-height: calc(100vh - 72px);
+        padding: 6px;
+      }
+
+      .clip[data-demo-asset="effect-strip-slide"] .effect-strip {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 5px;
+      }
+
+      .clip[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip {
+        min-height: 47px;
+      }
+
+      .clip[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip b {
+        font-size: 5px;
+      }
+
+      .clip.is-embedded .broadcast-frame {
+        width: 96%;
+        min-height: calc(100vh - 24px);
+      }
+
+      .clip.is-embedded .video-window {
+        min-height: calc(100vh - 40px);
+      }
+
+      .clip.is-embedded .video-headline strong {
+        font-size: 20px;
+      }
+
+      .clip.is-embedded .recap-card {
+        width: 96%;
+        padding: 8px;
+      }
+
+      .recap-card,
+      .clip.is-embedded .recap-card {
+        width: 92%;
+        grid-template-columns: 1fr;
+        gap: 6px;
+        padding: 9px;
+        text-align: center;
+      }
+
+      .recap-card .scene-kicker {
+        margin-bottom: 4px;
+      }
+
+      .recap-card .scene-title {
+        font-size: 18px;
+        line-height: .92;
+      }
+
+      .stats-window {
+        padding: 7px;
+      }
+
+      .stats-window header,
+      .recap-copy .scene-copy,
+      .stats-bars {
+        display: none;
+      }
+
+      .recap-stats,
+      .clip.is-embedded .recap-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 5px;
+      }
+
+      .recap-stat {
+        min-height: 52px;
+        padding: 6px 4px;
+      }
+
+      .recap-stat strong {
+        font-size: 17px;
+      }
+
+      .recap-stat span {
+        font-size: 5px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -3244,11 +3899,11 @@
       if (demoClip && window.self !== window.top) demoClip.classList.add("is-embedded");
       const assetTimes = {
         "hook-enter-slide": 1.1,
-        "laser-ko-slide": 3,
-        "sphere-slide": 8.6,
-        "comet-slide": 12,
+        "laser-ko-slide": 5.7,
+        "sphere-slide": 8.9,
+        "comet-slide": 12.3,
         "effect-strip-slide": 14.6,
-        "broadcast-break-clip": 18,
+        "broadcast-break-clip": 17.4,
         "stats-recap-slide": 21.2,
         "cta-slide": 23.1
       };
