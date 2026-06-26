@@ -294,8 +294,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   --banner-accent-soft:rgba(122,252,255,0.18);
   --banner-duration:3200ms;
   position:fixed; left:50%; top:58%; transform:translate(-50%,0); z-index:10000; pointer-events:none;
-  min-height:60px; max-height:76px; padding:0 16px; box-sizing:border-box; overflow:hidden;
-  display:grid; grid-template-columns:52px minmax(0,1fr) 7px; align-items:center; gap:12px;
+  min-height:72px; max-height:92px; padding:0 20px; box-sizing:border-box; overflow:hidden;
+  display:grid; grid-template-columns:64px minmax(0,1fr) 8px; align-items:center; gap:14px;
   font-family:'Rajdhani','Segoe UI',sans-serif; color:#f8fbff;
   background:
     linear-gradient(90deg, rgba(2,7,14,0.98), rgba(5,16,31,0.94) 34%, rgba(3,9,18,0.96)),
@@ -330,38 +330,38 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.transition-signal { animation:cyberBannerSignalIn 280ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 820ms 160ms ease-out; }
 .banner.transition-surge { animation:cyberBannerSurgeIn 390ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 900ms 120ms ease-out; }
 .banner-signal {
-  position:relative; width:52px; height:44px; display:grid; place-items:center; flex:0 0 auto;
+  position:relative; width:64px; height:54px; display:grid; place-items:center; flex:0 0 auto;
   color:var(--banner-accent); border-right:1px solid rgba(255,255,255,0.1);
 }
 .banner-code {
-  position:relative; z-index:1; min-width:36px; padding:4px 5px; text-align:center;
+  position:relative; z-index:1; min-width:42px; padding:5px 6px; text-align:center;
   border:1px solid rgba(var(--banner-accent-rgb),0.34);
   background:rgba(0,0,0,0.24);
   box-shadow:inset 0 0 18px rgba(var(--banner-accent-rgb),0.14);
-  font-size:11px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase;
+  font-size:12px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase;
 }
 .banner-pulse {
-  position:absolute; width:34px; height:34px; border:1px solid rgba(var(--banner-accent-rgb),0.38);
+  position:absolute; width:42px; height:42px; border:1px solid rgba(var(--banner-accent-rgb),0.38);
   transform:rotate(45deg); opacity:.82; animation:cyberSignalPulse 920ms ease-in-out infinite;
 }
 .banner-copy { min-width:0; position:relative; z-index:1; display:grid; gap:1px; }
 .banner-kicker {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:var(--banner-accent); font-size:11px; line-height:1; font-weight:900; letter-spacing:1.8px; text-transform:uppercase;
+  color:var(--banner-accent); font-size:12px; line-height:1; font-weight:900; letter-spacing:1.8px; text-transform:uppercase;
   text-shadow:0 0 12px rgba(var(--banner-accent-rgb),0.48);
 }
 .banner-title {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#fff; font-size:20px; line-height:1.05; font-weight:900; letter-spacing:.8px; text-transform:uppercase;
+  color:#fff; font-size:24px; line-height:1.04; font-weight:900; letter-spacing:.8px; text-transform:uppercase;
   text-shadow:0 0 18px rgba(255,255,255,0.28);
 }
 .banner-title strong { color:var(--banner-accent); font-weight:900; }
 .banner-meta {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#aeb8c9; font-size:11px; line-height:1.05; font-weight:800; letter-spacing:.8px; text-transform:uppercase;
+  color:#aeb8c9; font-size:12px; line-height:1.05; font-weight:800; letter-spacing:.8px; text-transform:uppercase;
 }
 .banner-meter {
-  position:relative; z-index:1; width:7px; height:44px; border:1px solid rgba(255,255,255,0.12);
+  position:relative; z-index:1; width:8px; height:54px; border:1px solid rgba(255,255,255,0.12);
   background:rgba(255,255,255,0.05); overflow:hidden; align-self:center;
 }
 .banner-meter-fill {
@@ -385,19 +385,19 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     0 0 86px rgba(255,84,54,0.14),
     inset 0 1px 0 rgba(255,255,255,0.18);
 }
-.banner.legendary .banner-title { font-size:21px; text-shadow:0 0 26px rgba(255,227,111,0.42); }
+.banner.legendary .banner-title { font-size:25px; text-shadow:0 0 26px rgba(255,227,111,0.42); }
 .banner.is-compact {
-  min-height:50px; max-height:58px; padding:0 10px; gap:8px;
-  grid-template-columns:42px minmax(0,1fr) 6px;
+  min-height:58px; max-height:68px; padding:0 13px; gap:10px;
+  grid-template-columns:48px minmax(0,1fr) 6px;
 }
-.banner.is-compact .banner-signal { width:42px; height:36px; }
-.banner.is-compact .banner-code { min-width:30px; padding:3px 4px; font-size:9px; letter-spacing:.9px; }
-.banner.is-compact .banner-pulse { width:28px; height:28px; }
-.banner.is-compact .banner-kicker { font-size:9px; letter-spacing:1.2px; }
+.banner.is-compact .banner-signal { width:48px; height:40px; }
+.banner.is-compact .banner-code { min-width:32px; padding:3px 4px; font-size:10px; letter-spacing:.9px; }
+.banner.is-compact .banner-pulse { width:31px; height:31px; }
+.banner.is-compact .banner-kicker { font-size:10px; letter-spacing:1.2px; }
 .banner.is-compact .banner-title,
-.banner.legendary.is-compact .banner-title { font-size:15px; letter-spacing:.5px; }
-.banner.is-compact .banner-meta { font-size:9px; letter-spacing:.6px; }
-.banner.is-compact .banner-meter { width:6px; height:34px; }
+.banner.legendary.is-compact .banner-title { font-size:17px; letter-spacing:.5px; }
+.banner.is-compact .banner-meta { font-size:10px; letter-spacing:.6px; }
+.banner.is-compact .banner-meter { width:6px; height:38px; }
 .banner.is-micro {
   min-height:42px; max-height:48px; padding:0 8px; gap:7px;
   grid-template-columns:34px minmax(0,1fr) 5px;
@@ -455,12 +455,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   to { transform:scaleY(.08); opacity:.62; }
 }
 @media(max-width:720px) {
-  .banner { min-height:52px; max-height:64px; padding:0 10px; gap:8px; }
-  .banner-signal { width:38px; height:36px; }
-  .banner-code { min-width:30px; font-size:9px; letter-spacing:.8px; }
-  .banner-pulse { width:28px; height:28px; }
+  .banner { min-height:58px; max-height:68px; padding:0 12px; gap:9px; grid-template-columns:44px minmax(0,1fr) 6px; }
+  .banner-signal { width:44px; height:38px; }
+  .banner-code { min-width:31px; font-size:9px; letter-spacing:.8px; }
+  .banner-pulse { width:29px; height:29px; }
   .banner-kicker { font-size:9px; letter-spacing:1.2px; }
-  .banner-title,.banner.legendary .banner-title { font-size:14px; letter-spacing:.5px; }
+  .banner-title,.banner.legendary .banner-title { font-size:16px; letter-spacing:.5px; }
   .banner-meta { font-size:9px; }
   .banner-meter { height:36px; }
 }
@@ -3383,17 +3383,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function placeBannerFallback(el) {
     const layout = getHordeLayout();
+    const canvasRect = canvas.getBoundingClientRect();
+    const frame = arenaFrame();
+    const safe = arenaSafeFrame(frame, 0.03);
+    const scaleX = canvasRect.width / Math.max(1, cw());
+    const safeLeft = canvasRect.left + safe.x * scaleX;
+    const safeRight = canvasRect.left + safe.right * scaleX;
+    const safeWidth = Math.max(1, safeRight - safeLeft);
     const left = canvasToViewport(layout.barX, layout.barY);
     const right = canvasToViewport(layout.barX + layout.barW, layout.barY);
-    const width = Math.max(220, right.x - left.x);
+    const width = Math.min(Math.max(280, (right.x - left.x) * 1.12), safeWidth);
     el.style.width = `${width}px`;
-    el.style.maxWidth = 'calc(100vw - 32px)';
+    el.style.maxWidth = `${safeWidth}px`;
     const rect = el.getBoundingClientRect();
-    const scaleY = canvas.getBoundingClientRect().height / Math.max(1, ch());
+    const scaleY = canvasRect.height / Math.max(1, ch());
     const gap = Math.max(22, Math.min(42, layout.barH * 0.34 * scaleY));
     const anchor = canvasToViewport(layout.x, Math.max(20, layout.barY));
-    el.style.left = `${anchor.x}px`;
-    el.style.top = `${Math.max(12, anchor.y - rect.height - gap)}px`;
+    const halfWidth = width / 2;
+    el.style.left = `${clampNumber(anchor.x, safeLeft + halfWidth, safeRight - halfWidth)}px`;
+    el.style.top = `${Math.max(canvasRect.top + safe.y * scaleY, anchor.y - rect.height - gap)}px`;
   }
 
   function placeBannerAbovePlayers(el) {
@@ -3404,7 +3412,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     const frame = arenaFrame();
-    const safe = arenaSafeFrame(frame, 0.018);
+    const safe = arenaSafeFrame(frame, 0.03);
     const canvasRect = canvas.getBoundingClientRect();
     const scaleX = canvasRect.width / Math.max(1, cw());
     const scaleY = canvasRect.height / Math.max(1, ch());
@@ -3426,11 +3434,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const rowWidth = Math.max(1, rowRight - rowLeft);
     const hordeLayout = getHordeLayout();
     const hordeWidth = Math.max(1, hordeLayout.barW * scaleX);
-    const maxWidth = Math.max(220, safeWidth - 4);
-    const minWidth = Math.min(maxWidth, 260);
+    const maxWidth = Math.max(260, safeWidth - Math.max(10, frame.w * scaleX * 0.01));
+    const minWidth = Math.min(maxWidth, 320);
     const preferredWidth = Math.min(
       maxWidth,
-      Math.max(minWidth, Math.min(rowWidth * 0.9, hordeWidth * 1.02, safeWidth * 0.88))
+      Math.max(minWidth, Math.min(rowWidth * 1.04, hordeWidth * 1.18, safeWidth * 0.94))
     );
 
     el.classList.remove('is-compact', 'is-micro');
@@ -3438,7 +3446,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     el.style.maxWidth = `${maxWidth}px`;
 
     const playerTopViewport = canvasRect.top + playerTop * scaleY;
-    const gap = Math.max(14, Math.min(22, (frame.h * scaleY) * 0.045));
+    const gap = Math.max(18, Math.min(30, (frame.h * scaleY) * 0.052));
     let rect = el.getBoundingClientRect();
     const availableHeight = playerTopViewport - gap - safeTop;
     if (availableHeight < rect.height) {
