@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Create Free Account — IntoTheBattle | TikTok LIVE Battle Overlay</title>
-  <meta name="description" content="Launch your first TikTok LIVE battle overlay in under 5 minutes with 7 days of everything unlocked." />
+  <title>Create Free Account | IntoTheBattle TikTok LIVE Overlay</title>
+  <meta name="description" content="Create your IntoTheBattle account, choose Google or email, and launch a TikTok LIVE battle overlay for OBS or TikTok Studio in under 5 minutes." />
   <meta name="robots" content="index, follow" />
   <meta name="author" content="IntoTheBattle" />
   <link rel="canonical" href="https://intothebattle.com/signup" />
@@ -12,7 +12,7 @@
 
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Create Your Free IntoTheBattle Account" />
-  <meta property="og:description" content="Turn your TikTok LIVE chat into a playable battle arena and launch your first overlay in under 5 minutes." />
+  <meta property="og:description" content="Choose Google or email, create your room, and launch your TikTok LIVE battle overlay for OBS or TikTok Studio in under 5 minutes." />
   <meta property="og:url" content="https://intothebattle.com/signup" />
   <meta property="og:image" content="https://intothebattle.com/og-intothebattle.png" />
   <meta property="og:image:secure_url" content="https://intothebattle.com/og-intothebattle.png" />
@@ -24,7 +24,7 @@
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Create Your Free IntoTheBattle Account" />
-  <meta name="twitter:description" content="Launch your first TikTok LIVE battle overlay in under 5 minutes." />
+  <meta name="twitter:description" content="Create your room and launch your TikTok LIVE battle overlay in under 5 minutes." />
   <meta name="twitter:image" content="https://intothebattle.com/og-intothebattle.png" />
   <meta name="twitter:image:alt" content="IntoTheBattle TikTok LIVE battle overlay preview." />
 
@@ -45,7 +45,7 @@
         "@id": "https://intothebattle.com/signup#webpage",
         "name": "IntoTheBattle Free Account Signup",
         "url": "https://intothebattle.com/signup",
-        "description": "Launch your first TikTok LIVE battle overlay in under 5 minutes with 7 days of everything unlocked.",
+        "description": "Create your IntoTheBattle account, choose Google or email, and launch a TikTok LIVE battle overlay for OBS or TikTok Studio in under 5 minutes.",
         "isPartOf": {
           "@id": "https://intothebattle.com/#website"
         },
@@ -153,16 +153,6 @@
 
     a { color: inherit; text-decoration: none; }
 
-    .orb {
-      position: fixed;
-      pointer-events: none;
-      border-radius: 999px;
-      filter: blur(10px);
-      z-index: -2;
-    }
-    .orb-a { width: 540px; height: 540px; left: -230px; top: 130px; background: radial-gradient(circle, rgba(246, 201, 91, .16), transparent 64%); }
-    .orb-b { width: 620px; height: 620px; right: -300px; bottom: -110px; background: radial-gradient(circle, rgba(85, 231, 255, .12), transparent 66%); }
-
     .nav-wrap {
       position: sticky;
       top: 0;
@@ -265,36 +255,37 @@
       margin: 0 auto;
       display: grid;
       grid-template-columns: repeat(12, minmax(0, 1fr));
-      gap: clamp(26px, 4vw, 56px);
+      gap: clamp(24px, 4vw, 52px);
       align-items: start;
-      padding: clamp(34px, 5vw, 68px) 0 58px;
+      padding: clamp(18px, 3vw, 38px) 0 58px;
     }
     .signup-card-wrap {
-      grid-column: 1 / span 5;
+      grid-column: 7 / -1;
       order: 2;
     }
     .hero-copy {
-      grid-column: 1 / -1;
+      grid-column: 1 / span 6;
       order: 1;
       display: grid;
-      justify-items: center;
-      text-align: center;
-      max-width: 1180px;
-      margin: 0 auto;
+      justify-items: start;
+      text-align: left;
+      max-width: 620px;
+      margin: 0;
     }
     .signup-preview-panel {
-      grid-column: 6 / -1;
+      grid-column: 1 / -1;
       order: 3;
       display: grid;
       align-self: start;
       justify-items: center;
+      margin-top: 4px;
     }
 
     .hero-header-row {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       gap: 10px;
       margin-bottom: 20px;
     }
@@ -343,9 +334,9 @@
       line-height: 1.02;
       letter-spacing: 0;
       text-transform: uppercase;
-      text-align: center;
+      text-align: left;
       text-wrap: balance;
-      margin: 0 auto 20px;
+      margin: 0 0 20px;
     }
     .hero-copy h1 span {
       display: block;
@@ -366,17 +357,17 @@
       color: #c7cedd;
       font-size: clamp(17px, 2vw, 21px);
       line-height: 1.7;
-      text-align: center;
+      text-align: left;
       text-wrap: balance;
-      margin: 0 auto 26px;
+      margin: 0 0 26px;
     }
 
     .outcome-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
-      max-width: 680px;
-      margin: 0 auto 26px;
+      max-width: 620px;
+      margin: 0 0 26px;
     }
     .outcome-item {
       min-height: 98px;
@@ -406,10 +397,10 @@
     .trust-chips {
       display: flex;
       flex-wrap: wrap;
-      justify-content: center;
+      justify-content: flex-start;
       gap: 10px;
-      max-width: 660px;
-      margin: 0 auto 28px;
+      max-width: 620px;
+      margin: 0 0 28px;
     }
     .trust-chips span {
       display: inline-flex;
@@ -516,7 +507,8 @@
       z-index: 0;
     }
     .card-content { position: relative; z-index: 1; }
-    .card-top { text-align: center; margin-bottom: 24px; }
+    .card-logo { display: none; }
+    .card-top { text-align: center; margin-bottom: 18px; }
     .eyebrow {
       display: inline-flex;
       align-items: center;
@@ -543,7 +535,7 @@
     }
     .card-title {
       font-family: 'Black Ops One', 'Rajdhani', sans-serif;
-      font-size: clamp(32px, 4vw, 48px);
+      font-size: clamp(30px, 3.4vw, 42px);
       line-height: 1;
       text-align: center;
       text-transform: uppercase;
@@ -561,7 +553,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      margin: 24px 0 12px;
+      margin: 18px 0 12px;
       padding: 12px 14px;
       border-radius: 8px;
       border: 1px solid rgba(119, 240, 161, .2);
@@ -755,9 +747,11 @@
 
     @media (max-width: 980px) {
       .signup-shell { grid-template-columns: 1fr; padding-top: 24px; }
-      .hero-copy { text-align: center; }
+      .hero-copy { text-align: center; justify-items: center; max-width: 1180px; margin: 0 auto; }
       .hero-copy, .signup-card-wrap, .signup-preview-panel { grid-column: 1 / -1; }
       .kicker, .lede, .outcome-grid, .battle-preview { margin-left: auto; margin-right: auto; }
+      .hero-header-row { justify-content: center; }
+      .hero-copy h1, .lede { text-align: center; }
       .trust-chips { justify-content: center; margin-left: auto; margin-right: auto; }
     }
     @media (max-width: 620px) {
@@ -780,6 +774,9 @@
       }
       .brand-mark { width: 42px; height: 42px; }
       .signup-shell { width: min(100% - 24px, var(--max)); padding-top: 16px; }
+      .signup-card-wrap { order: 1; }
+      .hero-copy { order: 2; }
+      .signup-preview-panel { order: 3; }
       .hero-header-row { gap: 8px; margin-bottom: 14px; }
       .kicker, .hero-proof { width: 100%; justify-content: center; }
       .hero-copy h1 { font-size: clamp(36px, 11vw, 54px); }
@@ -794,7 +791,6 @@
       .plan-compare { grid-template-columns: 1fr; }
       .signup-card { padding: 20px; }
       .card-top { margin-bottom: 14px; }
-      .card-logo { display: none; }
       .eyebrow { margin-bottom: 8px; padding: 7px 10px; font-size: 10px; }
       .card-title { margin-bottom: 8px; font-size: clamp(29px, 9vw, 38px); }
       .card-sub { font-size: 14px; line-height: 1.45; }
@@ -808,9 +804,6 @@
   <link rel="stylesheet" href="/css/site-refresh.css" />
 </head>
 <body>
-  <div class="orb orb-a" aria-hidden="true"></div>
-  <div class="orb orb-b" aria-hidden="true"></div>
-
   <div class="nav-wrap">
     <nav aria-label="Main navigation">
       <a class="brand" href="/" aria-label="IntoTheBattle home">
@@ -839,7 +832,7 @@
         <span class="headline-main">Launch your first battle overlay</span>
         <span class="headline-accent">in under 5 minutes.</span>
       </h1>
-      <p class="lede">Turn your TikTok LIVE chat into a playable battle arena. Create a room, get your signed OBS URL, and fire a test event before your next LIVE starts.</p>
+      <p class="lede">Turn your TikTok LIVE chat into a playable battle arena. Create a room, get your signed browser-source URL, and fire a test event before your next LIVE starts.</p>
       <div class="outcome-grid" aria-label="Signup outcomes">
         <div class="outcome-item"><b>Room</b><span>Your creator room is created after signup.</span></div>
         <div class="outcome-item"><b>Overlay</b><span>Copy the OBS or TikTok Studio source from the dashboard.</span></div>
@@ -870,7 +863,7 @@
           </div>
 
           <div class="actions">
-            <a href="/auth/google" class="btn btn-primary" id="googleSignupLink">Continue with Google →</a>
+            <a href="/auth/google" class="btn btn-primary" id="googleSignupLink">Continue with Google -></a>
             <a href="/register" class="btn btn-secondary" id="emailSignupLink">Create account with email</a>
           </div>
 
