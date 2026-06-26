@@ -128,7 +128,6 @@ body.hide-overlay-controls .panel-wrapper { display:none !important; }
 body.hide-overlay-status #status-badge { display:none !important; }
 body.sponsor-active .damage,
 body.sponsor-active .banner,
-body.sponsor-active .battle-prompt,
 body.sponsor-active .panel-tab,
 body.sponsor-active .layout-panel,
 body.sponsor-active #status-badge { display:none !important; }
@@ -377,6 +376,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.gift { --banner-accent:#7afcff; --banner-accent-rgb:122,252,255; --banner-accent-soft:rgba(122,252,255,0.16); }
 .banner.special { --banner-accent:#9dff8b; --banner-accent-rgb:157,255,139; --banner-accent-soft:rgba(157,255,139,0.15); }
 .banner.follow { --banner-accent:#6dffcb; --banner-accent-rgb:109,255,203; --banner-accent-soft:rgba(109,255,203,0.15); }
+.banner.heal { --banner-accent:#8fffd2; --banner-accent-rgb:143,255,210; --banner-accent-soft:rgba(143,255,210,0.16); }
 .banner.legendary {
   --banner-accent:#ffe36f; --banner-accent-rgb:255,227,111; --banner-accent-soft:rgba(255,174,41,0.24);
   box-shadow:
@@ -386,6 +386,30 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     inset 0 1px 0 rgba(255,255,255,0.18);
 }
 .banner.legendary .banner-title { font-size:21px; text-shadow:0 0 26px rgba(255,227,111,0.42); }
+.banner.is-compact {
+  min-height:50px; max-height:58px; padding:0 10px; gap:8px;
+  grid-template-columns:42px minmax(0,1fr) 6px;
+}
+.banner.is-compact .banner-signal { width:42px; height:36px; }
+.banner.is-compact .banner-code { min-width:30px; padding:3px 4px; font-size:9px; letter-spacing:.9px; }
+.banner.is-compact .banner-pulse { width:28px; height:28px; }
+.banner.is-compact .banner-kicker { font-size:9px; letter-spacing:1.2px; }
+.banner.is-compact .banner-title,
+.banner.legendary.is-compact .banner-title { font-size:15px; letter-spacing:.5px; }
+.banner.is-compact .banner-meta { font-size:9px; letter-spacing:.6px; }
+.banner.is-compact .banner-meter { width:6px; height:34px; }
+.banner.is-micro {
+  min-height:42px; max-height:48px; padding:0 8px; gap:7px;
+  grid-template-columns:34px minmax(0,1fr) 5px;
+}
+.banner.is-micro .banner-signal { width:34px; height:30px; }
+.banner.is-micro .banner-code { min-width:25px; padding:2px 3px; font-size:8px; letter-spacing:.6px; }
+.banner.is-micro .banner-pulse { width:23px; height:23px; }
+.banner.is-micro .banner-kicker { font-size:8px; letter-spacing:1px; }
+.banner.is-micro .banner-title,
+.banner.legendary.is-micro .banner-title { font-size:13px; letter-spacing:.35px; }
+.banner.is-micro .banner-meta { display:none; }
+.banner.is-micro .banner-meter { width:5px; height:28px; }
 @keyframes cyberBannerIn {
   0% { opacity:0; transform:translate(-50%,-14px) scaleX(.72); filter:blur(5px) brightness(1.45); }
   62% { opacity:1; transform:translate(-50%,2px) scaleX(1.025); filter:blur(0) brightness(1.1); }
@@ -444,43 +468,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   0%   { filter:brightness(1.35) saturate(1.25); box-shadow:0 0 0 2px rgba(255,255,255,0.55),0 0 80px rgba(246,201,91,0.35),0 0 150px rgba(85,231,255,0.22); }
   42%  { filter:brightness(1.12) saturate(1.18); box-shadow:0 0 0 2px rgba(246,201,91,0.55),0 0 72px rgba(246,201,91,0.24),0 0 130px rgba(85,231,255,0.18); }
   100% { filter:none; }
-}
-
-.battle-prompt {
-  position:absolute; left:50%; bottom:clamp(18px,3.2vw,44px); z-index:11;
-  transform:translate(-50%,18px) scale(.96);
-  display:flex; align-items:center; justify-content:center; gap:10px;
-  max-width:min(84vw,820px); min-height:clamp(34px,4.1vw,54px);
-  padding:clamp(8px,1vw,13px) clamp(18px,2.5vw,34px);
-  border:1px solid rgba(255,255,255,0.16); border-radius:999px;
-  background:
-    linear-gradient(90deg, rgba(246,201,91,0.18), rgba(4,10,20,0.88) 30%, rgba(4,10,20,0.88) 70%, rgba(85,231,255,0.14)),
-    rgba(3,7,14,0.9);
-  box-shadow:0 18px 60px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
-  color:#fff3d7; font-family:'Rajdhani','Segoe UI',sans-serif;
-  font-weight:900; font-size:clamp(15px,2vw,30px); letter-spacing:1.6px; text-transform:uppercase;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  opacity:0; pointer-events:none;
-  transition:opacity 260ms ease,transform 380ms cubic-bezier(.16,1,.3,1);
-}
-.battle-prompt.show { opacity:1; transform:translate(-50%,0) scale(1); }
-.battle-prompt::before {
-  content:""; width:clamp(8px,1vw,13px); height:clamp(8px,1vw,13px);
-  border-radius:50%; background:#f6c95b; box-shadow:0 0 18px #f6c95b;
-  flex:0 0 auto; animation:battlePromptPulse 1.2s ease-in-out infinite;
-}
-.battle-prompt.horde { color:#ffe5df; border-color:rgba(232,59,95,0.42); }
-.battle-prompt.horde::before { background:#e83b5f; box-shadow:0 0 18px #e83b5f; }
-.battle-prompt.return { color:#dffaff; border-color:rgba(85,231,255,0.42); }
-.battle-prompt.return::before { background:#55e7ff; box-shadow:0 0 18px #55e7ff; }
-body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
-  bottom:auto;
-  top:61.5%;
-  max-width:min(82vw,760px);
-}
-@keyframes battlePromptPulse {
-  0%,100% { transform:scale(.78); opacity:.7; }
-  50% { transform:scale(1.18); opacity:1; }
 }
 
 .sponsor-scene {
@@ -1112,7 +1099,6 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
 
 <div id="overlay-container">
   <canvas id="canvas"></canvas>
-  <div id="battlePrompt" class="battle-prompt" aria-hidden="true"></div>
   <div id="sponsorScene" class="sponsor-scene" aria-hidden="true">
     <video id="sponsorVideo" playsinline preload="metadata"></video>
     <div id="sponsorPoster" class="sponsor-poster" aria-hidden="true"></div>
@@ -1302,7 +1288,6 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   const ctx       = canvas.getContext('2d', { alpha: true });
   const container = document.getElementById('overlay-container');
   const statusDiv = document.getElementById('status-badge');
-  const battlePrompt = document.getElementById('battlePrompt');
   const sponsorScene = document.getElementById('sponsorScene');
   const sponsorVideo = document.getElementById('sponsorVideo');
   const sponsorPoster = document.getElementById('sponsorPoster');
@@ -1403,8 +1388,8 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   let stateFetchInFlight = false;
   let registerAcked = false;
   let registerRetryTimer = null;
-  let battlePromptTimer = null;
   let battlePromptLastShown = 0;
+  let richBannerLastShown = 0;
   let arenaShakeUntil = 0;
   let arenaShakeStartedAt = 0;
   let arenaShakeMagnitude = 0;
@@ -1558,20 +1543,24 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   }
 
   function showBattlePrompt(message, type = '', duration = 2600, force = false) {
-    if (!battlePrompt || sponsorState !== 'battle') return;
+    if (sponsorState !== 'battle') return;
+    const clean = String(message || '').trim().slice(0, 72);
+    if (!clean) return;
     const now = Date.now();
+    if (!force && now - richBannerLastShown < 180) return;
     if (!force && now - battlePromptLastShown < 3600) return;
     battlePromptLastShown = now;
-    battlePrompt.textContent = String(message || '').slice(0, 72);
-    battlePrompt.className = `battle-prompt ${type || ''}`.trim();
-    battlePrompt.setAttribute('aria-hidden', 'false');
-    void battlePrompt.offsetWidth;
-    battlePrompt.classList.add('show');
-    clearTimeout(battlePromptTimer);
-    battlePromptTimer = setTimeout(() => {
-      battlePrompt.classList.remove('show');
-      battlePrompt.setAttribute('aria-hidden', 'true');
-    }, Math.max(900, duration));
+    const promptType = String(type || '').toLowerCase();
+    const isHorde = promptType === 'horde';
+    const isReturn = promptType === 'return';
+    showBanner(isHorde ? 'streak' : isReturn ? 'follow' : 'special', {
+      code: isHorde ? 'HRD' : isReturn ? 'OK' : 'LIVE',
+      kicker: isHorde ? 'Horde pressure' : isReturn ? 'Arena update' : 'Battle update',
+      title: clean,
+      meta: isHorde ? 'Pressure event captured' : 'Status event captured',
+      charge: isHorde ? 72 : isReturn ? 54 : 58,
+      priority: force ? 64 : isHorde ? 56 : isReturn ? 42 : 46,
+    }, Math.max(1400, duration));
   }
 
   function triggerBattleReturn() {
@@ -3225,6 +3214,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     gift: { code: 'PWR', kicker: 'Boost signal', duration: 2700, priority: 58, charge: 64 },
     special: { code: 'CMD', kicker: 'Special strike', duration: 2250, priority: 54, charge: 58 },
     follow: { code: 'NEW', kicker: 'Crowd signal', duration: 2100, priority: 38, charge: 46 },
+    heal: { code: 'HP', kicker: 'Support pulse', duration: 2300, priority: 50, charge: 56 },
     legendary: { code: 'MAX', kicker: 'Legendary moment', duration: 3950, priority: 96, charge: 100 },
   };
   const bannerQueue = [];
@@ -3352,7 +3342,7 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     `;
     el.style.visibility = 'hidden';
     document.body.appendChild(el);
-    placeBannerAboveHorde(el);
+    placeBannerAbovePlayers(el);
     el.style.visibility = '';
     activeBannerTimer = setTimeout(() => closeActiveBanner(true), item.duration);
   }
@@ -3379,10 +3369,18 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
   }
 
   function showBanner(cls, content, dur, options = {}) {
+    richBannerLastShown = Date.now();
     enqueueBanner(normalizeBannerPayload(cls, content, dur, options));
   }
 
-  function placeBannerAboveHorde(el) {
+  window.addEventListener('resize', () => {
+    if (!activeBanner?.el) return;
+    requestAnimationFrame(() => {
+      if (activeBanner?.el) placeBannerAbovePlayers(activeBanner.el);
+    });
+  });
+
+  function placeBannerFallback(el) {
     const layout = getHordeLayout();
     const left = canvasToViewport(layout.barX, layout.barY);
     const right = canvasToViewport(layout.barX + layout.barW, layout.barY);
@@ -3395,6 +3393,69 @@ body.signed-overlay:not(.public-demo-overlay) .battle-prompt {
     const anchor = canvasToViewport(layout.x, Math.max(20, layout.barY));
     el.style.left = `${anchor.x}px`;
     el.style.top = `${Math.max(12, anchor.y - rect.height - gap)}px`;
+  }
+
+  function placeBannerAbovePlayers(el) {
+    const playersForBanner = topPlayers();
+    if (!playersForBanner.length) {
+      placeBannerFallback(el);
+      return;
+    }
+
+    const frame = arenaFrame();
+    const safe = arenaSafeFrame(frame, 0.018);
+    const canvasRect = canvas.getBoundingClientRect();
+    const scaleX = canvasRect.width / Math.max(1, cw());
+    const scaleY = canvasRect.height / Math.max(1, ch());
+    const safeLeft = canvasRect.left + safe.x * scaleX;
+    const safeRight = canvasRect.left + safe.right * scaleX;
+    const safeTop = canvasRect.top + safe.y * scaleY;
+    const safeBottom = canvasRect.top + safe.bottom * scaleY;
+    const safeWidth = Math.max(1, safeRight - safeLeft);
+    const playerBounds = playersForBanner.map((_, index) => {
+      const pos = getPlayerPosition(index, playersForBanner.length);
+      return getPlayerCardDrawMetrics(pos, playersForBanner.length);
+    });
+    const playerLeft = Math.min(...playerBounds.map(bounds => bounds.left));
+    const playerRight = Math.max(...playerBounds.map(bounds => bounds.right));
+    const playerTop = Math.min(...playerBounds.map(bounds => bounds.top));
+    const rowLeft = canvasRect.left + Math.max(safe.x, playerLeft) * scaleX;
+    const rowRight = canvasRect.left + Math.min(safe.right, playerRight) * scaleX;
+    const rowCenter = canvasRect.left + ((Math.max(safe.x, playerLeft) + Math.min(safe.right, playerRight)) / 2) * scaleX;
+    const rowWidth = Math.max(1, rowRight - rowLeft);
+    const hordeLayout = getHordeLayout();
+    const hordeWidth = Math.max(1, hordeLayout.barW * scaleX);
+    const maxWidth = Math.max(220, safeWidth - 4);
+    const minWidth = Math.min(maxWidth, 260);
+    const preferredWidth = Math.min(
+      maxWidth,
+      Math.max(minWidth, Math.min(rowWidth * 0.9, hordeWidth * 1.02, safeWidth * 0.88))
+    );
+
+    el.classList.remove('is-compact', 'is-micro');
+    el.style.width = `${preferredWidth}px`;
+    el.style.maxWidth = `${maxWidth}px`;
+
+    const playerTopViewport = canvasRect.top + playerTop * scaleY;
+    const gap = Math.max(14, Math.min(22, (frame.h * scaleY) * 0.045));
+    let rect = el.getBoundingClientRect();
+    const availableHeight = playerTopViewport - gap - safeTop;
+    if (availableHeight < rect.height) {
+      el.classList.add('is-compact');
+      rect = el.getBoundingClientRect();
+    }
+    if (availableHeight < rect.height) {
+      el.classList.add('is-micro');
+      rect = el.getBoundingClientRect();
+    }
+
+    const halfWidth = preferredWidth / 2;
+    const centerX = clampNumber(rowCenter, safeLeft + halfWidth, safeRight - halfWidth);
+    const targetTop = playerTopViewport - gap - rect.height;
+    const maxTop = Math.min(safeBottom - rect.height, targetTop);
+    const top = Math.max(safeTop, Math.min(targetTop, maxTop));
+    el.style.left = `${centerX}px`;
+    el.style.top = `${top}px`;
   }
 
   function showDamage(cx, cy, damage, kill, critical) {
