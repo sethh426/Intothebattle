@@ -4720,6 +4720,449 @@
       padding: 0 7px;
       font-size: 6px;
     }
+
+    /* First-slide banner cleanup: reduce loose strips and anchor the opening to the board. */
+    .hook-panel {
+      top: 35.9%;
+      width: min(74%, 920px);
+      min-height: 0;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .hook-panel h1 {
+      font-size: clamp(31px, 4.35vw, 64px);
+      line-height: .88;
+      text-shadow:
+        0 0 22px rgba(85, 231, 255, .2),
+        0 4px 18px rgba(0, 0, 0, .5);
+    }
+
+    .hook-panel p {
+      margin-top: clamp(5px, .8vw, 10px);
+      color: #bff8ff;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, .55);
+    }
+
+    .chat-stack {
+      top: 28.2%;
+      width: min(58%, 740px);
+      grid-template-columns: repeat(3, max-content);
+      justify-content: center;
+      gap: clamp(5px, .8vw, 10px);
+    }
+
+    .chat-line {
+      grid-template-columns: auto auto;
+      min-height: 0;
+      gap: clamp(5px, .7vw, 8px);
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+      font-size: clamp(6px, .72vw, 10px);
+      text-shadow: 0 2px 8px rgba(0, 0, 0, .65);
+    }
+
+    .chat-line strong {
+      color: rgba(217, 232, 245, .78);
+    }
+
+    .chat-line b {
+      font-size: clamp(7px, .86vw, 11px);
+    }
+
+    .chat-line.is-attack {
+      border-color: transparent;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .chat-line.is-attack b {
+      color: var(--gold2);
+      text-shadow: 0 0 16px rgba(246, 201, 91, .22);
+    }
+
+    @keyframes playerEnter {
+      0%, 27.4% { opacity: 1; transform: translateY(0) scale(1); }
+      29%, 100% { opacity: 0; transform: translateY(-6px) scale(.99); }
+    }
+
+    .clip.is-embedded .hook-panel {
+      top: 36.6%;
+      width: 80%;
+      min-height: 0;
+      padding: 0;
+    }
+
+    .clip.is-embedded .hook-panel h1 {
+      font-size: clamp(15px, 5vw, 22px);
+      line-height: .9;
+    }
+
+    .clip.is-embedded .chat-stack {
+      top: 26.8%;
+      width: 82%;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .clip.is-embedded .chat-line {
+      min-height: 0;
+      gap: 3px;
+      padding: 0;
+      font-size: 5px;
+    }
+
+    .clip.is-embedded .chat-line b {
+      font-size: 5.8px;
+    }
+
+    /* Demo banners now mirror the live game banner system from overlay.html. */
+    .demo-banner {
+      --banner-accent: #7afcff;
+      --banner-accent-rgb: 122, 252, 255;
+      --banner-accent-soft: rgba(122, 252, 255, .16);
+      --banner-charge: 64%;
+      display: grid;
+      grid-template-columns: clamp(42px, 5.4vw, 64px) minmax(0, 1fr) clamp(5px, .65vw, 8px);
+      align-items: center;
+      gap: clamp(8px, 1vw, 14px);
+      padding: 0 clamp(10px, 1.45vw, 20px);
+      overflow: hidden;
+      color: #f8fbff;
+      font-family: "Rajdhani", "Segoe UI", system-ui, sans-serif;
+      background:
+        linear-gradient(90deg, rgba(2, 7, 14, .98), rgba(5, 16, 31, .94) 34%, rgba(3, 9, 18, .96)),
+        radial-gradient(circle at 12% 50%, var(--banner-accent-soft), transparent 42%);
+      border: 1px solid rgba(var(--banner-accent-rgb), .48);
+      border-radius: 7px;
+      clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+      box-shadow:
+        0 18px 48px rgba(0, 0, 0, .58),
+        0 0 30px rgba(var(--banner-accent-rgb), .18),
+        inset 0 1px 0 rgba(255, 255, 255, .13),
+        inset 0 -1px 0 rgba(0, 0, 0, .45);
+      backdrop-filter: blur(12px) saturate(1.16);
+    }
+
+    .demo-banner::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: .54;
+      background:
+        linear-gradient(90deg, transparent 0 8%, rgba(var(--banner-accent-rgb), .42) 12%, transparent 18%),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, .06) 0 1px, transparent 1px 5px);
+      transform: translateX(-115%);
+      animation: demoBannerSweep 900ms 90ms cubic-bezier(.16, 1, .3, 1) both;
+    }
+
+    .demo-banner::after {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      display: block;
+      pointer-events: none;
+      border: 1px solid rgba(255, 255, 255, .08);
+      clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+      background: transparent;
+      box-shadow: none;
+    }
+
+    .demo-banner-special {
+      --banner-accent: #9dff8b;
+      --banner-accent-rgb: 157, 255, 139;
+      --banner-accent-soft: rgba(157, 255, 139, .15);
+      --banner-charge: 58%;
+    }
+
+    .demo-banner-kill {
+      --banner-accent: #ffd45d;
+      --banner-accent-rgb: 255, 212, 93;
+      --banner-accent-soft: rgba(255, 84, 54, .2);
+      --banner-charge: 72%;
+    }
+
+    .banner-signal {
+      position: relative;
+      z-index: 1;
+      width: clamp(42px, 5.4vw, 64px);
+      height: clamp(36px, 5.2vh, 54px);
+      display: grid;
+      place-items: center;
+      color: var(--banner-accent);
+      border-right: 1px solid rgba(255, 255, 255, .1);
+    }
+
+    .banner-code {
+      position: relative;
+      z-index: 1;
+      min-width: clamp(30px, 3.5vw, 42px);
+      padding: 5px 6px;
+      border: 1px solid rgba(var(--banner-accent-rgb), .34);
+      background: rgba(0, 0, 0, .24);
+      box-shadow: inset 0 0 18px rgba(var(--banner-accent-rgb), .14);
+      color: var(--banner-accent);
+      font-size: clamp(8px, .9vw, 12px);
+      font-weight: 950;
+      letter-spacing: 1.1px;
+      line-height: 1;
+      overflow: visible;
+      text-align: center;
+      text-overflow: clip;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .banner-pulse {
+      position: absolute;
+      width: clamp(30px, 4.2vw, 42px);
+      height: clamp(30px, 4.2vw, 42px);
+      border: 1px solid rgba(var(--banner-accent-rgb), .38);
+      transform: rotate(45deg);
+      opacity: .82;
+      animation: demoSignalPulse 920ms ease-in-out infinite;
+    }
+
+    .banner-copy {
+      position: relative;
+      z-index: 1;
+      min-width: 0;
+      display: grid;
+      gap: 2px;
+    }
+
+    .banner-kicker,
+    .duel-command .banner-kicker,
+    .clip.is-embedded .duel-command .banner-kicker {
+      display: block;
+      max-width: 100%;
+      overflow: hidden;
+      color: var(--banner-accent);
+      font-size: clamp(8px, .88vw, 12px);
+      font-weight: 950;
+      letter-spacing: 1.6px;
+      line-height: 1;
+      text-overflow: ellipsis;
+      text-shadow: 0 0 12px rgba(var(--banner-accent-rgb), .48);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .banner-title,
+    .duel-command .banner-title,
+    .clip.is-embedded .duel-command .banner-title {
+      display: block;
+      max-width: 100%;
+      overflow: hidden;
+      color: #fff;
+      font-size: clamp(15px, 1.85vw, 24px);
+      font-weight: 950;
+      letter-spacing: .7px;
+      line-height: 1.03;
+      text-overflow: ellipsis;
+      text-shadow: 0 0 18px rgba(255, 255, 255, .28);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .banner-meta,
+    .duel-command .banner-meta,
+    .clip.is-embedded .duel-command .banner-meta {
+      display: block;
+      max-width: 100%;
+      overflow: hidden;
+      color: #aeb8c9;
+      font-size: clamp(8px, .9vw, 12px);
+      font-weight: 850;
+      letter-spacing: .8px;
+      line-height: 1.05;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .banner-meter {
+      position: relative;
+      z-index: 1;
+      width: clamp(5px, .65vw, 8px);
+      height: clamp(34px, 5.2vh, 54px);
+      align-self: center;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, .12);
+      background: rgba(255, 255, 255, .05);
+    }
+
+    .banner-meter-fill {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: var(--banner-charge);
+      background: linear-gradient(180deg, #fff, var(--banner-accent));
+      box-shadow: 0 0 16px var(--banner-accent);
+      transform-origin: bottom center;
+    }
+
+    .command-card.demo-banner,
+    .event-banner.demo-banner {
+      grid-template-columns: clamp(44px, 5.6vw, 64px) minmax(0, 1fr) clamp(5px, .65vw, 8px);
+      min-height: clamp(58px, 8.8vh, 82px);
+    }
+
+    .command-card.demo-banner {
+      width: min(52%, 700px);
+      top: 33.4%;
+    }
+
+    .event-banner.demo-banner {
+      width: min(62%, 790px);
+      top: 74.8%;
+    }
+
+    .duel-command.demo-banner {
+      grid-template-columns: clamp(44px, 5.4vw, 62px) minmax(0, 1fr) clamp(5px, .65vw, 7px);
+      min-height: clamp(44px, 7vh, 58px);
+      padding: 0 clamp(8px, 1.1vw, 14px);
+    }
+
+    .duel-command.demo-banner .banner-signal,
+    .duel-command.demo-banner .banner-meter,
+    .duel-command.demo-banner .banner-copy,
+    .duel-command.demo-banner .banner-code,
+    .duel-command.demo-banner .banner-title,
+    .duel-command.demo-banner .banner-kicker,
+    .duel-command.demo-banner .banner-pulse,
+    .duel-command.demo-banner .banner-meter-fill {
+      justify-self: stretch;
+      align-self: center;
+      padding-inline: 0;
+    }
+
+    .duel-command.demo-banner .banner-signal {
+      justify-self: center;
+    }
+
+    @keyframes demoBannerSweep {
+      0% { transform: translateX(-115%); }
+      100% { transform: translateX(118%); }
+    }
+
+    @keyframes demoSignalPulse {
+      0%, 100% { transform: rotate(45deg) scale(.78); opacity: .42; }
+      50% { transform: rotate(45deg) scale(1.12); opacity: .96; }
+    }
+
+    .clip.is-embedded .demo-banner {
+      grid-template-columns: 34px minmax(0, 1fr) 5px;
+      gap: 7px;
+      padding: 0 8px;
+      clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+    }
+
+    .clip.is-embedded .command-card.demo-banner {
+      width: 66%;
+      min-height: 42px;
+    }
+
+    .clip.is-embedded .event-banner.demo-banner {
+      top: 72%;
+      width: 78%;
+      min-height: 30px;
+      grid-template-columns: 31px minmax(0, 1fr) 4px;
+      gap: 5px;
+      padding: 0 6px;
+    }
+
+    .clip.is-embedded .banner-signal {
+      width: 34px;
+      height: 30px;
+    }
+
+    .clip.is-embedded .banner-code {
+      min-width: 27px;
+      padding: 2px 3px;
+      font-size: 7px;
+      letter-spacing: .6px;
+    }
+
+    .clip.is-embedded .banner-pulse {
+      width: 23px;
+      height: 23px;
+    }
+
+    .clip.is-embedded .banner-kicker {
+      font-size: 8px;
+      letter-spacing: 1px;
+    }
+
+    .clip.is-embedded .banner-title {
+      font-size: 13px;
+      letter-spacing: .35px;
+    }
+
+    .clip.is-embedded .banner-meta {
+      display: none;
+    }
+
+    .clip.is-embedded .banner-meter {
+      width: 5px;
+      height: 28px;
+    }
+
+    .clip.is-embedded .event-banner.demo-banner .banner-signal {
+      width: 31px;
+      height: 25px;
+    }
+
+    .clip.is-embedded .event-banner.demo-banner .banner-code {
+      min-width: 22px;
+      padding: 2px;
+      font-size: 6px;
+      letter-spacing: .3px;
+    }
+
+    .clip.is-embedded .event-banner.demo-banner .banner-pulse {
+      width: 20px;
+      height: 20px;
+    }
+
+    .clip.is-embedded .event-banner.demo-banner .banner-kicker {
+      font-size: 6px;
+      letter-spacing: .7px;
+    }
+
+    .clip.is-embedded .event-banner.demo-banner .banner-title {
+      font-size: 11px;
+    }
+
+    .clip.is-embedded .event-banner.demo-banner .banner-meter {
+      width: 4px;
+      height: 23px;
+    }
+
+    .clip.is-embedded .duel-command.demo-banner span {
+      padding: 0;
+    }
+
+    .clip.is-embedded .duel-command.demo-banner {
+      grid-template-columns: 42px minmax(0, 1fr) 5px;
+    }
+
+    .clip.is-embedded .duel-command.demo-banner .banner-signal {
+      width: 40px;
+    }
+
+    .clip.is-embedded .duel-command.demo-banner .banner-code {
+      min-width: 30px;
+      padding: 2px;
+      font-size: 7px;
+      letter-spacing: .2px;
+    }
   </style>
 </head>
 <body>
@@ -4751,9 +5194,17 @@
         <div class="chat-line"><strong>@ashstorm</strong><b>100-like surge</b></div>
       </div>
 
-      <section class="command-card">
-        <b>Laser lock</b>
-        <strong>Mira targets Blaze</strong>
+      <section class="command-card demo-banner demo-banner-special">
+        <span class="banner-signal" aria-hidden="true">
+          <span class="banner-pulse"></span>
+          <span class="banner-code">CMD</span>
+        </span>
+        <span class="banner-copy">
+          <span class="banner-kicker">Special strike</span>
+          <span class="banner-title">Mira targets Blaze</span>
+          <span class="banner-meta">Laser on Blaze</span>
+        </span>
+        <span class="banner-meter" aria-hidden="true"><span class="banner-meter-fill"></span></span>
       </section>
 
       <div class="player-row">
@@ -4789,9 +5240,17 @@
       <div class="impact"></div>
       <div class="engagement-burst"><span>&#10084;</span><span>&#10084;</span><span>&#10084;</span><span>&#10084;</span></div>
 
-      <section class="event-banner">
-        <div class="event-code">KO</div>
-        <div class="event-copy"><span>Finishing blow</span><strong>Mira eliminates Blaze from the arena</strong></div>
+      <section class="event-banner demo-banner demo-banner-kill">
+        <span class="banner-signal" aria-hidden="true">
+          <span class="banner-pulse"></span>
+          <span class="banner-code">KO</span>
+        </span>
+        <span class="banner-copy">
+          <span class="banner-kicker">Finishing blow</span>
+          <span class="banner-title">Mira eliminates Blaze</span>
+          <span class="banner-meta">Blaze removed from arena</span>
+        </span>
+        <span class="banner-meter" aria-hidden="true"><span class="banner-meter-fill"></span></span>
       </section>
 
       <section class="horde">
@@ -4809,7 +5268,17 @@
         </div>
         <div class="duel-reel">
           <article class="duel-shot duel-shot-laser">
-            <div class="duel-command"><strong>@mira_live</strong><span>Laser on Blaze</span></div>
+            <div class="duel-command demo-banner demo-banner-special">
+              <span class="banner-signal" aria-hidden="true">
+                <span class="banner-pulse"></span>
+                <span class="banner-code">CMD</span>
+              </span>
+              <span class="banner-copy">
+                <span class="banner-kicker">@mira_live</span>
+                <span class="banner-title">Laser on Blaze</span>
+              </span>
+              <span class="banner-meter" aria-hidden="true"><span class="banner-meter-fill"></span></span>
+            </div>
             <div class="duel-arena">
               <div class="duel-player is-winner">
                 <div class="duel-name">Mira</div>
@@ -4827,7 +5296,17 @@
           </article>
 
           <article class="duel-shot duel-shot-sphere">
-            <div class="duel-command"><strong>@westside</strong><span>Sphere on NovaX</span></div>
+            <div class="duel-command demo-banner demo-banner-special">
+              <span class="banner-signal" aria-hidden="true">
+                <span class="banner-pulse"></span>
+                <span class="banner-code">CMD</span>
+              </span>
+              <span class="banner-copy">
+                <span class="banner-kicker">@westside</span>
+                <span class="banner-title">Sphere on NovaX</span>
+              </span>
+              <span class="banner-meter" aria-hidden="true"><span class="banner-meter-fill"></span></span>
+            </div>
             <div class="duel-arena">
               <div class="duel-player is-winner">
                 <div class="duel-name">West</div>
@@ -4845,7 +5324,17 @@
           </article>
 
           <article class="duel-shot duel-shot-comet">
-            <div class="duel-command"><strong>@ashstorm</strong><span>Comet into Horde</span></div>
+            <div class="duel-command demo-banner demo-banner-special">
+              <span class="banner-signal" aria-hidden="true">
+                <span class="banner-pulse"></span>
+                <span class="banner-code">CMD</span>
+              </span>
+              <span class="banner-copy">
+                <span class="banner-kicker">@ashstorm</span>
+                <span class="banner-title">Comet into Horde</span>
+              </span>
+              <span class="banner-meter" aria-hidden="true"><span class="banner-meter-fill"></span></span>
+            </div>
             <div class="duel-arena">
               <div class="duel-player is-winner">
                 <div class="duel-name">Ashlee</div>
