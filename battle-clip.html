@@ -341,7 +341,7 @@
     .hook-panel {
       position: absolute;
       left: 50%;
-      top: 9%;
+      top: 16%;
       z-index: 32;
       width: min(70%, 840px);
       display: grid;
@@ -726,7 +726,7 @@
     .engagement-burst {
       position: absolute;
       left: 66%;
-      top: 33%;
+      top: 56%;
       z-index: 33;
       width: clamp(90px, 14vw, 170px);
       height: clamp(48px, 9vh, 90px);
@@ -827,6 +827,7 @@
         radial-gradient(circle at left, rgba(232, 59, 95, .2), transparent 36%);
       box-shadow: 0 18px 48px rgba(0, 0, 0, .32), inset 0 0 0 1px rgba(255, 255, 255, .05);
       transform: translateX(-50%);
+      animation: hordeEnter var(--cycle) ease-out infinite;
     }
 
     .horde::before {
@@ -2147,6 +2148,12 @@
       28.2%, 100% { opacity: 0; transform: scale(.84) rotate(-2deg); }
     }
 
+    @keyframes hordeEnter {
+      0%, 10.6% { opacity: 0; transform: translateX(-50%) translateY(8px); }
+      12.2%, 27.4% { opacity: 1; transform: translateX(-50%) translateY(0); }
+      28.2%, 100% { opacity: 0; transform: translateX(-50%) translateY(0); }
+    }
+
     @keyframes gridDrift {
       to { background-position: 0 44px, 44px 0; }
     }
@@ -2201,7 +2208,8 @@
     }
 
     @keyframes playerEnter {
-      0%, 27.4% { opacity: 1; transform: translateY(0) scale(1); }
+      0%, 10.6% { opacity: 0; transform: translateY(10px); }
+      12.2%, 27.4% { opacity: 1; transform: translateY(0) scale(1); }
       29%, 100% { opacity: 0; transform: translateY(-6px) scale(.99); }
     }
 
@@ -2449,7 +2457,7 @@
       }
       .hud { top: 4.7%; left: 5%; right: 5%; }
       .hook-panel {
-        top: 10%;
+        top: 16%;
         width: 72%;
         grid-template-columns: 1fr;
         gap: 3px;
@@ -2681,7 +2689,7 @@
         font-size: 8px;
       }
       .hook-panel {
-        top: 11%;
+        top: 16%;
         width: 78%;
         padding: 7px 8px;
       }
@@ -2964,7 +2972,7 @@
         height: 66%;
       }
       .hook-panel {
-        top: 9.5%;
+        top: 16%;
         width: 68%;
         gap: 7px;
         padding: 7px 11px;
@@ -3019,7 +3027,7 @@
       }
       .engagement-burst {
         left: 74%;
-        top: 37%;
+        top: 62%;
         width: clamp(72px, 13vw, 126px);
         height: clamp(40px, 12vh, 60px);
       }
@@ -3259,7 +3267,7 @@
         height: 68%;
       }
       .clip.is-embedded .hook-panel {
-        top: 8.5%;
+        top: 13%;
         width: 74%;
         padding: 6px 8px;
       }
@@ -4466,7 +4474,7 @@
       </div>
 
       <div class="attack-beam"></div>
-      <div class="impact">KO</div>
+      <div class="impact"></div>
       <div class="engagement-burst"><span>&#10084;</span><span>&#10084;</span><span>&#10084;</span><span>&#10084;</span></div>
 
       <section class="event-banner">
