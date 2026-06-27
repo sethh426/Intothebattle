@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --cycle: 24s;
+      --cycle: 18s;
       --ink: #02040a;
       --panel: rgba(5, 12, 24, .86);
       --panel-strong: rgba(7, 18, 32, .96);
@@ -225,7 +225,7 @@
       animation: livePulse 1.1s ease-in-out infinite;
     }
 
-    /* 24s demo timeline: hook 0-3.2s, laser 3.2-6.8s, sphere 6.8-10.2s, comet 10.2-13.6s, effects 13.6-15.8s, break 15.8-20.2s, recap 20.2-22.2s, CTA 22.2-24s. */
+    /* 18s demo timeline: hook 0-2.2s, battle 2.2-5s, effects 5-10.4s, break 10.4-14s, recap 14-16.2s, CTA 16.2-18s. */
     .battle-scene {
       z-index: 4;
       opacity: 1;
@@ -339,6 +339,17 @@
       text-transform: uppercase;
     }
 
+    .chat-line.is-attack {
+      border-color: rgba(246, 201, 91, .5);
+      background:
+        linear-gradient(90deg, rgba(246, 201, 91, .16), rgba(85, 231, 255, .08)),
+        rgba(255, 255, 255, .06);
+      box-shadow:
+        0 16px 38px rgba(0, 0, 0, .28),
+        0 0 24px rgba(246, 201, 91, .16);
+      animation: chatLines var(--cycle) ease-out infinite, attackCommentPulse var(--cycle) ease-out infinite;
+    }
+
     .command-card {
       position: absolute;
       left: 50%;
@@ -360,6 +371,33 @@
       opacity: 0;
       transform: translate(-50%, 12px) scale(.98);
       animation: commandCue var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
+    }
+
+    .command-card::before,
+    .command-card::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .command-card::before {
+      inset: -1px;
+      border-radius: inherit;
+      border: 1px solid rgba(246, 201, 91, .22);
+      opacity: 0;
+      animation: commandLockPulse var(--cycle) ease-out infinite;
+    }
+
+    .command-card::after {
+      left: 50%;
+      bottom: -18px;
+      width: 2px;
+      height: 18px;
+      background: linear-gradient(180deg, rgba(85, 231, 255, .7), rgba(255, 45, 136, 0));
+      box-shadow: 0 0 12px rgba(85, 231, 255, .4);
+      transform: translateX(-50%);
+      opacity: 0;
+      animation: commandDropLine var(--cycle) ease-out infinite;
     }
 
     .command-card b {
@@ -421,6 +459,29 @@
       animation: playerEnter var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite, targetHit var(--cycle) ease-in-out infinite;
     }
 
+    .player-card.is-target::after {
+      content: "LOCKED";
+      position: absolute;
+      right: clamp(5px, .7vw, 9px);
+      top: clamp(5px, .7vw, 9px);
+      z-index: 2;
+      min-height: 16px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 6px;
+      border: 1px solid rgba(255, 45, 136, .42);
+      border-radius: 999px;
+      color: #ffdce8;
+      background: rgba(40, 5, 18, .7);
+      box-shadow: 0 0 14px rgba(255, 45, 136, .14);
+      font-size: clamp(5px, .68vw, 9px);
+      line-height: 1;
+      font-weight: 950;
+      text-transform: uppercase;
+      opacity: 0;
+      animation: targetLockLabel var(--cycle) ease-out infinite;
+    }
+
     .player-name {
       min-width: 0;
       overflow: hidden;
@@ -475,22 +536,54 @@
 
     .attack-beam {
       position: absolute;
-      left: 25%;
-      top: 61%;
+      left: 50%;
+      top: 45.8%;
       z-index: 29;
       width: 0;
-      height: clamp(5px, 1.1vh, 10px);
+      height: clamp(5px, 1.05vh, 9px);
       border-radius: 999px;
-      background: linear-gradient(90deg, transparent, var(--cyan), #fff, var(--magenta));
-      box-shadow: 0 0 26px rgba(85, 231, 255, .7), 0 0 46px rgba(255, 45, 136, .38);
+      background: linear-gradient(90deg, transparent, rgba(85, 231, 255, .72), #fff, var(--magenta));
+      box-shadow:
+        0 0 26px rgba(85, 231, 255, .7),
+        0 0 46px rgba(255, 45, 136, .38);
       opacity: 0;
+      transform: rotate(29deg);
+      transform-origin: 0 50%;
       animation: attackBeam var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
+    }
+
+    .attack-beam::before,
+    .attack-beam::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+      border-radius: 999px;
+    }
+
+    .attack-beam::before {
+      left: 0;
+      right: -12px;
+      top: 50%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .92));
+      box-shadow: 0 0 18px rgba(255, 255, 255, .5);
+      transform: translateY(-50%);
+    }
+
+    .attack-beam::after {
+      right: -9px;
+      top: 50%;
+      width: clamp(13px, 2.2vw, 24px);
+      aspect-ratio: 1;
+      background: radial-gradient(circle, #fff 0 22%, var(--gold2) 23% 38%, var(--magenta) 39% 66%, transparent 68%);
+      filter: drop-shadow(0 0 14px rgba(255, 45, 136, .72));
+      transform: translate(50%, -50%);
     }
 
     .impact {
       position: absolute;
       left: 65.5%;
-      top: 61%;
+      top: 59.8%;
       z-index: 31;
       width: clamp(45px, 8vw, 92px);
       aspect-ratio: 1;
@@ -505,6 +598,23 @@
       transform: translate(-50%, -50%) scale(.62);
       opacity: 0;
       animation: impactPop var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
+    }
+
+    .impact::before,
+    .impact::after {
+      content: "";
+      position: absolute;
+      inset: -24%;
+      border: 1px solid rgba(255, 240, 185, .6);
+      border-radius: 50%;
+      opacity: 0;
+      animation: impactRing var(--cycle) ease-out infinite;
+    }
+
+    .impact::after {
+      inset: -46%;
+      border-color: rgba(255, 45, 136, .38);
+      animation-delay: .06s;
     }
 
     .engagement-burst {
@@ -536,9 +646,9 @@
     .event-banner {
       position: absolute;
       left: 50%;
-      top: 71.5%;
+      top: 73.6%;
       z-index: 35;
-      width: min(58%, 720px);
+      width: min(62%, 790px);
       min-height: clamp(42px, 10%, 76px);
       display: grid;
       grid-template-columns: minmax(58px, .22fr) minmax(0, 1fr);
@@ -547,9 +657,12 @@
       border: 1px solid rgba(255, 45, 136, .34);
       border-radius: 12px;
       background:
-        linear-gradient(90deg, rgba(70, 10, 31, .96), rgba(4, 15, 27, .92)),
-        radial-gradient(circle at left, rgba(255, 45, 136, .2), transparent 40%);
-      box-shadow: 0 24px 60px rgba(0, 0, 0, .34), 0 0 26px rgba(255, 45, 136, .12);
+        linear-gradient(90deg, rgba(70, 10, 31, .97), rgba(4, 15, 27, .94)),
+        radial-gradient(circle at left, rgba(255, 45, 136, .24), transparent 42%);
+      box-shadow:
+        0 24px 60px rgba(0, 0, 0, .34),
+        0 0 34px rgba(255, 45, 136, .16),
+        inset 0 1px 0 rgba(255, 255, 255, .08);
       opacity: 0;
       transform: translate(-50%, 16px) scale(.98);
       animation: eventConfirm var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
@@ -1907,54 +2020,89 @@
     }
 
     @keyframes battleScene {
-      0%, 28.6% { visibility: visible; opacity: 1; transform: scale(1); }
-      29.2%, 100% { visibility: hidden; opacity: 0; transform: scale(.995); }
+      0%, 27.4% { visibility: visible; opacity: 1; transform: scale(1); }
+      28.2%, 100% { visibility: hidden; opacity: 0; transform: scale(.995); }
     }
 
     @keyframes hookPanel {
-      0%, 13.2% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-      15.2%, 100% { opacity: 0; transform: translate(-50%, -8px) scale(.995); }
+      0%, 10.8% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      12.8%, 100% { opacity: 0; transform: translate(-50%, -8px) scale(.995); }
     }
 
     @keyframes chatLines {
-      0%, 25.4% { opacity: 1; transform: translateY(0); }
-      28.4%, 100% { opacity: 0; transform: translateY(-8px); }
+      0%, 13.8% { opacity: 1; transform: translateY(0); }
+      16%, 100% { opacity: 0; transform: translateY(-8px); }
+    }
+
+    @keyframes attackCommentPulse {
+      0%, 10.8% { box-shadow: 0 14px 34px rgba(0, 0, 0, .22); }
+      12.4%, 16% {
+        box-shadow:
+          0 16px 38px rgba(0, 0, 0, .3),
+          0 0 30px rgba(246, 201, 91, .28),
+          0 0 22px rgba(85, 231, 255, .12);
+      }
+      18%, 100% { box-shadow: 0 14px 34px rgba(0, 0, 0, .18); }
     }
 
     @keyframes commandCue {
-      0%, 13.2% { opacity: 0; transform: translate(-50%, 12px) scale(.98); }
-      15.2%, 27.4% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-      29.2%, 100% { opacity: 0; transform: translate(-50%, 8px) scale(.99); }
+      0%, 12% { opacity: 0; transform: translate(-50%, 12px) scale(.98); }
+      14%, 18.8% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      20.6%, 100% { opacity: 0; transform: translate(-50%, -7px) scale(.99); }
+    }
+
+    @keyframes commandLockPulse {
+      0%, 13.5% { opacity: 0; transform: scale(.98); }
+      15.2%, 18.8% { opacity: 1; transform: scale(1.035); }
+      20.6%, 100% { opacity: 0; transform: scale(1.08); }
+    }
+
+    @keyframes commandDropLine {
+      0%, 14.2% { opacity: 0; transform: translate(-50%, -6px) scaleY(.3); }
+      16%, 19.2% { opacity: .9; transform: translate(-50%, 0) scaleY(1); }
+      20.6%, 100% { opacity: 0; transform: translate(-50%, 8px) scaleY(.4); }
     }
 
     @keyframes playerEnter {
-      0%, 28.6% { opacity: 1; transform: translateY(0) scale(1); }
-      30%, 100% { opacity: 0; transform: translateY(-6px) scale(.99); }
+      0%, 27.4% { opacity: 1; transform: translateY(0) scale(1); }
+      29%, 100% { opacity: 0; transform: translateY(-6px) scale(.99); }
     }
 
     @keyframes attackBeam {
-      0%, 15.6% { opacity: 0; width: 0; }
-      18% { opacity: 1; width: 40.5%; }
-      25.6% { opacity: 1; width: 40.5%; }
-      28.4%, 100% { opacity: 0; width: 0; }
+      0%, 14.8% { opacity: 0; width: 0; }
+      17.8% { opacity: 1; width: 20.5%; }
+      21.4% { opacity: 1; width: 20.5%; }
+      23.2%, 100% { opacity: 0; width: 0; }
     }
 
     @keyframes targetHit {
-      0%, 18.8% { filter: none; }
-      22%, 28.4% { filter: drop-shadow(0 0 26px rgba(232, 59, 95, .92)); }
-      30%, 100% { filter: grayscale(.24) brightness(.82); }
+      0%, 18% { filter: none; }
+      20%, 27.4% { filter: drop-shadow(0 0 30px rgba(232, 59, 95, .92)); }
+      29%, 100% { filter: grayscale(.24) brightness(.82); }
+    }
+
+    @keyframes targetLockLabel {
+      0%, 14% { opacity: 0; transform: translateY(-3px); }
+      15.8%, 21.8% { opacity: 1; transform: translateY(0); }
+      24%, 100% { opacity: 0; transform: translateY(2px); }
     }
 
     @keyframes impactPop {
-      0%, 19% { opacity: 0; transform: translate(-50%, -50%) scale(.62) rotate(-5deg); }
-      22%, 27.5% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
-      29.2%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(.88) rotate(2deg); }
+      0%, 18.6% { opacity: 0; transform: translate(-50%, -50%) scale(.62) rotate(-5deg); }
+      20.2%, 24.8% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+      28%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(.88) rotate(2deg); }
+    }
+
+    @keyframes impactRing {
+      0%, 19.6% { opacity: 0; transform: scale(.7); }
+      21% { opacity: .8; transform: scale(.94); }
+      25.8%, 100% { opacity: 0; transform: scale(1.36); }
     }
 
     @keyframes burstWindow {
-      0%, 18% { opacity: 0; }
-      22%, 28.6% { opacity: 1; }
-      30%, 100% { opacity: 0; }
+      0%, 19% { opacity: 0; }
+      21.2%, 27.4% { opacity: 1; }
+      29%, 100% { opacity: 0; }
     }
 
     @keyframes heartBurst {
@@ -1964,39 +2112,39 @@
     }
 
     @keyframes eventConfirm {
-      0%, 20% { opacity: 0; transform: translate(-50%, 16px) scale(.98); }
-      23%, 28.6% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-      30%, 100% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
+      0%, 21.2% { opacity: 0; transform: translate(-50%, 16px) scale(.98); }
+      23.1%, 27.4% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      29%, 100% { opacity: 0; transform: translate(-50%, 10px) scale(.99); }
     }
 
     @keyframes hordePressure {
-      0%, 18% { width: 62%; background-position: 0% 0; }
-      24%, 28.6% { width: 42%; background-position: 90% 0; }
-      32%, 100% { width: 62%; background-position: 180% 0; }
+      0%, 18.2% { width: 62%; background-position: 0% 0; }
+      23.2%, 27.4% { width: 42%; background-position: 90% 0; }
+      30%, 100% { width: 62%; background-position: 180% 0; }
     }
 
     @keyframes effectsScene {
-      0%, 27.7% { visibility: hidden; opacity: 0; transform: translateY(16px) scale(1.02); }
-      29%, 65.4% { visibility: visible; opacity: 1; transform: translateY(0) scale(1); }
-      66.3%, 100% { visibility: hidden; opacity: 0; transform: translateY(-10px) scale(.995); }
+      0%, 27.2% { visibility: hidden; opacity: 0; transform: translateY(16px) scale(1.02); }
+      28.2%, 58.2% { visibility: visible; opacity: 1; transform: translateY(0) scale(1); }
+      59%, 100% { visibility: hidden; opacity: 0; transform: translateY(-10px) scale(.995); }
     }
 
     @keyframes duelShotLaser {
-      0%, 28.8% { opacity: 0; transform: translateY(14px) scale(.985); }
-      30%, 34.2% { opacity: 1; transform: translateY(0) scale(1); }
-      35.4%, 100% { opacity: 0; transform: translateY(-10px) scale(.99); }
+      0%, 28.4% { opacity: 0; transform: translateY(14px) scale(.985); }
+      29.4%, 35.2% { opacity: 1; transform: translateY(0) scale(1); }
+      36.2%, 100% { opacity: 0; transform: translateY(-10px) scale(.99); }
     }
 
     @keyframes duelShotSphere {
-      0%, 34% { opacity: 0; transform: translateY(14px) scale(.985); }
-      35.2%, 45.5% { opacity: 1; transform: translateY(0) scale(1); }
-      46.8%, 100% { opacity: 0; transform: translateY(-10px) scale(.99); }
+      0%, 35.2% { opacity: 0; transform: translateY(14px) scale(.985); }
+      36.2%, 43.8% { opacity: 1; transform: translateY(0) scale(1); }
+      44.8%, 100% { opacity: 0; transform: translateY(-10px) scale(.99); }
     }
 
     @keyframes duelShotComet {
-      0%, 45.8% { opacity: 0; transform: translateY(14px) scale(.985); }
-      47.2%, 57.5% { opacity: 1; transform: translateY(0) scale(1); }
-      58.8%, 100% { opacity: 0; transform: translateY(-10px) scale(.99); }
+      0%, 43.8% { opacity: 0; transform: translateY(14px) scale(.985); }
+      44.8%, 52.2% { opacity: 1; transform: translateY(0) scale(1); }
+      53.2%, 100% { opacity: 0; transform: translateY(-10px) scale(.99); }
     }
 
     @keyframes duelLaserBeam {
@@ -2041,8 +2189,8 @@
     }
 
     @keyframes effectStripScene {
-      0%, 55.5%, 67%, 100% { opacity: 0; }
-      57%, 65.5% { opacity: 1; }
+      0%, 52.2%, 59%, 100% { opacity: 0; }
+      53.4%, 58.2% { opacity: 1; }
     }
 
     @keyframes duelTargetHit {
@@ -2110,9 +2258,9 @@
     }
 
     @keyframes sponsorScene {
-      0%, 64.7% { visibility: hidden; opacity: 0; transform: scale(1.025); }
-      66%, 84.2% { visibility: visible; opacity: 1; transform: scale(1); }
-      86%, 100% { visibility: hidden; opacity: 0; transform: scale(.995); }
+      0%, 57.6% { visibility: hidden; opacity: 0; transform: scale(1.025); }
+      59%, 77.8% { visibility: visible; opacity: 1; transform: scale(1); }
+      79.2%, 100% { visibility: hidden; opacity: 0; transform: scale(.995); }
     }
 
     @keyframes videoSheen {
@@ -2122,15 +2270,15 @@
     }
 
     @keyframes sponsorProgress {
-      0%, 65.4% { width: 0; }
-      84.2% { width: 100%; }
+      0%, 59.2% { width: 0; }
+      77.8% { width: 100%; }
       100% { width: 100%; }
     }
 
     @keyframes breakStatsEndcap {
-      0%, 79.6% { opacity: 0; transform: translateY(16px) scale(.985); }
-      81%, 84.2% { opacity: 1; transform: translateY(0) scale(1); }
-      86%, 100% { opacity: 0; transform: translateY(-10px) scale(.992); }
+      0%, 72.8% { opacity: 0; transform: translateY(16px) scale(.985); }
+      74.4%, 77.8% { opacity: 1; transform: translateY(0) scale(1); }
+      79.2%, 100% { opacity: 0; transform: translateY(-10px) scale(.992); }
     }
 
     @keyframes sparkDrop {
@@ -2140,14 +2288,14 @@
     }
 
     @keyframes recapScene {
-      0%, 83.4% { visibility: hidden; opacity: 0; transform: translateY(14px) scale(1.02); }
-      84.4%, 91.9% { visibility: visible; opacity: 1; transform: translateY(0) scale(1); }
-      92.7%, 100% { visibility: hidden; opacity: 0; transform: translateY(-10px) scale(.995); }
+      0%, 77.4% { visibility: hidden; opacity: 0; transform: translateY(14px) scale(1.02); }
+      78.4%, 90% { visibility: visible; opacity: 1; transform: translateY(0) scale(1); }
+      91.2%, 100% { visibility: hidden; opacity: 0; transform: translateY(-10px) scale(.995); }
     }
 
     @keyframes ctaScene {
-      0%, 91.9% { visibility: hidden; opacity: 0; transform: scale(1.02); }
-      92.6%, 99.95% { visibility: visible; opacity: 1; transform: scale(1); }
+      0%, 89.8% { visibility: hidden; opacity: 0; transform: scale(1.02); }
+      91%, 99.95% { visibility: visible; opacity: 1; transform: scale(1); }
       100% { visibility: hidden; opacity: 0; transform: scale(1.01); }
     }
 
@@ -2434,10 +2582,10 @@
         top: 52.5%;
       }
       @keyframes attackBeam {
-        0%, 17% { opacity: 0; width: 0; }
-        20% { opacity: 1; width: 42.5%; }
-        24% { opacity: 1; width: 42.5%; }
-        28%, 100% { opacity: 0; width: 0; }
+        0%, 14.8% { opacity: 0; width: 0; }
+        17.8% { opacity: 1; width: 21%; }
+        21.4% { opacity: 1; width: 21%; }
+        23.2%, 100% { opacity: 0; width: 0; }
       }
       .impact {
         left: 67.5%;
@@ -3142,7 +3290,7 @@
     }
 
     .hook-panel {
-      top: 14.8%;
+      top: 28.8%;
       width: min(66%, 790px);
       grid-template-columns: minmax(0, 1fr);
       justify-items: center;
@@ -3174,13 +3322,13 @@
     }
 
     .chat-stack {
-      top: 30%;
-      width: min(76%, 940px);
+      top: 35.3%;
+      width: min(78%, 960px);
     }
 
     .command-card {
-      top: 38.2%;
-      width: min(56%, 700px);
+      top: 42.4%;
+      width: min(58%, 720px);
       min-height: clamp(36px, 7.2%, 52px);
       border-radius: 999px;
     }
@@ -3191,13 +3339,23 @@
     }
 
     .player-row {
-      top: 49.5%;
+      top: 52%;
       width: min(80%, 1040px);
       gap: clamp(8px, 1vw, 14px);
     }
 
     .player-card {
       min-height: clamp(104px, 22vh, 158px);
+    }
+
+    .attack-beam {
+      left: 50%;
+      top: 49.2%;
+    }
+
+    .impact {
+      left: 65.8%;
+      top: 61.2%;
     }
 
     .player-card,
@@ -3212,9 +3370,9 @@
     }
 
     .event-banner {
-      top: 72.8%;
-      width: min(52%, 680px);
-      min-height: clamp(42px, 8%, 58px);
+      top: 74.4%;
+      width: min(60%, 760px);
+      min-height: clamp(44px, 8.4%, 62px);
       border-radius: 999px;
     }
 
@@ -3223,11 +3381,11 @@
     }
 
     .event-copy strong {
-      font-size: clamp(12px, 1.45vw, 21px);
+      font-size: clamp(12px, 1.5vw, 22px);
     }
 
     .horde {
-      top: 84.6%;
+      top: 85.8%;
       width: min(64%, 780px);
       height: clamp(42px, 8.8%, 66px);
     }
@@ -3556,6 +3714,23 @@
         bottom: clamp(20px, 4vh, 34px);
       }
 
+      .command-card {
+        top: 41.5%;
+        width: 76%;
+        min-height: 34px;
+        display: flex;
+        padding: 0 12px;
+        border-radius: 999px;
+      }
+
+      .command-card b {
+        display: none;
+      }
+
+      .command-card strong {
+        font-size: clamp(13px, 4vw, 18px);
+      }
+
       .duel-command {
         min-height: 24px;
         font-size: clamp(6px, 1.9vw, 8px);
@@ -3615,11 +3790,11 @@
       }
 
       .event-banner {
-        top: 76%;
+        top: 74.8%;
         width: 74%;
-        min-height: 42px;
+        min-height: 38px;
         display: grid;
-        grid-template-columns: 64px minmax(0, 1fr);
+        grid-template-columns: 58px minmax(0, 1fr);
         border-radius: 12px;
       }
 
@@ -3632,13 +3807,29 @@
       }
 
       .event-copy span {
-        display: none;
+        display: block;
+        font-size: 5.5px;
+        line-height: 1;
       }
 
       .event-copy strong {
-        font-size: 9px;
+        font-size: 9.5px;
         line-height: 1.05;
         white-space: normal;
+      }
+
+      .clip.is-embedded .event-banner {
+        display: grid;
+      }
+
+      .attack-beam {
+        left: 50%;
+        top: 49%;
+      }
+
+      .impact {
+        left: 66%;
+        top: 59%;
       }
 
       .clip[data-demo-asset="effect-strip-slide"] .effects-copy {
@@ -3801,20 +3992,64 @@
         height: 70%;
       }
 
-      .player-row {
-        top: 47.5%;
+      .player-row,
+      .clip.is-embedded .player-row {
+        top: 53%;
         width: 85%;
+      }
+
+      .player-card,
+      .clip.is-embedded .player-card {
+        min-height: 45px;
+        padding: 3px;
+        gap: 2px;
+      }
+
+      .player-name {
+        font-size: 4.8px;
+      }
+
+      .player-icon,
+      .clip.is-embedded .player-icon {
+        width: 21px;
+        font-size: 12px;
+      }
+
+      .hp {
+        height: 4px;
       }
 
       .attack-beam,
       .impact {
-        top: 58%;
+        top: 62%;
       }
 
-      .horde {
-        top: 78%;
+      .event-banner,
+      .clip.is-embedded .event-banner {
+        top: 71%;
+        width: 76%;
+        min-height: 28px;
+        display: grid;
+        grid-template-columns: 46px minmax(0, 1fr);
+      }
+
+      .event-code {
+        font-size: 12px;
+      }
+
+      .event-copy {
+        padding: 0 7px;
+      }
+
+      .event-copy strong {
+        font-size: 8px;
+      }
+
+      .horde,
+      .clip.is-embedded .horde {
+        top: 85.8%;
         width: 72%;
-        height: 29px;
+        height: 27px;
       }
 
       .horde::before {
@@ -3943,7 +4178,7 @@
   </style>
 </head>
 <body>
-  <div class="clip" aria-label="IntoTheBattle 24-second battle demo">
+  <div class="clip" aria-label="IntoTheBattle 18-second battle demo">
     <div class="grid" aria-hidden="true"></div>
     <div class="corners" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
 
@@ -3960,19 +4195,19 @@
       </header>
 
       <div class="hook-panel">
-        <h1><span>Comment.</span> <span>Attack.</span> <span>Watch it land.</span></h1>
-        <p>Viewer types <strong>!laser</strong>. The attack lands live on screen.</p>
+        <h1><span>TikTok chat</span> <span>becomes</span> <span>the battle.</span></h1>
+        <p>Viewers type commands. Your LIVE turns into a playable arena.</p>
       </div>
 
       <div class="chat-stack">
-        <div class="chat-line"><strong>@mira_live</strong><b>!laser</b></div>
+        <div class="chat-line is-attack"><strong>@mira_live</strong><b>!laser Blaze</b></div>
         <div class="chat-line"><strong>@nova_fan</strong><b>!emoji fire</b></div>
         <div class="chat-line"><strong>@ashstorm</strong><b>100 likes</b></div>
       </div>
 
       <section class="command-card">
-        <b>Command locked</b>
-        <strong>Laser targets Blaze</strong>
+        <b>Comment attack</b>
+        <strong>!laser locks onto Blaze</strong>
       </section>
 
       <div class="player-row">
@@ -4009,7 +4244,7 @@
 
       <section class="event-banner">
         <div class="event-code">KO</div>
-        <div class="event-copy"><span>Attack confirmed</span><strong>NovaX sent Blaze to zero</strong></div>
+        <div class="event-copy"><span>Watch it land</span><strong>@mira_live knocks Blaze out</strong></div>
       </section>
 
       <section class="horde">
@@ -4021,9 +4256,9 @@
     <section class="scene effects-scene" aria-hidden="true">
       <div class="effects-card">
         <div class="effects-copy">
-          <span class="scene-kicker">Battle effects in context</span>
-          <h2 class="scene-title">Every effect <em>lands clean</em></h2>
-          <p class="scene-copy">Sphere, comet, bullet, beam, and support effects stay readable inside the battle frame.</p>
+          <span class="scene-kicker">Commands become action</span>
+          <h2 class="scene-title">Every chat move <em>shows up</em></h2>
+          <p class="scene-copy">Attacks, boosts, gifts, and horde pressure stay readable inside the arena.</p>
         </div>
         <div class="duel-reel">
           <article class="duel-shot duel-shot-laser">
@@ -4095,17 +4330,17 @@
     <section class="scene sponsor-scene" aria-hidden="true">
       <div class="broadcast-frame">
         <div class="video-window">
-          <div class="video-badge">Battle break</div>
+          <div class="video-badge">Arena break</div>
           <div class="video-sparks"><i></i><i></i><i></i></div>
           <div class="video-headline">
             <strong>Arena Spotlight</strong>
-            <span>Full-screen video between rounds</span>
+            <span>Broadcast-style video between rounds</span>
           </div>
           <div class="video-progress"><span></span></div>
         </div>
         <div class="break-stats">
-          <span class="scene-kicker">End-cap stats</span>
-          <h2 class="scene-title">The action comes back with <em>proof</em></h2>
+          <span class="scene-kicker">Round proof</span>
+          <h2 class="scene-title">The break ends with <em>momentum</em></h2>
           <div class="stat-tile"><strong>247</strong><span>fighters joined</span></div>
           <div class="stat-tile"><strong>18</strong><span>KOs triggered</span></div>
           <div class="stat-tile"><strong>92%</strong><span>chat engaged</span></div>
@@ -4116,9 +4351,9 @@
     <section class="scene recap-scene" aria-hidden="true">
       <div class="recap-card">
         <div class="recap-copy">
-          <span class="scene-kicker">Stats recap</span>
-          <h2 class="scene-title">Shareable proof, <em>clearly labeled</em></h2>
-          <p class="scene-copy">Creators get a clean recap that explains what happened, why it mattered, and what to post after the LIVE.</p>
+          <span class="scene-kicker">After the round</span>
+          <h2 class="scene-title">Creators get proof <em>worth posting</em></h2>
+          <p class="scene-copy">The battle ends with a clean recap of who joined, who attacked, and how active chat became.</p>
         </div>
         <div class="stats-window">
           <header><span>Battle recap card</span><b>Ready to post</b></header>
@@ -4139,7 +4374,7 @@
     <section class="scene cta-scene" aria-hidden="true">
       <div class="cta-box">
         <span class="scene-kicker">Everything unlocked for 7 days</span>
-        <h2 class="scene-title">Launch your first arena <em>before tonight&apos;s LIVE</em></h2>
+        <h2 class="scene-title">Turn your next LIVE <em>into a battle</em></h2>
         <div class="cta-button">Start free setup</div>
       </div>
     </section>
@@ -4149,14 +4384,14 @@
       const demoClip = document.querySelector(".clip");
       if (demoClip && window.self !== window.top) demoClip.classList.add("is-embedded");
       const assetTimes = {
-        "hook-enter-slide": 1.1,
-        "laser-ko-slide": 5.7,
-        "sphere-slide": 8.9,
-        "comet-slide": 12.3,
-        "effect-strip-slide": 14.6,
-        "broadcast-break-clip": 17.4,
-        "stats-recap-slide": 21.2,
-        "cta-slide": 23.1
+        "hook-enter-slide": 0.8,
+        "laser-ko-slide": 4.3,
+        "sphere-slide": 7.1,
+        "comet-slide": 8.5,
+        "effect-strip-slide": 9.9,
+        "broadcast-break-clip": 11.9,
+        "stats-recap-slide": 14.9,
+        "cta-slide": 16.8
       };
       const params = new URLSearchParams(window.location.search);
       const asset = params.get("asset") || params.get("slide") || "";
