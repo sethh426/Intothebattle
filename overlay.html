@@ -294,8 +294,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   --banner-accent-soft:rgba(122,252,255,0.18);
   --banner-duration:3200ms;
   position:fixed; left:50%; top:58%; transform:translate(-50%,0); z-index:10000; pointer-events:none;
-  min-height:72px; max-height:92px; padding:0 20px; box-sizing:border-box; overflow:hidden;
-  display:grid; grid-template-columns:64px minmax(0,1fr) 8px; align-items:center; gap:14px;
+  min-height:66px; max-height:82px; padding:0 17px; box-sizing:border-box; overflow:hidden;
+  display:grid; grid-template-columns:58px minmax(0,1fr) 7px; align-items:center; gap:12px;
   font-family:'Rajdhani','Segoe UI',sans-serif; color:#f8fbff;
   background:
     linear-gradient(90deg, rgba(2,7,14,0.98), rgba(5,16,31,0.94) 34%, rgba(3,9,18,0.96)),
@@ -330,38 +330,38 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.transition-signal { animation:cyberBannerSignalIn 280ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 820ms 160ms ease-out; }
 .banner.transition-surge { animation:cyberBannerSurgeIn 390ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 900ms 120ms ease-out; }
 .banner-signal {
-  position:relative; width:64px; height:54px; display:grid; place-items:center; flex:0 0 auto;
+  position:relative; width:58px; height:48px; display:grid; place-items:center; flex:0 0 auto;
   color:var(--banner-accent); border-right:1px solid rgba(255,255,255,0.1);
 }
 .banner-code {
-  position:relative; z-index:1; min-width:42px; padding:5px 6px; text-align:center;
+  position:relative; z-index:1; min-width:38px; padding:4px 5px; text-align:center;
   border:1px solid rgba(var(--banner-accent-rgb),0.34);
   background:rgba(0,0,0,0.24);
   box-shadow:inset 0 0 18px rgba(var(--banner-accent-rgb),0.14);
-  font-size:12px; font-weight:900; letter-spacing:1.2px; text-transform:uppercase;
+  font-size:11px; font-weight:900; letter-spacing:1.1px; text-transform:uppercase;
 }
 .banner-pulse {
-  position:absolute; width:42px; height:42px; border:1px solid rgba(var(--banner-accent-rgb),0.38);
+  position:absolute; width:37px; height:37px; border:1px solid rgba(var(--banner-accent-rgb),0.38);
   transform:rotate(45deg); opacity:.82; animation:cyberSignalPulse 920ms ease-in-out infinite;
 }
 .banner-copy { min-width:0; position:relative; z-index:1; display:grid; gap:1px; }
 .banner-kicker {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:var(--banner-accent); font-size:12px; line-height:1; font-weight:900; letter-spacing:1.8px; text-transform:uppercase;
+  color:var(--banner-accent); font-size:11px; line-height:1; font-weight:900; letter-spacing:1.6px; text-transform:uppercase;
   text-shadow:0 0 12px rgba(var(--banner-accent-rgb),0.48);
 }
 .banner-title {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#fff; font-size:24px; line-height:1.04; font-weight:900; letter-spacing:.8px; text-transform:uppercase;
+  color:#fff; font-size:22px; line-height:1.04; font-weight:900; letter-spacing:.7px; text-transform:uppercase;
   text-shadow:0 0 18px rgba(255,255,255,0.28);
 }
 .banner-title strong { color:var(--banner-accent); font-weight:900; }
 .banner-meta {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#aeb8c9; font-size:12px; line-height:1.05; font-weight:800; letter-spacing:.8px; text-transform:uppercase;
+  color:#aeb8c9; font-size:11px; line-height:1.05; font-weight:800; letter-spacing:.7px; text-transform:uppercase;
 }
 .banner-meter {
-  position:relative; z-index:1; width:8px; height:54px; border:1px solid rgba(255,255,255,0.12);
+  position:relative; z-index:1; width:7px; height:48px; border:1px solid rgba(255,255,255,0.12);
   background:rgba(255,255,255,0.05); overflow:hidden; align-self:center;
 }
 .banner-meter-fill {
@@ -385,31 +385,31 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     0 0 86px rgba(255,84,54,0.14),
     inset 0 1px 0 rgba(255,255,255,0.18);
 }
-.banner.legendary .banner-title { font-size:25px; text-shadow:0 0 26px rgba(255,227,111,0.42); }
+.banner.legendary .banner-title { font-size:23px; text-shadow:0 0 26px rgba(255,227,111,0.42); }
 .banner.is-compact {
-  min-height:58px; max-height:68px; padding:0 13px; gap:10px;
-  grid-template-columns:48px minmax(0,1fr) 6px;
+  min-height:52px; max-height:62px; padding:0 11px; gap:9px;
+  grid-template-columns:42px minmax(0,1fr) 6px;
 }
-.banner.is-compact .banner-signal { width:48px; height:40px; }
-.banner.is-compact .banner-code { min-width:32px; padding:3px 4px; font-size:10px; letter-spacing:.9px; }
-.banner.is-compact .banner-pulse { width:31px; height:31px; }
-.banner.is-compact .banner-kicker { font-size:10px; letter-spacing:1.2px; }
+.banner.is-compact .banner-signal { width:42px; height:36px; }
+.banner.is-compact .banner-code { min-width:29px; padding:3px 4px; font-size:9px; letter-spacing:.8px; }
+.banner.is-compact .banner-pulse { width:27px; height:27px; }
+.banner.is-compact .banner-kicker { font-size:9px; letter-spacing:1.1px; }
 .banner.is-compact .banner-title,
-.banner.legendary.is-compact .banner-title { font-size:17px; letter-spacing:.5px; }
-.banner.is-compact .banner-meta { font-size:10px; letter-spacing:.6px; }
-.banner.is-compact .banner-meter { width:6px; height:38px; }
+.banner.legendary.is-compact .banner-title { font-size:15px; letter-spacing:.45px; }
+.banner.is-compact .banner-meta { font-size:9px; letter-spacing:.5px; }
+.banner.is-compact .banner-meter { width:5px; height:32px; }
 .banner.is-micro {
-  min-height:42px; max-height:48px; padding:0 8px; gap:7px;
-  grid-template-columns:34px minmax(0,1fr) 5px;
+  min-height:34px; max-height:40px; padding:0 7px; gap:6px;
+  grid-template-columns:30px minmax(0,1fr) 4px;
 }
-.banner.is-micro .banner-signal { width:34px; height:30px; }
-.banner.is-micro .banner-code { min-width:25px; padding:2px 3px; font-size:8px; letter-spacing:.6px; }
-.banner.is-micro .banner-pulse { width:23px; height:23px; }
-.banner.is-micro .banner-kicker { font-size:8px; letter-spacing:1px; }
+.banner.is-micro .banner-signal { width:30px; height:26px; }
+.banner.is-micro .banner-code { min-width:22px; padding:2px 3px; font-size:7px; letter-spacing:.5px; }
+.banner.is-micro .banner-pulse { width:20px; height:20px; }
+.banner.is-micro .banner-kicker { font-size:7px; letter-spacing:.8px; }
 .banner.is-micro .banner-title,
-.banner.legendary.is-micro .banner-title { font-size:13px; letter-spacing:.35px; }
+.banner.legendary.is-micro .banner-title { font-size:12px; letter-spacing:.3px; }
 .banner.is-micro .banner-meta { display:none; }
-.banner.is-micro .banner-meter { width:5px; height:28px; }
+.banner.is-micro .banner-meter { width:4px; height:24px; }
 @keyframes cyberBannerIn {
   0% { opacity:0; transform:translate(-50%,-14px) scaleX(.72); filter:blur(5px) brightness(1.45); }
   62% { opacity:1; transform:translate(-50%,2px) scaleX(1.025); filter:blur(0) brightness(1.1); }
@@ -455,14 +455,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   to { transform:scaleY(.08); opacity:.62; }
 }
 @media(max-width:720px) {
-  .banner { min-height:58px; max-height:68px; padding:0 12px; gap:9px; grid-template-columns:44px minmax(0,1fr) 6px; }
-  .banner-signal { width:44px; height:38px; }
-  .banner-code { min-width:31px; font-size:9px; letter-spacing:.8px; }
-  .banner-pulse { width:29px; height:29px; }
+  .banner { min-height:52px; max-height:62px; padding:0 10px; gap:8px; grid-template-columns:40px minmax(0,1fr) 5px; }
+  .banner-signal { width:40px; height:34px; }
+  .banner-code { min-width:28px; font-size:8px; letter-spacing:.7px; }
+  .banner-pulse { width:26px; height:26px; }
   .banner-kicker { font-size:9px; letter-spacing:1.2px; }
-  .banner-title,.banner.legendary .banner-title { font-size:16px; letter-spacing:.5px; }
-  .banner-meta { font-size:9px; }
-  .banner-meter { height:36px; }
+  .banner-title,.banner.legendary .banner-title { font-size:14px; letter-spacing:.45px; }
+  .banner-meta { font-size:8px; }
+  .banner-meter { height:32px; }
 }
 @keyframes battleReturnFrame {
   0%   { filter:brightness(1.35) saturate(1.25); box-shadow:0 0 0 2px rgba(255,255,255,0.55),0 0 80px rgba(246,201,91,0.35),0 0 150px rgba(85,231,255,0.22); }
@@ -2913,12 +2913,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const safe = arenaSafeFrame(frame, 0.045);
     const ui = canvasUiScale();
     const pad = Math.max(20 * ui, Math.min(W, H) * 0.04);
-    const barW = Math.min(safe.w, frame.w * 0.68 + Math.min(130, frame.h * 0.09));
-    const barH = Math.max(58 * ui, Math.min(104 * ui, frame.h * 0.118 * layoutZoom));
+    const barW = Math.min(safe.w, frame.w * 0.74 + Math.min(150, frame.h * 0.1));
+    const barH = Math.max(68 * ui, Math.min(118 * ui, frame.h * 0.136 * layoutZoom));
     const centerX = clampNumber(frame.x + frame.w / 2 + offsetX * 0.45, safe.x + barW / 2, safe.right - barW / 2);
-    const liveHordeTopY = frame.y + frame.h * 0.79;
+    const liveHordeTopY = frame.y + frame.h * 0.72;
     const desiredTopY = isPublicDemo ? H * demoHordeTopRatio : liveHordeTopY + offsetY * 0.34;
-    const minTopY = Math.max(safe.y + safe.h * 0.53, frame.y + frame.h * 0.55);
+    const minTopY = Math.max(safe.y + safe.h * 0.48, frame.y + frame.h * 0.5);
     const maxTopY = safe.bottom - barH;
     const topY = clampNumber(desiredTopY, minTopY, maxTopY);
     return {
@@ -3344,6 +3344,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     el.style.visibility = 'hidden';
     document.body.appendChild(el);
     placeBannerAbovePlayers(el);
+    requestAnimationFrame(() => {
+      if (activeBanner?.el === el) placeBannerAbovePlayers(el);
+    });
     el.style.visibility = '';
     activeBannerTimer = setTimeout(() => closeActiveBanner(true), item.duration);
   }
@@ -3385,19 +3388,19 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const layout = getHordeLayout();
     const canvasRect = canvas.getBoundingClientRect();
     const frame = arenaFrame();
-    const safe = arenaSafeFrame(frame, 0.03);
+    const safe = arenaSafeFrame(frame, 0.04);
     const scaleX = canvasRect.width / Math.max(1, cw());
     const safeLeft = canvasRect.left + safe.x * scaleX;
     const safeRight = canvasRect.left + safe.right * scaleX;
     const safeWidth = Math.max(1, safeRight - safeLeft);
     const left = canvasToViewport(layout.barX, layout.barY);
     const right = canvasToViewport(layout.barX + layout.barW, layout.barY);
-    const width = Math.min(Math.max(280, (right.x - left.x) * 1.12), safeWidth);
+    const width = Math.min(Math.max(260, (right.x - left.x) * 0.92), safeWidth);
     el.style.width = `${width}px`;
     el.style.maxWidth = `${safeWidth}px`;
     const rect = el.getBoundingClientRect();
     const scaleY = canvasRect.height / Math.max(1, ch());
-    const gap = Math.max(22, Math.min(42, layout.barH * 0.34 * scaleY));
+    const gap = Math.max(20, Math.min(34, layout.barH * 0.26 * scaleY));
     const anchor = canvasToViewport(layout.x, Math.max(20, layout.barY));
     const halfWidth = width / 2;
     el.style.left = `${clampNumber(anchor.x, safeLeft + halfWidth, safeRight - halfWidth)}px`;
@@ -3412,7 +3415,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     const frame = arenaFrame();
-    const safe = arenaSafeFrame(frame, 0.03);
+    const safe = arenaSafeFrame(frame, 0.04);
     const canvasRect = canvas.getBoundingClientRect();
     const scaleX = canvasRect.width / Math.max(1, cw());
     const scaleY = canvasRect.height / Math.max(1, ch());
@@ -3434,29 +3437,37 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const rowWidth = Math.max(1, rowRight - rowLeft);
     const hordeLayout = getHordeLayout();
     const hordeWidth = Math.max(1, hordeLayout.barW * scaleX);
-    const maxWidth = Math.max(260, safeWidth - Math.max(10, frame.w * scaleX * 0.01));
-    const minWidth = Math.min(maxWidth, 320);
+    const maxWidth = Math.max(240, safeWidth - Math.max(24, frame.w * scaleX * 0.035));
+    const minWidth = Math.min(maxWidth, 280);
     const preferredWidth = Math.min(
       maxWidth,
-      Math.max(minWidth, Math.min(rowWidth * 1.04, hordeWidth * 1.18, safeWidth * 0.94))
+      Math.max(minWidth, Math.min(rowWidth * 0.9, hordeWidth * 0.98, safeWidth * 0.82))
     );
 
+    const forceCompact = canvasRect.height <= 540 || preferredWidth < 760;
+    const forceMicro = canvasRect.height <= 420 || preferredWidth < 560;
     el.classList.remove('is-compact', 'is-micro');
+    if (forceCompact) el.classList.add('is-compact');
+    if (forceMicro) el.classList.add('is-micro');
     el.style.width = `${preferredWidth}px`;
     el.style.maxWidth = `${maxWidth}px`;
 
     const playerTopViewport = canvasRect.top + playerTop * scaleY;
-    const gap = Math.max(18, Math.min(30, (frame.h * scaleY) * 0.052));
+    const baseGap = Math.max(16, Math.min(26, (frame.h * scaleY) * 0.044));
+    let gap = baseGap;
     let rect = el.getBoundingClientRect();
-    const availableHeight = playerTopViewport - gap - safeTop;
+    let availableHeight = playerTopViewport - gap - safeTop;
     if (availableHeight < rect.height) {
       el.classList.add('is-compact');
       rect = el.getBoundingClientRect();
+      availableHeight = playerTopViewport - gap - safeTop;
     }
     if (availableHeight < rect.height) {
       el.classList.add('is-micro');
       rect = el.getBoundingClientRect();
     }
+    const availableGap = playerTopViewport - safeTop - rect.height;
+    gap = Math.max(0, Math.min(baseGap, availableGap));
 
     const halfWidth = preferredWidth / 2;
     const centerX = clampNumber(rowCenter, safeLeft + halfWidth, safeRight - halfWidth);
@@ -3781,18 +3792,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
             : this.kind === 'repost'
               ? [this.color, '#f6c95b', '#ff6a3d', '#ffffff', '#55e7ff']
               : [this.color, '#ff4f8f', '#ff8bc2', '#ffd1e3', '#ffd166'];
-      const baseCount = this.kind === 'like' ? 3 + this.hearts : this.kind === 'repost' ? 12 + this.hearts * 3 : 6 + this.hearts * 2;
-      const count    = Math.min(this.kind === 'like' ? 10 : this.kind === 'repost' ? 26 : 18, Math.max(4, baseCount + Math.floor(this.intensity * 6)));
+      const baseCount = this.kind === 'like' ? 2 + this.hearts : this.kind === 'repost' ? 12 + this.hearts * 3 : 6 + this.hearts * 2;
+      const count    = Math.min(this.kind === 'like' ? 7 : this.kind === 'repost' ? 26 : 18, Math.max(3, baseCount + Math.floor(this.intensity * (this.kind === 'like' ? 3 : 6))));
 
       this.motes = Array.from({ length: count }, (_, i) => {
         const spread = Math.PI * 2 * (i / count) + Math.random() * 0.45;
         return {
           angle: spread,
           delay: Math.random() * 0.18 + i * 0.018,
-          orbit: 12 + Math.random() * (26 + this.intensity * 12),
-          lift: 38 + Math.random() * (42 + this.intensity * 24),
-          drift: (Math.random() - 0.5) * (26 + this.intensity * 18),
-          size: (this.kind === 'like' ? 4.8 : 6.5) + Math.random() * (this.kind === 'like' ? 4.5 : 5.5) + this.intensity * 2,
+          orbit: this.kind === 'like' ? 7 + Math.random() * (14 + this.intensity * 6) : 12 + Math.random() * (26 + this.intensity * 12),
+          lift: this.kind === 'like' ? 20 + Math.random() * (24 + this.intensity * 10) : 38 + Math.random() * (42 + this.intensity * 24),
+          drift: (Math.random() - 0.5) * (this.kind === 'like' ? 13 + this.intensity * 8 : 26 + this.intensity * 18),
+          size: (this.kind === 'like' ? 3.6 : 6.5) + Math.random() * (this.kind === 'like' ? 2.8 : 5.5) + this.intensity * (this.kind === 'like' ? 1.1 : 2),
           color: palette[i % palette.length],
           spin: (Math.random() - 0.5) * 0.55,
         };
@@ -3812,13 +3823,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
 
-      const aura = ctx.createRadialGradient(x, y, 0, x, y, 58 + this.intensity * 30);
+      const auraRadius = this.kind === 'like' ? 34 + this.intensity * 14 : 58 + this.intensity * 30;
+      const ringRadius = this.kind === 'like' ? 34 + this.intensity * 13 : 58 + this.intensity * 26;
+      const labelOffset = this.kind === 'like' ? 31 : 44;
+      const labelLift = this.kind === 'like' ? 12 : 20;
+      const labelHeight = this.kind === 'like' ? 20 : 26;
+      const labelRadius = this.kind === 'like' ? 10 : 13;
+      const labelPad = this.kind === 'like' ? 18 : 24;
+      const labelFont = this.kind === 'like' ? Math.max(9, ch() * 0.022) : Math.max(12, ch() * 0.032);
+      const aura = ctx.createRadialGradient(x, y, 0, x, y, auraRadius);
       aura.addColorStop(0, `rgba(255,120,180,${0.18 * (1 - p)})`);
       aura.addColorStop(0.5, `rgba(255,209,102,${0.07 * (1 - p)})`);
       aura.addColorStop(1, 'rgba(255,120,180,0)');
       ctx.fillStyle = aura;
       ctx.beginPath();
-      ctx.arc(x, y, 58 + this.intensity * 30, 0, Math.PI * 2);
+      ctx.arc(x, y, auraRadius, 0, Math.PI * 2);
       ctx.fill();
 
       for (let i = 0; i < 2; i++) {
@@ -3828,7 +3847,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         ctx.strokeStyle = i === 0 ? '#ff7ab6' : '#8fffd2';
         ctx.lineWidth = 2.5 - i * 0.5;
         ctx.beginPath();
-        ctx.arc(x, y, 16 + ringT * (58 + this.intensity * 26), 0, Math.PI * 2);
+        ctx.arc(x, y, 12 + ringT * ringRadius, 0, Math.PI * 2);
         ctx.stroke();
       }
 
@@ -3857,7 +3876,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
       if (p < 0.78) {
         const labelAlpha = Math.min(1, p / 0.15) * (1 - Math.max(0, p - 0.48) / 0.3);
-        const labelY = y - 44 - 20 * lift;
+        const labelY = y - labelOffset - labelLift * lift;
         const text = this.kind === 'heal'
           ? `HEAL +${this.hearts * 5}`
           : this.kind === 'follow'
@@ -3869,14 +3888,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
                 : `LIKE +${this.hearts}`;
         ctx.save();
         ctx.globalAlpha = Math.max(0, labelAlpha);
-        ctx.font = `800 ${Math.max(12, ch() * 0.032)}px 'Rajdhani','Segoe UI',sans-serif`;
+        ctx.font = `800 ${labelFont}px 'Rajdhani','Segoe UI',sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        const w = ctx.measureText(text).width + 24;
+        const w = ctx.measureText(text).width + labelPad;
         ctx.fillStyle = 'rgba(6,10,20,0.62)';
         ctx.strokeStyle = 'rgba(255,255,255,0.26)';
         ctx.lineWidth = 1.2;
-        roundedRectPath(ctx, x - w / 2, labelY - 13, w, 26, 13);
+        roundedRectPath(ctx, x - w / 2, labelY - labelHeight / 2, w, labelHeight, labelRadius);
         ctx.fill();
         ctx.stroke();
         ctx.shadowColor = '#ff7ab6';
@@ -4866,10 +4885,24 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   // ═══════════════════════════════════════
   // HEART / RESPAWN EFFECTS
   // ═══════════════════════════════════════
+  function getLikeEffectPosition(playerId) {
+    const top = topPlayers();
+    if (!top.length) return null;
+    const wanted = String(playerId || '').toLowerCase();
+    let index = wanted
+      ? top.findIndex(p => [p.uniqueId, p.id, p.nickname, p.name].some(value => String(value || '').toLowerCase() === wanted))
+      : 0;
+    if (index < 0) index = 0;
+    const cardPos = getPlayerPosition(index, top.length);
+    const metrics = getPlayerCardDrawMetrics(cardPos, top.length);
+    return { x: cardPos.x, y: metrics.avatarY - metrics.avatarR * 0.12 };
+  }
+
   function fireHeartEffect(playerId, hearts, intensity, meta) {
     meta = meta || {};
     hearts = hearts || 1; intensity = intensity || 0;
-    let pos = getPositionForPlayer(playerId);
+    let pos = meta.kind === 'like' ? getLikeEffectPosition(playerId) : null;
+    if (!pos) pos = getPositionForPlayer(playerId);
     if (!pos) { const top = topPlayers(); pos = top.length ? getPlayerPosition(0, top.length) : getHordePosition(); }
     if (pos) {
       attacks.push(new HeartBloom(pos, hearts, intensity, meta));
@@ -4893,25 +4926,27 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (!milestone) return;
     const isMega = data.milestoneTier === 'mega' || milestone % 1000 === 0;
     const frame = arenaFrame();
-    const center = { x: frame.x + frame.w * 0.5, y: frame.y + frame.h * 0.47 };
-    const atk = new Attack(center, center, 'static', { intensity: isMega ? 1 : 0.72 });
-    const count = isMega ? 64 : 34;
+    const center = getLikeEffectPosition(data.uniqueId) || { x: frame.x + frame.w * 0.5, y: frame.y + frame.h * 0.47 };
+    const atk = new Attack(center, center, 'static', { intensity: isMega ? 0.72 : 0.36 });
+    const count = isMega ? 42 : 18;
     const palette = isMega
       ? [THEME.gold, THEME.goldBright, THEME.cyan, '#ffffff', '#ff78b2']
       : ['#ff78b2', THEME.cyan, THEME.gold, '#ffffff'];
 
     for (let i = 0; i < count; i += 1) {
       const angle = Math.PI * 2 * (i / count);
-      const speed = (isMega ? 7 : 4.8) + Math.random() * (isMega ? 6 : 3.4);
-      const particle = new Particle(center.x, center.y, {
+      const speed = (isMega ? 4.2 : 2.4) + Math.random() * (isMega ? 3.2 : 1.8);
+      const spreadX = isMega ? 18 : 10;
+      const spreadY = isMega ? 9 : 5;
+      const particle = new Particle(center.x + Math.cos(angle) * spreadX, center.y + Math.sin(angle) * spreadY, {
         speed,
         color: palette[i % palette.length],
-        radius: (isMega ? 2.8 : 2) + Math.random() * (isMega ? 3.4 : 2.4),
-        decay: isMega ? 0.012 : 0.018,
-        rise: isMega ? 0.9 : 0.55,
+        radius: (isMega ? 2.1 : 1.4) + Math.random() * (isMega ? 2.3 : 1.4),
+        decay: isMega ? 0.016 : 0.024,
+        rise: isMega ? 0.55 : 0.32,
       });
-      particle.vx = Math.cos(angle) * speed * (0.55 + Math.random() * 0.45);
-      particle.vy = Math.sin(angle) * speed * 0.55 - (isMega ? 1.6 : 1.0);
+      particle.vx = Math.cos(angle) * speed * (0.34 + Math.random() * 0.3);
+      particle.vy = Math.sin(angle) * speed * 0.34 - (isMega ? 0.8 : 0.42);
       atk.particles.push(particle);
     }
     attacks.push(atk);
@@ -4919,12 +4954,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       type: isMega ? 'kill' : 'hit',
       color: isMega ? THEME.gold : '#ff78b2',
       accent: isMega ? THEME.cyan : THEME.gold,
-      radius: isMega ? frame.h * 0.16 : frame.h * 0.11,
-      intensity: isMega ? 1 : 0.72,
-      duration: isMega ? 940 : 720,
+      radius: isMega ? frame.h * 0.105 : frame.h * 0.055,
+      intensity: isMega ? 0.72 : 0.36,
+      duration: isMega ? 760 : 520,
     });
-    triggerArenaShake(isMega ? 5.8 : 3.2, isMega ? 320 : 220);
-    fireHeartEffect(data.uniqueId, isMega ? 6 : 4, isMega ? 0.95 : 0.62, {
+    triggerArenaShake(isMega ? 3.4 : 1.2, isMega ? 240 : 140);
+    fireHeartEffect(data.uniqueId, isMega ? 3 : 2, isMega ? 0.48 : 0.24, {
       ...data,
       kind: 'like',
       color: isMega ? THEME.gold : '#ff78b2',
@@ -6383,8 +6418,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function handleLikeEvent(data) {
     if (!data) return;
-    const hearts = Math.max(1, Math.min(3, Number(data.hearts) || 1));
-    fireHeartEffect(data.uniqueId, hearts, Math.min(0.42, Number(data.intensity) || 0.16), {
+    const hearts = Math.max(1, Math.min(2, Number(data.hearts) || 1));
+    fireHeartEffect(data.uniqueId, hearts, Math.min(0.28, Number(data.intensity) || 0.12), {
       ...data,
       kind: 'like',
       color: data.color || '#ff78b2',
