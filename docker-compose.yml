@@ -16,6 +16,7 @@ services:
       - METRICS_TOKEN=local_metrics_token
       - DIAGNOSTICS_TOKEN=local_diagnostics_token
       - APP_BASE_URL=http://localhost:3000
+      - WRITEFREELY_PUBLIC_URL=http://localhost:8080/
       - TIKTOK_AUTO_RECONNECT=true
       - TIKTOK_MAX_RECONNECT_ATTEMPTS=3
     depends_on:

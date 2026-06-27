@@ -40,6 +40,7 @@ const server = spawn(process.execPath, ['server.js'], {
     GOOGLE_CLIENT_ID: 'google-smoke-client',
     GOOGLE_CLIENT_SECRET: 'google-smoke-secret',
     GOOGLE_OAUTH_REDIRECT_URI: 'https://intothebattle.test/auth/google/callback',
+    WRITEFREELY_PUBLIC_URL: 'https://updates.intothebattle.test',
     LOG_LEVEL: 'error',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
@@ -90,6 +91,10 @@ try {
   for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/how-to-play', '/battlegrounds', '/site-map', '/overlay-preview', '/overlay-v2-preview', '/overlay-phaser.html']) {
     await expectStatus(pathname, 200);
   }
+  const blog = await expectStatus('/blog', 302);
+  assert(blog.headers.get('location') === 'https://updates.intothebattle.test/', '/blog should redirect to WriteFreely');
+  const updates = await expectStatus('/updates', 302);
+  assert(updates.headers.get('location') === 'https://updates.intothebattle.test/', '/updates should redirect to WriteFreely');
   for (const pathname of ['/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/overlay-scene.js', '/js/overlay-v2.js', '/vendor/phaser/phaser.min.js']) {
     await expectStatus(pathname, 200);
   }

@@ -6,6 +6,8 @@ const ROUTES = new Map([
   ['/login', 'Login'],
   ['/sponsors', 'Sponsors'],
   ['/how-to-play', 'How To Play'],
+  ['/blog', 'Blog'],
+  ['/updates', 'Updates'],
   ['/site-map', 'Site Map'],
   ['/paywall', 'Creator Pro'],
   ['/profile', 'Profile'],

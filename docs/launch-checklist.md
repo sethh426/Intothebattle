@@ -53,6 +53,10 @@ The production readiness endpoint is protected at `/api/runtime/launch-readiness
 - `GOOGLE_CLIENT_SECRET`
 - `GOOGLE_OAUTH_REDIRECT_URI=https://www.intothebattle.com/auth/google/callback`
 
+Optional public blog redirect:
+
+- `WRITEFREELY_PUBLIC_URL=https://blog.intothebattle.com/`
+
 Optional storage controls:
 
 - `STORAGE_LIMIT_MB`
@@ -65,7 +69,7 @@ Optional storage controls:
 ## Manual Production Smoke
 
 - `/healthz` returns `200 ok`.
-- Home, signup, login, paywall, and sponsor pages load.
+- Home, signup, login, paywall, sponsor, and blog redirect pages load.
 - Logged-out `/api/status` returns `401`.
 - Signup sends verification email through Postmark.
 - Login with Google reaches the dashboard.

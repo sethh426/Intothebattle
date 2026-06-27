@@ -59,6 +59,16 @@
     </image:image>
   </url>
   <url>
+    <loc>https://intothebattle.com/blog</loc>
+    <lastmod>2026-06-27</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+    <image:image>
+      <image:loc>https://intothebattle.com/og-intothebattle.png</image:loc>
+      <image:title>IntoTheBattle updates and release notes</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://intothebattle.com/paywall</loc>
     <lastmod>2026-06-24</lastmod>
     <changefreq>weekly</changefreq>

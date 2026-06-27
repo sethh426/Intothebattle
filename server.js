@@ -4454,6 +4454,11 @@ app.get('/home', (_req, res) => res.sendFile(path.join(__dirname, 'home.html')))
 app.get(['/sponsors', '/sponsors.html'], (_req, res) => res.sendFile(path.join(__dirname, 'sponsors.html')));
 app.get(['/how-to-play', '/how-to-play.html', '/players', '/game-guide'], (_req, res) => res.sendFile(path.join(__dirname, 'how-to-play.html')));
 app.get(['/battlegrounds', '/battlegrounds.html', '/the-battlegrounds'], (_req, res) => res.sendFile(path.join(__dirname, 'battlegrounds.html')));
+app.get(['/blog', '/blog/', '/updates', '/updates/'], (_req, res) => {
+  const rawUrl = process.env.WRITEFREELY_PUBLIC_URL || process.env.WRITEFREELY_URL || 'http://localhost:8080/';
+  const blogUrl = rawUrl.endsWith('/') ? rawUrl : `${rawUrl}/`;
+  return res.redirect(302, blogUrl);
+});
 app.get(['/site-map', '/site-map.html', '/sitemap'], (_req, res) => res.sendFile(path.join(__dirname, 'sitemap.html')));
 app.get('/verify-email', (_req, res) => res.sendFile(path.join(__dirname, 'verify-email.html')));
 app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));

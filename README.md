@@ -116,6 +116,7 @@ DATABASE_URL=postgres://postgres:example@localhost:5432/tiktokbr
 REDIS_URL=redis://localhost:6379
 ENABLE_ROOM_SCOPED=true
 APP_BASE_URL=http://localhost:3000
+WRITEFREELY_PUBLIC_URL=http://localhost:8080/
 ```
 
 `OVERLAY_TOKEN_SECRET` is optional locally and recommended in production. If it is not set, signed overlay URLs use `JWT_SECRET`.
@@ -314,6 +315,7 @@ GET /
 GET /login
 GET /signup
 GET /paywall
+GET /blog redirects to WriteFreely through WRITEFREELY_PUBLIC_URL
 GET /my-code
 GET /overlay or /overlay.html with signed room_id + overlay_token for OBS/browser-source access
 GET /overlay-preview for public demo/recording footage without room auth
@@ -393,6 +395,7 @@ LOG_LEVEL=info
 DISK_PATH=/var/data
 TRUST_PROXY_HOPS=1
 CLARITY_PROJECT_ID=x82yl0ggk3
+WRITEFREELY_PUBLIC_URL=https://blog.intothebattle.com/
 PAYPAL_CLIENT_ID=<PayPal client id>
 PAYPAL_CLIENT_SECRET=<PayPal client secret>
 PAYPAL_PLAN_ID=<PayPal subscription plan id>

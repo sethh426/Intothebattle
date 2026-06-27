@@ -6,6 +6,7 @@ players_*.json
 tiktokbr.db
 tiktokbr/*.db*
 data/
+writefreely/
 playwright-report/
 test-results/
 .tmp-*
