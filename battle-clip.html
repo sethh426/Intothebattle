@@ -355,20 +355,21 @@
       left: 50%;
       top: 36.5%;
       z-index: 34;
-      width: min(42%, 470px);
-      min-height: clamp(32px, 7.5%, 54px);
+      width: min(38%, 430px);
+      min-height: clamp(30px, 6.6%, 48px);
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: clamp(7px, 1vw, 12px);
+      justify-content: flex-start;
+      gap: clamp(6px, .8vw, 10px);
       padding: 0 clamp(10px, 1.45vw, 18px);
       border: 1px solid rgba(85, 231, 255, .34);
-      border-radius: 10px;
+      border-radius: 999px;
       background:
         linear-gradient(180deg, rgba(7, 18, 32, .92), rgba(3, 8, 16, .9)),
         radial-gradient(circle at 50% 0, rgba(85, 231, 255, .18), transparent 60%);
       box-shadow: 0 20px 54px rgba(0, 0, 0, .34), 0 0 26px rgba(85, 231, 255, .11);
       opacity: 0;
+      overflow: hidden;
       transform: translate(-50%, 12px) scale(.98);
       animation: commandCue var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
     }
@@ -401,8 +402,15 @@
     }
 
     .command-card b {
+      display: inline-flex;
+      align-items: center;
+      min-height: 1.9em;
+      padding: 0 .72em;
+      border: 1px solid rgba(85, 231, 255, .28);
+      border-radius: 999px;
       color: var(--cyan2);
-      font-size: clamp(7px, .85vw, 11px);
+      background: rgba(85, 231, 255, .08);
+      font-size: clamp(6px, .7vw, 9px);
       font-weight: 950;
       text-transform: uppercase;
       white-space: nowrap;
@@ -410,7 +418,10 @@
 
     .command-card strong {
       color: #fff8e6;
-      font-size: clamp(13px, 2.2vw, 34px);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: clamp(10px, 1.35vw, 18px);
       line-height: 1;
       font-weight: 950;
       text-transform: uppercase;
@@ -2335,11 +2346,11 @@
       .chat-line b { font-size: 8px; }
       .command-card {
         top: 38.5%;
-        width: 50%;
+        width: 46%;
         min-height: 31px;
       }
-      .command-card b { display: none; }
-      .command-card strong { font-size: clamp(13px, 4vw, 20px); }
+      .command-card b { font-size: 5.5px; }
+      .command-card strong { font-size: clamp(9px, 2.5vw, 13px); }
       .player-row {
         top: 49.5%;
         width: 78%;
@@ -3133,7 +3144,7 @@
       }
       .clip.is-embedded .command-card {
         top: 38%;
-        width: 56%;
+        width: 48%;
       }
       .clip.is-embedded .player-row {
         top: 49%;
@@ -3328,14 +3339,14 @@
 
     .command-card {
       top: 42.4%;
-      width: min(58%, 720px);
-      min-height: clamp(36px, 7.2%, 52px);
+      width: min(42%, 520px);
+      min-height: clamp(34px, 6.4%, 48px);
       border-radius: 999px;
     }
 
     .command-card strong {
-      font-size: clamp(16px, 2vw, 28px);
-      letter-spacing: .01em;
+      font-size: clamp(10px, 1.35vw, 18px);
+      letter-spacing: .03em;
     }
 
     .player-row {
@@ -3716,7 +3727,7 @@
 
       .command-card {
         top: 41.5%;
-        width: 76%;
+        width: 62%;
         min-height: 34px;
         display: flex;
         padding: 0 12px;
@@ -3724,11 +3735,12 @@
       }
 
       .command-card b {
-        display: none;
+        display: inline-flex;
+        font-size: 5.5px;
       }
 
       .command-card strong {
-        font-size: clamp(13px, 4vw, 18px);
+        font-size: clamp(9px, 2.8vw, 13px);
       }
 
       .duel-command {
@@ -4200,14 +4212,14 @@
       </div>
 
       <div class="chat-stack">
-        <div class="chat-line is-attack"><strong>@mira_live</strong><b>!laser Blaze</b></div>
-        <div class="chat-line"><strong>@nova_fan</strong><b>!emoji fire</b></div>
-        <div class="chat-line"><strong>@ashstorm</strong><b>100 likes</b></div>
+        <div class="chat-line is-attack"><strong>@mira_live</strong><b>Laser on Blaze</b></div>
+        <div class="chat-line"><strong>@nova_fan</strong><b>Fire icon</b></div>
+        <div class="chat-line"><strong>@ashstorm</strong><b>100-like surge</b></div>
       </div>
 
       <section class="command-card">
-        <b>Comment attack</b>
-        <strong>!laser locks onto Blaze</strong>
+        <b>Laser lock</b>
+        <strong>Mira targets Blaze</strong>
       </section>
 
       <div class="player-row">
@@ -4244,7 +4256,7 @@
 
       <section class="event-banner">
         <div class="event-code">KO</div>
-        <div class="event-copy"><span>Watch it land</span><strong>@mira_live knocks Blaze out</strong></div>
+        <div class="event-copy"><span>Attack resolved</span><strong>Blaze takes the KO hit</strong></div>
       </section>
 
       <section class="horde">
@@ -4257,12 +4269,12 @@
       <div class="effects-card">
         <div class="effects-copy">
           <span class="scene-kicker">Commands become action</span>
-          <h2 class="scene-title">Every chat move <em>shows up</em></h2>
+          <h2 class="scene-title">Moves <em>land</em></h2>
           <p class="scene-copy">Attacks, boosts, gifts, and horde pressure stay readable inside the arena.</p>
         </div>
         <div class="duel-reel">
           <article class="duel-shot duel-shot-laser">
-            <div class="duel-command"><strong>@mira_live</strong><span>!laser Blaze</span></div>
+            <div class="duel-command"><strong>@mira_live</strong><span>Laser on Blaze</span></div>
             <div class="duel-arena">
               <div class="duel-player is-winner">
                 <div class="duel-name">Mira</div>
@@ -4276,11 +4288,11 @@
                 <div class="duel-hp"><span style="--hp: 18%"></span></div>
               </div>
             </div>
-            <div class="duel-result"><b>KO</b><span>Laser lands clean</span></div>
+            <div class="duel-result"><b>Laser impact</b><span>Direct KO</span></div>
           </article>
 
           <article class="duel-shot duel-shot-sphere">
-            <div class="duel-command"><strong>@westside</strong><span>!sphere NovaX</span></div>
+            <div class="duel-command"><strong>@westside</strong><span>Sphere on NovaX</span></div>
             <div class="duel-arena">
               <div class="duel-player is-winner">
                 <div class="duel-name">West</div>
@@ -4294,11 +4306,11 @@
                 <div class="duel-hp"><span style="--hp: 46%"></span></div>
               </div>
             </div>
-            <div class="duel-result"><b>Guard break</b><span>Sphere drops HP</span></div>
+            <div class="duel-result"><b>Shield break</b><span>NovaX loses guard</span></div>
           </article>
 
           <article class="duel-shot duel-shot-comet">
-            <div class="duel-command"><strong>@ashstorm</strong><span>!comet Horde</span></div>
+            <div class="duel-command"><strong>@ashstorm</strong><span>Comet into Horde</span></div>
             <div class="duel-arena">
               <div class="duel-player is-winner">
                 <div class="duel-name">Ashlee</div>
@@ -4312,7 +4324,7 @@
                 <div class="duel-hp"><span style="--hp: 42%"></span></div>
               </div>
             </div>
-            <div class="duel-result"><b>Pressure swing</b><span>Horde bar hit</span></div>
+            <div class="duel-result"><b>Horde damage</b><span>Pressure bar drops</span></div>
           </article>
 
           <div class="effect-demo-grid effect-strip">
