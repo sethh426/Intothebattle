@@ -341,7 +341,7 @@
     .hook-panel {
       position: absolute;
       left: 50%;
-      top: 14.4%;
+      top: 9%;
       z-index: 32;
       width: min(70%, 840px);
       display: grid;
@@ -520,7 +520,7 @@
     .player-row {
       position: absolute;
       left: 50%;
-      top: 48.5%;
+      top: 44%;
       z-index: 24;
       width: min(82%, 1100px);
       display: grid;
@@ -641,7 +641,7 @@
     .attack-beam {
       position: absolute;
       left: 50%;
-      top: 45.8%;
+      top: 47%;
       z-index: 29;
       width: 0;
       height: clamp(8px, 1.6vh, 16px);
@@ -689,7 +689,7 @@
     .impact {
       position: absolute;
       left: 65.5%;
-      top: 59.8%;
+      top: 57%;
       z-index: 31;
       width: clamp(45px, 8vw, 92px);
       aspect-ratio: 1;
@@ -725,8 +725,8 @@
 
     .engagement-burst {
       position: absolute;
-      left: 74%;
-      top: 38%;
+      left: 66%;
+      top: 33%;
       z-index: 33;
       width: clamp(90px, 14vw, 170px);
       height: clamp(48px, 9vh, 90px);
@@ -2096,18 +2096,19 @@
     .cta-button {
       position: relative;
       overflow: hidden;
-      min-height: clamp(31px, 6vh, 48px);
+      min-height: clamp(36px, 7.5vh, 58px);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      padding: 0 clamp(14px, 2vw, 24px);
+      padding: 0 clamp(20px, 2.8vw, 36px);
       border-radius: 999px;
       color: #140a02;
       background: linear-gradient(135deg, var(--gold), #fff1bd 52%, var(--ember));
-      box-shadow: 0 18px 44px rgba(246, 201, 91, .2);
-      font-size: clamp(10px, 1.35vw, 18px);
+      box-shadow: 0 18px 44px rgba(246, 201, 91, .22), 0 4px 12px rgba(246, 201, 91, .18);
+      font-size: clamp(12px, 1.65vw, 22px);
       font-weight: 950;
       text-transform: uppercase;
+      letter-spacing: .04em;
       white-space: nowrap;
       animation: ctaGlow 2.4s ease-in-out infinite;
     }
@@ -2121,6 +2122,29 @@
       height: 100%;
       background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .55) 50%, transparent);
       animation: ctaShimmer 2.8s ease-in-out infinite;
+    }
+
+    .ko-stamp {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      display: grid;
+      place-items: center;
+      color: var(--red);
+      font-size: clamp(20px, 4vw, 52px);
+      font-weight: 950;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      text-shadow: 0 0 28px rgba(232, 59, 95, .72), 0 0 8px rgba(232, 59, 95, .9);
+      opacity: 0;
+      pointer-events: none;
+      animation: koStamp var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
+    }
+
+    @keyframes koStamp {
+      0%, 21% { opacity: 0; transform: scale(1.5) rotate(-6deg); }
+      22%, 27.4% { opacity: 1; transform: scale(1) rotate(-4deg); }
+      28.2%, 100% { opacity: 0; transform: scale(.84) rotate(-2deg); }
     }
 
     @keyframes gridDrift {
@@ -2190,8 +2214,9 @@
 
     @keyframes targetHit {
       0%, 18% { filter: none; }
-      20%, 27.4% { filter: drop-shadow(0 0 30px rgba(232, 59, 95, .92)); }
-      29%, 100% { filter: grayscale(.24) brightness(.82); }
+      19.4%, 20.4% { filter: drop-shadow(0 0 44px rgba(255, 45, 136, 1)) brightness(1.24); }
+      22.5%, 27.4% { filter: drop-shadow(0 0 16px rgba(232, 59, 95, .48)) grayscale(.55) brightness(.7); }
+      28.2%, 100% { filter: none; }
     }
 
     @keyframes targetLockLabel {
@@ -2424,7 +2449,7 @@
       }
       .hud { top: 4.7%; left: 5%; right: 5%; }
       .hook-panel {
-        top: 16%;
+        top: 10%;
         width: 72%;
         grid-template-columns: 1fr;
         gap: 3px;
@@ -2656,7 +2681,7 @@
         font-size: 8px;
       }
       .hook-panel {
-        top: 17%;
+        top: 11%;
         width: 78%;
         padding: 7px 8px;
       }
@@ -2939,7 +2964,7 @@
         height: 66%;
       }
       .hook-panel {
-        top: 14.8%;
+        top: 9.5%;
         width: 68%;
         gap: 7px;
         padding: 7px 11px;
@@ -3234,7 +3259,7 @@
         height: 68%;
       }
       .clip.is-embedded .hook-panel {
-        top: 13.5%;
+        top: 8.5%;
         width: 74%;
         padding: 6px 8px;
       }
@@ -3403,7 +3428,7 @@
     }
 
     .hook-panel {
-      top: 24.4%;
+      top: 18%;
       width: min(62%, 760px);
       grid-template-columns: minmax(0, 1fr);
       justify-items: center;
@@ -4390,14 +4415,14 @@
           <div><strong>IntoTheBattle</strong><span>TikTok LIVE battle overlay</span></div>
         </div>
         <div class="hud-right">
-          <span>Chat-driven combat</span>
+          <span>Round 1 &middot; 5 fighters</span>
           <div class="status-pill">Live</div>
         </div>
       </header>
 
       <div class="hook-panel">
-        <h1><span>TikTok chat</span> <span>becomes</span> <span>the battle.</span></h1>
-        <p>Viewers type commands. Your LIVE turns into a playable arena.</p>
+        <h1><span>Every comment</span> <span>fires a real</span> <span>attack.</span></h1>
+        <p>Viewers type commands that deal real damage. Your LIVE becomes the arena.</p>
       </div>
 
       <div class="chat-stack">
@@ -4431,6 +4456,7 @@
           <div class="player-name">Blaze</div>
           <div class="player-icon">&#128293;</div>
           <div class="hp"><span style="--hp: 21%"></span></div>
+          <div class="ko-stamp" aria-hidden="true">KO</div>
         </article>
         <article class="player-card">
           <div class="player-name">Ashlee</div>
@@ -4445,7 +4471,7 @@
 
       <section class="event-banner">
         <div class="event-code">KO</div>
-        <div class="event-copy"><span>Attack resolved</span><strong>Blaze takes the KO hit</strong></div>
+        <div class="event-copy"><span>Finishing blow</span><strong>Mira eliminates Blaze from the arena</strong></div>
       </section>
 
       <section class="horde">
@@ -4574,9 +4600,9 @@
 
     <section class="scene cta-scene" aria-hidden="true">
       <div class="cta-box">
-        <span class="scene-kicker">Everything unlocked for 7 days</span>
+        <span class="scene-kicker">Free for 7 days — no card needed</span>
         <h2 class="scene-title">Turn your next LIVE <em>into a battle</em></h2>
-        <div class="cta-button">Start free setup</div>
+        <div class="cta-button">Start your battle free</div>
       </div>
     </section>
   </div>
