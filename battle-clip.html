@@ -4408,6 +4408,318 @@
       0%, 40% { left: -60%; }
       70%, 100% { left: 130%; }
     }
+
+    /* First-seven-second renewal: one centered arena composition, no loose banners. */
+    .battle-scene::before {
+      top: 22.6%;
+      width: min(88%, 1120px);
+      height: min(68%, 560px);
+    }
+
+    .hud {
+      left: 6.2%;
+      right: 6.2%;
+      top: 5.2%;
+    }
+
+    .hook-panel {
+      top: 35.7%;
+      width: min(66%, 820px);
+      min-height: clamp(68px, 13.2vh, 106px);
+      align-content: center;
+      justify-items: center;
+      padding: clamp(10px, 1.35vw, 18px) clamp(16px, 2.1vw, 28px);
+      border-color: rgba(246, 201, 91, .32);
+      border-radius: clamp(12px, 1.4vw, 18px);
+      background:
+        radial-gradient(circle at 50% 18%, rgba(246, 201, 91, .18), transparent 48%),
+        linear-gradient(180deg, rgba(7, 18, 32, .97), rgba(2, 6, 14, .94));
+      box-shadow:
+        0 26px 74px rgba(0, 0, 0, .38),
+        0 0 34px rgba(85, 231, 255, .11),
+        inset 0 1px 0 rgba(255, 255, 255, .08);
+    }
+
+    .hook-panel h1 {
+      font-size: clamp(23px, 3.25vw, 48px);
+      line-height: .9;
+      text-align: center;
+      text-wrap: balance;
+    }
+
+    .hook-panel p {
+      max-width: 48ch;
+      font-size: clamp(10px, 1.1vw, 15px);
+      line-height: 1.18;
+      text-align: center;
+    }
+
+    .chat-stack {
+      top: 27.8%;
+      width: min(70%, 880px);
+      gap: clamp(6px, .9vw, 12px);
+    }
+
+    .chat-line {
+      min-height: clamp(26px, 4.8vh, 38px);
+      border-color: rgba(85, 231, 255, .18);
+      background: rgba(5, 14, 27, .72);
+    }
+
+    .command-card {
+      top: 34%;
+      width: min(48%, 610px);
+      min-height: clamp(46px, 8.6vh, 64px);
+      display: grid;
+      grid-template-columns: minmax(92px, .26fr) minmax(0, 1fr);
+      gap: 0;
+      align-items: stretch;
+      justify-content: stretch;
+      padding: 0;
+      overflow: hidden;
+      border-color: rgba(255, 45, 136, .36);
+      border-radius: clamp(12px, 1.2vw, 16px);
+      background:
+        linear-gradient(90deg, rgba(72, 11, 32, .96), rgba(4, 15, 27, .94)),
+        radial-gradient(circle at left, rgba(255, 45, 136, .25), transparent 42%);
+      box-shadow:
+        0 24px 62px rgba(0, 0, 0, .38),
+        0 0 32px rgba(255, 45, 136, .16),
+        inset 0 1px 0 rgba(255, 255, 255, .08);
+    }
+
+    .command-card::after {
+      display: none;
+    }
+
+    .command-card b {
+      align-self: stretch;
+      justify-content: center;
+      min-height: 100%;
+      padding: 0 clamp(8px, 1vw, 13px);
+      border: 0;
+      border-radius: 0;
+      color: #ffe2e8;
+      background: linear-gradient(180deg, rgba(232, 59, 95, .82), rgba(124, 19, 52, .86));
+      font-size: clamp(8px, .9vw, 12px);
+    }
+
+    .command-card strong {
+      align-self: center;
+      padding: 0 clamp(12px, 1.5vw, 20px);
+      color: #fff8e6;
+      font-size: clamp(13px, 1.7vw, 23px);
+      letter-spacing: 0;
+    }
+
+    .player-row {
+      top: 55.4%;
+      width: min(82%, 1040px);
+    }
+
+    .player-card {
+      min-height: clamp(92px, 19vh, 136px);
+    }
+
+    .event-banner {
+      top: 76.1%;
+      width: min(58%, 740px);
+      border-radius: clamp(12px, 1.2vw, 16px);
+    }
+
+    .horde {
+      top: 86.1%;
+      width: min(62%, 760px);
+    }
+
+    .effects-scene {
+      padding: 4.2%;
+    }
+
+    .effects-card {
+      width: min(82%, 1000px);
+      min-height: min(66%, 455px);
+      grid-template-columns: 1fr;
+      grid-template-rows: auto minmax(0, 1fr);
+      justify-items: center;
+      align-items: stretch;
+      gap: clamp(10px, 1.4vw, 18px);
+      padding: clamp(16px, 2vw, 24px);
+    }
+
+    .effects-copy {
+      width: 100%;
+      display: grid;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .effects-copy .scene-kicker {
+      margin-bottom: clamp(6px, .8vw, 10px);
+    }
+
+    .effects-copy .scene-title {
+      font-size: clamp(23px, 3.15vw, 45px);
+      line-height: .92;
+      text-align: center;
+      text-wrap: balance;
+    }
+
+    .effects-copy .scene-title em {
+      display: inline;
+    }
+
+    .effects-copy .scene-copy {
+      display: none;
+    }
+
+    .duel-reel {
+      width: 100%;
+      min-height: clamp(225px, 42vh, 325px);
+    }
+
+    .duel-shot {
+      top: clamp(10px, 1.25vw, 16px);
+      bottom: clamp(10px, 1.25vw, 16px);
+    }
+
+    .duel-command {
+      display: grid;
+      grid-template-columns: minmax(110px, .26fr) minmax(0, 1fr);
+      gap: 0;
+      min-height: clamp(36px, 6.6vh, 48px);
+      padding: 0;
+      overflow: hidden;
+      border-color: rgba(255, 45, 136, .3);
+      border-radius: clamp(10px, 1vw, 14px);
+      background:
+        linear-gradient(90deg, rgba(66, 10, 31, .96), rgba(5, 16, 29, .94)),
+        radial-gradient(circle at left, rgba(255, 45, 136, .18), transparent 44%);
+    }
+
+    .duel-command strong {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 0 clamp(8px, 1vw, 12px);
+      color: #ffe2e8;
+      background: linear-gradient(180deg, rgba(232, 59, 95, .76), rgba(124, 19, 52, .8));
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .duel-command span {
+      align-self: center;
+      justify-self: start;
+      padding: 0 clamp(11px, 1.4vw, 18px);
+      color: #fff8e6;
+      font-size: clamp(10px, 1.15vw, 16px);
+    }
+
+    .clip.is-embedded .hook-panel {
+      top: 36.4%;
+      width: 76%;
+      min-height: 48px;
+      display: grid;
+      padding: 6px 8px;
+    }
+
+    .clip.is-embedded .hook-panel h1 {
+      font-size: clamp(12px, 3.9vw, 18px);
+      line-height: .92;
+      white-space: normal;
+    }
+
+    .clip.is-embedded .hook-panel p {
+      display: none;
+    }
+
+    .clip.is-embedded .chat-stack {
+      top: 25.8%;
+      width: 84%;
+      gap: 4px;
+    }
+
+    .clip.is-embedded .command-card {
+      top: 35.2%;
+      width: 58%;
+      min-height: 30px;
+      grid-template-columns: 54px minmax(0, 1fr);
+    }
+
+    .clip.is-embedded .command-card b {
+      font-size: 5.5px;
+    }
+
+    .clip.is-embedded .command-card strong {
+      padding: 0 8px;
+      font-size: 11px;
+    }
+
+    .clip.is-embedded .player-row {
+      top: 55.8%;
+      width: 86%;
+    }
+
+    .clip.is-embedded .event-banner {
+      top: 72.4%;
+      width: 76%;
+    }
+
+    .clip.is-embedded .horde {
+      top: 84.8%;
+      width: 72%;
+    }
+
+    .clip.is-embedded .effects-scene {
+      padding: 2.6%;
+    }
+
+    .clip.is-embedded .effects-card {
+      width: 93%;
+      min-height: calc(100vh - 26px);
+      gap: 6px;
+      padding: 8px;
+    }
+
+    .clip.is-embedded .effects-copy {
+      display: grid;
+    }
+
+    .clip.is-embedded .effects-copy .scene-kicker,
+    .clip.is-embedded .effects-copy .scene-copy {
+      display: none;
+    }
+
+    .clip.is-embedded .effects-copy .scene-title {
+      font-size: clamp(14px, 4.4vw, 23px);
+      line-height: .92;
+    }
+
+    .clip.is-embedded .duel-reel {
+      min-height: 188px;
+    }
+
+    .clip.is-embedded .duel-shot {
+      top: 7px;
+      bottom: 7px;
+      padding: 7px;
+    }
+
+    .clip.is-embedded .duel-command {
+      min-height: 21px;
+      grid-template-columns: 72px minmax(0, 1fr);
+      border-radius: 8px;
+    }
+
+    .clip.is-embedded .duel-command strong {
+      font-size: 5.5px;
+    }
+
+    .clip.is-embedded .duel-command span {
+      padding: 0 7px;
+      font-size: 6px;
+    }
   </style>
 </head>
 <body>
@@ -4430,7 +4742,7 @@
 
       <div class="hook-panel">
         <h1><span>Every comment</span> <span>fires a real</span> <span>attack.</span></h1>
-        <p>Viewers type commands that deal real damage. Your LIVE becomes the arena.</p>
+        <p>Viewer commands become visible hits inside the arena.</p>
       </div>
 
       <div class="chat-stack">
@@ -4491,9 +4803,9 @@
     <section class="scene effects-scene" aria-hidden="true">
       <div class="effects-card">
         <div class="effects-copy">
-          <span class="scene-kicker">Commands become action</span>
-          <h2 class="scene-title">Moves <em>land</em></h2>
-          <p class="scene-copy">Attacks, boosts, gifts, and horde pressure stay readable inside the arena.</p>
+          <span class="scene-kicker">Live command resolved</span>
+          <h2 class="scene-title">Every comment <em>fires a real attack</em></h2>
+          <p class="scene-copy">The battle shows the command, target, impact, and result in one readable frame.</p>
         </div>
         <div class="duel-reel">
           <article class="duel-shot duel-shot-laser">
