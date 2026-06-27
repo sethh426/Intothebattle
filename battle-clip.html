@@ -1159,20 +1159,28 @@
 
     .effect-strip {
       position: absolute;
-      left: clamp(10px, 1.4vw, 18px);
-      right: clamp(10px, 1.4vw, 18px);
-      bottom: clamp(10px, 1.4vw, 18px);
+      left: clamp(16px, 2.2vw, 30px);
+      right: clamp(16px, 2.2vw, 30px);
+      top: 50%;
+      bottom: auto;
       z-index: 8;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(8px, 1.15vw, 14px);
       opacity: 0;
+      transform: translateY(-50%);
       animation: effectStripScene var(--cycle) ease-in-out infinite;
     }
 
     .effect-strip .effect-chip {
-      min-height: clamp(44px, 9vh, 72px);
+      min-height: clamp(88px, 18vh, 150px);
+      border-color: rgba(85, 231, 255, .18);
+      border-radius: 14px;
       background:
-        radial-gradient(circle at 50% 68%, rgba(85, 231, 255, .1), transparent 58%),
-        linear-gradient(180deg, rgba(255, 255, 255, .075), rgba(255, 255, 255, .032));
+        radial-gradient(circle at 50% 68%, rgba(85, 231, 255, .16), transparent 58%),
+        linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .035));
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .08),
+        0 16px 36px rgba(0, 0, 0, .24);
     }
 
     .effect-strip .effect-chip::before,
@@ -1215,23 +1223,8 @@
       max-width: 28ch;
     }
 
-    .clip[data-demo-asset="effect-strip-slide"] .effect-strip {
-      left: min(38%, 420px);
-      right: clamp(18px, 2.4vw, 34px);
-      top: 50%;
-      bottom: auto;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: clamp(9px, 1.4vw, 16px);
-      transform: translateY(-50%);
-    }
-
     .clip[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip {
       min-height: clamp(104px, 20vh, 172px);
-      border-color: rgba(85, 231, 255, .18);
-      border-radius: 14px;
-      background:
-        radial-gradient(circle at 50% 68%, rgba(85, 231, 255, .16), transparent 58%),
-        linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, .035));
     }
 
     .clip[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip span,
@@ -2058,20 +2051,20 @@
 
     @keyframes commandCue {
       0%, 12% { opacity: 0; transform: translate(-50%, 12px) scale(.98); }
-      14%, 18.8% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-      20.6%, 100% { opacity: 0; transform: translate(-50%, -7px) scale(.99); }
+      14%, 25.8% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+      27.4%, 100% { opacity: 0; transform: translate(-50%, -7px) scale(.99); }
     }
 
     @keyframes commandLockPulse {
       0%, 13.5% { opacity: 0; transform: scale(.98); }
-      15.2%, 18.8% { opacity: 1; transform: scale(1.035); }
-      20.6%, 100% { opacity: 0; transform: scale(1.08); }
+      15.2%, 25.8% { opacity: 1; transform: scale(1.035); }
+      27.4%, 100% { opacity: 0; transform: scale(1.08); }
     }
 
     @keyframes commandDropLine {
       0%, 14.2% { opacity: 0; transform: translate(-50%, -6px) scaleY(.3); }
-      16%, 19.2% { opacity: .9; transform: translate(-50%, 0) scaleY(1); }
-      20.6%, 100% { opacity: 0; transform: translate(-50%, 8px) scaleY(.4); }
+      16%, 25.8% { opacity: .9; transform: translate(-50%, 0) scaleY(1); }
+      27.4%, 100% { opacity: 0; transform: translate(-50%, 8px) scaleY(.4); }
     }
 
     @keyframes playerEnter {
@@ -2082,8 +2075,8 @@
     @keyframes attackBeam {
       0%, 14.8% { opacity: 0; width: 0; }
       17.8% { opacity: 1; width: 20.5%; }
-      21.4% { opacity: 1; width: 20.5%; }
-      23.2%, 100% { opacity: 0; width: 0; }
+      25.8% { opacity: 1; width: 20.5%; }
+      27.4%, 100% { opacity: 0; width: 0; }
     }
 
     @keyframes targetHit {
@@ -2094,8 +2087,8 @@
 
     @keyframes targetLockLabel {
       0%, 14% { opacity: 0; transform: translateY(-3px); }
-      15.8%, 21.8% { opacity: 1; transform: translateY(0); }
-      24%, 100% { opacity: 0; transform: translateY(2px); }
+      15.8%, 25.8% { opacity: 1; transform: translateY(0); }
+      27.4%, 100% { opacity: 0; transform: translateY(2px); }
     }
 
     @keyframes impactPop {
@@ -3295,14 +3288,14 @@
     }
 
     .battle-scene::before {
-      top: 26%;
+      top: 25.2%;
       width: min(88%, 1120px);
-      height: min(62%, 520px);
+      height: min(64%, 540px);
     }
 
     .hook-panel {
-      top: 28.8%;
-      width: min(66%, 790px);
+      top: 24.4%;
+      width: min(62%, 760px);
       grid-template-columns: minmax(0, 1fr);
       justify-items: center;
       gap: clamp(5px, .75vw, 9px);
@@ -3333,12 +3326,12 @@
     }
 
     .chat-stack {
-      top: 35.3%;
+      top: 36.8%;
       width: min(78%, 960px);
     }
 
     .command-card {
-      top: 42.4%;
+      top: 42.8%;
       width: min(42%, 520px);
       min-height: clamp(34px, 6.4%, 48px);
       border-radius: 999px;
@@ -3350,7 +3343,7 @@
     }
 
     .player-row {
-      top: 52%;
+      top: 50.4%;
       width: min(80%, 1040px);
       gap: clamp(8px, 1vw, 14px);
     }
@@ -3381,7 +3374,7 @@
     }
 
     .event-banner {
-      top: 74.4%;
+      top: 72.5%;
       width: min(60%, 760px);
       min-height: clamp(44px, 8.4%, 62px);
       border-radius: 999px;
@@ -3396,7 +3389,7 @@
     }
 
     .horde {
-      top: 85.8%;
+      top: 84.4%;
       width: min(64%, 780px);
       height: clamp(42px, 8.8%, 66px);
     }
@@ -4186,6 +4179,44 @@
       .recap-stat span {
         font-size: 5px;
       }
+    }
+
+    /* Final slide polish: keep the live loop aligned with the exported asset frames. */
+    .effect-strip,
+    .clip.is-embedded .effect-strip,
+    .clip:not(.is-embedded) .effect-strip,
+    .clip[data-demo-asset="effect-strip-slide"] .effect-strip,
+    .clip.is-embedded[data-demo-asset="effect-strip-slide"] .effect-strip {
+      position: absolute;
+      left: clamp(8px, 2.2vw, 30px);
+      right: clamp(8px, 2.2vw, 30px);
+      top: 50%;
+      bottom: auto;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: clamp(5px, 1.1vw, 14px);
+      transform: translateY(-50%);
+    }
+
+    .effect-strip .effect-chip,
+    .clip.is-embedded .effect-strip .effect-chip,
+    .clip[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip,
+    .clip.is-embedded[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip {
+      min-height: clamp(50px, 18vh, 150px);
+      padding: clamp(4px, .9vw, 11px);
+      border-radius: clamp(8px, 1.1vw, 14px);
+    }
+
+    .effect-strip .effect-chip b,
+    .clip.is-embedded .effect-strip .effect-chip b,
+    .clip[data-demo-asset="effect-strip-slide"] .effect-strip .effect-chip b {
+      font-size: clamp(5px, .9vw, 13px);
+    }
+
+    .effect-strip .effect-chip span,
+    .effect-strip .effect-chip span::before,
+    .effect-strip .effect-chip span::after {
+      animation-delay: -.68s;
     }
   </style>
 </head>
