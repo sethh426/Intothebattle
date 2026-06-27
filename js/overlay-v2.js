@@ -108,6 +108,7 @@
       this.linkGraphics = this.add.graphics();
       this.worldLayer.add(this.linkGraphics);
       this.createHorde();
+      this.createChatDisplay();
       this.createAmbientMotion();
 
       if (demoMode) this.startDemo();
@@ -117,9 +118,9 @@
     }
 
     getSafeRect() {
-      const marginX = Math.max(70, this.W * 0.055);
-      const marginTop = Math.max(56, this.H * 0.07);
-      const marginBottom = Math.max(64, this.H * 0.075);
+      const marginX = Math.max(48, this.W * 0.038);
+      const marginTop = Math.max(96, this.H * 0.1);
+      const marginBottom = Math.max(56, this.H * 0.068);
       return {
         x: marginX,
         y: marginTop,
@@ -131,96 +132,134 @@
     drawBackground() {
       this.backgroundLayer.removeAll(true);
       const g = this.add.graphics();
-      g.fillStyle(0x02040a, 1);
+
+      // Deep space base
+      g.fillStyle(0x020408, 1);
       g.fillRect(0, 0, this.W, this.H);
-      g.fillStyle(0x050914, 0.72);
-      g.fillRoundedRect(this.safe.x - 18 * this.scaleUnit, this.safe.y - 18 * this.scaleUnit, this.safe.width + 36 * this.scaleUnit, this.safe.height + 36 * this.scaleUnit, 18 * this.scaleUnit);
 
-      for (let i = 0; i < 7; i += 1) {
-        const alpha = 0.045 - i * 0.004;
-        g.lineStyle(Math.max(1, 2 * this.scaleUnit), i % 2 ? 0xf6c95b : 0x7afcff, alpha);
-        const y = this.safe.y + i * (this.safe.height / 6);
-        g.lineBetween(this.safe.x, y, this.safe.x + this.safe.width, y);
-      }
+      // Blue nebula layered glows centered in content area
+      const cx = this.W / 2;
+      const cy = this.safe.y + this.safe.height * 0.54;
+      g.fillStyle(0x061428, 0.88);
+      g.fillEllipse(cx, cy, this.W * 0.78, this.H * 0.72);
+      g.fillStyle(0x0a1e3c, 0.68);
+      g.fillEllipse(cx, cy, this.W * 0.54, this.H * 0.52);
+      g.fillStyle(0x0d2555, 0.48);
+      g.fillEllipse(cx, cy, this.W * 0.32, this.H * 0.32);
+      g.fillStyle(0x0e1e42, 0.32);
+      g.fillEllipse(cx, cy, this.W * 0.18, this.H * 0.18);
 
-      const grid = Math.max(60, 86 * this.scaleUnit);
-      g.lineStyle(Math.max(1, 1.5 * this.scaleUnit), 0x7afcff, 0.055);
-      for (let x = this.safe.x; x <= this.safe.x + this.safe.width; x += grid) {
-        g.lineBetween(x, this.safe.y, x, this.safe.y + this.safe.height);
-      }
-      for (let y = this.safe.y; y <= this.safe.y + this.safe.height; y += grid) {
-        g.lineBetween(this.safe.x, y, this.safe.x + this.safe.width, y);
-      }
+      // Subtle grid overlay
+      const grid = Math.max(72, 96 * this.scaleUnit);
+      g.lineStyle(Math.max(1, 1 * this.scaleUnit), 0x1a3060, 0.28);
+      for (let x = 0; x <= this.W; x += grid) g.lineBetween(x, 0, x, this.H);
+      for (let y = 0; y <= this.H; y += grid) g.lineBetween(0, y, this.W, y);
 
-      g.fillStyle(0xf6c95b, 0.046);
-      g.fillEllipse(this.safe.x + this.safe.width * 0.18, this.safe.y + this.safe.height * 0.28, this.W * 0.32, this.H * 0.42);
-      g.fillStyle(0xe83b5f, 0.048);
-      g.fillEllipse(this.safe.x + this.safe.width * 0.78, this.safe.y + this.safe.height * 0.68, this.W * 0.42, this.H * 0.48);
-      g.fillStyle(0x7afcff, 0.035);
-      g.fillEllipse(this.safe.x + this.safe.width * 0.52, this.safe.y + this.safe.height * 0.42, this.W * 0.3, this.H * 0.2);
-      g.fillStyle(0xffffff, 0.045);
-      g.fillRoundedRect(this.safe.x + this.safe.width * 0.08, this.safe.y + this.safe.height * 0.36, this.safe.width * 0.84, 3 * this.scaleUnit, 2 * this.scaleUnit);
-
-      const coreX = this.W / 2;
-      const coreY = this.safe.y + this.safe.height * 0.57;
-      const radius = 118 * this.scaleUnit;
-      g.lineStyle(Math.max(1, 2 * this.scaleUnit), 0xf6c95b, 0.13);
-      g.strokeCircle(coreX, coreY, radius);
-      g.lineStyle(Math.max(1, 1.5 * this.scaleUnit), 0x7afcff, 0.1);
-      g.strokeCircle(coreX, coreY, radius * 0.62);
-      g.lineStyle(Math.max(1, 2 * this.scaleUnit), 0xff6a3d, 0.1);
-      g.lineBetween(coreX - radius * 1.18, coreY, coreX + radius * 1.18, coreY);
-      g.lineBetween(coreX, coreY - radius * 0.62, coreX, coreY + radius * 0.62);
+      // Faint star field dots
+      const stars = [
+        [0.12,0.18],[0.34,0.08],[0.56,0.14],[0.78,0.22],[0.91,0.11],
+        [0.08,0.42],[0.88,0.38],[0.22,0.72],[0.66,0.82],[0.84,0.76],
+        [0.45,0.91],[0.18,0.88],[0.72,0.06],[0.38,0.54],[0.96,0.62],
+      ];
+      stars.forEach(([rx, ry]) => {
+        g.fillStyle(0xffffff, 0.18 + Math.random() * 0.22);
+        g.fillCircle(rx * this.W, ry * this.H, Math.max(1, 2 * this.scaleUnit));
+      });
 
       this.backgroundLayer.add(g);
     }
 
     drawFrame() {
       this.frameLayer.removeAll(true);
-      const outer = this.add.graphics();
-      const line = Math.max(2, 3 * this.scaleUnit);
-      outer.lineStyle(line, 0xf6c95b, 0.86);
-      outer.strokeRoundedRect(18 * this.scaleUnit, 18 * this.scaleUnit, this.W - 36 * this.scaleUnit, this.H - 36 * this.scaleUnit, 26 * this.scaleUnit);
-      outer.lineStyle(Math.max(1, line * 0.45), 0xffffff, 0.14);
-      outer.strokeRoundedRect(this.safe.x - 22 * this.scaleUnit, this.safe.y - 22 * this.scaleUnit, this.safe.width + 44 * this.scaleUnit, this.safe.height + 44 * this.scaleUnit, 16 * this.scaleUnit);
 
-      const headerW = Math.min(this.W * 0.42, 640 * this.scaleUnit);
-      const headerH = Math.max(42, 48 * this.scaleUnit);
-      const headerX = this.W / 2 - headerW / 2;
-      const headerY = this.safe.y + 18 * this.scaleUnit;
+      // Full-width metallic header bar
+      const hh = Math.max(80, this.H * 0.088);
       const header = this.add.graphics();
-      header.fillStyle(0x030711, 0.82);
-      header.fillRoundedRect(headerX, headerY, headerW, headerH, headerH / 2);
-      header.lineStyle(Math.max(1, 2 * this.scaleUnit), 0xf6c95b, 0.5);
-      header.strokeRoundedRect(headerX, headerY, headerW, headerH, headerH / 2);
-      header.fillStyle(0x7afcff, 0.12);
-      header.fillRoundedRect(headerX + 8 * this.scaleUnit, headerY + 8 * this.scaleUnit, headerW - 16 * this.scaleUnit, headerH - 16 * this.scaleUnit, (headerH - 16 * this.scaleUnit) / 2);
-      const headerText = this.add.text(this.W / 2, headerY + headerH / 2, 'ARENA LIVE', {
-        fontFamily: 'Arial Black, Impact, sans-serif',
-        fontSize: `${Math.round(24 * this.scaleUnit)}px`,
-        color: '#fff8e6',
-        align: 'center',
-        letterSpacing: 1,
-      }).setOrigin(0.5);
-      const leftTick = this.add.rectangle(headerX - 22 * this.scaleUnit, headerY + headerH / 2, 44 * this.scaleUnit, 4 * this.scaleUnit, 0xff6a3d, 0.95);
-      const rightTick = this.add.rectangle(headerX + headerW + 22 * this.scaleUnit, headerY + headerH / 2, 44 * this.scaleUnit, 4 * this.scaleUnit, 0xff6a3d, 0.95);
 
+      // Dark metallic background
+      header.fillStyle(0x07090f, 0.98);
+      header.fillRect(0, 0, this.W, hh);
+      // Subtle inner highlight at top
+      header.fillStyle(0xffffff, 0.055);
+      header.fillRect(0, 0, this.W, hh * 0.45);
+      // Vertical rivet lines
+      for (let i = 1; i < 8; i++) {
+        header.fillStyle(0xffffff, 0.04);
+        header.fillRect(this.W * (i / 8), 0, Math.max(1, 1 * this.scaleUnit), hh);
+      }
+      // Gold accent line at bottom of header
+      const barH = Math.max(3, 4 * this.scaleUnit);
+      header.fillStyle(0xf6c95b, 0.92);
+      header.fillRect(0, hh - barH, this.W, barH);
+
+      // LEFT: Brand avatar circle + INTOTHEBATTLE text
+      const avatarX = Math.max(56, this.W * 0.05) + Math.max(28, 34 * this.scaleUnit);
+      const avatarY = hh / 2;
+      const avatarR = Math.max(24, 30 * this.scaleUnit);
+      const brandGfx = this.add.graphics();
+      brandGfx.fillStyle(0xe83b5f, 0.92);
+      brandGfx.fillCircle(avatarX, avatarY, avatarR);
+      brandGfx.lineStyle(Math.max(2, 2.5 * this.scaleUnit), 0xf6c95b, 0.88);
+      brandGfx.strokeCircle(avatarX, avatarY, avatarR);
+      // Sword/cross icon inside avatar
+      brandGfx.lineStyle(Math.max(2, 2.5 * this.scaleUnit), 0xffffff, 0.9);
+      brandGfx.lineBetween(avatarX, avatarY - avatarR * 0.58, avatarX, avatarY + avatarR * 0.58);
+      brandGfx.lineBetween(avatarX - avatarR * 0.42, avatarY - avatarR * 0.14, avatarX + avatarR * 0.42, avatarY - avatarR * 0.14);
+
+      const brandText = this.add.text(avatarX + avatarR + Math.max(8, 10 * this.scaleUnit), avatarY, 'INTOTHEBATTLE', {
+        fontFamily: 'Arial Black, Impact, sans-serif',
+        fontSize: `${Math.round(18 * this.scaleUnit)}px`,
+        color: '#e8e8e8',
+        letterSpacing: 2,
+      }).setOrigin(0, 0.5);
+
+      // CENTER: Main title "INTO THE BATTLE"
+      const titleText = this.add.text(this.W / 2, avatarY - 2 * this.scaleUnit, 'INTO THE BATTLE', {
+        fontFamily: 'Arial Black, Impact, sans-serif',
+        fontSize: `${Math.round(30 * this.scaleUnit)}px`,
+        color: '#f6c95b',
+        letterSpacing: Math.round(4 * this.scaleUnit),
+        stroke: '#02040a',
+        strokeThickness: Math.max(3, 5 * this.scaleUnit),
+      }).setOrigin(0.5);
+
+      // RIGHT: Red LIVE badge
+      const pillW = Math.max(90, 110 * this.scaleUnit);
+      const pillH = Math.max(32, 38 * this.scaleUnit);
+      const pillX = this.W - Math.max(56, this.W * 0.05) - pillW - Math.max(10, 12 * this.scaleUnit);
+      const livePill = this.add.graphics();
+      livePill.fillStyle(0xc0152a, 0.95);
+      livePill.fillRoundedRect(pillX, avatarY - pillH / 2, pillW, pillH, pillH / 2);
+      livePill.lineStyle(Math.max(1, 2 * this.scaleUnit), 0xff4466, 0.7);
+      livePill.strokeRoundedRect(pillX, avatarY - pillH / 2, pillW, pillH, pillH / 2);
+
+      const liveText = this.add.text(pillX + pillW / 2, avatarY, '● LIVE', {
+        fontFamily: 'Arial Black, Impact, sans-serif',
+        fontSize: `${Math.round(15 * this.scaleUnit)}px`,
+        color: '#ffffff',
+        letterSpacing: Math.round(2 * this.scaleUnit),
+      }).setOrigin(0.5);
+
+      // Bottom corners bracket decorations
       const corners = this.add.graphics();
-      corners.lineStyle(Math.max(4, 6 * this.scaleUnit), 0xff6a3d, 0.95);
-      const c = 82 * this.scaleUnit;
-      const ox = 34 * this.scaleUnit;
-      const oy = 34 * this.scaleUnit;
-      corners.lineBetween(ox, oy + c, ox, oy);
-      corners.lineBetween(ox, oy, ox + c, oy);
-      corners.lineBetween(this.W - ox - c, oy, this.W - ox, oy);
-      corners.lineBetween(this.W - ox, oy, this.W - ox, oy + c);
+      corners.lineStyle(Math.max(3, 5 * this.scaleUnit), 0xf6c95b, 0.88);
+      const c = 72 * this.scaleUnit;
+      const ox = Math.max(28, 32 * this.scaleUnit);
+      const oy = Math.max(28, 32 * this.scaleUnit);
       corners.lineBetween(ox, this.H - oy - c, ox, this.H - oy);
       corners.lineBetween(ox, this.H - oy, ox + c, this.H - oy);
       corners.lineBetween(this.W - ox - c, this.H - oy, this.W - ox, this.H - oy);
       corners.lineBetween(this.W - ox, this.H - oy, this.W - ox, this.H - oy - c);
 
-      this.scanLine = this.add.rectangle(this.W / 2, this.safe.y, this.safe.width, Math.max(2, 4 * this.scaleUnit), 0x7afcff, 0.16);
-      this.frameLayer.add([outer, header, headerText, leftTick, rightTick, corners, this.scanLine]);
+      // Side border lines
+      const border = this.add.graphics();
+      border.lineStyle(Math.max(2, 2.5 * this.scaleUnit), 0xf6c95b, 0.42);
+      border.lineBetween(ox, hh, ox, this.H - oy);
+      border.lineBetween(this.W - ox, hh, this.W - ox, this.H - oy);
+      border.lineBetween(ox, this.H - oy, this.W - ox, this.H - oy);
+
+      this.scanLine = this.add.rectangle(this.W / 2, this.safe.y + this.safe.height * 0.5, this.safe.width, Math.max(2, 3 * this.scaleUnit), 0x7afcff, 0.12);
+      this.frameLayer.add([header, brandGfx, brandText, titleText, livePill, liveText, corners, border, this.scanLine]);
     }
 
     createAmbientMotion() {
@@ -241,62 +280,99 @@
       this.hordeGraphics = this.add.graphics();
       this.hordeTitle = this.add.text(0, 0, 'HORDE', {
         fontFamily: 'Arial Black, Impact, sans-serif',
-        fontSize: `${Math.round(30 * this.scaleUnit)}px`,
-        color: '#fff0b9',
+        fontSize: `${Math.round(22 * this.scaleUnit)}px`,
+        color: '#ffffff',
         align: 'center',
+        letterSpacing: 2,
       }).setOrigin(0.5);
-      this.hordeMeta = this.add.text(0, 0, 'Awaiting challengers', {
+      this.hordeMeta = this.add.text(0, 0, 'HORDE PRESSURE', {
         fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
-        fontSize: `${Math.round(26 * this.scaleUnit)}px`,
+        fontSize: `${Math.round(16 * this.scaleUnit)}px`,
         color: '#ffd37a',
         align: 'center',
       }).setOrigin(0.5);
-      this.hordeLayer.add([this.hordeGraphics, this.hordeTitle, this.hordeMeta]);
+      this.hordeBadgeText = this.add.text(0, 0, 'HP', {
+        fontFamily: 'Arial Black, Impact, sans-serif',
+        fontSize: `${Math.round(14 * this.scaleUnit)}px`,
+        color: '#f6c95b',
+        align: 'center',
+      }).setOrigin(0.5);
+      this.hordeLayer.add([this.hordeGraphics, this.hordeTitle, this.hordeMeta, this.hordeBadgeText]);
       this.drawHorde();
     }
 
     drawHorde() {
       if (!this.hordeGraphics) return;
-      const h = Math.max(74, this.H * 0.088);
-      const w = Math.min(this.safe.width * 0.74, this.W * 0.76);
-      const x = (this.W - w) / 2;
-      const y = this.safe.y + this.safe.height * 0.68;
+      const h = Math.max(68, this.H * 0.082);
+      const w = this.safe.width;
+      const x = this.safe.x;
+      const y = this.safe.y + this.safe.height * 0.78;
       const reserve = Math.max(0, this.playerGroups.length - 5);
       const alive = this.playerGroups.filter(player => Number(player.data.health || 0) > 0).length;
-      const pulse = 0.66 + Math.sin(this.time.now * 0.004) * 0.1;
       const bossActive = Boolean(this.bossState?.active);
       const bossPct = bossActive
         ? clamp(Number(this.bossState.hp || 0) / Math.max(1, Number(this.bossState.maxHp || 1)), 0, 1)
         : 0;
+      const totalFighters = Math.max(1, this.playerGroups.length);
+      const alivePct = clamp(alive / totalFighters, 0, 1);
+      const fillPct = bossActive ? bossPct : alivePct;
 
       this.hordeGraphics.clear();
-      this.hordeGraphics.fillStyle(bossActive ? 0x19050a : 0x150406, 0.92);
-      this.hordeGraphics.fillRoundedRect(x, y, w, h, h * 0.22);
-      this.hordeGraphics.lineStyle(Math.max(2, 4 * this.scaleUnit), bossActive ? 0xf6c95b : 0xe83b5f, bossActive ? 0.9 : 0.78);
-      this.hordeGraphics.strokeRoundedRect(x, y, w, h, h * 0.22);
-      this.hordeGraphics.fillStyle(0xe83b5f, 0.18 * pulse);
-      this.hordeGraphics.fillRoundedRect(x + 12 * this.scaleUnit, y + 12 * this.scaleUnit, w - 24 * this.scaleUnit, h - 24 * this.scaleUnit, h * 0.16);
-      if (bossActive) {
-        this.hordeGraphics.fillStyle(0xf6c95b, 0.72);
-        this.hordeGraphics.fillRoundedRect(x + 16 * this.scaleUnit, y + h - 21 * this.scaleUnit, (w - 32 * this.scaleUnit) * bossPct, 8 * this.scaleUnit, 4 * this.scaleUnit);
+
+      // Main card background
+      this.hordeGraphics.fillStyle(0x07090f, 0.96);
+      this.hordeGraphics.fillRoundedRect(x, y, w, h, Math.max(8, 10 * this.scaleUnit));
+      this.hordeGraphics.lineStyle(Math.max(2, 3 * this.scaleUnit), bossActive ? 0xf6c95b : 0xe83b5f, 0.72);
+      this.hordeGraphics.strokeRoundedRect(x, y, w, h, Math.max(8, 10 * this.scaleUnit));
+
+      // Left red "HORDE" label box
+      const labelW = Math.max(110, 140 * this.scaleUnit);
+      const pad = Math.max(6, 8 * this.scaleUnit);
+      this.hordeGraphics.fillStyle(bossActive ? 0xb8820e : 0xc0152a, 0.92);
+      this.hordeGraphics.fillRoundedRect(x + pad, y + pad, labelW, h - pad * 2, Math.max(6, 8 * this.scaleUnit));
+
+      // HP bar track (after label)
+      const barX = x + labelW + pad * 3;
+      const barW = w - labelW - pad * 7 - Math.max(56, 68 * this.scaleUnit);
+      const barH = Math.max(16, 22 * this.scaleUnit);
+      const barY = y + (h - barH) / 2;
+      this.hordeGraphics.fillStyle(0x0d1525, 0.95);
+      this.hordeGraphics.fillRoundedRect(barX, barY, barW, barH, barH / 2);
+
+      // Gold gradient HP fill (simulated with two rects)
+      if (fillPct > 0) {
+        const fillW = (barW - 4 * this.scaleUnit) * fillPct;
+        this.hordeGraphics.fillStyle(0xd4920a, 0.88);
+        this.hordeGraphics.fillRoundedRect(barX + 2 * this.scaleUnit, barY + 2 * this.scaleUnit, fillW, barH - 4 * this.scaleUnit, (barH - 4 * this.scaleUnit) / 2);
+        this.hordeGraphics.fillStyle(0xf6c95b, 0.68);
+        this.hordeGraphics.fillRoundedRect(barX + 2 * this.scaleUnit, barY + 2 * this.scaleUnit, fillW, (barH - 4 * this.scaleUnit) * 0.45, (barH - 4 * this.scaleUnit) / 2);
       }
 
-      for (let i = 0; i < 12; i += 1) {
-        const stripeX = x + (i / 12) * w + ((this.time.now * 0.04) % (w / 12));
-        this.hordeGraphics.fillStyle(i % 2 ? 0xff6a3d : 0xf6c95b, 0.07);
-        this.hordeGraphics.fillRect(stripeX, y + 8 * this.scaleUnit, Math.max(6, 10 * this.scaleUnit), h - 16 * this.scaleUnit);
-      }
+      // Right "HP" badge box
+      const badgeW = Math.max(48, 60 * this.scaleUnit);
+      const badgeX = x + w - badgeW - pad;
+      this.hordeGraphics.fillStyle(0x1a1e32, 0.9);
+      this.hordeGraphics.fillRoundedRect(badgeX, y + pad, badgeW, h - pad * 2, Math.max(6, 8 * this.scaleUnit));
+      this.hordeGraphics.lineStyle(Math.max(1, 1.5 * this.scaleUnit), 0xf6c95b, 0.55);
+      this.hordeGraphics.strokeRoundedRect(badgeX, y + pad, badgeW, h - pad * 2, Math.max(6, 8 * this.scaleUnit));
 
-      this.hordeTitle.setText(bossActive ? 'BOSS WAVE' : 'HORDE');
-      this.hordeTitle.setPosition(x + w * 0.18, y + h / 2);
-      this.hordeMeta.setPosition(x + w * 0.58, y + h / 2);
+      this.hordeTitle.setText(bossActive ? 'BOSS' : 'HORDE');
+      this.hordeTitle.setPosition(x + pad + labelW / 2, y + h / 2);
+
       const bossRemainingMs = bossActive
         ? (Number.isFinite(Number(this.bossState?.endsAt)) ? Math.max(0, Number(this.bossState.endsAt) - Date.now()) : Number(this.bossState?.remainingMs))
         : 0;
-      const bossClock = bossActive && Number.isFinite(bossRemainingMs) ? ` | ${formatClockMs(bossRemainingMs)}` : '';
-      this.hordeMeta.setText(bossActive
+      const bossClock = bossActive && Number.isFinite(bossRemainingMs) ? ` ${formatClockMs(bossRemainingMs)}` : '';
+      const metaStr = bossActive
         ? `${Math.round(bossPct * 100)}% HP${bossClock} | TARGET @BOSS`
-        : reserve > 0 ? `${reserve} RESERVE | ${alive} ACTIVE` : `${alive || 0} ACTIVE FIGHTERS`);
+        : `HORDE PRESSURE  ${alive * 25}/${totalFighters * 25} HP${reserve > 0 ? `  +${reserve} RESERVE` : ''}`;
+      this.hordeMeta.setText(metaStr);
+      this.hordeMeta.setPosition(barX + barW / 2, y + h / 2);
+
+      if (this.hordeBadgeText) {
+        this.hordeBadgeText.setPosition(badgeX + badgeW / 2, y + h / 2);
+      }
+
       this.hordeBounds = { x, y, width: w, height: h };
     }
 
@@ -654,15 +730,19 @@
       const type = data.killed || data.killingBlow ? 'kill' : data.critical ? 'critical' : 'normal';
       const from = this.getEntityPosition(data.attacker || data.attackerId, data.attackerScope) || this.getHordePosition();
       const to = this.getEntityPosition(data.target || data.targetId, data.targetScope) || this.getHordePosition();
+      const beamColor = data.laserColor ? hexToNumber(data.laserColor, this.laserColor) : undefined;
       this.fireBeam(from, to, data.damage || 'HIT', type, {
         special: Boolean(data.special || data.giftBoosted),
         effect: data.effect || data.commandDescription || data.shotType,
-        color: data.laserColor ? hexToNumber(data.laserColor, this.laserColor) : undefined,
+        color: beamColor,
       });
       if (data.attacker || data.attackerId) this.pulseCard(data.attacker || data.attackerId, type === 'kill' ? 0xf6c95b : this.laserColor);
       if (data.target || data.targetId) this.pulseCard(data.target || data.targetId, type === 'kill' ? 0xff5566 : 0xff6a3d);
       if (String(data.target || '').toLowerCase().includes('boss') || String(data.targetScope || '').toLowerCase() === 'horde') this.pulseHorde(type === 'kill' ? 0xf6c95b : 0xff6a3d);
       if (data.shielded) this.showBanner(`Shield absorbed ${Math.round(Number(data.shieldAbsorbed) || 0)} damage`, 'heal');
+      const attackerName = data.attacker || data.attackerId || '';
+      const cmd = data.effect || data.commandDescription || data.shotType || (type === 'kill' ? 'KILLING BLOW' : type === 'critical' ? 'CRITICAL HIT' : 'ATTACK');
+      if (attackerName) this.updateChatDisplay(attackerName, cmd, beamColor || this.laserColor);
     }
 
     handleGiftAttackEvent(data = {}) {
@@ -1034,7 +1114,7 @@
       const cardH = Math.max(132 * this.scaleUnit, cardW * 0.56);
       const totalW = cardW * count + minGap * (count - 1);
       const startX = (this.W - totalW) / 2 + cardW / 2;
-      const y = this.safe.y + this.safe.height * 0.42;
+      const y = this.safe.y + this.safe.height * 0.56;
 
       visible.forEach((record, index) => {
         this.tweens.killTweensOf(record.container);
@@ -1091,86 +1171,197 @@
 
     redrawPlayer(record) {
       const w = record.cardW || 280 * this.scaleUnit;
-      const h = record.cardH || 156 * this.scaleUnit;
+      const h = record.cardH || 164 * this.scaleUnit;
       const health = clamp(Number(record.data.health || 0), 0, 100);
-      const r = Math.max(12, 18 * this.scaleUnit);
-      const hpW = w - 40 * this.scaleUnit;
-      const hpH = Math.max(9, 13 * this.scaleUnit);
+      const r = Math.max(10, 14 * this.scaleUnit);
       const top = -h / 2;
       const left = -w / 2;
-      const healthColor = health > 66 ? 0x99ffda : health > 34 ? 0xf6c95b : 0xff5566;
+      const healthColor = health > 66 ? 0x7afcff : health > 34 ? 0xf6c95b : 0xff5566;
       const teamColor = record.data.teamColor ? hexToNumber(record.data.teamColor, healthColor) : null;
       const accentColor = teamColor || healthColor;
 
+      // Name tab dimensions — protrudes above card top
+      const tabH = Math.max(26, 32 * this.scaleUnit);
+      const tabW = w * 0.78;
+
       record.gfx.clear();
-      record.gfx.fillStyle(0x000000, 0.32);
-      record.gfx.fillRoundedRect(left + 7 * this.scaleUnit, top + 9 * this.scaleUnit, w, h, r);
-      record.gfx.fillStyle(0x050811, 0.92);
+
+      // Drop shadow
+      record.gfx.fillStyle(0x000000, 0.38);
+      record.gfx.fillRoundedRect(left + 6 * this.scaleUnit, top + tabH + 6 * this.scaleUnit, w, h, r);
+
+      // Name tab background (above card body)
+      record.gfx.fillStyle(0x0b0f1e, 0.97);
+      record.gfx.fillRoundedRect(left + (w - tabW) / 2, top - tabH + 4 * this.scaleUnit, tabW, tabH, r * 0.55);
+      record.gfx.lineStyle(Math.max(1, 2 * this.scaleUnit), accentColor, 0.82);
+      record.gfx.strokeRoundedRect(left + (w - tabW) / 2, top - tabH + 4 * this.scaleUnit, tabW, tabH, r * 0.55);
+
+      // Main card body
+      record.gfx.fillStyle(0x0c1120, 0.97);
       record.gfx.fillRoundedRect(left, top, w, h, r);
-      record.gfx.fillStyle(accentColor, 0.08);
-      record.gfx.fillRoundedRect(left + 7 * this.scaleUnit, top + 7 * this.scaleUnit, w - 14 * this.scaleUnit, h - 14 * this.scaleUnit, r * 0.72);
-      record.gfx.fillStyle(0xffffff, 0.06);
-      record.gfx.fillRoundedRect(left + 12 * this.scaleUnit, top + 12 * this.scaleUnit, w - 24 * this.scaleUnit, h * 0.38, r * 0.52);
-      record.gfx.lineStyle(Math.max(2, 3 * this.scaleUnit), accentColor, 0.86);
+
+      // Accent inner tint
+      record.gfx.fillStyle(accentColor, 0.07);
+      record.gfx.fillRoundedRect(left + 4 * this.scaleUnit, top + 4 * this.scaleUnit, w - 8 * this.scaleUnit, h - 8 * this.scaleUnit, r * 0.72);
+
+      // Metallic sheen at top
+      record.gfx.fillStyle(0xffffff, 0.07);
+      record.gfx.fillRoundedRect(left + 8 * this.scaleUnit, top + 8 * this.scaleUnit, w - 16 * this.scaleUnit, h * 0.28, r * 0.5);
+
+      // Main border
+      record.gfx.lineStyle(Math.max(2, 3 * this.scaleUnit), accentColor, 0.9);
       record.gfx.strokeRoundedRect(left, top, w, h, r);
-      record.gfx.lineStyle(Math.max(1, 1.5 * this.scaleUnit), 0xffffff, 0.18);
-      record.gfx.strokeRoundedRect(left + 6 * this.scaleUnit, top + 6 * this.scaleUnit, w - 12 * this.scaleUnit, h - 12 * this.scaleUnit, r * 0.64);
-      record.gfx.fillStyle(accentColor, 0.88);
-      record.gfx.fillRoundedRect(left + 18 * this.scaleUnit, top + 12 * this.scaleUnit, w - 36 * this.scaleUnit, 4 * this.scaleUnit, 2 * this.scaleUnit);
-      record.gfx.fillStyle(accentColor, 0.92);
-      record.gfx.fillRoundedRect(left + 12 * this.scaleUnit, top + 22 * this.scaleUnit, 46 * this.scaleUnit, 26 * this.scaleUnit, 13 * this.scaleUnit);
-      record.gfx.fillStyle(0x02040a, 0.2);
-      record.gfx.fillRoundedRect(left + 16 * this.scaleUnit, top + 26 * this.scaleUnit, 38 * this.scaleUnit, 18 * this.scaleUnit, 9 * this.scaleUnit);
-      record.gfx.fillStyle(0x111827, 0.96);
-      record.gfx.fillRoundedRect(left + 20 * this.scaleUnit, top + h - 34 * this.scaleUnit, hpW, hpH, hpH / 2);
-      record.gfx.fillStyle(healthColor, 0.95);
-      record.gfx.fillRoundedRect(left + 20 * this.scaleUnit, top + h - 34 * this.scaleUnit, hpW * (health / 100), hpH, hpH / 2);
 
+      // Inner border
+      record.gfx.lineStyle(Math.max(1, 1.5 * this.scaleUnit), 0xffffff, 0.13);
+      record.gfx.strokeRoundedRect(left + 5 * this.scaleUnit, top + 5 * this.scaleUnit, w - 10 * this.scaleUnit, h - 10 * this.scaleUnit, r * 0.6);
+
+      // HP bar at bottom
+      const hpH = Math.max(10, 14 * this.scaleUnit);
+      const hpX = left + 14 * this.scaleUnit;
+      const hpW = w - 28 * this.scaleUnit;
+      const hpY = top + h - hpH - Math.max(10, 12 * this.scaleUnit);
+      record.gfx.fillStyle(0x111827, 0.95);
+      record.gfx.fillRoundedRect(hpX, hpY, hpW, hpH, hpH / 2);
+      if (health > 0) {
+        record.gfx.fillStyle(healthColor, 0.9);
+        record.gfx.fillRoundedRect(hpX, hpY, hpW * (health / 100), hpH, hpH / 2);
+        // Sheen on HP bar
+        record.gfx.fillStyle(0xffffff, 0.18);
+        record.gfx.fillRoundedRect(hpX, hpY, hpW * (health / 100), hpH * 0.42, hpH / 2);
+      }
+
+      // Avatar circle
       record.avatar.clear();
-      record.avatar.fillStyle(accentColor, 0.18);
-      record.avatar.fillCircle(0, top + 40 * this.scaleUnit, 30 * this.scaleUnit);
-      record.avatar.lineStyle(Math.max(2, 3 * this.scaleUnit), accentColor, 0.75);
-      record.avatar.strokeCircle(0, top + 40 * this.scaleUnit, 30 * this.scaleUnit);
-      record.avatar.fillStyle(0xffffff, 0.86);
-      record.avatar.fillCircle(0, top + 34 * this.scaleUnit, 9 * this.scaleUnit);
-      record.avatar.fillRoundedRect(-14 * this.scaleUnit, top + 47 * this.scaleUnit, 28 * this.scaleUnit, 14 * this.scaleUnit, 7 * this.scaleUnit);
+      const avatarCY = top + Math.max(44, 52 * this.scaleUnit);
+      const avatarR = Math.max(22, 28 * this.scaleUnit);
+      record.avatar.fillStyle(0x0d1525, 0.88);
+      record.avatar.fillCircle(0, avatarCY, avatarR);
+      record.avatar.fillStyle(accentColor, 0.16);
+      record.avatar.fillCircle(0, avatarCY, avatarR);
+      record.avatar.lineStyle(Math.max(2, 3 * this.scaleUnit), accentColor, 0.88);
+      record.avatar.strokeCircle(0, avatarCY, avatarR);
+      // Simple person silhouette
+      record.avatar.fillStyle(0xffffff, 0.82);
+      record.avatar.fillCircle(0, avatarCY - 9 * this.scaleUnit, 8 * this.scaleUnit);
+      record.avatar.fillRoundedRect(-12 * this.scaleUnit, avatarCY, 24 * this.scaleUnit, 12 * this.scaleUnit, 6 * this.scaleUnit);
 
+      // Name text (in tab above card)
       record.nameText.setText(record.data.name);
       record.nameText.setStyle({
-        fontFamily: 'Arial Black, Inter, sans-serif',
-        fontSize: `${Math.round(clamp(w * 0.078, 17 * this.scaleUnit, 25 * this.scaleUnit))}px`,
+        fontFamily: 'Arial Black, Impact, sans-serif',
+        fontSize: `${Math.round(clamp(w * 0.07, 14 * this.scaleUnit, 20 * this.scaleUnit))}px`,
         color: '#ffffff',
-        fixedWidth: Math.round(w - 22 * this.scaleUnit),
+        fixedWidth: Math.round(tabW - 12 * this.scaleUnit),
         align: 'center',
       });
-      record.nameText.setPosition(0, top + 82 * this.scaleUnit);
+      record.nameText.setPosition(0, top - tabH / 2 + 3 * this.scaleUnit);
 
+      // KOs text
       record.killsText.setText(`${record.data.kills || 0} KOs`);
       record.killsText.setStyle({
         fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
-        fontSize: `${Math.round(clamp(w * 0.064, 15 * this.scaleUnit, 21 * this.scaleUnit))}px`,
+        fontSize: `${Math.round(clamp(w * 0.057, 12 * this.scaleUnit, 18 * this.scaleUnit))}px`,
         color: '#fff0b9',
-        fixedWidth: Math.round(w - 24 * this.scaleUnit),
+        fixedWidth: Math.round(w - 18 * this.scaleUnit),
         align: 'center',
       });
-      record.killsText.setPosition(0, top + 112 * this.scaleUnit);
+      record.killsText.setPosition(0, hpY - Math.max(22, 26 * this.scaleUnit));
 
+      // HP % text
       record.hpText.setText(`${Math.round(health)}%`);
       record.hpText.setStyle({
         fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
-        fontSize: `${Math.round(clamp(w * 0.054, 13 * this.scaleUnit, 18 * this.scaleUnit))}px`,
+        fontSize: `${Math.round(clamp(w * 0.048, 11 * this.scaleUnit, 15 * this.scaleUnit))}px`,
         color: health > 34 ? '#99ffda' : '#ff8a9b',
       });
-      record.hpText.setPosition(left + w - 20 * this.scaleUnit, top + h - 46 * this.scaleUnit);
+      record.hpText.setPosition(left + w - 10 * this.scaleUnit, hpY - Math.max(14, 18 * this.scaleUnit));
 
+      // Rank badge (top-right corner of card)
       record.rankText.setText(`#${record.rank || 1}`);
       record.rankText.setStyle({
         fontFamily: 'Arial Black, Impact, sans-serif',
-        fontSize: `${Math.round(clamp(w * 0.054, 14 * this.scaleUnit, 18 * this.scaleUnit))}px`,
-        color: '#031017',
+        fontSize: `${Math.round(clamp(w * 0.048, 12 * this.scaleUnit, 16 * this.scaleUnit))}px`,
+        color: `#${accentColor.toString(16).padStart(6, '0')}`,
         align: 'center',
       });
-      record.rankText.setPosition(left + 35 * this.scaleUnit, top + 35 * this.scaleUnit);
+      record.rankText.setPosition(left + w - Math.max(14, 16 * this.scaleUnit), top + Math.max(14, 16 * this.scaleUnit));
+    }
+
+    createChatDisplay() {
+      this.chatSlots = [];
+      this.chatLayer = this.add.container(0, 0);
+      this.worldLayer.add(this.chatLayer);
+
+      const slotCount = 3;
+      const slotH = Math.max(78, this.H * 0.086);
+      const gap = Math.max(10, 12 * this.scaleUnit);
+      const totalW = this.safe.width;
+      const slotW = (totalW - gap * (slotCount - 1)) / slotCount;
+      const slotY = this.safe.y + Math.max(14, 16 * this.scaleUnit);
+
+      for (let i = 0; i < slotCount; i++) {
+        const slotX = this.safe.x + i * (slotW + gap);
+        const gfx = this.add.graphics();
+        const userText = this.add.text(slotX + Math.max(14, 16 * this.scaleUnit), slotY + Math.max(10, 12 * this.scaleUnit), '', {
+          fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
+          fontSize: `${Math.round(13 * this.scaleUnit)}px`,
+          color: '#7afcff',
+        });
+        const cmdText = this.add.text(slotX + Math.max(14, 16 * this.scaleUnit), slotY + Math.max(30, 36 * this.scaleUnit), '', {
+          fontFamily: 'Arial Black, Impact, sans-serif',
+          fontSize: `${Math.round(16 * this.scaleUnit)}px`,
+          color: '#ffffff',
+          fixedWidth: Math.round(slotW - Math.max(28, 32 * this.scaleUnit)),
+          wordWrap: { width: Math.round(slotW - Math.max(28, 32 * this.scaleUnit)) },
+        });
+        const slot = { gfx, userText, cmdText, slotX, slotY, slotW, slotH, username: '', command: '', accentColor: 0x7afcff };
+        this.chatSlots.push(slot);
+        this.chatLayer.add([gfx, userText, cmdText]);
+        this.redrawChatSlot(slot);
+      }
+    }
+
+    updateChatDisplay(username, command, accentColor = 0x7afcff) {
+      if (!this.chatSlots || !this.chatSlots.length) return;
+      for (let i = this.chatSlots.length - 1; i > 0; i--) {
+        const prev = this.chatSlots[i - 1];
+        this.chatSlots[i].username = prev.username;
+        this.chatSlots[i].command = prev.command;
+        this.chatSlots[i].accentColor = prev.accentColor;
+        this.redrawChatSlot(this.chatSlots[i]);
+      }
+      this.chatSlots[0].username = `@${String(username || 'viewer').toLowerCase().slice(0, 20)}`;
+      this.chatSlots[0].command = String(command || 'ATTACK').toUpperCase().slice(0, 28);
+      this.chatSlots[0].accentColor = typeof accentColor === 'number' ? accentColor : 0x7afcff;
+      this.redrawChatSlot(this.chatSlots[0]);
+    }
+
+    redrawChatSlot(slot) {
+      const accentColor = slot.accentColor || 0x7afcff;
+      const isEmpty = !slot.username;
+      slot.gfx.clear();
+
+      // Card background
+      slot.gfx.fillStyle(0x07090f, isEmpty ? 0.55 : 0.94);
+      slot.gfx.fillRoundedRect(slot.slotX, slot.slotY, slot.slotW, slot.slotH, Math.max(8, 10 * this.scaleUnit));
+      slot.gfx.lineStyle(Math.max(1, 2 * this.scaleUnit), accentColor, isEmpty ? 0.2 : 0.68);
+      slot.gfx.strokeRoundedRect(slot.slotX, slot.slotY, slot.slotW, slot.slotH, Math.max(8, 10 * this.scaleUnit));
+
+      if (!isEmpty) {
+        // Accent inner fill
+        slot.gfx.fillStyle(accentColor, 0.07);
+        slot.gfx.fillRoundedRect(slot.slotX + 4 * this.scaleUnit, slot.slotY + 4 * this.scaleUnit, slot.slotW - 8 * this.scaleUnit, slot.slotH - 8 * this.scaleUnit, Math.max(6, 8 * this.scaleUnit));
+        // Left accent bar
+        slot.gfx.fillStyle(accentColor, 0.92);
+        slot.gfx.fillRoundedRect(slot.slotX + 4 * this.scaleUnit, slot.slotY + Math.max(10, 12 * this.scaleUnit), Math.max(3, 4 * this.scaleUnit), slot.slotH - Math.max(20, 24 * this.scaleUnit), 2 * this.scaleUnit);
+      }
+
+      const hexStr = `#${accentColor.toString(16).padStart(6, '0')}`;
+      slot.userText.setText(slot.username || '—');
+      slot.userText.setStyle({ color: isEmpty ? '#334455' : hexStr, alpha: isEmpty ? 0.5 : 1 });
+      slot.cmdText.setText(slot.command || 'Waiting for command...');
+      slot.cmdText.setStyle({ color: isEmpty ? '#1e2e3e' : '#ffffff' });
     }
 
     showDamage(x, y, damage, type = 'normal') {
@@ -1657,16 +1848,19 @@
     startDemo() {
       this.demoModeActive = true;
       const players = [
-        { id: 'demo-1', name: 'NovaStrike', health: 100, kills: 3 },
-        { id: 'demo-2', name: 'MiraVex', health: 86, kills: 2 },
-        { id: 'demo-3', name: 'RookFire', health: 73, kills: 1 },
-        { id: 'demo-4', name: 'JettByte', health: 94, kills: 4 },
-        { id: 'demo-5', name: 'CrownArc', health: 65, kills: 2 },
+        { id: 'demo-1', name: 'NOVAX', health: 100, kills: 3 },
+        { id: 'demo-2', name: 'WEST', health: 86, kills: 2 },
+        { id: 'demo-3', name: 'MIRA', health: 73, kills: 1 },
+        { id: 'demo-4', name: 'BLAZE', health: 31, kills: 4, teamColor: '#ff45a0' },
+        { id: 'demo-5', name: 'ASHLEE', health: 94, kills: 2 },
       ];
       this.time.delayedCall(350, () => {
         players.forEach((player, index) => this.time.delayedCall(index * 90, () => this.addPlayerCard(player)));
       });
       this.time.delayedCall(1200, () => this.showBanner('Chat attacks power the battle', 'event'));
+      this.time.delayedCall(2000, () => this.updateChatDisplay('mira_live', 'LASER ON BLAZE', 0xff45a0));
+      this.time.delayedCall(3200, () => this.updateChatDisplay('nova_fan', 'FIRE ICON', 0xff6a3d));
+      this.time.delayedCall(4400, () => this.updateChatDisplay('walstorm', '100-LIKE SURGE', 0xf6c95b));
       this.demoAttackStartAt = this.time.now + 5200;
       this.lastDemoEvent = this.time.now + 1800;
     }
@@ -1678,6 +1872,13 @@
       const health = clamp(Number(player.data.health || 100) - Math.round(4 + Math.random() * 12), 18, 100);
       const kills = Number(player.data.kills || 0) + (Math.random() > 0.72 ? 1 : 0);
       this.updatePlayerStats(player.playerId, { health, kills });
+      const demoViewers = ['chat_user', 'lightning_fan', 'arena_watcher', 'firestorm99', 'shadow_x'];
+      const demoCmds = ['LASER STRIKE', 'FIRE BLAST', 'ICE SHARD', 'THUNDER BOLT', 'SHADOW SLASH', 'MEGA ATTACK'];
+      const demoColors = [0x7afcff, 0xff45a0, 0xff6a3d, 0xf6c95b, 0x99ffda];
+      const viewer = demoViewers[Math.floor(Math.random() * demoViewers.length)];
+      const cmd = demoCmds[Math.floor(Math.random() * demoCmds.length)];
+      const col = demoColors[Math.floor(Math.random() * demoColors.length)];
+      this.updateChatDisplay(viewer, cmd, col);
       this.showDamage(this.W / 2 + (Math.random() - 0.5) * this.safe.width * 0.34, this.safe.y + this.safe.height * 0.63, Math.random() > 0.78 ? 'CRIT' : Math.round(14 + Math.random() * 48), Math.random() > 0.78 ? 'critical' : 'normal');
       if (Math.random() > 0.82) this.showBanner(`${player.data.name} is heating up`, 'kill');
     }
