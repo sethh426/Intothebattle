@@ -296,6 +296,7 @@
     .footer { display:flex; flex-wrap:wrap; gap:12px; margin:4px 0 28px; }
     .footer-btn { display:inline-flex; min-height:46px; align-items:center; justify-content:center; padding:0 16px; border-radius:15px; font-weight:900; cursor:pointer; border:1px solid var(--line2); background:rgba(255,255,255,.06); color:#fff; }
     .footer-btn.primary { color:#170c02; background:linear-gradient(135deg,var(--gold),#fff0b9 52%,var(--ember)); border:0; }
+    .footer-btn:disabled { opacity:.48; cursor:not-allowed; filter:saturate(.7); }
 
     /* Futuristic creator cockpit theme */
     .topbar { border-color:rgba(190,235,255,.32); background:linear-gradient(135deg,rgba(10,20,54,.78),rgba(31,39,84,.62)); box-shadow:0 24px 90px rgba(5,12,42,.48), inset 0 1px 0 rgba(255,255,255,.16); }
@@ -730,7 +731,7 @@
 
     <details class="workflow" id="toolsWorkflow" data-workflow-key="tools">
       <summary class="workflow-summary">
-        <span><span class="workflow-kicker">Testing and maintenance</span><span class="workflow-title">Test events, cleanup, and raw diagnostics</span><span class="workflow-copy">Keep setup-only and danger-adjacent controls collapsed until the creator needs them.</span></span>
+        <span><span class="workflow-kicker">Advanced tools</span><span class="workflow-title">Manual events, cleanup, and diagnostics</span><span class="workflow-copy">Keep setup-only and maintenance controls collapsed until the creator needs them.</span></span>
         <span class="workflow-status warn" id="toolsWorkflowStatus">Tools</span>
         <span class="workflow-toggle" aria-hidden="true"></span>
       </summary>
@@ -743,7 +744,7 @@
     </details>
   </section>
 
-  <div class="footer"><button class="footer-btn primary" onclick="startSetupRehearsal()">Start Demo</button><button class="footer-btn" onclick="copySetupOverlayUrl()">Copy Source</button><button class="footer-btn" onclick="testOverlayBurst()">Test Overlay</button><button class="footer-btn" onclick="focusTikTokUsername()">Connect TikTok</button></div>
+  <div class="footer" aria-label="Quick creator actions"><button class="footer-btn primary" id="footerOpenOverlayButton" onclick="openOverlayWhenSponsorReady()" disabled>Open Overlay</button><button class="footer-btn" id="footerStartVideoButton" onclick="startSponsorVideoWhenReady()" disabled>Start Video</button><button class="footer-btn" onclick="focusTikTokUsername()">Connect TikTok</button><button class="footer-btn" onclick="focusAudioWorkflow()">Sounds</button></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -841,6 +842,26 @@ function updateLaunchActionGrid() {
   setLaunchActionState('connect', connectDone ? 'done' : testDone ? 'active' : 'locked');
   setLaunchActionState('live', liveDone ? 'done' : connectDone ? 'active' : 'locked');
 }
+function sponsorVideoReadyIssue() {
+  if (!canUseCreatorSponsors) return 'Upload controls require Creator Pro or beta tester access.';
+  const file = selectedSponsorFile();
+  if (!file) return 'Upload and select a sponsored video first.';
+  return sponsorPlaybackIssue(file);
+}
+function updateFooterActions() {
+  const openButton = document.getElementById('footerOpenOverlayButton');
+  const startButton = document.getElementById('footerStartVideoButton');
+  const sponsorIssue = sponsorVideoReadyIssue();
+  const openIssue = sponsorIssue || (!currentOverlayUrl ? 'Signed overlay URL is still loading.' : '');
+  if (openButton) {
+    openButton.disabled = Boolean(openIssue);
+    openButton.title = openIssue || 'Open the live overlay with the selected sponsored video ready.';
+  }
+  if (startButton) {
+    startButton.disabled = Boolean(sponsorIssue);
+    startButton.title = sponsorIssue || 'Start the selected sponsored video on the connected overlay.';
+  }
+}
 function updateWorkflowStatuses() {
   const launchReady = setupGateReady();
   setWorkflowStatus(
@@ -869,6 +890,7 @@ function updateWorkflowStatuses() {
     dashboardState.audioCount ? 'ready' : 'warn'
   );
   setWorkflowStatus('toolsWorkflowStatus', dashboardState.devTestMode ? 'Dev mode on' : 'Collapsed', dashboardState.devTestMode ? 'warn' : 'ready');
+  updateFooterActions();
 }
 function renderNextAction() {
   const title = document.getElementById('nextActionTitle');
@@ -1528,6 +1550,31 @@ function openOverlay() {
   if (!currentOverlayUrl) return toast('Signed live overlay URL is still loading', true);
   window.open(currentOverlayUrl, '_blank');
 }
+function openOverlayWhenSponsorReady() {
+  const issue = sponsorVideoReadyIssue();
+  if (issue) return toast(issue, true);
+  openOverlay();
+}
+function startSponsorVideoWhenReady() {
+  const issue = sponsorVideoReadyIssue();
+  if (issue) return toast(issue, true);
+  playSponsorScene(selectedSponsorFilename);
+}
+function focusAudioWorkflow() {
+  const workflow = document.getElementById('audioWorkflow');
+  const card = document.getElementById('audioManagerCard');
+  if (workflow) {
+    workflow.open = true;
+    persistWorkflowState();
+  }
+  const target = card || workflow;
+  if (target) {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const firstControl = target.querySelector('input,select,button');
+    setTimeout(() => firstControl?.focus?.(), 250);
+  }
+  toast('Sound controls opened');
+}
 function copyOverlayUrl() {
   if (!currentOverlayUrl) return toast('Signed live overlay URL is still loading', true);
   const url = currentOverlayUrl;
@@ -1858,6 +1905,7 @@ function updateSponsorActionState() {
     previewButton.disabled = Boolean(previewIssue);
     previewButton.title = previewIssue || 'Open a signed browser preview for the selected video.';
   }
+  updateFooterActions();
 }
 function setSponsorInputs(file) {
   if (!file) return;
