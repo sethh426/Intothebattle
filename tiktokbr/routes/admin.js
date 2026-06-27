@@ -2020,12 +2020,123 @@ function renderPostPreviewCards(posts = []) {
   }).join('');
 }
 
-function renderContentIdeaCards(creativeTemplates = []) {
+function renderQueueCardActions(post = {}) {
+  const status = String(post.status || 'draft').toLowerCase();
+  if (status === 'published') {
+    return '<div class="queue-card-actions muted">Published posts are locked.</div>';
+  }
+  return `<div class="queue-card-actions">
+    <form method="POST" action="/admin/marketing/${escapeAttr(post.id)}/status">
+      <input type="hidden" name="status" value="approved" />
+      <button type="submit" class="test" ${status === 'approved' ? 'disabled' : ''}>Approve</button>
+    </form>
+    <form method="POST" action="/admin/marketing/${escapeAttr(post.id)}/status">
+      <input type="hidden" name="status" value="draft" />
+      <button type="submit" class="secondary" ${status === 'draft' ? 'disabled' : ''}>Draft</button>
+    </form>
+    <form method="POST" action="/admin/marketing/${escapeAttr(post.id)}/status">
+      <input type="hidden" name="status" value="skipped" />
+      <button type="submit" class="danger" ${status === 'skipped' ? 'disabled' : ''}>Skip</button>
+    </form>
+  </div>`;
+}
+
+function renderGrowthQueueBoard(posts = []) {
+  const lanes = [
+    ['draft', 'Draft', 'Needs review before it can move.'],
+    ['approved', 'Approved', 'Ready for schedule or publishing gate.'],
+    ['failed', 'Failed', 'Fix setup, then recover.'],
+    ['published', 'Published', 'Already sent and recorded.'],
+  ];
+  const grouped = posts.reduce((acc, post) => {
+    const key = String(post.status || 'draft').toLowerCase();
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(post);
+    return acc;
+  }, {});
+  return `<div class="queue-board">
+    ${lanes.map(([key, title, copy]) => {
+      const lanePosts = (grouped[key] || []).slice(0, 8);
+      const cards = lanePosts.map(post => {
+        const characterLimit = marketingPlatformCharacterLimit(post.platform);
+        const body = String(post.body || '');
+        const bodyPreview = body.length > 220 ? `${body.slice(0, 217).replace(/\s+\S*$/, '')}...` : body;
+        return `<article class="queue-card ${escapeAttr(key)}">
+          <div class="queue-card-top">
+            <strong>${escapeHtml(String(post.platform || '').toUpperCase())}</strong>
+            <span>${escapeHtml(formatSponsorDate(post.scheduled_for))}</span>
+          </div>
+          <p>${escapeHtml(bodyPreview || 'No post body saved yet.')}</p>
+          <div class="queue-card-meta">
+            <span>${numberValue(body.length)}/${numberValue(characterLimit)} chars</span>
+            <span>${escapeHtml(post.topic_key || 'growth')}</span>
+          </div>
+          ${post.error_message ? `<div class="warning-note failed">${escapeHtml(post.error_message)}</div>` : ''}
+          ${renderQueueCardActions(post)}
+        </article>`;
+      }).join('');
+      return `<section class="queue-lane ${escapeAttr(key)}">
+        <div class="queue-lane-head">
+          <h3>${escapeHtml(title)}</h3>
+          <span>${numberValue((grouped[key] || []).length)}</span>
+        </div>
+        <p>${escapeHtml(copy)}</p>
+        <div class="queue-lane-cards">${cards || '<div class="empty-state">Nothing in this lane.</div>'}</div>
+      </section>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderAssetPreview(asset = {}) {
+  const url = String(asset.asset_url || '').trim();
+  const title = asset.title || 'Growth asset';
+  if (/\.(png|jpe?g|webp|gif|svg)(\?|#|$)/i.test(url)) {
+    return `<img src="${escapeAttr(url)}" alt="${escapeAttr(title)}" loading="lazy" />`;
+  }
+  if (/\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url)) {
+    return `<video src="${escapeAttr(url)}" muted playsinline preload="metadata" controls></video>`;
+  }
+  return `<div class="asset-preview-fallback"><span>${escapeHtml(creativeAssetLabel(asset.asset_type))}</span></div>`;
+}
+
+function renderCreativeAssetGallery(creativeAssets = [], creativeOptions = creativeTemplateOptions()) {
+  const assets = creativeAssets.slice(0, 12);
+  if (!assets.length) return '<div class="empty-state">No proof assets saved yet. Save the demo folder or upload one real product frame.</div>';
+  return `<div class="asset-gallery">
+    ${assets.map(asset => {
+      const status = String(asset.approval_status || 'draft').toLowerCase();
+      return `<article class="asset-card ${escapeAttr(status)}">
+        <div class="asset-preview">${renderAssetPreview(asset)}</div>
+        <div class="asset-card-body">
+          <div class="template-topline">
+            <span class="status-pill ${escapeAttr(status)}">${escapeHtml(status)}</span>
+            <small>${escapeHtml(creativeAssetLabel(asset.asset_type, creativeOptions))}</small>
+          </div>
+          <h3>${escapeHtml(asset.title || 'Growth asset')}</h3>
+          <p>${escapeHtml(asset.notes || asset.source || 'Proof asset available for campaign creative.')}</p>
+          <a href="${escapeAttr(asset.asset_url || '#')}" target="_blank" rel="noopener">Open asset</a>
+          <div class="queue-card-actions">
+            <form method="POST" action="/admin/marketing/creative-assets/${escapeAttr(asset.id)}/status">
+              <input type="hidden" name="status" value="approved" />
+              <button type="submit" class="test" ${status === 'approved' ? 'disabled' : ''}>Approve</button>
+            </form>
+            <form method="POST" action="/admin/marketing/creative-assets/${escapeAttr(asset.id)}/status">
+              <input type="hidden" name="status" value="blocked" />
+              <button type="submit" class="danger" ${status === 'blocked' ? 'disabled' : ''}>Block</button>
+            </form>
+          </div>
+        </div>
+      </article>`;
+    }).join('')}
+  </div>`;
+}
+
+function renderGrowthContentIdeaCards(creativeTemplates = []) {
   return creativeTemplates.slice(0, 8).map(template => `<div class="idea-card">
     <span class="status-pill draft">${escapeHtml(template.goal || 'growth')}</span>
     <h3>${escapeHtml(template.label || template.key)}</h3>
     <p>${escapeHtml(template.hooks?.[0] || '')}</p>
-    <small>Path: ${escapeHtml(template.path || '/')} · Assets: ${escapeHtml((template.requiredAssetLabels || []).join(', '))}</small>
+    <small>Path: ${escapeHtml(template.path || '/')} - Assets: ${escapeHtml((template.requiredAssetLabels || []).join(', '))}</small>
     <a href="#variant-builder">Build variants</a>
   </div>`).join('');
 }
@@ -2098,23 +2209,67 @@ function renderGrowthCommandDeck({
   const draftCount = numberValue(counts.draft);
   const approvedCount = numberValue(counts.approved);
   const dueApproved = numberValue(diagnostics.dueApprovedCount);
+  const failedCount = numberValue(counts.failed);
   const visits = numberValue(performanceSummary.visits);
   const battlePack = contentPacks.find(pack => pack.key === 'battle_clip_launch') || contentPacks[0];
-  const nextMove = autoPostBlockers.length
-    ? 'Fix the publishing gate before relying on automation.'
-    : draftCount > 0
-      ? `Review and approve ${draftCount} draft${draftCount === 1 ? '' : 's'} before generating more.`
-      : proofAssets.length === 0
-        ? 'Add one approved real overlay clip or screenshot so creative is based on proof.'
-        : 'Generate the battle-clip launch pack, approve winners, then publish the due queue.';
-  const primaryStatus = autoPostBlockers.length ? 'blocked' : dueApproved ? 'ready' : draftCount ? 'warn' : 'draft';
+  const mission = autoPostBlockers.length
+    ? {
+      status: 'blocked',
+      eyebrow: 'setup blocked',
+      title: 'Fix publishing setup',
+      copy: 'The engine can still create and approve content, but live auto-posting is blocked until the setup gate is clean.',
+      cta: 'Open settings',
+      href: '#settings',
+    }
+    : failedCount
+      ? {
+        status: 'blocked',
+        eyebrow: 'recovery needed',
+        title: 'Recover failed posts',
+        copy: `${failedCount} failed post${failedCount === 1 ? '' : 's'} need review before the queue can be trusted.`,
+        cta: 'Review queue',
+        href: '#queue',
+      }
+      : dueApproved
+        ? {
+          status: 'ready',
+          eyebrow: 'ready now',
+          title: 'Publish approved posts',
+          copy: `${dueApproved} approved post${dueApproved === 1 ? '' : 's'} are due now. Dry-run first if any connection changed.`,
+          cta: 'Publish queue',
+          href: '#queue',
+        }
+        : draftCount
+          ? {
+            status: 'warn',
+            eyebrow: 'review needed',
+            title: 'Approve the best drafts',
+            copy: `${draftCount} draft${draftCount === 1 ? '' : 's'} are waiting. Approve only the posts that clearly show the game promise and send tracked traffic.`,
+            cta: 'Review drafts',
+            href: '#queue',
+          }
+          : proofAssets.length === 0
+            ? {
+              status: 'warn',
+              eyebrow: 'proof missing',
+              title: 'Add real product proof',
+              copy: 'Growth creative should start from a real battle clip, overlay frame, sponsor break, or dashboard proof asset.',
+              cta: 'Open assets',
+              href: '#assets',
+            }
+            : {
+              status: 'ready',
+              eyebrow: 'build campaign',
+              title: 'Create the next campaign',
+              copy: 'Use an approved proof asset, generate a coordinated pack, approve the winners, and let the queue publish.',
+              cta: 'Create campaign',
+              href: '#create-campaign',
+            };
   const cards = [
-    ['Next best move', nextMove, primaryStatus],
-    ['Proof asset health', `${proofAssets.length} approved proof asset${proofAssets.length === 1 ? '' : 's'} available for conversion creative.`, proofAssets.length ? 'ready' : 'warn'],
-    ['Publishing queue', `${approvedCount} approved, ${dueApproved} due now, ${numberValue(counts.failed)} failed needing recovery.`, numberValue(counts.failed) ? 'blocked' : approvedCount ? 'ready' : 'warn'],
-    ['Learning signal', visits ? `${visits} tracked UTM visit${visits === 1 ? '' : 's'} in ${numberValue(performanceSummary.days)} days.` : 'No tracked visits yet. Every public growth link needs UTM proof.', visits ? 'ready' : 'warn'],
-    ['Creative pipeline', `${readyVariants.length} ready variant${readyVariants.length === 1 ? '' : 's'}, ${queuedVariants.length} queued for posting.`, readyVariants.length || queuedVariants.length ? 'ready' : 'draft'],
-    ['Lead sync', growthDiagnostics.enabled ? 'Growth API sync is enabled for lead capture and follow-up data.' : 'Lead sync is disabled; keep CTA links UTM-clean until API keys are connected.', growthDiagnostics.enabled ? 'ready' : 'warn'],
+    ['Traffic', visits ? `${visits} tracked visits in ${numberValue(performanceSummary.days)} days.` : 'No tracked UTM visits yet.', visits ? 'ready' : 'warn'],
+    ['Queue', `${draftCount} draft, ${approvedCount} approved, ${dueApproved} due now.`, failedCount ? 'blocked' : approvedCount || dueApproved ? 'ready' : draftCount ? 'warn' : 'draft'],
+    ['Proof assets', `${proofAssets.length} approved proof asset${proofAssets.length === 1 ? '' : 's'} ready.`, proofAssets.length ? 'ready' : 'warn'],
+    ['Lead sync', growthDiagnostics.enabled ? `Enabled for ${(growthDiagnostics.providers || []).join(', ') || 'configured providers'}.` : 'Disabled until HubSpot/Segment keys are connected.', growthDiagnostics.enabled ? 'ready' : 'warn'],
   ];
   const cardHtml = cards.map(([title, detail, status]) => `<div class="command-card ${escapeAttr(status)}">
     <span class="status-pill ${escapeAttr(status)}">${escapeHtml(status)}</span>
@@ -2125,32 +2280,37 @@ function renderGrowthCommandDeck({
   const blockerHtml = autoPostBlockers.length
     ? `<div class="growth-blockers">${autoPostBlockers.map(blocker => `<span>${escapeHtml(blocker)}</span>`).join('')}</div>`
     : '<div class="growth-blockers ready"><span>Automation gate is clean. Approved due posts can publish through configured webhooks.</span></div>';
-  return `<section class="growth-command-deck">
-    <div class="command-hero">
-      <span class="status-pill ${escapeAttr(primaryStatus)}">operator focus</span>
-      <h2>Today&apos;s growth mission</h2>
-      <p>${escapeHtml(nextMove)}</p>
-      <div class="command-links">
-        <a href="/battle-clip" target="_blank" rel="noopener">Open 18s demo</a>
-        <a href="#content-packs">Generate content pack</a>
-        <a href="#daily-queue">Review queue</a>
-        <a href="#asset-vault">Proof assets</a>
+  return `<section class="growth-command-center" id="command-center">
+    <div class="mission-panel ${escapeAttr(mission.status)}">
+      <span class="status-pill ${escapeAttr(mission.status)}">${escapeHtml(mission.eyebrow)}</span>
+      <h2>${escapeHtml(mission.title)}</h2>
+      <p>${escapeHtml(mission.copy)}</p>
+      <div class="mission-actions">
+        <a class="primary-action" href="${escapeAttr(mission.href)}">${escapeHtml(mission.cta)}</a>
+        <a href="/battle-clip" target="_blank" rel="noopener">View proof demo</a>
       </div>
     </div>
     <div class="proof-brief">
-      <span class="status-pill ready">primary asset</span>
-      <h3>Use the 18-second battle demo as the main sales proof.</h3>
-      <p>Daily content should sell one promise: comments become visible action, the battle creates a produced moment, and the creator can launch quickly.</p>
+      <span class="status-pill ready">campaign promise</span>
+      <h3>Sell the moment: chat becomes visible action.</h3>
+      <p>Every growth post should show the same clean story: a viewer comments, the overlay reacts, the battle produces a result, and the creator has a reason to launch.</p>
       <ul>
-        <li>Hook: Turn your TikTok LIVE chat into a playable battle arena.</li>
-        <li>Proof: chat command, attack, KO, effect montage, broadcast break, stats recap.</li>
-        <li>CTA: Launch your first battle room in under 5 minutes.</li>
+        <li>Hook: Turn TikTok LIVE comments into a playable battle arena.</li>
+        <li>Proof: command, attack, KO, sponsored break, and stats recap.</li>
+        <li>CTA: Start a battle room and let viewers play from chat.</li>
       </ul>
-      <small>${battlePack ? `Recommended pack: ${escapeHtml(battlePack.label || battlePack.key)}.` : 'Generate the battle clip launch pack after approving one real proof asset.'}</small>
+      <small>${battlePack ? `Recommended pack: ${escapeHtml(battlePack.label || battlePack.key)}.` : 'Approve one real proof asset before building a campaign pack.'}</small>
       ${battlePackRecipe ? `<ol>${battlePackRecipe}</ol>` : ''}
     </div>
     ${blockerHtml}
     <div class="command-grid">${cardHtml}</div>
+    <div class="mission-steps">
+      <a href="#create-campaign"><strong>1</strong><span>Create campaign</span></a>
+      <a href="#queue"><strong>2</strong><span>Approve queue</span></a>
+      <a href="#assets"><strong>3</strong><span>Use proof assets</span></a>
+      <a href="#results"><strong>4</strong><span>Read results</span></a>
+      <a href="#settings"><strong>5</strong><span>Fix setup</span></a>
+    </div>
   </section>`;
 }
 
@@ -2244,8 +2404,31 @@ function renderMarketingAdminPage({
   const performancePanels = renderPerformanceSummary(performanceSummary);
   const recentVisitRows = renderRecentVisitRows(recentVisits);
   const postPreviewCards = renderPostPreviewCards(posts);
-  const ideaCards = renderContentIdeaCards(creativeTemplates);
+  const queueBoard = renderGrowthQueueBoard(calendarQueuePosts);
+  const assetGallery = renderCreativeAssetGallery(creativeAssets, creativeOptions);
+  const ideaCards = renderGrowthContentIdeaCards(creativeTemplates);
   const guardrailCards = renderGrowthGuardrails(posts, diagnostics, performanceSummary);
+  const campaignGoalCards = [
+    ['Creator signups', 'Lead with the battle demo and route traffic to /signup.', 'Proof clip + launch CTA'],
+    ['Sponsor sales', 'Show branded breaks, dashboard control, and measurable live moments.', 'Sponsor page + proof asset'],
+    ['SEO demand', 'Turn high-intent topics into tracked social posts and page ideas.', 'Keyword + landing page'],
+    ['Product proof', 'Use real overlay frames so people understand what happens on screen.', 'Asset pack + queue'],
+  ].map(([title, copy, tag]) => `<div class="goal-card">
+    <span class="status-pill draft">${escapeHtml(tag)}</span>
+    <h3>${escapeHtml(title)}</h3>
+    <p>${escapeHtml(copy)}</p>
+  </div>`).join('');
+  const setupChecklist = [
+    ['Scheduler', diagnostics.autoPostEnabled ? 'ready' : 'warn', diagnostics.autoPostEnabled ? 'Auto-post scheduler is enabled.' : 'Auto-post scheduler is off.'],
+    ['Automation', diagnostics.enabled ? 'ready' : 'warn', diagnostics.enabled ? 'Outbound publishing is enabled.' : 'Outbound publishing is disabled.'],
+    ['Live mode', diagnostics.dryRun ? 'warn' : 'ready', diagnostics.dryRun ? 'Dry-run is on, so no live posts will be sent.' : 'Live publishing mode is available.'],
+    ['Webhooks', configuredWebhooks.length ? 'ready' : 'warn', configuredWebhooks.length ? `${configuredWebhooks.length} publishing webhook${configuredWebhooks.length === 1 ? '' : 's'} configured.` : 'No publishing webhook is configured.'],
+    ['Lead APIs', growthDiagnostics.enabled ? 'ready' : 'warn', growthDiagnostics.enabled ? `Lead sync connected: ${growthProviders.join(', ') || 'provider ready'}.` : 'HubSpot/Segment lead sync is disabled.'],
+  ].map(([title, status, copy]) => `<div class="setup-check ${escapeAttr(status)}">
+    <span class="status-pill ${escapeAttr(status)}">${escapeHtml(status)}</span>
+    <h3>${escapeHtml(title)}</h3>
+    <p>${escapeHtml(copy)}</p>
+  </div>`).join('');
   const eventRows = events.map(event => `<tr>
     <td data-label="Event"><strong>${escapeHtml(event.event_type || '')}</strong><br /><small>${escapeHtml(formatSponsorDate(event.created_at))}</small></td>
     <td data-label="Platform">${escapeHtml(String(event.platform || '').toUpperCase())}</td>
@@ -2329,6 +2512,67 @@ function renderMarketingAdminPage({
     .error { color:#ffb6b6; }
     .success { color:#c6ffc3; }
     .card { background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.24); }
+    .growth-tabs { position:sticky; top:12px; z-index:20; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; padding:8px; border:1px solid rgba(255,255,255,.1); border-radius:18px; background:rgba(5,7,11,.92); backdrop-filter:blur(16px); box-shadow:0 18px 50px rgba(0,0,0,.28); }
+    .growth-tabs a { min-height:40px; display:flex; align-items:center; justify-content:center; padding:0 10px; border-radius:12px; color:#dce7ff; background:rgba(255,255,255,.045); font-size:12px; text-align:center; }
+    .growth-tabs a:hover { color:#041014; background:linear-gradient(135deg,#55e7ff,#fff0b9); }
+    .growth-command-center { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr); gap:16px; padding:20px; border:1px solid rgba(85,231,255,.24); border-radius:28px; background:linear-gradient(180deg,rgba(85,231,255,.09),rgba(255,255,255,.026)); box-shadow:0 30px 90px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.08); scroll-margin-top:84px; }
+    .mission-panel,.proof-brief { min-width:0; padding:18px; border-radius:22px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.2); }
+    .mission-panel.ready { border-color:rgba(119,240,161,.3); }
+    .mission-panel.warn { border-color:rgba(246,201,91,.32); }
+    .mission-panel.blocked { border-color:rgba(232,59,95,.36); }
+    .mission-panel h2 { margin:12px 0 8px; font-size:clamp(34px,5vw,62px); line-height:.94; text-transform:uppercase; max-width:740px; }
+    .mission-panel p,.proof-brief p { margin:0; color:#dce7ff; font-size:16px; line-height:1.55; }
+    .mission-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+    .mission-actions a { min-height:44px; display:inline-flex; align-items:center; justify-content:center; padding:0 15px; border-radius:14px; color:#fff8e6; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.07); }
+    .mission-actions .primary-action { color:#041014; border:0; background:linear-gradient(135deg,#55e7ff,#fff0b9 62%,#ff6a3d); }
+    .mission-steps { grid-column:1 / -1; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
+    .mission-steps a { min-height:58px; display:flex; align-items:center; gap:10px; padding:10px; border-radius:16px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.18); color:#fff8e6; }
+    .mission-steps strong { width:32px; height:32px; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center; border-radius:10px; color:#041014; background:#55e7ff; }
+    .mission-steps span { min-width:0; font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; }
+    .growth-section { scroll-margin-top:86px; display:grid; gap:16px; }
+    .section-head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; }
+    .section-head h2 { margin:0; font-size:clamp(26px,3.5vw,42px); line-height:1; text-transform:uppercase; }
+    .section-head p { max-width:680px; margin:8px 0 0; }
+    .section-head .status-pill { flex:0 0 auto; }
+    .goal-grid,.setup-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .goal-card,.setup-check,.campaign-card,.publish-card,.queue-lane,.asset-card,.result-panel { min-width:0; border:1px solid rgba(255,255,255,.1); border-radius:18px; background:rgba(0,0,0,.2); }
+    .goal-card,.setup-check,.campaign-card,.publish-card,.result-panel { padding:14px; }
+    .goal-card h3,.setup-check h3,.campaign-card h3,.publish-card h3,.queue-lane h3,.asset-card h3,.result-panel h3 { margin:10px 0 8px; color:#fff8e6; font-size:17px; }
+    .goal-card p,.setup-check p,.campaign-card p,.publish-card p,.queue-lane p,.asset-card p,.result-panel p { margin:0; font-size:13px; }
+    .campaign-layout { display:grid; grid-template-columns:minmax(0,.95fr) minmax(320px,1.05fr); gap:16px; align-items:start; }
+    .campaign-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .campaign-actions form,.publish-card form { min-width:0; padding:14px; border-radius:16px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); }
+    .campaign-card .content-pack-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .publish-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+    .publish-card .calendar-grid { grid-template-columns:1fr; }
+    .queue-board { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; align-items:start; }
+    .queue-lane { padding:12px; }
+    .queue-lane-head,.queue-card-top,.queue-card-meta { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .queue-lane-head span { min-width:34px; height:30px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; color:#041014; background:#ffdf8a; font-weight:950; }
+    .queue-lane > p { margin:0 0 12px; color:#9fb2d7; }
+    .queue-lane-cards { display:grid; gap:10px; }
+    .queue-card { display:grid; gap:10px; padding:12px; border-radius:15px; border:1px solid rgba(255,255,255,.09); background:rgba(255,255,255,.04); }
+    .queue-card.approved { border-color:rgba(85,231,255,.24); }
+    .queue-card.failed { border-color:rgba(232,59,95,.32); }
+    .queue-card.published { border-color:rgba(119,240,161,.24); }
+    .queue-card-top strong { color:#ffdf8a; letter-spacing:.08em; }
+    .queue-card-top span,.queue-card-meta span { color:#9fb2d7; font-size:11px; font-weight:900; }
+    .queue-card p { color:#fff8e6; line-height:1.45; }
+    .queue-card-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; align-items:end; color:#9fb2d7; font-size:12px; font-weight:900; }
+    .queue-card-actions form { margin:0; }
+    .queue-card-actions button { min-height:34px; margin:0; padding:0 8px; border-radius:10px; font-size:11px; }
+    .queue-card-actions.muted { display:block; padding:9px; border-radius:10px; background:rgba(255,255,255,.05); }
+    .asset-gallery { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+    .asset-card { overflow:hidden; display:grid; grid-template-rows:auto 1fr; }
+    .asset-preview { aspect-ratio:16/9; background:#070b12; border-bottom:1px solid rgba(255,255,255,.08); }
+    .asset-preview img,.asset-preview video { width:100%; height:100%; display:block; object-fit:cover; }
+    .asset-preview-fallback { width:100%; height:100%; display:flex; align-items:center; justify-content:center; padding:12px; color:#9fefff; font-weight:900; text-align:center; background:linear-gradient(135deg,rgba(85,231,255,.12),rgba(246,201,91,.08)); }
+    .asset-card-body { display:grid; gap:8px; padding:14px; }
+    .asset-card-body a { font-size:12px; }
+    .results-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(320px,.82fr); gap:16px; align-items:start; }
+    .results-stack { display:grid; gap:12px; }
+    .results-stack .preview-grid,.results-stack .idea-grid { grid-template-columns:1fr; }
+    .empty-state { min-height:86px; display:flex; align-items:center; justify-content:center; padding:14px; border:1px dashed rgba(255,255,255,.16); border-radius:14px; color:#9fb2d7; background:rgba(255,255,255,.035); text-align:center; font-weight:800; line-height:1.35; }
     .growth-command-deck { display:grid; grid-template-columns:minmax(0,1.08fr) minmax(320px,.92fr); gap:16px; padding:20px; border:1px solid rgba(85,231,255,.24); border-radius:28px; background:radial-gradient(circle at 10% 0,rgba(85,231,255,.14),transparent 38%),radial-gradient(circle at 88% 8%,rgba(246,201,91,.12),transparent 36%),linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.026)); box-shadow:0 30px 90px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.08); }
     .command-hero,.proof-brief { min-width:0; padding:18px; border-radius:22px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.18); }
     .command-hero h2 { margin:10px 0 8px; font-size:clamp(30px,4.8vw,58px); line-height:.94; text-transform:uppercase; }
@@ -2460,8 +2704,8 @@ function renderMarketingAdminPage({
     th { background:rgba(246,201,91,0.09); color:#ffdf8a; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     small { color:#9fb2d7; }
     .post-copy { max-width:620px; white-space:pre-wrap; color:#fff8e6; line-height:1.45; }
-    @media(max-width:1100px){ .growth-command-deck,.growth-shell{grid-template-columns:1fr}.command-links,.template-grid,.blank-design-grid,.content-pack-grid,.demo-asset-grid,.engine-grid,.mode-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.calendar-grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
-    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-brand img{width:46px;height:46px}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.admin-nav a{padding:0 10px}.metrics-grid,.inline-grid,.focus-actions,.command-links,.command-grid,.template-grid,.blank-design-grid,.content-pack-grid,.demo-asset-grid,.engine-grid,.mode-grid,.calendar-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:1fr}.folder-head{display:grid}.growth-command-deck{padding:14px}.page-section summary{align-items:flex-start;flex-direction:column}.page-section summary small{text-align:left}.page-section summary::after{align-self:flex-start}.section-body{padding:0 12px 14px} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
+    @media(max-width:1100px){ .growth-command-center,.growth-command-deck,.growth-shell,.campaign-layout,.results-grid{grid-template-columns:1fr}.goal-grid,.setup-grid,.publish-grid,.queue-board,.asset-gallery,.mission-steps,.command-links,.template-grid,.blank-design-grid,.content-pack-grid,.demo-asset-grid,.engine-grid,.mode-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.calendar-grid{grid-template-columns:repeat(4,minmax(0,1fr));} }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-brand img{width:46px;height:46px}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.admin-nav a{padding:0 10px}.growth-tabs{position:static;grid-template-columns:1fr 1fr}.metrics-grid,.inline-grid,.focus-actions,.campaign-actions,.goal-grid,.setup-grid,.publish-grid,.queue-board,.asset-gallery,.mission-steps,.command-links,.command-grid,.template-grid,.blank-design-grid,.content-pack-grid,.demo-asset-grid,.engine-grid,.mode-grid,.calendar-grid,.preview-grid,.idea-grid,.guardrail-grid,.performance-grid{grid-template-columns:1fr}.folder-head,.section-head{display:grid}.growth-command-center,.growth-command-deck{padding:14px}.page-section summary{align-items:flex-start;flex-direction:column}.page-section summary small{text-align:left}.page-section summary::after{align-self:flex-start}.section-body{padding:0 12px 14px} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:14px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
     @media(max-width:420px){ .admin-nav{grid-template-columns:1fr}.metrics-grid{grid-template-columns:1fr} }
   </style>
 </head>
@@ -2477,216 +2721,286 @@ function renderMarketingAdminPage({
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
     ${commandDeck}
+    <nav class="growth-tabs" aria-label="Growth workflow">
+      <a href="#create-campaign">Create Campaign</a>
+      <a href="#queue">Queue</a>
+      <a href="#assets">Assets</a>
+      <a href="#results">Results</a>
+      <a href="#settings">Settings</a>
+    </nav>
     <div class="metrics-grid">
-      <div class="metric-card"><span>Drafts</span><strong>${numberValue(statusCounts.draft)}</strong></div>
-      <div class="metric-card"><span>Approved</span><strong>${numberValue(statusCounts.approved)}</strong></div>
-      <div class="metric-card"><span>Published</span><strong>${numberValue(statusCounts.published)}</strong></div>
-      <div class="metric-card"><span>Failed</span><strong>${numberValue(statusCounts.failed)}</strong></div>
+      <div class="metric-card"><span>Traffic</span><strong>${numberValue(performanceSummary.visits)}</strong><small>${numberValue(performanceSummary.days)} day visits</small></div>
+      <div class="metric-card"><span>Drafts</span><strong>${numberValue(overallStatusCounts.draft)}</strong><small>Needs approval</small></div>
+      <div class="metric-card"><span>Due Now</span><strong>${numberValue(diagnostics.dueApprovedCount)}</strong><small>Approved posts</small></div>
+      <div class="metric-card"><span>Proof Assets</span><strong>${numberValue(creativeAssetCounts.approved)}</strong><small>Approved assets</small></div>
     </div>
-    <details class="card page-section">
-      <summary><span>Creative production metrics</span><small>Asset, variant, and quality queue health.</small></summary>
-      <div class="section-body">
-        <div class="metrics-grid">
-          <div class="metric-card"><span>Approved Assets</span><strong>${numberValue(creativeAssetCounts.approved)}</strong></div>
-          <div class="metric-card"><span>Ready Variants</span><strong>${numberValue(creativeQualityCounts.ready)}</strong></div>
-          <div class="metric-card"><span>Queued Variants</span><strong>${numberValue(creativeVariantCounts.queued)}</strong></div>
-          <div class="metric-card"><span>Blocked Variants</span><strong>${numberValue(creativeQualityCounts.blocked)}</strong></div>
+
+    <section class="growth-section card" id="create-campaign">
+      <div class="section-head">
+        <div>
+          <h2>Create Campaign</h2>
+          <p>Pick the business goal, choose real proof, generate platform-ready posts, then send only the best work into the queue.</p>
+        </div>
+        <span class="status-pill ready">campaign builder</span>
+      </div>
+      <div class="goal-grid">${campaignGoalCards}</div>
+      <div class="campaign-layout">
+        <div class="campaign-card">
+          <h3>Fast daily SEO drafts</h3>
+          <p>Creates UTM-tagged posts from the public pages. Use this when you need a clean daily baseline across channels.</p>
+          <form method="POST" action="/admin/marketing/generate">
+            <label>Date</label>
+            <input name="date" type="date" value="${escapeAttr(nowDate)}" />
+            <label><input name="force" type="checkbox" value="1" /> Rebuild existing drafts</label>
+            <button type="submit">Generate Daily Drafts</button>
+          </form>
+        </div>
+        <div class="campaign-card" id="content-packs">
+          <h3>One-click content packs</h3>
+          <p>Use one approved proof asset to generate coordinated hooks, proof copy, CTAs, UTM links, SEO fields, and production briefs.</p>
+          <div class="content-pack-grid">${contentPackCards || '<div class="empty-state">No content packs configured.</div>'}</div>
         </div>
       </div>
-    </details>
-    <details class="card page-section">
-      <summary><span>Growth pulse</span><small>UTM traffic, channel mix, and recent landing visits.</small></summary>
-      <div class="section-body">
-        <p>Tracked UTM visits in the last ${numberValue(performanceSummary.days)} days: <strong>${numberValue(performanceSummary.visits)}</strong>. Last tracked visit: <strong>${escapeHtml(formatSponsorDate(performanceSummary.lastVisit))}</strong>.</p>
-        ${performancePanels}
-        <div class="table-shell">
-          <table>
-            <thead><tr><th>Source</th><th>Campaign</th><th>Landing path</th></tr></thead>
-            <tbody>${recentVisitRows || '<tr><td colspan="3">No UTM visits recorded yet.</td></tr>'}</tbody>
-          </table>
-        </div>
-      </div>
-    </details>
-    <div class="card focus-card" id="growth-controls">
-      <h2>Growth engine controls</h2>
-      <p><span class="status-pill ${escapeAttr(autoPostStatus)}">${escapeHtml(autoPostLabel)}</span> Due approved posts: <strong>${numberValue(diagnostics.dueApprovedCount)}</strong>. Check interval: <strong>${numberValue(diagnostics.autoPostIntervalMinutes)}</strong> min. Batch limit: <strong>${numberValue(diagnostics.autoPostLimit)}</strong>.</p>
-      <p>Generate SEO and UTM-tagged daily drafts from the public site pages, approve the good ones, and let the scheduler publish due posts when the engine is live.</p>
-      <p>Platforms: ${escapeHtml((diagnostics.platforms || []).join(', '))}. Webhooks configured: ${escapeHtml(configuredWebhooks.length ? configuredWebhooks.join(', ') : 'none')}.</p>
-      ${autoPostBlockers.length ? `<div class="warning-note ${diagnostics.autoPostEnabled ? 'failed' : ''}">${autoPostBlockers.map(blocker => escapeHtml(blocker)).join('<br />')}</div>` : '<div class="warning-note">Auto-posting is live-gated and ready. Only approved due posts will publish.</div>'}
-      <div class="engine-grid">${engineSteps}</div>
-      <p>Lead APIs: sync ${growthDiagnostics.enabled ? 'enabled' : 'disabled'}; HubSpot ${growthDiagnostics.hubspotConfigured ? 'connected' : 'not configured'}; HubSpot custom fields ${growthDiagnostics.hubspotCustomPropertiesConfigured ? 'configured' : 'not configured'}; Segment ${growthDiagnostics.segmentConfigured ? 'connected' : 'not configured'}; providers ${escapeHtml(growthProviders.length ? growthProviders.join(', ') : 'none')}.</p>
-      <h2>Autopilot modes</h2>
-      <div class="mode-grid">${autopilotModes}</div>
-      <div class="connect-smoke">
-        <h2>Connection smoke test</h2>
-        <p>Send one admin test lead through the same HubSpot/Segment growth-sync path used by signup intent. If sync is disabled, this safely returns a skipped result so you know the route and validation still work.</p>
-        <form method="POST" action="/admin/marketing/growth-sync-smoke">
+      <div class="campaign-card" id="variant-builder">
+        <h3>Variant builder</h3>
+        <p>Build specific creative variants from an approved asset when a campaign needs more control than a full pack.</p>
+        <form method="POST" action="/admin/marketing/creative-variants/generate">
           <div class="inline-grid compact">
-            <span><label>Test email</label><input name="email" type="email" value="growth-smoke@example.com" required /></span>
-            <span><label>Name</label><input name="name" value="Growth Smoke" maxlength="120" /></span>
-            <span><label>TikTok username</label><input name="tiktokUsername" value="growth_smoke" maxlength="80" /></span>
+            <span><label>Template</label><select name="templateKey" required>${templateOptions}</select></span>
+            <span><label>Platform</label><select name="platform" required>${platformOptions}</select></span>
+            <span><label>Approved asset</label><select name="assetId" required>${approvedAssetOptions || '<option value="">No approved assets</option>'}</select></span>
           </div>
-          <button type="submit" class="secondary">Run Connection Smoke Test</button>
+          <div class="inline-grid compact">
+            <span><label>Variant count</label><input name="count" type="number" min="1" max="5" value="3" /></span>
+            <span><button type="submit" ${approvedAssetOptions ? '' : 'disabled'}>Generate Variants</button></span>
+          </div>
         </form>
       </div>
-      <div class="focus-actions">
-        <form method="POST" action="/admin/marketing/generate">
-          <label>Date</label>
-          <input name="date" type="date" value="${escapeAttr(nowDate)}" />
-          <label><input name="force" type="checkbox" value="1" /> Rebuild existing drafts</label>
-          <button type="submit">Generate Daily Drafts</button>
-        </form>
-        <form method="POST" action="/admin/marketing/publish">
-          <input type="hidden" name="dryRun" value="1" />
-          <label>Dry-run approved posts</label>
-          <input name="limit" type="number" min="1" max="50" value="10" />
-          <button type="submit" class="secondary">Dry Run Publish</button>
-        </form>
-        <form method="POST" action="/admin/marketing/publish" onsubmit="return confirm('Publish approved due posts to configured outbound webhooks?')">
-          <input type="hidden" name="dryRun" value="0" />
-          <label>Live publish approved posts</label>
-          <input name="limit" type="number" min="1" max="50" value="10" />
-          <button type="submit" class="test">Publish Approved</button>
-        </form>
-        <form method="POST" action="/admin/marketing/recover-failed">
-          <label>Recovery mode</label>
-          <input name="limit" type="number" min="1" max="50" value="10" />
-          <button type="submit" class="danger">Move Failed to Draft</button>
-        </form>
-      </div>
-    </div>
-    <details class="card page-section" open>
-      <summary><span>Campaign calendar</span><small>Seven-day view of scheduled drafts and approved posts.</small></summary>
-      <div class="section-body">
-        <p>The next seven days of scheduled growth posts. This keeps the queue readable before the detailed editor gets involved.</p>
-        <div class="calendar-grid">${campaignCalendar}</div>
-      </div>
-    </details>
-    <details class="card page-section" open>
-      <summary><span>Post preview cards</span><small>Fast review of what is closest to approval.</small></summary>
-      <div class="section-body">
-        <p>Fast visual review of the next editable posts before approval. The detailed editor below remains the source of truth.</p>
-        <div class="preview-grid">${postPreviewCards || '<p>No draft or approved posts to preview.</p>'}</div>
-      </div>
-    </details>
-    <details class="card page-section">
-      <summary><span>Guardrails and content ideas</span><small>Quality checks plus reusable content angles.</small></summary>
-      <div class="section-body">
-        <p>These checks catch duplicate copy, missing tracking, bad character limits, and posting gates before the engine publishes.</p>
-        <div class="guardrail-grid">${guardrailCards}</div>
-        <h2 style="margin-top:18px;">Content idea engine</h2>
-        <p>Use these repeatable angles to keep growth content tied to the product, proof assets, and landing pages.</p>
-        <div class="idea-grid">${ideaCards || '<p>No content ideas configured.</p>'}</div>
-      </div>
-    </details>
-    <details class="card page-section">
-      <summary><span>Creative templates</span><small>Approved proof assets, downloadable designs, and variant generation.</small></summary>
-      <div class="section-body">
-        <h2>Creative template engine</h2>
-        <p>Build repeatable posts from approved proof assets. Duplicate variants are skipped and every queued variant is rechecked against the latest asset approval.</p>
-        <div class="template-grid">${templateCards || '<p>No templates configured.</p>'}</div>
-        <h2 style="margin-top:18px;">Design template library</h2>
-        <p>One blank starter plus branded campaign templates with the IntoTheBattle logo, finished copy blocks, proof/video frames, and CTA placement. The battle clip video template links directly to the canonical /battle-clip demo.</p>
-        <div class="blank-design-grid">${blankDesignCards || '<p>No design templates configured.</p>'}</div>
-      </div>
-    </details>
-    <details class="card page-section" id="asset-vault">
-      <summary><span>Asset vault</span><small>Upload or save the real proof assets used by growth creative.</small></summary>
-      <div class="section-body">
-      <p>Upload real overlay screenshots, sponsor clips, dashboard screenshots, approved textures, or generated backgrounds. Keep proof assets approved only when they show the real product accurately.</p>
-      ${battleDemoAssetFolder}
-      <form method="POST" action="/admin/marketing/creative-assets/upload" enctype="multipart/form-data">
-        <div class="inline-grid compact">
-          <span><label>Title</label><input name="title" maxlength="120" placeholder="Real overlay action frame" required /></span>
-          <span><label>Asset type</label><select name="assetType"><option value="">Auto from file</option>${assetTypeOptions}</select></span>
-          <span><label>Status</label><select name="approvalStatus"><option value="approved">Approved</option><option value="draft">Draft</option><option value="blocked">Blocked</option></select></span>
+    </section>
+
+    <section class="growth-section" id="queue">
+      <div class="section-head">
+        <div>
+          <h2>Queue</h2>
+          <p>Approve, recover, and publish from one board. The detailed editor stays available for copy, UTM, schedule, hashtag, and keyword changes.</p>
         </div>
-        <label>Upload image or video</label>
-        <input name="creativeAsset" type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime,video/x-m4v" required />
-        <div class="inline-grid compact">
-          <span><label>Source</label><input name="source" maxlength="80" value="admin-upload" /></span>
-          <span><label>Notes</label><input name="notes" maxlength="500" placeholder="Why this asset is approved and where it should be used" /></span>
-          <span><button type="submit">Upload Asset</button></span>
+        <span class="status-pill ${escapeAttr(autoPostStatus)}">${escapeHtml(autoPostLabel)}</span>
+      </div>
+      ${queueBoard}
+      <div class="publish-grid">
+        <div class="publish-card">
+          <h3>Dry-run publish</h3>
+          <p>Test the approved queue without sending live posts.</p>
+          <form method="POST" action="/admin/marketing/publish">
+            <input type="hidden" name="dryRun" value="1" />
+            <label>Limit</label>
+            <input name="limit" type="number" min="1" max="50" value="10" />
+            <button type="submit" class="secondary">Dry Run Publish</button>
+          </form>
         </div>
-      </form>
-      <form method="POST" action="/admin/marketing/creative-assets">
-        <div class="inline-grid compact">
-          <span><label>Title</label><input name="title" maxlength="120" placeholder="Real overlay demo clip" required /></span>
-          <span><label>Asset type</label><select name="assetType" required>${assetTypeOptions}</select></span>
-          <span><label>Status</label><select name="approvalStatus"><option value="approved">Approved</option><option value="draft">Draft</option><option value="blocked">Blocked</option></select></span>
+        <div class="publish-card">
+          <h3>Live publish</h3>
+          <p>Send approved due posts through configured webhooks.</p>
+          <form method="POST" action="/admin/marketing/publish" onsubmit="return confirm('Publish approved due posts to configured outbound webhooks?')">
+            <input type="hidden" name="dryRun" value="0" />
+            <label>Limit</label>
+            <input name="limit" type="number" min="1" max="50" value="10" />
+            <button type="submit" class="test">Publish Approved</button>
+          </form>
         </div>
-        <label>Asset URL</label>
-        <input name="assetUrl" maxlength="700" placeholder="/assets/battle-demo.mp4 or https://..." required />
-        <div class="inline-grid compact">
-          <span><label>Source</label><input name="source" maxlength="80" value="manual" /></span>
-          <span><label>Notes</label><input name="notes" maxlength="500" placeholder="Where this came from and why it is approved" /></span>
-          <span><button type="submit">Save Asset</button></span>
+        <div class="publish-card">
+          <h3>Recover failed</h3>
+          <p>Move failed posts back to draft after setup is fixed.</p>
+          <form method="POST" action="/admin/marketing/recover-failed">
+            <label>Limit</label>
+            <input name="limit" type="number" min="1" max="50" value="10" />
+            <button type="submit" class="danger">Move Failed to Draft</button>
+          </form>
         </div>
-      </form>
-      <div class="table-shell">
-        <table>
-          <thead><tr><th>Asset</th><th>Status</th><th>URL</th><th>Actions</th></tr></thead>
-          <tbody>${creativeAssetRows || '<tr><td colspan="4">No creative assets saved yet.</td></tr>'}</tbody>
-        </table>
-      </div>
-      </div>
-    </details>
-    <details class="card page-section" id="content-packs" open>
-      <summary><span>Content packs and variants</span><small>Generate, approve, and queue structured creative packages.</small></summary>
-      <div class="section-body">
-      <h2>One-click content packs</h2>
-      <p>Pick one approved real asset and generate a coordinated set of platform-ready variants with hooks, proof copy, CTA, UTM links, image prompts, SEO fields, and downloadable production briefs.</p>
-      <div class="content-pack-grid">${contentPackCards || '<p>No content packs configured.</p>'}</div>
-      <h2 id="variant-builder" style="margin-top:18px;">Variant builder</h2>
-      <p>Generated variants are structured as hook, proof, CTA, UTM URL, frame script, and safe-zone guidance. Blocked variants cannot be approved or queued.</p>
-      <form method="POST" action="/admin/marketing/creative-variants/generate">
-        <div class="inline-grid compact">
-          <span><label>Template</label><select name="templateKey" required>${templateOptions}</select></span>
-          <span><label>Platform</label><select name="platform" required>${platformOptions}</select></span>
-          <span><label>Approved asset</label><select name="assetId" required>${approvedAssetOptions || '<option value="">No approved assets</option>'}</select></span>
+        <div class="publish-card">
+          <h3>Seven-day calendar</h3>
+          <p>Scheduled posts across the next week.</p>
+          <div class="calendar-grid">${campaignCalendar}</div>
         </div>
-        <div class="inline-grid compact">
-          <span><label>Variant count</label><input name="count" type="number" min="1" max="5" value="3" /></span>
-          <span><button type="submit" ${approvedAssetOptions ? '' : 'disabled'}>Generate Variants</button></span>
+      </div>
+      <details class="card page-section" id="daily-queue">
+        <summary><span>Detailed content editor</span><small>Full copy, UTM, schedule, hashtag, and keyword controls.</small></summary>
+        <div class="section-body">
+          <form method="GET" action="/admin/marketing">
+            <div class="inline-grid compact">
+              <span><label>Status</label><select name="status">${statusOptions}</select></span>
+              <span><label>Date</label><input name="date" type="date" value="${escapeAttr(selectedDate)}" /></span>
+              <span><button type="submit">Filter Queue</button></span>
+            </div>
+          </form>
+          <div class="table-shell">
+            <table>
+              <thead><tr><th>Platform</th><th>Status</th><th>Draft</th><th>Actions</th></tr></thead>
+              <tbody>${rows || '<tr><td colspan="4">No marketing posts generated yet.</td></tr>'}</tbody>
+            </table>
+          </div>
         </div>
-      </form>
-      <div class="table-shell">
-        <table>
-          <thead><tr><th>Template</th><th>Status</th><th>Asset</th><th>Copy</th><th>Actions</th></tr></thead>
-          <tbody>${creativeVariantRows || '<tr><td colspan="5">No creative variants generated yet.</td></tr>'}</tbody>
-        </table>
-      </div>
-      </div>
-    </details>
-    <details class="card page-section" id="daily-queue" open>
-      <summary><span>Daily content queue</span><small>Detailed editor for generated post drafts.</small></summary>
-      <div class="section-body">
-      <h2>Queue filters</h2>
-      <form method="GET" action="/admin/marketing">
-        <div class="inline-grid compact">
-          <span><label>Status</label><select name="status">${statusOptions}</select></span>
-          <span><label>Date</label><input name="date" type="date" value="${escapeAttr(selectedDate)}" /></span>
-          <span><button type="submit">Filter Queue</button></span>
+      </details>
+    </section>
+
+    <section class="growth-section" id="assets">
+      <div class="section-head">
+        <div>
+          <h2>Assets</h2>
+          <p>Keep campaign creative tied to real product proof. Approved assets are what the campaign builder should use first.</p>
         </div>
-      </form>
-      <h2>Daily content queue</h2>
-      <div class="table-shell">
-        <table>
-          <thead><tr><th>Platform</th><th>Status</th><th>Draft</th><th>Actions</th></tr></thead>
-          <tbody>${rows || '<tr><td colspan="4">No marketing posts generated yet.</td></tr>'}</tbody>
-        </table>
+        <span class="status-pill ready">${numberValue(creativeAssetCounts.approved)} approved</span>
       </div>
+      ${assetGallery}
+      <details class="card page-section" id="asset-vault" open>
+        <summary><span>Proof asset vault</span><small>Save demo frames, upload product proof, or add an approved URL.</small></summary>
+        <div class="section-body">
+          ${battleDemoAssetFolder}
+          <div class="campaign-actions">
+            <form method="POST" action="/admin/marketing/creative-assets/upload" enctype="multipart/form-data">
+              <h3>Upload proof asset</h3>
+              <div class="inline-grid compact">
+                <span><label>Title</label><input name="title" maxlength="120" placeholder="Real overlay action frame" required /></span>
+                <span><label>Asset type</label><select name="assetType"><option value="">Auto from file</option>${assetTypeOptions}</select></span>
+                <span><label>Status</label><select name="approvalStatus"><option value="approved">Approved</option><option value="draft">Draft</option><option value="blocked">Blocked</option></select></span>
+              </div>
+              <label>Upload image or video</label>
+              <input name="creativeAsset" type="file" accept="image/png,image/jpeg,image/webp,image/gif,video/mp4,video/webm,video/quicktime,video/x-m4v" required />
+              <div class="inline-grid compact">
+                <span><label>Source</label><input name="source" maxlength="80" value="admin-upload" /></span>
+                <span><label>Notes</label><input name="notes" maxlength="500" placeholder="Why this asset is approved and where it should be used" /></span>
+                <span><button type="submit">Upload Asset</button></span>
+              </div>
+            </form>
+            <form method="POST" action="/admin/marketing/creative-assets">
+              <h3>Save proof URL</h3>
+              <div class="inline-grid compact">
+                <span><label>Title</label><input name="title" maxlength="120" placeholder="Real overlay demo clip" required /></span>
+                <span><label>Asset type</label><select name="assetType" required>${assetTypeOptions}</select></span>
+                <span><label>Status</label><select name="approvalStatus"><option value="approved">Approved</option><option value="draft">Draft</option><option value="blocked">Blocked</option></select></span>
+              </div>
+              <label>Asset URL</label>
+              <input name="assetUrl" maxlength="700" placeholder="/assets/battle-demo.mp4 or https://..." required />
+              <div class="inline-grid compact">
+                <span><label>Source</label><input name="source" maxlength="80" value="manual" /></span>
+                <span><label>Notes</label><input name="notes" maxlength="500" placeholder="Where this came from and why it is approved" /></span>
+                <span><button type="submit">Save Asset</button></span>
+              </div>
+            </form>
+          </div>
+          <div class="table-shell">
+            <table>
+              <thead><tr><th>Asset</th><th>Status</th><th>URL</th><th>Actions</th></tr></thead>
+              <tbody>${creativeAssetRows || '<tr><td colspan="4">No creative assets saved yet.</td></tr>'}</tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+      <details class="card page-section">
+        <summary><span>Templates and generated variants</span><small>Reusable creative systems, design starters, and generated packages.</small></summary>
+        <div class="section-body">
+          <div class="metrics-grid">
+            <div class="metric-card"><span>Ready Variants</span><strong>${numberValue(creativeQualityCounts.ready)}</strong></div>
+            <div class="metric-card"><span>Queued Variants</span><strong>${numberValue(creativeVariantCounts.queued)}</strong></div>
+            <div class="metric-card"><span>Blocked Variants</span><strong>${numberValue(creativeQualityCounts.blocked)}</strong></div>
+            <div class="metric-card"><span>Draft Variants</span><strong>${numberValue(creativeVariantCounts.draft)}</strong></div>
+          </div>
+          <h2 style="margin-top:18px;">Creative templates</h2>
+          <div class="template-grid">${templateCards || '<div class="empty-state">No templates configured.</div>'}</div>
+          <h2 style="margin-top:18px;">Design starters</h2>
+          <div class="blank-design-grid">${blankDesignCards || '<div class="empty-state">No design templates configured.</div>'}</div>
+          <h2 style="margin-top:18px;">Generated variants</h2>
+          <div class="table-shell">
+            <table>
+              <thead><tr><th>Template</th><th>Status</th><th>Asset</th><th>Copy</th><th>Actions</th></tr></thead>
+              <tbody>${creativeVariantRows || '<tr><td colspan="5">No creative variants generated yet.</td></tr>'}</tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="growth-section" id="results">
+      <div class="section-head">
+        <div>
+          <h2>Results</h2>
+          <p>Use UTM visits, publish history, and quality guardrails to decide what the next campaign should do.</p>
+        </div>
+        <span class="status-pill ${numberValue(performanceSummary.visits) ? 'ready' : 'warn'}">${numberValue(performanceSummary.visits) ? 'learning' : 'needs traffic'}</span>
       </div>
-    </details>
-    <details class="card page-section">
-      <summary><span>Recent publish events</span><small>Audit trail for dry-runs, posts, failures, and recovery.</small></summary>
-      <div class="section-body table-shell">
-        <table>
-          <thead><tr><th>Event</th><th>Platform</th><th>Topic</th><th>Detail</th></tr></thead>
-          <tbody>${eventRows || '<tr><td colspan="4">No publish events recorded yet.</td></tr>'}</tbody>
-        </table>
+      <div class="results-grid">
+        <div class="results-stack">
+          <div class="card">
+            <h2>Growth pulse</h2>
+            <p>Tracked UTM visits in the last ${numberValue(performanceSummary.days)} days: <strong>${numberValue(performanceSummary.visits)}</strong>. Last tracked visit: <strong>${escapeHtml(formatSponsorDate(performanceSummary.lastVisit))}</strong>.</p>
+            ${performancePanels}
+          </div>
+          <div class="card">
+            <h2>Guardrails</h2>
+            <div class="guardrail-grid">${guardrailCards}</div>
+          </div>
+        </div>
+        <div class="results-stack">
+          <div class="card">
+            <h2>Post previews</h2>
+            <div class="preview-grid">${postPreviewCards || '<div class="empty-state">No draft or approved posts to preview.</div>'}</div>
+          </div>
+          <div class="card">
+            <h2>Content ideas</h2>
+            <div class="idea-grid">${ideaCards || '<div class="empty-state">No content ideas configured.</div>'}</div>
+          </div>
+        </div>
       </div>
-    </details>
+      <details class="card page-section">
+        <summary><span>Recent visits and publish events</span><small>Audit trail for UTM traffic, dry-runs, posts, failures, and recovery.</small></summary>
+        <div class="section-body">
+          <div class="table-shell">
+            <table>
+              <thead><tr><th>Source</th><th>Campaign</th><th>Landing path</th></tr></thead>
+              <tbody>${recentVisitRows || '<tr><td colspan="3">No UTM visits recorded yet.</td></tr>'}</tbody>
+            </table>
+          </div>
+          <div class="table-shell">
+            <table>
+              <thead><tr><th>Event</th><th>Platform</th><th>Topic</th><th>Detail</th></tr></thead>
+              <tbody>${eventRows || '<tr><td colspan="4">No publish events recorded yet.</td></tr>'}</tbody>
+            </table>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <section class="growth-section" id="settings">
+      <div class="section-head">
+        <div>
+          <h2>Settings</h2>
+          <p>Connection health, publishing mode, webhooks, and lead API checks live here so setup does not clutter campaign work.</p>
+        </div>
+        <span class="status-pill ${escapeAttr(autoPostStatus)}">${escapeHtml(autoPostLabel)}</span>
+      </div>
+      <div class="setup-grid">${setupChecklist}</div>
+      ${autoPostBlockers.length ? `<div class="warning-note ${diagnostics.autoPostEnabled ? 'failed' : ''}">${autoPostBlockers.map(blocker => escapeHtml(blocker)).join('<br />')}</div>` : '<div class="warning-note">Auto-posting is live-gated and ready. Only approved due posts will publish.</div>'}
+      <div class="card focus-card" id="growth-controls">
+        <h2>Growth engine controls</h2>
+        <p><span class="status-pill ${escapeAttr(autoPostStatus)}">${escapeHtml(autoPostLabel)}</span> Due approved posts: <strong>${numberValue(diagnostics.dueApprovedCount)}</strong>. Check interval: <strong>${numberValue(diagnostics.autoPostIntervalMinutes)}</strong> min. Batch limit: <strong>${numberValue(diagnostics.autoPostLimit)}</strong>.</p>
+        <p>Platforms: ${escapeHtml((diagnostics.platforms || []).join(', '))}. Webhooks configured: ${escapeHtml(configuredWebhooks.length ? configuredWebhooks.join(', ') : 'none')}.</p>
+        <div class="engine-grid">${engineSteps}</div>
+        <h2>Autopilot modes</h2>
+        <div class="mode-grid">${autopilotModes}</div>
+        <div class="connect-smoke">
+          <h2>Connection smoke test</h2>
+          <p>Send one admin test lead through the same HubSpot/Segment growth-sync path used by signup intent.</p>
+          <form method="POST" action="/admin/marketing/growth-sync-smoke">
+            <div class="inline-grid compact">
+              <span><label>Test email</label><input name="email" type="email" value="growth-smoke@example.com" required /></span>
+              <span><label>Name</label><input name="name" value="Growth Smoke" maxlength="120" /></span>
+              <span><label>TikTok username</label><input name="tiktokUsername" value="growth_smoke" maxlength="80" /></span>
+            </div>
+            <button type="submit" class="secondary">Run Connection Smoke Test</button>
+          </form>
+        </div>
+      </div>
+    </section>
   </div>
 </body>
 </html>`;
