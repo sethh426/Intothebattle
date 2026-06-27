@@ -20,6 +20,7 @@
     "test:e2e:install": "playwright install chromium",
     "test:postmark": "node scripts/test_postmark.js",
     "capture:overlay-v2": "node scripts/capture_overlay_v2_screenshots.js",
+    "capture:overlay-demo-video": "node scripts/capture_overlay_demo_video.js",
     "test:all": "npm run validate:schemas && npm run audit:stability && npm run test:logic && npm run test:marketing && npm run test:http && npm run test:socket && npm run test:e2e",
     "launch:check": "node scripts/launch_readiness_check.js --strict",
     "launch:check:local": "node scripts/launch_readiness_check.js",
