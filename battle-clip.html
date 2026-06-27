@@ -105,6 +105,71 @@
     .clip.is-embedded .corners span:nth-child(3) { right: 2.2%; bottom: 4.5%; }
     .clip.is-embedded .corners span:nth-child(4) { left: 2.2%; bottom: 4.5%; }
 
+    .particles {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .particles::before,
+    .particles::after {
+      content: "";
+      display: block;
+      width: 2px;
+      height: 2px;
+      border-radius: 50%;
+      animation: particleDrift 22s linear infinite;
+    }
+
+    .particles::before {
+      background: transparent;
+      box-shadow:
+        82px 140px 1px rgba(85, 231, 255, .35),
+        210px 60px 2px rgba(246, 201, 91, .28),
+        360px 220px 1px rgba(255, 45, 136, .3),
+        520px 90px 1px rgba(85, 231, 255, .22),
+        670px 310px 2px rgba(246, 201, 91, .32),
+        140px 380px 1px rgba(255, 45, 136, .24),
+        750px 170px 1px rgba(85, 231, 255, .3),
+        430px 460px 2px rgba(246, 201, 91, .2),
+        920px 80px 1px rgba(255, 45, 136, .28),
+        290px 540px 1px rgba(85, 231, 255, .26),
+        600px 390px 2px rgba(246, 201, 91, .24),
+        1050px 260px 1px rgba(85, 231, 255, .2),
+        780px 490px 1px rgba(255, 45, 136, .22),
+        50px 590px 2px rgba(246, 201, 91, .18),
+        1150px 340px 1px rgba(85, 231, 255, .24),
+        470px 700px 1px rgba(255, 45, 136, .18),
+        840px 620px 2px rgba(246, 201, 91, .22),
+        180px 720px 1px rgba(85, 231, 255, .2);
+    }
+
+    .particles::after {
+      background: transparent;
+      animation-delay: -11s;
+      box-shadow:
+        160px 200px 1px rgba(246, 201, 91, .26),
+        320px 110px 2px rgba(85, 231, 255, .3),
+        490px 330px 1px rgba(255, 45, 136, .22),
+        700px 50px 1px rgba(246, 201, 91, .28),
+        100px 480px 2px rgba(85, 231, 255, .24),
+        580px 570px 1px rgba(255, 45, 136, .2),
+        880px 230px 1px rgba(246, 201, 91, .22),
+        380px 650px 2px rgba(85, 231, 255, .18),
+        1000px 420px 1px rgba(255, 45, 136, .24),
+        720px 740px 1px rgba(246, 201, 91, .2),
+        240px 300px 2px rgba(85, 231, 255, .26),
+        960px 560px 1px rgba(255, 45, 136, .18),
+        1100px 140px 1px rgba(246, 201, 91, .24),
+        60px 660px 2px rgba(85, 231, 255, .2),
+        810px 370px 1px rgba(255, 45, 136, .22),
+        440px 780px 1px rgba(246, 201, 91, .18),
+        1200px 480px 2px rgba(85, 231, 255, .16),
+        270px 840px 1px rgba(255, 45, 136, .16);
+    }
+
     .grid {
       position: absolute;
       inset: 0;
@@ -206,12 +271,22 @@
     }
 
     .status-pill {
+      position: relative;
       min-height: clamp(24px, 4.5vh, 34px);
       padding: 0 clamp(8px, 1.1vw, 13px);
       border: 1px solid rgba(119, 240, 161, .26);
       border-radius: 999px;
       color: #b8ffd0;
       background: rgba(5, 22, 14, .72);
+    }
+
+    .status-pill::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: 999px;
+      border: 1px solid rgba(119, 240, 161, .7);
+      animation: statusRipple 1.4s ease-out infinite;
     }
 
     .status-pill::before {
@@ -229,7 +304,19 @@
     .battle-scene {
       z-index: 4;
       opacity: 1;
-      animation: battleScene var(--cycle) linear infinite;
+      animation: battleScene var(--cycle) linear infinite,
+                 battleShake var(--cycle) ease-out infinite;
+    }
+
+    .battle-scene::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 60;
+      pointer-events: none;
+      background: radial-gradient(circle at 65% 55%, rgba(255, 230, 180, .92), rgba(255, 160, 60, .5) 28%, transparent 58%);
+      opacity: 0;
+      animation: koFlash var(--cycle) ease-out infinite;
     }
 
     .battle-scene::before {
@@ -322,8 +409,8 @@
       animation: chatLines var(--cycle) ease-out infinite;
     }
 
-    .chat-line:nth-child(2),
-    .chat-line:nth-child(3) { animation-delay: 0s; }
+    .chat-line:nth-child(2) { animation-delay: .18s; }
+    .chat-line:nth-child(3) { animation-delay: .36s; }
 
     .chat-line strong {
       min-width: 0;
@@ -347,7 +434,9 @@
       box-shadow:
         0 16px 38px rgba(0, 0, 0, .28),
         0 0 24px rgba(246, 201, 91, .16);
-      animation: chatLines var(--cycle) ease-out infinite, attackCommentPulse var(--cycle) ease-out infinite;
+      animation: chatLines var(--cycle) ease-out infinite,
+                 attackCommentPulse var(--cycle) ease-out infinite,
+                 attackChatPulse var(--cycle) ease-out infinite;
     }
 
     .command-card {
@@ -460,14 +549,18 @@
       animation: playerEnter var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
     }
 
-    .player-card:nth-child(2),
-    .player-card:nth-child(3),
-    .player-card:nth-child(4),
-    .player-card:nth-child(5) { animation-delay: 0s; }
+    .player-card:nth-child(2) { animation-delay: .07s; }
+    .player-card:nth-child(3) { animation-delay: .14s; }
+    .player-card:nth-child(4) { animation-delay: .21s; }
+    .player-card:nth-child(5) { animation-delay: .28s; }
 
     .player-card.is-target {
       border-color: rgba(255, 45, 136, .42);
       animation: playerEnter var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite, targetHit var(--cycle) ease-in-out infinite;
+    }
+
+    .player-card.is-target .hp span {
+      animation: blazeHpDrain var(--cycle) ease-in-out infinite;
     }
 
     .player-card.is-target::after {
@@ -551,12 +644,14 @@
       top: 45.8%;
       z-index: 29;
       width: 0;
-      height: clamp(5px, 1.05vh, 9px);
+      height: clamp(8px, 1.6vh, 16px);
       border-radius: 999px;
       background: linear-gradient(90deg, transparent, rgba(85, 231, 255, .72), #fff, var(--magenta));
       box-shadow:
-        0 0 26px rgba(85, 231, 255, .7),
-        0 0 46px rgba(255, 45, 136, .38);
+        0 0 38px rgba(85, 231, 255, .85),
+        0 0 80px rgba(85, 231, 255, .45),
+        0 0 28px rgba(255, 45, 136, .7),
+        0 0 60px rgba(255, 45, 136, .38);
       opacity: 0;
       transform: rotate(29deg);
       transform-origin: 0 50%;
@@ -1999,6 +2094,8 @@
     }
 
     .cta-button {
+      position: relative;
+      overflow: hidden;
       min-height: clamp(31px, 6vh, 48px);
       display: inline-flex;
       align-items: center;
@@ -2012,6 +2109,18 @@
       font-weight: 950;
       text-transform: uppercase;
       white-space: nowrap;
+      animation: ctaGlow 2.4s ease-in-out infinite;
+    }
+
+    .cta-button::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -60%;
+      width: 40%;
+      height: 100%;
+      background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .55) 50%, transparent);
+      animation: ctaShimmer 2.8s ease-in-out infinite;
     }
 
     @keyframes gridDrift {
@@ -4218,10 +4327,60 @@
     .effect-strip .effect-chip span::after {
       animation-delay: -.68s;
     }
+
+    @keyframes blazeHpDrain {
+      0%, 16.8%    { width: 62%; }
+      20.8%, 100%  { width: 14%; }
+    }
+
+    @keyframes koFlash {
+      0%, 18.6%, 100% { opacity: 0; }
+      19.0%           { opacity: 0.78; }
+      19.8%           { opacity: 0; }
+      20.3%           { opacity: 0.32; }
+      20.8%           { opacity: 0; }
+    }
+
+    @keyframes battleShake {
+      0%, 18.7%, 21%, 27.4% { transform: translate(0, 0) scale(1); }
+      18.9% { transform: translate(-5px, -2px) rotate(-.2deg) scale(1); }
+      19.2% { transform: translate(4px, 2px) rotate(.15deg) scale(1); }
+      19.5% { transform: translate(-3px, 1px) scale(1); }
+      19.8% { transform: translate(2px, -1px) scale(1); }
+      20.1% { transform: translate(0, 0) scale(1); }
+      28.2%, 100% { transform: translate(0, 0) scale(.995); }
+    }
+
+    @keyframes attackChatPulse {
+      0%, 11.8%, 16%, 100% { box-shadow: 0 16px 38px rgba(0, 0, 0, .28), 0 0 24px rgba(246, 201, 91, .16); }
+      12.4% { box-shadow: 0 16px 38px rgba(0, 0, 0, .28), 0 0 0 1px rgba(246, 201, 91, .52), 0 0 32px rgba(246, 201, 91, .44); }
+      14.2% { box-shadow: 0 16px 38px rgba(0, 0, 0, .28), 0 0 24px rgba(246, 201, 91, .16); }
+    }
+
+    @keyframes statusRipple {
+      0%   { transform: scale(1); opacity: .8; }
+      100% { transform: scale(2.4); opacity: 0; }
+    }
+
+    @keyframes particleDrift {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-100vh); }
+    }
+
+    @keyframes ctaGlow {
+      0%, 100% { box-shadow: 0 18px 44px rgba(246, 201, 91, .2); }
+      50% { box-shadow: 0 18px 44px rgba(246, 201, 91, .22), 0 0 32px rgba(246, 201, 91, .4), 0 0 60px rgba(246, 201, 91, .18); }
+    }
+
+    @keyframes ctaShimmer {
+      0%, 40% { left: -60%; }
+      70%, 100% { left: 130%; }
+    }
   </style>
 </head>
 <body>
   <div class="clip" aria-label="IntoTheBattle 18-second battle demo">
+    <div class="particles" aria-hidden="true"></div>
     <div class="grid" aria-hidden="true"></div>
     <div class="corners" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
 
