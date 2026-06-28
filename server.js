@@ -5747,11 +5747,13 @@ function buildSponsorScenePayload(room, body = {}) {
   if (playbackIssue) return { error: playbackIssue, status: 409 };
   const timingProfile = parseSponsorTimingProfile(body.timingProfile || body.placement || 'spotlight');
   const mediaDurationMs = entry?.durationSeconds ? Math.round(Number(entry.durationSeconds) * 1000) : null;
+  const token = entry ? createOverlayToken(room.roomId) : '';
 
   return {
     action: 'show',
     source: 'creator',
     filename: entry?.filename || null,
+    videoUrl: entry && token ? appendOverlayAuth(`/sponsor/${encodeURIComponent(entry.filename)}`, room.roomId, token, { v: Date.now() }) : '',
     title: sanitizeSponsorText(body.title, entry?.title || entry?.originalName || 'Power Moment', 90),
     partner: sanitizeSponsorText(body.partner, entry?.partner || 'Presented By', 70),
     kicker: sponsorKickerForProfile(timingProfile),
