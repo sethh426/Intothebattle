@@ -79,24 +79,11 @@
                   "@value": "support@intothebattle.com"
                 }
               ],
-              "https://schema.org/image": [
-                {
-                  "@id": "https://intothebattle.com/brand-identity-square.png"
-                },
-                {
-                  "@id": "https://intothebattle.com/og-intothebattle.png"
-                }
-              ],
               "https://schema.org/logo": [
                 {
                   "@id": "https://intothebattle.com/#logo",
                   "@type": [
                     "https://schema.org/ImageObject"
-                  ],
-                  "https://schema.org/contentUrl": [
-                    {
-                      "@value": "https://intothebattle.com/brand-identity-square.png"
-                    }
                   ],
                   "https://schema.org/height": [
                     {

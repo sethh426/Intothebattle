@@ -33,7 +33,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"Organization\",\n        \"@id\": \"https://intothebattle.com/#organization\",\n        \"name\": \"IntoTheBattle\",\n        \"url\": \"https://intothebattle.com/\",\n        \"logo\": {\n          \"@type\": \"ImageObject\",\n          \"@id\": \"https://intothebattle.com/#logo\",\n          \"url\": \"https://intothebattle.com/brand-identity-square.png\",\n          \"contentUrl\": \"https://intothebattle.com/brand-identity-square.png\",\n          \"w",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"Organization\",\n        \"@id\": \"https://intothebattle.com/#organization\",\n        \"name\": \"IntoTheBattle\",\n        \"url\": \"https://intothebattle.com/\",\n        \"logo\": { \"@type\": \"ImageObject\", \"@id\": \"https://intothebattle.com/#logo\", \"url\": \"https://intothebattle.com/brand-identity-square.png\", \"width\": 1200, \"height\": 1200 },\n        \"description\": \"IntoTheBattle turns TikTok LIVE chat into a playable battle aren",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -45,7 +45,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/how-to-play#webpage\",\n        \"url\": \"https://intothebattle.com/how-to-play\",\n        \"name\": \"How To Play IntoTheBattle | TikTok LIVE Viewer Commands\",\n        \"description\": \"Learn how viewers play IntoTheBattle during TikTok LIVE with chat commands, emojis, attacks, shields, healing, likes, gifts, and future arena mechanics.\",\n        \"isPartOf\": {\n          \"@",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/how-to-play#webpage\",\n        \"url\": \"https://intothebattle.com/how-to-play\",\n        \"name\": \"How To Play IntoTheBattle | TikTok LIVE Viewer Commands\",\n        \"description\": \"Learn how viewers play IntoTheBattle during TikTok LIVE with chat commands, emojis, attacks, shields, healing, likes, gifts, and future arena mechanics.\",\n        \"isPartOf\": { \"@id\": \"http",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -57,7 +57,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\",\n    \"name\": \"IntoTheBattle Login\",\n    \"url\": \"https://intothebattle.com/login\",\n    \"description\": \"Log into IntoTheBattle to access your TikTok LIVE battle overlay, creator dashboard, and stream management tools.\",\n    \"isPartOf\": {\n      \"@type\": \"WebSite\",\n      \"name\": \"IntoTheBattle\",\n      \"url\": \"https://intothebattle.com/\"\n    }\n  }",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\",\n    \"name\": \"IntoTheBattle Login\",\n    \"url\": \"https://intothebattle.com/login\",\n    \"description\": \"Log into IntoTheBattle to access your TikTok LIVE battle overlay, creator dashboard, and stream management tools.\",\n    \"isPartOf\": { \"@type\": \"WebSite\", \"name\": \"IntoTheBattle\", \"url\": \"https://intothebattle.com/\" }\n  }",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -101,7 +101,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/paywall#webpage\",\n        \"url\": \"https://intothebattle.com/paywall\",\n        \"name\": \"IntoTheBattle Creator Pro\",\n        \"description\": \"Upgrade IntoTheBattle to unlock custom brand control, video moments, and premium controls after your 7-day everything-unlocked trial.\",\n        \"isPartOf\": {\n          \"@id\": \"https://intothebattle.com/#website\"\n        },\n    ",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/paywall#webpage\",\n        \"url\": \"https://intothebattle.com/paywall\",\n        \"name\": \"IntoTheBattle Creator Pro\",\n        \"description\": \"Upgrade IntoTheBattle to unlock custom brand control, video moments, and premium controls after your 7-day everything-unlocked trial.\",\n        \"isPartOf\": { \"@id\": \"https://intothebattle.com/#website\" },\n        \"about\": { \"@i",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -161,7 +161,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/sponsors#webpage\",\n        \"url\": \"https://intothebattle.com/sponsors\",\n        \"name\": \"IntoTheBattle Sponsors | Live Stream Brand Takeovers\",\n        \"description\": \"Put your brand inside TikTok LIVE battle moments with sports-broadcast style video breaks that return viewers to the action.\",\n        \"isPartOf\": {\n          \"@id\": \"https://intothebattle.com/#webs",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/sponsors#webpage\",\n        \"url\": \"https://intothebattle.com/sponsors\",\n        \"name\": \"IntoTheBattle Sponsors | Live Stream Brand Takeovers\",\n        \"description\": \"Put your brand inside TikTok LIVE battle moments with sports-broadcast style video breaks that return viewers to the action.\",\n        \"isPartOf\": { \"@id\": \"https://intothebattle.com/#website\" },\n  ",
           "ok": true,
           "errors": [],
           "warnings": []
