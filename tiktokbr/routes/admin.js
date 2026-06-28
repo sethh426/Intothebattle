@@ -51,6 +51,17 @@ import {
   updateCreativeAssetStatus,
   updateCreativeVariantStatus,
 } from '../services/creativeTemplateEngine.js';
+import {
+  createBlogPost,
+  deleteBlogPost,
+  generateBlogDraftsFromSiteContext,
+  getBlogPostById,
+  listBlogPosts,
+  pushBlogPostToWritefreely,
+  setBlogPostStatus,
+  updateBlogPost,
+  writefreelyPublishConfig,
+} from '../services/blogEngine.js';
 import { getAllRooms } from '../../roomManager.js';
 
 const router = express.Router();
@@ -786,7 +797,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
         <div><h1>Admin Panel</h1><p>Access, promos, and room controls</p></div>
       </div>
-      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/logout">Logout</a></div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/logout">Logout</a></div>
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${createdCode ? `<div class="notice success">New access code created: <strong>${escapeHtml(createdCode)}</strong> <button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(createdCode)}')">Copy</button></div>` : ''}
@@ -1200,6 +1211,173 @@ router.post('/create-promo', requireAdminAuth, (req, res) => {
   res.redirect(`/admin?message=${encodeURIComponent(`Promo ${code} created`)}`);
 });
 
+function buildBlogPayload(body = {}) {
+  return {
+    title: String(body.title || '').trim(),
+    slug: String(body.slug || '').trim(),
+    summary: String(body.summary || '').trim(),
+    contentHtml: String(body.contentHtml || '').trim(),
+    status: String(body.status || 'draft').trim(),
+    publishedAt: normalizePostDateInput(body.publishedAt),
+    seoTitle: String(body.seoTitle || '').trim(),
+    seoDescription: String(body.seoDescription || '').trim(),
+    seoKeywords: String(body.seoKeywords || '').trim(),
+  };
+}
+
+function buildBlogListMessage(summary = {}) {
+  const created = Number(summary.created?.length || 0);
+  const updated = Number(summary.updated?.length || 0);
+  const skipped = Number(summary.skipped?.length || 0);
+  const messageParts = [];
+  if (created) messageParts.push(`created ${created}`);
+  if (updated) messageParts.push(`updated ${updated}`);
+  if (skipped) messageParts.push(`skipped ${skipped}`);
+  if (!messageParts.length) return 'No draft changes were needed.';
+  return `Blog generation complete: ${messageParts.join(', ')}.`;
+}
+
+router.get('/blog', requireAdminAuth, (req, res) => {
+  const status = String(req.query.status || '').trim().toLowerCase();
+  const source = String(req.query.source || '').trim().toLowerCase();
+  const sort = String(req.query.sort || 'updated').trim().toLowerCase() === 'published' ? 'published' : 'updated';
+  try {
+    res.send(renderBlogAdminPage({
+      message: String(req.query.message || ''),
+      error: String(req.query.error || ''),
+      posts: listBlogPosts({ status, source, sort, limit: 120 }),
+    }));
+  } catch (err) {
+    res.status(500).send(renderBlogAdminPage({
+      error: err?.message || 'Blog admin page failed to load',
+      posts: [],
+    }));
+  }
+});
+
+router.get('/blog/manual', requireAdminAuth, (req, res) => {
+  res.send(renderWritefreelyPosterPage({
+    message: String(req.query.message || ''),
+    error: String(req.query.error || ''),
+  }));
+});
+
+router.post('/blog/manual', requireAdminAuth, async (req, res) => {
+  const payload = buildBlogPayload(req.body);
+  try {
+    const created = createBlogPost({
+      ...payload,
+      source: 'manual',
+      sourceKey: req.body.sourceKey || '',
+    });
+    if (req.body.push === '1') {
+      const pushResult = await pushBlogPostToWritefreely(created.id);
+      if (!pushResult.ok) {
+        return res.send(renderWritefreelyPosterPage({
+          message: `Created ${created.title || 'post'} but push failed.`,
+          error: pushResult.error || 'Failed to push post.',
+          post: created,
+        }));
+      }
+      return res.redirect(`/admin/blog/manual?message=${encodeURIComponent(`${created.title || 'Post'} created and pushed to WriteFreely`)}`);
+    }
+    return res.redirect(`/admin/blog?message=${encodeURIComponent(`${created.title || 'Post'} created`)}`);
+  } catch (err) {
+    res.send(renderWritefreelyPosterPage({
+      error: err?.message || 'Failed to create post',
+      post: payload.slug ? { ...payload } : null,
+    }));
+  }
+});
+
+router.get('/blog/:id/edit', requireAdminAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    return res.redirect('/admin/blog?error=Invalid%20post%20id');
+  }
+  const post = getBlogPostById(id);
+  if (!post) {
+    return res.redirect('/admin/blog?error=Post%20not%20found');
+  }
+  res.send(renderWritefreelyPosterPage({
+    message: String(req.query.message || ''),
+    error: String(req.query.error || ''),
+    post,
+  }));
+});
+
+router.post('/blog/:id/update', requireAdminAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    return res.redirect('/admin/blog?error=Invalid%20post%20id');
+  }
+  try {
+    const payload = buildBlogPayload(req.body);
+    const updated = updateBlogPost(id, payload);
+    const title = updated?.title || `Post #${id}`;
+    return res.redirect(`/admin/blog/${encodeURIComponent(id)}/edit?message=${encodeURIComponent(`${title} updated`)}`);
+  } catch (err) {
+    return res.redirect(`/admin/blog/${encodeURIComponent(id)}/edit?error=${encodeURIComponent(err?.message || 'Failed to update post')}`);
+  }
+});
+
+router.post('/blog/:id/push', requireAdminAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    return res.redirect('/admin/blog?error=Invalid%20post%20id');
+  }
+  try {
+    const result = await pushBlogPostToWritefreely(id);
+    const post = getBlogPostById(id);
+    const postTitle = (post && post.title) || `Post #${id}`;
+    if (!result.ok) {
+      return res.redirect(`/admin/blog?error=${encodeURIComponent(`Failed to push ${postTitle}: ${result.error || 'WriteFreely push failed'}`)}`);
+    }
+    return res.redirect(`/admin/blog?message=${encodeURIComponent(`${postTitle} pushed to WriteFreely`)}`);
+  } catch (err) {
+    return res.redirect(`/admin/blog?error=${encodeURIComponent(err?.message || 'Failed to push post')}`);
+  }
+});
+
+router.post('/blog/:id/status', requireAdminAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    return res.redirect('/admin/blog?error=Invalid%20post%20id');
+  }
+  const status = String(req.body.status || '').trim();
+  try {
+    const updated = setBlogPostStatus(id, status);
+    const postTitle = (updated && updated.title) || `Post #${id}`;
+    return res.redirect(`/admin/blog?message=${encodeURIComponent(`${postTitle} status set to ${updated?.status || status}`)}`);
+  } catch (err) {
+    return res.redirect(`/admin/blog?error=${encodeURIComponent(err?.message || 'Failed to update post status')}`);
+  }
+});
+
+router.post('/blog/:id/delete', requireAdminAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    return res.redirect('/admin/blog?error=Invalid%20post%20id');
+  }
+  try {
+    const deleted = deleteBlogPost(id);
+    return res.redirect(`/admin/blog?message=${encodeURIComponent(`Deleted ${deleted?.title || 'post'}`)}`);
+  } catch (err) {
+    return res.redirect(`/admin/blog?error=${encodeURIComponent(err?.message || 'Failed to delete post')}`);
+  }
+});
+
+router.post('/blog/generate', requireAdminAuth, (req, res) => {
+  const force = String(req.body.force || '0') === '1';
+  try {
+    const summary = generateBlogDraftsFromSiteContext({ force });
+    const message = buildBlogListMessage(summary);
+    return res.redirect(`/admin/blog?message=${encodeURIComponent(message)}`);
+  } catch (err) {
+    return res.redirect(`/admin/blog?error=${encodeURIComponent(err?.message || 'Failed to generate blog drafts')}`);
+  }
+});
+
 function parseStatsMode(value) {
   return ['endcap', 'delayed', 'hidden', 'always'].includes(value) ? value : 'endcap';
 }
@@ -1270,6 +1448,279 @@ function formatSponsorDate(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
   return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function normalizePostDateInput(value) {
+  const date = parseDateTimeLocal(value);
+  return date || null;
+}
+
+function renderBlogPostRows(posts = []) {
+  return posts.map((post) => {
+    const status = String(post.status || 'draft');
+    const source = String(post.source || 'manual');
+    const statusClass = status === 'published' ? 'published' : status === 'queued' ? 'queued' : status === 'archived' ? 'archived' : 'draft';
+    const summary = String(post.summary || '').slice(0, 220);
+    const pushState = post.writefreelyLastPushError ? `Failed: ${post.writefreelyLastPushError}` : (post.writefreelyLastPushAt ? `Posted ${formatSponsorDate(post.writefreelyLastPushAt)}` : 'Not posted');
+    return `<tr>
+      <td data-label="Title"><strong>${escapeHtml(post.title || 'Untitled')}</strong><br /><small>${escapeHtml(post.slug || '')}</small></td>
+      <td data-label="Source">
+        <strong>${escapeHtml(source)}</strong><br />
+        <small>Created: ${escapeHtml(formatSponsorDate(post.createdAt))}</small><br />
+        <small>Updated: ${escapeHtml(formatSponsorDate(post.updatedAt))}</small>
+      </td>
+      <td data-label="Status"><span class="status-pill ${escapeAttr(statusClass)}">${escapeHtml(status)}</span></td>
+      <td data-label="Summary">${escapeHtml(summary)}</td>
+      <td data-label="Publish">${escapeHtml(post.publishedAt ? formatSponsorDate(post.publishedAt) : 'Draft')}</td>
+      <td data-label="Writer">${escapeHtml(pushState)}</td>
+      <td data-label="Actions">
+        <div class="actions-grid">
+          <a class="text-link" href="/admin/blog/${escapeAttr(post.id)}/edit">Open editor</a>
+          <form method="POST" action="/admin/blog/${escapeAttr(post.id)}/push"><button type="submit">Push WriteFreely</button></form>
+          <form method="POST" action="/admin/blog/${escapeAttr(post.id)}/status">
+            <input type="hidden" name="status" value="${status === 'published' ? 'archived' : 'published'}" />
+            <button type="submit">${status === 'published' ? 'Archive' : 'Publish'}</button>
+          </form>
+          <form method="POST" action="/admin/blog/${escapeAttr(post.id)}/status">
+            <input type="hidden" name="status" value="${status === 'draft' ? 'queued' : 'draft'}" />
+            <button type="submit">${status === 'draft' ? 'Queue' : 'Move to draft'}</button>
+          </form>
+          <form method="POST" action="/admin/blog/${escapeAttr(post.id)}/delete" onsubmit="return confirm('Delete this post permanently?')">
+            <button class="danger" type="submit">Delete</button>
+          </form>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7">No blog posts yet.</td></tr>';
+}
+
+function renderBlogPostForm(post = null) {
+  const editing = Boolean(post && post.id);
+  const safePost = post || {};
+  const status = String(safePost.status || 'draft');
+  const options = ['draft', 'queued', 'published', 'archived']
+    .map(value => `<option value="${escapeAttr(value)}" ${status === value ? 'selected' : ''}>${escapeHtml(value)}</option>`)
+    .join('');
+  const action = editing ? `/admin/blog/${safePost.id}/update` : '/admin/blog/manual';
+  const heading = editing ? `Edit ${escapeHtml(safePost.slug || 'post')}` : 'Create draft post';
+  return `
+      <section class="card admin-section">
+        <h3>${escapeHtml(heading)}</h3>
+        <div class="section-body">
+          <form method="POST" action="${action}" class="edit-form">
+            <label>Title</label>
+            <input name="title" value="${escapeAttr(safePost.title || '')}" required />
+            <label>Slug</label>
+            <input name="slug" value="${escapeAttr(safePost.slug || '')}" required />
+            <label>Summary</label>
+            <textarea name="summary" maxlength="260" required>${escapeHtml(safePost.summary || '')}</textarea>
+            <label>Content HTML</label>
+            <textarea name="contentHtml" required>${escapeHtml(safePost.contentHtml || '')}</textarea>
+            <div class="inline-grid compact">
+              <span><label>Status</label><select name="status">${options}</select></span>
+              <span><label>Published at</label><input name="publishedAt" type="datetime-local" value="${escapeAttr(formatDateTimeInput(safePost.publishedAt))}" /></span>
+            </div>
+            <label>SEO title</label>
+            <input name="seoTitle" value="${escapeAttr(safePost.seoTitle || safePost.title || '')}" />
+            <label>SEO description</label>
+            <textarea name="seoDescription" maxlength="240">${escapeHtml(safePost.seoDescription || '')}</textarea>
+            <label>SEO keywords</label>
+            <input name="seoKeywords" value="${escapeAttr(safePost.seoKeywords || '')}" />
+            <button type="submit">${editing ? 'Save changes' : 'Create draft'}</button>
+            ${editing ? '' : '<button type="submit" name="push" value="1" class="secondary">Create and push</button>'}
+          </form>
+        </div>
+      </section>
+  `;
+}
+
+function renderWritefreelyPosterPage({
+  message = '',
+  error = '',
+  post = null,
+} = {}) {
+  const writefreelyCfg = writefreelyPublishConfig();
+  const canPush = writefreelyCfg.enabled;
+  const dashboardLink = writefreelyCfg.dashboardUrl || '';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manual Blog Poster - Admin</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { min-height:100vh; font-family:Inter,Arial,sans-serif; color:#fff8e6; background:radial-gradient(circle at 16% 0,rgba(246,201,91,.18),transparent 30%),radial-gradient(circle at 88% 12%,rgba(232,59,95,.14),transparent 28%),linear-gradient(180deg,#050608,#030406); margin:0; padding:24px; }
+    body::before { content:""; position:fixed; inset:0; pointer-events:none; background-image:linear-gradient(rgba(246,201,91,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(246,201,91,.035) 1px,transparent 1px); background-size:58px 58px; mask-image:radial-gradient(circle at top,black,transparent 72%); z-index:-1; }
+    .wrapper { max-width: 1080px; margin: 0 auto; display:grid; gap:18px; }
+    .admin-hero { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:16px; border:1px solid rgba(246,201,91,.24); border-radius:18px; background:rgba(5,7,11,.78); }
+    .admin-hero h1 { margin:0; font-size:clamp(28px,4vw,44px); line-height:1; text-transform:uppercase; }
+    .admin-nav { display:flex; gap:10px; flex-wrap:wrap; }
+    .admin-nav a { min-height:38px; display:inline-flex; align-items:center; justify-content:center; padding:0 12px; border-radius:999px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.055); color:#fff8e6; }
+    .notice { padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,.12); }
+    .error { color:#ffb6b6; }
+    .success { color:#c6ffc3; }
+    .admin-section, .panel { background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); border:1px solid rgba(255,255,255,.1); border-radius:20px; padding:18px; }
+    h2 { margin:0 0 12px; font-size:20px; }
+    label { display:block; margin:10px 0 6px; color:#a8afbf; font-size:12px; font-weight:900; text-transform:uppercase; }
+    input, textarea, select { width:100%; min-height:44px; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:#111827; color:#fff8e6; }
+    textarea { min-height:140px; resize:vertical; }
+    .edit-form .inline-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    button { margin-top:12px; width:100%; min-height:40px; border:none; border-radius:12px; background:linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color:#170c02; cursor:pointer; font-weight:800; }
+    button.secondary { background:rgba(255,255,255,.07); color:#fff8e6; border:1px solid rgba(255,255,255,.12); }
+    .muted { color:#a8afbf; }
+    .field-note { color:#9ec7ff; margin:8px 0 0; font-size:12px; }
+    .status { margin-top: 8px; display:flex; gap:10px; flex-wrap:wrap; }
+    .status span { display:inline-flex; min-height:30px; align-items:center; padding:0 10px; border-radius:999px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); font-size:12px; text-transform:uppercase; color:#9fefff; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <header class="admin-hero">
+      <h1>Manual WriteFreely Poster</h1>
+      <div class="admin-nav">
+        <a href="/admin">Access Codes</a>
+        <a href="/admin/sponsors">Video Platform</a>
+        <a href="/admin/marketing">Company Growth</a>
+        <a href="/admin/blog">Blog Posts</a>
+        <a href="/admin/logout">Logout</a>
+      </div>
+    </header>
+    ${message ? `<div class="notice success">${escapeHtml(message)} </div>` : ''}
+    ${error ? `<div class="notice error">${escapeHtml(error)} </div>` : ''}
+    <section class="panel">
+      <h2>WriteFreely bridge</h2>
+      <p class="muted">Push writes to your configured webhook endpoint.</p>
+      <p class="status">
+        <span>${canPush ? 'Enabled' : 'Disabled'}</span>
+      </p>
+      ${dashboardLink ? `<p class="field-note">Dashboard: <a class="text-link" href="${escapeAttr(dashboardLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(dashboardLink)}</a></p>` : ''}
+      <p class="field-note">Webhook: ${escapeHtml(writefreelyCfg.webhookUrl || 'Missing webhook URL')}</p>
+      ${renderBlogPostForm(post || null)}
+    </section>
+  </div>
+</body>
+</html>`;
+}
+
+function renderBlogAdminPage({ message = '', error = '', posts = [] } = {}) {
+  const sourceRows = renderBlogPostRows(posts);
+  const postCounts = posts.reduce((acc, post) => {
+    const source = String(post.source || 'manual');
+    acc[source] = (acc[source] || 0) + 1;
+    return acc;
+  }, {});
+  const statusRows = posts.reduce((acc, post) => {
+    const status = String(post.status || 'draft');
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+  const counts = `<p class="muted">Posts by source: ${Object.entries(postCounts).map(([key, value]) => `${key}: ${value}`).join(' | ') || 'none'}. Status: ${Object.entries(statusRows).map(([key, value]) => `${key}: ${value}`).join(' | ') || 'none'}.</p>`;
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog Posts - Admin</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { min-height:100vh; font-family:Inter,Arial,sans-serif; color:#fff8e6; background:radial-gradient(circle at 16% 0,rgba(246,201,91,.18),transparent 30%),radial-gradient(circle at 88% 12%,rgba(232,59,95,.14),transparent 28%),linear-gradient(180deg,#050608,#030406); margin:0; padding:24px; }
+    body::before { content:""; position:fixed; inset:0; pointer-events:none; background-image:linear-gradient(rgba(246,201,91,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(246,201,91,.035) 1px,transparent 1px); background-size:58px 58px; mask-image:radial-gradient(circle at top,black,transparent 72%); z-index:-1; }
+    .wrapper { max-width: 1240px; margin: 0 auto; display:grid; gap:18px; }
+    .admin-hero { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:18px; border:1px solid rgba(246,201,91,.24); border-radius:26px; background:rgba(5,7,11,.78); box-shadow:0 28px 80px rgba(0,0,0,.38); }
+    .admin-brand { display:flex; align-items:center; gap:14px; min-width:0; }
+    .admin-brand h1 { margin:0; font-size:clamp(28px,4vw,48px); line-height:1; text-transform:uppercase; }
+    .admin-nav { display:flex; gap:10px; flex-wrap:wrap; }
+    .admin-nav a { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:999px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.055); color:#fff8e6; }
+    .card { background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.24); }
+    .notice { padding: 14px 16px; border-radius: 16px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,0.06); }
+    .notice.error { color:#ffb6b6; }
+    .notice.success { color:#c6ffc3; }
+    .muted { color:#a8afbf; line-height:1.55; }
+    .top-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:start; }
+    .section { display:grid; gap:12px; }
+    .toolbar { display:flex; flex-wrap:wrap; gap:12px; }
+    .toolbar a, .toolbar button, .text-link { display:inline-flex; min-height:40px; align-items:center; justify-content:center; border-radius:12px; width:100%; }
+    .toolbar a, .text-link { text-decoration:none; padding:0 14px; color:#ffdf8a; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.07); }
+    button, .toolbar button, .text-link { cursor:pointer; border:0; font-weight:900; }
+    .toolbar button, form button { width:100%; min-height:34px; border-radius:10px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.07); color:#fff8e6; }
+    .toolbar form { margin:0; }
+    table { width:100%; border-collapse: collapse; margin-top:10px; }
+    th, td { border-bottom:1px solid rgba(255,255,255,.08); padding:12px; font-size:13px; vertical-align:top; }
+    th { color:#ffdf8a; background:rgba(246,201,91,.09); text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
+    .status-pill { display:inline-flex; min-height:26px; align-items:center; padding:4px 10px; border-radius:999px; font-size:11px; border:1px solid rgba(255,255,255,.14); text-transform:uppercase; }
+    .status-pill.draft { color:#ffdf8a; background:rgba(246,201,91,.08); }
+    .status-pill.queued { color:#9fefff; background:rgba(85,231,255,.08); }
+    .status-pill.published { color:#c6ffc3; background:rgba(119,240,161,.08); }
+    .status-pill.archived { color:#ffb6b6; background:rgba(232,59,95,.08); }
+    .actions-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+    .actions-grid form { margin:0; }
+    .danger { background:rgba(232,59,95,.16) !important; color:#ffb6b6 !important; border-color:rgba(232,59,95,.38) !important; }
+    @media (max-width: 1000px) { .top-grid{grid-template-columns:1fr} .admin-hero{flex-direction:column; align-items:flex-start;} }
+    @media (max-width: 720px) {
+      body { padding:12px; }
+      .admin-nav { display:grid; width:100%; grid-template-columns:1fr; }
+      .toolbar { width:100%; }
+      table, thead, tbody, tr, th, td { display:block; }
+      thead { display:none; }
+      tr { border:1px solid rgba(255,255,255,.08); border-radius:14px; margin-bottom:10px; overflow:hidden; }
+      td { border-bottom:1px solid rgba(255,255,255,.06); }
+      td::before { content: attr(data-label); display:block; color:#ffdf8a; margin-bottom:3px; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <header class="admin-hero">
+      <div class="admin-brand">
+        <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" style="width:50px;height:50px;border-radius:16px;" />
+        <h1>Blog Posts</h1>
+      </div>
+      <div class="admin-nav">
+        <a href="/admin">Access Codes</a>
+        <a href="/admin/sponsors">Video Platform</a>
+        <a href="/admin/marketing">Company Growth</a>
+        <a href="/admin/blog/manual">Manual poster</a>
+        <a href="/admin/logout">Logout</a>
+      </div>
+    </header>
+    ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
+    ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
+    <section class="card section">
+      <div class="top-grid">
+        <div>
+          <h2>Blog engine controls</h2>
+          <p class="muted">Generate SEO-ready draft posts from your public pages, then review status and push selected posts to WriteFreely.</p>
+          <div class="toolbar">
+            <form method="POST" action="/admin/blog/generate" style="margin:0;">
+              <button type="submit" title="Regenerate daily drafts from current site pages">Generate from site context</button>
+            </form>
+            <form method="POST" action="/admin/blog/generate" style="margin:0;">
+              <input type="hidden" name="force" value="1" />
+              <button type="submit">Generate and overwrite drafts</button>
+            </form>
+            <a href="/admin/blog/manual">Create post manually</a>
+            <a href="/api/public/blog-posts?limit=1" target="_blank" rel="noopener">Test public API</a>
+          </div>
+        </div>
+        <div class="muted">
+          ${counts}
+        </div>
+      </div>
+    </section>
+    <section class="card section">
+      <h2>All posts</h2>
+      <div class="section-body table-shell">
+        <table>
+          <thead><tr><th>Post</th><th>Source / lifecycle</th><th>Status</th><th>Summary</th><th>Publish date</th><th>WriteFreely</th><th>Actions</th></tr></thead>
+          <tbody>${sourceRows}</tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</body>
+</html>`;
 }
 
 function parseDateTimeLocal(value) {
@@ -1513,7 +1964,7 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
         <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
         <div><h1>Video Platform</h1><p>Company-controlled creative inventory</p></div>
       </div>
-      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/logout">Logout</a></div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/logout">Logout</a></div>
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
@@ -2716,7 +3167,7 @@ function renderMarketingAdminPage({
         <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
         <div><h1>Company Growth</h1><p>Admin-only sales workflow</p></div>
       </div>
-      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/logout">Logout</a></div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/logout">Logout</a></div>
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}

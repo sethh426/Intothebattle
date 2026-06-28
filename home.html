@@ -575,6 +575,51 @@
       letter-spacing: .08em;
       text-transform: uppercase;
     }
+    .home-blog-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .home-blog-card {
+      padding: 20px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.025));
+      min-width: 0;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+      display: grid;
+      gap: 10px;
+    }
+    .home-blog-card h3 {
+      margin: 0;
+      color: #fff4d2;
+      font-size: 22px;
+      line-height: 1.1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .home-blog-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      max-height: 4.6em;
+      overflow: hidden;
+    }
+    .home-blog-card a {
+      color: #f6c95b;
+      text-transform: uppercase;
+      font-size: 12px;
+      letter-spacing: .08em;
+      font-weight: 900;
+      display: inline-flex;
+      width: max-content;
+      gap: 7px;
+      align-items: center;
+    }
+    .home-blog-footer {
+      margin-top: 12px;
+    }
     .faq-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -730,6 +775,7 @@
         white-space: normal;
         overflow-wrap: anywhere;
       }
+      .home-blog-grid { grid-template-columns: 1fr; }
       .comment-grid { grid-template-columns: 1fr; }
       .comment-card blockquote { font-size: 16px; }
     }
@@ -911,6 +957,19 @@
       </div>
     </section>
 
+    <section id="home-blog" class="section" aria-labelledby="home-blog-title">
+      <div class="section-head">
+        <h2 id="home-blog-title">From the blog</h2>
+        <p>Fresh updates and release notes from our team, pulled from published posts.</p>
+      </div>
+      <div id="homeBlogPosts" class="home-blog-grid" aria-live="polite">
+        <p class="muted">Loading latest posts...</p>
+      </div>
+      <div id="homeBlogEmpty" class="home-blog-footer" hidden>
+        <p class="muted">No blog posts are live yet. Check back soon or visit the full <a href="/blog">blog index</a>.</p>
+      </div>
+    </section>
+
     <section id="faq" class="section" aria-labelledby="faq-title">
       <div class="section-head">
         <h2 id="faq-title">TikTok LIVE overlay FAQ.</h2>
@@ -954,5 +1013,57 @@
   </main>
 
   <footer>&copy; 2026 IntoTheBattle. <a href="/how-to-play">How to play</a> &middot; <a href="/blog">Blog</a> &middot; <a href="/site-map">Site map</a> &middot; <a href="/login">Login</a> &middot; <a href="/signup">Create account</a></footer>
+  <script>
+    (function() {
+      const container = document.getElementById('homeBlogPosts');
+      const emptyState = document.getElementById('homeBlogEmpty');
+      if (!container || !emptyState) return;
+
+      function formatDate(value) {
+        if (!value) return '';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return '';
+        return date.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+        });
+      }
+
+      fetch('/api/public/blog-posts?limit=3&status=published')
+        .then((response) => {
+          if (!response.ok) throw new Error('Unable to load blog posts');
+          return response.json();
+        })
+        .then((payload) => {
+          const posts = Array.isArray(payload?.posts) ? payload.posts : [];
+          if (!posts.length) {
+            container.style.display = 'none';
+            emptyState.hidden = false;
+            return;
+          }
+
+          container.innerHTML = posts.map((post) => {
+            const slug = encodeURIComponent(String(post.slug || ''));
+            const title = String(post.title || 'Untitled');
+            const summary = String(post.summary || '');
+            const published = formatDate(post.publishedAt || post.createdAt || post.updatedAt);
+            return `<article class="home-blog-card">
+              <h3>${title}</h3>
+              ${published ? `<small style="color:#9ff5ff">${published}</small>` : ''}
+              <p>${summary.slice(0, 190)}${summary.length > 190 ? '...' : ''}</p>
+              <a href="/blog/${slug}">Read article</a>
+            </article>`;
+          }).join('');
+        })
+        .catch(() => {
+          container.style.display = 'none';
+          emptyState.hidden = false;
+          emptyState.querySelector('p').textContent = 'Blog feed is temporarily unavailable. Visit the full blog page.';
+          const link = emptyState.querySelector('a');
+          if (link) link.setAttribute('href', '/blog');
+        });
+    })();
+  </script>
 </body>
 </html>

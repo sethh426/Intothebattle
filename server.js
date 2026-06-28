@@ -35,6 +35,7 @@ import { buildLaunchReadinessReport } from './tiktokbr/services/launchReadiness.
 import { buildUploadDecision, getStorageUsage, uploadLimitBytes } from './tiktokbr/services/storagePolicy.js';
 import { growthIntegrationDiagnostics, syncLeadToGrowthApis } from './tiktokbr/services/growthIntegrations.js';
 import { marketingAutomationDiagnostics, publishApprovedMarketingPosts, recordMarketingVisit } from './tiktokbr/services/marketingAutomation.js';
+import { getBlogPostBySlug, listBlogPosts } from './tiktokbr/services/blogEngine.js';
 import {
   getOrCreateRoom,
   getRoom,
@@ -1194,6 +1195,165 @@ function renderBattleRecapPage(recap) {
       <div class="actions"><a class="btn primary" href="/signup">Create your arena</a><a class="btn secondary" href="/how-to-play">See how players join</a></div>
     </section>
   </main>
+</body>
+</html>`;
+}
+
+function formatBlogDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function renderBlogListPage(posts = []) {
+  const cards = (posts.length ? posts : []).map(post => {
+    const link = `/blog/${encodeURIComponent(post.slug)}`;
+    const byLine = [post.status, post.source].filter(Boolean).join(' • ');
+    const published = formatBlogDate(post.publishedAt);
+    return `<article class="blog-card">
+      <p class="blog-meta">${escapeHtml(byLine)}${published ? ` <span>• ${escapeHtml(published)}</span>` : ''}</p>
+      <h2><a href="${link}">${escapeHtml(post.title)}</a></h2>
+      <p>${escapeHtml(post.summary || '')}</p>
+      <a href="${link}" class="blog-link">Read full post</a>
+    </article>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog - IntoTheBattle</title>
+  <meta name="description" content="Creator-first updates, guides, and launch notes from IntoTheBattle." />
+  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, Arial, sans-serif;
+      color: #fff8e6;
+      background: radial-gradient(140% 95% at 50% 0%, #151c2e 0%, #05080d 58%, #020204 100%);
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 32px 24px 60px;
+    }
+    a { color: #9ff5ff; }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+      padding-bottom: 14px;
+    }
+    .top h1 { margin: 0; text-transform: uppercase; letter-spacing: .08em; font-size: clamp(32px, 5vw, 56px); }
+    .top a { color: #f6c95b; text-transform: uppercase; font-size: 13px; letter-spacing: .08em; font-weight: 800; text-decoration: none; }
+    .blog-grid {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    }
+    .blog-card {
+      background: rgba(5,9,16,.78);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 12px;
+      padding: 16px 16px 18px;
+      display: grid;
+      gap: 10px;
+    }
+    .blog-card h2 { margin: 0; font-size: 22px; line-height: 1.1; }
+    .blog-card p { margin: 0; color: #aeb7c7; line-height: 1.5; }
+    .blog-meta { margin: 0; color: #9ff5ff; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .blog-link { color: #f6c95b; text-decoration: none; font-weight: 800; }
+    .blog-empty {
+      border: 1px dashed rgba(255,255,255,.2);
+      padding: 18px;
+      border-radius: 12px;
+      color: #9ca7b6;
+      text-align: center;
+    }
+    @media (max-width: 640px) { .top { align-items: flex-start; } }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <h1>IntoTheBattle Blog</h1>
+      <a href="/">Back to homepage</a>
+    </header>
+    <main class="blog-grid">
+      ${cards || '<p class="blog-empty">No published posts yet. Check again soon while we seed the first set of SEO-ready updates.</p>'}
+    </main>
+  </div>
+</body>
+</html>`;
+}
+
+function renderBlogPostPage(post) {
+  if (!post) {
+    return '<!doctype html><html><body><h1>Blog post not found</h1></body></html>';
+  }
+  const title = escapeHtml(post.title || 'Untitled');
+  const published = post.publishedAt ? `<p>Published ${escapeHtml(formatBlogDate(post.publishedAt))}</p>` : '';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${title} | IntoTheBattle Blog</title>
+  <meta name="description" content="${escapeHtml(post.seoDescription || post.summary || '')}" />
+  ${post.seoKeywords ? `<meta name="keywords" content="${escapeHtml(post.seoKeywords)}" />` : ''}
+  <meta property="og:title" content="${escapeHtml(post.seoTitle || post.title)}" />
+  <meta property="og:description" content="${escapeHtml(post.seoDescription || post.summary || '')}" />
+  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, Arial, sans-serif;
+      color: #fff8e6;
+      background: radial-gradient(150% 95% at 50% 0%, #151c2e 0%, #05080d 58%, #020204 100%);
+    }
+    .wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 24px 60px;
+    }
+    .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .nav a { color: #9ff5ff; text-decoration: none; font-weight: 700; }
+    article { background: rgba(8,12,20,.78); border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 22px; }
+    h1 { margin: 0 0 10px; font-size: clamp(34px, 5vw, 56px); line-height: 1.05; }
+    .meta { margin-bottom: 16px; color: #9ff5ff; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+    .summary { margin: 0 0 20px; color: #aeb7c7; line-height: 1.5; font-weight: 500; }
+    .content { color: #e6e9f4; line-height: 1.75; }
+    .content p { margin: 0 0 14px; }
+    .content h2 { margin: 26px 0 8px; font-size: 24px; line-height: 1.2; }
+    .content ul { padding-left: 20px; }
+    .content a { color: #9ff5ff; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav">
+      <a href="/blog">← All posts</a>
+      <a href="/">Homepage</a>
+    </div>
+    <article>
+      <div class="meta">${escapeHtml(formatBlogDate(post.publishedAt) || 'Draft')} • ${escapeHtml(post.source || 'manual')}</div>
+      <h1>${title}</h1>
+      <p class="summary">${escapeHtml(post.summary || '')}</p>
+      <div class="content">
+        ${post.contentHtml || `<p>No content available.</p>`}
+      </div>
+    </article>
+  </div>
 </body>
 </html>`;
 }
@@ -4454,11 +4614,6 @@ app.get('/home', (_req, res) => res.sendFile(path.join(__dirname, 'home.html')))
 app.get(['/sponsors', '/sponsors.html'], (_req, res) => res.sendFile(path.join(__dirname, 'sponsors.html')));
 app.get(['/how-to-play', '/how-to-play.html', '/players', '/game-guide'], (_req, res) => res.sendFile(path.join(__dirname, 'how-to-play.html')));
 app.get(['/battlegrounds', '/battlegrounds.html', '/the-battlegrounds'], (_req, res) => res.sendFile(path.join(__dirname, 'battlegrounds.html')));
-app.get(['/blog', '/blog/', '/updates', '/updates/'], (_req, res) => {
-  const rawUrl = process.env.WRITEFREELY_PUBLIC_URL || process.env.WRITEFREELY_URL || 'http://localhost:8080/';
-  const blogUrl = rawUrl.endsWith('/') ? rawUrl : `${rawUrl}/`;
-  return res.redirect(302, blogUrl);
-});
 app.get(['/site-map', '/site-map.html', '/sitemap'], (_req, res) => res.sendFile(path.join(__dirname, 'sitemap.html')));
 app.get('/verify-email', (_req, res) => res.sendFile(path.join(__dirname, 'verify-email.html')));
 app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));
@@ -4526,9 +4681,43 @@ app.get('/api/public/session-recap/:sessionId', (req, res) => {
   res.json({ success: true, recap });
 });
 
+app.get(['/blog', '/blog/', '/updates', '/updates/'], (req, res) => {
+  const posts = listBlogPosts({
+    status: 'published',
+    sort: 'published',
+    limit: 24,
+  });
+  res.send(renderBlogListPage(posts));
+});
+
+app.get('/blog/:slug', (req, res) => {
+  const slug = req.params.slug || '';
+  const post = getBlogPostBySlug(slug);
+  if (!post || post.status !== 'published') return res.status(404).sendFile(path.join(__dirname, '404.html'));
+  res.send(renderBlogPostPage(post));
+});
+
 app.get('/api/public/comments', (_req, res) => {
   res.set('Cache-Control', 'public, max-age=45');
   res.json({ success: true, comments: listPublicCreatorComments(18) });
+});
+
+app.get('/api/public/blog-posts', (req, res) => {
+  const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 12));
+  const posts = listBlogPosts({
+    status: 'published',
+    limit,
+    sort: 'published',
+  });
+  res.set('Cache-Control', 'public, max-age=60');
+  res.json({ success: true, posts });
+});
+
+app.get('/api/public/blog-posts/:slug', (req, res) => {
+  const post = getBlogPostBySlug(req.params.slug || '');
+  if (!post || post.status !== 'published') return res.status(404).json({ success: false, error: 'Post not found' });
+  res.set('Cache-Control', 'public, max-age=60');
+  res.json({ success: true, post });
 });
 
 app.post('/api/public/comments', (req, res) => {

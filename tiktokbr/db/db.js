@@ -712,6 +712,40 @@ async function initDb() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS local_blog_posts (
+        id SERIAL PRIMARY KEY,
+        slug TEXT UNIQUE NOT NULL,
+        title TEXT NOT NULL,
+        summary TEXT NOT NULL,
+        content_html TEXT NOT NULL,
+        status TEXT DEFAULT 'draft',
+        source TEXT DEFAULT 'manual',
+        source_key TEXT,
+        seo_title TEXT,
+        seo_description TEXT,
+        seo_keywords TEXT,
+        published_at TIMESTAMP,
+        writefreely_post_id TEXT,
+        writefreely_post_url TEXT,
+        writefreely_last_push_error TEXT,
+        writefreely_last_push_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await safeExec("ALTER TABLE local_blog_posts ADD COLUMN source_key TEXT");
+    await safeExec("ALTER TABLE local_blog_posts ADD COLUMN seo_title TEXT");
+    await safeExec("ALTER TABLE local_blog_posts ADD COLUMN seo_description TEXT");
+    await safeExec("ALTER TABLE local_blog_posts ADD COLUMN seo_keywords TEXT");
+    await safeExec("ALTER TABLE local_blog_posts ADD COLUMN published_at TIMESTAMP");
+    await safeExec("ALTER TABLE local_blog_posts ADD COLUMN writefreely_post_id TEXT");
+    await safeExec("ALTER TABLE local_blog_posts ADD COLUMN writefreely_post_url TEXT");
+    await safeExec("ALTER TABLE local_blog_posts ADD COLUMN writefreely_last_push_error TEXT");
+    await safeExec("ALTER TABLE local_blog_posts ADD COLUMN writefreely_last_push_at TIMESTAMP");
+    await safeExec("CREATE INDEX IF NOT EXISTS local_blog_posts_slug_idx ON local_blog_posts(slug)");
+    await safeExec("CREATE INDEX IF NOT EXISTS local_blog_posts_status_published_idx ON local_blog_posts(status, published_at)");
+    await safeExec("CREATE INDEX IF NOT EXISTS local_blog_posts_source_idx ON local_blog_posts(source, status)");
 
     await safeExec('ALTER TABLE room_player_stats ALTER COLUMN last_kill_time TYPE BIGINT USING last_kill_time::bigint');
     await safeExec('ALTER TABLE room_player_stats ALTER COLUMN last_active TYPE BIGINT USING last_active::bigint');

@@ -323,3 +323,28 @@ CREATE TABLE IF NOT EXISTS global_player_stats (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS local_blog_posts (
+  id SERIAL PRIMARY KEY,
+  slug TEXT UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  summary TEXT NOT NULL,
+  content_html TEXT NOT NULL,
+  status TEXT DEFAULT 'draft',
+  source TEXT DEFAULT 'manual',
+  source_key TEXT,
+  seo_title TEXT,
+  seo_description TEXT,
+  seo_keywords TEXT,
+  published_at TIMESTAMP,
+  writefreely_post_id TEXT,
+  writefreely_post_url TEXT,
+  writefreely_last_push_error TEXT,
+  writefreely_last_push_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS local_blog_posts_slug_idx ON local_blog_posts(slug);
+CREATE INDEX IF NOT EXISTS local_blog_posts_status_published_idx ON local_blog_posts(status, published_at);
+CREATE INDEX IF NOT EXISTS local_blog_posts_source_idx ON local_blog_posts(source, status);
