@@ -91,10 +91,10 @@ try {
   for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/how-to-play', '/battlegrounds', '/site-map', '/overlay-preview', '/overlay-v2-preview', '/overlay-phaser.html']) {
     await expectStatus(pathname, 200);
   }
-  const blog = await expectStatus('/blog', 302);
-  assert(blog.headers.get('location') === 'https://updates.intothebattle.test/', '/blog should redirect to WriteFreely');
-  const updates = await expectStatus('/updates', 302);
-  assert(updates.headers.get('location') === 'https://updates.intothebattle.test/', '/updates should redirect to WriteFreely');
+  const blog = await expectStatus('/blog', 200);
+  assert((await blog.text()).includes('IntoTheBattle'), '/blog should render the local blog index');
+  const updates = await expectStatus('/updates', 200);
+  assert((await updates.text()).includes('IntoTheBattle'), '/updates should render the local blog index');
   for (const pathname of ['/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/overlay-scene.js', '/js/overlay-v2.js', '/vendor/phaser/phaser.min.js']) {
     await expectStatus(pathname, 200);
   }

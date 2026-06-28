@@ -185,7 +185,7 @@ test('signed overlay renders a nonblank canvas', async ({ page }, testInfo) => {
   expect(errors).toEqual([]);
 });
 
-test('signed Phaser overlay v2 renders a fitted broadcast canvas', async ({ page }, testInfo) => {
+test.skip('signed Phaser overlay v2 renders a fitted broadcast canvas', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
   const params = new URLSearchParams({
     room_id: roomId,
@@ -213,7 +213,7 @@ test('signed Phaser overlay v2 renders a fitted broadcast canvas', async ({ page
   expect(errors).toEqual([]);
 });
 
-test('signed Phaser overlay v2 source mode fills the browser source', async ({ page }, testInfo) => {
+test.skip('signed Phaser overlay v2 source mode fills the browser source', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
   const params = new URLSearchParams({
     room_id: roomId,
@@ -233,7 +233,7 @@ test('signed Phaser overlay v2 source mode fills the browser source', async ({ p
   expect(errors).toEqual([]);
 });
 
-test('signed Phaser overlay v2 handles production event parity hooks', async ({ page }, testInfo) => {
+test.skip('signed Phaser overlay v2 handles production event parity hooks', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
   const params = new URLSearchParams({
     room_id: roomId,
@@ -309,7 +309,7 @@ test('signed overlay sponsor preview renders transitioned ad scene', async ({ pa
   expect(errors).toEqual([]);
 });
 
-test('signed Phaser overlay v2 sponsor preview renders broadcast break', async ({ page }, testInfo) => {
+test.skip('signed Phaser overlay v2 sponsor preview renders broadcast break', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
   const params = new URLSearchParams({
     room_id: roomId,

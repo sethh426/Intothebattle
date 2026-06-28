@@ -1,6 +1,8 @@
-Schema validation summary: files scanned: 22, files with JSON-LD: 11, blocks: 11, errors: 0, warnings: 0
+Schema validation summary: files scanned: 23, files with JSON-LD: 12, blocks: 12, errors: 0, warnings: 0
 - 404.html: no JSON-LD blocks found
 - battle-clip.html: no JSON-LD blocks found
+- battlegrounds.html: 1 JSON-LD block(s)
+  - block #1: OK
 - dashboard-welcome.html: no JSON-LD blocks found
 - dashboard.html: no JSON-LD blocks found
 - home.html: 1 JSON-LD block(s)

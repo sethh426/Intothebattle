@@ -9,6 +9,18 @@
       "blocks": []
     },
     {
+      "path": "battlegrounds.html",
+      "blocks": [
+        {
+          "index": 1,
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\",\n    \"@id\": \"https://intothebattle.com/battlegrounds#webpage\",\n    \"url\": \"https://intothebattle.com/battlegrounds\",\n    \"name\": \"The Battlegrounds\",\n    \"description\": \"A public board for creators announcing upcoming IntoTheBattle live battles.\",\n    \"isPartOf\": { \"@id\": \"https://intothebattle.com/#website\" }\n  }",
+          "ok": true,
+          "errors": [],
+          "warnings": []
+        }
+      ]
+    },
+    {
       "path": "dashboard-welcome.html",
       "blocks": []
     },
@@ -21,7 +33,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"Organization\",\n        \"@id\": \"https://intothebattle.com/#organization\",\n        \"name\": \"IntoTheBattle\",\n        \"url\": \"https://intothebattle.com/\",\n        \"logo\": \"https://intothebattle.com/intothebattlelogo_logo_only.svg\",\n        \"image\": \"https://intothebattle.com/og-intothebattle.png\",\n        \"description\": \"IntoTheBattle turns TikTok LIVE chat into a playable battle arena for creators.\"\n      },\n      {\n ",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"Organization\",\n        \"@id\": \"https://intothebattle.com/#organization\",\n        \"name\": \"IntoTheBattle\",\n        \"url\": \"https://intothebattle.com/\",\n        \"logo\": {\n          \"@type\": \"ImageObject\",\n          \"@id\": \"https://intothebattle.com/#logo\",\n          \"url\": \"https://intothebattle.com/brand-identity-square.png\",\n          \"contentUrl\": \"https://intothebattle.com/brand-identity-square.png\",\n          \"w",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -125,7 +137,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/signup#webpage\",\n        \"name\": \"IntoTheBattle Free Account Signup\",\n        \"url\": \"https://intothebattle.com/signup\",\n        \"description\": \"Launch your first TikTok LIVE battle overlay in under 5 minutes with 7 days of everything unlocked.\",\n        \"isPartOf\": {\n          \"@id\": \"https://intothebattle.com/#website\"\n        },\n        \"about\": {\n          \"@i",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/signup#webpage\",\n        \"name\": \"IntoTheBattle Free Account Signup\",\n        \"url\": \"https://intothebattle.com/signup\",\n        \"description\": \"Create your IntoTheBattle account, choose Google or email, and launch a TikTok LIVE battle overlay for OBS or TikTok Studio in under 5 minutes.\",\n        \"isPartOf\": {\n          \"@id\": \"https://intothebattle.com/#website\"",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -137,7 +149,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/site-map#webpage\",\n        \"url\": \"https://intothebattle.com/site-map\",\n        \"name\": \"IntoTheBattle Site Map\",\n        \"description\": \"Find IntoTheBattle creator, player, sponsor, account, and support pages from one site map.\",\n        \"isPartOf\": {\n          \"@id\": \"https://intothebattle.com/#website\"\n        }\n      },\n      {\n        \"@type\": \"BreadcrumbList",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/site-map#webpage\",\n        \"url\": \"https://intothebattle.com/site-map\",\n        \"name\": \"IntoTheBattle Site Map\",\n        \"description\": \"Find IntoTheBattle creator, player, sponsor, account, and support pages from one site map.\",\n        \"isPartOf\": {\n          \"@id\": \"https://intothebattle.com/#website\"\n        },\n        \"primaryImageOfPage\": {\n          \"@type",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -178,9 +190,9 @@
     }
   ],
   "summary": {
-    "total_files": 22,
-    "files_with_jsonld": 11,
-    "total_blocks": 11,
+    "total_files": 23,
+    "files_with_jsonld": 12,
+    "total_blocks": 12,
     "errors": 0,
     "warnings": 0
   }
