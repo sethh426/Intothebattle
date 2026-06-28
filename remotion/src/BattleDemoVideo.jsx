@@ -13,6 +13,7 @@ export const BATTLE_DEMO_FPS = 30;
 export const BATTLE_DEMO_DURATION_FRAMES = 600;
 
 const SOURCE_VIDEO = 'remotion/homepage-real-overlay-source.mp4';
+const SOURCE_TRIM_BEFORE_FRAMES = 40;
 
 const colors = {
   black: '#02040a',
@@ -127,6 +128,7 @@ function RealFootage({ frame, vertical }) {
     <AbsoluteFill style={{ overflow: 'hidden', background: colors.black }}>
       <OffthreadVideo
         src={staticFile(SOURCE_VIDEO)}
+        trimBefore={SOURCE_TRIM_BEFORE_FRAMES}
         muted
         volume={0}
         style={{
