@@ -28,36 +28,36 @@ const shots = [
   {
     start: 0,
     end: 112,
-    kicker: 'Real overlay capture',
+    kicker: 'Real browser-source overlay',
     headline: 'Chat becomes combat',
-    subcopy: 'Viewer actions hit the arena while the stream is live.',
+    subcopy: 'Viewer actions trigger effects on the live arena.',
     tone: colors.gold,
     side: 'left',
   },
   {
     start: 112,
     end: 232,
-    kicker: 'Live events',
+    kicker: 'Live event triggers',
     headline: 'Every action lands',
-    subcopy: 'Follows, shares, gifts, and attacks become visible moments.',
+    subcopy: 'Follows, shares, gifts, and attacks become visible.',
     tone: colors.cyan,
     side: 'right',
   },
   {
     start: 232,
     end: 352,
-    kicker: 'Battle pressure',
-    headline: 'The room can read it',
-    subcopy: 'Health, horde pressure, and impact effects stay on-screen.',
+    kicker: 'Readable battle state',
+    headline: 'Pressure stays clear',
+    subcopy: 'Health, horde pressure, and impacts stay on-screen.',
     tone: colors.green,
     side: 'left',
   },
   {
     start: 352,
     end: 472,
-    kicker: 'Stream-ready',
-    headline: 'Built for OBS',
-    subcopy: 'Drop in the browser source and test the fight before going live.',
+    kicker: 'OBS and TikTok Studio ready',
+    headline: 'Drop it in live',
+    subcopy: 'Use one browser source and test the fight before stream.',
     tone: colors.red,
     side: 'right',
   },
@@ -66,18 +66,18 @@ const shots = [
     end: 600,
     kicker: 'IntoTheBattle',
     headline: 'Start the fight',
-    subcopy: 'A TikTok LIVE overlay that makes chat impossible to ignore.',
+    subcopy: 'One overlay turns passive chat into a game.',
     tone: colors.gold,
-    side: 'center',
+    side: 'left',
   },
 ];
 
 const cameraKeys = {
   landscape: {
     frame: [0, 82, 112, 194, 232, 314, 352, 432, 472, 600],
-    scale: [1.42, 1.62, 1.85, 2.05, 1.88, 2.12, 1.62, 1.78, 1.34, 1.48],
-    x: [-90, -180, -420, -520, -80, -160, -310, -370, -20, -110],
-    y: [10, -8, -72, -96, -210, -248, -70, -88, 8, -12],
+    scale: [1.12, 1.16, 1.18, 1.22, 1.18, 1.2, 1.15, 1.18, 1.1, 1.13],
+    x: [0, -18, -22, -34, 14, 4, -16, -24, 0, -8],
+    y: [-12, -18, -16, -22, -10, -18, -12, -18, -8, -12],
   },
   vertical: {
     frame: [0, 82, 112, 194, 232, 314, 352, 432, 472, 600],
@@ -102,7 +102,7 @@ function linear(frame, input, output) {
   });
 }
 
-function shotOpacity(frame, start, end, fadeIn = 12, fadeOut = 14) {
+function shotOpacity(frame, start, end, fadeIn = 6, fadeOut = 10) {
   const inOpacity = linear(frame, [start, start + fadeIn], [0, 1]);
   const outOpacity = linear(frame, [end - fadeOut, end], [1, 0]);
   return Math.max(0, Math.min(inOpacity, outOpacity));
@@ -137,7 +137,7 @@ function RealFootage({ frame, vertical }) {
           objectFit: 'cover',
           transformOrigin: '50% 50%',
           transform: `translate3d(${cam.x}px, ${cam.y}px, 0) scale(${cam.scale})`,
-          filter: 'saturate(1.28) contrast(1.16) brightness(0.88)',
+          filter: 'saturate(1.22) contrast(1.12) brightness(0.98)',
         }}
       />
     </AbsoluteFill>
@@ -146,7 +146,7 @@ function RealFootage({ frame, vertical }) {
 
 function ColorGrade({ frame, vertical }) {
   const drift = linear(frame % 180, [0, 180], [-18, 118]);
-  const warm = 0.42 + Math.sin(frame / 32) * 0.08;
+  const warm = 0.32 + Math.sin(frame / 32) * 0.05;
   return (
     <AbsoluteFill>
       <div
@@ -154,8 +154,8 @@ function ColorGrade({ frame, vertical }) {
           position: 'absolute',
           inset: 0,
           background:
-            'linear-gradient(90deg, rgba(2,4,10,0.9), rgba(2,4,10,0.18) 36%, rgba(2,4,10,0.16) 66%, rgba(2,4,10,0.82)), ' +
-            'linear-gradient(180deg, rgba(2,4,10,0.38), transparent 42%, rgba(2,4,10,0.76))',
+            'linear-gradient(90deg, rgba(2,4,10,0.66), rgba(2,4,10,0.04) 34%, rgba(2,4,10,0.05) 68%, rgba(2,4,10,0.62)), ' +
+            'linear-gradient(180deg, rgba(2,4,10,0.18), transparent 46%, rgba(2,4,10,0.58))',
         }}
       />
       <div
@@ -164,7 +164,7 @@ function ColorGrade({ frame, vertical }) {
           inset: 0,
           background: `radial-gradient(circle at 18% 22%, rgba(246,201,91,${warm}), transparent 30%), radial-gradient(circle at 82% 28%, rgba(85,231,255,0.28), transparent 34%), radial-gradient(circle at 62% 82%, rgba(232,59,95,0.22), transparent 34%)`,
           mixBlendMode: 'screen',
-          opacity: 0.56,
+          opacity: 0.28,
         }}
       />
       <div
@@ -172,12 +172,12 @@ function ColorGrade({ frame, vertical }) {
           position: 'absolute',
           left: `${drift}%`,
           top: vertical ? -240 : -180,
-          width: vertical ? 190 : 250,
+          width: vertical ? 140 : 170,
           height: vertical ? 2500 : 1500,
-          background: 'linear-gradient(90deg, transparent, rgba(255,248,230,0.18), rgba(85,231,255,0.08), transparent)',
+          background: 'linear-gradient(90deg, transparent, rgba(255,248,230,0.12), rgba(85,231,255,0.06), transparent)',
           transform: 'skewX(-18deg)',
           mixBlendMode: 'screen',
-          opacity: 0.8,
+          opacity: 0.3,
         }}
       />
       <div
@@ -195,25 +195,26 @@ function ColorGrade({ frame, vertical }) {
 
 function BigType({ frame, width, height, vertical }) {
   const shot = currentShot(frame);
-  const opacity = shotOpacity(frame, shot.start, shot.end);
-  const enter = ease(frame, [shot.start, shot.start + 24], [34, 0]);
+  const opacity = shotOpacity(frame, shot.start, shot.end, 2, 6);
+  const enter = ease(frame, [shot.start, shot.start + 12], [18, 0]);
+  const scale = ease(frame, [shot.start, shot.start + 14], [0.988, 1]);
   const left = vertical
     ? 70
     : shot.side === 'right'
-      ? width - 720
+      ? width - 640
       : shot.side === 'center'
-        ? 126
+        ? 150
         : 78;
   const top = vertical
     ? height - 650
     : shot.side === 'center'
-      ? height - 380
-      : height - 470;
+      ? height - 330
+      : height - 438;
   const maxWidth = vertical
     ? width - 140
     : shot.side === 'center'
       ? width - 252
-      : 640;
+      : 560;
   const align = shot.side === 'right' && !vertical ? 'right' : 'left';
   return (
     <div
@@ -224,18 +225,35 @@ function BigType({ frame, width, height, vertical }) {
         width: maxWidth,
         opacity,
         textAlign: align,
+        transform: `scale(${scale})`,
+        transformOrigin: align === 'right' ? '100% 50%' : '0 50%',
       }}
     >
       <div
         style={{
+          position: 'absolute',
+          zIndex: 0,
+          left: vertical ? -90 : align === 'right' ? -190 : -96,
+          right: vertical ? -90 : align === 'right' ? -96 : -190,
+          top: -148,
+          bottom: -156,
+          background: align === 'right'
+            ? 'radial-gradient(ellipse at 82% 50%, rgba(2,4,10,0.94), rgba(2,4,10,0.66) 38%, rgba(2,4,10,0) 72%)'
+            : 'radial-gradient(ellipse at 18% 50%, rgba(2,4,10,0.94), rgba(2,4,10,0.66) 38%, rgba(2,4,10,0) 72%)',
+        }}
+      />
+      <div
+        style={{
+          position: 'relative',
+          zIndex: 1,
           display: 'inline-flex',
           alignItems: 'center',
           gap: vertical ? 14 : 12,
           color: shot.tone,
-          fontSize: vertical ? 28 : 24,
+          fontSize: vertical ? 28 : 19,
           fontWeight: 950,
           textTransform: 'uppercase',
-          textShadow: '0 3px 22px rgba(0,0,0,0.72)',
+          textShadow: '0 3px 18px rgba(0,0,0,0.9)',
         }}
       >
         <span
@@ -251,13 +269,15 @@ function BigType({ frame, width, height, vertical }) {
       </div>
       <div
         style={{
+          position: 'relative',
+          zIndex: 1,
           marginTop: vertical ? 18 : 14,
           color: colors.cream,
           fontFamily: 'Arial Black, Impact, sans-serif',
-          fontSize: vertical ? 112 : 92,
-          lineHeight: 0.92,
+          fontSize: vertical ? 112 : 68,
+          lineHeight: 0.94,
           textTransform: 'uppercase',
-          textShadow: '0 8px 44px rgba(0,0,0,0.82)',
+          textShadow: '0 5px 18px rgba(0,0,0,0.96), 0 14px 58px rgba(0,0,0,0.88)',
           letterSpacing: 0,
         }}
       >
@@ -265,13 +285,15 @@ function BigType({ frame, width, height, vertical }) {
       </div>
       <div
         style={{
+          position: 'relative',
+          zIndex: 1,
           marginTop: vertical ? 22 : 18,
-          color: colors.muted,
-          fontSize: vertical ? 34 : 30,
+          color: '#d6e0f3',
+          fontSize: vertical ? 34 : 23,
           lineHeight: 1.18,
           fontWeight: 850,
-          textShadow: '0 5px 26px rgba(0,0,0,0.82)',
-          maxWidth: vertical ? width - 140 : 570,
+          textShadow: '0 3px 14px rgba(0,0,0,0.96), 0 9px 34px rgba(0,0,0,0.88)',
+          maxWidth: vertical ? width - 140 : 520,
           marginLeft: align === 'right' ? 'auto' : 0,
         }}
       >
@@ -286,8 +308,8 @@ function CutLight({ frame, width, height, vertical }) {
   return (
     <>
       {cutFrames.map((cut) => {
-        const opacity = shotOpacity(frame, cut - 7, cut + 19, 3, 15);
-        const x = linear(frame, [cut - 7, cut + 19], [-26, 126]);
+        const opacity = shotOpacity(frame, cut - 4, cut + 13, 2, 8) * 0.52;
+        const x = linear(frame, [cut - 4, cut + 13], [-22, 120]);
         return (
           <div
             key={cut}
@@ -295,10 +317,10 @@ function CutLight({ frame, width, height, vertical }) {
               position: 'absolute',
               left: `${x}%`,
               top: vertical ? -260 : -200,
-              width: vertical ? 240 : 340,
+              width: vertical ? 150 : 190,
               height: vertical ? height + 520 : height + 400,
               opacity,
-              background: 'linear-gradient(90deg, transparent, rgba(255,248,230,0.58), rgba(85,231,255,0.26), transparent)',
+              background: 'linear-gradient(90deg, transparent, rgba(255,248,230,0.28), rgba(85,231,255,0.12), transparent)',
               transform: 'skewX(-18deg)',
               mixBlendMode: 'screen',
             }}
@@ -310,8 +332,8 @@ function CutLight({ frame, width, height, vertical }) {
           position: 'absolute',
           inset: 0,
           opacity: Math.max(
-            ...cutFrames.map((cut) => shotOpacity(frame, cut - 2, cut + 8, 2, 8))
-          ) * 0.34,
+            ...cutFrames.map((cut) => shotOpacity(frame, cut - 1, cut + 7, 1, 6))
+          ) * 0.14,
           background: `linear-gradient(135deg, ${colors.gold}, ${colors.cyan}, ${colors.red})`,
           mixBlendMode: 'screen',
         }}
