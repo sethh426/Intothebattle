@@ -293,9 +293,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   --banner-accent-rgb:122,252,255;
   --banner-accent-soft:rgba(122,252,255,0.18);
   --banner-duration:3200ms;
-  position:fixed; left:50%; top:58%; transform:translate(-50%,0); z-index:10000; pointer-events:none;
-  min-height:66px; max-height:82px; padding:0 17px; box-sizing:border-box; overflow:hidden;
-  display:grid; grid-template-columns:58px minmax(0,1fr) 7px; align-items:center; gap:12px;
+  position:fixed; left:50%; top:50%; transform:translate(-50%,0); z-index:10000; pointer-events:none;
+  min-height:58px; max-height:74px; padding:0 14px; box-sizing:border-box; overflow:hidden;
+  display:grid; grid-template-columns:50px minmax(0,1fr) 6px; align-items:center; gap:10px;
   font-family:'Rajdhani','Segoe UI',sans-serif; color:#f8fbff;
   background:
     linear-gradient(90deg, rgba(2,7,14,0.98), rgba(5,16,31,0.94) 34%, rgba(3,9,18,0.96)),
@@ -330,18 +330,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.transition-signal { animation:cyberBannerSignalIn 280ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 820ms 160ms ease-out; }
 .banner.transition-surge { animation:cyberBannerSurgeIn 390ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 900ms 120ms ease-out; }
 .banner-signal {
-  position:relative; width:58px; height:48px; display:grid; place-items:center; flex:0 0 auto;
+  position:relative; width:50px; height:42px; display:grid; place-items:center; flex:0 0 auto;
   color:var(--banner-accent); border-right:1px solid rgba(255,255,255,0.1);
 }
 .banner-code {
-  position:relative; z-index:1; min-width:38px; padding:4px 5px; text-align:center;
+  position:relative; z-index:1; min-width:34px; padding:4px 5px; text-align:center;
   border:1px solid rgba(var(--banner-accent-rgb),0.34);
   background:rgba(0,0,0,0.24);
   box-shadow:inset 0 0 18px rgba(var(--banner-accent-rgb),0.14);
-  font-size:11px; font-weight:900; letter-spacing:1.1px; text-transform:uppercase;
+  font-size:10px; font-weight:900; letter-spacing:1px; text-transform:uppercase;
 }
 .banner-pulse {
-  position:absolute; width:37px; height:37px; border:1px solid rgba(var(--banner-accent-rgb),0.38);
+  position:absolute; width:32px; height:32px; border:1px solid rgba(var(--banner-accent-rgb),0.38);
   transform:rotate(45deg); opacity:.82; animation:cyberSignalPulse 920ms ease-in-out infinite;
 }
 .banner-copy { min-width:0; position:relative; z-index:1; display:grid; gap:1px; }
@@ -352,7 +352,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 }
 .banner-title {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#fff; font-size:22px; line-height:1.04; font-weight:900; letter-spacing:.7px; text-transform:uppercase;
+  color:#fff; font-size:20px; line-height:1.04; font-weight:900; letter-spacing:.7px; text-transform:uppercase;
   text-shadow:0 0 18px rgba(255,255,255,0.28);
 }
 .banner-title strong { color:var(--banner-accent); font-weight:900; }
@@ -361,7 +361,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   color:#aeb8c9; font-size:11px; line-height:1.05; font-weight:800; letter-spacing:.7px; text-transform:uppercase;
 }
 .banner-meter {
-  position:relative; z-index:1; width:7px; height:48px; border:1px solid rgba(255,255,255,0.12);
+  position:relative; z-index:1; width:6px; height:42px; border:1px solid rgba(255,255,255,0.12);
   background:rgba(255,255,255,0.05); overflow:hidden; align-self:center;
 }
 .banner-meter-fill {
@@ -385,7 +385,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     0 0 86px rgba(255,84,54,0.14),
     inset 0 1px 0 rgba(255,255,255,0.18);
 }
-.banner.legendary .banner-title { font-size:23px; text-shadow:0 0 26px rgba(255,227,111,0.42); }
+.banner.legendary .banner-title { font-size:21px; text-shadow:0 0 26px rgba(255,227,111,0.42); }
 .banner.is-compact {
   min-height:52px; max-height:62px; padding:0 11px; gap:9px;
   grid-template-columns:42px minmax(0,1fr) 6px;
@@ -3572,7 +3572,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const playerTop = Math.min(...playerBounds.map(bounds => bounds.top));
     const rowLeft = canvasRect.left + Math.max(safe.x, playerLeft) * scaleX;
     const rowRight = canvasRect.left + Math.min(safe.right, playerRight) * scaleX;
-    const rowCenter = canvasRect.left + ((Math.max(safe.x, playerLeft) + Math.min(safe.right, playerRight)) / 2) * scaleX;
+    const arenaCenter = canvasRect.left + (frame.x + frame.w / 2) * scaleX;
     const rowWidth = Math.max(1, rowRight - rowLeft);
     const hordeLayout = getHordeLayout();
     const hordeWidth = Math.max(1, hordeLayout.barW * scaleX);
@@ -3609,7 +3609,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     gap = Math.max(0, Math.min(baseGap, availableGap));
 
     const halfWidth = preferredWidth / 2;
-    const centerX = clampNumber(rowCenter, safeLeft + halfWidth, safeRight - halfWidth);
+    const centerX = clampNumber(arenaCenter, safeLeft + halfWidth, safeRight - halfWidth);
     const targetTop = playerTopViewport - gap - rect.height;
     const maxTop = Math.min(safeBottom - rect.height, targetTop);
     const top = Math.max(safeTop, Math.min(targetTop, maxTop));

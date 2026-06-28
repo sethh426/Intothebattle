@@ -275,9 +275,10 @@
     .recap-row strong { color:#fff; font-size:13px; text-align:right; }
     .section-title { color:var(--gold2); font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.12em; margin-bottom:12px; }
     .audio-files { display:grid; gap:10px; }
-    .audio-row { display:flex; align-items:center; gap:10px; padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.2); }
-    .audio-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:800; }
+    .audio-row { display:flex; align-items:center; gap:10px; min-width:0; padding:12px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.2); }
+    .audio-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:800; }
     .audio-size { color:var(--dim); font-size:11px; }
+    .audio-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
     .assign-table { width:100%; border-collapse:collapse; }.assign-table td { padding:10px 0; border-bottom:1px solid rgba(255,255,255,.06); }
     .assign-select-cell { padding-left:14px; }
     .assignment-meta { margin-top:6px; color:var(--dim); font-size:11px; font-weight:800; line-height:1.35; }
@@ -388,10 +389,11 @@
     .boss-fill { background:linear-gradient(90deg,#ff2d88,#ff9f3d,#ffd666); box-shadow:0 0 20px rgba(255,45,136,.24); }
     .weekly-event { border-color:rgba(255,214,102,.22); background:rgba(255,214,102,.065); }
     #toast { border-color:rgba(0,229,255,.28); background:rgba(5,7,17,.94); }
-    @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,.sponsor-layout,.sponsor-upgrade,.ops-strip,.session-layout,.launch-checklist{grid-template-columns:1fr}#audioManagerCard,#toolsRail,#creatorSponsorCard{order:initial}}
+    @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,#audioManagerCard .audio-layout,.sponsor-layout,.sponsor-upgrade,.ops-strip,.session-layout,.launch-checklist{grid-template-columns:1fr}#audioManagerCard,#toolsRail,#creatorSponsorCard{order:initial}}
     @media(max-width:860px){.session-status-grid,.session-control-grid{grid-template-columns:1fr}}
     @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.dashboard-nav{position:relative;top:auto}.dashboard-nav a{flex:1 1 120px}.workflow-summary{grid-template-columns:1fr;align-items:start}.workflow-status{width:fit-content}.workflow-toggle{position:absolute;right:18px;top:18px}.workflow-body{padding:14px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.stream-coach{grid-template-columns:1fr}.coach-actions{justify-content:stretch}.coach-actions .btn,.secondary-launch-actions .btn{width:100%}.launch-action-grid{grid-template-columns:1fr}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}.setup-steps,.next-action-panel{grid-template-columns:1fr}.next-action-actions{justify-content:stretch}.footer{position:sticky;bottom:10px;z-index:35;padding:10px;border:1px solid rgba(246,201,91,.24);border-radius:20px;background:rgba(5,7,11,.9);backdrop-filter:blur(16px);box-shadow:0 18px 60px rgba(0,0,0,.38)}.footer-btn{flex:1 1 130px}}
     @media(max-width:700px){.launch-action{grid-template-columns:32px minmax(0,1fr); gap:3px 10px; padding:12px}.launch-action b{grid-row:1 / span 2}.launch-action strong{font-size:14px}.launch-action span{font-size:11px}.secondary-launch-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.secondary-launch-actions .btn:last-child{grid-column:1 / -1}}
+    @media(max-width:700px){.audio-row{display:grid;grid-template-columns:minmax(0,1fr);align-items:start}.audio-name{white-space:normal;overflow-wrap:anywhere}.audio-size{font-size:12px}.audio-actions,.assign-actions,.sponsor-row-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;padding-left:0;justify-content:stretch}.audio-actions .btn,.assign-actions .btn,.sponsor-row-actions .btn{width:100%}.assign-table,.assign-table tbody,.assign-table tr,.assign-table td{display:block;width:100%}.assign-table tr{padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)}.assign-table td{padding:6px 0;border-bottom:0}.assign-select-cell{padding-left:0}.event-pill{width:100%;justify-content:center}.sponsor-row{display:grid;grid-template-columns:1fr}.sponsor-thumb{width:100%;max-width:260px}.sponsor-selected,.sponsor-upgrade,.sponsor-readiness-head,.sponsor-step-track{grid-template-columns:1fr}.sponsor-step-track{display:grid}}
   </style>
 </head>
 <body>
@@ -1439,6 +1441,7 @@ function setSponsorControlsAvailability(enabled) {
 function setSubscriptionChip(data) {
   const chip = document.getElementById('subscription-chip');
   if (!chip) return;
+  const wasSponsorEnabled = canUseCreatorSponsors;
   subscriptionStatusData = data;
   let label = 'Plan status';
   let className = 'subscription-chip';
@@ -1453,7 +1456,7 @@ function setSubscriptionChip(data) {
     label = data.planName || 'Creator Pro';
     className += ' active';
     setSponsorControlsAvailability(true);
-    loadSponsors();
+    if (!wasSponsorEnabled || !sponsorLibraryData.length) loadSponsors();
   } else {
     label = data.planName || 'Free';
     className += ' free';
@@ -1465,7 +1468,18 @@ function setSubscriptionChip(data) {
   chip.className = className;
   updateReadinessChecklist();
 }
-async function fetchSubscriptionStatus() { try { const res = await fetch('/api/subscription/status', { credentials: 'same-origin' }); if (!res.ok) return setSubscriptionChip(null); setSubscriptionChip(await res.json()); } catch (_) { setSubscriptionChip(null); } }
+async function fetchSubscriptionStatus() {
+  try {
+    const res = await fetch('/api/subscription/status', { credentials: 'same-origin' });
+    if (!res.ok) {
+      if (!subscriptionStatusData) setSubscriptionChip(null);
+      return;
+    }
+    setSubscriptionChip(await res.json());
+  } catch (_) {
+    if (!subscriptionStatusData) setSubscriptionChip(null);
+  }
+}
 function openBillingStatus() { if (subscriptionStatusData && subscriptionStatusData.actionRequired) window.location.href = subscriptionStatusData.paywallUrl || '/paywall'; else window.location.href = '/profile'; }
 function cacheBustAssetUrl(src) {
   if (!src) return '';
@@ -1539,6 +1553,7 @@ async function fetchStatus() {
     text('dev-mode-badge', devValue);
     if (data.overlayCount !== undefined) setOverlayCount(data.overlayCount);
     if (data.session) renderSessionStatus(data.session);
+    if (data.plan) setSubscriptionChip({ success: true, ...data.plan });
     socket.emit('register', { type: 'dashboard' });
     updateReadinessChecklist();
   } catch (_err) {
@@ -2124,7 +2139,7 @@ function renderAudioLibrary() {
   audioLibraryData.forEach(file => {
     const row = document.createElement('div');
     row.className = 'audio-row';
-    row.innerHTML = `<div>🎵</div><div class="audio-name">${escapeHtml(file.originalName)}</div><div class="audio-size">${formatBytes(file.size)}</div><div style="display:flex;gap:8px;"><button class="btn btn-secondary" onclick="playPreview('${file.filename}','${escapeHtml(file.originalName)}')">Play</button><a class="btn btn-secondary" href="/audio/${file.filename}" download>Download</a></div>`;
+    row.innerHTML = `<div class="audio-name">${escapeHtml(file.originalName)}</div><div class="audio-size">${formatBytes(file.size)}</div><div class="audio-actions"><button class="btn btn-secondary" onclick="playPreview('${file.filename}','${escapeHtml(file.originalName)}')">Play</button><a class="btn btn-secondary" href="/audio/${file.filename}" download>Download</a></div>`;
     container.appendChild(row);
   });
   updateReadinessChecklist();

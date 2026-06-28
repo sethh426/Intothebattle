@@ -5013,7 +5013,12 @@ function requireRoom(req, res, next) {
 
 function requireCreatorSponsorAccess(req, res, next) {
   const auth = req.auth || getAuthRecord(req.cookies?.session_token);
-  const plan = buildPlanEntitlements(auth);
+  const plan = req.planEntitlements || buildPlanEntitlements(auth);
+  req.planEntitlements = plan;
+  if (req.room) {
+    req.room.planEntitlements = plan;
+    updatePlatformSponsorSchedule(req.room, plan);
+  }
   if (!plan.canUseCreatorSponsors) {
     return res.status(403).json({
       success: false,
@@ -6549,6 +6554,7 @@ app.delete('/api/sponsor/delete/:filename', requireRoom, requireCreatorSponsorAc
 });
 
 app.post('/api/sponsor/play', requireRoom, requireCreatorSponsorAccess, (req, res) => {
+  loadRoomSponsorConfig(req.room);
   const payload = buildSponsorScenePayload(req.room, req.body || {});
   if (payload.error) return res.status(payload.status || 404).json({ success: false, error: payload.error });
   const record = startSponsorBreak(req.room, payload, { trigger: 'creator_dashboard', source: 'creator' });

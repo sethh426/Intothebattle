@@ -315,7 +315,7 @@ GET /
 GET /login
 GET /signup
 GET /paywall
-GET /blog redirects to WriteFreely through WRITEFREELY_PUBLIC_URL
+GET /blog and /updates render the local blog index
 GET /my-code
 GET /overlay or /overlay.html with signed room_id + overlay_token for OBS/browser-source access
 GET /overlay-preview for public demo/recording footage without room auth
@@ -395,7 +395,7 @@ LOG_LEVEL=info
 DISK_PATH=/var/data
 TRUST_PROXY_HOPS=1
 CLARITY_PROJECT_ID=x82yl0ggk3
-WRITEFREELY_PUBLIC_URL=https://blog.intothebattle.com/
+WRITEFREELY_PUBLIC_URL=https://blog.intothebattle.com/   # optional external publishing target
 PAYPAL_CLIENT_ID=<PayPal client id>
 PAYPAL_CLIENT_SECRET=<PayPal client secret>
 PAYPAL_PLAN_ID=<PayPal subscription plan id>

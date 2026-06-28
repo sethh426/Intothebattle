@@ -9,6 +9,45 @@
       "blocks": []
     },
     {
+      "path": "battlegrounds.html",
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "mode": "pyld",
+          "expanded_sample": [
+            {
+              "@id": "https://intothebattle.com/battlegrounds#webpage",
+              "@type": [
+                "https://schema.org/WebPage"
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "A public board for creators announcing upcoming IntoTheBattle live battles."
+                }
+              ],
+              "https://schema.org/isPartOf": [
+                {
+                  "@id": "https://intothebattle.com/#website"
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "The Battlegrounds"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/battlegrounds"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": "dashboard-welcome.html",
       "blocks": []
     },
@@ -35,14 +74,45 @@
                   "@value": "IntoTheBattle turns TikTok LIVE chat into a playable battle arena for creators."
                 }
               ],
+              "https://schema.org/email": [
+                {
+                  "@value": "support@intothebattle.com"
+                }
+              ],
               "https://schema.org/image": [
+                {
+                  "@id": "https://intothebattle.com/brand-identity-square.png"
+                },
                 {
                   "@id": "https://intothebattle.com/og-intothebattle.png"
                 }
               ],
               "https://schema.org/logo": [
                 {
-                  "@id": "https://intothebattle.com/intothebattlelogo_logo_only.svg"
+                  "@id": "https://intothebattle.com/#logo",
+                  "@type": [
+                    "https://schema.org/ImageObject"
+                  ],
+                  "https://schema.org/contentUrl": [
+                    {
+                      "@value": "https://intothebattle.com/brand-identity-square.png"
+                    }
+                  ],
+                  "https://schema.org/height": [
+                    {
+                      "@value": 1200
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/brand-identity-square.png"
+                    }
+                  ],
+                  "https://schema.org/width": [
+                    {
+                      "@value": 1200
+                    }
+                  ]
                 }
               ],
               "https://schema.org/name": [
@@ -113,6 +183,28 @@
               "https://schema.org/name": [
                 {
                   "@value": "How To Play IntoTheBattle | TikTok LIVE Viewer Commands"
+                }
+              ],
+              "https://schema.org/primaryImageOfPage": [
+                {
+                  "@type": [
+                    "https://schema.org/ImageObject"
+                  ],
+                  "https://schema.org/height": [
+                    {
+                      "@value": 630
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/og-intothebattle.png"
+                    }
+                  ],
+                  "https://schema.org/width": [
+                    {
+                      "@value": 1200
+                    }
+                  ]
                 }
               ],
               "https://schema.org/url": [
@@ -365,6 +457,28 @@
                   "@value": "IntoTheBattle Creator Pro"
                 }
               ],
+              "https://schema.org/primaryImageOfPage": [
+                {
+                  "@type": [
+                    "https://schema.org/ImageObject"
+                  ],
+                  "https://schema.org/height": [
+                    {
+                      "@value": 630
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/og-intothebattle.png"
+                    }
+                  ],
+                  "https://schema.org/width": [
+                    {
+                      "@value": 1200
+                    }
+                  ]
+                }
+              ],
               "https://schema.org/url": [
                 {
                   "@value": "https://intothebattle.com/paywall"
@@ -511,7 +625,7 @@
               ],
               "https://schema.org/description": [
                 {
-                  "@value": "Launch your first TikTok LIVE battle overlay in under 5 minutes with 7 days of everything unlocked."
+                  "@value": "Create your IntoTheBattle account, choose Google or email, and launch a TikTok LIVE battle overlay for OBS or TikTok Studio in under 5 minutes."
                 }
               ],
               "https://schema.org/isPartOf": [
@@ -522,6 +636,28 @@
               "https://schema.org/name": [
                 {
                   "@value": "IntoTheBattle Free Account Signup"
+                }
+              ],
+              "https://schema.org/primaryImageOfPage": [
+                {
+                  "@type": [
+                    "https://schema.org/ImageObject"
+                  ],
+                  "https://schema.org/height": [
+                    {
+                      "@value": 630
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/og-intothebattle.png"
+                    }
+                  ],
+                  "https://schema.org/width": [
+                    {
+                      "@value": 1200
+                    }
+                  ]
                 }
               ],
               "https://schema.org/url": [
@@ -609,6 +745,28 @@
               "https://schema.org/name": [
                 {
                   "@value": "IntoTheBattle Site Map"
+                }
+              ],
+              "https://schema.org/primaryImageOfPage": [
+                {
+                  "@type": [
+                    "https://schema.org/ImageObject"
+                  ],
+                  "https://schema.org/height": [
+                    {
+                      "@value": 630
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/og-intothebattle.png"
+                    }
+                  ],
+                  "https://schema.org/width": [
+                    {
+                      "@value": 1200
+                    }
+                  ]
                 }
               ],
               "https://schema.org/url": [
@@ -701,6 +859,28 @@
               "https://schema.org/name": [
                 {
                   "@value": "IntoTheBattle Sponsors | Live Stream Brand Takeovers"
+                }
+              ],
+              "https://schema.org/primaryImageOfPage": [
+                {
+                  "@type": [
+                    "https://schema.org/ImageObject"
+                  ],
+                  "https://schema.org/height": [
+                    {
+                      "@value": 630
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/og-intothebattle.png"
+                    }
+                  ],
+                  "https://schema.org/width": [
+                    {
+                      "@value": 1200
+                    }
+                  ]
                 }
               ],
               "https://schema.org/url": [
@@ -821,8 +1001,8 @@
     }
   ],
   "summary": {
-    "total_files": 22,
-    "expanded": 11,
+    "total_files": 23,
+    "expanded": 12,
     "errors": 0
   }
 }

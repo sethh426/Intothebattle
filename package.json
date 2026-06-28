@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "start:dev": "NODE_ENV=development node server.js",
+    "start:dev": "cross-env NODE_ENV=development node server.js",
     "audit:stability": "node scripts/stability_audit.js",
     "lint": "node scripts/stability_audit.js",
     "test:logic": "node scripts/business_logic_smoke.js",
@@ -70,6 +70,7 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@remotion/cli": "4.0.484",
+    "cross-env": "^10.1.0",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "remotion": "4.0.484",
