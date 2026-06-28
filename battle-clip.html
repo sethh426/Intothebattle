@@ -4598,30 +4598,40 @@
     }
 
     .effects-card {
-      width: min(82%, 1000px);
-      min-height: min(66%, 455px);
+      width: min(78%, 980px);
+      min-height: min(64%, 440px);
       grid-template-columns: 1fr;
       grid-template-rows: auto minmax(0, 1fr);
       justify-items: center;
       align-items: stretch;
-      gap: clamp(10px, 1.4vw, 18px);
-      padding: clamp(16px, 2vw, 24px);
+      gap: clamp(11px, 1.45vw, 18px);
+      padding: clamp(18px, 2.25vw, 28px);
     }
 
     .effects-copy {
-      width: 100%;
+      width: min(82%, 760px);
       display: grid;
       justify-items: center;
+      gap: clamp(5px, .7vw, 8px);
+      padding: clamp(9px, 1.15vw, 14px) clamp(13px, 1.7vw, 22px);
+      border: 1px solid rgba(85, 231, 255, .24);
+      border-radius: clamp(10px, 1.2vw, 14px);
+      background:
+        linear-gradient(180deg, rgba(4, 13, 25, .92), rgba(2, 6, 14, .88)),
+        radial-gradient(circle at 50% 0, rgba(85, 231, 255, .12), transparent 70%);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .08),
+        0 18px 46px rgba(0, 0, 0, .28);
       text-align: center;
     }
 
     .effects-copy .scene-kicker {
-      margin-bottom: clamp(6px, .8vw, 10px);
+      margin-bottom: 0;
     }
 
     .effects-copy .scene-title {
-      font-size: clamp(23px, 3.15vw, 45px);
-      line-height: .92;
+      font-size: clamp(21px, 2.65vw, 39px);
+      line-height: .95;
       text-align: center;
       text-wrap: balance;
     }
@@ -4733,18 +4743,23 @@
     }
 
     .clip.is-embedded .effects-scene {
-      padding: 2.6%;
+      padding: 4%;
     }
 
     .clip.is-embedded .effects-card {
-      width: 93%;
-      min-height: calc(100vh - 26px);
-      gap: 6px;
-      padding: 8px;
+      width: 88%;
+      min-height: calc(100vh - 42px);
+      gap: 7px;
+      padding: 10px;
     }
 
     .clip.is-embedded .effects-copy {
+      width: 88%;
       display: grid;
+      margin-top: clamp(30px, 7vh, 36px);
+      padding: 6px 8px;
+      border-radius: 9px;
+      align-self: start;
     }
 
     .clip.is-embedded .effects-copy .scene-kicker,
@@ -4753,8 +4768,9 @@
     }
 
     .clip.is-embedded .effects-copy .scene-title {
-      font-size: clamp(14px, 4.4vw, 23px);
-      line-height: .92;
+      font-size: clamp(11px, 2vw, 18px);
+      line-height: .95;
+      white-space: nowrap;
     }
 
     .clip.is-embedded .duel-reel {
@@ -5245,8 +5261,8 @@
       </header>
 
       <div class="hook-panel">
-        <h1><span>Every comment</span> <span>fires a real</span> <span>attack.</span></h1>
-        <p>Viewer commands become visible hits inside the arena.</p>
+        <h1><span>Launch your</span> <span>battle room</span></h1>
+        <p>Connect TikTok LIVE, choose attack styles, and let viewers play from chat.</p>
       </div>
 
       <div class="chat-stack">
@@ -5324,8 +5340,8 @@
       <div class="effects-card">
         <div class="effects-copy">
           <span class="scene-kicker">Live command resolved</span>
-          <h2 class="scene-title">Every comment <em>fires a real attack</em></h2>
-          <p class="scene-copy">The battle shows the command, target, impact, and result in one readable frame.</p>
+          <h2 class="scene-title">Chat commands <em>fire real attacks</em></h2>
+          <p class="scene-copy">Each action shows who sent it, who it targets, and what happened next.</p>
         </div>
         <div class="duel-reel">
           <article class="duel-shot duel-shot-laser">
