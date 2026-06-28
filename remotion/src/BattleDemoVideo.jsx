@@ -15,73 +15,79 @@ export const BATTLE_DEMO_DURATION_FRAMES = 600;
 const SOURCE_VIDEO = 'remotion/homepage-real-overlay-source.mp4';
 
 const colors = {
-  void: '#02040a',
-  ink: '#061018',
+  black: '#02040a',
   cream: '#fff8e6',
-  muted: '#b9c3d8',
-  dim: '#748099',
+  muted: '#b9c6da',
   gold: '#f6c95b',
-  goldSoft: '#fff0b9',
   cyan: '#55e7ff',
-  cyanSoft: '#9ff5ff',
-  ember: '#ff6a3d',
   red: '#e83b5f',
   green: '#77f0a1',
 };
 
-const moments = [
+const shots = [
   {
-    start: 12,
-    end: 126,
+    start: 0,
+    end: 112,
     kicker: 'Real overlay capture',
-    title: 'Chat becomes combat on stream',
-    detail: 'The footage is recorded from the live overlay renderer.',
+    headline: 'Chat becomes combat',
+    subcopy: 'Viewer actions hit the arena while the stream is live.',
     tone: colors.gold,
+    side: 'left',
   },
   {
-    start: 126,
-    end: 252,
-    kicker: 'Event queue',
-    title: 'Likes, follows, shares, gifts',
-    detail: 'Viewer actions enter the same visual lanes creators use live.',
+    start: 112,
+    end: 232,
+    kicker: 'Live events',
+    headline: 'Every action lands',
+    subcopy: 'Follows, shares, gifts, and attacks become visible moments.',
     tone: colors.cyan,
+    side: 'right',
   },
   {
-    start: 252,
-    end: 384,
-    kicker: 'Attack effects',
-    title: 'Lasers, impacts, shields, banners',
-    detail: 'The battle board resolves real overlay effects in motion.',
-    tone: colors.ember,
-  },
-  {
-    start: 384,
-    end: 504,
-    kicker: 'Battle state',
-    title: 'Prompts and pressure stay readable',
-    detail: 'The stream sees what changed without leaving TikTok chat.',
+    start: 232,
+    end: 352,
+    kicker: 'Battle pressure',
+    headline: 'The room can read it',
+    subcopy: 'Health, horde pressure, and impact effects stay on-screen.',
     tone: colors.green,
+    side: 'left',
   },
   {
-    start: 504,
+    start: 352,
+    end: 472,
+    kicker: 'Stream-ready',
+    headline: 'Built for OBS',
+    subcopy: 'Drop in the browser source and test the fight before going live.',
+    tone: colors.red,
+    side: 'right',
+  },
+  {
+    start: 472,
     end: 600,
-    kicker: 'OBS ready',
-    title: 'Copy the browser source. Start the battle.',
-    detail: 'A creator can test the show before going live.',
+    kicker: 'IntoTheBattle',
+    headline: 'Start the fight',
+    subcopy: 'A TikTok LIVE overlay that makes chat impossible to ignore.',
     tone: colors.gold,
+    side: 'center',
   },
 ];
 
-const eventSteps = [
-  { label: 'Like', frame: 40, tone: colors.gold },
-  { label: 'Follow', frame: 84, tone: colors.cyan },
-  { label: 'Share', frame: 126, tone: colors.green },
-  { label: 'Attack', frame: 186, tone: colors.ember },
-  { label: 'Gift', frame: 258, tone: colors.goldSoft },
-  { label: 'Round', frame: 330, tone: colors.red },
-];
+const cameraKeys = {
+  landscape: {
+    frame: [0, 82, 112, 194, 232, 314, 352, 432, 472, 600],
+    scale: [1.42, 1.62, 1.85, 2.05, 1.88, 2.12, 1.62, 1.78, 1.34, 1.48],
+    x: [-90, -180, -420, -520, -80, -160, -310, -370, -20, -110],
+    y: [10, -8, -72, -96, -210, -248, -70, -88, 8, -12],
+  },
+  vertical: {
+    frame: [0, 82, 112, 194, 232, 314, 352, 432, 472, 600],
+    scale: [2.08, 2.32, 2.6, 2.82, 2.42, 2.7, 2.24, 2.46, 2.04, 2.18],
+    x: [-360, -420, -690, -770, -470, -540, -610, -680, -420, -500],
+    y: [80, 60, -20, -48, -300, -340, 10, -20, 92, 58],
+  },
+};
 
-function clamp(frame, input, output, easing = Easing.bezier(0.16, 1, 0.3, 1)) {
+function ease(frame, input, output, easing = Easing.bezier(0.16, 1, 0.3, 1)) {
   return interpolate(frame, input, output, {
     easing,
     extrapolateLeft: 'clamp',
@@ -96,135 +102,29 @@ function linear(frame, input, output) {
   });
 }
 
-function segmentOpacity(frame, start, end, fadeIn = 10, fadeOut = 12) {
-  const enter = linear(frame, [start, start + fadeIn], [0, 1]);
-  const exit = linear(frame, [end - fadeOut, end], [1, 0]);
-  return Math.max(0, Math.min(enter, exit));
+function shotOpacity(frame, start, end, fadeIn = 12, fadeOut = 14) {
+  const inOpacity = linear(frame, [start, start + fadeIn], [0, 1]);
+  const outOpacity = linear(frame, [end - fadeOut, end], [1, 0]);
+  return Math.max(0, Math.min(inOpacity, outOpacity));
 }
 
-function activeMoment(frame) {
-  return moments.find((moment) => frame >= moment.start && frame < moment.end) || moments[0];
+function currentShot(frame) {
+  return shots.find((shot) => frame >= shot.start && frame < shot.end) || shots[shots.length - 1];
 }
 
-function layout(width, height, variant) {
-  const vertical = variant === 'vertical' || height > width;
-  const pad = vertical ? 58 : 72;
+function getCamera(frame, vertical) {
+  const keys = vertical ? cameraKeys.vertical : cameraKeys.landscape;
   return {
-    vertical,
-    pad,
-    width,
-    height,
-    brand: vertical
-      ? { x: pad, y: 54, w: width - pad * 2, h: 82 }
-      : { x: pad, y: 48, w: 520, h: 76 },
-    label: vertical
-      ? { x: pad, y: height - 548, w: width - pad * 2 }
-      : { x: pad, y: height - 312, w: 610 },
-    strip: vertical
-      ? { x: pad, y: height - 228, w: width - pad * 2, h: 156 }
-      : { x: width - 790, y: height - 152, w: 714, h: 86 },
+    scale: ease(frame, keys.frame, keys.scale, Easing.bezier(0.45, 0, 0.55, 1)),
+    x: ease(frame, keys.frame, keys.x, Easing.bezier(0.45, 0, 0.55, 1)),
+    y: ease(frame, keys.frame, keys.y, Easing.bezier(0.45, 0, 0.55, 1)),
   };
 }
 
-function BrandBug({ l, frame }) {
-  const pulse = 0.74 + Math.sin(frame / 10) * 0.14;
-  const logoSize = l.vertical ? 62 : 58;
+function RealFootage({ frame, vertical }) {
+  const cam = getCamera(frame, vertical);
   return (
-    <div
-      style={{
-        position: 'absolute',
-        left: l.brand.x,
-        top: l.brand.y,
-        width: l.brand.w,
-        height: l.brand.h,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 16,
-        padding: l.vertical ? '0 6px' : 0,
-      }}
-    >
-      <div
-        style={{
-          width: logoSize,
-          height: logoSize,
-          borderRadius: 8,
-          border: `2px solid rgba(246, 201, 91, ${0.72 + pulse * 0.18})`,
-          background: 'linear-gradient(135deg, rgba(255,248,230,0.14), rgba(85,231,255,0.08))',
-          boxShadow: '0 0 34px rgba(246,201,91,0.26)',
-          overflow: 'hidden',
-          display: 'grid',
-          placeItems: 'center',
-          color: colors.cream,
-          fontFamily: 'Arial Black, Impact, sans-serif',
-          fontSize: l.vertical ? 28 : 26,
-          fontWeight: 950,
-        }}
-      >
-        IB
-      </div>
-      <div style={{ minWidth: 0 }}>
-        <div
-          style={{
-            color: colors.cream,
-            fontFamily: 'Arial Black, Impact, sans-serif',
-            fontSize: l.vertical ? 34 : 31,
-            lineHeight: 1,
-            textTransform: 'uppercase',
-            textShadow: '0 2px 24px rgba(0,0,0,0.6)',
-          }}
-        >
-          IntoTheBattle
-        </div>
-        <div
-          style={{
-            marginTop: 8,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            color: colors.cyanSoft,
-            fontSize: l.vertical ? 17 : 15,
-            fontWeight: 900,
-            textTransform: 'uppercase',
-            letterSpacing: 0,
-          }}
-        >
-          <span
-            style={{
-              width: 9,
-              height: 9,
-              borderRadius: '50%',
-              background: colors.green,
-              boxShadow: `0 0 ${12 + pulse * 16}px ${colors.green}`,
-              opacity: pulse,
-            }}
-          />
-          Live overlay capture
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function camera(frame, vertical) {
-  const frames = [0, 96, 196, 314, 444, 600];
-  if (vertical) {
-    return {
-      scale: clamp(frame, frames, [1.02, 1.06, 1.1, 1.07, 1.03, 1.05]),
-      x: clamp(frame, frames, [-60, -18, 54, -42, 26, -28]),
-      y: clamp(frame, frames, [0, -22, 20, -18, 8, 0]),
-    };
-  }
-  return {
-    scale: clamp(frame, frames, [1.015, 1.055, 1.13, 1.095, 1.045, 1.025]),
-    x: clamp(frame, frames, [0, -28, -118, 86, 18, 0]),
-    y: clamp(frame, frames, [0, -10, 28, -26, 0, 0]),
-  };
-}
-
-function RealOverlayFootage({ l, frame }) {
-  const c = camera(frame, l.vertical);
-  return (
-    <AbsoluteFill style={{ overflow: 'hidden', background: colors.void }}>
+    <AbsoluteFill style={{ overflow: 'hidden', background: colors.black }}>
       <OffthreadVideo
         src={staticFile(SOURCE_VIDEO)}
         muted
@@ -235,334 +135,231 @@ function RealOverlayFootage({ l, frame }) {
           width: '100%',
           height: '100%',
           objectFit: 'cover',
-          transform: `translate3d(${c.x}px, ${c.y}px, 0) scale(${c.scale})`,
-          filter: 'saturate(1.18) contrast(1.08) brightness(0.86)',
+          transformOrigin: '50% 50%',
+          transform: `translate3d(${cam.x}px, ${cam.y}px, 0) scale(${cam.scale})`,
+          filter: 'saturate(1.28) contrast(1.16) brightness(0.88)',
         }}
       />
     </AbsoluteFill>
   );
 }
 
-function Grade({ l, frame }) {
-  const shimmer = linear(frame % 150, [0, 150], [-28, 128]);
+function ColorGrade({ frame, vertical }) {
+  const drift = linear(frame % 180, [0, 180], [-18, 118]);
+  const warm = 0.42 + Math.sin(frame / 32) * 0.08;
   return (
-    <AbsoluteFill style={{ pointerEvents: 'none' }}>
+    <AbsoluteFill>
       <div
         style={{
           position: 'absolute',
           inset: 0,
           background:
-            'linear-gradient(180deg, rgba(2,4,10,0.24), transparent 28%, rgba(2,4,10,0.56)), ' +
-            'linear-gradient(90deg, rgba(2,4,10,0.78), transparent 22%, transparent 74%, rgba(2,4,10,0.62))',
+            'linear-gradient(90deg, rgba(2,4,10,0.9), rgba(2,4,10,0.18) 36%, rgba(2,4,10,0.16) 66%, rgba(2,4,10,0.82)), ' +
+            'linear-gradient(180deg, rgba(2,4,10,0.38), transparent 42%, rgba(2,4,10,0.76))',
         }}
       />
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          background:
-            'repeating-linear-gradient(0deg, rgba(255,255,255,0.045) 0, rgba(255,255,255,0.045) 1px, transparent 1px, transparent 5px)',
-          opacity: 0.18,
+          background: `radial-gradient(circle at 18% 22%, rgba(246,201,91,${warm}), transparent 30%), radial-gradient(circle at 82% 28%, rgba(85,231,255,0.28), transparent 34%), radial-gradient(circle at 62% 82%, rgba(232,59,95,0.22), transparent 34%)`,
           mixBlendMode: 'screen',
+          opacity: 0.56,
         }}
       />
       <div
         style={{
           position: 'absolute',
-          left: `${shimmer}%`,
-          top: -l.height * 0.2,
-          width: l.vertical ? 190 : 260,
-          height: l.height * 1.45,
-          background: 'linear-gradient(90deg, transparent, rgba(255,248,230,0.12), rgba(85,231,255,0.08), transparent)',
+          left: `${drift}%`,
+          top: vertical ? -240 : -180,
+          width: vertical ? 190 : 250,
+          height: vertical ? 2500 : 1500,
+          background: 'linear-gradient(90deg, transparent, rgba(255,248,230,0.18), rgba(85,231,255,0.08), transparent)',
           transform: 'skewX(-18deg)',
           mixBlendMode: 'screen',
+          opacity: 0.8,
         }}
       />
       <div
         style={{
           position: 'absolute',
-          inset: l.vertical ? 34 : 42,
-          border: '1px solid rgba(255,255,255,0.11)',
-          boxShadow: 'inset 0 0 0 1px rgba(246,201,91,0.12), inset 0 0 80px rgba(2,4,10,0.46)',
-          borderRadius: 8,
+          inset: 0,
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.055) 0, transparent 1px)',
+          backgroundSize: '100% 6px',
+          opacity: 0.1,
         }}
       />
     </AbsoluteFill>
   );
 }
 
-function MomentLabel({ l, frame }) {
-  const moment = activeMoment(frame);
-  const opacity = segmentOpacity(frame, moment.start, moment.end, 12, 14);
-  const lift = clamp(frame, [moment.start, moment.start + 20], [26, 0]);
+function BigType({ frame, width, height, vertical }) {
+  const shot = currentShot(frame);
+  const opacity = shotOpacity(frame, shot.start, shot.end);
+  const enter = ease(frame, [shot.start, shot.start + 24], [34, 0]);
+  const left = vertical
+    ? 70
+    : shot.side === 'right'
+      ? width - 720
+      : shot.side === 'center'
+        ? 126
+        : 78;
+  const top = vertical
+    ? height - 650
+    : shot.side === 'center'
+      ? height - 380
+      : height - 470;
+  const maxWidth = vertical
+    ? width - 140
+    : shot.side === 'center'
+      ? width - 252
+      : 640;
+  const align = shot.side === 'right' && !vertical ? 'right' : 'left';
   return (
     <div
       style={{
         position: 'absolute',
-        left: l.label.x,
-        top: l.label.y + lift,
-        width: l.label.w,
+        left,
+        top: top + enter,
+        width: maxWidth,
         opacity,
-        padding: l.vertical ? '28px 30px 30px' : '26px 28px 28px',
-        borderRadius: 8,
-        border: `1px solid ${moment.tone}88`,
-        background: 'linear-gradient(135deg, rgba(3,6,13,0.88), rgba(7,13,26,0.74))',
-        boxShadow: `0 22px 70px rgba(0,0,0,0.45), 0 0 34px ${moment.tone}26`,
-        backdropFilter: 'blur(10px)',
+        textAlign: align,
       }}
     >
       <div
         style={{
-          display: 'flex',
+          display: 'inline-flex',
           alignItems: 'center',
-          gap: 12,
-          color: moment.tone,
-          fontSize: l.vertical ? 21 : 17,
+          gap: vertical ? 14 : 12,
+          color: shot.tone,
+          fontSize: vertical ? 28 : 24,
           fontWeight: 950,
           textTransform: 'uppercase',
+          textShadow: '0 3px 22px rgba(0,0,0,0.72)',
         }}
       >
         <span
           style={{
-            width: 34,
-            height: 4,
+            width: vertical ? 52 : 46,
+            height: 5,
             borderRadius: 8,
-            background: moment.tone,
-            boxShadow: `0 0 18px ${moment.tone}`,
+            background: shot.tone,
+            boxShadow: `0 0 24px ${shot.tone}`,
           }}
         />
-        {moment.kicker}
+        {shot.kicker}
       </div>
       <div
         style={{
+          marginTop: vertical ? 18 : 14,
           color: colors.cream,
           fontFamily: 'Arial Black, Impact, sans-serif',
-          fontSize: l.vertical ? 56 : 48,
-          lineHeight: 1.02,
+          fontSize: vertical ? 112 : 92,
+          lineHeight: 0.92,
           textTransform: 'uppercase',
-          marginTop: 13,
-          textShadow: '0 4px 28px rgba(0,0,0,0.62)',
+          textShadow: '0 8px 44px rgba(0,0,0,0.82)',
+          letterSpacing: 0,
         }}
       >
-        {moment.title}
+        {shot.headline}
       </div>
       <div
         style={{
+          marginTop: vertical ? 22 : 18,
           color: colors.muted,
-          fontSize: l.vertical ? 27 : 21,
-          lineHeight: 1.34,
-          fontWeight: 800,
-          marginTop: 14,
+          fontSize: vertical ? 34 : 30,
+          lineHeight: 1.18,
+          fontWeight: 850,
+          textShadow: '0 5px 26px rgba(0,0,0,0.82)',
+          maxWidth: vertical ? width - 140 : 570,
+          marginLeft: align === 'right' ? 'auto' : 0,
         }}
       >
-        {moment.detail}
+        {shot.subcopy}
       </div>
     </div>
   );
 }
 
-function EventStrip({ l, frame }) {
-  const progress = linear(frame, [0, BATTLE_DEMO_DURATION_FRAMES], [0, 1]);
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: l.strip.x,
-        top: l.strip.y,
-        width: l.strip.w,
-        height: l.strip.h,
-        borderRadius: 8,
-        border: '1px solid rgba(255,255,255,0.12)',
-        background: 'rgba(3,6,13,0.72)',
-        boxShadow: '0 22px 64px rgba(0,0,0,0.4)',
-        padding: l.vertical ? 18 : 16,
-        backdropFilter: 'blur(9px)',
-      }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          left: l.vertical ? 18 : 16,
-          right: l.vertical ? 18 : 16,
-          top: l.vertical ? 24 : 18,
-          height: 4,
-          borderRadius: 8,
-          background: 'rgba(255,255,255,0.12)',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            width: `${progress * 100}%`,
-            height: '100%',
-            borderRadius: 8,
-            background: `linear-gradient(90deg, ${colors.gold}, ${colors.cyan}, ${colors.red})`,
-            boxShadow: '0 0 20px rgba(85,231,255,0.46)',
-          }}
-        />
-      </div>
-      <div
-        style={{
-          position: 'absolute',
-          left: l.vertical ? 18 : 16,
-          right: l.vertical ? 18 : 16,
-          bottom: l.vertical ? 18 : 15,
-          display: 'grid',
-          gridTemplateColumns: l.vertical ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)',
-          gap: l.vertical ? 10 : 8,
-        }}
-      >
-        {eventSteps.map((step) => {
-          const active = frame >= step.frame;
-          const pop = clamp(frame, [step.frame, step.frame + 14], [0.92, 1], Easing.bezier(0.34, 1.36, 0.64, 1));
-          return (
-            <div
-              key={step.label}
-              style={{
-                minHeight: l.vertical ? 50 : 42,
-                borderRadius: 8,
-                border: `1px solid ${active ? step.tone : 'rgba(255,255,255,0.12)'}`,
-                background: active
-                  ? `linear-gradient(135deg, ${step.tone}2e, rgba(255,255,255,0.075))`
-                  : 'rgba(255,255,255,0.045)',
-                color: active ? colors.cream : colors.dim,
-                display: 'grid',
-                placeItems: 'center',
-                fontSize: l.vertical ? 16 : 13,
-                fontWeight: 950,
-                textTransform: 'uppercase',
-                transform: `scale(${pop})`,
-                boxShadow: active ? `0 0 18px ${step.tone}24` : 'none',
-              }}
-            >
-              {step.label}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function CutFlash({ l, frame }) {
-  const cuts = [126, 252, 384, 504];
+function CutLight({ frame, width, height, vertical }) {
+  const cutFrames = shots.slice(1).map((shot) => shot.start);
   return (
     <>
-      {cuts.map((cut) => {
-        const opacity = segmentOpacity(frame, cut - 6, cut + 18, 4, 14);
-        const travel = linear(frame, [cut - 6, cut + 18], [-34, 134]);
+      {cutFrames.map((cut) => {
+        const opacity = shotOpacity(frame, cut - 7, cut + 19, 3, 15);
+        const x = linear(frame, [cut - 7, cut + 19], [-26, 126]);
         return (
           <div
             key={cut}
             style={{
               position: 'absolute',
-              left: `${travel}%`,
-              top: -l.height * 0.2,
-              width: l.vertical ? 260 : 320,
-              height: l.height * 1.45,
+              left: `${x}%`,
+              top: vertical ? -260 : -200,
+              width: vertical ? 240 : 340,
+              height: vertical ? height + 520 : height + 400,
               opacity,
-              background: 'linear-gradient(90deg, transparent, rgba(255,248,230,0.4), rgba(85,231,255,0.2), transparent)',
-              transform: 'skewX(-20deg)',
+              background: 'linear-gradient(90deg, transparent, rgba(255,248,230,0.58), rgba(85,231,255,0.26), transparent)',
+              transform: 'skewX(-18deg)',
               mixBlendMode: 'screen',
             }}
           />
         );
       })}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          opacity: Math.max(
+            ...cutFrames.map((cut) => shotOpacity(frame, cut - 2, cut + 8, 2, 8))
+          ) * 0.34,
+          background: `linear-gradient(135deg, ${colors.gold}, ${colors.cyan}, ${colors.red})`,
+          mixBlendMode: 'screen',
+        }}
+      />
     </>
   );
 }
 
-function FocusReticle({ l, frame }) {
-  const windows = [
-    { start: 170, end: 258, x: l.vertical ? 0.5 : 0.58, y: l.vertical ? 0.44 : 0.46, size: l.vertical ? 330 : 260, tone: colors.cyan },
-    { start: 286, end: 392, x: l.vertical ? 0.5 : 0.47, y: l.vertical ? 0.4 : 0.42, size: l.vertical ? 380 : 300, tone: colors.ember },
-    { start: 414, end: 504, x: l.vertical ? 0.5 : 0.64, y: l.vertical ? 0.5 : 0.48, size: l.vertical ? 430 : 330, tone: colors.green },
-  ];
-
-  return (
-    <>
-      {windows.map((window) => {
-        const opacity = segmentOpacity(frame, window.start, window.end, 12, 16);
-        const size = window.size + Math.sin(frame / 9) * 10;
-        return (
-          <div
-            key={`${window.start}-${window.end}`}
-            style={{
-              position: 'absolute',
-              left: l.width * window.x - size / 2,
-              top: l.height * window.y - size / 2,
-              width: size,
-              height: size,
-              opacity: opacity * 0.74,
-              borderRadius: '50%',
-              border: `2px solid ${window.tone}`,
-              boxShadow: `0 0 30px ${window.tone}55, inset 0 0 30px ${window.tone}22`,
-              mixBlendMode: 'screen',
-            }}
-          >
-            <div
-              style={{
-                position: 'absolute',
-                left: '50%',
-                top: 18,
-                bottom: 18,
-                width: 1,
-                background: `linear-gradient(180deg, transparent, ${window.tone}, transparent)`,
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                top: '50%',
-                left: 18,
-                right: 18,
-                height: 1,
-                background: `linear-gradient(90deg, transparent, ${window.tone}, transparent)`,
-              }}
-            />
-          </div>
-        );
-      })}
-    </>
-  );
-}
-
-function FinalEmphasis({ l, frame }) {
-  const opacity = segmentOpacity(frame, 520, 600, 16, 10);
-  const y = clamp(frame, [520, 548], [24, 0]);
+function EdgeBrand({ frame, width, height, vertical }) {
+  const opacity = shotOpacity(frame, 0, 600, 16, 16);
   return (
     <div
       style={{
         position: 'absolute',
-        right: l.vertical ? l.pad : 74,
-        top: l.vertical ? 192 + y : 86 + y,
-        width: l.vertical ? l.width - l.pad * 2 : 650,
+        left: vertical ? 52 : 58,
+        top: vertical ? 44 : 40,
+        right: vertical ? 52 : 58,
+        height: vertical ? 74 : 58,
         opacity,
-        textAlign: l.vertical ? 'left' : 'right',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        color: colors.cream,
+        fontWeight: 950,
+        textTransform: 'uppercase',
+        textShadow: '0 4px 28px rgba(0,0,0,0.8)',
       }}
     >
+      <div style={{ fontSize: vertical ? 32 : 26 }}>IntoTheBattle</div>
       <div
         style={{
-          color: colors.goldSoft,
-          fontSize: l.vertical ? 24 : 20,
-          fontWeight: 950,
-          textTransform: 'uppercase',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          color: colors.cyan,
+          fontSize: vertical ? 20 : 16,
         }}
       >
-        Stream-ready battle overlay
-      </div>
-      <div
-        style={{
-          color: colors.cream,
-          fontFamily: 'Arial Black, Impact, sans-serif',
-          fontSize: l.vertical ? 64 : 58,
-          lineHeight: 1,
-          textTransform: 'uppercase',
-          marginTop: 12,
-          textShadow: '0 6px 34px rgba(0,0,0,0.7)',
-        }}
-      >
-        Real effects. Real overlay.
+        <span
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            background: colors.green,
+            boxShadow: `0 0 ${14 + Math.sin(frame / 8) * 6}px ${colors.green}`,
+          }}
+        />
+        Live overlay
       </div>
     </div>
   );
@@ -571,25 +368,22 @@ function FinalEmphasis({ l, frame }) {
 export function BattleDemoVideo({ variant = 'landscape' }) {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();
-  const l = layout(width, height, variant);
+  const vertical = variant === 'vertical' || height > width;
 
   return (
     <AbsoluteFill
       style={{
         fontFamily: 'Inter, Arial, sans-serif',
+        background: colors.black,
         color: colors.cream,
-        background: colors.void,
         overflow: 'hidden',
       }}
     >
-      <RealOverlayFootage l={l} frame={frame} />
-      <Grade l={l} frame={frame} />
-      <CutFlash l={l} frame={frame} />
-      <FocusReticle l={l} frame={frame} />
-      <BrandBug l={l} frame={frame} />
-      <MomentLabel l={l} frame={frame} />
-      <EventStrip l={l} frame={frame} />
-      <FinalEmphasis l={l} frame={frame} />
+      <RealFootage frame={frame} vertical={vertical} />
+      <ColorGrade frame={frame} vertical={vertical} />
+      <CutLight frame={frame} width={width} height={height} vertical={vertical} />
+      <EdgeBrand frame={frame} width={width} height={height} vertical={vertical} />
+      <BigType frame={frame} width={width} height={height} vertical={vertical} />
     </AbsoluteFill>
   );
 }
