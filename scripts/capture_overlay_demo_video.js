@@ -11,11 +11,17 @@ const width = Number(process.env.OVERLAY_DEMO_WIDTH || 1920);
 const height = Number(process.env.OVERLAY_DEMO_HEIGHT || 1080);
 const durationMs = Number(process.env.OVERLAY_DEMO_DURATION_MS || 22000);
 const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-const outputDir = path.join(process.cwd(), 'test-results', 'overlay-demo-video', timestamp);
+const outputDir = process.env.OVERLAY_DEMO_OUTPUT_DIR
+  ? path.resolve(process.env.OVERLAY_DEMO_OUTPUT_DIR)
+  : path.join(process.cwd(), 'test-results', 'overlay-demo-video', timestamp);
 const diskPath = fs.mkdtempSync(path.join(os.tmpdir(), 'intothebattle-overlay-demo-'));
 const webmDir = path.join(outputDir, 'raw-webm');
-const mp4Path = path.join(outputDir, `intothebattle-real-overlay-demo-${timestamp}.mp4`);
-const manifestPath = path.join(outputDir, `manifest-${timestamp}.json`);
+const mp4Path = process.env.OVERLAY_DEMO_MP4_PATH
+  ? path.resolve(process.env.OVERLAY_DEMO_MP4_PATH)
+  : path.join(outputDir, `intothebattle-real-overlay-demo-${timestamp}.mp4`);
+const manifestPath = process.env.OVERLAY_DEMO_MANIFEST_PATH
+  ? path.resolve(process.env.OVERLAY_DEMO_MANIFEST_PATH)
+  : path.join(outputDir, `manifest-${timestamp}.json`);
 
 let output = '';
 let server;
@@ -65,6 +71,7 @@ function runProcess(command, args) {
 
 async function transcodeToMp4(webmPath) {
   const ffmpeg = process.env.FFMPEG_PATH || 'ffmpeg';
+  fs.mkdirSync(path.dirname(mp4Path), { recursive: true });
   await runProcess(ffmpeg, [
     '-y',
     '-i', webmPath,
@@ -89,6 +96,7 @@ async function triggerRealOverlayMoments(page) {
 
 try {
   fs.mkdirSync(webmDir, { recursive: true });
+  fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
   server = spawn(process.execPath, ['server.js'], {
     cwd: process.cwd(),
     env: {
