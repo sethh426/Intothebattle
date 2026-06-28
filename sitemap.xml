@@ -4,12 +4,12 @@
   xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://intothebattle.com/</loc>
-    <lastmod>2026-06-24</lastmod>
+    <lastmod>2026-06-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <image:image>
       <image:loc>https://intothebattle.com/og-intothebattle.png</image:loc>
-      <image:title>IntoTheBattle TikTok LIVE battle overlay preview</image:title>
+      <image:title>IntoTheBattle live streaming engagement game key art</image:title>
       <image:caption>IntoTheBattle turns TikTok LIVE chat into a playable battle arena.</image:caption>
     </image:image>
     <image:image>
@@ -20,27 +20,27 @@
   </url>
   <url>
     <loc>https://intothebattle.com/signup</loc>
-    <lastmod>2026-06-24</lastmod>
+    <lastmod>2026-06-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <image:image>
       <image:loc>https://intothebattle.com/og-intothebattle.png</image:loc>
-      <image:title>IntoTheBattle signup battle overlay preview</image:title>
+      <image:title>IntoTheBattle signup game key art</image:title>
     </image:image>
   </url>
   <url>
     <loc>https://intothebattle.com/how-to-play</loc>
-    <lastmod>2026-06-24</lastmod>
+    <lastmod>2026-06-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <image:image>
       <image:loc>https://intothebattle.com/og-intothebattle.png</image:loc>
-      <image:title>IntoTheBattle player commands and overlay preview</image:title>
+      <image:title>IntoTheBattle player command game key art</image:title>
     </image:image>
   </url>
   <url>
     <loc>https://intothebattle.com/battlegrounds</loc>
-    <lastmod>2026-06-24</lastmod>
+    <lastmod>2026-06-27</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
     <image:image>
@@ -50,12 +50,12 @@
   </url>
   <url>
     <loc>https://intothebattle.com/sponsors</loc>
-    <lastmod>2026-06-24</lastmod>
+    <lastmod>2026-06-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://intothebattle.com/og-intothebattle.png</image:loc>
-      <image:title>IntoTheBattle sponsor brand moment preview</image:title>
+      <image:title>IntoTheBattle sponsor game key art</image:title>
     </image:image>
   </url>
   <url>
@@ -70,17 +70,17 @@
   </url>
   <url>
     <loc>https://intothebattle.com/paywall</loc>
-    <lastmod>2026-06-24</lastmod>
+    <lastmod>2026-06-27</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
     <image:image>
       <image:loc>https://intothebattle.com/og-intothebattle.png</image:loc>
-      <image:title>IntoTheBattle Creator Pro overlay preview</image:title>
+      <image:title>IntoTheBattle Creator Pro game key art</image:title>
     </image:image>
   </url>
   <url>
     <loc>https://intothebattle.com/site-map</loc>
-    <lastmod>2026-06-24</lastmod>
+    <lastmod>2026-06-27</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
