@@ -50,13 +50,13 @@ const BATTLE_DEMO_CONTENT_ASSETS = [
   {
     key: 'full-loop-clip',
     folderKey: BATTLE_DEMO_FOLDER_KEY,
-    title: '24s Demo / Full Conversion Loop',
+    title: 'Remotion Demo / Full Vertical Conversion Loop',
     phase: 'Full loop',
     timing: '0-24s',
     assetType: 'real_overlay_clip',
-    assetUrl: '/battle-clip?asset=full-loop',
-    useCase: 'Homepage, signup, paywall, sponsor page hero proof.',
-    notes: 'Full canonical demo loop: hook, players, attack, effects, broadcast break, recap, and CTA.',
+    assetUrl: '/media/remotion/growth-battle-demo-vertical.mp4',
+    useCase: 'TikTok, Reels, Shorts, signup proof, and growth-page video campaigns.',
+    notes: 'Rendered Remotion demo loop: hook, players, attack, effects, video break, recap, and CTA.',
   },
   {
     key: 'hook-enter-slide',
@@ -172,11 +172,11 @@ const BLANK_DESIGN_TEMPLATES = [
     bestFor: 'TikTok, Reels, Shorts, signup hero',
     accent: BRAND_SYSTEM.colors.cyan,
     secondary: BRAND_SYSTEM.colors.cyan,
-    demoUrl: '/battle-clip',
+    demoUrl: '/media/remotion/growth-battle-demo-vertical.mp4',
     recommendedAssetType: 'real_overlay_clip',
     headline: 'Turn TikTok LIVE chat into a battle arena',
-    mediaLabel: '18-SECOND BATTLE CLIP VIDEO',
-    mediaHelper: 'Use the polished /battle-clip loop here',
+    mediaLabel: '24-SECOND BATTLE DEMO VIDEO',
+    mediaHelper: 'Use the rendered Remotion battle demo video here',
     bodyCopy: 'Chat. Attacks. Break. Recap.',
     cta: 'Launch your first battle in under 5 minutes',
     description: 'A finished branded vertical template built around the complete demo video we made.',
@@ -263,7 +263,7 @@ const TEMPLATE_DEFINITIONS = [
     key: 'complete_battle_demo',
     label: '24-second battle clip video demo',
     featured: true,
-    demoUrl: '/battle-clip',
+    demoUrl: '/media/remotion/growth-battle-demo-vertical.mp4',
     audience: 'TikTok LIVE creators',
     goal: 'conversion',
     path: '/signup',
@@ -573,7 +573,8 @@ function assetUrlCompatibility(assetUrl = '', assetType = '') {
 }
 
 function isCanonicalBattleDemoAssetUrl(value = '') {
-  return pathnameForAssetUrl(value) === '/battle-clip';
+  const pathname = pathnameForAssetUrl(value);
+  return pathname === '/battle-clip' || pathname === '/media/remotion/growth-battle-demo-vertical.mp4';
 }
 
 function utmUrl(path, platform, templateKey, variantIndex = 0) {
@@ -1747,7 +1748,7 @@ function designFrame(template) {
       <path d="M ${margin} ${contentY - 70} L ${width - margin} ${contentY - 70} L ${width - margin - 42} ${contentY - 25} L ${margin + 42} ${contentY - 25} Z" fill="${accent}" opacity="0.16"/>
       <path d="M ${margin + 28} ${contentY + contentH + 78} C ${width * 0.32} ${contentY + contentH + 142}, ${width * 0.68} ${contentY + contentH + 142}, ${width - margin - 28} ${contentY + contentH + 78}" fill="none" stroke="${secondary}" stroke-width="9" stroke-linecap="round" opacity="0.44"/>
       <rect x="${margin + 52}" y="${contentY + contentH + 38}" width="${contentW - 104}" height="58" rx="24" fill="#03040a" stroke="${accent}" stroke-opacity="0.30" stroke-width="2"/>
-      ${svgHelper('CANONICAL DEMO VIDEO: /battle-clip', width / 2, contentY + contentH + 75, vertical ? 20 : 14, BRAND_SYSTEM.colors.cyanSoft, 'middle')}
+      ${svgHelper('CANONICAL VIDEO: Remotion battle demo MP4', width / 2, contentY + contentH + 75, vertical ? 20 : 14, BRAND_SYSTEM.colors.cyanSoft, 'middle')}
     `,
     sponsor_broadcast_moment: `
       <rect x="${margin}" y="${height - margin - 92}" width="${contentW}" height="92" rx="22" fill="#070b15" stroke="${accent}" stroke-opacity="0.44" stroke-width="3"/>

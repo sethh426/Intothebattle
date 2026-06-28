@@ -126,7 +126,7 @@ assert(blankDesigns.length === 5, 'Expected five design templates');
 assert(blankDesigns.filter(design => design.templateType === 'blank').length === 1, 'Design library must include exactly one blank starter');
 assert(blankDesigns.filter(design => design.templateType !== 'blank').length === 4, 'All non-blank designs must be fully branded campaign templates');
 assert(
-  blankDesigns.some(design => design.key === 'battle_clip_video_launch' && design.demoHref === '/battle-clip' && design.templateType === 'branded-video'),
+  blankDesigns.some(design => design.key === 'battle_clip_video_launch' && design.demoHref === '/media/remotion/growth-battle-demo-vertical.mp4' && design.templateType === 'branded-video'),
   'Design library must include the branded battle clip video template'
 );
 assert(blankDesigns.every(design => design.width > 0 && design.height > 0 && design.downloadSvg && design.downloadBrief), 'Design templates must include dimensions and downloads');

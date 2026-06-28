@@ -5089,6 +5089,14 @@ app.use('/css', express.static(path.join(__dirname, 'css'), {
   maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
 }));
 
+app.use('/media/remotion', express.static(path.join(__dirname, 'media', 'remotion'), {
+  dotfiles: 'deny',
+  etag: true,
+  fallthrough: false,
+  index: false,
+  maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
+}));
+
 app.use('/vendor/microsoft-clarity', express.static(path.join(__dirname, 'node_modules', '@microsoft', 'clarity'), {
   dotfiles: 'deny',
   etag: true,

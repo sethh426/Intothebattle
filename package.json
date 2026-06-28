@@ -28,6 +28,10 @@
     "marketing:generate": "node scripts/generate_marketing_posts.js",
     "marketing:publish:dry-run": "node scripts/publish_marketing_posts.js",
     "marketing:publish": "node scripts/publish_marketing_posts.js --live",
+    "video:studio": "remotion studio remotion/index.jsx --port=3002",
+    "video:render:homepage": "remotion render remotion/index.jsx battle-homepage media/remotion/homepage-battle-demo.mp4 --codec=h264 --overwrite",
+    "video:render:growth": "remotion render remotion/index.jsx battle-growth-vertical media/remotion/growth-battle-demo-vertical.mp4 --codec=h264 --overwrite",
+    "video:render:all": "npm run video:render:homepage && npm run video:render:growth",
     "validate:schema": "python tools/validate_schema.py",
     "validate:schema-expand": "python tools/validate_schema_expand.py",
     "validate:schemas": "npm run validate:schema && npm run validate:schema-expand"
@@ -57,7 +61,7 @@
     "socket.io": "^4.7.5",
     "three": "^0.150.0",
     "uuid": "^11.1.1",
-    "zod": "^4.4.3"
+    "zod": "4.3.6"
   },
   "overrides": {
     "form-data": "^4.0.6",
@@ -65,6 +69,10 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "@remotion/cli": "4.0.484",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "remotion": "4.0.484",
     "socket.io-client": "^4.7.5"
   }
 }
