@@ -8,7 +8,7 @@
   <meta name="robots" content="index, follow" />
   <meta name="author" content="IntoTheBattle" />
   <link rel="canonical" href="https://intothebattle.com/paywall" />
-  <meta name="theme-color" content="#050608" />
+  <meta name="theme-color" content="#080c14" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="IntoTheBattle Creator Pro | Custom Battle Overlay Controls" />
   <meta property="og:description" content="Unlock custom video moments, premium overlay controls, creator assets, and stream-ready presentation after the 7-day everything-unlocked period." />
@@ -27,9 +27,6 @@
   <meta name="twitter:image:alt" content="IntoTheBattle live streaming engagement game key art with creators facing a red enemy horde." />
   <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
   <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=DM+Sans:wght@400;500;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
   <script type="module" src="/js/clarity-loader.js"></script>
   <script type="application/ld+json">
   {
@@ -41,12 +38,8 @@
         "url": "https://intothebattle.com/paywall",
         "name": "IntoTheBattle Creator Pro",
         "description": "Upgrade IntoTheBattle to unlock custom brand control, video moments, and premium controls after your 7-day everything-unlocked trial.",
-        "isPartOf": {
-          "@id": "https://intothebattle.com/#website"
-        },
-        "about": {
-          "@id": "https://intothebattle.com/#software"
-        },
+        "isPartOf": { "@id": "https://intothebattle.com/#website" },
+        "about": { "@id": "https://intothebattle.com/#software" },
         "primaryImageOfPage": {
           "@type": "ImageObject",
           "url": "https://intothebattle.com/og-intothebattle.png",
@@ -73,105 +66,367 @@
         "@type": "BreadcrumbList",
         "@id": "https://intothebattle.com/paywall#breadcrumb",
         "itemListElement": [
-          {
-            "@type": "ListItem",
-            "position": 1,
-            "name": "Home",
-            "item": "https://intothebattle.com/"
-          },
-          {
-            "@type": "ListItem",
-            "position": 2,
-            "name": "Creator Pro",
-            "item": "https://intothebattle.com/paywall"
-          }
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://intothebattle.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Creator Pro", "item": "https://intothebattle.com/paywall" }
         ]
       }
     ]
   }
   </script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --gold:#f6c95b; --gold2:#ffdf8a; --ember:#ff6a3d; --red:#e83b5f; --cyan:#55e7ff; --green:#77f0a1; --text:#fff8e6; --muted:#a8afbf; --line:rgba(246,201,91,.24); --line2:rgba(255,255,255,.1); --shadow:0 32px 90px rgba(0,0,0,.48); }
-    body { min-height:100vh; padding:24px; display:grid; place-items:center; font-family:'DM Sans',system-ui,sans-serif; color:var(--text); background:radial-gradient(circle at 18% 2%,rgba(246,201,91,.18),transparent 30%),radial-gradient(circle at 84% 16%,rgba(232,59,95,.13),transparent 30%),radial-gradient(circle at 74% 88%,rgba(85,231,255,.11),transparent 32%),linear-gradient(180deg,#050608,#030406); overflow-x:hidden; }
-    body::before { content:''; position:fixed; inset:0; pointer-events:none; background-image:linear-gradient(rgba(246,201,91,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(246,201,91,.035) 1px,transparent 1px); background-size:58px 58px; mask-image:radial-gradient(circle at top,black,transparent 72%); z-index:-1; }
-    a { color:inherit; text-decoration:none; }
-    .wrap { width:min(1080px,100%); display:grid; grid-template-columns:1.08fr .92fr; gap:24px; align-items:stretch; }
-    .hero, .card { border-radius:34px; border:1px solid var(--line2); background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025)); box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.08); }
-    .hero { padding:clamp(30px,4vw,46px); border-color:var(--line); background:radial-gradient(circle at top left,rgba(246,201,91,.16),transparent 34%),linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.025)); }
-    .logo { width:78px; height:78px; border-radius:24px; border:1px solid rgba(246,201,91,.38); background:rgba(246,201,91,.08); overflow:hidden; margin-bottom:26px; box-shadow:0 0 42px rgba(246,201,91,.2); }
-    .logo img { width:100%; height:auto; display:block; transform:scale(1.1); }
-    .kicker { display:inline-flex; margin-bottom:18px; padding:8px 12px; border-radius:999px; border:1px solid rgba(246,201,91,.3); background:rgba(246,201,91,.08); color:var(--gold2); font-size:12px; font-weight:900; letter-spacing:.12em; text-transform:uppercase; }
-    h1 { font-family:'Black Ops One','Rajdhani',sans-serif; font-size:clamp(42px,5.8vw,78px); line-height:1; text-transform:uppercase; margin-bottom:18px; }
-    h1 span { color:transparent; background:linear-gradient(100deg,#fff7d7,var(--gold),var(--ember)); -webkit-background-clip:text; background-clip:text; }
-    .sub { color:#c7cedd; line-height:1.75; font-size:17px; max-width:660px; }
-    .features { display:grid; gap:12px; margin-top:30px; }
-    .feature { padding:15px 16px; border-radius:18px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.2); color:#dfe6f3; line-height:1.55; }
-    .feature b { color:var(--gold2); }
-    .battle-clip-frame { margin-top:24px; border-radius:18px; overflow:hidden; border:1px solid rgba(85,231,255,.18); background:#02040a; box-shadow:0 22px 60px rgba(0,0,0,.32); aspect-ratio:16/9; }
-    .battle-clip-frame iframe { width:100%; height:100%; border:0; display:block; }
-    .card { padding:clamp(28px,4vw,40px); border-color:rgba(246,201,91,.38); background:rgba(5,7,11,.72); }
-    .price-label { color:var(--gold2); font-size:12px; font-weight:900; letter-spacing:.14em; text-transform:uppercase; }
-    .plan { margin:12px 0 8px; font-size:26px; font-weight:900; }
-    .price { font-family:'Black Ops One','Rajdhani',sans-serif; font-size:64px; line-height:1; margin-bottom:8px; }
-    .price small { font-family:'DM Sans',sans-serif; font-size:16px; color:var(--muted); }
-    .period { color:var(--muted); line-height:1.55; }
-    .list { list-style:none; display:grid; gap:12px; margin:26px 0; }
-    .list li { display:flex; gap:10px; color:#dfe6f3; line-height:1.5; }
-    .list li::before { content:'✓'; color:var(--green); font-weight:900; }
-    .btn { display:flex; align-items:center; justify-content:center; width:100%; min-height:56px; border:0; border-radius:16px; font-weight:900; font-size:16px; cursor:pointer; transition:.16s ease; }
-    .btn:hover { transform:translateY(-1px); filter:brightness(1.06); }
-    .primary { color:#170c02; background:linear-gradient(135deg,var(--gold),#fff0b9 52%,var(--ember)); box-shadow:0 18px 46px rgba(246,201,91,.22); margin-bottom:12px; }
-    .secondary { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); color:#fff; }
-    .payment-box { margin-top:4px; display:grid; gap:12px; }
-    .payment-status { min-height:48px; padding:14px 16px; border-radius:16px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.055); color:#c7cedd; line-height:1.45; font-size:14px; }
-    .payment-status.success { color:#b8ffd0; border-color:rgba(119,240,161,.25); background:rgba(119,240,161,.08); }
-    .payment-status.error { color:#ffb1b8; border-color:rgba(232,59,95,.25); background:rgba(232,59,95,.1); }
-    .paypal-shell { min-height:80px; padding:8px; border-radius:18px; border:1px solid rgba(246,201,91,.18); background:rgba(0,0,0,.18); }
-    .hidden { display:none !important; }
-    .footer { margin-top:18px; text-align:center; color:var(--muted); font-size:13px; line-height:1.6; }
-    .footer a { color:var(--gold2); font-weight:900; }
-    @media(max-width:860px) { body{padding:14px}.wrap{grid-template-columns:1fr}.hero,.card{padding:26px} }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      padding: clamp(20px, 4vw, 40px) 24px;
+      display: grid;
+      place-items: center;
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--txt);
+      overflow-x: hidden;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* Layout */
+    .wrap {
+      width: min(1080px, 100%);
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* Hero panel */
+    .hero {
+      padding: clamp(28px, 4vw, 46px);
+      border-radius: var(--r-xl, 32px);
+      border: 1px solid var(--b-gold, rgba(245,200,66,0.28));
+      background:
+        radial-gradient(circle at top left, rgba(245,200,66,0.13) 0%, transparent 38%),
+        linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.025) 100%);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+
+    .logo-box {
+      width: 72px; height: 72px;
+      border-radius: var(--r-lg, 24px);
+      border: 1px solid rgba(245,200,66,0.38);
+      background: rgba(245,200,66,0.08);
+      box-shadow: 0 0 40px rgba(245,200,66,0.18);
+      overflow: hidden;
+      margin-bottom: 24px;
+      display: grid;
+      place-items: center;
+    }
+    .logo-box img { width: 100%; height: auto; display: block; transform: scale(1.1); }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding: 7px 14px;
+      border-radius: var(--r-pill, 999px);
+      border: 1px solid rgba(245,200,66,0.32);
+      background: rgba(245,200,66,0.08);
+      color: var(--gold-l, #ffe99a);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .kicker-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--gold, #f5c842);
+      box-shadow: 0 0 8px var(--gold, #f5c842);
+      animation: itb-pulse 2s ease-in-out infinite;
+    }
+
+    h1 {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: clamp(38px, 5.5vw, 72px);
+      line-height: 0.92;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      color: var(--txt, #edf0fa);
+      margin-bottom: 16px;
+    }
+    h1 span {
+      display: block;
+      background: var(--grad-heading, linear-gradient(115deg, #fff5d6 0%, #f5c842 38%, #ff6b35 100%));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .sub {
+      color: var(--muted, #8896ae);
+      line-height: 1.72;
+      font-size: clamp(15px, 1.7vw, 17px);
+      max-width: 560px;
+    }
+
+    /* Battle clip preview */
+    .clip-frame {
+      margin-top: 28px;
+      border-radius: var(--r-md, 18px);
+      overflow: hidden;
+      border: 1px solid rgba(0,200,255,0.18);
+      background: #02040a;
+      box-shadow: 0 22px 60px rgba(0,0,0,0.38);
+      aspect-ratio: 16 / 9;
+    }
+    .clip-frame iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+    /* Feature list */
+    .features { display: grid; gap: 10px; margin-top: 24px; }
+    .feature-item {
+      padding: 14px 16px;
+      border-radius: var(--r-sm, 12px);
+      border: 1px solid var(--border, rgba(255,255,255,0.09));
+      background: rgba(0,0,0,0.22);
+      color: var(--muted, #8896ae);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .feature-item strong { color: var(--gold-l, #ffe99a); }
+
+    .feature-item:nth-child(1) { border-left: 3px solid var(--gold, #f5c842); }
+    .feature-item:nth-child(2) { border-left: 3px solid var(--blue, #00c8ff); }
+    .feature-item:nth-child(3) { border-left: 3px solid var(--ember, #ff7a3a); }
+
+    /* Checkout card */
+    .card {
+      padding: clamp(28px, 4vw, 40px);
+      border-radius: var(--r-xl, 32px);
+      border: 1px solid var(--b-gold, rgba(245,200,66,0.28));
+      background: rgba(5,8,14,0.80);
+      box-shadow: 0 32px 80px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06);
+      position: sticky;
+      top: 24px;
+    }
+
+    .price-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--gold-l, #ffe99a);
+      margin-bottom: 6px;
+    }
+    .plan-name {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--txt, #edf0fa);
+      margin-bottom: 12px;
+    }
+    .price-display {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .price-amount {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: clamp(52px, 7vw, 68px);
+      line-height: 1;
+      color: var(--txt, #edf0fa);
+    }
+    .price-period {
+      color: var(--muted, #8896ae);
+      font-size: 15px;
+      line-height: 1.4;
+    }
+    .billing-note {
+      color: var(--dim, #4e5a6c);
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border, rgba(255,255,255,0.09));
+    }
+
+    /* Feature checklist */
+    .check-list {
+      list-style: none;
+      display: grid;
+      gap: 11px;
+      margin-bottom: 28px;
+    }
+    .check-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      color: var(--muted, #8896ae);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .check-list li::before {
+      content: '✓';
+      color: var(--green, #39d875);
+      font-weight: 700;
+      font-size: 13px;
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
+
+    /* Payment section */
+    .payment-box { display: grid; gap: 10px; }
+
+    .payment-status {
+      min-height: 46px;
+      padding: 13px 15px;
+      border-radius: var(--r-sm, 12px);
+      border: 1px solid var(--border, rgba(255,255,255,0.09));
+      background: rgba(255,255,255,0.045);
+      color: var(--muted, #8896ae);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .payment-status.success {
+      color: #b8ffd0;
+      border-color: rgba(57,216,117,0.28);
+      background: rgba(57,216,117,0.07);
+    }
+    .payment-status.error {
+      color: #ffb1b8;
+      border-color: rgba(255,42,74,0.28);
+      background: rgba(255,42,74,0.08);
+    }
+
+    .paypal-shell {
+      min-height: 76px;
+      padding: 8px;
+      border-radius: var(--r-md, 18px);
+      border: 1px solid rgba(245,200,66,0.18);
+      background: rgba(0,0,0,0.20);
+    }
+
+    /* Buttons */
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 54px;
+      border: none;
+      border-radius: var(--r-md, 18px);
+      font-weight: 800;
+      font-size: 15px;
+      cursor: pointer;
+      transition: transform 0.16s ease, filter 0.16s ease, box-shadow 0.16s ease;
+      text-decoration: none;
+    }
+    .btn:hover { transform: translateY(-2px); filter: brightness(1.07); }
+    .btn-primary {
+      color: #0a0700;
+      background: var(--grad-primary, linear-gradient(135deg, #f5c842 0%, #ffe99a 42%, #ff7a3a 100%));
+      box-shadow: 0 8px 28px rgba(245,200,66,0.26);
+    }
+    .btn-primary:hover { box-shadow: 0 14px 38px rgba(245,200,66,0.38); }
+    .btn-secondary {
+      color: var(--txt, #edf0fa);
+      border: 1px solid var(--border, rgba(255,255,255,0.09));
+      background: rgba(255,255,255,0.055);
+      margin-top: 10px;
+    }
+
+    .hidden { display: none !important; }
+
+    .card-footer {
+      margin-top: 16px;
+      text-align: center;
+      color: var(--dim, #4e5a6c);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .card-footer a { color: var(--gold-l, #ffe99a); font-weight: 700; }
+    .card-footer a:hover { text-decoration: underline; }
+
+    /* Responsive */
+    @media (max-width: 860px) {
+      body { padding: 16px; }
+      .wrap { grid-template-columns: 1fr; }
+      .card { position: static; }
+    }
   </style>
   <link rel="stylesheet" href="/css/site-refresh.css" />
 </head>
 <body>
   <main class="wrap">
+
+    <!-- Left: hero / features panel -->
     <section class="hero">
-      <div class="logo"><img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" /></div>
-      <div class="kicker">Creator Pro after 7 days unlocked</div>
+      <div class="logo-box">
+        <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" width="72" height="72" />
+      </div>
+
+      <div class="kicker">
+        <span class="kicker-dot" aria-hidden="true"></span>
+        Creator Pro · After 7 days unlocked
+      </div>
+
       <h1>Unlock custom brand <span>control.</span></h1>
+
       <p class="sub">Your first 7 days unlock everything. Upgrade when you want paid creator control over custom video moments, premium stream polish, and advanced room presentation.</p>
-      <div class="battle-clip-frame" aria-label="IntoTheBattle battle clip">
+
+      <div class="clip-frame" aria-label="IntoTheBattle battle clip preview">
         <iframe src="/battle-clip" title="IntoTheBattle battle clip" loading="eager"></iframe>
       </div>
+
       <div class="features">
-        <div class="feature"><b>Overlay control:</b> browser-source overlay, reload controls, room state, and stream-ready setup.</div>
-        <div class="feature"><b>Video moments:</b> free rooms receive platform-managed breaks; Creator Pro unlocks your custom uploads and timing.</div>
-        <div class="feature"><b>Creator assets:</b> custom backgrounds, sounds, event assignments, and premium stream polish.</div>
+        <div class="feature-item">
+          <strong>Overlay control:</strong> browser-source overlay, reload controls, room state, and stream-ready setup.
+        </div>
+        <div class="feature-item">
+          <strong>Video moments:</strong> free rooms receive platform-managed breaks; Creator Pro unlocks your custom uploads and timing.
+        </div>
+        <div class="feature-item">
+          <strong>Creator assets:</strong> custom backgrounds, sounds, event assignments, and premium stream polish.
+        </div>
       </div>
     </section>
-    <section class="card" aria-label="Creator Pro plan">
+
+    <!-- Right: checkout card -->
+    <section class="card" aria-label="Creator Pro subscription">
       <div class="price-label">Subscription</div>
-      <div class="plan">Creator Pro</div>
-      <div class="price">$12<small>/mo + applicable tax</small></div>
-      <div class="period">Billed through PayPal. Cancel anytime with no long-term contract.</div>
-      <ul class="list">
+      <div class="plan-name">Creator Pro</div>
+
+      <div class="price-display">
+        <span class="price-amount">$12</span>
+        <span class="price-period">/mo<br>+ applicable tax</span>
+      </div>
+      <div class="billing-note">Billed through PayPal. Cancel anytime — no long-term contract.</div>
+
+      <ul class="check-list">
         <li>Battle rooms and creator dashboard</li>
         <li>Custom audio and visual controls</li>
         <li>Creator-controlled video moments after the unlocked trial</li>
         <li>Overlay support for OBS and TikTok Studio</li>
         <li>Advanced timing, transition, and presentation tooling</li>
       </ul>
+
       <div class="payment-box" aria-label="PayPal checkout">
         <div id="paymentStatus" class="payment-status">Loading secure PayPal checkout...</div>
         <div id="paypalButtons" class="paypal-shell"></div>
-        <button id="fallbackPayPal" class="btn primary hidden" type="button" onclick="upgradeToPaid()">Continue to PayPal</button>
+        <button id="fallbackPayPal" class="btn btn-primary hidden" type="button" onclick="upgradeToPaid()">
+          Continue to PayPal
+        </button>
       </div>
-      <button class="btn secondary" onclick="window.location.href='/dashboard'">Back to dashboard</button>
-      <div class="footer">Questions? <a href="mailto:support@intothebattle.com">Contact support</a></div>
+
+      <button class="btn btn-secondary" type="button" onclick="window.location.href='/dashboard'">
+        Back to dashboard
+      </button>
+
+      <div class="card-footer">
+        Questions? <a href="mailto:support@intothebattle.com">Contact support</a>
+      </div>
     </section>
+
   </main>
+
   <script>
     const paymentStatus = document.getElementById('paymentStatus');
     const paypalButtonsEl = document.getElementById('paypalButtons');

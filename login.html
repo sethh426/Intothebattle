@@ -5,30 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login — IntoTheBattle | Creator Command Center</title>
   <meta name="description" content="Log into IntoTheBattle to access your TikTok LIVE battle overlay, creator dashboard, rooms, sponsor moments, and stream controls." />
-  <meta name="keywords" content="IntoTheBattle login, TikTok LIVE overlay login, creator dashboard, OBS overlay, TikTok Studio overlay" />
   <meta name="robots" content="noindex, follow" />
-  <meta name="author" content="IntoTheBattle" />
   <link rel="canonical" href="https://intothebattle.com/login" />
   <meta property="og:type" content="website" />
   <meta property="og:title" content="IntoTheBattle Login" />
   <meta property="og:description" content="Secure login for your TikTok LIVE battle overlay and creator command center." />
   <meta property="og:url" content="https://intothebattle.com/login" />
   <meta property="og:image" content="https://intothebattle.com/brand-identity-square.png" />
-  <meta property="og:image:type" content="image/png" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="1200" />
-  <meta property="og:image:alt" content="IntoTheBattle brand identity." />
   <meta property="og:site_name" content="IntoTheBattle" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="IntoTheBattle Login" />
   <meta name="twitter:description" content="Access your TikTok LIVE battle overlay and creator dashboard." />
   <meta name="twitter:image" content="https://intothebattle.com/brand-identity-square.png" />
-  <meta name="twitter:image:alt" content="IntoTheBattle brand identity." />
   <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
   <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=DM+Sans:wght@400;500;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
   <script type="module" src="/js/clarity-loader.js"></script>
   <script type="application/ld+json">
   {
@@ -37,278 +27,500 @@
     "name": "IntoTheBattle Login",
     "url": "https://intothebattle.com/login",
     "description": "Log into IntoTheBattle to access your TikTok LIVE battle overlay, creator dashboard, and stream management tools.",
-    "isPartOf": {
-      "@type": "WebSite",
-      "name": "IntoTheBattle",
-      "url": "https://intothebattle.com/"
-    }
+    "isPartOf": { "@type": "WebSite", "name": "IntoTheBattle", "url": "https://intothebattle.com/" }
   }
   </script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #030406;
-      --gold: #f6c95b;
-      --gold2: #ffdf8a;
-      --ember: #ff6a3d;
-      --red: #e83b5f;
-      --cyan: #55e7ff;
-      --green: #77f0a1;
-      --text: #fff8e6;
-      --muted: #a8afbf;
-      --dim: #677083;
-      --line: rgba(246,201,91,.24);
-      --line2: rgba(255,255,255,.1);
-      --shadow: 0 32px 90px rgba(0,0,0,.48);
+      --gold:   #f5c842;
+      --gold-l: #ffe99a;
+      --ember:  #ff7a3a;
+      --red:    #ff2a4a;
+      --blue:   #00c8ff;
+      --green:  #39d875;
+      --txt:    #edf0fa;
+      --muted:  #8896ae;
+      --dim:    #4e5a6c;
+      --border: rgba(255,255,255,0.09);
+      --b-gold: rgba(245,200,66,0.28);
+      --panel:  rgba(255,255,255,0.048);
+      --ease:   0.18s cubic-bezier(0.4,0,0.2,1);
     }
     body {
       min-height: 100vh;
       padding: 24px;
-      color: var(--text);
-      font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background:
-        radial-gradient(circle at 18% 2%, rgba(246,201,91,.18), transparent 30%),
-        radial-gradient(circle at 84% 16%, rgba(232,59,95,.14), transparent 30%),
-        radial-gradient(circle at 72% 88%, rgba(85,231,255,.1), transparent 32%),
-        linear-gradient(180deg, #050608, #030406);
+      color: var(--txt);
+      font-family: 'Inter', system-ui, sans-serif;
       display: grid;
       place-items: center;
       overflow-x: hidden;
     }
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      background-image:
-        linear-gradient(rgba(246,201,91,.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(246,201,91,.035) 1px, transparent 1px);
-      background-size: 58px 58px;
-      mask-image: radial-gradient(circle at top, black, transparent 72%);
-      z-index: -1;
-    }
     a { color: inherit; text-decoration: none; }
     button, input { font-family: inherit; }
+
+    /* Page layout */
     .page {
-      width: min(1120px, 100%);
+      width: min(1100px, 100%);
       display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(360px, .95fr);
-      gap: 24px;
+      grid-template-columns: minmax(0, 1.08fr) minmax(340px, 0.92fr);
+      gap: 20px;
       align-items: stretch;
     }
-    .hero, .form-card {
-      border-radius: 32px;
-      border: 1px solid var(--line2);
-      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.025));
-      box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,.08);
-      overflow: hidden;
-    }
-    .hero {
-      padding: clamp(30px, 4vw, 46px);
-      border-color: var(--line);
-      background:
-        radial-gradient(circle at top left, rgba(246,201,91,.16), transparent 34%),
-        linear-gradient(180deg, rgba(255,255,255,.075), rgba(255,255,255,.025));
+
+    /* Left hero panel */
+    .hero-panel {
+      position: relative;
+      padding: clamp(30px, 4vw, 48px);
+      border: 1px solid var(--b-gold);
+      border-radius: 28px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.025) 100%);
+      box-shadow: 0 8px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      min-height: 580px;
+      min-height: 560px;
+      overflow: hidden;
     }
-    .brand-logo {
-      width: 76px;
-      height: 76px;
+    .hero-panel::before {
+      content: "";
+      position: absolute;
+      top: -60px;
+      left: -60px;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(245,200,66,0.14), transparent 70%);
+      pointer-events: none;
+    }
+    .hero-panel::after {
+      content: "";
+      position: absolute;
+      bottom: -40px;
+      right: -40px;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,200,255,0.10), transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Brand logo */
+    .brand-logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+      position: relative;
+    }
+    .brand-logo-box {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      border: 1px solid rgba(245,200,66,0.38);
+      background: rgba(245,200,66,0.07);
+      box-shadow: 0 0 28px rgba(245,200,66,0.16);
       display: grid;
       place-items: center;
-      border-radius: 24px;
-      border: 1px solid rgba(246,201,91,.38);
-      background: rgba(246,201,91,.08);
-      box-shadow: 0 0 42px rgba(246,201,91,.2);
       overflow: hidden;
-      margin-bottom: 26px;
+      flex-shrink: 0;
     }
-    .brand-logo img { width: 100%; height: auto; display: block; transform: scale(1.1); transform-origin: center; }
+    .brand-logo-box img { width: 100%; height: auto; display: block; transform: scale(1.08); }
+    .brand-logo-text strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--txt);
+    }
+    .brand-logo-text span {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* Hero copy */
     .kicker {
       display: inline-flex;
+      align-items: center;
+      gap: 7px;
       width: fit-content;
-      margin-bottom: 18px;
-      padding: 8px 12px;
+      margin-bottom: 16px;
+      padding: 6px 12px;
+      border: 1px solid var(--b-gold);
       border-radius: 999px;
-      border: 1px solid rgba(246,201,91,.3);
-      background: rgba(246,201,91,.08);
-      color: var(--gold2);
-      font-size: 12px;
-      font-weight: 900;
-      letter-spacing: .12em;
+      background: rgba(245,200,66,0.08);
+      color: var(--gold-l);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
       text-transform: uppercase;
+      position: relative;
     }
-    h1 {
-      font-family: 'Black Ops One', 'Rajdhani', sans-serif;
-      font-size: clamp(42px, 5.6vw, 76px);
-      line-height: 1;
+    .kicker::before {
+      content: "";
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 8px var(--gold);
+      animation: pulse 2.2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.2)} }
+
+    .hero-panel h1 {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: clamp(38px, 5.2vw, 66px);
+      line-height: 0.96;
       text-transform: uppercase;
-      margin-bottom: 20px;
+      letter-spacing: 0.02em;
+      color: var(--txt);
+      margin-bottom: 18px;
+      position: relative;
     }
-    h1 span {
-      color: transparent;
-      background: linear-gradient(100deg, #fff7d7, var(--gold), var(--ember));
+    .hero-panel h1 span {
+      background: linear-gradient(110deg, #fff5d6, var(--gold), var(--ember));
       -webkit-background-clip: text;
       background-clip: text;
+      color: transparent;
     }
-    .hero p { color: #c7cedd; line-height: 1.75; font-size: 17px; max-width: 620px; }
-    .hero-links { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
-    .hero-links a, .btn-link {
+    .hero-panel .sub {
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 16px;
+      max-width: 560px;
+      margin-bottom: 28px;
+      position: relative;
+    }
+
+    /* Hero actions */
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 0;
+      position: relative;
+    }
+    .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 52px;
-      padding: 0 18px;
-      border-radius: 16px;
-      font-weight: 900;
+      min-height: 50px;
+      padding: 0 20px;
+      border-radius: 14px;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      transition: transform var(--ease), filter var(--ease), box-shadow var(--ease);
+      text-decoration: none;
     }
-    .hero-links .primary, .btn-primary {
-      color: #170c02;
-      background: linear-gradient(135deg, var(--gold), #fff0b9 52%, var(--ember));
-      box-shadow: 0 18px 46px rgba(246,201,91,.22);
+    .btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+    .btn-primary {
+      color: #0a0700;
+      background: linear-gradient(135deg, var(--gold), var(--gold-l) 42%, var(--ember));
+      box-shadow: 0 6px 24px rgba(245,200,66,0.28);
     }
-    .hero-links .secondary, .btn-secondary {
-      color: var(--text);
-      border: 1px solid var(--line2);
-      background: rgba(255,255,255,.06);
+    .btn-primary:hover { box-shadow: 0 10px 32px rgba(245,200,66,0.40); }
+    .btn-secondary {
+      color: var(--txt);
+      border: 1px solid var(--border);
+      background: var(--panel);
     }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.18); }
+
+    /* Proof tiles */
     .proof-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 10px;
-      margin-top: 30px;
+      margin-top: 28px;
+      position: relative;
     }
-    .proof {
-      padding: 13px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.08);
-      background: rgba(0,0,0,.2);
+    .proof-tile {
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.22);
+    }
+    .proof-tile b {
+      display: block;
+      color: var(--gold-l);
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 3px;
+    }
+    .proof-tile span { color: var(--muted); font-size: 12px; line-height: 1.4; }
+
+    /* Right form card */
+    .form-card {
+      padding: clamp(28px, 4vw, 42px);
+      border: 1px solid var(--b-gold);
+      border-radius: 28px;
+      background: rgba(6,9,18,0.78);
+      box-shadow: 0 8px 48px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+    .form-section-label {
+      color: var(--gold-l);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .form-card h2 {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: 28px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      color: var(--txt);
+      margin-bottom: 6px;
+    }
+    .form-card .form-sub {
       color: var(--muted);
-      font-size: 12px;
-      line-height: 1.4;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 22px;
     }
-    .proof b { display: block; color: var(--gold2); font-size: 16px; margin-bottom: 4px; }
-    .form-card { padding: clamp(28px, 4vw, 40px); background: rgba(5,7,11,.72); border-color: rgba(246,201,91,.34); }
-    .section-title { color: var(--gold2); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .14em; margin-bottom: 12px; }
-    .form-card h2 { font-size: 30px; margin-bottom: 8px; }
-    .form-card .small { color: var(--muted); line-height: 1.6; margin-bottom: 22px; }
-    .form-group { margin-bottom: 16px; }
-    label { display: block; color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
-    input {
-      width: 100%;
-      min-height: 52px;
-      padding: 13px 15px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.1);
-      background: rgba(255,255,255,.055);
-      color: #fff;
-      outline: none;
-      font-size: 15px;
+
+    /* Status area */
+    .status-area { min-height: 4px; margin-bottom: 6px; }
+    .notice {
+      padding: 12px 15px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 4px;
     }
-    input:focus { border-color: rgba(246,201,91,.55); box-shadow: 0 0 0 4px rgba(246,201,91,.08); }
-    button {
-      width: 100%;
-      min-height: 54px;
-      border: 0;
-      border-radius: 16px;
-      color: #170c02;
-      background: linear-gradient(135deg, var(--gold), #fff0b9 52%, var(--ember));
-      font-size: 15px;
-      font-weight: 900;
-      cursor: pointer;
-      transition: .16s ease;
-    }
-    button:hover, .btn-link:hover, .hero-links a:hover { transform: translateY(-1px); filter: brightness(1.06); }
+    .error   { background: rgba(255,42,74,0.10); border: 1px solid rgba(255,42,74,0.24); color: #ffb0bb; }
+    .success { background: rgba(57,216,117,0.09); border: 1px solid rgba(57,216,117,0.24); color: #a8ffd0; }
+
+    /* Google button */
     .btn-google {
-      width: 100%;
-      min-height: 54px;
-      margin-bottom: 18px;
-      border-radius: 16px;
-      background: #fff;
-      color: #111;
-      font-weight: 900;
-      display: inline-flex;
+      display: flex;
       align-items: center;
       justify-content: center;
       gap: 10px;
+      width: 100%;
+      min-height: 52px;
+      border-radius: 14px;
+      background: #fff;
+      color: #111;
+      font-weight: 800;
+      font-size: 14px;
+      text-decoration: none;
+      border: none;
+      transition: filter var(--ease), transform var(--ease);
+      cursor: pointer;
+      margin-bottom: 20px;
     }
-    .form-divider { height: 1px; background: rgba(255,255,255,.1); margin: 24px 0; }
-    .inline-link { display: inline-flex; color: var(--gold2); font-weight: 900; margin-top: 14px; }
-    .notice { border-radius: 16px; padding: 14px 16px; margin-bottom: 16px; font-size: 14px; line-height: 1.5; }
-    .error { background: rgba(232,59,95,.1); border: 1px solid rgba(232,59,95,.25); color: #ffb1b8; }
-    .success { background: rgba(119,240,161,.08); border: 1px solid rgba(119,240,161,.25); color: #b8ffd0; }
-    details.legacy {
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 18px;
-      background: rgba(255,255,255,.035);
+    .btn-google:hover { filter: brightness(0.96); transform: translateY(-1px); }
+    .btn-google svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 0 20px;
+      color: var(--dim);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .divider::before,
+    .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* Form fields */
+    .form-group { margin-bottom: 14px; }
+    label {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+    input[type="email"],
+    input[type="password"],
+    input[type="text"] {
+      width: 100%;
+      min-height: 50px;
+      padding: 12px 15px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.28);
+      color: var(--txt);
+      font-size: 15px;
+      outline: none;
+      transition: border-color var(--ease), box-shadow var(--ease);
+    }
+    input:focus {
+      border-color: rgba(245,200,66,0.5);
+      box-shadow: 0 0 0 3px rgba(245,200,66,0.09);
+    }
+    input::placeholder { color: var(--dim); }
+
+    .btn-submit {
+      width: 100%;
+      min-height: 52px;
+      border-radius: 14px;
+      border: none;
+      color: #0a0700;
+      background: linear-gradient(135deg, var(--gold), var(--gold-l) 42%, var(--ember));
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 24px rgba(245,200,66,0.26);
+      transition: transform var(--ease), filter var(--ease), box-shadow var(--ease);
+    }
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 32px rgba(245,200,66,0.38);
+    }
+
+    .inline-link {
+      display: inline-flex;
+      align-items: center;
+      color: var(--gold-l);
+      font-weight: 700;
+      font-size: 13px;
+      margin-top: 12px;
+      transition: color var(--ease);
+    }
+    .inline-link:hover { color: var(--gold); }
+
+    /* Legacy details */
+    .legacy-toggle {
+      margin-top: 20px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.03);
       overflow: hidden;
     }
-    details.legacy summary {
+    .legacy-toggle summary {
       cursor: pointer;
       list-style: none;
-      padding: 16px 18px;
+      padding: 14px 16px;
       color: var(--muted);
-      font-weight: 900;
+      font-weight: 700;
+      font-size: 13px;
       display: flex;
       justify-content: space-between;
+      align-items: center;
+      user-select: none;
     }
-    details.legacy summary::-webkit-details-marker { display: none; }
-    details.legacy summary::after { content: '+'; color: var(--gold); }
-    details.legacy[open] summary::after { content: '−'; }
-    .legacy-body { padding: 0 18px 18px; }
-    @media (max-width: 940px) { .page { grid-template-columns: 1fr; } .hero { min-height: auto; } }
-    @media (max-width: 640px) { body { padding: 14px; } .proof-grid { grid-template-columns: 1fr; } }
+    .legacy-toggle summary::-webkit-details-marker { display: none; }
+    .legacy-toggle summary::after { content: '+'; color: var(--gold); font-size: 16px; }
+    .legacy-toggle[open] summary::after { content: '−'; }
+    .legacy-body { padding: 0 16px 16px; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .page { grid-template-columns: 1fr; }
+      .hero-panel { min-height: auto; }
+    }
+    @media (max-width: 600px) {
+      body { padding: 14px; }
+      .proof-grid { grid-template-columns: 1fr; }
+      .hero-actions { flex-direction: column; }
+      .hero-actions .btn { width: 100%; }
+    }
   </style>
   <link rel="stylesheet" href="/css/site-refresh.css" />
 </head>
 <body>
-  <main class="page">
-    <section class="hero">
+  <main class="page" role="main">
+
+    <!-- Left: Brand hero -->
+    <section class="hero-panel" aria-label="IntoTheBattle creator access">
       <div>
-        <a href="/" class="brand-logo" aria-label="IntoTheBattle home"><img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" /></a>
+        <a href="/" class="brand-logo-wrap" aria-label="IntoTheBattle home">
+          <div class="brand-logo-box">
+            <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" width="56" height="56" />
+          </div>
+          <div class="brand-logo-text">
+            <strong>IntoTheBattle</strong>
+            <span>TikTok LIVE arena overlay</span>
+          </div>
+        </a>
         <div class="kicker">Creator access</div>
         <h1>Enter your <span>command center.</span></h1>
-        <p>Log in to control your TikTok LIVE battle overlay, open your room, manage sponsor moments, and prepare your stream for OBS or TikTok Studio.</p>
-        <div class="hero-links">
-          <a href="/signup" class="primary" id="signupLink">Create free account</a>
-          <a href="/register" class="secondary" id="registerLink">Use email signup</a>
+        <p class="sub">Log in to control your TikTok LIVE battle overlay, open your room, manage sponsor moments, and prepare your stream for OBS or TikTok Studio.</p>
+        <div class="hero-actions">
+          <a href="/signup" class="btn btn-primary" id="signupLink">Create free account</a>
+          <a href="/register" class="btn btn-secondary" id="registerLink">Use email signup</a>
         </div>
       </div>
-      <div class="proof-grid" aria-label="Login page highlights">
-        <div class="proof"><b>Overlay</b>Browser source ready</div>
-        <div class="proof"><b>Room</b>Creator dashboard</div>
-        <div class="proof"><b>Moments</b>Audio and sponsor tools</div>
+      <div class="proof-grid" aria-label="Platform highlights">
+        <div class="proof-tile">
+          <b>Overlay</b>
+          <span>Browser source ready</span>
+        </div>
+        <div class="proof-tile">
+          <b>Room</b>
+          <span>Creator dashboard</span>
+        </div>
+        <div class="proof-tile">
+          <b>Moments</b>
+          <span>Audio &amp; sponsor tools</span>
+        </div>
       </div>
     </section>
 
+    <!-- Right: Login form -->
     <section class="form-card" aria-label="Login form">
-      <div class="section-title">Account login</div>
+      <div class="form-section-label">Account login</div>
       <h2>Welcome back</h2>
-      <p class="small">Continue with Google or use your email and password.</p>
-      <div id="accountStatus"></div>
-      <a href="/auth/google" class="btn-google" id="googleLoginBtn">Continue with Google</a>
+      <p class="form-sub">Continue with Google or use your email and password.</p>
 
-      <div class="form-divider"></div>
+      <div id="accountStatus" class="status-area" role="alert" aria-live="polite"></div>
+
+      <a href="/auth/google" class="btn-google" id="googleLoginBtn">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Continue with Google
+      </a>
+
+      <div class="divider">or use email</div>
 
       <form id="accountLoginForm" novalidate>
-        <div class="form-group"><label for="email">Email</label><input id="email" type="email" autocomplete="username" required /></div>
-        <div class="form-group"><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" required /></div>
-        <button id="loginBtn" type="submit">Login</button>
+        <div class="form-group">
+          <label for="email">Email address</label>
+          <input id="email" type="email" autocomplete="username" placeholder="you@example.com" required />
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input id="password" type="password" autocomplete="current-password" placeholder="Your password" required />
+        </div>
+        <button id="loginBtn" type="submit" class="btn-submit">Sign in</button>
       </form>
-      <a href="/request-password-reset" class="inline-link">Forgot password?</a>
 
-      <div class="form-divider"></div>
+      <a href="/request-password-reset" class="inline-link">Forgot your password?</a>
 
-      <details class="legacy">
-        <summary>Legacy room access</summary>
+      <details class="legacy-toggle">
+        <summary>Legacy room access code</summary>
         <div class="legacy-body">
           <form method="POST" action="/login" id="accessCodeForm">
-            <div class="form-group"><label for="code">Access code</label><input id="code" name="code" type="text" autocomplete="off" required placeholder="XXXX-XXXX-XXXX" /></div>
+            <div class="form-group" style="margin-top:6px">
+              <label for="code">Access code</label>
+              <input id="code" name="code" type="text" autocomplete="off" placeholder="XXXX-XXXX-XXXX" required />
+            </div>
             <input id="fp" name="fingerprint" type="hidden" />
-            <button type="submit">Use access code</button>
+            <button type="submit" class="btn-submit">Use access code</button>
           </form>
         </div>
       </details>
@@ -316,39 +528,39 @@
   </main>
 
   <script>
-    const statusEl = document.getElementById('accountStatus');
-    const accountLoginForm = document.getElementById('accountLoginForm');
-    const loginBtn = document.getElementById('loginBtn');
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
-    const signupLink = document.getElementById('signupLink');
-    const registerLink = document.getElementById('registerLink');
-    const googleLoginBtn = document.getElementById('googleLoginBtn');
-    const params = new URLSearchParams(window.location.search);
+    const statusEl    = document.getElementById('accountStatus');
+    const loginForm   = document.getElementById('accountLoginForm');
+    const emailInput  = document.getElementById('email');
+    const params      = new URLSearchParams(window.location.search);
+
     const nextPath = (() => {
-      const value = params.get('next') || '/dashboard';
-      return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : '/dashboard';
+      const v = params.get('next') || '/dashboard';
+      return v.startsWith('/') && !v.startsWith('//') && !v.includes('\\') ? v : '/dashboard';
     })();
+
     const emailHint = params.get('email');
     if (emailHint) emailInput.value = emailHint;
+
     const nextQuery = nextPath === '/dashboard' ? '' : `?next=${encodeURIComponent(nextPath)}`;
-    if (signupLink) signupLink.href = `/signup${nextQuery}`;
-    if (registerLink) registerLink.href = `/register${nextQuery}`;
+    const signupLink     = document.getElementById('signupLink');
+    const registerLink   = document.getElementById('registerLink');
+    const googleLoginBtn = document.getElementById('googleLoginBtn');
+    if (signupLink)     signupLink.href     = `/signup${nextQuery}`;
+    if (registerLink)   registerLink.href   = `/register${nextQuery}`;
     if (googleLoginBtn) googleLoginBtn.href = `/auth/google${nextQuery}`;
 
-    function showStatus(message, isError = false) {
-      statusEl.innerHTML = `<div class="notice ${isError ? 'error' : 'success'}">${message}</div>`;
+    function showStatus(msg, isError = false) {
+      statusEl.innerHTML = `<div class="notice ${isError ? 'error' : 'success'}">${msg}</div>`;
     }
 
-    accountLoginForm.addEventListener('submit', async event => {
-      event.preventDefault();
+    loginForm.addEventListener('submit', async e => {
+      e.preventDefault();
       statusEl.innerHTML = '';
-      const email = emailInput.value.trim();
-      const password = passwordInput.value;
+      const email    = emailInput.value.trim();
+      const password = document.getElementById('password').value;
       if (!email || !password) return showStatus('Email and password are required.', true);
-
       try {
-        const res = await fetch('/auth/user/login', {
+        const res  = await fetch('/auth/user/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
@@ -357,7 +569,7 @@
         const json = await res.json();
         if (!res.ok) return showStatus(json.error || 'Login failed.', true);
         window.location.href = json.redirectUrl || nextPath;
-      } catch (err) {
+      } catch {
         showStatus('Login failed. Please try again.', true);
       }
     });
@@ -371,7 +583,7 @@
   <script src="https://cdn.jsdelivr.net/npm/fingerprintjs2@2/dist/fingerprint2.min.js"></script>
   <script>
     if (window.Fingerprint2) {
-      Fingerprint2.get(function(components) {
+      Fingerprint2.get(function (components) {
         const values = components.map(c => c.value);
         setFingerprint(Fingerprint2.x64hash128(values.join(''), 31));
       });

@@ -12,6 +12,10 @@
   <meta property="og:description" content="A public board for creators announcing upcoming IntoTheBattle live battles." />
   <meta property="og:url" content="https://intothebattle.com/battlegrounds" />
   <meta property="og:image" content="https://intothebattle.com/og-intothebattle.png?v=20260627" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:site_name" content="IntoTheBattle" />
   <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
   <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
   <script type="module" src="/js/clarity-loader.js"></script>
@@ -28,281 +32,251 @@
   }
   </script>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --gold: #f6c95b;
-      --gold2: #fff0b9;
-      --ember: #ff6a3d;
-      --cyan: #55e7ff;
-      --red: #e83b5f;
-      --ink: #050608;
-      --muted: #a8afbf;
-      --text: #fff8e6;
-      --line: rgba(255,255,255,.12);
-      --max: 1180px;
+      --gold:   #f5c842;
+      --gold-l: #ffe99a;
+      --ember:  #ff7a3a;
+      --red:    #ff2a4a;
+      --blue:   #00c8ff;
+      --green:  #39d875;
+      --txt:    #edf0fa;
+      --muted:  #8896ae;
+      --dim:    #4e5a6c;
+      --border: rgba(255,255,255,0.09);
+      --b-gold: rgba(245,200,66,0.28);
+      --b-blue: rgba(0,200,255,0.20);
+      --panel:  rgba(255,255,255,0.048);
+      --max:    1200px;
+      --ease:   0.18s cubic-bezier(0.4,0,0.2,1);
     }
-    body {
-      min-height: 100vh;
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at 18% 0, rgba(246,201,91,.18), transparent 30%),
-        radial-gradient(circle at 82% 14%, rgba(85,231,255,.12), transparent 32%),
-        linear-gradient(180deg, #050608 0%, #030406 66%, #020307 100%);
-      overflow-x: hidden;
-    }
-    body::before {
-      content: "";
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      pointer-events: none;
-      background-image:
-        linear-gradient(rgba(246,201,91,.035) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(85,231,255,.035) 1px, transparent 1px);
-      background-size: 58px 58px;
-      mask-image: radial-gradient(circle at top, black, transparent 76%);
-    }
+    body { min-height: 100vh; font-family: 'Inter', system-ui, sans-serif; color: var(--txt); overflow-x: hidden; }
     a { color: inherit; text-decoration: none; }
-    .nav-wrap { position: sticky; top: 0; z-index: 10; padding: 18px clamp(16px,4vw,42px) 0; }
+
+    /* Nav */
+    .nav-wrap { position: sticky; top: 0; z-index: 50; padding: 16px clamp(16px,4vw,40px) 0; }
     nav {
-      max-width: var(--max);
-      margin: auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 12px 14px;
-      border: 1px solid rgba(246,201,91,.22);
-      border-radius: 24px;
-      background: rgba(5,7,11,.78);
-      backdrop-filter: blur(20px);
-      box-shadow: 0 20px 70px rgba(0,0,0,.32);
+      max-width: var(--max); margin: auto;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 10px 12px 10px 16px;
     }
-    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-    .brand img { width: 48px; height: 48px; border-radius: 16px; transform: scale(1.1); }
-    .brand strong { display: block; text-transform: uppercase; letter-spacing: .08em; }
-    .brand span span { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
-    .nav-links { display: flex; align-items: center; gap: 10px; }
-    .nav-links a {
-      padding: 11px 14px;
-      border-radius: 999px;
-      color: var(--muted);
-      font-weight: 850;
-      font-size: 14px;
-      white-space: nowrap;
-    }
-    .nav-links .cta { color: #160d02; background: linear-gradient(135deg, var(--gold), var(--gold2) 52%, var(--ember)); }
-    main { max-width: var(--max); margin: auto; padding: clamp(48px,7vw,86px) clamp(18px,4vw,42px) 78px; }
+    .brand { display: flex; align-items: center; gap: 11px; }
+    .brand img { width: 44px; height: 44px; transform: scale(1.06); display: block; }
+    .brand-name strong { display: block; font-size: 13px; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; }
+    .brand-name span   { display: block; font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
+    .nav-links { display: flex; align-items: center; gap: 6px; }
+    .nav-links a { padding: 9px 13px; border-radius: 999px; color: var(--muted); font-weight: 600; font-size: 14px; white-space: nowrap; transition: color var(--ease), background var(--ease); }
+    .nav-links a:hover { color: var(--txt); background: rgba(255,255,255,0.07); }
+    .nav-cta { color: #0a0700 !important; font-weight: 800 !important; background: linear-gradient(135deg, var(--gold), var(--gold-l) 42%, var(--ember)) !important; padding: 10px 18px !important; box-shadow: 0 4px 20px rgba(245,200,66,0.28) !important; }
+
+    /* Layout */
+    main { max-width: var(--max); margin: auto; padding: clamp(48px,7vw,80px) clamp(18px,4vw,40px) 80px; }
+
+    /* Hero */
     .hero {
       display: grid;
-      grid-template-columns: minmax(0, .95fr) minmax(320px, .6fr);
+      grid-template-columns: minmax(0, 1.05fr) minmax(280px, 0.52fr);
       gap: clamp(24px,4vw,52px);
-      align-items: end;
-      margin-bottom: 38px;
+      align-items: center;
+      margin-bottom: 48px;
     }
     .eyebrow {
-      display: inline-flex;
-      margin-bottom: 18px;
-      padding: 9px 13px;
-      border: 1px solid rgba(85,231,255,.28);
-      border-radius: 999px;
-      background: rgba(85,231,255,.08);
-      color: #9ff5ff;
-      font-size: 12px;
-      font-weight: 950;
-      letter-spacing: .13em;
-      text-transform: uppercase;
+      display: inline-flex; align-items: center; gap: 7px; width: fit-content;
+      margin-bottom: 18px; padding: 7px 13px;
+      border: 1px solid var(--b-blue); border-radius: 999px;
+      background: rgba(0,200,255,0.08); color: rgba(0,200,255,0.85);
+      font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
     }
     h1 {
-      max-width: 840px;
-      margin-bottom: 20px;
-      font-size: clamp(48px,7vw,92px);
-      line-height: .9;
-      letter-spacing: 0;
-      text-transform: uppercase;
+      font-family: 'Black Ops One', sans-serif;
+      font-size: clamp(44px, 6.5vw, 86px);
+      line-height: 0.92; letter-spacing: 0.02em; text-transform: uppercase; color: var(--txt);
+      margin-bottom: 18px;
     }
-    h1 span {
-      color: transparent;
-      background: linear-gradient(100deg, #fff7d7, var(--gold), #ff7a48);
-      -webkit-background-clip: text;
-      background-clip: text;
-    }
-    .lede { color: #c4ccdb; font-size: clamp(17px,2vw,21px); line-height: 1.68; }
-    .pulse-panel {
+    h1 span { display: block; background: linear-gradient(110deg, #fff5d6, var(--gold), var(--ember)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+    .lede { color: var(--muted); font-size: clamp(16px, 1.8vw, 19px); line-height: 1.7; }
+
+    /* Live board visual */
+    .live-board {
       position: relative;
+      min-height: 220px;
+      border: 1px solid var(--b-gold);
+      border-radius: 20px;
+      background: linear-gradient(145deg, var(--panel), rgba(255,255,255,0.015));
+      box-shadow: 0 0 50px rgba(245,200,66,0.08), inset 0 1px 0 rgba(255,255,255,0.06);
       overflow: hidden;
-      min-height: 246px;
-      border: 1px solid rgba(246,201,91,.26);
-      border-radius: 8px;
-      background: linear-gradient(145deg, rgba(255,255,255,.07), rgba(255,255,255,.025));
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 22px;
     }
-    .pulse-panel::before {
-      content: "";
+    .live-scan {
       position: absolute;
-      inset: 18px;
-      border: 1px solid rgba(85,231,255,.18);
-      border-radius: 8px;
+      left: 10%; right: 10%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(0,200,255,0.8), rgba(245,200,66,0.9), transparent);
+      box-shadow: 0 0 20px rgba(0,200,255,0.4);
+      animation: scan 3s ease-in-out infinite;
     }
-    .pulse-line {
-      position: absolute;
-      left: 9%;
-      right: 9%;
-      height: 3px;
-      top: 44%;
-      background: linear-gradient(90deg, transparent, rgba(85,231,255,.8), rgba(246,201,91,.9), transparent);
-      box-shadow: 0 0 28px rgba(85,231,255,.35);
-      animation: scan 2.8s ease-in-out infinite;
-    }
-    .pulse-copy {
-      position: absolute;
-      inset: auto 28px 26px;
-      display: grid;
-      gap: 7px;
-    }
-    .pulse-copy strong { font-size: 24px; text-transform: uppercase; letter-spacing: .08em; }
-    .pulse-copy span { color: var(--muted); line-height: 1.5; }
     @keyframes scan {
-      0%, 100% { transform: translateY(-44px); opacity: .4; }
-      50% { transform: translateY(44px); opacity: 1; }
+      0%, 100% { top: 20%; opacity: 0.4; }
+      50% { top: 78%; opacity: 1; }
     }
+    .live-board-copy strong { display: block; font-family: 'Black Ops One', sans-serif; font-size: 20px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--txt); margin-bottom: 6px; }
+    .live-board-copy span { color: var(--muted); font-size: 14px; line-height: 1.5; }
+
+    /* Content layout */
     .layout {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(320px, 390px);
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
       gap: 22px;
       align-items: start;
     }
-    .section-head { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin-bottom: 16px; }
-    .section-head h2 { font-size: clamp(28px,4vw,42px); text-transform: uppercase; line-height: 1; }
-    .section-head p { max-width: 520px; color: var(--muted); line-height: 1.55; }
-    .battle-list { display: grid; gap: 14px; }
-    .battle-card, .form-panel {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: linear-gradient(180deg, rgba(255,255,255,.065), rgba(255,255,255,.025));
-      box-shadow: 0 18px 58px rgba(0,0,0,.24);
+
+    /* Section head */
+    .section-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-end; margin-bottom: 18px; }
+    .section-head h2 {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: clamp(26px, 3.5vw, 40px); text-transform: uppercase; line-height: 1;
+      letter-spacing: 0.02em; color: var(--txt);
     }
+    .section-head p { max-width: 480px; color: var(--muted); line-height: 1.55; font-size: 14px; }
+
+    /* Battle list */
+    .battle-list { display: grid; gap: 14px; }
     .battle-card {
       display: grid;
-      grid-template-columns: minmax(130px, .24fr) minmax(0, 1fr);
+      grid-template-columns: minmax(120px, 0.22fr) minmax(0, 1fr);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(180deg, var(--panel), rgba(255,255,255,0.018));
+      box-shadow: 0 4px 24px rgba(0,0,0,0.28);
       overflow: hidden;
+      transition: border-color var(--ease), transform var(--ease);
     }
+    .battle-card:hover { transform: translateY(-2px); border-color: rgba(245,200,66,0.22); }
     .time-box {
-      display: grid;
-      align-content: center;
-      gap: 7px;
-      padding: 22px;
-      border-right: 1px solid rgba(255,255,255,.09);
-      background: linear-gradient(160deg, rgba(85,231,255,.1), rgba(246,201,91,.06));
+      display: flex; flex-direction: column; justify-content: center; gap: 6px;
+      padding: 20px;
+      border-right: 1px solid var(--border);
+      background: linear-gradient(160deg, rgba(0,200,255,0.09), rgba(245,200,66,0.06));
     }
-    .time-box b { color: var(--gold2); font-size: 26px; line-height: 1; }
-    .time-box span { color: var(--muted); font-size: 12px; font-weight: 850; text-transform: uppercase; letter-spacing: .12em; }
-    .battle-copy { padding: 22px; display: grid; gap: 10px; }
-    .handle { color: #9ff5ff; font-weight: 900; letter-spacing: .04em; }
-    .battle-copy h3 { font-size: clamp(22px,3vw,30px); line-height: 1.05; text-transform: uppercase; }
-    .battle-copy p { color: #cbd3df; line-height: 1.55; }
-    .battle-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 4px; }
+    .time-box b { color: var(--gold-l); font-size: 24px; line-height: 1; font-weight: 800; }
+    .time-box span { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.10em; }
+    .battle-copy { padding: 20px; display: grid; gap: 8px; }
+    .handle { color: rgba(0,200,255,0.8); font-weight: 700; font-size: 13px; letter-spacing: 0.04em; }
+    .battle-copy h3 {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: clamp(18px, 2.5vw, 26px); line-height: 1.05; text-transform: uppercase;
+      letter-spacing: 0.02em; color: var(--txt);
+    }
+    .battle-copy p { color: var(--muted); line-height: 1.55; font-size: 14px; }
+    .battle-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 4px; }
     .chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 11px;
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 999px;
-      color: #dce8f3;
-      background: rgba(0,0,0,.2);
-      font-size: 13px;
-      font-weight: 850;
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 11px; border: 1px solid var(--border); border-radius: 999px;
+      color: rgba(237,240,250,0.85); background: rgba(0,0,0,0.22);
+      font-size: 12px; font-weight: 600;
+      text-decoration: none; transition: border-color var(--ease), color var(--ease);
     }
+    .chip:hover { border-color: rgba(245,200,66,0.28); color: var(--gold-l); }
+    .empty {
+      padding: 28px; border: 1px dashed rgba(245,200,66,0.22);
+      border-radius: 14px; color: var(--muted); line-height: 1.65;
+      background: rgba(245,200,66,0.04); font-size: 15px;
+    }
+
+    /* Form panel */
     .form-panel {
       position: sticky;
       top: 96px;
-      padding: 22px;
+      padding: 24px;
+      border: 1px solid var(--b-gold);
+      border-radius: 20px;
+      background: linear-gradient(180deg, var(--panel), rgba(255,255,255,0.018));
+      box-shadow: 0 8px 40px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06);
     }
-    .form-panel h2 { margin-bottom: 8px; font-size: 28px; text-transform: uppercase; }
-    .form-panel p { margin-bottom: 18px; color: var(--muted); line-height: 1.55; }
+    .form-panel h2 {
+      font-family: 'Black Ops One', sans-serif;
+      font-size: 26px; text-transform: uppercase; letter-spacing: 0.02em; color: var(--txt);
+      margin-bottom: 8px;
+    }
+    .form-panel > p { margin-bottom: 18px; color: var(--muted); line-height: 1.55; font-size: 14px; }
     form { display: grid; gap: 12px; }
-    label { display: grid; gap: 7px; color: #dbe4ef; font-size: 13px; font-weight: 850; text-transform: uppercase; letter-spacing: .08em; }
+    label { display: grid; gap: 6px; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; }
     input, textarea {
-      width: 100%;
-      min-height: 46px;
-      border: 1px solid rgba(255,255,255,.14);
-      border-radius: 8px;
-      background: rgba(0,0,0,.28);
-      color: var(--text);
-      padding: 12px 13px;
-      font: inherit;
-      outline: none;
+      width: 100%; min-height: 44px;
+      border: 1px solid var(--border); border-radius: 12px;
+      background: rgba(0,0,0,0.28); color: var(--txt);
+      padding: 10px 13px; font: inherit; font-size: 14px; outline: none;
+      transition: border-color var(--ease), box-shadow var(--ease);
     }
-    textarea { min-height: 96px; resize: vertical; }
-    input:focus, textarea:focus { border-color: rgba(85,231,255,.55); box-shadow: 0 0 0 3px rgba(85,231,255,.08); }
-    button {
-      min-height: 50px;
-      border: 0;
-      border-radius: 8px;
-      background: linear-gradient(135deg, var(--gold), var(--gold2) 52%, var(--ember));
-      color: #160d02;
-      font-weight: 950;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      cursor: pointer;
+    textarea { min-height: 88px; resize: vertical; }
+    input:focus, textarea:focus { border-color: rgba(245,200,66,0.5); box-shadow: 0 0 0 3px rgba(245,200,66,0.09); }
+    input::placeholder, textarea::placeholder { color: var(--dim); }
+    .btn-submit {
+      min-height: 50px; border: none; border-radius: 14px;
+      background: linear-gradient(135deg, var(--gold), var(--gold-l) 52%, var(--ember));
+      color: #0a0700; font-weight: 800; font-size: 14px; letter-spacing: 0.04em;
+      text-transform: uppercase; cursor: pointer;
+      box-shadow: 0 6px 24px rgba(245,200,66,0.26);
+      transition: transform var(--ease), box-shadow var(--ease);
     }
-    .status { min-height: 22px; color: #9ff5ff; font-size: 13px; font-weight: 800; }
-    .empty {
-      padding: 28px;
-      border: 1px dashed rgba(246,201,91,.28);
-      border-radius: 8px;
-      color: #cbd3df;
-      line-height: 1.6;
-      background: rgba(246,201,91,.045);
-    }
-    footer {
-      max-width: var(--max);
-      margin: auto;
-      padding: 30px clamp(18px,4vw,42px);
-      color: #7e8799;
-      border-top: 1px solid rgba(255,255,255,.08);
-    }
+    .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(245,200,66,0.38); }
+    .status { min-height: 20px; color: rgba(0,200,255,0.8); font-size: 13px; font-weight: 700; }
+
+    /* Footer */
+    footer { max-width: var(--max); margin: auto; padding: 28px clamp(18px,4vw,40px); color: var(--dim); border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; font-size: 13px; }
+    .footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
+    .footer-links a { color: var(--muted); transition: color var(--ease); }
+    .footer-links a:hover { color: var(--gold); }
+
+    /* Responsive */
     @media (max-width: 900px) {
       .hero, .layout { grid-template-columns: 1fr; }
       .form-panel { position: relative; top: auto; }
     }
-    @media (max-width: 680px) {
-      .nav-links a:not(.cta) { display: none; }
-      .brand span span { display: none; }
-      h1 { font-size: clamp(42px,14vw,68px); }
+    @media (max-width: 640px) {
+      .nav-links a:not(.nav-cta) { display: none; }
+      .brand-name span { display: none; }
+      h1 { font-size: clamp(40px, 13vw, 64px); }
       .battle-card { grid-template-columns: 1fr; }
-      .time-box { border-right: 0; border-bottom: 1px solid rgba(255,255,255,.09); }
+      .time-box { border-right: none; border-bottom: 1px solid var(--border); }
     }
   </style>
+  <link rel="stylesheet" href="/css/site-refresh.css" />
 </head>
 <body>
+
   <div class="nav-wrap">
     <nav aria-label="Main navigation">
       <a class="brand" href="/">
-        <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
-        <span><strong>IntoTheBattle</strong><span>Live battle arena</span></span>
+        <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" width="44" height="44">
+        <div class="brand-name">
+          <strong>IntoTheBattle</strong>
+          <span>Live battle arena</span>
+        </div>
       </a>
       <div class="nav-links">
         <a href="/how-to-play">Players</a>
         <a href="/sponsors">Sponsors</a>
         <a href="/blog">Blog</a>
         <a href="/login">Login</a>
-        <a class="cta" href="/signup">Start Free</a>
+        <a class="nav-cta" href="/signup">Start free</a>
       </div>
     </nav>
   </div>
 
   <main>
-    <section class="hero">
+    <section class="hero" aria-labelledby="hero-title">
       <div>
-        <span class="eyebrow">The Battlegrounds</span>
-        <h1>Find the next <span>live arena.</span></h1>
+        <div class="eyebrow">The Battlegrounds</div>
+        <h1 id="hero-title">Find the next <span>live arena.</span></h1>
         <p class="lede">Creators can post when they are going live with an IntoTheBattle arena so players know where to show up, join the horde, and fight for the top five.</p>
       </div>
-      <div class="pulse-panel" aria-hidden="true">
-        <div class="pulse-line"></div>
-        <div class="pulse-copy">
+      <div class="live-board" aria-hidden="true">
+        <div class="live-scan"></div>
+        <div class="live-board-copy">
           <strong>Live battle board</strong>
           <span>Upcoming rooms, creator handles, and battle windows in one public place.</span>
         </div>
@@ -313,21 +287,21 @@
       <section aria-labelledby="battle-list-title">
         <div class="section-head">
           <div>
-            <h2 id="battle-list-title">Upcoming Battles</h2>
+            <h2 id="battle-list-title">Upcoming battles</h2>
             <p>Newest approved posts appear here for viewers looking for a stream to play in.</p>
           </div>
         </div>
         <div id="battle-list" class="battle-list">
-          <div class="empty">Loading battle posts...</div>
+          <div class="empty">Loading battle posts&hellip;</div>
         </div>
       </section>
 
       <aside class="form-panel" aria-labelledby="post-battle-title">
         <h2 id="post-battle-title">Post a battle</h2>
         <p>Add your TikTok LIVE battle window so players can find you before the arena starts.</p>
-        <form id="battle-form">
+        <form id="battle-form" novalidate>
           <label>Creator name
-            <input name="creatorName" maxlength="70" autocomplete="name" required />
+            <input name="creatorName" maxlength="70" autocomplete="name" placeholder="Your display name" required />
           </label>
           <label>TikTok username
             <input name="tiktokUsername" maxlength="80" placeholder="@yourhandle" autocomplete="username" required />
@@ -347,7 +321,7 @@
           <label>Description
             <textarea name="description" maxlength="260" placeholder="Tell players what kind of battle you are running."></textarea>
           </label>
-          <button type="submit">Post Battle</button>
+          <button type="submit" class="btn-submit">Post battle</button>
           <div id="form-status" class="status" role="status" aria-live="polite"></div>
         </form>
       </aside>
@@ -355,87 +329,83 @@
   </main>
 
   <footer>
-    <span>IntoTheBattle</span>
+    <span>&copy; 2026 IntoTheBattle</span>
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="/how-to-play">How to play</a>
+      <a href="/sponsors">Sponsors</a>
+      <a href="/signup">Start free</a>
+    </div>
   </footer>
 
   <script>
-    const list = document.getElementById('battle-list');
-    const form = document.getElementById('battle-form');
+    const listEl   = document.getElementById('battle-list');
+    const formEl   = document.getElementById('battle-form');
     const statusEl = document.getElementById('form-status');
 
-    const fallbackPosts = [
-      {
-        creatorName: 'Arena Host',
-        tiktokUsername: 'intothebattle',
-        battleTitle: 'Open horde practice',
-        scheduledFor: '',
-        timezone: '',
-        description: 'A sample battle post will disappear once creators start posting live sessions.',
-        battleUrl: '/signup'
-      }
-    ];
+    const fallbackPosts = [{
+      creatorName: 'Arena Host',
+      tiktokUsername: 'intothebattle',
+      battleTitle: 'Open horde practice',
+      scheduledFor: '',
+      timezone: '',
+      description: 'A sample battle post. Once creators start posting live sessions, real battles will appear here.',
+      battleUrl: '/signup'
+    }];
 
     function escapeHtml(value) {
-      return String(value || '').replace(/[&<>"']/g, char => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-      })[char]);
+      return String(value || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
     }
 
     function formatTime(value, timezone) {
-      if (!value) return { day: 'Soon', time: timezone || 'Time TBA' };
-      const date = new Date(value);
-      if (Number.isNaN(date.getTime())) return { day: 'Soon', time: timezone || 'Time TBA' };
+      if (!value) return { day: 'Soon', time: timezone || 'TBA' };
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return { day: 'Soon', time: timezone || 'TBA' };
       return {
-        day: date.toLocaleDateString([], { month: 'short', day: 'numeric' }),
-        time: `${date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}${timezone ? ` ${timezone}` : ''}`
+        day: d.toLocaleDateString([], { month: 'short', day: 'numeric' }),
+        time: `${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}${timezone ? ' ' + timezone : ''}`
       };
     }
 
     function renderPosts(posts) {
-      const safePosts = Array.isArray(posts) && posts.length ? posts : fallbackPosts;
-      list.innerHTML = safePosts.map(post => {
+      const items = Array.isArray(posts) && posts.length ? posts : fallbackPosts;
+      listEl.innerHTML = items.map(post => {
         const when = formatTime(post.scheduledFor, post.timezone);
-        const url = post.battleUrl || `https://www.tiktok.com/@${encodeURIComponent(post.tiktokUsername || '')}`;
-        return `
-          <article class="battle-card">
-            <div class="time-box">
-              <b>${escapeHtml(when.day)}</b>
-              <span>${escapeHtml(when.time)}</span>
+        const url  = escapeHtml(post.battleUrl || `https://www.tiktok.com/@${encodeURIComponent(post.tiktokUsername || '')}`);
+        return `<article class="battle-card">
+          <div class="time-box">
+            <b>${escapeHtml(when.day)}</b>
+            <span>${escapeHtml(when.time)}</span>
+          </div>
+          <div class="battle-copy">
+            <div class="handle">@${escapeHtml(post.tiktokUsername)}</div>
+            <h3>${escapeHtml(post.battleTitle)}</h3>
+            <p>${escapeHtml(post.description || 'Battle details coming soon.')}</p>
+            <div class="battle-actions">
+              <a class="chip" href="${url}" rel="noopener noreferrer">Open stream</a>
+              <span class="chip">${escapeHtml(post.creatorName || 'Creator')}</span>
             </div>
-            <div class="battle-copy">
-              <div class="handle">@${escapeHtml(post.tiktokUsername)}</div>
-              <h3>${escapeHtml(post.battleTitle)}</h3>
-              <p>${escapeHtml(post.description || 'Battle details coming soon.')}</p>
-              <div class="battle-actions">
-                <a class="chip" href="${escapeHtml(url)}" rel="noopener">Open stream</a>
-                <span class="chip">${escapeHtml(post.creatorName || 'Creator')}</span>
-              </div>
-            </div>
-          </article>
-        `;
+          </div>
+        </article>`;
       }).join('');
     }
 
     async function loadPosts() {
       try {
-        const res = await fetch('/api/public/battlegrounds');
+        const res  = await fetch('/api/public/battlegrounds');
         const json = await res.json();
         renderPosts(json.posts || []);
-      } catch (_err) {
+      } catch {
         renderPosts(fallbackPosts);
       }
     }
 
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      statusEl.textContent = 'Posting battle...';
-      const body = Object.fromEntries(new FormData(form).entries());
+    formEl.addEventListener('submit', async e => {
+      e.preventDefault();
+      statusEl.textContent = 'Posting battle…';
+      const body = Object.fromEntries(new FormData(formEl).entries());
       try {
-        const res = await fetch('/api/public/battlegrounds', {
+        const res  = await fetch('/api/public/battlegrounds', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify(body)
@@ -443,7 +413,7 @@
         const json = await res.json();
         if (!res.ok || !json.success) throw new Error(json.error || 'Unable to post battle.');
         renderPosts(json.posts || []);
-        form.reset();
+        formEl.reset();
         statusEl.textContent = 'Battle posted.';
       } catch (err) {
         statusEl.textContent = err.message || 'Unable to post battle.';
