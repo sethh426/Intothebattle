@@ -1249,14 +1249,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
             <div class="shot-grid">
               <button class="shot-btn active" data-shot="beam">Beam</button>
               <button class="shot-btn" data-shot="laser">Laser</button>
-              <button class="shot-btn" data-shot="neon">Neon</button>
-              <button class="shot-btn" data-shot="fire">Fire</button>
-              <button class="shot-btn" data-shot="bullet">Bullet</button>
               <button class="shot-btn" data-shot="railgun">Rail</button>
               <button class="shot-btn" data-shot="comet">Comet</button>
               <button class="shot-btn" data-shot="arc">Arc</button>
               <button class="shot-btn" data-shot="sphere">Sphere</button>
-              <button class="shot-btn" data-shot="projectile">Proj.</button>
+              <button class="shot-btn" data-shot="pulse">Pulse</button>
+              <button class="shot-btn" data-shot="void">Void</button>
             </div>
           </div>
           <div class="ctrl" style="margin-top:10px">
@@ -1349,6 +1347,49 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let audioConfig     = { ...DEFAULT_OVERLAY_AUDIO_CONFIG };
   let audioCache      = {};
   let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1, backgroundFit: 'contain' };
+  const APPROVED_EFFECTS = Object.freeze(['beam', 'laser', 'arc', 'sphere', 'railgun', 'comet', 'pulse', 'void']);
+  const DEFAULT_EFFECT = 'beam';
+  const EFFECT_ALIASES = Object.freeze({
+    beam: 'beam',
+    laser: 'laser',
+    neon: 'laser',
+    rail: 'railgun',
+    railgun: 'railgun',
+    arc: 'arc',
+    shock: 'arc',
+    bolt: 'arc',
+    lightning: 'arc',
+    sphere: 'sphere',
+    orb: 'sphere',
+    projectile: 'comet',
+    comet: 'comet',
+    fire: 'comet',
+    flame: 'comet',
+    meteor: 'comet',
+    pulse: 'pulse',
+    ripple: 'pulse',
+    wave: 'pulse',
+    bubble: 'pulse',
+    bubbles: 'pulse',
+    water: 'pulse',
+    explosion: 'pulse',
+    boom: 'pulse',
+    nuke: 'pulse',
+    nukes: 'pulse',
+    void: 'void',
+    gravity: 'void',
+    blackhole: 'void',
+    vortex: 'void',
+    dark: 'void',
+    bullet: 'railgun',
+    shot: 'railgun',
+    shell: 'railgun',
+    gift: 'beam',
+    hearts: 'beam',
+    heart: 'beam',
+    boss: 'railgun',
+    bosswave: 'railgun',
+  });
   let isDemoMode      = false;
   let darkMode        = true;
   let _demoTimer      = null;
@@ -1481,6 +1522,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const isPublicDemo = overlayParams.get('demo') === '1'
     || /^\/overlay-(demo|preview)(?:\.html)?\/?$/i.test(window.location.pathname);
   const disableDemoAutoplay = overlayParams.get('demo_autoplay') === '0';
+  const allowLayoutCustomization = !isSignedOverlay
+    || isSetupMode
+    || overlayParams.get('controls') === '1'
+    || overlayParams.get('debug') === '1';
   function readDemoRatio(name, fallback, min, max) {
     const value = Number(overlayParams.get(name));
     const ratio = Number.isFinite(value) ? value : fallback;
@@ -2542,9 +2587,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   });
 
   // ── Shot type buttons ──
+  function normalizeEffectType(value, fallback = DEFAULT_EFFECT) {
+    const key = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const mapped = EFFECT_ALIASES[key] || key;
+    if (APPROVED_EFFECTS.includes(mapped)) return mapped;
+    if (APPROVED_EFFECTS.includes(fallback)) return fallback;
+    return DEFAULT_EFFECT;
+  }
+
   function setActiveShotType(type) {
-    overlaySettings.shotType = type;
-    shotBtns.forEach(b => b.classList.toggle('active', b.dataset.shot === type));
+    const normalized = normalizeEffectType(type);
+    overlaySettings.shotType = normalized;
+    shotBtns.forEach(b => b.classList.toggle('active', b.dataset.shot === normalized));
     saveLayout();
   }
   shotBtns.forEach(b => b.addEventListener('click', () => setActiveShotType(b.dataset.shot)));
@@ -2583,7 +2637,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   // ── Save / Load (no hordeThreshold) ──
   function saveLayout() {
-    if (isPublicDemo) return;
+    if (isPublicDemo || !allowLayoutCustomization) return;
     try {
       localStorage.setItem('battleOverlayLayout', JSON.stringify({
         gap: layoutGap, offsetX, offsetY,
@@ -2618,6 +2672,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     updateLabels();
     resizeCanvas();
   }
+  function applyFixedProductionLayout() {
+    layoutGap = 0;
+    offsetX = 0;
+    offsetY = 0;
+    layoutZoom = 1;
+    gapControl.value = 0;
+    offsetXControl.value = 0;
+    offsetYControl.value = 0;
+    zoomControl.value = 100;
+    heightControl.value = 100;
+    container.style.height = '100vh';
+  }
   function loadLayout() {
     if (isPublicDemo) {
       applyPublicDemoLayout();
@@ -2625,23 +2691,35 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
     let s;
     try { s = JSON.parse(localStorage.getItem('battleOverlayLayout') || 'null'); } catch (_) {}
-    if (!s) return;
-    layoutGap      = s.gap       ?? 0;
-    offsetX        = s.offsetX   ?? 0;
-    offsetY        = s.offsetY   ?? 0;
+    if (!s) {
+      if (!allowLayoutCustomization) {
+        applyFixedProductionLayout();
+        allSliders.forEach(syncFill);
+        updateLabels();
+        resizeCanvas();
+      }
+      return;
+    }
+    if (allowLayoutCustomization) {
+      layoutGap      = s.gap       ?? 0;
+      offsetX        = s.offsetX   ?? 0;
+      offsetY        = s.offsetY   ?? 0;
+      heightControl.value  = s.height    ?? 85;
+      zoomControl.value    = s.zoom      ?? 100;
+      gapControl.value     = layoutGap;
+      offsetXControl.value = offsetX;
+      offsetYControl.value = offsetY;
+      layoutZoom           = (s.zoom ?? 100) / 100;
+      container.style.height = heightControl.value + 'vh';
+    } else {
+      applyFixedProductionLayout();
+    }
     darkMode       = s.darkMode !== undefined ? s.darkMode : true;
-    heightControl.value  = s.height    ?? 85;
-    zoomControl.value    = s.zoom      ?? 100;
     shotSpeedControl.value = s.shotSpeed ?? 100;
-    gapControl.value     = layoutGap;
-    offsetXControl.value = offsetX;
-    offsetYControl.value = offsetY;
-    layoutZoom                = (s.zoom ?? 100) / 100;
     overlaySettings.shotSpeed = (s.shotSpeed ?? 100) / 100;
     overlaySettings.laserColor = s.laserColor || '#7afcff';
-    overlaySettings.shotType  = s.shotType   || 'beam';
+    overlaySettings.shotType  = normalizeEffectType(s.shotType);
     overlaySettings.backgroundFit = s.backgroundFit === 'cover' ? 'cover' : (overlaySettings.backgroundFit || 'contain');
-    container.style.height = heightControl.value + 'vh';
     themeToggle.checked    = darkMode;
     setActiveShotType(overlaySettings.shotType);
     setLaserColor(overlaySettings.laserColor);
@@ -3080,6 +3158,67 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function canvasToViewport(cx, cy) {
     const r = canvas.getBoundingClientRect();
     return { x: r.left + cx * (r.width / cw()), y: r.top + cy * (r.height / ch()) };
+  }
+
+  function getCombatEffectLane() {
+    const frame = arenaFrame();
+    const safe = arenaSafeFrame(frame, 0.055);
+    const ui = canvasUiScale();
+    const hordeLayout = getHordeLayout();
+    const top = topPlayers();
+    let playerBottom = frame.y + frame.h * 0.49;
+
+    if (top.length) {
+      const playerBounds = top.map((_, index) => {
+        const pos = getPlayerPosition(index, top.length);
+        return getPlayerCardDrawMetrics(pos, top.length);
+      });
+      playerBottom = Math.max(...playerBounds.map(bounds => bounds.bottom));
+    }
+
+    let laneTop = clampNumber(playerBottom + 20 * ui, safe.y + safe.h * 0.39, safe.y + safe.h * 0.61);
+    let laneBottom = Math.min(hordeLayout.barY - 24 * ui, safe.y + safe.h * 0.75, safe.bottom - 24 * ui);
+    const minHeight = Math.max(52 * ui, frame.h * 0.052);
+    if (laneBottom - laneTop < minHeight) {
+      const center = clampNumber(frame.y + frame.h * 0.61, safe.y + minHeight / 2, safe.bottom - minHeight / 2);
+      laneTop = center - minHeight / 2;
+      laneBottom = center + minHeight / 2;
+    }
+
+    const inset = Math.max(34 * ui, frame.w * 0.028);
+    return {
+      x: safe.x + inset,
+      right: safe.right - inset,
+      top: laneTop,
+      bottom: laneBottom,
+      centerY: (laneTop + laneBottom) / 2,
+    };
+  }
+
+  function clampPointToCombatLane(point, lane) {
+    return {
+      x: clampNumber(point.x, lane.x, lane.right),
+      y: clampNumber(point.y, lane.top, lane.bottom),
+    };
+  }
+
+  function constrainAttackPath(from, to) {
+    const lane = getCombatEffectLane();
+    const ui = canvasUiScale();
+    const nextFrom = clampPointToCombatLane(from, lane);
+    const nextTo = clampPointToCombatLane(to, lane);
+
+    if (Math.hypot(nextFrom.x - nextTo.x, nextFrom.y - nextTo.y) < 36 * ui) {
+      const half = Math.max(28 * ui, Math.min(70 * ui, (lane.right - lane.x) * 0.06));
+      const centerX = clampNumber((nextFrom.x + nextTo.x) / 2, lane.x + half, lane.right - half);
+      nextFrom.x = centerX - half;
+      nextTo.x = centerX + half;
+      nextFrom.y = lane.centerY;
+      nextTo.y = lane.centerY;
+    }
+
+    window.__overlayLegacyEffectLane = lane;
+    return { from: nextFrom, to: nextTo, lane };
   }
 
   // ═══════════════════════════════════════
@@ -3931,7 +4070,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       this._impacted      = false;
 
       const speed = Math.max(0.5, options.shotSpeed || overlaySettings.shotSpeed || 1);
-      const durations = { static:1800, projectile:760, gift:900, explosion:780, beam:430, laser:520, neon:640, fire:780, sphere:780, bullet:620, railgun:480, comet:820, arc:560 };
+      const durations = { static:1800, beam:430, laser:520, railgun:480, comet:820, arc:620, sphere:700, pulse:680, void:760, projectile:760, neon:640, fire:780, explosion:680, bullet:620 };
       this.duration = Math.round((durations[type] || 500) / speed);
 
       if (type === 'fire') {
@@ -3962,7 +4101,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     draw() {
       ctx.save();
       this.drawAnchorCues();
-      if (!['bullet', 'sphere'].includes(this.type)) this.drawVectorRail();
+      if (!['bullet', 'sphere', 'pulse', 'void'].includes(this.type)) this.drawVectorRail();
       switch (this.type) {
         case 'laser':      this.drawLaser();      break;
         case 'beam':       this.drawBeam();       break;
@@ -3971,7 +4110,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         case 'railgun':    this.drawRailgun();    break;
         case 'comet':      this.drawComet();      break;
         case 'arc':        this.drawArc();        break;
-        case 'gift':       this.drawGift();       break;
+        case 'pulse':      this.drawPulse();      break;
+        case 'void':       this.drawVoid();       break;
         case 'explosion':  this.drawExplosion();  break;
         case 'neon':       this.drawNeon();       break;
         case 'fire':       this.drawFire();       break;
@@ -4389,31 +4529,66 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const ux = dx / dist, uy = dy / dist;
       const nx = -uy, ny = ux;
       const p = easeOutCubic(pg);
-      const segments = 7;
+      const segments = 9;
       const ui = canvasUiScale();
-      const fade = pg < 0.7 ? 1 : Math.max(0, 1 - (pg - 0.7) / 0.3);
+      const fade = pg < 0.72 ? 1 : Math.max(0, 1 - (pg - 0.72) / 0.28);
+      const now = Date.now();
+      const points = [{ x: f.x, y: f.y }];
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.globalAlpha = 0.72 * fade;
-      ctx.strokeStyle = '#99ffda';
-      ctx.lineWidth = Math.max(3, 6 * ui);
-      ctx.beginPath();
-      ctx.moveTo(f.x, f.y);
       for (let i = 1; i <= segments; i += 1) {
         const local = Math.min(p, i / segments);
         if (local <= (i - 1) / segments) break;
-        const offset = Math.sin((i * 2.31 + Date.now() * 0.018)) * (12 + this.intensity * 10) * ui;
-        const x = f.x + dx * local + nx * offset;
-        const y = f.y + dy * local + ny * offset;
-        ctx.lineTo(x, y);
+        const envelope = Math.sin(local * Math.PI);
+        const offset = Math.sin(i * 2.31 + now * 0.018) * (13 + this.intensity * 12) * ui * envelope;
+        points.push({
+          x: f.x + dx * local + nx * offset,
+          y: f.y + dy * local + ny * offset,
+        });
       }
+
+      const drawPath = (width, color, alpha) => {
+        if (points.length < 2) return;
+        ctx.globalAlpha = alpha * fade;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(1, width * ui);
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i += 1) ctx.lineTo(points[i].x, points[i].y);
+        ctx.stroke();
+      };
+
+      drawPath(15 + this.intensity * 7, '#1ed8ff', 0.24);
+      drawPath(7 + this.intensity * 3, '#99ffda', 0.76);
+      drawPath(2.2, '#ffffff', 0.96);
+
+      for (let i = 2; i < points.length - 1; i += 2) {
+        const base = points[i];
+        const branchLen = (22 + this.intensity * 18) * ui * (1 - i / (points.length + 2));
+        const dir = i % 4 === 0 ? 1 : -1;
+        ctx.globalAlpha = fade * 0.42;
+        ctx.strokeStyle = i % 3 === 0 ? '#f6c95b' : '#bdfcff';
+        ctx.lineWidth = Math.max(1, 1.5 * ui);
+        ctx.beginPath();
+        ctx.moveTo(base.x, base.y);
+        ctx.lineTo(base.x + nx * branchLen * dir + ux * branchLen * 0.45, base.y + ny * branchLen * dir + uy * branchLen * 0.45);
+        ctx.stroke();
+      }
+
+      const head = points[points.length - 1] || f;
+      ctx.globalAlpha = fade * 0.62;
+      ctx.strokeStyle = this.killingBlow ? THEME.gold : '#99ffda';
+      ctx.lineWidth = Math.max(1, 2.1 * ui);
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, (12 + this.intensity * 9) * ui, 0, Math.PI * 2);
       ctx.stroke();
-      ctx.globalAlpha = 0.95 * fade;
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = Math.max(1, 2 * ui);
-      ctx.stroke();
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, Math.max(2.4 * ui, 3.2 * ui + this.intensity * 2 * ui), 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     }
 
@@ -4488,6 +4663,184 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.beginPath(); ctx.arc(x, y, 5 + this.intensity * 4, 0, Math.PI * 2); ctx.fill();
     }
 
+    drawPulse() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const x = f.x + (t.x - f.x) * p;
+      const y = f.y + (t.y - f.y) * p;
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const ui = canvasUiScale();
+      const fade = pg < 0.76 ? 1 : Math.max(0, 1 - (pg - 0.76) / 0.24);
+      const impactT = clamp01((pg - 0.66) / 0.34);
+      const impactAlpha = Math.sin(impactT * Math.PI);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      const trail = Math.max(44 * ui, Math.min(dist * 0.34, (92 + this.intensity * 34) * ui));
+      const grad = ctx.createLinearGradient(x - ux * trail, y - uy * trail, x, y);
+      grad.addColorStop(0, 'rgba(122,252,255,0)');
+      grad.addColorStop(0.46, 'rgba(122,252,255,0.18)');
+      grad.addColorStop(1, 'rgba(255,255,255,0.8)');
+      ctx.globalAlpha = fade;
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = Math.max(5 * ui, (9 + this.intensity * 5) * ui);
+      ctx.beginPath();
+      ctx.moveTo(x - ux * trail, y - uy * trail);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+
+      for (let i = 0; i < 3; i += 1) {
+        const ringT = clamp01(pg * 1.3 - i * 0.18);
+        if (ringT <= 0 || ringT >= 1) continue;
+        const alpha = Math.sin(ringT * Math.PI) * fade;
+        ctx.globalAlpha = alpha * (0.46 - i * 0.08);
+        ctx.strokeStyle = i === 1 ? '#f6c95b' : '#7afcff';
+        ctx.lineWidth = Math.max(1.1, (2.1 - i * 0.25) * ui);
+        ctx.beginPath();
+        ctx.arc(x, y, (12 + ringT * (46 + this.intensity * 18)) * ui, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      const coreR = (7 + this.intensity * 5) * ui;
+      const core = ctx.createRadialGradient(x - coreR * 0.3, y - coreR * 0.35, 1, x, y, coreR * 2.2);
+      core.addColorStop(0, '#ffffff');
+      core.addColorStop(0.28, '#d9fffb');
+      core.addColorStop(0.62, '#55e7ff');
+      core.addColorStop(1, 'rgba(85,231,255,0)');
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(x, y, coreR * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (impactT > 0 && !this._impacted) {
+        this._impacted = true;
+        for (let i = 0; i < 18; i += 1) {
+          this.particles.push(new Particle(t.x, t.y, {
+            speed: 2.6 + Math.random() * (5 + this.intensity * 3),
+            color: i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? '#7afcff' : '#f6c95b',
+            radius: 1.4 + Math.random() * 2.4,
+            decay: 0.026 + Math.random() * 0.018,
+            rise: 0.5,
+          }));
+        }
+      }
+
+      if (impactAlpha > 0) {
+        ctx.globalAlpha = impactAlpha * 0.52;
+        ctx.strokeStyle = this.killingBlow ? THEME.gold : '#bdfcff';
+        ctx.lineWidth = Math.max(1.4, 2.4 * ui);
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, (18 + impactT * (74 + this.intensity * 24)) * ui, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    drawVoid() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const x = f.x + (t.x - f.x) * p;
+      const y = f.y + (t.y - f.y) * p;
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const nx = -uy, ny = ux;
+      const ui = canvasUiScale();
+      const now = Date.now();
+      const fade = pg < 0.82 ? 1 : Math.max(0, 1 - (pg - 0.82) / 0.18);
+      const radius = (13 + this.intensity * 9) * ui;
+      const impactT = clamp01((pg - 0.7) / 0.3);
+      const impactAlpha = Math.sin(impactT * Math.PI);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      const tail = Math.max(44 * ui, Math.min(dist * 0.36, (96 + this.intensity * 38) * ui));
+      for (let lane = -1; lane <= 1; lane += 1) {
+        const laneOffset = lane * radius * 0.34;
+        const grad = ctx.createLinearGradient(x - ux * tail, y - uy * tail, x, y);
+        grad.addColorStop(0, 'rgba(50,35,110,0)');
+        grad.addColorStop(0.5, 'rgba(85,45,180,0.22)');
+        grad.addColorStop(1, lane === 0 ? 'rgba(246,201,91,0.56)' : 'rgba(122,252,255,0.32)');
+        ctx.globalAlpha = fade * (lane === 0 ? 0.72 : 0.34);
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = Math.max(2 * ui, (lane === 0 ? 7 : 3) * ui);
+        ctx.beginPath();
+        ctx.moveTo(x - ux * tail + nx * laneOffset, y - uy * tail + ny * laneOffset);
+        ctx.quadraticCurveTo(
+          x - ux * tail * 0.45 - nx * laneOffset * 1.4,
+          y - uy * tail * 0.45 - ny * laneOffset * 1.4,
+          x,
+          y
+        );
+        ctx.stroke();
+      }
+
+      const aura = ctx.createRadialGradient(x, y, 0, x, y, radius * 2.4);
+      aura.addColorStop(0, 'rgba(255,255,255,0.34)');
+      aura.addColorStop(0.18, 'rgba(246,201,91,0.24)');
+      aura.addColorStop(0.5, 'rgba(85,45,180,0.2)');
+      aura.addColorStop(1, 'rgba(20,8,45,0)');
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 2.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = fade;
+      const core = ctx.createRadialGradient(x - radius * 0.2, y - radius * 0.24, 1, x, y, radius * 1.12);
+      core.addColorStop(0, '#1c143c');
+      core.addColorStop(0.5, '#070611');
+      core.addColorStop(1, '#000000');
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = '#f6c95b';
+      ctx.lineWidth = Math.max(1, 1.7 * ui);
+      for (let ring = 0; ring < 2; ring += 1) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(now * (0.0028 + ring * 0.0018) * (ring ? -1 : 1));
+        ctx.scale(1, 0.36 + ring * 0.12);
+        ctx.globalAlpha = fade * (0.62 - ring * 0.18);
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * (1.34 + ring * 0.3), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (impactT > 0 && !this._impacted) {
+        this._impacted = true;
+        for (let i = 0; i < 20; i += 1) {
+          this.particles.push(new Particle(t.x, t.y, {
+            speed: 1.8 + Math.random() * (4.6 + this.intensity * 3),
+            color: i % 3 === 0 ? '#f6c95b' : i % 3 === 1 ? '#8b7cff' : '#7afcff',
+            radius: 1.3 + Math.random() * 2.4,
+            decay: 0.026 + Math.random() * 0.017,
+            rise: 0.25,
+          }));
+        }
+      }
+
+      if (impactAlpha > 0) {
+        ctx.globalAlpha = impactAlpha * 0.44;
+        ctx.strokeStyle = '#8b7cff';
+        ctx.lineWidth = Math.max(1.2, 2.2 * ui);
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, (radius * 0.8 + impactT * radius * 3.1), 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     drawFire() {
       const { from: f, to: t, progress: pg } = this;
       const x = f.x + (t.x - f.x) * pg, y = f.y + (t.y - f.y) * pg;
@@ -4539,13 +4892,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const fade = pg < 0.82 ? 1 : Math.max(0, 1 - (pg - 0.82) / 0.18);
       const phase = now * 0.0028;
       const pulse = 1 + Math.sin(now * 0.016) * 0.045;
-      const radius = (22 + this.intensity * 15) * ui * pulse;
-      const tail = Math.max(58 * ui, Math.min(dist * 0.38, (128 + this.intensity * 44) * ui));
+      const radius = (15 + this.intensity * 9) * ui * pulse;
+      const tail = Math.max(36 * ui, Math.min(dist * 0.28, (86 + this.intensity * 28) * ui));
       const impactT = clamp01((pg - 0.72) / 0.28);
       const impactAlpha = Math.sin(impactT * Math.PI);
 
       this.trail.push({ x, y, r: radius, p: pg });
-      while (this.trail.length > 13) this.trail.shift();
+      while (this.trail.length > 9) this.trail.shift();
 
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
@@ -4554,14 +4907,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
       const ribbonGrad = ctx.createLinearGradient(x - ux * tail, y - uy * tail, x, y);
       ribbonGrad.addColorStop(0, 'rgba(85,231,255,0)');
-      ribbonGrad.addColorStop(0.35, 'rgba(85,231,255,0.18)');
-      ribbonGrad.addColorStop(0.72, 'rgba(130,124,255,0.44)');
-      ribbonGrad.addColorStop(1, 'rgba(255,255,255,0.8)');
+      ribbonGrad.addColorStop(0.35, 'rgba(85,231,255,0.12)');
+      ribbonGrad.addColorStop(0.72, 'rgba(130,124,255,0.32)');
+      ribbonGrad.addColorStop(1, 'rgba(255,255,255,0.72)');
       for (let lane = -1; lane <= 1; lane += 1) {
         const wobble = Math.sin(phase * 4 + lane * 1.9) * radius * 0.18;
-        ctx.globalAlpha = fade * (lane === 0 ? 0.8 : 0.32);
+        ctx.globalAlpha = fade * (lane === 0 ? 0.64 : 0.2);
         ctx.strokeStyle = ribbonGrad;
-        ctx.lineWidth = (lane === 0 ? 7.5 : 3.2) * ui + this.intensity * (lane === 0 ? 3.2 : 1.4) * ui;
+        ctx.lineWidth = (lane === 0 ? 4.8 : 2.2) * ui + this.intensity * (lane === 0 ? 2.2 : 0.9) * ui;
         ctx.beginPath();
         ctx.moveTo(f.x + nx * lane * radius * 0.14, f.y + ny * lane * radius * 0.14);
         ctx.quadraticCurveTo(
@@ -4575,7 +4928,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
       this.trail.forEach((point, index) => {
         const age = (index + 1) / this.trail.length;
-        const alpha = Math.pow(age, 1.7) * 0.2 * fade;
+        const alpha = Math.pow(age, 1.8) * 0.14 * fade;
         if (alpha <= 0) return;
         const ghost = ctx.createRadialGradient(point.x, point.y, 0, point.x, point.y, point.r * (0.8 + age * 0.42));
         ghost.addColorStop(0, `rgba(210,255,255,${alpha * 0.88})`);
@@ -4587,15 +4940,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         ctx.fill();
       });
 
-      const aura = ctx.createRadialGradient(x, y, 0, x, y, radius * 2.25);
-      aura.addColorStop(0, 'rgba(255,255,255,0.42)');
-      aura.addColorStop(0.18, 'rgba(122,252,255,0.28)');
-      aura.addColorStop(0.55, 'rgba(116,91,255,0.14)');
+      const aura = ctx.createRadialGradient(x, y, 0, x, y, radius * 1.85);
+      aura.addColorStop(0, 'rgba(255,255,255,0.36)');
+      aura.addColorStop(0.18, 'rgba(122,252,255,0.22)');
+      aura.addColorStop(0.55, 'rgba(116,91,255,0.1)');
       aura.addColorStop(1, 'rgba(116,91,255,0)');
       ctx.globalAlpha = fade;
       ctx.fillStyle = aura;
       ctx.beginPath();
-      ctx.arc(x, y, radius * 2.25, 0, Math.PI * 2);
+      ctx.arc(x, y, radius * 1.85, 0, Math.PI * 2);
       ctx.fill();
 
       const orb = ctx.createRadialGradient(x - radius * 0.34, y - radius * 0.42, 1, x, y, radius * 1.08);
@@ -4613,17 +4966,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(phase * 2.2);
-      for (let ring = 0; ring < 3; ring += 1) {
-        ctx.globalAlpha = fade * (0.62 - ring * 0.13);
+      for (let ring = 0; ring < 2; ring += 1) {
+        ctx.globalAlpha = fade * (0.58 - ring * 0.14);
         ctx.strokeStyle = ring === 1 ? '#f6c95b' : '#bdfcff';
-        ctx.lineWidth = Math.max(1.2, (2.1 - ring * 0.3) * ui);
-        ctx.setLineDash(ring === 2 ? [radius * 0.55, radius * 0.32] : []);
+        ctx.lineWidth = Math.max(1.1, (1.7 - ring * 0.25) * ui);
+        ctx.setLineDash([]);
         ctx.lineDashOffset = -now * (0.035 + ring * 0.018);
         ctx.save();
         ctx.rotate((Math.PI / 3) * ring + phase * (ring === 1 ? -1.4 : 0.9));
         ctx.scale(1, 0.34 + ring * 0.1);
         ctx.beginPath();
-        ctx.arc(0, 0, radius * (1.22 + ring * 0.18), 0, Math.PI * 2);
+        ctx.arc(0, 0, radius * (1.16 + ring * 0.18), 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       }
@@ -4642,12 +4995,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.arc(x + radius * 0.18, y + radius * 0.14, radius * 0.58, Math.PI * 0.12, Math.PI * 0.86);
       ctx.stroke();
 
-      for (let i = 0; i < 6; i += 1) {
-        const a = phase * 3.4 + i * (Math.PI * 2 / 6);
-        const orbit = radius * (0.82 + (i % 2) * 0.34);
+      for (let i = 0; i < 4; i += 1) {
+        const a = phase * 3.4 + i * (Math.PI * 2 / 4);
+        const orbit = radius * (0.78 + (i % 2) * 0.24);
         const sx = x + Math.cos(a) * orbit;
         const sy = y + Math.sin(a) * orbit * 0.48;
-        ctx.globalAlpha = fade * (0.28 + (i % 3) * 0.08);
+        ctx.globalAlpha = fade * (0.24 + (i % 3) * 0.06);
         ctx.fillStyle = i % 2 ? '#f6c95b' : '#d9fffb';
         ctx.beginPath();
         ctx.arc(sx, sy, Math.max(1.2 * ui, radius * 0.045), 0, Math.PI * 2);
@@ -4656,11 +5009,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
       if (impactT > 0 && !this._impacted) {
         this._impacted = true;
-        for (let i = 0; i < 24; i += 1) {
+        for (let i = 0; i < 16; i += 1) {
           this.particles.push(new Particle(t.x, t.y, {
             speed: 2.8 + Math.random() * (5.6 + this.intensity * 4),
             color: i % 4 === 0 ? '#ffffff' : i % 4 === 1 ? '#55e7ff' : i % 4 === 2 ? '#8b7cff' : '#f6c95b',
-            radius: 1.6 + Math.random() * (2.8 + this.intensity * 1.8),
+            radius: 1.2 + Math.random() * (2.1 + this.intensity * 1.3),
             decay: 0.024 + Math.random() * 0.016,
             rise: 0.45 + Math.random() * 0.7,
           }));
@@ -4672,14 +5025,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         ctx.strokeStyle = this.critical ? '#ffffff' : '#bdfcff';
         ctx.lineWidth = Math.max(1.4, 2.2 * ui);
         ctx.beginPath();
-        ctx.arc(t.x, t.y, (radius * 0.52 + impactT * radius * 2.2), 0, Math.PI * 2);
+        ctx.arc(t.x, t.y, (radius * 0.62 + impactT * radius * 1.9), 0, Math.PI * 2);
         ctx.stroke();
         ctx.globalAlpha = impactAlpha * 0.26;
         ctx.strokeStyle = '#f6c95b';
         ctx.setLineDash([radius * 0.42, radius * 0.28]);
         ctx.lineDashOffset = -now * 0.08;
         ctx.beginPath();
-        ctx.arc(t.x, t.y, (radius * 0.9 + impactT * radius * 2.65), 0, Math.PI * 2);
+        ctx.arc(t.x, t.y, (radius * 0.9 + impactT * radius * 2.25), 0, Math.PI * 2);
         ctx.stroke();
         ctx.setLineDash([]);
       }
@@ -4698,35 +5051,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   // ═══════════════════════════════════════
   // FIRE ATTACK
   // ═══════════════════════════════════════
-  const TYPE_MAP = {
-    fire:'fire', bubble:'bubble', bubbles:'bubble', water:'bubble',
-    beam:'beam', laser:'laser', shot:'laser', projectile:'projectile',
-    neon:'neon', ripple:'ripple', wave:'ripple',
-    sphere:'sphere', gift:'gift', hearts:'gift',
-    explosion:'explosion', boom:'explosion',
-    boss:'neon', bosswave:'neon',
-    meteor:'fire', tsunami:'ripple', nuke:'explosion', nukes:'explosion',
-  };
-  Object.assign(TYPE_MAP, {
-    bubble: 'arc',
-    bubbles: 'arc',
-    water: 'arc',
-    ripple: 'arc',
-    wave: 'arc',
-    shock: 'arc',
-    arc: 'arc',
-    shot: 'bullet',
-    bullet: 'bullet',
-    shell: 'bullet',
-    rail: 'railgun',
-    railgun: 'railgun',
-    comet: 'comet',
-    meteor: 'comet',
-    boss: 'railgun',
-    bosswave: 'railgun',
-    projectile: 'projectile',
-  });
-
   function attackKey(attackerId, targetId, effect) {
     return `${String(attackerId || '').toLowerCase()}|${String(targetId || '').toLowerCase()}|${String(effect || '').toLowerCase()}`;
   }
@@ -4782,22 +5106,22 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       : targetIsBoss
         ? getBossPosition()
         : getPositionForPlayer(targetId, meta.targetScope) || (horde ? getHordeEdgePosition(rawFrom) : null);
-    const from = attackerIsBoss ? getBossEdgePosition(rawTo) : attackerIsHorde && horde ? getHordeEdgePosition(rawTo) : rawFrom;
-    const to = targetIsBoss ? getBossEdgePosition(rawFrom) : targetIsHorde && horde ? getHordeEdgePosition(rawFrom) : rawTo;
+    let from = attackerIsBoss ? getBossEdgePosition(rawTo) : attackerIsHorde && horde ? getHordeEdgePosition(rawTo) : rawFrom;
+    let to = targetIsBoss ? getBossEdgePosition(rawFrom) : targetIsHorde && horde ? getHordeEdgePosition(rawFrom) : rawTo;
     if (!from || !to) return false;
     if (Math.abs(from.x - to.x) < 2 && Math.abs(from.y - to.y) < 2) {
       from.x -= 24;
       to.x += 24;
     }
+    const constrainedPath = constrainAttackPath(from, to);
+    from = constrainedPath.from;
+    to = constrainedPath.to;
 
     let type;
-    if (effect)      { type = TYPE_MAP[String(effect).toLowerCase()] || String(effect).toLowerCase(); }
-    else if (special){ type = 'gift'; }
-    else if (killed) { type = 'explosion'; }
-    else {
-      const s = overlaySettings.shotType;
-      type = TYPE_MAP[String(s || '').toLowerCase()] || (s === 'pulse' ? 'fire' : s === 'burst' ? 'explosion' : 'laser');
-    }
+    if (effect)      { type = normalizeEffectType(effect, overlaySettings.shotType || DEFAULT_EFFECT); }
+    else if (special){ type = normalizeEffectType(overlaySettings.shotType); }
+    else if (killed) { type = 'pulse'; }
+    else             { type = normalizeEffectType(overlaySettings.shotType); }
 
     const attackIntensity = meta.intensity != null ? meta.intensity : 0.5;
     attacks.push(new Attack(from, to, type, {
@@ -4852,7 +5176,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (!data) return;
     const attackerId = data.attackerId || data.attacker;
     const targetId = data.targetId || data.target;
-    const effect = data.effect || (data.special ? 'gift' : null);
+    const effect = data.effect || null;
     if (!attackerId || !targetId || hasRecentAttack(attackerId, targetId, effect)) return;
 
     setTimeout(() => {
@@ -5042,7 +5366,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const center = { x: frame.x + frame.w * 0.5, y: frame.y + frame.h * 0.58 };
     const horde = getHordePosition();
     const color = data.color || (isTakeover ? THEME.gold : THEME.cyan);
-    const atk = new Attack(center, horde, isTakeover ? 'sphere' : isViral ? 'railgun' : 'neon', {
+    const atk = new Attack(center, horde, isTakeover ? 'sphere' : isViral ? 'railgun' : 'pulse', {
       intensity: isTakeover ? 1 : isViral ? 0.84 : 0.68,
       color,
       critical: isTakeover,
@@ -6093,8 +6417,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   // ═══════════════════════════════════════
   // DEMO MODE
   // ═══════════════════════════════════════
-  const ALL_EFFECTS = ['laser','beam','projectile','neon','fire','sphere','explosion','bullet','railgun','comet','arc'];
-  const PREVIEW_EFFECTS = ['laser','beam','neon','sphere','bullet','railgun','comet','arc'];
+  const ALL_EFFECTS = APPROVED_EFFECTS;
+  const PREVIEW_EFFECTS = APPROVED_EFFECTS;
 
   function stopDemoLoop() { if (_demoTimer) { clearInterval(_demoTimer); _demoTimer = null; } }
 
@@ -6405,8 +6729,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function handleGiftAttackEvent(data) {
     if (!data) return;
-    const s = overlaySettings.shotType;
-    const forcedEffect = TYPE_MAP[String(s || '').toLowerCase()] || (s === 'pulse' ? 'fire' : s === 'burst' ? 'explosion' : 'laser');
+    const forcedEffect = normalizeEffectType(overlaySettings.shotType);
     const fired = fireAttack(data.attacker, data.target, data.damage, data.killed, true, forcedEffect, {
       intensity: data.intensity || 0.5, giftBoosted: true,
       remainingHpPct: data.killed ? 0 : 1,
@@ -6454,7 +6777,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function handleKillEvent(data) {
     if (!data) return;
-    fireAttack(data.killer, data.victim, data.damage, true, false, data.effect || 'explosion', {
+    fireAttack(data.killer, data.victim, data.damage, true, false, data.effect || 'pulse', {
       intensity: 0.95, critical: true, streak: data.killerStreak || 0, remainingHpPct: 0,
       attackerScope: data.attackerScope, targetScope: data.targetScope,
     });
@@ -6856,6 +7179,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       socket.on('engagementSurge', data => enqueueVisualEvent('engagementSurge', data, handleEngagementSurge, { mergeKey: payload => payload.tier || 'engagement-surge' }));
 
       socket.on('layoutUpdate', ({ gapX, gapY }) => {
+        if (!allowLayoutCustomization) return;
         if (typeof gapX === 'number') { layoutGap = gapX; gapControl.value = gapX; syncFill(gapControl); }
         if (typeof gapY === 'number') { offsetY = (gapY - 260) * 0.3; offsetYControl.value = offsetY; syncFill(offsetYControl); }
         updateLabels();
