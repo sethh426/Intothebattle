@@ -94,6 +94,7 @@
       --ember: #ff7a3a;
       --red: #ff2a4a;
       --blue: #00c8ff;
+      --cyan: #55e7ff;
       --green: #39d875;
       --txt: #edf0fa;
       --muted: #8896ae;
@@ -473,7 +474,7 @@
       content: '';
       position: absolute;
       inset: -1px;
-      border-radius: var(--radius-xl);
+      border-radius: var(--r-xl);
       background: linear-gradient(145deg, rgba(246, 201, 91, .74), rgba(255, 255, 255, .1) 28%, rgba(232, 59, 95, .45) 62%, rgba(85, 231, 255, .25));
       filter: drop-shadow(0 28px 95px rgba(0, 0, 0, .58));
       z-index: -1;
@@ -707,11 +708,6 @@
       line-height: 1.35;
     }
     .plan-column li::before {
-      content: '•';
-      color: var(--cyan);
-      margin-right: 7px;
-    }
-    .plan-column li::before {
       content: '';
       display: inline-block;
       width: 6px;
@@ -849,24 +845,24 @@
             <a class="card-logo" href="/" aria-label="IntoTheBattle home">
               <img src="/intothebattlelogo_logo_only.svg" style="transform:scale(1.1);transform-origin:center;" alt="IntoTheBattle logo" />
             </a>
-            <div class="eyebrow">Best first step</div>
+            <div class="eyebrow">7-day full access · No card needed</div>
             <h2 class="card-title">Create your room</h2>
-            <p class="card-sub">Use Google for the fastest setup. Email is available if you prefer a password-based account.</p>
+            <p class="card-sub">Use Google for the fastest setup. Email signup is also available. No credit card — your first 7 days unlock everything.</p>
           </div>
 
           <div class="recommended-path">
-            <strong>Recommended: start with Google and land on the welcome dashboard.</strong>
+            <strong>Recommended: Google gets you into setup in one click.</strong>
             <span>Fastest</span>
           </div>
 
           <div class="actions">
-            <a href="/auth/google" class="btn btn-primary" id="googleSignupLink">Continue with Google -></a>
-            <a href="/register" class="btn btn-secondary" id="emailSignupLink">Create account with email</a>
+            <a href="/auth/google" class="btn btn-primary" id="googleSignupLink">Start free with Google →</a>
+            <a href="/register" class="btn btn-secondary" id="emailSignupLink">Use email instead</a>
           </div>
 
-          <div class="login-link">Already have an account? <a href="/login" id="loginLink">Sign in here</a>.</div>
+          <p class="microcopy">No credit card. No paywall before setup. Your first 7 days give you full access — every creator control, the overlay, test attacks — so you can prove it works before spending a cent.</p>
 
-          <p class="microcopy">No card. No paid wall before setup. Your first 7 days unlock everything so you can prove the overlay works.</p>
+          <div class="login-link">Already have an account? <a href="/login" id="loginLink">Sign in here</a>.</div>
 
           <div class="setup-path" aria-label="What happens after signup">
             <strong>After you click, the path is simple:</strong>
@@ -881,7 +877,7 @@
             <strong>What is included?</strong>
             <div class="plan-compare">
               <div class="plan-column">
-                <b>7-Day Trial <span>Unlocked</span></b>
+                <b>7-Day Full Access <span>Trial</span></b>
                 <ul>
                   <li>Battle overlay and room setup</li>
                   <li>Dashboard controls</li>
@@ -890,16 +886,16 @@
                 </ul>
               </div>
               <div class="plan-column pro">
-                <b>Creator Pro <span>After trial</span></b>
+                <b>Creator Pro <span>$12/mo</span></b>
                 <ul>
-                  <li>$12/month plus applicable tax</li>
-                  <li>Upload your own video moments</li>
+                  <li>Upload your own custom video moments</li>
                   <li>Preview and trigger breaks live</li>
                   <li>Custom timing and presentation controls</li>
                   <li>Advanced creator branding tools</li>
                 </ul>
               </div>
             </div>
+            <p style="margin-top:12px;font-size:12px;color:var(--muted);text-align:center;line-height:1.5;">After your trial, the battle overlay keeps working for free. Creator Pro adds custom brand controls. No card is ever required to start.</p>
           </div>
 
         </div>
@@ -909,7 +905,7 @@
     <section class="signup-preview-panel" aria-label="Live battle demo preview">
       <div class="battle-preview">
         <div class="battle-preview-inner">
-          <div class="preview-top"><span>Battle clip</span><span>Comment to KO</span></div>
+          <div class="preview-top"><span>Battle clip</span><span>Chat commands trigger live effects</span></div>
           <div class="preview-frame">
             <iframe data-src="/battle-clip" src="about:blank" title="IntoTheBattle battle clip" loading="lazy"></iframe>
           </div>
@@ -924,8 +920,6 @@
     const navSignupLink = document.querySelector('.nav-cta');
     const previewFrame = document.querySelector('.battle-preview');
 
-    if (googleSignupLink) googleSignupLink.textContent = 'Start free with Google ->';
-    if (emailSignupLink) emailSignupLink.textContent = 'Use email instead';
 
     function trackSignupEvent(name, tags = {}, upgrade = false) {
       if (typeof window.intothebattleTrack === 'function') {

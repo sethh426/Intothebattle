@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Create Account — IntoTheBattle | TikTok LIVE Battle Overlay</title>
-  <meta name="description" content="Create your IntoTheBattle creator account with email and set up your TikTok LIVE battle overlay room." />
+  <title>Create Free Account — IntoTheBattle | 7-Day Full Access Trial</title>
+  <meta name="description" content="Create your free IntoTheBattle creator account with email. 7-day full access trial, no credit card required. Set up your TikTok LIVE battle overlay room." />
   <meta name="keywords" content="IntoTheBattle register, TikTok LIVE overlay signup, creator account, battle overlay setup, streamer tools" />
   <meta name="robots" content="noindex, follow" />
   <meta name="author" content="IntoTheBattle" />
@@ -14,21 +14,22 @@
   <meta property="og:title" content="Create Your IntoTheBattle Account" />
   <meta property="og:description" content="Use email to create your creator account and continue setting up your TikTok LIVE battle room." />
   <meta property="og:url" content="https://intothebattle.com/register" />
-  <meta property="og:image" content="https://intothebattle.com/brand-identity-square.png" />
+  <meta property="og:image" content="https://intothebattle.com/og-intothebattle.png?v=20260627" />
+  <meta property="og:image:secure_url" content="https://intothebattle.com/og-intothebattle.png?v=20260627" />
   <meta property="og:image:type" content="image/png" />
   <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="1200" />
-  <meta property="og:image:alt" content="IntoTheBattle brand identity." />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="IntoTheBattle live streaming engagement game key art with creators facing a red enemy horde." />
   <meta property="og:site_name" content="IntoTheBattle" />
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Create Your IntoTheBattle Account" />
-  <meta name="twitter:description" content="Create your TikTok LIVE battle overlay account and continue to room setup." />
-  <meta name="twitter:image" content="https://intothebattle.com/brand-identity-square.png" />
-  <meta name="twitter:image:alt" content="IntoTheBattle brand identity." />
+  <meta name="twitter:description" content="Create your TikTok LIVE battle overlay account — 7-day full access trial, no card needed." />
+  <meta name="twitter:image" content="https://intothebattle.com/og-intothebattle.png?v=20260627" />
+  <meta name="twitter:image:alt" content="IntoTheBattle live streaming engagement game key art with creators facing a red enemy horde." />
 
-  <link rel="icon" href="/logo.svg" />
-  <link rel="apple-touch-icon" href="/logo.svg" />
+  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
+  <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
@@ -59,16 +60,19 @@
       --ember: #ff7a3a;
       --red: #ff2a4a;
       --blue: #00c8ff;
+      --cyan: #55e7ff;
       --green: #39d875;
       --bg: #080c14;
       --panel: rgba(14, 20, 34, .82);
       --panel-strong: rgba(10, 14, 24, .96);
       --b-gold: rgba(245, 200, 66, .26);
+      --line: rgba(245, 200, 66, .26);
       --white-line: rgba(255, 255, 255, .1);
       --border: rgba(255, 255, 255, .09);
       --muted: #8896ae;
       --dim: #4e5a6c;
       --txt: #edf0fa;
+      --success: #b8ffd0;
       --shadow: 0 32px 90px rgba(0, 0, 0, .55);
     }
 
@@ -670,12 +674,12 @@
         <div class="card-top">
           <div class="eyebrow">Email account setup</div>
           <h2 class="card-title">Enter the arena</h2>
-          <p class="card-sub">Create your account with email, then continue to the welcome dashboard with every creator control unlocked for 7 days.</p>
+          <p class="card-sub">7-day full access trial — no credit card required. Every creator control unlocked from day one.</p>
         </div>
 
         <div class="google-option">
-          <a href="/signup#signup-options" class="btn btn-secondary">Prefer Google? See signup options</a>
-          <p class="helper">Google starts from the signup options page. This page is for email setup.</p>
+          <a href="/auth/google" class="btn btn-secondary">Continue with Google instead →</a>
+          <p class="helper">Google signup takes one click. This page is for email setup.</p>
         </div>
 
         <div class="divider">Email details</div>
@@ -684,20 +688,20 @@
 
         <div class="form-grid">
           <div class="form-group">
-            <label for="name">Name</label>
-            <input id="name" type="text" autocomplete="name" placeholder="Creator name" />
+            <label for="name">Your name</label>
+            <input id="name" type="text" autocomplete="name" placeholder="Your name" />
           </div>
           <div class="form-group">
             <label for="email">Email</label>
             <input id="email" type="email" autocomplete="email" placeholder="you@example.com" />
           </div>
           <div class="form-group">
-            <label for="password">Password</label>
+            <label for="password">Password (8+ characters)</label>
             <input id="password" type="password" autocomplete="new-password" placeholder="Create a password" />
           </div>
           <div class="form-group">
-            <label for="tiktokUsername">TikTok username</label>
-            <input id="tiktokUsername" type="text" autocomplete="off" placeholder="yourusername" />
+            <label for="tiktokUsername">TikTok username (without @)</label>
+            <input id="tiktokUsername" type="text" autocomplete="off" placeholder="yourtiktokusername" />
           </div>
         </div>
 
@@ -739,6 +743,10 @@
       const value = new URLSearchParams(window.location.search).get('next') || '/dashboard/welcome';
       return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : '/dashboard/welcome';
     })();
+    const googleBtn = document.querySelector('.google-option a[href="/auth/google"]');
+    if (googleBtn && nextPath !== '/dashboard/welcome') {
+      googleBtn.href = `/auth/google?next=${encodeURIComponent(nextPath)}`;
+    }
 
     function escapeHtml(value) {
       return String(value || '')
