@@ -399,6 +399,32 @@
     }
     .inline-link:hover { color: var(--gold); }
 
+    .signup-prompt {
+      margin-top: 22px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    .signup-prompt p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+      margin-bottom: 12px;
+    }
+    .signup-prompt strong {
+      display: block;
+      color: var(--txt);
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+    .signup-actions {
+      display: grid;
+      gap: 10px;
+    }
+    .signup-actions .btn {
+      width: 100%;
+      min-height: 48px;
+    }
+
     /* Legacy details */
     .legacy-toggle {
       margin-top: 20px;
@@ -456,10 +482,6 @@
         <div class="kicker">Creator access</div>
         <h1>Enter your <span>command center.</span></h1>
         <p class="sub">Log in to control your TikTok LIVE battle overlay, open your room, manage sponsor moments, and prepare your stream for OBS or TikTok Studio.</p>
-        <div class="hero-actions">
-          <a href="/signup" class="btn btn-primary" id="signupLink">Create free account</a>
-          <a href="/register" class="btn btn-secondary" id="registerLink">Use email signup</a>
-        </div>
       </div>
       <div class="proof-grid" aria-label="Platform highlights">
         <div class="proof-tile">
@@ -510,6 +532,15 @@
       </form>
 
       <a href="/request-password-reset" class="inline-link">Forgot your password?</a>
+
+      <div class="signup-prompt">
+        <strong>New to IntoTheBattle?</strong>
+        <p>Create a free account after sign-in options, so returning creators can get into the dashboard first.</p>
+        <div class="signup-actions">
+          <a href="/signup" class="btn btn-primary" id="signupLink">Create free account</a>
+          <a href="/register" class="btn btn-secondary" id="registerLink">Use email signup</a>
+        </div>
+      </div>
 
       <details class="legacy-toggle">
         <summary>Legacy room access code</summary>
