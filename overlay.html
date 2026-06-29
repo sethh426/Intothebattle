@@ -264,10 +264,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
 /* ── Status / damage / banners ── */
 #status-badge {
-  position:fixed; bottom:12px; left:50%; transform:translateX(-50%);
+  position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
   background:rgba(0,0,0,0.75); backdrop-filter:blur(8px);
   border-radius:24px; padding:4px 16px; font-size:11px; font-weight:bold;
-  letter-spacing:1px; color:#aaa; pointer-events:none; z-index:9999;
+  letter-spacing:1px; color:#aaa; pointer-events:none; z-index:26;
   font-family:'Rajdhani',monospace; border:1px solid rgba(255,255,255,0.07);
   transition:color .2s,border-color .2s;
 }
@@ -276,10 +276,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 #status-badge.demo         { color:#ffd84f; text-shadow:0 0 4px #ffaa00; border-color:rgba(255,216,79,0.2); }
 
 .damage {
-  position:fixed; font-weight:900; font-size:clamp(18px,3vw,28px);
+  position:absolute; font-weight:900; font-size:clamp(18px,3vw,28px);
   color:#ff5050; text-shadow:0 0 16px rgba(255,80,80,0.95),2px 2px 8px rgba(0,0,0,0.9);
-  animation:floatDamage 0.85s ease-out forwards; pointer-events:none; z-index:9999;
+  animation:floatDamage 0.85s ease-out forwards; pointer-events:none; z-index:25;
   transform:translate(-50%,-50%); white-space:nowrap; font-family:'Rajdhani',sans-serif;
+  max-width:calc(100% - 48px); overflow:hidden; text-overflow:ellipsis; text-align:center;
 }
 .damage.kill     { color:#ffd84f; font-size:clamp(22px,4vw,34px);   text-shadow:0 0 20px rgba(255,216,79,0.95); }
 .damage.critical { color:#ff2244; font-size:clamp(24px,4.5vw,38px); text-shadow:0 0 24px rgba(255,34,68,1),0 0 48px rgba(255,100,0,0.6); }
@@ -293,7 +294,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   --banner-accent-rgb:122,252,255;
   --banner-accent-soft:rgba(122,252,255,0.18);
   --banner-duration:3200ms;
-  position:fixed; left:50%; top:50%; transform:translate(-50%,0); z-index:10000; pointer-events:none;
+  position:absolute; left:50%; top:50%; transform:translate(-50%,0); z-index:26; pointer-events:none;
   min-height:72px; max-height:88px; padding:0 18px; box-sizing:border-box; overflow:hidden;
   display:grid; grid-template-columns:58px minmax(0,1fr) 7px; align-items:center; gap:12px;
   font-family:'Rajdhani','Segoe UI',sans-serif; color:#f8fbff;
@@ -1165,6 +1166,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       <div class="sponsor-outro-title" id="sponsorOutroTitle">BACK TO THE BATTLE</div>
     </div>
   </div>
+  <div id="status-badge" class="disconnected">⚡ CONNECTING...</div>
 </div>
 
 <!-- CONTROL PANEL -->
@@ -1272,8 +1274,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     </div>
   </div>
 </div>
-
-<div id="status-badge" class="disconnected">⚡ CONNECTING...</div>
 
 <script src="/socket.io/socket.io.js"></script>
 
@@ -3162,6 +3162,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return { x: r.left + cx * (r.width / cw()), y: r.top + cy * (r.height / ch()) };
   }
 
+  function overlayScale() {
+    return {
+      x: container.clientWidth / Math.max(1, cw()),
+      y: container.clientHeight / Math.max(1, ch()),
+    };
+  }
+
+  function canvasToOverlay(cx, cy) {
+    const scale = overlayScale();
+    return { x: cx * scale.x, y: cy * scale.y };
+  }
+
   function getCombatEffectLane() {
     const frame = arenaFrame();
     const safe = arenaSafeFrame(frame, 0.055);
@@ -3483,7 +3495,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       <span class="banner-meter" aria-hidden="true"><span class="banner-meter-fill"></span></span>
     `;
     el.style.visibility = 'hidden';
-    document.body.appendChild(el);
+    container.appendChild(el);
     placeBannerAbovePlayers(el);
     requestAnimationFrame(() => {
       if (activeBanner?.el === el) placeBannerAbovePlayers(el);
@@ -3527,25 +3539,26 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function placeBannerFallback(el) {
     const layout = getHordeLayout();
-    const canvasRect = canvas.getBoundingClientRect();
     const frame = arenaFrame();
     const safe = arenaSafeFrame(frame, 0.04);
-    const scaleX = canvasRect.width / Math.max(1, cw());
-    const safeLeft = canvasRect.left + safe.x * scaleX;
-    const safeRight = canvasRect.left + safe.right * scaleX;
+    const scale = overlayScale();
+    const safeLeft = safe.x * scale.x;
+    const safeRight = safe.right * scale.x;
+    const safeTop = safe.y * scale.y;
+    const safeBottom = safe.bottom * scale.y;
     const safeWidth = Math.max(1, safeRight - safeLeft);
-    const left = canvasToViewport(layout.barX, layout.barY);
-    const right = canvasToViewport(layout.barX + layout.barW, layout.barY);
+    const left = canvasToOverlay(layout.barX, layout.barY);
+    const right = canvasToOverlay(layout.barX + layout.barW, layout.barY);
     const width = Math.min(Math.max(260, (right.x - left.x) * 0.92), safeWidth);
     el.style.width = `${width}px`;
     el.style.maxWidth = `${safeWidth}px`;
     const rect = el.getBoundingClientRect();
-    const scaleY = canvasRect.height / Math.max(1, ch());
-    const gap = Math.max(20, Math.min(34, layout.barH * 0.26 * scaleY));
-    const anchor = canvasToViewport(layout.x, Math.max(20, layout.barY));
+    const gap = Math.max(20, Math.min(34, layout.barH * 0.26 * scale.y));
+    const anchor = canvasToOverlay(layout.x, Math.max(20, layout.barY));
     const halfWidth = width / 2;
     el.style.left = `${clampNumber(anchor.x, safeLeft + halfWidth, safeRight - halfWidth)}px`;
-    el.style.top = `${Math.max(canvasRect.top + safe.y * scaleY, anchor.y - rect.height - gap)}px`;
+    const maxTop = Math.max(safeTop, safeBottom - rect.height);
+    el.style.top = `${clampNumber(anchor.y - rect.height - gap, safeTop, maxTop)}px`;
   }
 
   function placeBannerAbovePlayers(el) {
@@ -3557,13 +3570,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     const frame = arenaFrame();
     const safe = arenaSafeFrame(frame, 0.04);
-    const canvasRect = canvas.getBoundingClientRect();
-    const scaleX = canvasRect.width / Math.max(1, cw());
-    const scaleY = canvasRect.height / Math.max(1, ch());
-    const safeLeft = canvasRect.left + safe.x * scaleX;
-    const safeRight = canvasRect.left + safe.right * scaleX;
-    const safeTop = canvasRect.top + safe.y * scaleY;
-    const safeBottom = canvasRect.top + safe.bottom * scaleY;
+    const scale = overlayScale();
+    const safeLeft = safe.x * scale.x;
+    const safeRight = safe.right * scale.x;
+    const safeTop = safe.y * scale.y;
+    const safeBottom = safe.bottom * scale.y;
     const safeWidth = Math.max(1, safeRight - safeLeft);
     const playerBounds = playersForBanner.map((_, index) => {
       const pos = getPlayerPosition(index, playersForBanner.length);
@@ -3572,62 +3583,80 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const playerLeft = Math.min(...playerBounds.map(bounds => bounds.left));
     const playerRight = Math.max(...playerBounds.map(bounds => bounds.right));
     const playerTop = Math.min(...playerBounds.map(bounds => bounds.top));
-    const rowLeft = canvasRect.left + Math.max(safe.x, playerLeft) * scaleX;
-    const rowRight = canvasRect.left + Math.min(safe.right, playerRight) * scaleX;
-    const arenaCenter = canvasRect.left + (frame.x + frame.w / 2) * scaleX;
+    const rowLeft = Math.max(safe.x, playerLeft) * scale.x;
+    const rowRight = Math.min(safe.right, playerRight) * scale.x;
+    const arenaCenter = (frame.x + frame.w / 2) * scale.x;
     const rowWidth = Math.max(1, rowRight - rowLeft);
     const hordeLayout = getHordeLayout();
-    const hordeWidth = Math.max(1, hordeLayout.barW * scaleX);
-    const maxWidth = Math.max(240, safeWidth - Math.max(24, frame.w * scaleX * 0.035));
+    const hordeWidth = Math.max(1, hordeLayout.barW * scale.x);
+    const maxWidth = Math.max(240, safeWidth - Math.max(24, frame.w * scale.x * 0.035));
     const minWidth = Math.min(maxWidth, 280);
     const preferredWidth = Math.min(
       maxWidth,
       Math.max(minWidth, Math.min(rowWidth * 0.9, hordeWidth * 0.98, safeWidth * 0.82))
     );
 
-    const forceCompact = canvasRect.height <= 540 || preferredWidth < 760;
-    const forceMicro = canvasRect.height <= 420 || preferredWidth < 560;
+    const forceCompact = container.clientHeight <= 540 || preferredWidth < 760;
+    const forceMicro = container.clientHeight <= 420 || preferredWidth < 560;
     el.classList.remove('is-compact', 'is-micro');
     if (forceCompact) el.classList.add('is-compact');
     if (forceMicro) el.classList.add('is-micro');
     el.style.width = `${preferredWidth}px`;
     el.style.maxWidth = `${maxWidth}px`;
 
-    const playerTopViewport = canvasRect.top + playerTop * scaleY;
-    const baseGap = Math.max(16, Math.min(26, (frame.h * scaleY) * 0.044));
+    const playerTopOverlay = playerTop * scale.y;
+    const baseGap = Math.max(16, Math.min(26, (frame.h * scale.y) * 0.044));
     let gap = baseGap;
     let rect = el.getBoundingClientRect();
-    let availableHeight = playerTopViewport - gap - safeTop;
+    let availableHeight = playerTopOverlay - gap - safeTop;
     if (availableHeight < rect.height) {
       el.classList.add('is-compact');
       rect = el.getBoundingClientRect();
-      availableHeight = playerTopViewport - gap - safeTop;
+      availableHeight = playerTopOverlay - gap - safeTop;
     }
     if (availableHeight < rect.height) {
       el.classList.add('is-micro');
       rect = el.getBoundingClientRect();
     }
-    const availableGap = playerTopViewport - safeTop - rect.height;
+    const availableGap = playerTopOverlay - safeTop - rect.height;
     gap = Math.max(0, Math.min(baseGap, availableGap));
 
     const halfWidth = preferredWidth / 2;
     const centerX = clampNumber(arenaCenter, safeLeft + halfWidth, safeRight - halfWidth);
-    const targetTop = playerTopViewport - gap - rect.height;
-    const maxTop = Math.min(safeBottom - rect.height, targetTop);
-    const top = Math.max(safeTop, Math.min(targetTop, maxTop));
+    const targetTop = playerTopOverlay - gap - rect.height;
+    const maxTop = Math.max(safeTop, safeBottom - rect.height);
+    const top = clampNumber(targetTop, safeTop, maxTop);
     el.style.left = `${centerX}px`;
     el.style.top = `${top}px`;
   }
 
   function showDamage(cx, cy, damage, kill, critical) {
-    const vp = canvasToViewport(cx, cy);
+    const point = canvasToOverlay(cx, cy);
     const el = document.createElement('div');
     el.className  = 'damage' + (kill ? ' kill' : critical ? ' critical' : '');
     el.textContent = kill ? '💀 KILL!' : critical ? `⚡ ${Math.round(damage)}` : `-${Math.round(damage)}`;
     el.textContent = kill ? 'KO!' : critical ? `CRIT ${Math.round(damage)}` : `-${Math.round(damage)}`;
-    el.style.left = vp.x + 'px';
-    el.style.top  = vp.y + 'px';
-    document.body.appendChild(el);
+    el.style.visibility = 'hidden';
+    container.appendChild(el);
+    const frame = arenaFrame();
+    const safe = arenaSafeFrame(frame, 0.055);
+    const scale = overlayScale();
+    const safeLeft = safe.x * scale.x;
+    const safeRight = safe.right * scale.x;
+    const safeTop = safe.y * scale.y;
+    const safeBottom = safe.bottom * scale.y;
+    const rect = el.getBoundingClientRect();
+    const halfWidth = rect.width / 2;
+    const halfHeight = rect.height / 2;
+    const minX = safeLeft + halfWidth;
+    const maxX = safeRight - halfWidth;
+    const minY = safeTop + rect.height * 2;
+    const maxY = safeBottom - halfHeight;
+    const x = minX <= maxX ? clampNumber(point.x, minX, maxX) : (safeLeft + safeRight) / 2;
+    const y = minY <= maxY ? clampNumber(point.y, minY, maxY) : (safeTop + safeBottom) / 2;
+    el.style.left = `${x}px`;
+    el.style.top = `${y}px`;
+    el.style.visibility = '';
     setTimeout(() => el.remove(), 950);
   }
 
