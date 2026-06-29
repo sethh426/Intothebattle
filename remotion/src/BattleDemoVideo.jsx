@@ -10,7 +10,7 @@ import {
   useVideoConfig,
 } from 'remotion';
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// Constants
 export const BATTLE_DEMO_FPS = 30;
 export const BATTLE_DEMO_DURATION_FRAMES = 900; // 30 seconds
 
@@ -27,48 +27,48 @@ const colors = {
   green: '#77f0a1',
 };
 
-// ── Shot definitions ──────────────────────────────────────────────────────────
+// Shot definitions
 // Each shot aligns with a burst fired at source timestamps:
-//   Burst 1 @ 1.2s (36f)  → Shot 1 opens on live action
-//   Burst 2 @ 5.5s (165f) → Shot 2 mid-stream shows banner events
-//   Burst 3 @ 10.0s (300f)→ Shot 3 chat effects phase
-//   Burst 4 @ 14.5s (435f)→ Shot 4 gift/social events
-//   Burst 5 @ 19.0s (570f)→ Shot 5 energy peak
-//   Burst 6 @ 24.0s (720f)→ Shot 6 residual action + brand close
+//   Burst 1 @ 1.2s (36f) - Shot 1 opens on live action
+//   Burst 2 @ 5.5s (165f) - Shot 2 mid-stream shows banner events
+//   Burst 3 @ 10.0s (300f) - Shot 3 chat effects phase
+//   Burst 4 @ 14.5s (435f) - Shot 4 gift/social events
+//   Burst 5 @ 19.0s (570f) - Shot 5 energy peak
+//   Burst 6 @ 24.0s (720f) - Shot 6 residual action + brand close
 const shots = [
   {
     start: 0,
     end: 150,
-    kicker: 'TikTok LIVE battle overlay',
-    headline: 'Chat becomes combat.',
-    subcopy: 'The arena activates the moment you go live.',
+    kicker: 'Real TikTok LIVE overlay',
+    headline: 'Chat fights live.',
+    subcopy: 'Players, horde, boss pressure, and effects stay readable.',
     tone: colors.gold,
     side: 'left',
   },
   {
     start: 150,
     end: 300,
-    kicker: 'Real browser-source overlay',
-    headline: 'This is what your stream sees.',
-    subcopy: 'One signed URL in OBS or TikTok Studio — done.',
+    kicker: 'Viewer actions',
+    headline: 'Every event lands.',
+    subcopy: 'Comments, gifts, follows, shares, and attacks become visible.',
     tone: colors.cyan,
     side: 'right',
   },
   {
     start: 300,
     end: 450,
-    kicker: 'Viewer chat commands',
-    headline: 'They type. It fires.',
-    subcopy: '!attack, !laser, !heal — every command becomes a visible moment.',
-    tone: colors.cyan,
+    kicker: 'Premium layout',
+    headline: 'Nothing collides.',
+    subcopy: 'Banners, players, boss, horde, and impacts hold their lanes.',
+    tone: colors.green,
     side: 'left',
   },
   {
     start: 450,
     end: 600,
-    kicker: 'Gifts, follows, shares',
-    headline: 'Every action lands on screen.',
-    subcopy: 'Viewer engagement stops being invisible.',
+    kicker: 'OBS and TikTok Studio ready',
+    headline: 'Drop it in live.',
+    subcopy: 'One browser source turns the stream into an arena.',
     tone: colors.red,
     side: 'right',
   },
@@ -85,27 +85,27 @@ const shots = [
     start: 735,
     end: 900,
     kicker: 'IntoTheBattle',
-    headline: 'Start the fight.',
-    subcopy: '7-day free trial. No card required.',
+    headline: 'Launch the arena.',
+    subcopy: 'A finished engagement layer for tomorrow night.',
     tone: colors.gold,
     side: 'center',
   },
 ];
 
-// ── Camera keyframes ──────────────────────────────────────────────────────────
-// Shot 1: Pull back from 1.12→1.0 over first 50 frames (cinematic reveal), stay wide
+// Camera keyframes
+// Shot 1: Pull back from 1.12 to 1.0 over first 50 frames, then stay wide.
 // Shot 2: Hold 1.0, subtle push mid-shot
 // Shot 3: 1.0 at cut, push toward center
 // Shot 4: 1.0 at cut, gentle pan
 // Shot 5: 1.0 at cut, most dramatic push (energy peak)
 // Shot 6: 1.0 steady for brand close
-// MAX scale anywhere: 1.09 — no cropping of UI elements
+// Max scale anywhere: 1.09 so UI elements do not crop.
 const cameraKeys = {
   landscape: {
     frame: [0,   50, 150, 215, 300, 365, 450, 515, 600, 660, 735, 840, 900],
-    scale: [1.12, 1.0, 1.0, 1.04,1.0, 1.0, 1.0, 1.06,1.0, 1.0, 1.0, 1.0, 1.0],
-    x:     [0,   0,   0,  -8,   0,   0,   0,   0,   0,   0,   0,   0,   0],
-    y:     [0,   0,   0,  14,   0,   0,   0, -12,  0,   0,   0,   8,   8],
+    scale: [1.06, 1.0, 1.0, 1.035,1.0, 1.0, 1.0, 1.045,1.0, 1.0, 1.0, 1.0, 1.0],
+    x:     [0,   0,   0,  -6,   0,   0,   0,  -4,   0,   0,   0,   0,   0],
+    y:     [0,   0,   0,   8,   0,   0,   0, -10,   0,   0,   0,   6,   6],
   },
   vertical: {
     frame: [0,   50, 150, 215, 300, 365, 450, 515, 600, 660, 735, 840, 900],
@@ -115,7 +115,7 @@ const cameraKeys = {
   },
 };
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers
 function ease(frame, input, output, easing = Easing.bezier(0.16, 1, 0.3, 1)) {
   return interpolate(frame, input, output, {
     easing,
@@ -150,7 +150,7 @@ function getCamera(frame, vertical) {
   };
 }
 
-// ── Components ────────────────────────────────────────────────────────────────
+// Components
 
 function RealFootage({ frame, vertical }) {
   const cam = getCamera(frame, vertical);
@@ -217,7 +217,7 @@ function ColorGrade({ frame, vertical }) {
           opacity: 0.22,
         }}
       />
-      {/* Per-shot tonal tint — subtle color identity per scene */}
+      {/* Per-shot tonal tint with subtle color identity per scene. */}
       <div
         style={{
           position: 'absolute',
@@ -239,28 +239,26 @@ function BigType({ frame, width, height, vertical }) {
 
   const isCenter = shot.side === 'center';
   const isRight = shot.side === 'right' && !vertical;
+  const isCTA = shot.side === 'center';
 
   const left = vertical
     ? 70
     : isCenter
       ? 80
       : isRight
-        ? width - 620
-        : 82;
+        ? width - 570
+        : 66;
   const top = vertical
     ? height - 620
-    : isCenter
-      ? height / 2 - 180
-      : height - 430;
+    : isCTA
+      ? height - 344
+      : height - 360;
   const maxW = vertical
     ? width - 140
     : isCenter
       ? width - 160
-      : 560;
+      : 500;
   const align = isRight ? 'right' : 'left';
-
-  // Shot 6 (center/CTA) gets a special logo-above layout
-  const isCTA = shot.side === 'center';
 
   return (
     <div
@@ -275,15 +273,15 @@ function BigType({ frame, width, height, vertical }) {
         transformOrigin: isRight ? '100% 50%' : '0 50%',
       }}
     >
-      {/* Dark scrim behind text — lighter falloff than before */}
+      {/* Dark scrim behind text with lighter falloff than before. */}
       <div
         style={{
           position: 'absolute',
           zIndex: 0,
-          left: vertical ? -80 : isRight ? -170 : -90,
-          right: vertical ? -80 : isRight ? -90 : -170,
-          top: -130,
-          bottom: -140,
+          left: vertical ? -80 : isRight ? -150 : -82,
+          right: vertical ? -80 : isRight ? -82 : -150,
+          top: -108,
+          bottom: -116,
           background: isRight
             ? 'radial-gradient(ellipse at 82% 50%, rgba(2,4,10,0.92), rgba(2,4,10,0.60) 36%, rgba(2,4,10,0) 68%)'
             : 'radial-gradient(ellipse at 18% 50%, rgba(2,4,10,0.92), rgba(2,4,10,0.60) 36%, rgba(2,4,10,0) 68%)',
@@ -299,7 +297,7 @@ function BigType({ frame, width, height, vertical }) {
           alignItems: 'center',
           gap: vertical ? 14 : 11,
           color: shot.tone,
-          fontSize: vertical ? 28 : 18,
+          fontSize: vertical ? 28 : 17,
           fontWeight: 900,
           fontFamily: "'Black Ops One', 'Arial Black', sans-serif",
           textTransform: 'uppercase',
@@ -325,14 +323,14 @@ function BigType({ frame, width, height, vertical }) {
         style={{
           position: 'relative',
           zIndex: 1,
-          marginTop: vertical ? 18 : 13,
+          marginTop: vertical ? 18 : 10,
           color: colors.cream,
           fontFamily: "'Black Ops One', 'Arial Black', sans-serif",
-          fontSize: vertical ? 108 : isCTA ? 80 : 70,
+          fontSize: vertical ? 108 : isCTA ? 70 : 55,
           lineHeight: 0.92,
           textTransform: 'uppercase',
           textShadow: '0 4px 16px rgba(0,0,0,0.98), 0 12px 48px rgba(0,0,0,0.90)',
-          letterSpacing: '-0.01em',
+          letterSpacing: 0,
         }}
       >
         {shot.headline}
@@ -343,14 +341,14 @@ function BigType({ frame, width, height, vertical }) {
         style={{
           position: 'relative',
           zIndex: 1,
-          marginTop: vertical ? 22 : 17,
+          marginTop: vertical ? 22 : 12,
           color: '#d0dcf2',
-          fontSize: vertical ? 33 : 22,
+          fontSize: vertical ? 33 : 20,
           lineHeight: 1.22,
           fontWeight: 700,
           fontFamily: "'Inter', Arial, sans-serif",
           textShadow: '0 2px 12px rgba(0,0,0,0.98), 0 8px 28px rgba(0,0,0,0.90)',
-          maxWidth: vertical ? width - 140 : isCTA ? 600 : 510,
+          maxWidth: vertical ? width - 140 : isCTA ? 560 : 460,
           marginLeft: align === 'right' ? 'auto' : 0,
         }}
       >
@@ -384,7 +382,7 @@ function CutLight({ frame, width, height, vertical }) {
           />
         );
       })}
-      {/* Shot-toned flash — reduced from 0.14 to 0.08 */}
+      {/* Shot-toned flash reduced from 0.14 to 0.08. */}
       <div
         style={{
           position: 'absolute',
@@ -454,7 +452,7 @@ function EdgeBrand({ frame, width, height, vertical }) {
   );
 }
 
-// Thin progress strip at bottom — shows video position
+// Thin progress strip at bottom shows video position.
 function ShotProgress({ frame, width, height }) {
   const shot = currentShot(frame);
   const totalProgress = frame / BATTLE_DEMO_DURATION_FRAMES;
@@ -484,7 +482,7 @@ function ShotProgress({ frame, width, height }) {
   );
 }
 
-// ── Root composition ──────────────────────────────────────────────────────────
+// Root composition
 export function BattleDemoVideo({ variant = 'landscape' }) {
   const frame = useCurrentFrame();
   const { width, height } = useVideoConfig();

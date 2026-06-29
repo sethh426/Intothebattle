@@ -1191,11 +1191,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           </div>
           <div class="ctrl">
             <div class="ctrl-row"><span class="ctrl-lbl">Horizontal Offset</span><span class="ctrl-val" id="offsetXValue">0</span></div>
-            <input id="offsetXControl" type="range" min="-400" max="400" value="0" />
+            <input id="offsetXControl" type="range" min="-160" max="160" value="0" />
           </div>
           <div class="ctrl">
             <div class="ctrl-row"><span class="ctrl-lbl">Vertical Position</span><span class="ctrl-val" id="offsetYValue">0</span></div>
-            <input id="offsetYControl" type="range" min="-200" max="200" value="0" />
+            <input id="offsetYControl" type="range" min="-80" max="80" value="0" />
           </div>
           <div class="ctrl">
             <div class="ctrl-row"><span class="ctrl-lbl">Layout Height</span><span class="ctrl-val" id="heightValue">85%</span></div>
@@ -1203,7 +1203,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           </div>
           <div class="ctrl">
             <div class="ctrl-row"><span class="ctrl-lbl">Zoom</span><span class="ctrl-val" id="zoomValue">100%</span></div>
-            <input id="zoomControl" type="range" min="60" max="140" value="100" />
+            <input id="zoomControl" type="range" min="80" max="112" value="100" />
           </div>
         </div>
       </div>
@@ -1332,6 +1332,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let offsetY         = 0;
   let layoutZoom      = 1;
   const hordeThreshold = 5;      // now fixed
+  const OVERLAY_STAGE = Object.freeze({
+    framePad: 0.055,
+    zones: Object.freeze({
+      banner: Object.freeze({ left: 0.12, top: 0.065, right: 0.88, bottom: 0.195 }),
+      players: Object.freeze({ left: 0.055, top: 0.265, right: 0.945, bottom: 0.49 }),
+      effects: Object.freeze({ left: 0.13, top: 0.515, right: 0.87, bottom: 0.715 }),
+      boss: Object.freeze({ left: 0.29, top: 0.525, right: 0.71, bottom: 0.695 }),
+      horde: Object.freeze({ left: 0.105, top: 0.765, right: 0.895, bottom: 0.895 }),
+      status: Object.freeze({ left: 0.34, top: 0.912, right: 0.66, bottom: 0.965 }),
+    }),
+  });
   let backgroundImg   = null;
   let socket          = null;
   const DEFAULT_OVERLAY_AUDIO_CONFIG = Object.freeze({
@@ -2528,6 +2539,29 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       enqueueVisualEvent('giftCelebration', { uniqueId: 'p3', nickname: 'GhostByte', giftName: 'Galaxy', tier: 'legendary', diamonds: 1200 }, handleGiftCelebration);
       enqueueVisualEvent('roundEvent', { type: 'round_started', label: 'Round started' }, handleRoundEvent, { mergeKey: () => 'round_started' });
     },
+    testBoss: () => {
+      handleBossWave({
+        type: 'started',
+        active: true,
+        hp: 720,
+        maxHp: 1000,
+        remainingMs: 76000,
+        durationMs: 90000,
+        nextAttackAt: Date.now() + 2600,
+        attackIntervalMs: 11000,
+      });
+      handleBossWave({
+        type: 'attack',
+        active: true,
+        hp: 680,
+        maxHp: 1000,
+        targets: topPlayers().slice(0, 4),
+        remainingMs: 73000,
+        durationMs: 90000,
+        nextAttackAt: Date.now() + 2400,
+        attackIntervalMs: 11000,
+      });
+    },
   };
 
   // ── Demo players ──
@@ -2703,22 +2737,22 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       return;
     }
     if (allowLayoutCustomization) {
-      layoutGap      = s.gap       ?? 0;
-      offsetX        = s.offsetX   ?? 0;
-      offsetY        = s.offsetY   ?? 0;
-      heightControl.value  = s.height    ?? 85;
-      zoomControl.value    = s.zoom      ?? 100;
+      layoutGap      = clampNumber(s.gap ?? 0, Number(gapControl.min), Number(gapControl.max));
+      offsetX        = clampNumber(s.offsetX ?? 0, Number(offsetXControl.min), Number(offsetXControl.max));
+      offsetY        = clampNumber(s.offsetY ?? 0, Number(offsetYControl.min), Number(offsetYControl.max));
+      heightControl.value  = clampNumber(s.height ?? 85, Number(heightControl.min), Number(heightControl.max));
+      zoomControl.value    = clampNumber(s.zoom ?? 100, Number(zoomControl.min), Number(zoomControl.max));
       gapControl.value     = layoutGap;
       offsetXControl.value = offsetX;
       offsetYControl.value = offsetY;
-      layoutZoom           = (s.zoom ?? 100) / 100;
+      layoutZoom           = Number(zoomControl.value) / 100;
       container.style.height = heightControl.value + 'vh';
     } else {
       applyFixedProductionLayout();
     }
     darkMode       = s.darkMode !== undefined ? s.darkMode : true;
-    shotSpeedControl.value = s.shotSpeed ?? 100;
-    overlaySettings.shotSpeed = (s.shotSpeed ?? 100) / 100;
+    shotSpeedControl.value = clampNumber(s.shotSpeed ?? 100, Number(shotSpeedControl.min), Number(shotSpeedControl.max));
+    overlaySettings.shotSpeed = Number(shotSpeedControl.value) / 100;
     overlaySettings.laserColor = s.laserColor || '#7afcff';
     overlaySettings.shotType  = normalizeEffectType(s.shotType);
     overlaySettings.backgroundFit = s.backgroundFit === 'cover' ? 'cover' : (overlaySettings.backgroundFit || 'contain');
@@ -2914,16 +2948,20 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function getPlayerCardMetrics(total = 1) {
-    const W = cw(), H = ch();
-    const frame = arenaFrame();
-    const requestedCardH = frame.h * (isPublicDemo ? 0.42 : 0.35) * layoutZoom;
+    const stage = computeOverlayLayout();
+    const frame = stage.frame;
+    const playerZone = stage.zones.players;
+    const requestedCardH = Math.min(
+      frame.h * (isPublicDemo ? 0.31 : 0.285),
+      playerZone.h * (isPublicDemo ? 1.32 : 1.2)
+    ) * layoutZoom;
     const requestedCardW = requestedCardH * 0.72;
     const baseGap = requestedCardW * (total >= 5 ? 0.035 : total === 4 ? 0.05 : total === 3 ? 0.08 : 0.11);
-    const minGap = Math.max(6, Math.min(12, requestedCardW * 0.035));
-    const maxGap = requestedCardW * (total >= 5 ? 0.12 : total === 4 ? 0.16 : total === 3 ? 0.24 : 0.32);
+    const minGap = stage.gap * 2.1;
+    const maxGap = requestedCardW * (total >= 5 ? 0.16 : total === 4 ? 0.2 : total === 3 ? 0.28 : 0.36);
     const gapScale = total >= 5 ? 0.18 : total === 4 ? 0.24 : 0.32;
     const visualGap = Math.min(Math.max(minGap, maxGap), Math.max(minGap, baseGap + Math.max(0, layoutGap) * gapScale));
-    const availableW = Math.max(240, frame.w - Math.max(32, Math.min(W, H) * 0.08) * 2);
+    const availableW = Math.max(240, playerZone.w - stage.gap * 2);
     const naturalWidth = total > 1 ? requestedCardW * total + visualGap * (total - 1) : requestedCardW;
     const fitScale = naturalWidth > availableW ? availableW / naturalWidth : 1;
     const cardH = requestedCardH * fitScale;
@@ -2976,30 +3014,30 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function getPlayerPosition(index, total) {
     const W = cw(), H = ch();
     const { cardW, spacing, totalWidth } = getPlayerCardMetrics(total);
-    const frame = arenaFrame();
-    const liveBoardY = frame.y + frame.h * 0.39;
+    const stage = computeOverlayLayout();
+    const playerZone = stage.zones.players;
+    const liveBoardY = playerZone.y + playerZone.h * 0.55;
     const baseY = isPublicDemo ? H * demoPlayerYRatio : liveBoardY;
     const desired = {
-      x: (W - totalWidth) / 2 + offsetX + index * spacing + cardW / 2,
-      y: baseY + offsetY + H * 0.16 * (1 - layoutZoom),
+      x: playerZone.x + (playerZone.w - totalWidth) / 2 + offsetX + index * spacing + cardW / 2,
+      y: baseY + offsetY * 0.45 + H * 0.1 * (1 - layoutZoom),
     };
-    const safe = arenaSafeFrame(frame, 0.045);
-    return clampRectPositionToFrame(desired, getPlayerCardDrawMetrics(desired, total), safe);
+    return clampRectPositionToFrame(desired, getPlayerCardDrawMetrics(desired, total), playerZone);
   }
 
   function getHordeLayout() {
     const W = cw(), H = ch();
-    const frame = arenaFrame();
-    const safe = arenaSafeFrame(frame, 0.045);
+    const stage = computeOverlayLayout();
+    const frame = stage.frame;
+    const hordeZone = stage.zones.horde;
     const ui = canvasUiScale();
-    const pad = Math.max(20 * ui, Math.min(W, H) * 0.04);
-    const barW = Math.min(safe.w, frame.w * 0.74 + Math.min(150, frame.h * 0.1));
-    const barH = Math.max(68 * ui, Math.min(118 * ui, frame.h * 0.136 * layoutZoom));
-    const centerX = clampNumber(frame.x + frame.w / 2 + offsetX * 0.45, safe.x + barW / 2, safe.right - barW / 2);
-    const liveHordeTopY = frame.y + frame.h * 0.72;
+    const barW = Math.min(hordeZone.w, frame.w * 0.72);
+    const barH = Math.max(56 * ui, Math.min(hordeZone.h, 96 * ui, frame.h * 0.115 * layoutZoom));
+    const centerX = clampNumber(hordeZone.x + hordeZone.w / 2 + offsetX * 0.22, hordeZone.x + barW / 2, hordeZone.right - barW / 2);
+    const liveHordeTopY = hordeZone.y + hordeZone.h * 0.42 - barH / 2;
     const desiredTopY = isPublicDemo ? H * demoHordeTopRatio : liveHordeTopY + offsetY * 0.34;
-    const minTopY = Math.max(safe.y + safe.h * 0.48, frame.y + frame.h * 0.5);
-    const maxTopY = safe.bottom - barH;
+    const minTopY = hordeZone.y;
+    const maxTopY = hordeZone.bottom - barH;
     const topY = clampNumber(desiredTopY, minTopY, maxTopY);
     return {
       x: centerX,
@@ -3033,20 +3071,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function getBossLayout() {
-    const frame = arenaFrame();
-    const safe = arenaSafeFrame(frame, 0.055);
+    const stage = computeOverlayLayout();
+    const frame = stage.frame;
+    const bossZone = stage.zones.boss;
     const ui = canvasUiScale();
     const hordeLayout = getHordeLayout();
-    const r = Math.max(34 * ui, Math.min(64 * ui, frame.h * 0.088));
-    const x = clampNumber(frame.x + frame.w * 0.5, safe.x + r * 1.4, safe.right - r * 1.4);
-    const desiredY = frame.y + frame.h * 0.595;
-    const maxY = hordeLayout.barY - r * 1.8;
-    const minY = Math.max(safe.y + r * 1.3, frame.y + frame.h * 0.49);
+    const r = Math.max(30 * ui, Math.min(56 * ui, bossZone.h * 0.33, frame.h * 0.074));
+    const x = clampNumber(bossZone.x + bossZone.w / 2, bossZone.x + r * 1.5, bossZone.right - r * 1.5);
+    const desiredY = bossZone.y + bossZone.h * 0.42;
+    const maxY = Math.min(bossZone.bottom - r * 1.55, hordeLayout.barY - stage.gap - r * 1.2);
+    const minY = bossZone.y + r * 1.35;
     const y = Math.max(minY, Math.min(maxY, desiredY));
-    const panelW = Math.max(250 * ui, Math.min(frame.w * 0.46, 430 * ui));
-    const panelH = Math.max(62 * ui, 74 * ui);
-    const panelX = clampNumber(x - panelW / 2, safe.x, safe.right - panelW);
-    const panelY = clampNumber(y + r * 0.72, safe.y, safe.bottom - panelH);
+    const panelW = Math.max(230 * ui, Math.min(bossZone.w * 0.94, 380 * ui));
+    const panelH = Math.max(54 * ui, 66 * ui);
+    const panelX = clampNumber(x - panelW / 2, bossZone.x, bossZone.right - panelW);
+    const panelY = clampNumber(y + r * 0.74, bossZone.y, bossZone.bottom - panelH);
     return {
       x,
       y,
@@ -3174,13 +3213,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return { x: cx * scale.x, y: cy * scale.y };
   }
 
+  function canvasRectToOverlay(rect) {
+    const scale = overlayScale();
+    return makeRect(rect.x * scale.x, rect.y * scale.y, rect.w * scale.x, rect.h * scale.y);
+  }
+
   function getCombatEffectLane() {
-    const frame = arenaFrame();
-    const safe = arenaSafeFrame(frame, 0.055);
-    const ui = canvasUiScale();
+    const layout = computeOverlayLayout();
+    const effectZone = bossWaveState?.active ? layout.zones.effects : insetRect(layout.zones.effects, layout.gap * 0.4);
     const hordeLayout = getHordeLayout();
     const top = topPlayers();
-    let playerBottom = frame.y + frame.h * 0.49;
+    let playerBottom = layout.zones.players.bottom;
 
     if (top.length) {
       const playerBounds = top.map((_, index) => {
@@ -3190,19 +3233,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       playerBottom = Math.max(...playerBounds.map(bounds => bounds.bottom));
     }
 
-    let laneTop = clampNumber(playerBottom + 20 * ui, safe.y + safe.h * 0.39, safe.y + safe.h * 0.61);
-    let laneBottom = Math.min(hordeLayout.barY - 24 * ui, safe.y + safe.h * 0.75, safe.bottom - 24 * ui);
-    const minHeight = Math.max(52 * ui, frame.h * 0.052);
+    let laneTop = Math.max(effectZone.top, playerBottom + layout.gap);
+    let laneBottom = Math.min(effectZone.bottom, hordeLayout.barY - layout.gap);
+    const minHeight = Math.max(48 * canvasUiScale(), layout.frame.h * 0.048);
     if (laneBottom - laneTop < minHeight) {
-      const center = clampNumber(frame.y + frame.h * 0.61, safe.y + minHeight / 2, safe.bottom - minHeight / 2);
+      const center = clampNumber(effectZone.y + effectZone.h / 2, effectZone.y + minHeight / 2, effectZone.bottom - minHeight / 2);
       laneTop = center - minHeight / 2;
       laneBottom = center + minHeight / 2;
     }
 
-    const inset = Math.max(34 * ui, frame.w * 0.028);
     return {
-      x: safe.x + inset,
-      right: safe.right - inset,
+      x: effectZone.x,
+      right: effectZone.right,
       top: laneTop,
       bottom: laneBottom,
       centerY: (laneTop + laneBottom) / 2,
@@ -3472,7 +3514,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       closing.el.classList.add('closing');
       setTimeout(() => closing.el && closing.el.remove(), 240);
     }
-    if (renderNext) setTimeout(renderNextBanner, 210);
+    if (renderNext) setTimeout(renderNextBanner, 280);
   }
 
   function renderBannerItem(item) {
@@ -3538,94 +3580,39 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   });
 
   function placeBannerFallback(el) {
-    const layout = getHordeLayout();
-    const frame = arenaFrame();
-    const safe = arenaSafeFrame(frame, 0.04);
-    const scale = overlayScale();
-    const safeLeft = safe.x * scale.x;
-    const safeRight = safe.right * scale.x;
-    const safeTop = safe.y * scale.y;
-    const safeBottom = safe.bottom * scale.y;
-    const safeWidth = Math.max(1, safeRight - safeLeft);
-    const left = canvasToOverlay(layout.barX, layout.barY);
-    const right = canvasToOverlay(layout.barX + layout.barW, layout.barY);
-    const width = Math.min(Math.max(260, (right.x - left.x) * 0.92), safeWidth);
-    el.style.width = `${width}px`;
-    el.style.maxWidth = `${safeWidth}px`;
-    const rect = el.getBoundingClientRect();
-    const gap = Math.max(20, Math.min(34, layout.barH * 0.26 * scale.y));
-    const anchor = canvasToOverlay(layout.x, Math.max(20, layout.barY));
-    const halfWidth = width / 2;
-    el.style.left = `${clampNumber(anchor.x, safeLeft + halfWidth, safeRight - halfWidth)}px`;
-    const maxTop = Math.max(safeTop, safeBottom - rect.height);
-    el.style.top = `${clampNumber(anchor.y - rect.height - gap, safeTop, maxTop)}px`;
+    placeBannerInZone(el);
   }
 
   function placeBannerAbovePlayers(el) {
-    const playersForBanner = topPlayers();
-    if (!playersForBanner.length) {
-      placeBannerFallback(el);
-      return;
-    }
+    placeBannerInZone(el);
+  }
 
-    const frame = arenaFrame();
-    const safe = arenaSafeFrame(frame, 0.04);
-    const scale = overlayScale();
-    const safeLeft = safe.x * scale.x;
-    const safeRight = safe.right * scale.x;
-    const safeTop = safe.y * scale.y;
-    const safeBottom = safe.bottom * scale.y;
-    const safeWidth = Math.max(1, safeRight - safeLeft);
-    const playerBounds = playersForBanner.map((_, index) => {
-      const pos = getPlayerPosition(index, playersForBanner.length);
-      return getPlayerCardDrawMetrics(pos, playersForBanner.length);
-    });
-    const playerLeft = Math.min(...playerBounds.map(bounds => bounds.left));
-    const playerRight = Math.max(...playerBounds.map(bounds => bounds.right));
-    const playerTop = Math.min(...playerBounds.map(bounds => bounds.top));
-    const rowLeft = Math.max(safe.x, playerLeft) * scale.x;
-    const rowRight = Math.min(safe.right, playerRight) * scale.x;
-    const arenaCenter = (frame.x + frame.w / 2) * scale.x;
-    const rowWidth = Math.max(1, rowRight - rowLeft);
-    const hordeLayout = getHordeLayout();
-    const hordeWidth = Math.max(1, hordeLayout.barW * scale.x);
-    const maxWidth = Math.max(240, safeWidth - Math.max(24, frame.w * scale.x * 0.035));
-    const minWidth = Math.min(maxWidth, 280);
-    const preferredWidth = Math.min(
-      maxWidth,
-      Math.max(minWidth, Math.min(rowWidth * 0.9, hordeWidth * 0.98, safeWidth * 0.82))
-    );
-
-    const forceCompact = container.clientHeight <= 540 || preferredWidth < 760;
-    const forceMicro = container.clientHeight <= 420 || preferredWidth < 560;
+  function placeBannerInZone(el) {
+    const stage = computeOverlayLayout();
+    const zone = canvasRectToOverlay(stage.zones.banner);
+    const maxWidth = Math.max(220, Math.min(zone.w, container.clientWidth * 0.62));
+    const preferredWidth = Math.min(maxWidth, Math.max(240, zone.w * 0.92));
+    const forceCompact = zone.h <= 96 || preferredWidth < 720;
+    const forceMicro = zone.h <= 70 || preferredWidth < 500;
     el.classList.remove('is-compact', 'is-micro');
     if (forceCompact) el.classList.add('is-compact');
     if (forceMicro) el.classList.add('is-micro');
     el.style.width = `${preferredWidth}px`;
     el.style.maxWidth = `${maxWidth}px`;
 
-    const playerTopOverlay = playerTop * scale.y;
-    const baseGap = Math.max(16, Math.min(26, (frame.h * scale.y) * 0.044));
-    let gap = baseGap;
     let rect = el.getBoundingClientRect();
-    let availableHeight = playerTopOverlay - gap - safeTop;
-    if (availableHeight < rect.height) {
+    if (rect.height > zone.h && !el.classList.contains('is-compact')) {
       el.classList.add('is-compact');
       rect = el.getBoundingClientRect();
-      availableHeight = playerTopOverlay - gap - safeTop;
     }
-    if (availableHeight < rect.height) {
+    if (rect.height > zone.h && !el.classList.contains('is-micro')) {
       el.classList.add('is-micro');
       rect = el.getBoundingClientRect();
     }
-    const availableGap = playerTopOverlay - safeTop - rect.height;
-    gap = Math.max(0, Math.min(baseGap, availableGap));
-
     const halfWidth = preferredWidth / 2;
-    const centerX = clampNumber(arenaCenter, safeLeft + halfWidth, safeRight - halfWidth);
-    const targetTop = playerTopOverlay - gap - rect.height;
-    const maxTop = Math.max(safeTop, safeBottom - rect.height);
-    const top = clampNumber(targetTop, safeTop, maxTop);
+    const centerX = clampNumber(zone.x + zone.w / 2, zone.x + halfWidth, zone.right - halfWidth);
+    const maxTop = Math.max(zone.y, zone.bottom - rect.height);
+    const top = clampNumber(zone.y + (zone.h - rect.height) / 2, zone.y, maxTop);
     el.style.left = `${centerX}px`;
     el.style.top = `${top}px`;
   }
@@ -3638,8 +3625,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     el.textContent = kill ? 'KO!' : critical ? `CRIT ${Math.round(damage)}` : `-${Math.round(damage)}`;
     el.style.visibility = 'hidden';
     container.appendChild(el);
-    const frame = arenaFrame();
-    const safe = arenaSafeFrame(frame, 0.055);
+    const stage = computeOverlayLayout();
+    const safe = insetRect(stage.zones.effects, stage.gap * 0.25);
     const scale = overlayScale();
     const safeLeft = safe.x * scale.x;
     const safeRight = safe.right * scale.x;
@@ -3650,7 +3637,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const halfHeight = rect.height / 2;
     const minX = safeLeft + halfWidth;
     const maxX = safeRight - halfWidth;
-    const minY = safeTop + rect.height * 2;
+    const minY = safeTop + rect.height * 3.4;
     const maxY = safeBottom - halfHeight;
     const x = minX <= maxX ? clampNumber(point.x, minX, maxX) : (safeLeft + safeRight) / 2;
     const y = minY <= maxY ? clampNumber(point.y, minY, maxY) : (safeTop + safeBottom) / 2;
@@ -3785,9 +3772,53 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       w: Math.max(1, frame.w - pad * 2),
       h: Math.max(1, frame.h - pad * 2),
       pad,
+      left: frame.x + pad,
+      top: frame.y + pad,
       right: frame.x + frame.w - pad,
       bottom: frame.y + frame.h - pad,
     };
+  }
+
+  function makeRect(x, y, w, h) {
+    return { x, y, w, h, left: x, top: y, right: x + w, bottom: y + h };
+  }
+
+  function intersectRect(a, b) {
+    const left = Math.max(a.left, b.left);
+    const top = Math.max(a.top, b.top);
+    const right = Math.min(a.right, b.right);
+    const bottom = Math.min(a.bottom, b.bottom);
+    return makeRect(left, top, Math.max(1, right - left), Math.max(1, bottom - top));
+  }
+
+  function zoneFromRatios(frame, safe, ratios) {
+    const rect = makeRect(
+      frame.x + frame.w * ratios.left,
+      frame.y + frame.h * ratios.top,
+      frame.w * Math.max(0.01, ratios.right - ratios.left),
+      frame.h * Math.max(0.01, ratios.bottom - ratios.top)
+    );
+    return intersectRect(rect, safe);
+  }
+
+  function overlayObjectGap(frame = arenaFrame()) {
+    const ui = canvasUiScale();
+    return Math.max(16 * ui, Math.min(28 * ui, Math.min(frame.w, frame.h) * 0.026));
+  }
+
+  function insetRect(rect, inset) {
+    const safeInset = Math.max(0, Math.min(inset, rect.w / 2 - 1, rect.h / 2 - 1));
+    return makeRect(rect.x + safeInset, rect.y + safeInset, Math.max(1, rect.w - safeInset * 2), Math.max(1, rect.h - safeInset * 2));
+  }
+
+  function computeOverlayLayout() {
+    const frame = arenaFrame();
+    const safe = arenaSafeFrame(frame, OVERLAY_STAGE.framePad);
+    const gap = overlayObjectGap(frame);
+    const zones = Object.fromEntries(
+      Object.entries(OVERLAY_STAGE.zones).map(([key, ratios]) => [key, insetRect(zoneFromRatios(frame, safe, ratios), key === 'banner' ? gap * 0.35 : 0)])
+    );
+    return { frame, safe, gap, zones };
   }
 
   function clampRectPositionToFrame(pos, bounds, safeFrame = arenaSafeFrame()) {
@@ -6023,6 +6054,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     ctx.save();
     ctx.globalCompositeOperation = 'source-over';
+    const bossZone = computeOverlayLayout().zones.boss;
+    roundedRectPath(ctx, bossZone.x, bossZone.y, bossZone.w, bossZone.h, Math.max(18 * ui, layout.r * 0.44));
+    ctx.clip();
     drawBossTargetWarnings(layout, nextAttackMs, nextAttackPct);
 
     const aura = ctx.createRadialGradient(layout.x, layout.y, 0, layout.x, layout.y, layout.r * 2.9);
@@ -6222,6 +6256,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     roundedRectPath(ctx, barX + 1, barY + 1, barW - 2, barH - 2, radius - 1);
     ctx.stroke();
 
+    const hordeZone = computeOverlayLayout().zones.horde;
+    ctx.save();
+    roundedRectPath(ctx, hordeZone.x, hordeZone.y, hordeZone.w, hordeZone.h, Math.max(12 * ui, radius));
+    ctx.clip();
     for (let i = hordePulses.length - 1; i >= 0; i--) {
       const item = hordePulses[i];
       const progress = clamp01((Date.now() - item.startedAt) / item.duration);
@@ -6246,6 +6284,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.stroke();
       ctx.restore();
     }
+    ctx.restore();
 
     const topRail = ctx.createLinearGradient(barX, 0, barX + barW, 0);
     topRail.addColorStop(0, 'rgba(232,59,95,0.98)');
@@ -6365,6 +6404,68 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   // ═══════════════════════════════════════
   // RENDER LOOP
   // ═══════════════════════════════════════
+  function normalizeAuditRect(item) {
+    if (!item) return null;
+    const left = Number(item.left);
+    const right = Number(item.right);
+    const top = Number(item.top);
+    const bottom = Number(item.bottom);
+    if (![left, right, top, bottom].every(Number.isFinite)) return null;
+    return {
+      id: item.id || 'object',
+      left,
+      right,
+      top,
+      bottom,
+      x: left,
+      y: top,
+      w: Math.max(0, right - left),
+      h: Math.max(0, bottom - top),
+    };
+  }
+
+  function domElementToCanvasRect(el, id) {
+    if (!el || el.style.visibility === 'hidden') return null;
+    const rect = el.getBoundingClientRect();
+    const parent = container.getBoundingClientRect();
+    if (!rect.width || !rect.height || !parent.width || !parent.height) return null;
+    const scale = overlayScale();
+    return normalizeAuditRect({
+      id,
+      left: (rect.left - parent.left) / Math.max(0.001, scale.x),
+      right: (rect.right - parent.left) / Math.max(0.001, scale.x),
+      top: (rect.top - parent.top) / Math.max(0.001, scale.y),
+      bottom: (rect.bottom - parent.top) / Math.max(0.001, scale.y),
+    });
+  }
+
+  function rectDistance(a, b) {
+    const dx = Math.max(0, Math.max(a.left - b.right, b.left - a.right));
+    const dy = Math.max(0, Math.max(a.top - b.bottom, b.top - a.bottom));
+    return Math.hypot(dx, dy);
+  }
+
+  function auditObjectLayout(objects, frame, minGap) {
+    const normalized = objects.map(normalizeAuditRect).filter(Boolean);
+    const leaks = normalized
+      .filter(item => (
+        item.left < frame.x + minGap ||
+        item.right > frame.x + frame.w - minGap ||
+        item.top < frame.y + minGap ||
+        item.bottom > frame.y + frame.h - minGap
+      ))
+      .map(item => item.id);
+    const collisions = [];
+    for (let i = 0; i < normalized.length; i += 1) {
+      for (let j = i + 1; j < normalized.length; j += 1) {
+        const a = normalized[i];
+        const b = normalized[j];
+        if (rectDistance(a, b) < minGap) collisions.push(`${a.id}<->${b.id}`);
+      }
+    }
+    return { objects: normalized, leaks, collisions };
+  }
+
   function draw() {
     ctx.clearRect(0, 0, cw(), ch());
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
@@ -6414,29 +6515,58 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       };
     }
     drawHorde(horde);
+    let legacyLayoutBoss = null;
     if (bossWaveState?.active) {
       const bossPos = getBossPosition();
       rememberPosition(BOSS_ID, bossPos, 'boss');
+      const bossLayout = getBossLayout();
+      legacyLayoutBoss = {
+        id: BOSS_ID,
+        x: bossLayout.x,
+        y: bossLayout.y,
+        left: bossLayout.x - bossLayout.r * 1.45,
+        right: bossLayout.x + bossLayout.r * 1.45,
+        top: bossLayout.y - bossLayout.r * 1.45,
+        bottom: Math.max(bossLayout.y + bossLayout.r * 1.45, bossLayout.panelY + bossLayout.panelH),
+        panel: {
+          left: bossLayout.panelX,
+          right: bossLayout.panelX + bossLayout.panelW,
+          top: bossLayout.panelY,
+          bottom: bossLayout.panelY + bossLayout.panelH,
+        },
+      };
       drawBossWave();
     }
-    const frame = arenaFrame();
-    const safeFrame = arenaSafeFrame(frame, 0.035);
-    const containedObjects = legacyLayoutPlayers.concat(legacyLayoutHorde ? [legacyLayoutHorde] : []);
-    const layoutLeaks = containedObjects.filter(item => (
-      item.left < frame.x - 1 ||
-      item.right > frame.x + frame.w + 1 ||
-      item.top < frame.y - 1 ||
-      item.bottom > frame.y + frame.h + 1
-    )).map(item => item.id || 'horde');
+    const stage = computeOverlayLayout();
+    const frame = stage.frame;
+    const safeFrame = stage.safe;
+    const domObjects = Array.from(container.querySelectorAll('.banner,.damage'))
+      .map((el, index) => domElementToCanvasRect(el, `${el.classList.contains('banner') ? 'banner' : 'damage'}-${index}`))
+      .filter(Boolean);
+    const containedObjects = legacyLayoutPlayers
+      .concat(legacyLayoutHorde ? [legacyLayoutHorde] : [])
+      .concat(legacyLayoutBoss ? [legacyLayoutBoss] : [])
+      .concat(domObjects);
+    const audit = auditObjectLayout(containedObjects, frame, stage.gap * 0.72);
     window.__overlayLegacyLayout = {
       frame,
       safeFrame,
+      zones: stage.zones,
+      minGap: stage.gap * 0.72,
       players: legacyLayoutPlayers,
       horde: legacyLayoutHorde,
-      leaks: layoutLeaks,
+      boss: legacyLayoutBoss,
+      objects: audit.objects,
+      leaks: audit.leaks,
+      collisions: audit.collisions,
     };
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    ctx.save();
+    const effectZone = computeOverlayLayout().zones.effects;
+    roundedRectPath(ctx, effectZone.x, effectZone.y, effectZone.w, effectZone.h, Math.max(16 * canvasUiScale(), effectZone.h * 0.14));
+    ctx.clip();
     attacks = attacks.filter(a => { const alive = a.update(); if (alive) a.draw(); return alive; });
+    ctx.restore();
     ctx.restore();
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     drawArenaFrame();

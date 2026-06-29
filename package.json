@@ -17,6 +17,7 @@
     "test:http": "node scripts/http_smoke.js",
     "test:socket": "node scripts/socket_smoke.js",
     "test:e2e": "playwright test",
+    "test:overlay:visual": "node scripts/overlay_visual_audit.js",
     "test:qa:contracts": "node scripts/qa_entitlement_contract.js",
     "test:qa:e2e": "playwright test tests/e2e/v1-qa.spec.js",
     "test:qa": "npm run test:qa:contracts && npm run test:qa:e2e",
