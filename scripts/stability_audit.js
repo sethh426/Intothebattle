@@ -135,11 +135,87 @@ function checkImportantFiles() {
   }
 }
 
+function checkOverlayModuleContracts() {
+  const overlayHtml = readText('overlay.html');
+  const httpSmoke = readText('scripts/http_smoke.js');
+  const inlineRuntimeIndex = overlayHtml.indexOf('<script>\n(function ()');
+  const modules = [
+    {
+      file: 'js/overlay/stage-config.js',
+      globalName: 'IntoTheBattleOverlayStageConfig',
+      consumerMarker: 'window.IntoTheBattleOverlayStageConfig',
+    },
+    {
+      file: 'js/overlay/overlay-normalizers.js',
+      globalName: 'IntoTheBattleOverlayNormalizers',
+      consumerMarker: 'window.IntoTheBattleOverlayNormalizers',
+    },
+    {
+      file: 'js/overlay/overlay-diagnostics.js',
+      globalName: 'IntoTheBattleOverlayDiagnostics',
+      consumerMarker: 'window.IntoTheBattleOverlayDiagnostics',
+    },
+    {
+      file: 'js/overlay/overlay-audio.js',
+      globalName: 'IntoTheBattleOverlayAudio',
+      consumerMarker: 'window.IntoTheBattleOverlayAudio',
+    },
+  ];
+
+  let previousIndex = -1;
+  for (const item of modules) {
+    const scriptPath = `/${item.file.replaceAll('\\', '/')}`;
+    const scriptTag = `<script src="${scriptPath}"></script>`;
+    const scriptIndex = overlayHtml.indexOf(scriptTag);
+    const fullPath = path.join(root, item.file);
+
+    if (!fs.existsSync(fullPath)) {
+      addError(`Overlay module is missing: ${item.file}`);
+      continue;
+    }
+    const moduleText = readText(item.file);
+    if (!moduleText.includes(item.globalName)) {
+      addError(`Overlay module ${item.file} does not export ${item.globalName}.`);
+    }
+    if (scriptIndex < 0) {
+      addError(`overlay.html does not load ${scriptPath}.`);
+    } else {
+      if (inlineRuntimeIndex >= 0 && scriptIndex > inlineRuntimeIndex) {
+        addError(`${scriptPath} must load before the inline overlay runtime.`);
+      }
+      if (previousIndex >= 0 && scriptIndex < previousIndex) {
+        addError(`Overlay module load order is unstable around ${scriptPath}.`);
+      }
+      previousIndex = scriptIndex;
+    }
+    if (!overlayHtml.includes(item.consumerMarker)) {
+      addError(`overlay.html does not consume ${item.globalName}.`);
+    }
+    if (!httpSmoke.includes(scriptPath)) {
+      addError(`HTTP smoke does not check overlay module asset ${scriptPath}.`);
+    }
+  }
+
+  if (/const\s+OVERLAY_STAGE\s*=\s*Object\.freeze/.test(overlayHtml)) {
+    addError('overlay.html reintroduced inline OVERLAY_STAGE data; keep it in js/overlay/stage-config.js.');
+  }
+  if (/const\s+EFFECT_ALIASES\s*=/.test(overlayHtml)) {
+    addError('overlay.html reintroduced inline effect aliases; keep them in js/overlay/overlay-normalizers.js.');
+  }
+  if (/const\s+DEFAULT_OVERLAY_AUDIO_CONFIG\s*=\s*Object\.freeze/.test(overlayHtml)) {
+    addError('overlay.html reintroduced inline default audio config; keep it in js/overlay/overlay-audio.js.');
+  }
+  if (/function\s+(normalizeAuditRect|auditObjectLayout|domLayerLeakLabels)\s*\(/.test(overlayHtml)) {
+    addError('overlay.html reintroduced diagnostics helpers; keep them in js/overlay/overlay-diagnostics.js.');
+  }
+}
+
 runSyntaxCheck();
 checkDependencies();
 checkServerRiskSignals();
 checkRequiredScripts();
 checkImportantFiles();
+checkOverlayModuleContracts();
 
 console.log('\nIntoTheBattle stability audit');
 console.log('================================');

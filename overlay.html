@@ -268,12 +268,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   background:rgba(0,0,0,0.75); backdrop-filter:blur(8px);
   border-radius:24px; padding:4px 16px; font-size:11px; font-weight:bold;
   letter-spacing:1px; color:#aaa; pointer-events:none; z-index:26;
+  line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center;
   font-family:'Rajdhani',monospace; border:1px solid rgba(255,255,255,0.07);
   transition:color .2s,border-color .2s;
 }
 #status-badge.connected    { color:#7aff87; text-shadow:0 0 4px #2eff5e; border-color:rgba(122,255,135,0.2); }
 #status-badge.disconnected { color:#ff8866; border-color:rgba(255,136,102,0.2); }
 #status-badge.demo         { color:#ffd84f; text-shadow:0 0 4px #ffaa00; border-color:rgba(255,216,79,0.2); }
+#status-badge.is-compact { padding:3px 12px; font-size:10px; letter-spacing:.8px; }
+#status-badge.is-micro { padding:2px 9px; font-size:9px; letter-spacing:.55px; }
 
 .damage {
   position:absolute; font-weight:900; font-size:clamp(18px,3vw,28px);
@@ -411,6 +414,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.legendary.is-micro .banner-title { font-size:13px; letter-spacing:.32px; }
 .banner.is-micro .banner-meta { display:block; font-size:8px; letter-spacing:.45px; }
 .banner.is-micro .banner-meter { width:4px; height:28px; }
+.banner.is-nano {
+  min-height:30px; max-height:34px; padding:0 6px; gap:5px;
+  grid-template-columns:minmax(0,1fr) 3px;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+}
+.banner.is-nano .banner-signal,
+.banner.is-nano .banner-kicker,
+.banner.is-nano .banner-meta { display:none; }
+.banner.is-nano .banner-copy { gap:0; }
+.banner.is-nano .banner-title,
+.banner.legendary.is-nano .banner-title { font-size:10px; line-height:1; letter-spacing:.2px; }
+.banner.is-nano .banner-meter { width:3px; height:20px; }
 @keyframes cyberBannerIn {
   0% { opacity:0; transform:translate(-50%,-14px) scaleX(.72); filter:blur(5px) brightness(1.45); }
   62% { opacity:1; transform:translate(-50%,2px) scaleX(1.025); filter:blur(0) brightness(1.1); }
@@ -990,6 +1005,175 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .sponsor-return-hint { display:none; }
   .sponsor-media-status { display:none; }
 }
+#overlay-container.stage-short .sponsor-title {
+  font-size:42px;
+  line-height:.96;
+}
+#overlay-container.stage-short .sponsor-subtitle {
+  font-size:20px;
+}
+#overlay-container.stage-short .sponsor-frame {
+  left:34px;
+  right:34px;
+  bottom:54px;
+  width:auto;
+  gap:10px;
+}
+#overlay-container.stage-short .sponsor-live-stats {
+  left:34px;
+  right:34px;
+  bottom:48px;
+  padding:12px 14px;
+}
+#overlay-container.stage-short .sponsor-stats-head {
+  font-size:22px;
+  margin-bottom:8px;
+}
+#overlay-container.stage-short .sponsor-stats-head span:last-child {
+  font-size:16px;
+}
+#overlay-container.stage-short .sponsor-stats-grid {
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+#overlay-container.stage-short .sponsor-stat {
+  min-height:72px;
+  padding:10px 12px;
+}
+#overlay-container.stage-short .sponsor-stat-label {
+  font-size:14px;
+  margin-bottom:3px;
+}
+#overlay-container.stage-short .sponsor-stat-value,
+#overlay-container.stage-short .sponsor-stat-score .sponsor-stat-value,
+#overlay-container.stage-short .sponsor-stat-fighter .sponsor-stat-value {
+  font-size:28px;
+  line-height:1.06;
+}
+#overlay-container.stage-short .sponsor-stat-sub {
+  margin-top:3px;
+  font-size:14px;
+}
+#overlay-container.stage-short .sponsor-horde-bar {
+  height:7px;
+  margin-top:6px;
+}
+#overlay-container.stage-short .sponsor-leaderboard {
+  display:none;
+}
+#overlay-container.stage-short .sponsor-progress {
+  left:38px;
+  right:38px;
+  bottom:22px;
+}
+#overlay-container.stage-tiny .sponsor-intro-copy {
+  padding:18px;
+  gap:8px;
+}
+#overlay-container.stage-tiny .sponsor-intro-title,
+#overlay-container.stage-tiny .sponsor-title {
+  font-size:28px;
+}
+#overlay-container.stage-tiny .sponsor-intro-partner,
+#overlay-container.stage-tiny .sponsor-subtitle {
+  font-size:15px;
+}
+#overlay-container.stage-tiny .sponsor-brand,
+#overlay-container.stage-tiny .sponsor-disclosure {
+  top:12px;
+  font-size:11px;
+  padding:5px 8px;
+}
+#overlay-container.stage-tiny .sponsor-brand {
+  right:14px;
+  max-width:42%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+#overlay-container.stage-tiny .sponsor-disclosure {
+  left:14px;
+}
+#overlay-container.stage-tiny .sponsor-video-chrome,
+#overlay-container.stage-tiny .sponsor-broadcast-frame {
+  inset:8px;
+}
+#overlay-container.stage-tiny .sponsor-broadcast-frame span {
+  width:18px;
+  height:18px;
+}
+#overlay-container.stage-tiny .sponsor-live-stats {
+  left:12px;
+  right:12px;
+  bottom:30px;
+  padding:8px 9px;
+}
+#overlay-container.stage-tiny .sponsor-stats-head {
+  font-size:14px;
+  margin-bottom:5px;
+}
+#overlay-container.stage-tiny .sponsor-stats-head span:last-child {
+  font-size:11px;
+  padding-left:14px;
+}
+#overlay-container.stage-tiny .sponsor-stats-head span:last-child::before {
+  width:7px;
+  height:7px;
+}
+#overlay-container.stage-tiny .sponsor-stats-grid {
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:5px;
+}
+#overlay-container.stage-tiny .sponsor-stat-fighter {
+  display:none;
+}
+#overlay-container.stage-tiny .sponsor-stat {
+  min-height:52px;
+  padding:7px 8px;
+}
+#overlay-container.stage-tiny .sponsor-stat-label {
+  font-size:10px;
+}
+#overlay-container.stage-tiny .sponsor-stat-value,
+#overlay-container.stage-tiny .sponsor-stat-score .sponsor-stat-value,
+#overlay-container.stage-tiny .sponsor-stat-fighter .sponsor-stat-value {
+  font-size:18px;
+}
+#overlay-container.stage-tiny .sponsor-stat-sub {
+  font-size:10px;
+}
+#overlay-container.stage-tiny .sponsor-horde-bar {
+  height:5px;
+  margin-top:4px;
+}
+#overlay-container.stage-tiny .sponsor-progress {
+  left:20px;
+  right:20px;
+  bottom:12px;
+  height:4px;
+}
+#overlay-container.stage-nano .sponsor-scene.live.stats-visible .sponsor-frame {
+  display:none;
+}
+#overlay-container.stage-nano .sponsor-live-stats {
+  top:38px;
+  bottom:auto;
+}
+#overlay-container.stage-nano .sponsor-stat {
+  min-height:42px;
+  padding:5px 7px;
+}
+#overlay-container.stage-nano .sponsor-stat-label {
+  display:none;
+}
+#overlay-container.stage-nano .sponsor-stat-value,
+#overlay-container.stage-nano .sponsor-stat-score .sponsor-stat-value,
+#overlay-container.stage-nano .sponsor-stat-fighter .sponsor-stat-value {
+  font-size:15px;
+}
+#overlay-container.stage-nano .sponsor-stat-sub {
+  font-size:9px;
+}
 @keyframes sponsorProgress { to { transform:scaleX(1); } }
 @keyframes sponsorGridDrift { to { transform:perspective(700px) rotateX(58deg) translateY(12%) translateY(54px); } }
 @keyframes sponsorGateLeft {
@@ -1276,12 +1460,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/js/overlay/stage-config.js"></script>
+<script src="/js/overlay/overlay-normalizers.js"></script>
+<script src="/js/overlay/overlay-diagnostics.js"></script>
+<script src="/js/overlay/overlay-audio.js"></script>
 
 <script>
 (function () {
   'use strict';
 
   // ── Core refs ──
+  const OVERLAY_STAGE = window.IntoTheBattleOverlayStageConfig;
+  const overlayNormalizers = window.IntoTheBattleOverlayNormalizers;
+  const overlayDiagnostics = window.IntoTheBattleOverlayDiagnostics;
+  const overlayAudio = window.IntoTheBattleOverlayAudio;
+
   const canvas    = document.getElementById('canvas');
   const ctx       = canvas.getContext('2d', { alpha: true });
   const container = document.getElementById('overlay-container');
@@ -1332,75 +1525,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let offsetY         = 0;
   let layoutZoom      = 1;
   const hordeThreshold = 5;      // now fixed
-  const OVERLAY_STAGE = Object.freeze({
-    framePad: 0.06,
-    zones: Object.freeze({
-      banner: Object.freeze({ left: 0.175, top: 0.072, right: 0.825, bottom: 0.182 }),
-      players: Object.freeze({ left: 0.075, top: 0.245, right: 0.925, bottom: 0.50 }),
-      effects: Object.freeze({ left: 0.18, top: 0.525, right: 0.82, bottom: 0.735 }),
-      boss: Object.freeze({ left: 0.335, top: 0.545, right: 0.665, bottom: 0.715 }),
-      horde: Object.freeze({ left: 0.145, top: 0.778, right: 0.855, bottom: 0.905 }),
-      status: Object.freeze({ left: 0.36, top: 0.925, right: 0.64, bottom: 0.968 }),
-    }),
-  });
   let backgroundImg   = null;
   let socket          = null;
-  const DEFAULT_OVERLAY_AUDIO_CONFIG = Object.freeze({
-    attack:          'sound1.mp3',
-    gift:            'sound2.mp3',
-    kill:            'sound3.mp3',
-    respawn:         'sound4.mp3',
-    heal:            'sound5.mp3',
-    follow:          'sound6.mp3',
-    socialBoost:     'sound6.mp3',
-    engagementSurge: 'sound2.mp3',
-  });
+  const DEFAULT_OVERLAY_AUDIO_CONFIG = overlayAudio.defaultAudioConfig;
   let audioConfig     = { ...DEFAULT_OVERLAY_AUDIO_CONFIG };
   let audioCache      = {};
   let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1, backgroundFit: 'contain' };
-  const APPROVED_EFFECTS = Object.freeze(['beam', 'laser', 'arc', 'sphere', 'railgun', 'comet', 'pulse', 'void']);
-  const DEFAULT_EFFECT = 'beam';
-  const EFFECT_ALIASES = Object.freeze({
-    beam: 'beam',
-    laser: 'laser',
-    neon: 'laser',
-    rail: 'railgun',
-    railgun: 'railgun',
-    arc: 'arc',
-    shock: 'arc',
-    bolt: 'arc',
-    lightning: 'arc',
-    sphere: 'sphere',
-    orb: 'sphere',
-    projectile: 'comet',
-    comet: 'comet',
-    fire: 'comet',
-    flame: 'comet',
-    meteor: 'comet',
-    pulse: 'pulse',
-    ripple: 'pulse',
-    wave: 'pulse',
-    bubble: 'pulse',
-    bubbles: 'pulse',
-    water: 'pulse',
-    explosion: 'pulse',
-    boom: 'pulse',
-    nuke: 'pulse',
-    nukes: 'pulse',
-    void: 'void',
-    gravity: 'void',
-    blackhole: 'void',
-    vortex: 'void',
-    dark: 'void',
-    bullet: 'railgun',
-    shot: 'railgun',
-    shell: 'railgun',
-    gift: 'beam',
-    hearts: 'beam',
-    heart: 'beam',
-    boss: 'railgun',
-    bosswave: 'railgun',
-  });
+  const APPROVED_EFFECTS = overlayNormalizers.approvedEffects;
+  const DEFAULT_EFFECT = overlayNormalizers.defaultEffect;
   let isDemoMode      = false;
   let darkMode        = true;
   let _demoTimer      = null;
@@ -2584,6 +2716,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   // ── Canvas ──
+  function updateStageSizeClasses(rect) {
+    if (!container || !rect) return;
+    container.classList.toggle('stage-short', rect.height < 740 || rect.width < 1320);
+    container.classList.toggle('stage-tiny', rect.height < 360 || rect.width < 660);
+    container.classList.toggle('stage-nano', rect.height < 260 || rect.width < 430);
+  }
+
   function resizeCanvas() {
     const rect = container.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
@@ -2597,6 +2736,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
+    updateStageSizeClasses(rect);
   }
   window.addEventListener('resize', resizeCanvas);
   resizeCanvas();
@@ -2625,13 +2765,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   });
 
   // ── Shot type buttons ──
-  function normalizeEffectType(value, fallback = DEFAULT_EFFECT) {
-    const key = String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
-    const mapped = EFFECT_ALIASES[key] || key;
-    if (APPROVED_EFFECTS.includes(mapped)) return mapped;
-    if (APPROVED_EFFECTS.includes(fallback)) return fallback;
-    return DEFAULT_EFFECT;
-  }
+  const normalizeEffectType = overlayNormalizers.normalizeEffectType;
 
   function setActiveShotType(type) {
     const normalized = normalizeEffectType(type);
@@ -3589,9 +3723,27 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     placeBannerInZone(el);
   }
 
+  function elementLayoutSize(el) {
+    const rect = el.getBoundingClientRect();
+    return {
+      width: el.offsetWidth || rect.width,
+      height: el.offsetHeight || rect.height,
+    };
+  }
+
   function placeBannerInZone(el) {
     const stage = computeOverlayLayout();
-    const zone = canvasRectToOverlay(stage.zones.banner);
+    const scale = overlayScale();
+    const frame = canvasRectToOverlay(stage.frame);
+    const bannerZone = canvasRectToOverlay(stage.zones.banner);
+    const playersZone = canvasRectToOverlay(stage.zones.players);
+    const gapX = stage.gap * scale.x;
+    const gapY = stage.gap * scale.y;
+    const topBandY = frame.y + gapY;
+    const topBandBottom = Math.max(topBandY + 1, playersZone.y - gapY);
+    const topBand = makeRect(frame.x + gapX, topBandY, Math.max(1, frame.w - gapX * 2), Math.max(1, topBandBottom - topBandY));
+    const forceNano = stage.frame.h < 260 || stage.frame.w < 430 || topBand.h < 42;
+    const zone = forceNano ? topBand : bannerZone;
     const viewportWidth = Math.max(container.clientWidth, window.innerWidth || 0);
     const viewportMaxWidth = viewportWidth * 0.86;
     const readableMinWidth = Math.min(viewportMaxWidth, Math.max(240, viewportWidth * 0.6));
@@ -3600,22 +3752,23 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const preferredWidth = Math.min(maxWidth, Math.max(readableMinWidth, zone.w * 0.92));
     const forceCompact = zone.h <= 96 || preferredWidth < 720;
     const forceMicro = zone.h <= 70 || preferredWidth < 500;
-    el.classList.remove('is-compact', 'is-micro');
+    el.classList.remove('is-compact', 'is-micro', 'is-nano');
     if (forceCompact) el.classList.add('is-compact');
     if (forceMicro) el.classList.add('is-micro');
+    if (forceNano) el.classList.add('is-nano');
     el.style.width = `${preferredWidth}px`;
     el.style.maxWidth = `${maxWidth}px`;
 
-    let rect = el.getBoundingClientRect();
+    let rect = elementLayoutSize(el);
     if (rect.height > zone.h && !el.classList.contains('is-compact')) {
       el.classList.add('is-compact');
-      rect = el.getBoundingClientRect();
+      rect = elementLayoutSize(el);
     }
     if (rect.height > zone.h && !el.classList.contains('is-micro')) {
       el.classList.add('is-micro');
-      rect = el.getBoundingClientRect();
+      rect = elementLayoutSize(el);
     }
-    const halfWidth = preferredWidth / 2;
+    const halfWidth = rect.width / 2;
     const centerX = clampNumber(zone.x + zone.w / 2, zone.x + halfWidth, zone.right - halfWidth);
     const maxTop = Math.max(zone.y, zone.bottom - rect.height);
     const top = clampNumber(zone.y + (zone.h - rect.height) / 2, zone.y, maxTop);
@@ -3628,9 +3781,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const stage = computeOverlayLayout();
     const scale = overlayScale();
     const frame = canvasRectToOverlay(stage.frame);
+    statusDiv.style.visibility = '';
+    if (stage.frame.h < 260 || stage.frame.w < 430) {
+      statusDiv.style.visibility = 'hidden';
+      return;
+    }
     const marginX = stage.gap * scale.x * 0.9;
-    const marginY = stage.gap * scale.y * 0.9;
+    const marginY = stage.gap * scale.y * 1.15;
     const maxWidth = Math.max(120, Math.min(frame.w * 0.32, 360 * scale.x));
+    statusDiv.classList.remove('is-compact', 'is-micro');
+    if (stage.frame.h < 420 || maxWidth < 220) statusDiv.classList.add('is-compact');
+    if (stage.frame.h < 330 || maxWidth < 170) statusDiv.classList.add('is-micro');
     statusDiv.style.maxWidth = `${maxWidth}px`;
     statusDiv.style.bottom = 'auto';
 
@@ -6429,66 +6590,24 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   // ═══════════════════════════════════════
   // RENDER LOOP
   // ═══════════════════════════════════════
-  function normalizeAuditRect(item) {
-    if (!item) return null;
-    const left = Number(item.left);
-    const right = Number(item.right);
-    const top = Number(item.top);
-    const bottom = Number(item.bottom);
-    if (![left, right, top, bottom].every(Number.isFinite)) return null;
-    return {
-      id: item.id || 'object',
-      left,
-      right,
-      top,
-      bottom,
-      x: left,
-      y: top,
-      w: Math.max(0, right - left),
-      h: Math.max(0, bottom - top),
-    };
-  }
-
-  function domElementToCanvasRect(el, id) {
+  function domElementToCanvasRect(el, id, type) {
     if (!el || el.style.visibility === 'hidden') return null;
     const rect = el.getBoundingClientRect();
     const parent = container.getBoundingClientRect();
     if (!rect.width || !rect.height || !parent.width || !parent.height) return null;
     const scale = overlayScale();
-    return normalizeAuditRect({
+    const position = getComputedStyle(el).position;
+    return overlayDiagnostics.normalizeAuditRect({
       id,
+      type,
+      parentId: el.parentElement?.id || '',
+      position,
+      stageBound: el.parentElement === container && position === 'absolute',
       left: (rect.left - parent.left) / Math.max(0.001, scale.x),
       right: (rect.right - parent.left) / Math.max(0.001, scale.x),
       top: (rect.top - parent.top) / Math.max(0.001, scale.y),
       bottom: (rect.bottom - parent.top) / Math.max(0.001, scale.y),
     });
-  }
-
-  function rectDistance(a, b) {
-    const dx = Math.max(0, Math.max(a.left - b.right, b.left - a.right));
-    const dy = Math.max(0, Math.max(a.top - b.bottom, b.top - a.bottom));
-    return Math.hypot(dx, dy);
-  }
-
-  function auditObjectLayout(objects, frame, minGap) {
-    const normalized = objects.map(normalizeAuditRect).filter(Boolean);
-    const leaks = normalized
-      .filter(item => (
-        item.left < frame.x + minGap ||
-        item.right > frame.x + frame.w - minGap ||
-        item.top < frame.y + minGap ||
-        item.bottom > frame.y + frame.h - minGap
-      ))
-      .map(item => item.id);
-    const collisions = [];
-    for (let i = 0; i < normalized.length; i += 1) {
-      for (let j = i + 1; j < normalized.length; j += 1) {
-        const a = normalized[i];
-        const b = normalized[j];
-        if (rectDistance(a, b) < minGap) collisions.push(`${a.id}<->${b.id}`);
-      }
-    }
-    return { objects: normalized, leaks, collisions };
   }
 
   function draw() {
@@ -6569,14 +6688,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const domObjects = Array.from(container.querySelectorAll('.banner,.damage,#status-badge'))
       .map((el, index) => {
         const type = el.id === 'status-badge' ? 'status' : el.classList.contains('banner') ? 'banner' : 'damage';
-        return domElementToCanvasRect(el, `${type}-${index}`);
+        return domElementToCanvasRect(el, `${type}-${index}`, type);
       })
       .filter(Boolean);
+    const domLayerLeaks = overlayDiagnostics.domLayerLeakLabels(domObjects);
     const containedObjects = legacyLayoutPlayers
       .concat(legacyLayoutHorde ? [legacyLayoutHorde] : [])
       .concat(legacyLayoutBoss ? [legacyLayoutBoss] : [])
       .concat(domObjects);
-    const audit = auditObjectLayout(containedObjects, frame, stage.gap * 0.72);
+    const audit = overlayDiagnostics.auditObjectLayout(containedObjects, frame, stage.gap * 0.72);
     window.__overlayLegacyLayout = {
       frame,
       safeFrame,
@@ -6585,6 +6705,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       players: legacyLayoutPlayers,
       horde: legacyLayoutHorde,
       boss: legacyLayoutBoss,
+      domObjects,
+      domLayerLeaks,
       objects: audit.objects,
       leaks: audit.leaks,
       collisions: audit.collisions,

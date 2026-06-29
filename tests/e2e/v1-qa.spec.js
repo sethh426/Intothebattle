@@ -230,6 +230,7 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
     const title = el.querySelector('.banner-title')?.getBoundingClientRect();
     const meta = el.querySelector('.banner-meta')?.getBoundingClientRect();
     return {
+      className: el.className,
       left: rect.left,
       right: rect.right,
       top: rect.top,
@@ -249,10 +250,16 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
   expect(geometry.bottom).toBeLessThanOrEqual(geometry.viewport.height);
   expect(geometry.width).toBeGreaterThanOrEqual(Math.min(240, geometry.viewport.width * 0.6));
   expect(geometry.width).toBeLessThanOrEqual(geometry.viewport.width * 0.86);
-  expect(geometry.height).toBeGreaterThanOrEqual(44);
+  if (geometry.className.includes('is-nano')) {
+    expect(geometry.height).toBeGreaterThanOrEqual(28);
+    expect(geometry.height).toBeLessThanOrEqual(36);
+    expect(geometry.metaHeight).toBe(0);
+  } else {
+    expect(geometry.height).toBeGreaterThanOrEqual(44);
+    expect(geometry.metaHeight).toBeGreaterThan(6);
+  }
   expect(geometry.centerDelta).toBeLessThanOrEqual(Math.max(18, geometry.viewport.width * 0.035));
-  expect(geometry.titleHeight).toBeGreaterThan(10);
-  expect(geometry.metaHeight).toBeGreaterThan(6);
+  expect(geometry.titleHeight).toBeGreaterThan(9);
 
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'qa-overlay-v1-banner');
