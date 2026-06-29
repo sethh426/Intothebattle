@@ -320,6 +320,14 @@
     }
 
     /* ── Demo shell ── */
+    @keyframes shellReveal {
+      from { opacity: 0; transform: translateY(16px) scale(0.98); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes glowPulse {
+      0%, 100% { opacity: 0.55; }
+      50%       { opacity: 0.90; }
+    }
     .demo-shell {
       position: relative;
       width: min(100%, 860px);
@@ -329,6 +337,8 @@
       border: 1px solid rgba(0,200,255,0.22);
       background: #02040a;
       box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 60px rgba(0,200,255,0.10);
+      animation: shellReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-delay: 0.2s;
     }
     .demo-shell::before {
       content: "";
@@ -338,6 +348,7 @@
       background: linear-gradient(90deg, rgba(245,200,66,0.16), rgba(0,200,255,0.20), rgba(255,42,74,0.14));
       filter: blur(30px);
       z-index: -1;
+      animation: glowPulse 3s ease-in-out infinite;
     }
     .demo-bar {
       display: flex;
@@ -1142,6 +1153,17 @@
         if (a) a.href = '/blog';
       });
   })();
+  </script>
+  <script>
+  // Autoplay fallback: some mobile/low-power browsers suppress autoplay silently.
+  // Re-attempt with explicit muted flag to recover playback.
+  document.querySelectorAll('video[autoplay]').forEach(function(v) {
+    v.play().catch(function() {
+      v.load();
+      v.muted = true;
+      v.play().catch(function() {});
+    });
+  });
   </script>
 </body>
 </html>
