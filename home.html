@@ -208,6 +208,7 @@
       padding-bottom: clamp(16px, 3vh, 32px);
     }
     .hero-text { display: flex; flex-direction: column; gap: 0; }
+    .hero aside { min-width: 0; }
     .eyebrow {
       display: inline-flex;
       align-items: center;
@@ -351,7 +352,7 @@
       border: 1px solid rgba(255,255,255,0.08);
       backdrop-filter: blur(12px);
     }
-    .demo-bar-left { line-height: 1.2; }
+    .demo-bar-left { line-height: 1.2; min-width: 0; }
     .demo-bar-left strong {
       display: block;
       color: var(--gold-l);
@@ -359,6 +360,9 @@
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .demo-bar-left span {
       display: block;
@@ -366,6 +370,9 @@
       font-size: 11px;
       font-weight: 600;
       margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .demo-badge {
       display: inline-flex;
@@ -769,8 +776,15 @@
 
     /* ── Responsive ── */
     @media (max-width: 980px) {
-      .hero { grid-template-columns: 1fr; min-height: auto; padding-top: clamp(28px,5vw,48px); }
-      .demo-shell { max-width: 720px; width: 100%; }
+      .hero {
+        grid-template-columns: 1fr;
+        min-height: auto;
+        gap: clamp(22px, 4vw, 34px);
+        padding-top: clamp(20px,4vw,38px);
+      }
+      .hero aside { order: -1; }
+      .hero-text { order: 1; }
+      .demo-shell { max-width: 720px; width: 100%; margin: 0 auto; }
       .quick-panel,
       .steps,
       .feature-grid,
@@ -824,9 +838,23 @@
       .actions .btn { width: 100%; }
       .proof-list { flex-direction: column; }
       .proof-list span { width: 100%; justify-content: center; }
+      .demo-shell {
+        border-radius: 18px;
+        box-shadow: 0 18px 48px rgba(0,0,0,0.56), 0 0 34px rgba(0,200,255,0.11);
+      }
+      .demo-bar {
+        margin: 10px 10px 0;
+        padding: 9px 10px;
+        gap: 8px;
+      }
+      .demo-bar-left strong { font-size: 10px; letter-spacing: 0.07em; }
+      .demo-bar-left span { font-size: 10px; }
+      .demo-badge { font-size: 9px; letter-spacing: 0.08em; padding: 4px 7px; }
+      .frame-wrap { margin: 8px 10px 10px; border-radius: 10px; }
     }
     @media (max-width: 400px) {
       .flow-strip { grid-template-columns: 1fr; }
+      .demo-bar-left span { display: none; }
     }
   </style>
   <link rel="stylesheet" href="/css/site-refresh.css" />
@@ -887,10 +915,12 @@
           </div>
           <div class="frame-wrap">
             <video
-              src="/media/remotion/homepage-battle-demo.mp4?v=homepage-v3-20260629"
               aria-label="IntoTheBattle battle clip demo"
-              autoplay muted loop playsinline preload="metadata"
-            ></video>
+              autoplay muted loop playsinline preload="auto"
+              poster="/media/remotion/homepage-real-overlay-poster.jpg?v=homepage-real-v1-20260629"
+            >
+              <source src="/media/remotion/homepage-real-overlay-source.mp4?v=homepage-real-v1-20260629" type="video/mp4">
+            </video>
           </div>
         </div>
       </aside>

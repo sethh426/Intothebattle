@@ -3592,8 +3592,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function placeBannerInZone(el) {
     const stage = computeOverlayLayout();
     const zone = canvasRectToOverlay(stage.zones.banner);
-    const maxWidth = Math.max(220, Math.min(zone.w, container.clientWidth * 0.62));
-    const preferredWidth = Math.min(maxWidth, Math.max(240, zone.w * 0.92));
+    const viewportWidth = Math.max(container.clientWidth, window.innerWidth || 0);
+    const viewportMaxWidth = viewportWidth * 0.86;
+    const readableMinWidth = Math.min(viewportMaxWidth, Math.max(240, viewportWidth * 0.6));
+    const hardMaxWidth = Math.max(180, Math.min(viewportMaxWidth, Math.max(zone.w, readableMinWidth)));
+    const maxWidth = Math.max(readableMinWidth, Math.min(hardMaxWidth, viewportWidth * 0.66));
+    const preferredWidth = Math.min(maxWidth, Math.max(readableMinWidth, zone.w * 0.92));
     const forceCompact = zone.h <= 96 || preferredWidth < 720;
     const forceMicro = zone.h <= 70 || preferredWidth < 500;
     el.classList.remove('is-compact', 'is-micro');

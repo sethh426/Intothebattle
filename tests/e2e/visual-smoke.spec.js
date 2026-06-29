@@ -120,6 +120,54 @@ for (const [name, pathname, selector] of [
   });
 }
 
+test('home hero video is visible and playable', async ({ page }, testInfo) => {
+  const errors = await watchPage(page);
+  const mediaResponses = [];
+  page.on('response', res => {
+    if (res.url().includes('/media/remotion/homepage-real-overlay-')) {
+      mediaResponses.push({ url: res.url(), status: res.status() });
+    }
+  });
+
+  await page.goto(`${baseUrl}/`, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('.demo-shell')).toBeVisible();
+  const video = page.locator('.frame-wrap video');
+  await expect(video).toBeVisible();
+
+  const state = await video.evaluate(async el => {
+    if (el.readyState < 1) {
+      await new Promise(resolve => el.addEventListener('loadedmetadata', resolve, { once: true }));
+    }
+    await el.play().catch(() => {});
+    await new Promise(resolve => setTimeout(resolve, 800));
+    const rect = el.getBoundingClientRect();
+    return {
+      src: el.currentSrc || el.src,
+      currentTime: el.currentTime,
+      paused: el.paused,
+      readyState: el.readyState,
+      videoWidth: el.videoWidth,
+      videoHeight: el.videoHeight,
+      error: el.error ? { code: el.error.code, message: el.error.message } : null,
+      rect: { top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height },
+      viewportHeight: window.innerHeight,
+    };
+  });
+
+  expect(state.src).toContain('/media/remotion/homepage-real-overlay-source.mp4');
+  expect(state.error).toBeNull();
+  expect(state.readyState).toBeGreaterThanOrEqual(2);
+  expect(state.videoWidth).toBeGreaterThanOrEqual(1280);
+  expect(state.videoHeight).toBeGreaterThanOrEqual(720);
+  expect(state.currentTime).toBeGreaterThan(0);
+  expect(state.rect.width).toBeGreaterThan(300);
+  expect(state.rect.top).toBeLessThan(state.viewportHeight * 0.75);
+  expect(mediaResponses.some(res => [200, 206, 304].includes(res.status))).toBe(true);
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'home-video');
+  expect(errors).toEqual([]);
+});
+
 test('profile redirects unauthenticated users to login', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
   await page.goto(`${baseUrl}/profile`, { waitUntil: 'domcontentloaded' });
