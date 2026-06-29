@@ -1333,14 +1333,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let layoutZoom      = 1;
   const hordeThreshold = 5;      // now fixed
   const OVERLAY_STAGE = Object.freeze({
-    framePad: 0.055,
+    framePad: 0.06,
     zones: Object.freeze({
-      banner: Object.freeze({ left: 0.12, top: 0.065, right: 0.88, bottom: 0.195 }),
-      players: Object.freeze({ left: 0.055, top: 0.265, right: 0.945, bottom: 0.49 }),
-      effects: Object.freeze({ left: 0.13, top: 0.515, right: 0.87, bottom: 0.715 }),
-      boss: Object.freeze({ left: 0.29, top: 0.525, right: 0.71, bottom: 0.695 }),
-      horde: Object.freeze({ left: 0.105, top: 0.765, right: 0.895, bottom: 0.895 }),
-      status: Object.freeze({ left: 0.34, top: 0.912, right: 0.66, bottom: 0.965 }),
+      banner: Object.freeze({ left: 0.175, top: 0.072, right: 0.825, bottom: 0.182 }),
+      players: Object.freeze({ left: 0.075, top: 0.245, right: 0.925, bottom: 0.50 }),
+      effects: Object.freeze({ left: 0.18, top: 0.525, right: 0.82, bottom: 0.735 }),
+      boss: Object.freeze({ left: 0.335, top: 0.545, right: 0.665, bottom: 0.715 }),
+      horde: Object.freeze({ left: 0.145, top: 0.778, right: 0.855, bottom: 0.905 }),
+      status: Object.freeze({ left: 0.36, top: 0.925, right: 0.64, bottom: 0.968 }),
     }),
   });
   let backgroundImg   = null;
@@ -1542,8 +1542,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const ratio = Number.isFinite(value) ? value : fallback;
     return Math.max(min, Math.min(max, ratio));
   }
-  const demoPlayerYRatio = isPublicDemo ? readDemoRatio('demo_player_y', 0.6, 0.36, 0.68) : null;
-  const demoHordeTopRatio = isPublicDemo ? readDemoRatio('demo_horde_y', 0.75, 0.54, 0.82) : null;
+  const hasDemoPlayerYOverride = isPublicDemo && overlayParams.has('demo_player_y');
+  const hasDemoHordeYOverride = isPublicDemo && overlayParams.has('demo_horde_y');
+  const demoPlayerYRatio = isPublicDemo ? readDemoRatio('demo_player_y', 0.46, 0.34, 0.62) : null;
+  const demoHordeTopRatio = isPublicDemo ? readDemoRatio('demo_horde_y', 0.79, 0.62, 0.86) : null;
 
   if (isSignedOverlay || isPublicDemo) {
     document.body.classList.add('signed-overlay');
@@ -2952,8 +2954,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const frame = stage.frame;
     const playerZone = stage.zones.players;
     const requestedCardH = Math.min(
-      frame.h * (isPublicDemo ? 0.31 : 0.285),
-      playerZone.h * (isPublicDemo ? 1.32 : 1.2)
+      frame.h * (isPublicDemo ? 0.285 : 0.27),
+      playerZone.h * (isPublicDemo ? 1.1 : 1.02)
     ) * layoutZoom;
     const requestedCardW = requestedCardH * 0.72;
     const baseGap = requestedCardW * (total >= 5 ? 0.035 : total === 4 ? 0.05 : total === 3 ? 0.08 : 0.11);
@@ -3016,11 +3018,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const { cardW, spacing, totalWidth } = getPlayerCardMetrics(total);
     const stage = computeOverlayLayout();
     const playerZone = stage.zones.players;
-    const liveBoardY = playerZone.y + playerZone.h * 0.55;
-    const baseY = isPublicDemo ? H * demoPlayerYRatio : liveBoardY;
+    const liveBoardY = playerZone.y + playerZone.h * 0.56;
+    const baseY = hasDemoPlayerYOverride ? H * demoPlayerYRatio : liveBoardY;
     const desired = {
-      x: playerZone.x + (playerZone.w - totalWidth) / 2 + offsetX + index * spacing + cardW / 2,
-      y: baseY + offsetY * 0.45 + H * 0.1 * (1 - layoutZoom),
+      x: playerZone.x + (playerZone.w - totalWidth) / 2 + offsetX * 0.68 + index * spacing + cardW / 2,
+      y: baseY + offsetY * 0.32 + H * 0.07 * (1 - layoutZoom),
     };
     return clampRectPositionToFrame(desired, getPlayerCardDrawMetrics(desired, total), playerZone);
   }
@@ -3031,11 +3033,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const frame = stage.frame;
     const hordeZone = stage.zones.horde;
     const ui = canvasUiScale();
-    const barW = Math.min(hordeZone.w, frame.w * 0.72);
-    const barH = Math.max(56 * ui, Math.min(hordeZone.h, 96 * ui, frame.h * 0.115 * layoutZoom));
-    const centerX = clampNumber(hordeZone.x + hordeZone.w / 2 + offsetX * 0.22, hordeZone.x + barW / 2, hordeZone.right - barW / 2);
-    const liveHordeTopY = hordeZone.y + hordeZone.h * 0.42 - barH / 2;
-    const desiredTopY = isPublicDemo ? H * demoHordeTopRatio : liveHordeTopY + offsetY * 0.34;
+    const barW = Math.min(hordeZone.w, frame.w * 0.68);
+    const barH = Math.max(56 * ui, Math.min(hordeZone.h, 92 * ui, frame.h * 0.105 * layoutZoom));
+    const centerX = clampNumber(hordeZone.x + hordeZone.w / 2 + offsetX * 0.12, hordeZone.x + barW / 2, hordeZone.right - barW / 2);
+    const liveHordeTopY = hordeZone.y + hordeZone.h * 0.45 - barH / 2;
+    const desiredTopY = hasDemoHordeYOverride ? H * demoHordeTopRatio : liveHordeTopY + offsetY * 0.22;
     const minTopY = hordeZone.y;
     const maxTopY = hordeZone.bottom - barH;
     const topY = clampNumber(desiredTopY, minTopY, maxTopY);
@@ -3078,7 +3080,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const hordeLayout = getHordeLayout();
     const r = Math.max(30 * ui, Math.min(56 * ui, bossZone.h * 0.33, frame.h * 0.074));
     const x = clampNumber(bossZone.x + bossZone.w / 2, bossZone.x + r * 1.5, bossZone.right - r * 1.5);
-    const desiredY = bossZone.y + bossZone.h * 0.42;
+    const desiredY = bossZone.y + bossZone.h * 0.39;
     const maxY = Math.min(bossZone.bottom - r * 1.55, hordeLayout.barY - stage.gap - r * 1.2);
     const minY = bossZone.y + r * 1.35;
     const y = Math.max(minY, Math.min(maxY, desiredY));
@@ -3615,6 +3617,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const top = clampNumber(zone.y + (zone.h - rect.height) / 2, zone.y, maxTop);
     el.style.left = `${centerX}px`;
     el.style.top = `${top}px`;
+  }
+
+  function placeStatusBadge() {
+    if (!statusDiv || !statusDiv.getClientRects().length) return;
+    const stage = computeOverlayLayout();
+    const scale = overlayScale();
+    const frame = canvasRectToOverlay(stage.frame);
+    const marginX = stage.gap * scale.x * 0.9;
+    const marginY = stage.gap * scale.y * 0.9;
+    const maxWidth = Math.max(120, Math.min(frame.w * 0.32, 360 * scale.x));
+    statusDiv.style.maxWidth = `${maxWidth}px`;
+    statusDiv.style.bottom = 'auto';
+
+    const rect = statusDiv.getBoundingClientRect();
+    const halfWidth = rect.width / 2;
+    const centerX = clampNumber(frame.x + frame.w / 2, frame.x + marginX + halfWidth, frame.right - marginX - halfWidth);
+    const top = clampNumber(frame.bottom - marginY - rect.height, frame.y + marginY, frame.bottom - marginY - rect.height);
+    statusDiv.style.left = `${centerX}px`;
+    statusDiv.style.top = `${top}px`;
   }
 
   function showDamage(cx, cy, damage, kill, critical) {
@@ -6538,10 +6559,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       drawBossWave();
     }
     const stage = computeOverlayLayout();
+    placeStatusBadge();
     const frame = stage.frame;
     const safeFrame = stage.safe;
-    const domObjects = Array.from(container.querySelectorAll('.banner,.damage'))
-      .map((el, index) => domElementToCanvasRect(el, `${el.classList.contains('banner') ? 'banner' : 'damage'}-${index}`))
+    const domObjects = Array.from(container.querySelectorAll('.banner,.damage,#status-badge'))
+      .map((el, index) => {
+        const type = el.id === 'status-badge' ? 'status' : el.classList.contains('banner') ? 'banner' : 'damage';
+        return domElementToCanvasRect(el, `${type}-${index}`);
+      })
       .filter(Boolean);
     const containedObjects = legacyLayoutPlayers
       .concat(legacyLayoutHorde ? [legacyLayoutHorde] : [])
