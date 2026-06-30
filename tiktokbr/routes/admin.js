@@ -62,6 +62,10 @@ import {
   updateBlogPost,
   writefreelyPublishConfig,
 } from '../services/blogEngine.js';
+import {
+  getActiveUserCounts,
+  injectActiveUserMetrics,
+} from '../services/adminUserCounts.js';
 import { getAllRooms } from '../../roomManager.js';
 
 const router = express.Router();
@@ -88,6 +92,17 @@ const GROWTH_ASSET_DIR = path.join(process.env.DISK_PATH || path.resolve(__dirna
 const GROWTH_CREATIVE_UPLOAD_MAX_BYTES = uploadLimitBytes('GROWTH_CREATIVE_UPLOAD_MAX_MB', 25 * 1024 * 1024);
 const GROWTH_ASSET_EXTS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.webm', '.m4v', '.mov']);
 const GROWTH_ASSET_MIMES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v']);
+
+router.use((req, res, next) => {
+  if (req.method !== 'GET' || req.path !== '/') return next();
+
+  const send = res.send.bind(res);
+  res.send = body => {
+    if (typeof body !== 'string') return send(body);
+    return send(injectActiveUserMetrics(body, getActiveUserCounts(db)));
+  };
+  next();
+});
 
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
