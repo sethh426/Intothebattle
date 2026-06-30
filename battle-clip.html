@@ -500,84 +500,6 @@
                  attackChatPulse var(--cycle) ease-out infinite;
     }
 
-    .command-card {
-      position: absolute;
-      left: 50%;
-      top: 36.5%;
-      z-index: 34;
-      width: min(38%, 430px);
-      min-height: clamp(30px, 6.6%, 48px);
-      display: flex;
-      align-items: center;
-      justify-content: flex-start;
-      gap: clamp(6px, .8vw, 10px);
-      padding: 0 clamp(10px, 1.45vw, 18px);
-      border: 1px solid rgba(85, 231, 255, .34);
-      border-radius: 999px;
-      background:
-        linear-gradient(180deg, rgba(7, 18, 32, .92), rgba(3, 8, 16, .9)),
-        radial-gradient(circle at 50% 0, rgba(85, 231, 255, .18), transparent 60%);
-      box-shadow: 0 20px 54px rgba(0, 0, 0, .34), 0 0 26px rgba(85, 231, 255, .11);
-      opacity: 0;
-      overflow: hidden;
-      transform: translate(-50%, 12px) scale(.98);
-      animation: commandCue var(--cycle) cubic-bezier(.16, 1, .3, 1) infinite;
-    }
-
-    .command-card::before,
-    .command-card::after {
-      content: "";
-      position: absolute;
-      pointer-events: none;
-    }
-
-    .command-card::before {
-      inset: -1px;
-      border-radius: inherit;
-      border: 1px solid rgba(246, 201, 91, .22);
-      opacity: 0;
-      animation: commandLockPulse var(--cycle) ease-out infinite;
-    }
-
-    .command-card::after {
-      left: 50%;
-      bottom: -18px;
-      width: 2px;
-      height: 18px;
-      background: linear-gradient(180deg, rgba(85, 231, 255, .7), rgba(255, 45, 136, 0));
-      box-shadow: 0 0 12px rgba(85, 231, 255, .4);
-      transform: translateX(-50%);
-      opacity: 0;
-      animation: commandDropLine var(--cycle) ease-out infinite;
-    }
-
-    .command-card b {
-      display: inline-flex;
-      align-items: center;
-      min-height: 1.9em;
-      padding: 0 .72em;
-      border: 1px solid rgba(85, 231, 255, .28);
-      border-radius: 999px;
-      color: var(--cyan2);
-      background: rgba(85, 231, 255, .08);
-      font-size: clamp(6px, .7vw, 9px);
-      font-weight: 950;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .command-card strong {
-      color: #fff8e6;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      font-size: clamp(10px, 1.35vw, 18px);
-      line-height: 1;
-      font-weight: 950;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
     .player-row {
       position: absolute;
       left: 50%;
@@ -2250,24 +2172,6 @@
       18%, 100% { box-shadow: 0 14px 34px rgba(0, 0, 0, .18); }
     }
 
-    @keyframes commandCue {
-      0%, 12% { opacity: 0; transform: translate(-50%, 12px) scale(.98); }
-      14%, 25.8% { opacity: 1; transform: translate(-50%, 0) scale(1); }
-      27.4%, 100% { opacity: 0; transform: translate(-50%, -7px) scale(.99); }
-    }
-
-    @keyframes commandLockPulse {
-      0%, 13.5% { opacity: 0; transform: scale(.98); }
-      15.2%, 25.8% { opacity: 1; transform: scale(1.035); }
-      27.4%, 100% { opacity: 0; transform: scale(1.08); }
-    }
-
-    @keyframes commandDropLine {
-      0%, 14.2% { opacity: 0; transform: translate(-50%, -6px) scaleY(.3); }
-      16%, 25.8% { opacity: .9; transform: translate(-50%, 0) scaleY(1); }
-      27.4%, 100% { opacity: 0; transform: translate(-50%, 8px) scaleY(.4); }
-    }
-
     @keyframes playerEnter {
       0%, 10.6% { opacity: 0; transform: translateY(10px); }
       12.2%, 27.4% { opacity: 1; transform: translateY(0) scale(1); }
@@ -2540,13 +2444,6 @@
         font-size: 6px;
       }
       .chat-line b { font-size: 8px; }
-      .command-card {
-        top: 38.5%;
-        width: 46%;
-        min-height: 31px;
-      }
-      .command-card b { font-size: 5.5px; }
-      .command-card strong { font-size: clamp(9px, 2.5vw, 13px); }
       .player-row {
         top: 49.5%;
         width: 78%;
@@ -2768,7 +2665,6 @@
         font-size: 5.5px;
       }
       .chat-line b { font-size: 6.5px; }
-      .command-card { display: none; }
       .player-row {
         top: 42.5%;
         width: 86%;
@@ -3051,14 +2947,6 @@
         font-size: clamp(6px, 1vw, 9px);
       }
       .chat-line b { font-size: clamp(7px, 1.1vw, 10px); }
-      .command-card {
-        top: 38.2%;
-        width: min(46%, 410px);
-        min-height: clamp(28px, 8.3vh, 42px);
-        padding: 0 10px;
-      }
-      .command-card b { display: none; }
-      .command-card strong { font-size: clamp(12px, 2.4vw, 21px); }
       .player-row {
         top: 50%;
         width: 82%;
@@ -3338,10 +3226,6 @@
         top: 28.5%;
         width: 83%;
       }
-      .clip.is-embedded .command-card {
-        top: 38%;
-        width: 48%;
-      }
       .clip.is-embedded .player-row {
         top: 49%;
         width: 85%;
@@ -3531,18 +3415,6 @@
     .chat-stack {
       top: 36.8%;
       width: min(78%, 960px);
-    }
-
-    .command-card {
-      top: 42.8%;
-      width: min(42%, 520px);
-      min-height: clamp(34px, 6.4%, 48px);
-      border-radius: 999px;
-    }
-
-    .command-card strong {
-      font-size: clamp(10px, 1.35vw, 18px);
-      letter-spacing: .03em;
     }
 
     .player-row {
@@ -3918,24 +3790,6 @@
 
       .duel-shot {
         bottom: clamp(20px, 4vh, 34px);
-      }
-
-      .command-card {
-        top: 41.5%;
-        width: 62%;
-        min-height: 34px;
-        display: flex;
-        padding: 0 12px;
-        border-radius: 999px;
-      }
-
-      .command-card b {
-        display: inline-flex;
-        font-size: 5.5px;
-      }
-
-      .command-card strong {
-        font-size: clamp(9px, 2.8vw, 13px);
       }
 
       .duel-command {
@@ -4527,52 +4381,6 @@
       background: rgba(5, 14, 27, .72);
     }
 
-    .command-card {
-      top: 34%;
-      width: min(48%, 610px);
-      min-height: clamp(46px, 8.6vh, 64px);
-      display: grid;
-      grid-template-columns: minmax(92px, .26fr) minmax(0, 1fr);
-      gap: 0;
-      align-items: stretch;
-      justify-content: stretch;
-      padding: 0;
-      overflow: hidden;
-      border-color: rgba(255, 45, 136, .36);
-      border-radius: clamp(12px, 1.2vw, 16px);
-      background:
-        linear-gradient(90deg, rgba(72, 11, 32, .96), rgba(4, 15, 27, .94)),
-        radial-gradient(circle at left, rgba(255, 45, 136, .25), transparent 42%);
-      box-shadow:
-        0 24px 62px rgba(0, 0, 0, .38),
-        0 0 32px rgba(255, 45, 136, .16),
-        inset 0 1px 0 rgba(255, 255, 255, .08);
-    }
-
-    .command-card::after {
-      display: none;
-    }
-
-    .command-card b {
-      align-self: stretch;
-      justify-content: center;
-      min-height: 100%;
-      padding: 0 clamp(8px, 1vw, 13px);
-      border: 0;
-      border-radius: 0;
-      color: #ffe2e8;
-      background: linear-gradient(180deg, rgba(232, 59, 95, .82), rgba(124, 19, 52, .86));
-      font-size: clamp(8px, .9vw, 12px);
-    }
-
-    .command-card strong {
-      align-self: center;
-      padding: 0 clamp(12px, 1.5vw, 20px);
-      color: #fff8e6;
-      font-size: clamp(13px, 1.7vw, 23px);
-      letter-spacing: 0;
-    }
-
     .player-row {
       top: 55.4%;
       width: min(82%, 1040px);
@@ -4709,22 +4517,6 @@
       top: 25.8%;
       width: 84%;
       gap: 4px;
-    }
-
-    .clip.is-embedded .command-card {
-      top: 35.2%;
-      width: 58%;
-      min-height: 30px;
-      grid-template-columns: 54px minmax(0, 1fr);
-    }
-
-    .clip.is-embedded .command-card b {
-      font-size: 5.5px;
-    }
-
-    .clip.is-embedded .command-card strong {
-      padding: 0 8px;
-      font-size: 11px;
     }
 
     .clip.is-embedded .player-row {
@@ -5085,15 +4877,9 @@
       transform-origin: bottom center;
     }
 
-    .command-card.demo-banner,
     .event-banner.demo-banner {
       grid-template-columns: clamp(44px, 5.6vw, 64px) minmax(0, 1fr) clamp(5px, .65vw, 8px);
       min-height: clamp(58px, 8.8vh, 82px);
-    }
-
-    .command-card.demo-banner {
-      width: min(52%, 700px);
-      top: 33.4%;
     }
 
     .event-banner.demo-banner {
@@ -5139,11 +4925,6 @@
       gap: 7px;
       padding: 0 8px;
       clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
-    }
-
-    .clip.is-embedded .command-card.demo-banner {
-      width: 66%;
-      min-height: 42px;
     }
 
     .clip.is-embedded .event-banner.demo-banner {
@@ -5270,19 +5051,6 @@
         <div class="chat-line"><strong>@nova_fan</strong><b>Fire icon</b></div>
         <div class="chat-line"><strong>@ashstorm</strong><b>100-like surge</b></div>
       </div>
-
-      <section class="command-card demo-banner demo-banner-special">
-        <span class="banner-signal" aria-hidden="true">
-          <span class="banner-pulse"></span>
-          <span class="banner-code">CMD</span>
-        </span>
-        <span class="banner-copy">
-          <span class="banner-kicker">Special strike</span>
-          <span class="banner-title">Mira targets Blaze</span>
-          <span class="banner-meta">Laser on Blaze</span>
-        </span>
-        <span class="banner-meter" aria-hidden="true"><span class="banner-meter-fill"></span></span>
-      </section>
 
       <div class="player-row">
         <article class="player-card">
