@@ -225,9 +225,12 @@ test('signed overlay renders a nonblank canvas', async ({ page }, testInfo) => {
   const playerBottom = Math.max(...legacyLayout.players.map(player => player.bottom));
   const frameTop = legacyLayout.frame.y;
   const frameHeight = legacyLayout.frame.h;
-  expect(playerTop).toBeGreaterThan(frameTop + frameHeight * 0.2);
-  expect(legacyLayout.horde.top).toBeGreaterThan(frameTop + frameHeight * 0.58);
-  expect(legacyLayout.horde.top - playerBottom).toBeGreaterThan(frameHeight * 0.06);
+  expect(playerTop).toBeGreaterThan(frameTop + frameHeight * 0.18);
+  expect(legacyLayout.horde.top).toBeGreaterThan(playerBottom + frameHeight * 0.22);
+  expect(legacyLayout.horde.top).toBeLessThan(frameTop + frameHeight * 0.78);
+  if (legacyLayout.boss) {
+    expect(legacyLayout.horde.top - legacyLayout.boss.bottom).toBeGreaterThan(frameHeight * 0.02);
+  }
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'overlay');
   expect(errors).toEqual([]);

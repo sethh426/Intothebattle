@@ -298,18 +298,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   --banner-accent-soft:rgba(122,252,255,0.18);
   --banner-duration:3200ms;
   position:absolute; left:50%; top:50%; transform:translate(-50%,0); z-index:26; pointer-events:none;
-  min-height:72px; max-height:88px; padding:0 18px; box-sizing:border-box; overflow:hidden;
-  display:grid; grid-template-columns:58px minmax(0,1fr) 7px; align-items:center; gap:12px;
+  min-height:58px; max-height:68px; padding:0 14px; box-sizing:border-box; overflow:hidden;
+  display:grid; grid-template-columns:48px minmax(0,1fr) 6px; align-items:center; gap:10px;
   font-family:'Rajdhani','Segoe UI',sans-serif; color:#f8fbff;
   background:
     linear-gradient(90deg, rgba(2,7,14,0.98), rgba(5,16,31,0.94) 34%, rgba(3,9,18,0.96)),
     radial-gradient(circle at 12% 50%, var(--banner-accent-soft), transparent 40%);
   border:1px solid rgba(var(--banner-accent-rgb),0.48);
   border-radius:7px;
-  clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);
+  clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);
   box-shadow:
-    0 18px 48px rgba(0,0,0,0.58),
-    0 0 30px rgba(var(--banner-accent-rgb),0.18),
+    0 14px 34px rgba(0,0,0,0.54),
+    0 0 24px rgba(var(--banner-accent-rgb),0.16),
     inset 0 1px 0 rgba(255,255,255,0.13),
     inset 0 -1px 0 rgba(0,0,0,0.45);
   backdrop-filter:blur(12px) saturate(1.16);
@@ -334,38 +334,38 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.transition-signal { animation:cyberBannerSignalIn 280ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 820ms 160ms ease-out; }
 .banner.transition-surge { animation:cyberBannerSurgeIn 390ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 900ms 120ms ease-out; }
 .banner-signal {
-  position:relative; width:58px; height:48px; display:grid; place-items:center; flex:0 0 auto;
+  position:relative; width:48px; height:40px; display:grid; place-items:center; flex:0 0 auto;
   color:var(--banner-accent); border-right:1px solid rgba(255,255,255,0.1);
 }
 .banner-code {
-  position:relative; z-index:1; min-width:38px; padding:5px 6px; text-align:center;
+  position:relative; z-index:1; min-width:32px; padding:4px 5px; text-align:center;
   border:1px solid rgba(var(--banner-accent-rgb),0.34);
   background:rgba(0,0,0,0.24);
   box-shadow:inset 0 0 18px rgba(var(--banner-accent-rgb),0.14);
-  font-size:11px; font-weight:900; letter-spacing:1px; text-transform:uppercase;
+  font-size:10px; font-weight:900; letter-spacing:.9px; text-transform:uppercase;
 }
 .banner-pulse {
-  position:absolute; width:38px; height:38px; border:1px solid rgba(var(--banner-accent-rgb),0.38);
+  position:absolute; width:31px; height:31px; border:1px solid rgba(var(--banner-accent-rgb),0.38);
   transform:rotate(45deg); opacity:.82; animation:cyberSignalPulse 920ms ease-in-out infinite;
 }
 .banner-copy { min-width:0; position:relative; z-index:1; display:grid; gap:1px; }
 .banner-kicker {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:var(--banner-accent); font-size:12px; line-height:1; font-weight:900; letter-spacing:1.6px; text-transform:uppercase;
+  color:var(--banner-accent); font-size:10px; line-height:1; font-weight:900; letter-spacing:1.35px; text-transform:uppercase;
   text-shadow:0 0 12px rgba(var(--banner-accent-rgb),0.48);
 }
 .banner-title {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#fff; font-size:24px; line-height:1.04; font-weight:900; letter-spacing:.7px; text-transform:uppercase;
+  color:#fff; font-size:20px; line-height:1.02; font-weight:900; letter-spacing:.55px; text-transform:uppercase;
   text-shadow:0 0 18px rgba(255,255,255,0.28);
 }
 .banner-title strong { color:var(--banner-accent); font-weight:900; }
 .banner-meta {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#aeb8c9; font-size:12px; line-height:1.05; font-weight:800; letter-spacing:.7px; text-transform:uppercase;
+  color:#aeb8c9; font-size:10px; line-height:1.05; font-weight:800; letter-spacing:.58px; text-transform:uppercase;
 }
 .banner-meter {
-  position:relative; z-index:1; width:7px; height:50px; border:1px solid rgba(255,255,255,0.12);
+  position:relative; z-index:1; width:6px; height:40px; border:1px solid rgba(255,255,255,0.12);
   background:rgba(255,255,255,0.05); overflow:hidden; align-self:center;
 }
 .banner-meter-fill {
@@ -389,31 +389,31 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     0 0 86px rgba(255,84,54,0.14),
     inset 0 1px 0 rgba(255,255,255,0.18);
 }
-.banner.legendary .banner-title { font-size:25px; text-shadow:0 0 26px rgba(255,227,111,0.42); }
+.banner.legendary .banner-title { font-size:21px; text-shadow:0 0 24px rgba(255,227,111,0.42); }
 .banner.is-compact {
-  min-height:52px; max-height:62px; padding:0 11px; gap:9px;
-  grid-template-columns:42px minmax(0,1fr) 6px;
+  min-height:44px; max-height:52px; padding:0 10px; gap:8px;
+  grid-template-columns:36px minmax(0,1fr) 5px;
 }
-.banner.is-compact .banner-signal { width:42px; height:36px; }
-.banner.is-compact .banner-code { min-width:29px; padding:3px 4px; font-size:9px; letter-spacing:.8px; }
-.banner.is-compact .banner-pulse { width:27px; height:27px; }
-.banner.is-compact .banner-kicker { font-size:9px; letter-spacing:1.1px; }
+.banner.is-compact .banner-signal { width:36px; height:30px; }
+.banner.is-compact .banner-code { min-width:26px; padding:3px 4px; font-size:8px; letter-spacing:.72px; }
+.banner.is-compact .banner-pulse { width:23px; height:23px; }
+.banner.is-compact .banner-kicker { font-size:8px; letter-spacing:1px; }
 .banner.is-compact .banner-title,
-.banner.legendary.is-compact .banner-title { font-size:15px; letter-spacing:.45px; }
-.banner.is-compact .banner-meta { font-size:9px; letter-spacing:.5px; }
-.banner.is-compact .banner-meter { width:5px; height:32px; }
+.banner.legendary.is-compact .banner-title { font-size:14px; letter-spacing:.36px; }
+.banner.is-compact .banner-meta { font-size:8px; letter-spacing:.45px; }
+.banner.is-compact .banner-meter { width:5px; height:28px; }
 .banner.is-micro {
-  min-height:46px; max-height:54px; padding:0 8px; gap:7px;
-  grid-template-columns:34px minmax(0,1fr) 4px;
+  min-height:38px; max-height:44px; padding:0 8px; gap:6px;
+  grid-template-columns:30px minmax(0,1fr) 4px;
 }
-.banner.is-micro .banner-signal { width:34px; height:30px; }
-.banner.is-micro .banner-code { min-width:24px; padding:2px 3px; font-size:8px; letter-spacing:.55px; }
-.banner.is-micro .banner-pulse { width:22px; height:22px; }
-.banner.is-micro .banner-kicker { font-size:8px; letter-spacing:.85px; }
+.banner.is-micro .banner-signal { width:30px; height:26px; }
+.banner.is-micro .banner-code { min-width:22px; padding:2px 3px; font-size:7px; letter-spacing:.5px; }
+.banner.is-micro .banner-pulse { width:20px; height:20px; }
+.banner.is-micro .banner-kicker { font-size:7px; letter-spacing:.78px; }
 .banner.is-micro .banner-title,
-.banner.legendary.is-micro .banner-title { font-size:13px; letter-spacing:.32px; }
-.banner.is-micro .banner-meta { display:block; font-size:8px; letter-spacing:.45px; }
-.banner.is-micro .banner-meter { width:4px; height:28px; }
+.banner.legendary.is-micro .banner-title { font-size:12px; letter-spacing:.28px; }
+.banner.is-micro .banner-meta { display:block; font-size:7px; letter-spacing:.38px; }
+.banner.is-micro .banner-meter { width:4px; height:24px; }
 .banner.is-nano {
   min-height:30px; max-height:34px; padding:0 6px; gap:5px;
   grid-template-columns:minmax(0,1fr) 3px;
@@ -471,14 +471,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   to { transform:scaleY(.08); opacity:.62; }
 }
 @media(max-width:720px) {
-  .banner { min-height:52px; max-height:62px; padding:0 10px; gap:8px; grid-template-columns:40px minmax(0,1fr) 5px; }
-  .banner-signal { width:40px; height:34px; }
-  .banner-code { min-width:28px; font-size:8px; letter-spacing:.7px; }
-  .banner-pulse { width:26px; height:26px; }
-  .banner-kicker { font-size:9px; letter-spacing:1.2px; }
-  .banner-title,.banner.legendary .banner-title { font-size:14px; letter-spacing:.45px; }
-  .banner-meta { font-size:8px; }
-  .banner-meter { height:32px; }
+  .banner { min-height:42px; max-height:50px; padding:0 9px; gap:7px; grid-template-columns:34px minmax(0,1fr) 5px; }
+  .banner-signal { width:34px; height:29px; }
+  .banner-code { min-width:24px; font-size:8px; letter-spacing:.65px; }
+  .banner-pulse { width:22px; height:22px; }
+  .banner-kicker { font-size:8px; letter-spacing:1px; }
+  .banner-title,.banner.legendary .banner-title { font-size:13px; letter-spacing:.35px; }
+  .banner-meta { font-size:7px; }
+  .banner-meter { height:26px; }
 }
 @keyframes battleReturnFrame {
   0%   { filter:brightness(1.35) saturate(1.25); box-shadow:0 0 0 2px rgba(255,255,255,0.55),0 0 80px rgba(246,201,91,0.35),0 0 150px rgba(85,231,255,0.22); }
@@ -3167,10 +3167,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const frame = stage.frame;
     const hordeZone = stage.zones.horde;
     const ui = canvasUiScale();
-    const barW = Math.min(hordeZone.w, frame.w * 0.68);
-    const barH = Math.max(56 * ui, Math.min(hordeZone.h, 92 * ui, frame.h * 0.105 * layoutZoom));
+    const barW = Math.min(hordeZone.w, frame.w * 0.7);
+    const barH = Math.max(46 * ui, Math.min(hordeZone.h, 74 * ui, frame.h * 0.088 * layoutZoom));
     const centerX = clampNumber(hordeZone.x + hordeZone.w / 2 + offsetX * 0.12, hordeZone.x + barW / 2, hordeZone.right - barW / 2);
-    const liveHordeTopY = hordeZone.y + hordeZone.h * 0.45 - barH / 2;
+    const liveHordeTopY = hordeZone.y + hordeZone.h * 0.24 - barH / 2;
     const desiredTopY = hasDemoHordeYOverride ? H * demoHordeTopRatio : liveHordeTopY + offsetY * 0.22;
     const minTopY = hordeZone.y;
     const maxTopY = hordeZone.bottom - barH;
@@ -3212,16 +3212,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const bossZone = stage.zones.boss;
     const ui = canvasUiScale();
     const hordeLayout = getHordeLayout();
-    const r = Math.max(30 * ui, Math.min(56 * ui, bossZone.h * 0.33, frame.h * 0.074));
+    const r = Math.max(28 * ui, Math.min(52 * ui, bossZone.h * 0.28, frame.h * 0.068));
     const x = clampNumber(bossZone.x + bossZone.w / 2, bossZone.x + r * 1.5, bossZone.right - r * 1.5);
-    const desiredY = bossZone.y + bossZone.h * 0.39;
-    const maxY = Math.min(bossZone.bottom - r * 1.55, hordeLayout.barY - stage.gap - r * 1.2);
-    const minY = bossZone.y + r * 1.35;
+    const panelH = Math.max(44 * ui, Math.min(58 * ui, bossZone.h * 0.28));
+    const panelGap = Math.max(5 * ui, stage.gap * 0.28);
+    const desiredY = bossZone.y + bossZone.h * 0.34;
+    const bossPlayers = topPlayers();
+    const playerBottom = bossPlayers.reduce((bottom, _player, index) => {
+      const pos = getPlayerPosition(index, bossPlayers.length);
+      return Math.max(bottom, getPlayerCardDrawMetrics(pos, bossPlayers.length).bottom);
+    }, bossZone.y);
+    const minY = Math.max(bossZone.y + r * 1.28, playerBottom + stage.gap * 0.9 + r * 1.45);
+    const maxY = Math.min(
+      bossZone.bottom - panelH - panelGap - r * 1.18,
+      hordeLayout.barY - stage.gap * 0.72 - panelH - panelGap - r * 1.18
+    );
     const y = Math.max(minY, Math.min(maxY, desiredY));
     const panelW = Math.max(230 * ui, Math.min(bossZone.w * 0.94, 380 * ui));
-    const panelH = Math.max(54 * ui, 66 * ui);
     const panelX = clampNumber(x - panelW / 2, bossZone.x, bossZone.right - panelW);
-    const panelY = clampNumber(y + r * 0.74, bossZone.y, bossZone.bottom - panelH);
+    const panelY = clampNumber(y + r * 1.18 + panelGap, bossZone.y, bossZone.bottom - panelH);
     return {
       x,
       y,
@@ -3744,14 +3753,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const topBand = makeRect(frame.x + gapX, topBandY, Math.max(1, frame.w - gapX * 2), Math.max(1, topBandBottom - topBandY));
     const forceNano = stage.frame.h < 260 || stage.frame.w < 430 || topBand.h < 42;
     const zone = forceNano ? topBand : bannerZone;
-    const viewportWidth = Math.max(container.clientWidth, window.innerWidth || 0);
-    const viewportMaxWidth = viewportWidth * 0.86;
-    const readableMinWidth = Math.min(viewportMaxWidth, Math.max(240, viewportWidth * 0.6));
-    const hardMaxWidth = Math.max(180, Math.min(viewportMaxWidth, Math.max(zone.w, readableMinWidth)));
-    const maxWidth = Math.max(readableMinWidth, Math.min(hardMaxWidth, viewportWidth * 0.66));
-    const preferredWidth = Math.min(maxWidth, Math.max(readableMinWidth, zone.w * 0.92));
-    const forceCompact = zone.h <= 96 || preferredWidth < 720;
-    const forceMicro = zone.h <= 70 || preferredWidth < 500;
+    const frameMaxWidth = Math.max(180, frame.w * 0.76);
+    const readableMinWidth = Math.min(frameMaxWidth, Math.max(240, frame.w * 0.42));
+    const maxWidth = Math.max(readableMinWidth, Math.min(frameMaxWidth, zone.w * 1.08));
+    const preferredWidth = Math.min(maxWidth, Math.max(readableMinWidth, zone.w * 0.96));
+    const forceCompact = zone.h <= 72 || preferredWidth < 720;
+    const forceMicro = zone.h <= 48 || preferredWidth < 500;
     el.classList.remove('is-compact', 'is-micro', 'is-nano');
     if (forceCompact) el.classList.add('is-compact');
     if (forceMicro) el.classList.add('is-micro');
