@@ -339,6 +339,18 @@ test('creator pro sponsor video upload, serving, and v1 overlay playback work to
     const body = await res.json();
     return body.overlayCount || 0;
   }, { timeout: 8000 }).toBeGreaterThan(0);
+  await expect.poll(async () => page.evaluate(() => window.overlayEventEngine?.status?.().connection?.state || ''), {
+    timeout: 8000,
+  }).toBe('registered');
+  const connectionStatus = await page.evaluate(() => window.overlayEventEngine?.status?.().connection || null);
+  expect(connectionStatus).toMatchObject({
+    mode: 'signed',
+    ready: true,
+    connected: true,
+    registered: true,
+    hasOverlayToken: true,
+  });
+  expect(connectionStatus).not.toHaveProperty('overlayToken');
 
   const playResponse = await context.request.post(`${baseUrl}/api/sponsor/play`, {
     data: {

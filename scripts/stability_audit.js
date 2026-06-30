@@ -160,6 +160,11 @@ function checkOverlayModuleContracts() {
       globalName: 'IntoTheBattleOverlayAudio',
       consumerMarker: 'window.IntoTheBattleOverlayAudio',
     },
+    {
+      file: 'js/overlay/video-agent.js',
+      globalName: 'IntoTheBattleOverlayVideoAgent',
+      consumerMarker: 'window.IntoTheBattleOverlayVideoAgent',
+    },
   ];
 
   let previousIndex = -1;
@@ -207,6 +212,96 @@ function checkOverlayModuleContracts() {
   }
   if (/function\s+(normalizeAuditRect|auditObjectLayout|domLayerLeakLabels)\s*\(/.test(overlayHtml)) {
     addError('overlay.html reintroduced diagnostics helpers; keep them in js/overlay/overlay-diagnostics.js.');
+  }
+  if (!overlayHtml.includes('prefers-reduced-motion: reduce')) {
+    addError('overlay.html is missing the reduced-motion CSS path for overlay motion comfort.');
+  }
+  if (!overlayHtml.includes('motionParticleCount') || !overlayHtml.includes('currentOverlayMotionStatus')) {
+    addError('overlay.html is missing reduced-motion canvas effect controls.');
+  }
+  if (!overlayHtml.includes('resolveEffectEntity') || !overlayHtml.includes('testEffectOwnership') || !overlayHtml.includes('unownedEffects')) {
+    addError('overlay.html is missing combat effect ownership enforcement/status hooks.');
+  }
+  if (!overlayHtml.includes('sponsorVideoAgent.status') || !readText('js/overlay/video-agent.js').includes('status(payload = {})')) {
+    addError('Overlay sponsor video-agent status hook is missing.');
+  }
+  if (!overlayHtml.includes('currentConnectionStatus') || !overlayHtml.includes('connectionHealthStats')) {
+    addError('overlay.html is missing overlay connection health status.');
+  }
+  if (!overlayHtml.includes('currentBackgroundStatus') || !overlayHtml.includes('handleBackgroundChanged') || !overlayHtml.includes('backgroundAssetStatus')) {
+    addError('overlay.html is missing background asset health status.');
+  }
+  if (!overlayHtml.includes('testBackground')) {
+    addError('overlay.html is missing the deterministic background asset test hook.');
+  }
+  if (!overlayHtml.includes('SPONSOR_QUEUE_MAX') || !overlayHtml.includes('currentSponsorSceneStatus') || !overlayHtml.includes('enqueueSponsorScenePayload')) {
+    addError('overlay.html is missing bounded sponsor scene queue health controls.');
+  }
+  if (!overlayHtml.includes('testSponsorQueue') || !overlayHtml.includes('runSponsorQueueStress')) {
+    addError('overlay.html is missing the deterministic sponsor queue stress probe.');
+  }
+  if (!overlayHtml.includes('currentAudioStatus') || !overlayHtml.includes('applyAudioConfig(audioConfig)')) {
+    addError('overlay.html is missing overlay audio preload/status coverage.');
+  }
+  if (!overlayHtml.includes('visualQueueStats') || !overlayHtml.includes('currentVisualQueueStatus')) {
+    addError('overlay.html is missing visual event queue health status.');
+  }
+  if (!overlayHtml.includes('currentFrameHealthStatus') || !overlayHtml.includes('recordFrameHealth') || !overlayHtml.includes('resetFrameHealth')) {
+    addError('overlay.html is missing render frame health telemetry.');
+  }
+  if (!overlayHtml.includes('trimVisualEffects') || !overlayHtml.includes('pushAttackEffect')) {
+    addError('overlay.html is missing bounded transient canvas effect controls.');
+  }
+  if (!overlayHtml.includes('currentBannerStatus')) {
+    addError('overlay.html is missing banner backlog health status.');
+  }
+  if (!overlayHtml.includes('testEventStorm') || !overlayHtml.includes('runVisualEventStorm')) {
+    addError('overlay.html is missing the deterministic visual event storm probe.');
+  }
+  if (!readText('scripts/overlay_visual_audit.js').includes("emulateMedia({ reducedMotion: 'reduce' })")) {
+    addError('Overlay visual audit no longer verifies reduced-motion rendering.');
+  }
+  if (!readText('scripts/overlay_visual_audit.js').includes('testMotionImpact')) {
+    addError('Overlay visual audit no longer verifies reduced-motion canvas effects.');
+  }
+  if (!readText('scripts/overlay_visual_audit.js').includes('assertSponsorMediaAgent')) {
+    addError('Overlay visual audit no longer verifies sponsor video-agent wiring.');
+  }
+  if (!readText('scripts/overlay_visual_audit.js').includes('assertConnectionStatus')) {
+    addError('Overlay visual audit no longer verifies overlay connection health.');
+  }
+  if (!readText('scripts/overlay_visual_audit.js').includes('assertBackgroundStatus')) {
+    addError('Overlay visual audit no longer verifies background asset health.');
+  }
+  if (!readText('scripts/overlay_visual_audit.js').includes('auditBackgroundViewport')) {
+    addError('Overlay visual audit no longer verifies background load/error/clear behavior.');
+  }
+  if (!readText('tests/e2e/v1-qa.spec.js').includes('connectionStatus')) {
+    addError('V1 QA e2e no longer verifies signed overlay connection health.');
+  }
+  if (!readText('scripts/overlay_visual_audit.js').includes('assertSponsorQueueHealth')) {
+    addError('Overlay visual audit no longer verifies sponsor queue health.');
+  }
+  if (!readText('scripts/overlay_visual_audit.js').includes('auditSponsorQueueViewport')) {
+    addError('Overlay visual audit no longer verifies sponsor queue stress behavior.');
+  }
+  if (!readText('scripts/overlay_visual_audit.js').includes('assertOverlayAudioStatus')) {
+    addError('Overlay visual audit no longer verifies overlay audio preload/status.');
+  }
+  if (!readText('scripts/overlay_visual_audit.js').includes('assertVisualQueueHealth')) {
+    addError('Overlay visual audit no longer verifies visual event queue health.');
+  }
+  if (!readText('scripts/overlay_visual_audit.js').includes('assertEffectOwnership') || !readText('scripts/overlay_visual_audit.js').includes('auditEffectOwnershipViewport')) {
+    addError('Overlay visual audit no longer verifies combat effect ownership.');
+  }
+  if (!readText('scripts/overlay_visual_audit.js').includes('assertFrameHealth')) {
+    addError('Overlay visual audit no longer verifies render frame health.');
+  }
+  if (!readText('scripts/overlay_visual_audit.js').includes('assertBannerBacklog')) {
+    addError('Overlay visual audit no longer verifies banner backlog health.');
+  }
+  if (!readText('scripts/overlay_visual_audit.js').includes('auditEventStormViewport')) {
+    addError('Overlay visual audit no longer verifies event-storm resilience.');
   }
 }
 

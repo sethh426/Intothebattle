@@ -1271,6 +1271,125 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   100% { opacity:0; transform:scale(1.04); filter:blur(0); }
 }
 
+@keyframes reducedDamageFade {
+  0% { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  100% { opacity:0; transform:translate(-50%,-50%) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior:auto !important;
+  }
+
+  body.battle-return #overlay-container,
+  .banner,
+  .banner::before,
+  .banner::after,
+  .banner.closing,
+  .banner.transition-slam,
+  .banner.transition-sweep,
+  .banner.transition-signal,
+  .banner.transition-surge,
+  .banner-pulse,
+  .sponsor-scene,
+  .sponsor-scene::before,
+  .sponsor-scene::after,
+  .sponsor-gate,
+  .sponsor-sweep,
+  .sponsor-ring,
+  .sponsor-intro-rail,
+  .sponsor-intro-title,
+  .sponsor-intro-partner,
+  .sponsor-spark-field span,
+  .sponsor-video-chrome,
+  .sponsor-video-chrome::before,
+  .sponsor-broadcast-frame,
+  .sponsor-broadcast-frame::before,
+  .sponsor-live-stats,
+  .sponsor-live-stats::before,
+  .sponsor-live-stats::after,
+  .sponsor-stats-head span:last-child::before,
+  .sponsor-stat,
+  .sponsor-leader-row,
+  .sponsor-return-hint,
+  .sponsor-outro-wipe,
+  .sponsor-outro-title {
+    animation:none !important;
+    transition:none !important;
+  }
+
+  .banner,
+  .banner.closing,
+  .banner.transition-slam,
+  .banner.transition-sweep,
+  .banner.transition-signal,
+  .banner.transition-surge {
+    opacity:1;
+    filter:none;
+    transform:translate(-50%,0) scale(1);
+  }
+
+  .banner::before,
+  .banner-pulse,
+  .sponsor-spark-field,
+  .sponsor-sweep,
+  .sponsor-ring,
+  .sponsor-outro-wipe {
+    display:none;
+  }
+
+  .damage,
+  .damage.kill,
+  .damage.critical {
+    animation:reducedDamageFade .42s linear forwards !important;
+  }
+
+  .sponsor-scene,
+  .sponsor-scene.active,
+  .sponsor-scene video,
+  .sponsor-poster,
+  .sponsor-frame,
+  .sponsor-live-stats,
+  .sponsor-stat,
+  .sponsor-leader-row,
+  .sponsor-outro-title {
+    transform:none !important;
+    filter:none !important;
+  }
+
+  .sponsor-scene.active {
+    opacity:1;
+    visibility:visible;
+  }
+
+  .sponsor-scene.live.stats-visible .sponsor-live-stats,
+  .sponsor-scene.live.stats-visible.stats-endcap .sponsor-live-stats {
+    opacity:1;
+    transform:none !important;
+  }
+
+  .sponsor-scene.live.stats-endcap .sponsor-live-stats {
+    top:50%;
+    transform:translateY(-50%) !important;
+  }
+
+  .sponsor-scene.live.stats-visible .sponsor-stat,
+  .sponsor-scene.live.stats-visible .sponsor-leader-row {
+    opacity:1;
+    transform:none !important;
+  }
+
+  .sponsor-horde-bar span {
+    animation:none !important;
+  }
+
+  .sponsor-scene.live.clock-running .sponsor-progress span {
+    animation:sponsorProgress var(--sponsor-duration) linear forwards !important;
+  }
+}
+
 .reload-overlay {
   position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:99999;
   display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:auto;
@@ -1464,6 +1583,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 <script src="/js/overlay/overlay-normalizers.js"></script>
 <script src="/js/overlay/overlay-diagnostics.js"></script>
 <script src="/js/overlay/overlay-audio.js"></script>
+<script src="/js/overlay/video-agent.js"></script>
 
 <script>
 (function () {
@@ -1474,6 +1594,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const overlayNormalizers = window.IntoTheBattleOverlayNormalizers;
   const overlayDiagnostics = window.IntoTheBattleOverlayDiagnostics;
   const overlayAudio = window.IntoTheBattleOverlayAudio;
+  const overlayVideoAgent = window.IntoTheBattleOverlayVideoAgent;
 
   const canvas    = document.getElementById('canvas');
   const ctx       = canvas.getContext('2d', { alpha: true });
@@ -1526,6 +1647,22 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let layoutZoom      = 1;
   const hordeThreshold = 5;      // now fixed
   let backgroundImg   = null;
+  let backgroundLoadToken = 0;
+  const backgroundAssetStatus = {
+    state: 'idle',
+    filename: '',
+    source: '',
+    requestedAt: 0,
+    loadedAt: 0,
+    errorAt: 0,
+    naturalWidth: 0,
+    naturalHeight: 0,
+    loadCount: 0,
+    errorCount: 0,
+    clearCount: 0,
+    lastError: '',
+    usingPrevious: false,
+  };
   let socket          = null;
   const DEFAULT_OVERLAY_AUDIO_CONFIG = overlayAudio.defaultAudioConfig;
   let audioConfig     = { ...DEFAULT_OVERLAY_AUDIO_CONFIG };
@@ -1538,18 +1675,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let _demoTimer      = null;
   let sponsorTimer    = null;
   let sponsorVideoStartTimer = null;
-  let sponsorStallTimer = null;
   let sponsorClockDeadline = 0;
   let sponsorClockRemainingMs = 0;
   let sponsorClockPaused = false;
   let sponsorStatsTimers = [];
   let sponsorState    = 'battle';
   let sponsorQueue    = [];
+  const SPONSOR_QUEUE_MAX = 3;
+  const sponsorQueueStats = {
+    enqueued: 0,
+    replaced: 0,
+    dropped: 0,
+    cleared: 0,
+    startedFromQueue: 0,
+    maxDepth: 0,
+  };
   let activeSponsorPayload = null;
   let preparedSponsorPayload = null;
   let sponsorFinishStatus = 'completed';
   let sponsorAudioContext = null;
-  let sponsorVideoLoadToken = 0;
   let sponsorStatsLastRender = 0;
   let sponsorLeaderboardSignature = '';
   let renderScale     = 1;
@@ -1564,6 +1708,30 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const seenVisualSeqs = new Set();
   const seenVisualSeqOrder = [];
   const visualLaneReadyAt = {};
+  const frameDeltas = [];
+  const frameHealthStats = {
+    frames: 0,
+    startedAt: 0,
+    lastAt: 0,
+    lastDeltaMs: 0,
+    maxDeltaMs: 0,
+    longFrames: 0,
+    veryLongFrames: 0,
+    resetAt: 0,
+  };
+  const visualQueueStats = {
+    enqueued: 0,
+    merged: 0,
+    processed: 0,
+    trimmed: 0,
+    expired: 0,
+    sponsorDropped: 0,
+    duplicateSeq: 0,
+    staleSeq: 0,
+    handlerErrors: 0,
+    maxDepth: 0,
+  };
+  let lastVisualQueueError = null;
   let visualEventScheduled = false;
   let pendingGameState = null;
   let gameStateScheduled = false;
@@ -1572,6 +1740,20 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let stateFetchInFlight = false;
   let registerAcked = false;
   let registerRetryTimer = null;
+  const connectionHealthStats = {
+    connectCount: 0,
+    disconnectCount: 0,
+    connectErrorCount: 0,
+    registerAttempts: 0,
+    registerAcks: 0,
+    lastConnectAt: 0,
+    lastDisconnectAt: 0,
+    lastConnectErrorAt: 0,
+    lastRegisterAttemptAt: 0,
+    lastRegisterAckAt: 0,
+    lastReason: '',
+    lastError: '',
+  };
   let battlePromptLastShown = 0;
   let richBannerLastShown = 0;
   let arenaShakeUntil = 0;
@@ -1657,7 +1839,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   const HORDE_ID = '__HORDE__';
   const BOSS_ID = '__BOSS__';
+  const EFFECT_OWNER_KINDS = new Set(['player', 'horde', 'boss']);
+  const effectOwnershipStats = {
+    droppedEffects: 0,
+    droppedByReason: {},
+    lastDropped: null,
+  };
   const overlayParams = new URLSearchParams(window.location.search);
+  const reducedMotionMedia = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
   const overlayRoomId = overlayParams.get('room_id') || '';
   const overlayToken  = overlayParams.get('overlay_token') || overlayParams.get('overlayToken') || '';
   const isSignedOverlay = Boolean(overlayRoomId && overlayToken);
@@ -1678,6 +1867,34 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const hasDemoHordeYOverride = isPublicDemo && overlayParams.has('demo_horde_y');
   const demoPlayerYRatio = isPublicDemo ? readDemoRatio('demo_player_y', 0.46, 0.34, 0.62) : null;
   const demoHordeTopRatio = isPublicDemo ? readDemoRatio('demo_horde_y', 0.79, 0.62, 0.86) : null;
+  function prefersReducedMotion() {
+    return Boolean(reducedMotionMedia?.matches);
+  }
+
+  function canvasMotionScale() {
+    return prefersReducedMotion() ? 0.36 : 1;
+  }
+
+  function canvasEffectDensityScale() {
+    const area = cw() * ch();
+    if (area >= 1900 * 1000) return 0.14;
+    if (area >= 1200 * 700) return 0.32;
+    if (area >= 900 * 520) return 0.52;
+    return 1;
+  }
+
+  function motionParticleCount(count, options = {}) {
+    const safeCount = Math.max(0, Math.floor(Number(count) || 0));
+    const min = Math.max(0, Math.floor(Number(options.min) || 1));
+    if (!safeCount) return 0;
+    if (!prefersReducedMotion()) {
+      const scaled = Math.floor(safeCount * canvasEffectDensityScale());
+      return Math.max(Math.min(safeCount, min), Math.min(safeCount, scaled));
+    }
+    const factor = Number(options.factor) || 0.28;
+    const max = Math.max(min, Math.floor(Number(options.max) || safeCount));
+    return Math.min(safeCount, Math.max(min, Math.min(max, Math.ceil(safeCount * factor))));
+  }
 
   if (isSignedOverlay || isPublicDemo) {
     document.body.classList.add('signed-overlay');
@@ -1709,6 +1926,99 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return `${url.pathname}${url.search}`;
   }
 
+  function scrubOverlayUrl(value) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    if (/^data:image\//i.test(text)) return 'data:image';
+    if (/^blob:/i.test(text)) return 'blob:image';
+    try {
+      const url = new URL(text, window.location.origin);
+      url.searchParams.delete('overlay_token');
+      url.searchParams.delete('overlayToken');
+      return `${url.pathname}${url.search}`;
+    } catch (_err) {
+      return text.replace(/([?&](?:overlay_token|overlayToken)=)[^&]+/gi, '$1[redacted]').slice(0, 180);
+    }
+  }
+
+  function resolveBackgroundSource(data = {}) {
+    const filename = data && data.filename ? String(data.filename) : '';
+    const url = String(data?.url || data?.src || '').trim();
+    if (url) {
+      if (/^(?:data:image\/|blob:)/i.test(url)) return url;
+      return withOverlayAuth(url, { v: data._ts || Date.now() });
+    }
+    if (!filename) return '';
+    return withOverlayAuth(`/background/${encodeURIComponent(filename)}`, { v: data._ts || Date.now() });
+  }
+
+  function currentBackgroundStatus() {
+    return {
+      ...backgroundAssetStatus,
+      hasImage: Boolean(backgroundImg),
+      requestAgeMs: backgroundAssetStatus.requestedAt ? Date.now() - backgroundAssetStatus.requestedAt : null,
+      loadedAgeMs: backgroundAssetStatus.loadedAt ? Date.now() - backgroundAssetStatus.loadedAt : null,
+      errorAgeMs: backgroundAssetStatus.errorAt ? Date.now() - backgroundAssetStatus.errorAt : null,
+    };
+  }
+
+  function handleBackgroundChanged(data = {}) {
+    const filename = data && data.filename ? String(data.filename) : '';
+    const source = resolveBackgroundSource(data);
+    backgroundLoadToken += 1;
+    const token = backgroundLoadToken;
+    if (!filename && !source) {
+      backgroundImg = null;
+      backgroundAssetStatus.state = 'cleared';
+      backgroundAssetStatus.filename = '';
+      backgroundAssetStatus.source = '';
+      backgroundAssetStatus.requestedAt = Date.now();
+      backgroundAssetStatus.loadedAt = 0;
+      backgroundAssetStatus.errorAt = 0;
+      backgroundAssetStatus.naturalWidth = 0;
+      backgroundAssetStatus.naturalHeight = 0;
+      backgroundAssetStatus.clearCount += 1;
+      backgroundAssetStatus.lastError = '';
+      backgroundAssetStatus.usingPrevious = false;
+      return currentBackgroundStatus();
+    }
+
+    backgroundAssetStatus.state = 'loading';
+    backgroundAssetStatus.filename = filename;
+    backgroundAssetStatus.source = scrubOverlayUrl(source);
+    backgroundAssetStatus.requestedAt = Date.now();
+    backgroundAssetStatus.loadedAt = 0;
+    backgroundAssetStatus.errorAt = 0;
+    backgroundAssetStatus.naturalWidth = 0;
+    backgroundAssetStatus.naturalHeight = 0;
+    backgroundAssetStatus.lastError = '';
+    backgroundAssetStatus.usingPrevious = Boolean(backgroundImg);
+
+    const img = new Image();
+    img.onload = () => {
+      if (token !== backgroundLoadToken) return;
+      backgroundImg = img;
+      backgroundAssetStatus.state = 'ready';
+      backgroundAssetStatus.loadedAt = Date.now();
+      backgroundAssetStatus.naturalWidth = img.naturalWidth || img.width || 0;
+      backgroundAssetStatus.naturalHeight = img.naturalHeight || img.height || 0;
+      backgroundAssetStatus.loadCount += 1;
+      backgroundAssetStatus.lastError = '';
+      backgroundAssetStatus.usingPrevious = false;
+    };
+    img.onerror = () => {
+      if (token !== backgroundLoadToken) return;
+      backgroundAssetStatus.state = 'error';
+      backgroundAssetStatus.errorAt = Date.now();
+      backgroundAssetStatus.errorCount += 1;
+      backgroundAssetStatus.lastError = `failed to load ${backgroundAssetStatus.source || filename || 'background'}`;
+      backgroundAssetStatus.usingPrevious = Boolean(backgroundImg);
+      console.warn('Overlay background failed to load', filename || backgroundAssetStatus.source);
+    };
+    img.src = source;
+    return currentBackgroundStatus();
+  }
+
   function makeSocketOptions() {
     const options = {
       transports: ['websocket', 'polling'],
@@ -1726,12 +2036,66 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return options;
   }
 
+  function ageMs(timestamp) {
+    return timestamp ? Math.max(0, Date.now() - timestamp) : null;
+  }
+
+  function currentConnectionStatus() {
+    const hasSocket = Boolean(socket);
+    const connected = Boolean(socket?.connected);
+    const mode = isPublicDemo ? 'demo' : isSignedOverlay ? 'signed' : 'local';
+    let state = 'connecting';
+    if (isPublicDemo) state = 'demo';
+    else if (!hasSocket && isDemoMode) state = 'demo-fallback';
+    else if (!hasSocket) state = 'socket-unavailable';
+    else if (connected && registerAcked) state = 'registered';
+    else if (connected) state = 'connected';
+    else if (connectionHealthStats.connectErrorCount > 0) state = 'retrying';
+    else if (connectionHealthStats.disconnectCount > 0) state = 'disconnected';
+    return {
+      mode,
+      state,
+      ready: state === 'demo' || state === 'demo-fallback' || state === 'registered',
+      signed: isSignedOverlay,
+      setupMode: isSetupMode,
+      publicDemo: isPublicDemo,
+      roomId: overlayRoomId || '',
+      hasOverlayToken: Boolean(overlayToken),
+      hasSocket,
+      connected,
+      registered: registerAcked,
+      demoMode: isDemoMode,
+      retryTimerActive: Boolean(registerRetryTimer),
+      playerCount: Object.keys(players).length,
+      statusText: String(statusDiv?.textContent || '').slice(0, 120),
+      stats: { ...connectionHealthStats },
+      ages: {
+        connectMs: ageMs(connectionHealthStats.lastConnectAt),
+        disconnectMs: ageMs(connectionHealthStats.lastDisconnectAt),
+        connectErrorMs: ageMs(connectionHealthStats.lastConnectErrorAt),
+        registerAttemptMs: ageMs(connectionHealthStats.lastRegisterAttemptAt),
+        registerAckMs: ageMs(connectionHealthStats.lastRegisterAckAt),
+      },
+    };
+  }
+
   window.overlayAuth = { roomId: overlayRoomId, overlayToken, withOverlayAuth };
 
   function setSponsorText(el, value, fallback) {
     if (!el) return;
     el.textContent = String(value || fallback || '').slice(0, 140);
   }
+
+  const sponsorVideoAgent = overlayVideoAgent.create({
+    scene: sponsorScene,
+    video: sponsorVideo,
+    poster: sponsorPoster,
+    statusElement: sponsorMediaStatus,
+    report: (payload, status, message) => reportSponsorPlayback(payload, status, message),
+    isCurrent: payload => sponsorState === 'live' && activeSponsorPayload === payload,
+    onBuffering: payload => pauseSponsorClockForBuffering(payload),
+    onRecovered: payload => resumeSponsorClockAfterBuffering(payload),
+  });
 
   function showBattlePrompt(message, type = '', duration = 2600, force = false) {
     if (sponsorState !== 'battle') return;
@@ -1768,10 +2132,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function clearSponsorStallTimer() {
-    if (sponsorStallTimer) {
-      clearTimeout(sponsorStallTimer);
-      sponsorStallTimer = null;
-    }
+    sponsorVideoAgent.clearStallTimer();
   }
 
   function clearSponsorVideoStartTimer() {
@@ -1839,10 +2200,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function pauseSponsorVideoForStats(payload) {
-    if (!sponsorVideo || !payload?.videoUrl || payload.statsMode !== 'endcap') return;
-    try {
-      if (!sponsorVideo.paused && !sponsorVideo.ended) sponsorVideo.pause();
-    } catch (_err) {}
+    if (!payload?.videoUrl || payload.statsMode !== 'endcap') return;
+    sponsorVideoAgent.pause();
   }
 
   function revealSponsorStats(payload, phase = 'endcap') {
@@ -1952,31 +2311,67 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
   }
 
+  function sponsorQueueKey(payload = {}) {
+    return String(payload.breakId || payload.creativeId || payload.videoUrl || payload.filename || `${payload.partner}:${payload.title}`).toLowerCase();
+  }
+
+  function sponsorPayloadSummary(payload = {}) {
+    if (!payload) return null;
+    return {
+      breakId: payload.breakId || '',
+      partner: payload.partner || '',
+      title: payload.title || '',
+      timingProfile: payload.timingProfile || '',
+      statsMode: payload.statsMode || '',
+      hasVideo: Boolean(payload.videoUrl || payload.filename),
+      durationMs: payload.durationMs || 0,
+    };
+  }
+
+  function currentSponsorSceneStatus() {
+    return {
+      state: sponsorState,
+      queued: sponsorQueue.length,
+      maxQueued: SPONSOR_QUEUE_MAX,
+      active: sponsorPayloadSummary(activeSponsorPayload),
+      prepared: sponsorPayloadSummary(preparedSponsorPayload),
+      next: sponsorPayloadSummary(sponsorQueue[0]),
+      timerActive: Boolean(sponsorTimer),
+      videoStartTimerActive: Boolean(sponsorVideoStartTimer),
+      statsTimers: sponsorStatsTimers.length,
+      clockPaused: sponsorClockPaused,
+      stats: { ...sponsorQueueStats },
+    };
+  }
+
+  function enqueueSponsorScenePayload(scenePayload) {
+    if (!scenePayload) return currentSponsorSceneStatus();
+    const key = sponsorQueueKey(scenePayload);
+    const existingIndex = sponsorQueue.findIndex(item => sponsorQueueKey(item) === key);
+    if (existingIndex >= 0) {
+      sponsorQueue[existingIndex] = scenePayload;
+      sponsorQueueStats.replaced += 1;
+      return currentSponsorSceneStatus();
+    }
+    sponsorQueue.push(scenePayload);
+    sponsorQueueStats.enqueued += 1;
+    if (sponsorQueue.length > SPONSOR_QUEUE_MAX) {
+      const dropCount = sponsorQueue.length - SPONSOR_QUEUE_MAX;
+      sponsorQueue.splice(0, dropCount);
+      sponsorQueueStats.dropped += dropCount;
+    }
+    sponsorQueueStats.maxDepth = Math.max(sponsorQueueStats.maxDepth, sponsorQueue.length);
+    return currentSponsorSceneStatus();
+  }
+
+  function clearSponsorQueue() {
+    if (sponsorQueue.length) sponsorQueueStats.cleared += sponsorQueue.length;
+    sponsorQueue = [];
+  }
+
   function resetSponsorVideo(clearSource = true, cancelLoad = true) {
-    if (cancelLoad) sponsorVideoLoadToken += 1;
-    if (sponsorVideo) {
-      sponsorVideo.pause();
-      sponsorVideo.onended = null;
-      sponsorVideo.oncanplay = null;
-      sponsorVideo.oncanplaythrough = null;
-      sponsorVideo.onloadeddata = null;
-      sponsorVideo.onloadedmetadata = null;
-      sponsorVideo.onplaying = null;
-      sponsorVideo.onerror = null;
-      sponsorVideo.onstalled = null;
-      sponsorVideo.onwaiting = null;
-      if (clearSource) {
-        sponsorVideo.removeAttribute('src');
-        sponsorVideo.load();
-      }
-    }
-    if (clearSource) clearSponsorPoster();
-    if (sponsorScene) {
-      sponsorScene.classList.remove('video-ready', 'video-loading', 'video-error');
-      delete sponsorScene.dataset.videoFit;
-    }
+    sponsorVideoAgent.reset({ clearSource, cancelLoad });
     resetSponsorTimingClasses();
-    setSponsorText(sponsorMediaStatus, '', '');
   }
 
   function setSponsorSceneState(nextState) {
@@ -1990,47 +2385,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function setSponsorMediaStatus(message, stateClass) {
-    if (!sponsorScene) return;
-    sponsorScene.classList.remove('video-ready', 'video-loading', 'video-error');
-    if (stateClass) sponsorScene.classList.add(stateClass);
-    setSponsorText(sponsorMediaStatus, message || '', '');
-  }
-
-  function sponsorPosterSource(payload = {}) {
-    const source = String(payload.posterUrl || payload.posterData || payload.thumbnailData || '').trim();
-    if (/^data:image\/(?:jpeg|jpg|png|webp);base64,/i.test(source)) return source;
-    if (/^(?:https?:)?\/\//i.test(source) || source.startsWith('/')) return source;
-    return '';
+    sponsorVideoAgent.setStatus(message, stateClass);
   }
 
   function applySponsorPoster(payload = {}) {
-    const source = sponsorPosterSource(payload);
-    if (sponsorPoster) {
-      sponsorPoster.style.backgroundImage = source ? `url("${source.replace(/"/g, '%22')}")` : '';
-    }
-    if (sponsorVideo) {
-      if (source) sponsorVideo.poster = source;
-      else sponsorVideo.removeAttribute('poster');
-    }
-    if (sponsorScene) sponsorScene.classList.toggle('has-poster', Boolean(source));
-  }
-
-  function clearSponsorPoster() {
-    if (sponsorPoster) sponsorPoster.style.backgroundImage = '';
-    if (sponsorVideo) sponsorVideo.removeAttribute('poster');
-    if (sponsorScene) sponsorScene.classList.remove('has-poster');
-  }
-
-  function sponsorVideoErrorMessage(prefix = 'Arena media could not play') {
-    if (!sponsorVideo?.error?.code) return prefix;
-    const labels = {
-      1: 'aborted',
-      2: 'network',
-      3: 'decode',
-      4: 'unsupported source',
-    };
-    const label = labels[sponsorVideo.error.code] || `code ${sponsorVideo.error.code}`;
-    return `${prefix} (${label})`;
+    sponsorVideoAgent.applyPoster(payload);
   }
 
   function sponsorCleanKicker(value) {
@@ -2045,26 +2404,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return ['sponsor', 'sponsored moment', 'sponsor moment', 'presented by'].includes(normalized) ? 'Power Moment' : (text || 'Power Moment');
   }
 
-  function applySponsorVideoFit(payload = {}) {
-    if (!sponsorScene || !sponsorVideo) return;
-    const requestedFit = ['cover', 'contain', 'auto'].includes(payload.fit) ? payload.fit : 'auto';
-    let resolvedFit = requestedFit;
-    if (resolvedFit === 'auto') {
-      const mediaWidth = Number(payload.mediaWidth) || Number(sponsorVideo.videoWidth) || 16;
-      const mediaHeight = Number(payload.mediaHeight) || Number(sponsorVideo.videoHeight) || 9;
-      const ratio = mediaWidth / Math.max(1, mediaHeight);
-      resolvedFit = ratio < 1.45 || ratio > 2.05 ? 'contain' : 'cover';
-    }
-    sponsorScene.classList.toggle('contain', resolvedFit === 'contain');
-    sponsorScene.dataset.videoFit = resolvedFit;
-  }
-
   function sponsorMediaDurationMs() {
-    if (activeSponsorPayload?.mediaDurationMs && Number.isFinite(Number(activeSponsorPayload.mediaDurationMs))) {
-      return Math.round(Number(activeSponsorPayload.mediaDurationMs));
-    }
-    if (!sponsorVideo || !Number.isFinite(sponsorVideo.duration) || sponsorVideo.duration <= 0) return 0;
-    return Math.round(sponsorVideo.duration * 1000);
+    return sponsorVideoAgent.mediaDurationMs(activeSponsorPayload);
   }
 
   function sponsorEndcapDurationMs(baseDuration, payload = {}) {
@@ -2094,9 +2435,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function reportSponsorPlayback(payload, status, message = '') {
     if (!socket || !payload?.breakId) return;
-    const mediaDurationMs = sponsorVideo && Number.isFinite(sponsorVideo.duration) && sponsorVideo.duration > 0
-      ? Math.round(sponsorVideo.duration * 1000)
-      : Number(payload.mediaDurationMs) || null;
+    const mediaTelemetry = sponsorVideoAgent.mediaTelemetry(payload);
     try {
       socket.emit('sponsorPlaybackEvent', {
         breakId: payload.breakId,
@@ -2105,12 +2444,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         source: payload.source || 'creator',
         creativeId: payload.creativeId || null,
         filename: payload.filename || '',
-        readyState: sponsorVideo ? sponsorVideo.readyState : null,
-        currentTime: sponsorVideo ? sponsorVideo.currentTime : null,
-        duration: sponsorVideo ? sponsorVideo.duration : null,
-        mediaDurationMs,
-        mediaWidth: sponsorVideo ? sponsorVideo.videoWidth || payload.mediaWidth || null : payload.mediaWidth || null,
-        mediaHeight: sponsorVideo ? sponsorVideo.videoHeight || payload.mediaHeight || null : payload.mediaHeight || null,
+        ...mediaTelemetry,
       });
     } catch (_err) {}
   }
@@ -2120,213 +2454,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function preloadSponsorVideo(payload) {
-    sponsorVideoLoadToken += 1;
-    const token = sponsorVideoLoadToken;
-
-    if (!sponsorVideo || !payload.videoUrl) {
-      setSponsorMediaStatus('', null);
-      return Promise.resolve(false);
-    }
-
-    setSponsorMediaStatus('Preparing arena media', 'video-loading');
-    resetSponsorVideo(true, false);
-    applySponsorPoster(payload);
-    setSponsorMediaStatus('Preparing arena media', 'video-loading');
-
-    return new Promise(resolve => {
-      let settled = false;
-      let decodedReported = false;
-      let readyTimer = null;
-      const reportDecoded = () => {
-        if (decodedReported || token !== sponsorVideoLoadToken) return;
-        decodedReported = true;
-        applySponsorVideoFit(payload);
-        reportSponsorPlayback(payload, 'decoded', 'Arena media metadata decoded');
-      };
-      const done = (ready, message, stateClass) => {
-        if (settled || token !== sponsorVideoLoadToken) return;
-        settled = true;
-        if (ready) reportDecoded();
-        if (readyTimer) {
-          clearTimeout(readyTimer);
-          readyTimer = null;
-        }
-        setSponsorMediaStatus(message, stateClass);
-        resolve(ready);
-      };
-      const markReady = () => {
-        if (settled || token !== sponsorVideoLoadToken) return;
-        if (!sponsorVideo || sponsorVideo.readyState < 2) return;
-        reportDecoded();
-        if (readyTimer) clearTimeout(readyTimer);
-        readyTimer = setTimeout(() => {
-          readyTimer = null;
-          if (sponsorVideo && sponsorVideo.readyState >= 2) done(true, '', 'video-ready');
-        }, 120);
-      };
-
-      sponsorVideo.preload = 'auto';
-      sponsorVideo.playsInline = true;
-      sponsorVideo.disablePictureInPicture = true;
-      sponsorVideo.muted = payload.muted;
-      sponsorVideo.loop = false;
-      applySponsorPoster(payload);
-      sponsorVideo.src = payload.videoUrl;
-      sponsorVideo.onloadedmetadata = reportDecoded;
-      sponsorVideo.onloadeddata = markReady;
-      sponsorVideo.oncanplay = markReady;
-      sponsorVideo.oncanplaythrough = markReady;
-      sponsorVideo.onerror = () => done(false, sponsorVideoErrorMessage('Arena media could not preload'), 'video-error');
-      sponsorVideo.onstalled = () => setSponsorMediaStatus('Buffering arena media', 'video-loading');
-      sponsorVideo.onwaiting = () => setSponsorMediaStatus('Buffering arena media', 'video-loading');
-
-      try {
-        sponsorVideo.load();
-        if (sponsorVideo.readyState >= 1) reportDecoded();
-        if (sponsorVideo.readyState >= 2) markReady();
-      } catch (_err) {
-        done(false, 'Arena media could not load', 'video-error');
-      }
-    });
+    return sponsorVideoAgent.preload(payload);
   }
 
   function playPreparedSponsorVideo(payload, hooks = {}) {
-    if (!sponsorVideo || !payload.videoUrl) {
-      setSponsorMediaStatus('', null);
-      hooks.onUnavailable?.();
-      return;
-    }
-
-    let playingNotified = false;
-    let playbackStartedNotified = false;
-    let readyFallbackTimer = null;
-    let firstFrameFallbackTimer = null;
-    const clearFirstFrameFallback = () => {
-      if (firstFrameFallbackTimer) {
-        clearTimeout(firstFrameFallbackTimer);
-        firstFrameFallbackTimer = null;
-      }
-    };
-    const clearReadyFallback = () => {
-      if (readyFallbackTimer) {
-        clearTimeout(readyFallbackTimer);
-        readyFallbackTimer = null;
-      }
-    };
-    const notifyPlaybackStarted = (message = 'Arena media playback started') => {
-      if (playbackStartedNotified) return;
-      playbackStartedNotified = true;
-      reportSponsorPlayback(payload, 'playing', message);
-    };
-    const notifyPlaying = (message = '') => {
-      if (playingNotified) return;
-      playingNotified = true;
-      clearReadyFallback();
-      clearFirstFrameFallback();
-      applySponsorVideoFit(payload);
-      setSponsorMediaStatus('', 'video-ready');
-      notifyPlaybackStarted();
-      reportSponsorPlayback(payload, 'first_frame', message);
-      hooks.onPlaying?.();
-    };
-    const requestFirstFrame = (message = 'Arena media first frame displayed') => {
-      if (playingNotified) return;
-      clearFirstFrameFallback();
-      if (sponsorVideo && typeof sponsorVideo.requestVideoFrameCallback === 'function') {
-        sponsorVideo.requestVideoFrameCallback(() => {
-          if (sponsorState === 'live' && activeSponsorPayload === payload) notifyPlaying(message);
-        });
-        firstFrameFallbackTimer = setTimeout(() => {
-          firstFrameFallbackTimer = null;
-          if (!playingNotified && sponsorVideo && sponsorVideo.readyState >= 2) {
-            notifyPlaying('Arena media frame confirmed by ready-state fallback');
-          }
-        }, 1100);
-        return;
-      }
-      firstFrameFallbackTimer = setTimeout(() => {
-        firstFrameFallbackTimer = null;
-        notifyPlaying(message);
-      }, 180);
-    };
-    const failPlayback = (message) => {
-      clearReadyFallback();
-      clearFirstFrameFallback();
-      setSponsorMediaStatus(message, 'video-error');
-      reportSponsorPlayback(payload, 'failed', message);
-      hooks.onError?.();
-    };
-    const scheduleReadyFallback = (delay = 1200) => {
-      clearReadyFallback();
-      if (playingNotified || sponsorVideo.readyState < 2) return;
-      readyFallbackTimer = setTimeout(() => {
-        readyFallbackTimer = null;
-        if (
-          !playingNotified &&
-          sponsorState === 'live' &&
-          activeSponsorPayload === payload &&
-          sponsorVideo &&
-          sponsorVideo.readyState >= 2
-        ) {
-          requestFirstFrame('Arena media started after ready-state fallback');
-        }
-      }, delay);
-    };
-    const handleRecovered = () => {
-      applySponsorVideoFit(payload);
-      setSponsorMediaStatus('', 'video-ready');
-      resumeSponsorClockAfterBuffering(payload);
-    };
-    const handleBuffering = () => {
-      setSponsorMediaStatus('Buffering arena media', 'video-loading');
-      pauseSponsorClockForBuffering(payload);
-      clearSponsorStallTimer();
-      sponsorStallTimer = setTimeout(() => {
-        sponsorStallTimer = null;
-        if (sponsorState !== 'live' || activeSponsorPayload !== payload) return;
-        failPlayback('Arena media stalled during playback');
-      }, 7000);
-    };
-
-    sponsorVideo.muted = payload.muted !== false;
-    applySponsorPoster(payload);
-    applySponsorVideoFit(payload);
-    if (sponsorVideo.readyState >= 2) {
-      setSponsorMediaStatus('', 'video-ready');
-      scheduleReadyFallback(1400);
-    } else {
-      setSponsorMediaStatus('Buffering arena media', 'video-loading');
-    }
-
-    sponsorVideo.onloadeddata = () => {
-      handleRecovered();
-      scheduleReadyFallback(1000);
-    };
-    sponsorVideo.oncanplay = () => {
-      handleRecovered();
-      scheduleReadyFallback(900);
-    };
-    sponsorVideo.oncanplaythrough = () => {
-      handleRecovered();
-      scheduleReadyFallback(700);
-    };
-    sponsorVideo.onloadedmetadata = () => applySponsorVideoFit(payload);
-    sponsorVideo.onplaying = () => {
-      handleRecovered();
-      notifyPlaybackStarted();
-      requestFirstFrame();
-    };
-    sponsorVideo.onwaiting = handleBuffering;
-    sponsorVideo.onstalled = handleBuffering;
-    sponsorVideo.onerror = () => {
-      failPlayback(sponsorVideoErrorMessage('Arena media could not play'));
-    };
-    sponsorVideo.onended = () => {
-      clearReadyFallback();
-      clearFirstFrameFallback();
-      clearSponsorStallTimer();
-      if (sponsorState === 'live' && activeSponsorPayload === payload) {
-        reportSponsorPlayback(payload, 'video_completed', 'Arena media completed');
+    sponsorVideoAgent.play(payload, {
+      ...hooks,
+      onEnded: () => {
         if ((payload.statsMode || 'endcap') === 'endcap' && sponsorTimer) {
           const remaining = Math.max(0, sponsorClockDeadline - Date.now());
           const endcapLength = sponsorEndcapDurationMs(remaining + 1200, payload);
@@ -2338,32 +2472,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           return;
         }
         startSponsorOutro(payload);
-      }
-    };
-
-    try {
-      sponsorVideo.currentTime = 0;
-    } catch (_err) {}
-
-    const playAttempt = sponsorVideo.play();
-    if (playAttempt && typeof playAttempt.then === 'function') {
-      playAttempt.then(() => requestFirstFrame()).catch(() => {
-        clearReadyFallback();
-        sponsorVideo.muted = true;
-        const mutedAttempt = sponsorVideo.play();
-        if (mutedAttempt && typeof mutedAttempt.then === 'function') {
-          scheduleReadyFallback(1400);
-          mutedAttempt.then(() => requestFirstFrame('Arena media first frame displayed after muted retry')).catch(() => {
-            failPlayback('Browser blocked sponsor media playback');
-          });
-        } else {
-          setTimeout(() => requestFirstFrame('Arena media first frame displayed after muted retry'), 120);
-        }
-      });
-    } else {
-      scheduleReadyFallback(900);
-      setTimeout(() => requestFirstFrame(), 120);
-    }
+      },
+    });
   }
 
   function playSponsorTone(kind) {
@@ -2441,9 +2551,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function isPreparedSponsorVideo(payload = {}) {
-    if (!preparedSponsorPayload || !sponsorVideo) return false;
-    if (payload.breakId && preparedSponsorPayload.breakId === payload.breakId) return sponsorVideo.readyState >= 2;
-    return Boolean(payload.videoUrl && preparedSponsorPayload.videoUrl === payload.videoUrl && sponsorVideo.readyState >= 2);
+    if (!preparedSponsorPayload) return false;
+    if (payload.breakId && preparedSponsorPayload.breakId !== payload.breakId) {
+      return Boolean(payload.videoUrl && preparedSponsorPayload.videoUrl === payload.videoUrl && sponsorVideoAgent.isReadyFor(payload));
+    }
+    return sponsorVideoAgent.isReadyFor(payload);
   }
 
   function prepareSponsorScene(payload = {}) {
@@ -2490,6 +2602,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     const next = sponsorQueue.shift();
     if (next) {
+      sponsorQueueStats.startedFromQueue += 1;
       sponsorTimer = setTimeout(() => {
         sponsorTimer = null;
         startSponsorIntro(next);
@@ -2532,7 +2645,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       resetSponsorVideo(true);
     } else {
       resetSponsorTimingClasses();
-      setSponsorMediaStatus(sponsorVideo.readyState >= 2 ? '' : 'Buffering arena media', sponsorVideo.readyState >= 2 ? 'video-ready' : 'video-loading');
+      setSponsorMediaStatus(sponsorVideoAgent.hasReadyFrame() ? '' : 'Buffering arena media', sponsorVideoAgent.hasReadyFrame() ? 'video-ready' : 'video-loading');
     }
     setSponsorText(sponsorIntroPartner, `Featuring ${payload.partner}`, 'Featuring IntoTheBattle');
 
@@ -2547,7 +2660,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     setSponsorSceneState('intro');
     playSponsorTone('intro');
 
-    const videoReady = hasPreparedVideo ? Promise.resolve(sponsorVideo.readyState >= 2) : preloadSponsorVideo(payload);
+    const videoReady = hasPreparedVideo ? Promise.resolve(sponsorVideoAgent.hasReadyFrame()) : preloadSponsorVideo(payload);
     Promise.all([
       sleep(sponsorIntroDelayMs(payload)),
       payload.videoUrl ? Promise.race([videoReady, sleep(sponsorPreloadWaitMs(payload)).then(() => false)]) : Promise.resolve(false),
@@ -2580,7 +2693,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       sponsorVideoStartTimer = setTimeout(() => {
         sponsorVideoStartTimer = null;
         if (sponsorState === 'live' && activeSponsorPayload === payload && !sponsorTimer) {
-          const readyEnough = Boolean(sponsorVideo && sponsorVideo.readyState >= 2);
+          const readyEnough = sponsorVideoAgent.hasReadyFrame();
           if (readyEnough) {
             setSponsorMediaStatus('', 'video-ready');
             reportSponsorPlayback(payload, 'first_frame', 'Arena media started after live fallback');
@@ -2617,7 +2730,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function hideSponsorScene() {
-    sponsorQueue = [];
+    clearSponsorQueue();
     if (!sponsorScene) return;
     if (sponsorState === 'battle') {
       finishSponsorScene();
@@ -2635,7 +2748,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     const scenePayload = normalizeSponsorPayload(payload);
     if (sponsorState !== 'battle') {
-      sponsorQueue.push(scenePayload);
+      enqueueSponsorScenePayload(scenePayload);
       return;
     }
 
@@ -2647,17 +2760,208 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     hide: hideSponsorScene,
     stop: hideSponsorScene,
     state: () => sponsorState,
+    status: () => currentSponsorSceneStatus(),
   };
+
+  function runSponsorQueueStress(count = 9) {
+    const requested = Math.max(4, Math.min(18, Math.round(Number(count) || 9)));
+    if (sponsorState !== 'battle') {
+      return {
+        requested,
+        skipped: true,
+        status: currentSponsorSceneStatus(),
+      };
+    }
+    for (let i = 0; i < requested; i += 1) {
+      showSponsorScene({
+        breakId: `stress-${Date.now()}-${i}`,
+        source: 'audit',
+        partner: `Queue Partner ${i + 1}`,
+        title: `Sponsor Queue Stress ${i + 1}`,
+        subtitle: 'Bounded queue audit for repeated arena breaks.',
+        durationMs: 5000,
+        statsMode: 'always',
+        timingProfile: 'bumper',
+        fit: 'contain',
+        muted: true,
+        _ts: Date.now() + i,
+      });
+    }
+    return {
+      requested,
+      skipped: false,
+      status: currentSponsorSceneStatus(),
+    };
+  }
+
+  function runVisualEventStorm(count = 132) {
+    const requested = Math.max(24, Math.min(180, Math.round(Number(count) || 132)));
+    const roster = (topPlayers().length ? topPlayers() : DEMO_PLAYERS)
+      .map(player => player.uniqueId || player.id)
+      .filter(Boolean);
+    const ids = roster.length ? roster : ['p1', 'p2', 'p3', 'p4'];
+    const effects = ['laser', 'pulse', 'meteor', 'arc', 'explosion'];
+    const baseSeq = Math.max(lastVisualEventSeq + 1000, Date.now());
+
+    for (let i = 0; i < requested; i += 1) {
+      const seq = baseSeq + i + 1;
+      const actor = ids[i % ids.length];
+      const target = ids[(i + 1) % ids.length] || actor;
+      const intensity = 0.24 + (i % 5) * 0.08;
+      switch (i % 8) {
+        case 0:
+          enqueueVisualEvent('attack', {
+            _seq: seq,
+            attacker: actor,
+            target,
+            damage: 8 + (i % 32),
+            effect: effects[i % effects.length],
+            intensity,
+            critical: i % 24 === 0,
+            special: i % 32 === 0,
+          }, handleAttackEvent);
+          break;
+        case 1:
+          enqueueVisualEvent('like', {
+            _seq: seq,
+            uniqueId: actor,
+            hearts: 1,
+            intensity: 0.16,
+            milestone: i % 24 === 1 ? 500 + i : 0,
+            milestoneTier: i % 48 === 1 ? 'mega' : '',
+          }, handleLikeEvent, { mergeKey: payload => payload.milestone ? `like-${payload.milestone}` : (payload.uniqueId || payload.nickname || 'viewer') });
+          break;
+        case 2:
+          enqueueVisualEvent('heal', {
+            _seq: seq,
+            uniqueId: actor,
+            amount: 8 + (i % 24),
+            color: i % 16 === 2 ? THEME.cyan : THEME.green,
+          }, handleHealEvent, { mergeKey: payload => payload.uniqueId || 'viewer' });
+          break;
+        case 3:
+          enqueueVisualEvent('socialBoost', {
+            _seq: seq,
+            uniqueId: actor,
+            nickname: `Storm ${i % 9}`,
+            type: i % 16 === 3 ? 'repost' : 'share',
+            affectedCount: 3 + (i % 6),
+            rallyHeal: 14 + (i % 18),
+            color: i % 16 === 3 ? THEME.gold : '#99ffda',
+          }, showSocialBoost, { mergeKey: payload => payload.uniqueId || payload.nickname || 'viewer' });
+          break;
+        case 4:
+          enqueueVisualEvent('giftCelebration', {
+            _seq: seq,
+            uniqueId: actor,
+            nickname: `StormGift${i % 7}`,
+            giftName: i % 16 === 4 ? 'Galaxy' : 'Boost Core',
+            tier: i % 16 === 4 ? 'legendary' : 'rare',
+            diamonds: i % 16 === 4 ? 1200 : 120 + i,
+          }, handleGiftCelebration);
+          break;
+        case 5:
+          enqueueVisualEvent('follow', {
+            _seq: seq,
+            uniqueId: actor,
+            nickname: `Recruit${i % 11}`,
+            hpBoost: 18 + (i % 28),
+            strengthBoost: i % 3,
+            shieldMs: i % 2 ? 12000 : 0,
+            color: THEME.cyan,
+          }, handleFollowEvent);
+          break;
+        case 6:
+          enqueueVisualEvent('soundEvent', {
+            _seq: seq,
+            event: i % 16 === 6 ? 'gift' : 'attack',
+            priority: 40 + (i % 20),
+          }, handleSoundEvent, { lane: 'sound', mergeKey: payload => payload.event || 'sound' });
+          break;
+        default:
+          enqueueVisualEvent('roundEvent', {
+            _seq: seq,
+            type: i % 16 === 7 ? 'round_started' : 'round_ended',
+            number: 1 + (i % 5),
+            title: 'Storm replay checkpoint',
+          }, handleRoundEvent, { mergeKey: payload => payload.type || 'round' });
+          break;
+      }
+    }
+
+    return {
+      requested,
+      baseSeq,
+      status: currentVisualQueueStatus(),
+    };
+  }
+
+  function clearTransientEffectsForProbe() {
+    attacks = [];
+    impactBursts.length = 0;
+    container.querySelectorAll('.damage').forEach(el => el.remove());
+  }
+
+  function runEffectOwnershipProbe() {
+    clearTransientEffectsForProbe();
+    const top = topPlayers();
+    const first = top[0]?.uniqueId || 'p1';
+    const second = top[1]?.uniqueId || first;
+    const third = top[2]?.uniqueId || first;
+    const fourth = top[3]?.uniqueId || second;
+    const beforeDropped = effectOwnershipStats.droppedEffects;
+    const previousBossState = bossWaveState ? { ...bossWaveState } : null;
+    bossWaveState = null;
+    const inactiveBoss = fireAttack(first, BOSS_ID, 9, false, false, 'railgun', { attackerScope: 'top', targetScope: 'boss' });
+    bossWaveState = previousBossState;
+    const results = {
+      playerToPlayer: fireAttack(first, second, 12, false, false, 'laser', { attackerScope: 'top', targetScope: 'top' }),
+      playerToHorde: fireAttack(first, HORDE_ID, 18, false, true, 'pulse', { attackerScope: 'top', targetScope: 'horde' }),
+      hordeToPlayer: fireAttack(HORDE_ID, second, 16, false, false, 'arc', { attackerScope: 'horde', targetScope: 'top' }),
+      invalidPlayer: fireAttack('__missing_player__', first, 9, false, false, 'laser', { attackerScope: 'top', targetScope: 'top' }),
+      inactiveBoss,
+    };
+    handleBossWave({
+      type: 'started',
+      active: true,
+      hp: 640,
+      maxHp: 900,
+      remainingMs: 54000,
+      durationMs: 90000,
+      nextAttackAt: Date.now() + 2400,
+      attackIntervalMs: 11000,
+    });
+    results.playerToBoss = fireAttack(third, BOSS_ID, 32, false, true, 'railgun', { attackerScope: 'top', targetScope: 'boss' });
+    results.bossToPlayer = fireAttack(BOSS_ID, fourth, 24, false, false, 'comet', { attackerScope: 'boss', targetScope: 'top' });
+    return {
+      results,
+      droppedDuringProbe: effectOwnershipStats.droppedEffects - beforeDropped,
+      status: currentOverlayMotionStatus(),
+    };
+  }
 
   window.overlayEventEngine = {
     status: () => ({
       sponsorState,
+      connection: currentConnectionStatus(),
       queued: VISUAL_EVENT_LANE_ORDER.reduce((summary, lane) => {
         summary[lane] = visualEventQueue.filter(item => item.lane === lane).length;
         return summary;
       }, {}),
       activeBanner: activeBanner ? { type: activeBanner.cls, priority: activeBanner.priority } : null,
+      banner: currentBannerStatus(),
+      visualQueue: currentVisualQueueStatus(),
+      sponsor: currentSponsorSceneStatus(),
+      sponsorMedia: sponsorVideoAgent.status(activeSponsorPayload || preparedSponsorPayload || {}),
+      background: currentBackgroundStatus(),
+      audio: currentAudioStatus(),
+      motion: currentOverlayMotionStatus(),
+      frame: currentFrameHealthStatus(),
     }),
+    resetFrameHealth: () => {
+      resetFrameHealth();
+      return currentFrameHealthStatus();
+    },
     flush: (lane = '') => {
       for (let i = visualEventQueue.length - 1; i >= 0; i -= 1) {
         if (!lane || visualEventQueue[i].lane === lane) visualEventQueue.splice(i, 1);
@@ -2672,6 +2976,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       enqueueVisualEvent('attack', { attacker: 'p1', target: 'p2', damage: 22, effect: 'laser' }, handleAttackEvent);
       enqueueVisualEvent('giftCelebration', { uniqueId: 'p3', nickname: 'GhostByte', giftName: 'Galaxy', tier: 'legendary', diamonds: 1200 }, handleGiftCelebration);
       enqueueVisualEvent('roundEvent', { type: 'round_started', label: 'Round started' }, handleRoundEvent, { mergeKey: () => 'round_started' });
+    },
+    testEventStorm: (count = 132) => runVisualEventStorm(count),
+    testEffectOwnership: () => runEffectOwnershipProbe(),
+    testSponsorQueue: (count = 9) => runSponsorQueueStress(count),
+    testBackground: (mode = 'valid') => {
+      const kind = String(mode || 'valid').toLowerCase();
+      if (kind === 'clear') return handleBackgroundChanged({});
+      if (kind === 'missing' || kind === 'error') {
+        return handleBackgroundChanged({
+          filename: 'missing-overlay-background-audit.png',
+          url: `/missing-overlay-background-audit-${Date.now()}.png`,
+          _ts: Date.now(),
+        });
+      }
+      return handleBackgroundChanged({
+        filename: 'og-intothebattle.png',
+        url: '/og-intothebattle.png',
+        _ts: Date.now(),
+      });
     },
     testBoss: () => {
       handleBossWave({
@@ -2695,6 +3018,28 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         nextAttackAt: Date.now() + 2400,
         attackIntervalMs: 11000,
       });
+    },
+    testMotionImpact: () => {
+      const owner = resolveEffectEntity(HORDE_ID, 'horde', 'owner');
+      if (owner?.unresolved) return currentOverlayMotionStatus();
+      const center = owner.point;
+      addImpactBurst(center.x, center.y, {
+        owner,
+        type: 'critical',
+        color: THEME.ember,
+        accent: THEME.gold,
+        radius: owner.bounds.h * 0.42,
+        intensity: 0.9,
+        duration: 760,
+      });
+      triggerArenaShake(6, 300);
+      pushAttackEffect(new Attack(
+        { x: owner.bounds.left, y: center.y },
+        center,
+        'pulse',
+        { intensity: 1, critical: true, giftBoosted: true }
+      ), { type: 'motion_probe', owner });
+      return currentOverlayMotionStatus();
     },
   };
 
@@ -3325,6 +3670,196 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return idx !== -1 ? getPlayerPosition(idx, top.length) : null;
   }
 
+  function normalizeEntityToken(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function entityTokenMatchesPlayer(player, wanted) {
+    if (!player || !wanted) return false;
+    return [player.uniqueId, player.id, player.nickname, player.name]
+      .some(value => normalizeEntityToken(value) === wanted);
+  }
+
+  function isBossEntityRequest(id, scope) {
+    const wanted = normalizeEntityToken(id);
+    return scope === 'boss' || wanted === normalizeEntityToken(BOSS_ID) || wanted === '@boss' || wanted === 'boss';
+  }
+
+  function isHordeEntityRequest(id, scope) {
+    const wanted = normalizeEntityToken(id);
+    return scope === 'horde' || wanted === normalizeEntityToken(HORDE_ID) || wanted === '@horde' || wanted === 'horde';
+  }
+
+  function playerEntityBounds(pos, total) {
+    const metrics = getPlayerCardDrawMetrics(pos, total);
+    return makeRect(metrics.left, metrics.top, metrics.right - metrics.left, metrics.bottom - metrics.top);
+  }
+
+  function hordeEntityBounds() {
+    const layout = getHordeLayout();
+    return makeRect(layout.barX, layout.barY, layout.barW, layout.barH);
+  }
+
+  function bossEntityBounds() {
+    const layout = getBossLayout();
+    const coreBounds = makeRect(
+      layout.x - layout.r * 1.45,
+      layout.y - layout.r * 1.45,
+      layout.r * 2.9,
+      layout.r * 2.9
+    );
+    const panelBounds = makeRect(layout.panelX, layout.panelY, layout.panelW, layout.panelH);
+    const left = Math.min(coreBounds.left, panelBounds.left);
+    const top = Math.min(coreBounds.top, panelBounds.top);
+    const right = Math.max(coreBounds.right, panelBounds.right);
+    const bottom = Math.max(coreBounds.bottom, panelBounds.bottom);
+    return makeRect(left, top, right - left, bottom - top);
+  }
+
+  function buildEntity(kind, id, point, bounds, scope = kind) {
+    if (!EFFECT_OWNER_KINDS.has(kind) || !point || !bounds) return null;
+    return {
+      kind,
+      id: String(id || kind),
+      scope,
+      point: { x: point.x, y: point.y },
+      bounds,
+    };
+  }
+
+  function resolveTopPlayerEntity(id) {
+    const wanted = normalizeEntityToken(id);
+    if (!wanted) return null;
+    const top = topPlayers();
+    const idx = top.findIndex(player => entityTokenMatchesPlayer(player, wanted));
+    if (idx < 0) return null;
+    const player = top[idx];
+    const point = getPlayerPosition(idx, top.length);
+    return buildEntity('player', player.uniqueId || player.id || id, point, playerEntityBounds(point, top.length), 'top');
+  }
+
+  function resolveHordeEntity(id, reasonScope = 'horde') {
+    const horde = hordePlayer();
+    if (!horde) return null;
+    return buildEntity('horde', HORDE_ID, getHordePosition(), hordeEntityBounds(), reasonScope);
+  }
+
+  function resolveBossEntity(reasonScope = 'boss') {
+    if (!bossWaveState?.active) return null;
+    return buildEntity('boss', BOSS_ID, getBossPosition(), bossEntityBounds(), reasonScope);
+  }
+
+  function resolveEffectEntity(id, preferredScope, role = 'entity') {
+    const scope = String(preferredScope || '').trim().toLowerCase();
+    const wanted = normalizeEntityToken(id);
+    if (isBossEntityRequest(id, scope)) {
+      const boss = resolveBossEntity(scope || 'boss');
+      return boss || { unresolved: true, reason: 'boss_inactive', role, id: id || BOSS_ID, scope };
+    }
+    if (isHordeEntityRequest(id, scope)) {
+      const horde = resolveHordeEntity(id, scope || 'horde');
+      return horde || { unresolved: true, reason: 'horde_missing', role, id: id || HORDE_ID, scope };
+    }
+    if (!wanted) return { unresolved: true, reason: `missing_${role}`, role, id: '', scope };
+
+    const topPlayer = resolveTopPlayerEntity(id);
+    if (topPlayer) return topPlayer;
+    if (scope === 'top') return { unresolved: true, reason: 'missing_player', role, id, scope };
+
+    const horde = hordePlayer();
+    if (horde?.memberIds?.some(memberId => normalizeEntityToken(memberId) === wanted)) {
+      return resolveHordeEntity(id, 'horde-member') || { unresolved: true, reason: 'horde_missing', role, id, scope };
+    }
+
+    return { unresolved: true, reason: 'missing_player', role, id, scope };
+  }
+
+  function recordDroppedEffect(reason, context = {}) {
+    const safeReason = String(reason || 'unresolved_entity');
+    effectOwnershipStats.droppedEffects += 1;
+    effectOwnershipStats.droppedByReason[safeReason] = (effectOwnershipStats.droppedByReason[safeReason] || 0) + 1;
+    effectOwnershipStats.lastDropped = {
+      reason: safeReason,
+      role: String(context.role || ''),
+      id: String(context.id || '').slice(0, 80),
+      scope: String(context.scope || '').slice(0, 40),
+      type: String(context.type || '').slice(0, 40),
+      at: Date.now(),
+    };
+    return false;
+  }
+
+  function dropUnresolvedEntity(entity, fallbackReason = 'unresolved_entity', extra = {}) {
+    const reason = entity?.reason || fallbackReason;
+    return recordDroppedEffect(reason, { ...extra, ...entity });
+  }
+
+  function effectOwnerRef(entity) {
+    if (!entity || !EFFECT_OWNER_KINDS.has(entity.kind)) return null;
+    return {
+      kind: entity.kind,
+      id: String(entity.id || entity.kind),
+      scope: entity.scope || entity.kind,
+    };
+  }
+
+  function normalizeEffectOwnership(ownership = {}) {
+    const normalized = { type: String(ownership.type || 'effect') };
+    for (const key of ['owner', 'source', 'target']) {
+      const ref = effectOwnerRef(ownership[key]);
+      if (ref) normalized[key] = ref;
+    }
+    normalized.refs = ['owner', 'source', 'target'].map(key => normalized[key]).filter(Boolean);
+    return normalized;
+  }
+
+  function hasValidEffectOwnership(ownership) {
+    const normalized = normalizeEffectOwnership(ownership);
+    return normalized.refs.length > 0 && normalized.refs.every(ref => EFFECT_OWNER_KINDS.has(ref.kind) && ref.id);
+  }
+
+  function entityAnchorPoint(entity, otherPoint) {
+    if (!entity) return null;
+    if (entity.kind === 'boss') return getBossEdgePosition(otherPoint || entity.point);
+    if (entity.kind === 'horde') return getHordeEdgePosition(otherPoint || entity.point);
+    return { x: entity.point.x, y: entity.point.y };
+  }
+
+  function ownedPointWithinBounds(point, owner) {
+    if (!point || !owner?.bounds) return point;
+    return {
+      x: clampNumber(point.x, owner.bounds.left, owner.bounds.right),
+      y: clampNumber(point.y, owner.bounds.top, owner.bounds.bottom),
+    };
+  }
+
+  function unionEffectBounds(rects) {
+    const valid = rects.filter(rect => rect && Number.isFinite(rect.left) && Number.isFinite(rect.right) && Number.isFinite(rect.top) && Number.isFinite(rect.bottom));
+    if (!valid.length) return null;
+    const left = Math.min(...valid.map(rect => rect.left));
+    const right = Math.max(...valid.map(rect => rect.right));
+    const top = Math.min(...valid.map(rect => rect.top));
+    const bottom = Math.max(...valid.map(rect => rect.bottom));
+    return makeRect(left, top, right - left, bottom - top);
+  }
+
+  function expandedEffectBounds(rect, pad) {
+    if (!rect) return null;
+    const frame = arenaFrame();
+    const frameRect = makeRect(frame.x, frame.y, frame.w, frame.h);
+    return intersectRect(
+      makeRect(rect.left - pad, rect.top - pad, rect.w + pad * 2, rect.h + pad * 2),
+      frameRect
+    );
+  }
+
+  function effectOwnershipBounds(ownership = {}) {
+    const rect = unionEffectBounds(['owner', 'source', 'target'].map(key => ownership[key]?.bounds));
+    if (!rect) return null;
+    const pad = Math.max(36 * canvasUiScale(), Math.min(arenaFrame().h * 0.13, 120 * canvasUiScale()));
+    return expandedEffectBounds(rect, pad);
+  }
+
   function getPositionForPlayer(id, preferredScope) {
     if (id === BOSS_ID || preferredScope === 'boss') {
       return getBossPosition();
@@ -3406,16 +3941,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function constrainAttackPath(from, to) {
     const lane = getCombatEffectLane();
     const ui = canvasUiScale();
-    const nextFrom = clampPointToCombatLane(from, lane);
-    const nextTo = clampPointToCombatLane(to, lane);
+    const frame = arenaSafeFrame();
+    const nextFrom = {
+      x: clampNumber(from.x, frame.left, frame.right),
+      y: clampNumber(from.y, frame.top, frame.bottom),
+    };
+    const nextTo = {
+      x: clampNumber(to.x, frame.left, frame.right),
+      y: clampNumber(to.y, frame.top, frame.bottom),
+    };
 
     if (Math.hypot(nextFrom.x - nextTo.x, nextFrom.y - nextTo.y) < 36 * ui) {
-      const half = Math.max(28 * ui, Math.min(70 * ui, (lane.right - lane.x) * 0.06));
-      const centerX = clampNumber((nextFrom.x + nextTo.x) / 2, lane.x + half, lane.right - half);
+      const half = Math.max(18 * ui, Math.min(42 * ui, (frame.right - frame.left) * 0.035));
+      const centerX = clampNumber((nextFrom.x + nextTo.x) / 2, frame.left + half, frame.right - half);
       nextFrom.x = centerX - half;
       nextTo.x = centerX + half;
-      nextFrom.y = lane.centerY;
-      nextTo.y = lane.centerY;
     }
 
     window.__overlayLegacyEffectLane = lane;
@@ -3452,6 +3992,33 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ...Object.values(DEFAULT_OVERLAY_AUDIO_CONFIG),
       ...Object.values(audioConfig),
     ].filter(Boolean))];
+  }
+
+  function currentAudioStatus() {
+    const filenames = audioFilenames();
+    const cacheEntries = Object.entries(audioCache).map(([filename, audio]) => ({
+      filename,
+      readyState: audio ? audio.readyState : 0,
+      networkState: audio ? audio.networkState : 0,
+      currentSrc: audio ? audio.currentSrc || audio.src || '' : '',
+      errorCode: audio?.error?.code || 0,
+    }));
+    return {
+      module: 'overlay-audio',
+      hasModule: Boolean(overlayAudio?.defaultAudioConfig),
+      unlocked: audioUnlocked,
+      unlockInFlight: audioUnlockInFlight,
+      pendingReplayType: pendingAudioReplay?.type || '',
+      warningCount: audioWarnings.size,
+      warnings: Array.from(audioWarnings).slice(0, 8),
+      assignedEvents: Object.keys(audioConfig).filter(key => audioConfig[key]).sort(),
+      filenames,
+      cachedCount: cacheEntries.length,
+      readyCount: cacheEntries.filter(entry => entry.readyState >= 2).length,
+      errorCount: cacheEntries.filter(entry => entry.errorCode > 0).length,
+      cacheEntries,
+      lastSoundAgeMs: lastAnySoundAt ? Date.now() - lastAnySoundAt : null,
+    };
   }
 
   async function unlockOverlayAudio() {
@@ -3542,9 +4109,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         playPromise.catch(err => handleAudioFailure(fn, type, options, err));
       }
     } catch (err) {
+      connectionHealthStats.lastError = String(err?.message || err || 'socket init failed').slice(0, 160);
       handleAudioFailure(fn, type, options, err);
     }
   }
+
+  applyAudioConfig(audioConfig);
 
   // ═══════════════════════════════════════
   // DOM HELPERS
@@ -3717,6 +4287,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     enqueueBanner(normalizeBannerPayload(cls, content, dur, options));
   }
 
+  function currentBannerStatus() {
+    const now = Date.now();
+    const nodes = Array.from(container.querySelectorAll('.banner'));
+    return {
+      active: activeBanner ? {
+        type: activeBanner.cls,
+        priority: activeBanner.priority,
+        ageMs: Math.max(0, now - activeBanner.createdAt),
+      } : null,
+      queued: bannerQueue.length,
+      oldestQueuedAgeMs: bannerQueue.length
+        ? Math.max(...bannerQueue.map(item => Math.max(0, now - item.createdAt)))
+        : 0,
+      domCount: nodes.length,
+      closingDomCount: nodes.filter(el => el.classList.contains('closing')).length,
+      detachedDomCount: nodes.filter(el => el.parentElement !== container || getComputedStyle(el).position !== 'absolute').length,
+    };
+  }
+
   window.addEventListener('resize', () => {
     if (!activeBanner?.el) return;
     requestAnimationFrame(() => {
@@ -3810,16 +4399,26 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     statusDiv.style.top = `${top}px`;
   }
 
-  function showDamage(cx, cy, damage, kill, critical) {
-    const point = canvasToOverlay(cx, cy);
+  function showDamage(cx, cy, damage, kill, critical, owner) {
+    const ownerRef = effectOwnerRef(owner);
+    if (!ownerRef) {
+      recordDroppedEffect('unowned_damage', { type: 'damage' });
+      return;
+    }
+    const targetPoint = ownedPointWithinBounds({ x: cx, y: cy }, owner);
+    const point = canvasToOverlay(targetPoint.x, targetPoint.y);
     const el = document.createElement('div');
     el.className  = 'damage' + (kill ? ' kill' : critical ? ' critical' : '');
     el.textContent = kill ? '💀 KILL!' : critical ? `⚡ ${Math.round(damage)}` : `-${Math.round(damage)}`;
     el.textContent = kill ? 'KO!' : critical ? `CRIT ${Math.round(damage)}` : `-${Math.round(damage)}`;
+    el.dataset.effectOwnerKind = ownerRef.kind;
+    el.dataset.effectOwnerId = ownerRef.id;
     el.style.visibility = 'hidden';
     container.appendChild(el);
     const stage = computeOverlayLayout();
-    const safe = insetRect(stage.zones.effects, stage.gap * 0.25);
+    const safe = owner?.bounds
+      ? insetRect(owner.bounds, Math.min(stage.gap * 0.16, owner.bounds.w * 0.08, owner.bounds.h * 0.08))
+      : insetRect(stage.zones.effects, stage.gap * 0.25);
     const scale = overlayScale();
     const safeLeft = safe.x * scale.x;
     const safeRight = safe.right * scale.x;
@@ -3830,7 +4429,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const halfHeight = rect.height / 2;
     const minX = safeLeft + halfWidth;
     const maxX = safeRight - halfWidth;
-    const minY = safeTop + rect.height * 3.4;
+    const minY = safeTop + halfHeight;
     const maxY = safeBottom - halfHeight;
     const x = minX <= maxX ? clampNumber(point.x, minX, maxX) : (safeLeft + safeRight) / 2;
     const y = minY <= maxY ? clampNumber(point.y, minY, maxY) : (safeTop + safeBottom) / 2;
@@ -3865,17 +4464,30 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   class Particle {
     constructor(x, y, opts) {
       opts = opts || {};
+      const motion = canvasMotionScale();
+      const baseDecay = opts.decay || (0.02 + Math.random() * 0.03);
       this.x     = x; this.y = y;
-      this.vx    = (Math.random() - 0.5) * (opts.speed  || 4);
-      this.vy    = (Math.random() - 0.5) * (opts.speed  || 4) - (opts.rise || 0);
+      this.vx    = (Math.random() - 0.5) * (opts.speed  || 4) * motion;
+      this.vy    = ((Math.random() - 0.5) * (opts.speed  || 4) - (opts.rise || 0)) * motion;
       this.life  = 1;
-      this.decay = opts.decay  || (0.02 + Math.random() * 0.03);
-      this.r     = opts.radius || (2 + Math.random() * 3);
+      this.decay = prefersReducedMotion() ? Math.max(baseDecay, 0.045) : baseDecay;
+      this.r     = (opts.radius || (2 + Math.random() * 3)) * (prefersReducedMotion() ? 0.82 : 1);
       this.color = opts.color  || '#7afcff';
       this.emoji = opts.emoji  || null;
-      this.fs    = opts.fontSize || 18;
+      this.fs    = Math.max(10, (opts.fontSize || 18) * (prefersReducedMotion() ? 0.86 : 1));
+      this.gravity = 0.06 * motion;
+      this.lastUpdate = Date.now();
     }
-    update() { this.x += this.vx; this.y += this.vy; this.vy += 0.06; this.life -= this.decay; return this.life > 0; }
+    update() {
+      const now = Date.now();
+      const step = Math.max(0.5, Math.min(4, (now - this.lastUpdate) / 16.67 || 1));
+      this.lastUpdate = now;
+      this.x += this.vx * step;
+      this.y += this.vy * step;
+      this.vy += this.gravity * step;
+      this.life -= this.decay * step;
+      return this.life > 0;
+    }
     draw(c) {
       c.save(); c.globalAlpha = Math.max(0, this.life);
       if (this.emoji) {
@@ -4033,7 +4645,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function triggerArenaShake(magnitude = 4, duration = 220) {
     const safeMagnitude = Math.max(0, Math.min(10, Number(magnitude) || 0));
-    if (!safeMagnitude) return;
+    if (!safeMagnitude || prefersReducedMotion()) return;
     arenaShakeMagnitude = Math.max(arenaShakeMagnitude * 0.65, safeMagnitude);
     arenaShakeStartedAt = Date.now();
     arenaShakeUntil = Math.max(arenaShakeUntil, arenaShakeStartedAt + Math.max(80, Number(duration) || 220));
@@ -4051,24 +4663,179 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
   }
 
+  function attackParticleCount() {
+    return attacks.reduce((total, attack) => {
+      const particles = Array.isArray(attack?.particles) ? attack.particles.length : 0;
+      const motes = Array.isArray(attack?.motes) ? attack.motes.length : 0;
+      return total + particles + motes;
+    }, 0);
+  }
+
+  function trimVisualEffects() {
+    const maxEffects = prefersReducedMotion() ? 8 : 12;
+    const maxParticles = prefersReducedMotion() ? 64 : 220;
+    if (attacks.length > maxEffects) attacks.splice(0, attacks.length - maxEffects);
+    let totalParticles = attackParticleCount();
+    if (totalParticles <= maxParticles) return;
+    for (const attack of attacks) {
+      for (const key of ['particles', 'motes']) {
+        const list = attack?.[key];
+        if (!Array.isArray(list) || !list.length) continue;
+        const removeCount = Math.min(list.length, totalParticles - maxParticles);
+        if (removeCount > 0) {
+          list.splice(0, removeCount);
+          totalParticles -= removeCount;
+        }
+        if (totalParticles <= maxParticles) return;
+      }
+    }
+  }
+
+  function pushAttackEffect(effect, ownership) {
+    if (!effect) return null;
+    if (!hasValidEffectOwnership(ownership)) {
+      recordDroppedEffect('unowned_effect', { type: effect.type || effect.kind || 'effect' });
+      return null;
+    }
+    effect.__effectOwnership = normalizeEffectOwnership(ownership);
+    effect.__effectBounds = effectOwnershipBounds(ownership);
+    attacks.push(effect);
+    trimVisualEffects();
+    return effect;
+  }
+
+  function activeDamageOwnershipItems() {
+    return Array.from(container.querySelectorAll('.damage')).map(el => ({
+      type: 'damage',
+      owner: {
+        kind: el.dataset.effectOwnerKind || '',
+        id: el.dataset.effectOwnerId || '',
+      },
+    }));
+  }
+
+  function activeEffectOwnershipItems() {
+    const attackItems = attacks.map(effect => effect.__effectOwnership || { type: effect.type || 'attack' });
+    const burstItems = impactBursts.map(burst => burst.__effectOwnership || { type: burst.type || 'impact' });
+    return attackItems.concat(burstItems, activeDamageOwnershipItems());
+  }
+
+  function currentOverlayMotionStatus() {
+    const now = Date.now();
+    const particleCount = attackParticleCount();
+    const ownershipItems = activeEffectOwnershipItems();
+    const ownedEffects = ownershipItems.filter(item => hasValidEffectOwnership(item)).length;
+    return {
+      reducedMotion: prefersReducedMotion(),
+      activeAttacks: attacks.length,
+      activeEffects: ownershipItems.length,
+      ownedEffects,
+      unownedEffects: Math.max(0, ownershipItems.length - ownedEffects),
+      droppedEffects: effectOwnershipStats.droppedEffects,
+      droppedByReason: { ...effectOwnershipStats.droppedByReason },
+      lastDropped: effectOwnershipStats.lastDropped ? { ...effectOwnershipStats.lastDropped } : null,
+      particles: particleCount,
+      impactBursts: impactBursts.length,
+      arenaShakeActive: now < arenaShakeUntil && arenaShakeMagnitude > 0,
+    };
+  }
+
+  function frameNow() {
+    return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  }
+
+  function resetFrameHealth() {
+    const now = frameNow();
+    frameDeltas.length = 0;
+    frameHealthStats.frames = 0;
+    frameHealthStats.startedAt = now;
+    frameHealthStats.lastAt = now;
+    frameHealthStats.lastDeltaMs = 0;
+    frameHealthStats.maxDeltaMs = 0;
+    frameHealthStats.longFrames = 0;
+    frameHealthStats.veryLongFrames = 0;
+    frameHealthStats.resetAt = Date.now();
+  }
+
+  function recordFrameHealth() {
+    const now = frameNow();
+    if (!frameHealthStats.startedAt) {
+      resetFrameHealth();
+      return;
+    }
+    const delta = now - frameHealthStats.lastAt;
+    frameHealthStats.lastAt = now;
+    if (!Number.isFinite(delta) || delta <= 0 || delta > 1000) return;
+    frameHealthStats.frames += 1;
+    frameHealthStats.lastDeltaMs = delta;
+    frameHealthStats.maxDeltaMs = Math.max(frameHealthStats.maxDeltaMs, delta);
+    if (delta > 50) frameHealthStats.longFrames += 1;
+    if (delta > 120) frameHealthStats.veryLongFrames += 1;
+    frameDeltas.push(delta);
+    if (frameDeltas.length > 180) frameDeltas.splice(0, frameDeltas.length - 180);
+  }
+
+  function roundedMs(value) {
+    return Math.round((Number(value) || 0) * 10) / 10;
+  }
+
+  function currentFrameHealthStatus() {
+    const samples = frameDeltas.slice();
+    const sorted = samples.slice().sort((a, b) => a - b);
+    const sum = samples.reduce((total, value) => total + value, 0);
+    const avg = samples.length ? sum / samples.length : 0;
+    const p95 = sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.95))] : 0;
+    const recentMax = samples.length ? Math.max(...samples) : 0;
+    const recentLongFrames = samples.filter(value => value > 50).length;
+    const recentVeryLongFrames = samples.filter(value => value > 120).length;
+    return {
+      frames: frameHealthStats.frames,
+      samples: samples.length,
+      measuringMs: Math.round(frameNow() - frameHealthStats.startedAt),
+      avgDeltaMs: roundedMs(avg),
+      p95DeltaMs: roundedMs(p95),
+      recentMaxDeltaMs: roundedMs(recentMax),
+      maxDeltaMs: roundedMs(frameHealthStats.maxDeltaMs),
+      lastDeltaMs: roundedMs(frameHealthStats.lastDeltaMs),
+      fps: avg ? Math.round(1000 / avg) : 0,
+      longFrames: frameHealthStats.longFrames,
+      veryLongFrames: frameHealthStats.veryLongFrames,
+      recentLongFrames,
+      recentVeryLongFrames,
+      resetAt: frameHealthStats.resetAt,
+    };
+  }
+
   function addImpactBurst(x, y, options = {}) {
     if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    const owner = options.owner || options.target || null;
+    if (!hasValidEffectOwnership({ type: 'impact', owner })) {
+      recordDroppedEffect('unowned_impact', { type: options.type || 'impact' });
+      return;
+    }
+    const point = ownedPointWithinBounds({ x, y }, owner);
+    const reducedMotion = prefersReducedMotion();
+    const baseDuration = Math.max(260, Math.min(1200, Number(options.duration) || 620));
+    const baseRadius = Math.max(18, Number(options.radius) || 36);
+    const baseIntensity = clamp01(options.intensity == null ? 0.55 : options.intensity);
     impactBursts.push({
-      x,
-      y,
+      x: point.x,
+      y: point.y,
       startedAt: Date.now(),
-      duration: Math.max(260, Math.min(1200, Number(options.duration) || 620)),
-      radius: Math.max(18, Number(options.radius) || 36),
+      duration: reducedMotion ? Math.max(180, Math.min(420, Math.round(baseDuration * 0.42))) : baseDuration,
+      radius: reducedMotion ? Math.max(14, baseRadius * 0.62) : baseRadius,
       color: options.color || THEME.cyan,
       accent: options.accent || THEME.gold,
-      intensity: clamp01(options.intensity == null ? 0.55 : options.intensity),
+      intensity: reducedMotion ? Math.min(baseIntensity, 0.38) : baseIntensity,
       type: options.type || 'hit',
+      __effectOwnership: normalizeEffectOwnership({ type: 'impact', owner }),
     });
     if (impactBursts.length > 24) impactBursts.splice(0, impactBursts.length - 24);
   }
 
   function drawImpactBursts() {
     const now = Date.now();
+    const reducedMotion = prefersReducedMotion();
     for (let i = impactBursts.length - 1; i >= 0; i -= 1) {
       const burst = impactBursts[i];
       const progress = clamp01((now - burst.startedAt) / burst.duration);
@@ -4076,7 +4843,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         impactBursts.splice(i, 1);
         continue;
       }
-      const wave = easeOutCubic(progress);
+      const wave = reducedMotion ? 1 : easeOutCubic(progress);
       const alpha = Math.sin(progress * Math.PI);
       const r = burst.radius * (0.5 + wave * (burst.type === 'kill' ? 1.72 : 1.24));
       ctx.save();
@@ -4097,7 +4864,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.stroke();
       ctx.globalAlpha = alpha * 0.38;
       ctx.setLineDash([Math.max(8, r * 0.18), Math.max(8, r * 0.16)]);
-      ctx.lineDashOffset = -now * 0.06;
+      ctx.lineDashOffset = reducedMotion ? 0 : -now * 0.06;
       ctx.strokeStyle = burst.accent;
       ctx.lineWidth = Math.max(1, 1.4 + burst.intensity);
       ctx.beginPath();
@@ -4187,19 +4954,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
               ? [this.color, '#f6c95b', '#ff6a3d', '#ffffff', '#55e7ff']
               : [this.color, '#ff4f8f', '#ff8bc2', '#ffd1e3', '#ffd166'];
       const baseCount = this.kind === 'like' ? 2 + this.hearts : this.kind === 'repost' ? 12 + this.hearts * 3 : 6 + this.hearts * 2;
-      const count    = Math.min(this.kind === 'like' ? 7 : this.kind === 'repost' ? 26 : 18, Math.max(3, baseCount + Math.floor(this.intensity * (this.kind === 'like' ? 3 : 6))));
+      const rawCount = Math.min(this.kind === 'like' ? 7 : this.kind === 'repost' ? 26 : 18, Math.max(3, baseCount + Math.floor(this.intensity * (this.kind === 'like' ? 3 : 6))));
+      const count    = motionParticleCount(rawCount, { min: this.kind === 'like' ? 2 : 4, max: this.kind === 'repost' ? 9 : 7 });
+      const motion   = canvasMotionScale();
 
       this.motes = Array.from({ length: count }, (_, i) => {
         const spread = Math.PI * 2 * (i / count) + Math.random() * 0.45;
         return {
           angle: spread,
           delay: Math.random() * 0.18 + i * 0.018,
-          orbit: this.kind === 'like' ? 7 + Math.random() * (14 + this.intensity * 6) : 12 + Math.random() * (26 + this.intensity * 12),
-          lift: this.kind === 'like' ? 20 + Math.random() * (24 + this.intensity * 10) : 38 + Math.random() * (42 + this.intensity * 24),
-          drift: (Math.random() - 0.5) * (this.kind === 'like' ? 13 + this.intensity * 8 : 26 + this.intensity * 18),
+          orbit: (this.kind === 'like' ? 7 + Math.random() * (14 + this.intensity * 6) : 12 + Math.random() * (26 + this.intensity * 12)) * motion,
+          lift: (this.kind === 'like' ? 20 + Math.random() * (24 + this.intensity * 10) : 38 + Math.random() * (42 + this.intensity * 24)) * motion,
+          drift: (Math.random() - 0.5) * (this.kind === 'like' ? 13 + this.intensity * 8 : 26 + this.intensity * 18) * motion,
           size: (this.kind === 'like' ? 3.6 : 6.5) + Math.random() * (this.kind === 'like' ? 2.8 : 5.5) + this.intensity * (this.kind === 'like' ? 1.1 : 2),
           color: palette[i % palette.length],
-          spin: (Math.random() - 0.5) * 0.55,
+          spin: (Math.random() - 0.5) * 0.55 * motion,
         };
       });
     }
@@ -4329,18 +5098,20 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       this.duration = Math.round((durations[type] || 500) / speed);
 
       if (type === 'fire') {
-        const cnt = 40 + Math.floor(this.intensity * 24);
+        const cnt = motionParticleCount(40 + Math.floor(this.intensity * 24), { min: 6, max: 14 });
         for (let i = 0; i < cnt; i++) {
           this.particles.push(new Particle(this.to.x, this.to.y, { speed: 3 + Math.random() * 6, color: i % 3 === 0 ? '#ffdd44' : '#ff8844', radius: 2 + Math.random() * 4, decay: 0.025 }));
         }
       }
       if (this.critical) {
-        for (let i = 0; i < 14; i++) {
+        const cnt = motionParticleCount(14, { min: 3, max: 5 });
+        for (let i = 0; i < cnt; i++) {
           this.particles.push(new Particle(this.to.x, this.to.y, { speed: 5 + Math.random() * 5, color: '#ffffff', radius: 1.5 + Math.random() * 2, decay: 0.04 }));
         }
       }
       if (this.giftBoosted) {
-        for (let i = 0; i < 10; i++) {
+        const cnt = motionParticleCount(10, { min: 2, max: 4 });
+        for (let i = 0; i < cnt; i++) {
           this.particles.push(new Particle(this.from.x, this.from.y, { speed: 2, color: '#ffd700', radius: 1.5, decay: 0.045, rise: 0.6 }));
         }
       }
@@ -4488,7 +5259,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     drawBeam() {
       const { from: f, to: t, progress: pg } = this;
       const a = pg < 0.3 ? 1 : 1 - (pg - 0.3) / 0.7;
-      const pulse = 1 + Math.sin(Date.now() / 110) * 0.16;
+      const pulse = prefersReducedMotion() ? 1 : 1 + Math.sin(Date.now() / 110) * 0.16;
       const mx = f.x + (t.x - f.x) * pg, my = f.y + (t.y - f.y) * pg;
       ctx.globalCompositeOperation = 'lighter';
       if (this.giftBoosted) {
@@ -4522,7 +5293,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.fillStyle = g; ctx.beginPath(); ctx.arc(px, py, R, 0, Math.PI * 2); ctx.fill();
       if (pg > 0.9 && !this._impacted) {
         this._impacted = true;
-        for (let i = 0; i < 14; i++) this.particles.push(new Particle(t.x, t.y, { speed: 4 + Math.random() * 5, color: '#7afcff', radius: 2 + Math.random() * 3, decay: 0.03 }));
+        const cnt = motionParticleCount(14, { min: 3, max: 5 });
+        for (let i = 0; i < cnt; i++) this.particles.push(new Particle(t.x, t.y, { speed: 4 + Math.random() * 5, color: '#7afcff', radius: 2 + Math.random() * 3, decay: 0.03 }));
       }
     }
 
@@ -4538,7 +5310,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const body = (20 + this.intensity * 9) * ui;
       const radius = (4.4 + this.intensity * 1.8) * ui;
       const fade = pg < 0.84 ? 1 : Math.max(0, 1 - (pg - 0.84) / 0.16);
-      const pulse = 0.86 + Math.sin(Date.now() * 0.06) * 0.14;
+      const pulse = prefersReducedMotion() ? 1 : 0.86 + Math.sin(Date.now() * 0.06) * 0.14;
       const tracer = Math.max(48 * ui, Math.min(dist * 0.42, (118 + this.intensity * 42) * ui));
       const tailX = px - ux * tracer;
       const tailY = py - uy * tracer;
@@ -4676,7 +5448,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
       if (impactT > 0 && !this._impacted) {
         this._impacted = true;
-        for (let i = 0; i < 20; i += 1) {
+        const cnt = motionParticleCount(20, { min: 4, max: 7 });
+        for (let i = 0; i < cnt; i += 1) {
           this.particles.push(new Particle(t.x, t.y, {
             speed: 3.8 + Math.random() * (6.2 + this.intensity * 4),
             color: i % 3 === 0 ? '#fff8d7' : i % 3 === 1 ? '#f6c95b' : '#ff6a3d',
@@ -4851,7 +5624,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       if (!this.spawned) {
         this.spawned = true;
         const emojis = ['❤️','💖','💘','💝','💫'];
-        const count  = 18 + Math.floor(this.intensity * 14);
+        const count  = motionParticleCount(18 + Math.floor(this.intensity * 14), { min: 3, max: 8 });
         for (let i = 0; i < count; i++) {
           this.particles.push(new Particle(this.to.x, this.to.y, { speed: 6 + Math.random() * 5, emoji: emojis[i % emojis.length], fontSize: 18 + Math.random() * 14, decay: 0.018, rise: 1.2 }));
         }
@@ -4861,7 +5634,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     drawExplosion() {
       if (!this.spawned) {
         this.spawned = true;
-        const count = 34 + Math.floor(this.intensity * 24);
+        const count = motionParticleCount(34 + Math.floor(this.intensity * 24), { min: 5, max: 12 });
         for (let i = 0; i < count; i++) {
           this.particles.push(new Particle(this.to.x, this.to.y, { speed: 7 + Math.random() * (10 + this.intensity * 8), color: ['#ff6644','#ffcc44','#ff2222','#ff8800'][i % 4], radius: 3 + Math.random() * (5 + this.intensity * 4), decay: 0.014 - this.intensity * 0.004 }));
         }
@@ -4872,7 +5645,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const { from: f, to: t, progress: pg } = this;
       const x = f.x + (t.x - f.x) * pg, y = f.y + (t.y - f.y) * pg;
       const now = Date.now();
-      const intensity  = 0.7 + Math.sin(now * 0.018) * 0.3;
+      const intensity  = prefersReducedMotion() ? 0.82 : 0.7 + Math.sin(now * 0.018) * 0.3;
       const coreColor  = this.critical ? '#fff2b0' : '#ffffff';
       const midColor   = this.critical ? '#ff6640' : (this.color || '#00ccff');
       const glowColor  = this.critical ? '#ff2200' : '#0044cc';
@@ -4888,7 +5661,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y);
       ctx.strokeStyle = coreColor; ctx.lineWidth = 3; ctx.globalAlpha = 1;
       ctx.setLineDash([14, 8]); ctx.stroke(); ctx.setLineDash([]);
-      const headRad = 13 + Math.sin(now * 0.025) * 2.5;
+      const headRad = 13 + (prefersReducedMotion() ? 0 : Math.sin(now * 0.025) * 2.5);
       ctx.shadowBlur = 22; ctx.shadowColor = midColor;
       ctx.beginPath(); ctx.arc(x, y, headRad, 0, Math.PI * 2); ctx.fillStyle = coreColor; ctx.fill();
       ctx.shadowBlur = 0;
@@ -4973,7 +5746,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
       if (impactT > 0 && !this._impacted) {
         this._impacted = true;
-        for (let i = 0; i < 18; i += 1) {
+        const cnt = motionParticleCount(18, { min: 4, max: 6 });
+        for (let i = 0; i < cnt; i += 1) {
           this.particles.push(new Particle(t.x, t.y, {
             speed: 2.6 + Math.random() * (5 + this.intensity * 3),
             color: i % 3 === 0 ? '#ffffff' : i % 3 === 1 ? '#7afcff' : '#f6c95b',
@@ -5074,7 +5848,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
       if (impactT > 0 && !this._impacted) {
         this._impacted = true;
-        for (let i = 0; i < 20; i += 1) {
+        const cnt = motionParticleCount(20, { min: 4, max: 7 });
+        for (let i = 0; i < cnt; i += 1) {
           this.particles.push(new Particle(t.x, t.y, {
             speed: 1.8 + Math.random() * (4.6 + this.intensity * 3),
             color: i % 3 === 0 ? '#f6c95b' : i % 3 === 1 ? '#8b7cff' : '#7afcff',
@@ -5103,7 +5878,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y);
       ctx.strokeStyle = `rgba(255,110,20,${0.65 * (1 - pg * 0.6)})`; ctx.lineWidth = 8 + this.intensity * 6; ctx.stroke();
-      const flicker = 1 + Math.sin(Date.now() * 0.04) * 0.12;
+      const flicker = prefersReducedMotion() ? 1 : 1 + Math.sin(Date.now() * 0.04) * 0.12;
       const flame = ctx.createRadialGradient(x - size * 0.2, y - size * 0.2, 1, x, y, size * flicker);
       flame.addColorStop(0, '#fff8e0'); flame.addColorStop(0.22, '#ffcc44');
       flame.addColorStop(0.55, '#ff5500'); flame.addColorStop(1, '#880000');
@@ -5113,13 +5888,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     drawBubble() {
       const { from: f, to: t, progress: pg } = this;
       const x = f.x + (t.x - f.x) * pg, y = f.y + (t.y - f.y) * pg;
-      const count = 4 + Math.floor(this.intensity * 3), now = Date.now();
+      const count = motionParticleCount(4 + Math.floor(this.intensity * 3), { min: 2, max: 3 }), now = Date.now();
       ctx.globalCompositeOperation = 'lighter'; ctx.lineCap = 'round';
       ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(x, y);
       ctx.strokeStyle = `rgba(160,230,255,${0.4 * (1 - pg)})`; ctx.lineWidth = 5 + this.intensity * 3; ctx.stroke();
       ctx.globalCompositeOperation = 'source-over';
       for (let i = 0; i < count; i++) {
-        const angle = now * 0.003 + i * (Math.PI * 2 / count);
+        const angle = (prefersReducedMotion() ? 0 : now * 0.003) + i * (Math.PI * 2 / count);
         const orbit = 10 + this.intensity * 4;
         const bx = x + Math.cos(angle) * orbit, by = y + Math.sin(angle) * orbit * 0.65;
         const r = Math.max(2, 14 - i * 1.2 + this.intensity * 4);
@@ -5145,8 +5920,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const ui = canvasUiScale();
       const now = Date.now();
       const fade = pg < 0.82 ? 1 : Math.max(0, 1 - (pg - 0.82) / 0.18);
-      const phase = now * 0.0028;
-      const pulse = 1 + Math.sin(now * 0.016) * 0.045;
+      const phase = prefersReducedMotion() ? 0 : now * 0.0028;
+      const pulse = prefersReducedMotion() ? 1 : 1 + Math.sin(now * 0.016) * 0.045;
       const radius = (15 + this.intensity * 9) * ui * pulse;
       const tail = Math.max(36 * ui, Math.min(dist * 0.28, (86 + this.intensity * 28) * ui));
       const impactT = clamp01((pg - 0.72) / 0.28);
@@ -5226,7 +6001,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         ctx.strokeStyle = ring === 1 ? '#f6c95b' : '#bdfcff';
         ctx.lineWidth = Math.max(1.1, (1.7 - ring * 0.25) * ui);
         ctx.setLineDash([]);
-        ctx.lineDashOffset = -now * (0.035 + ring * 0.018);
+        ctx.lineDashOffset = prefersReducedMotion() ? 0 : -now * (0.035 + ring * 0.018);
         ctx.save();
         ctx.rotate((Math.PI / 3) * ring + phase * (ring === 1 ? -1.4 : 0.9));
         ctx.scale(1, 0.34 + ring * 0.1);
@@ -5264,7 +6039,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
       if (impactT > 0 && !this._impacted) {
         this._impacted = true;
-        for (let i = 0; i < 16; i += 1) {
+        const cnt = motionParticleCount(16, { min: 4, max: 6 });
+        for (let i = 0; i < cnt; i += 1) {
           this.particles.push(new Particle(t.x, t.y, {
             speed: 2.8 + Math.random() * (5.6 + this.intensity * 4),
             color: i % 4 === 0 ? '#ffffff' : i % 4 === 1 ? '#55e7ff' : i % 4 === 2 ? '#8b7cff' : '#f6c95b',
@@ -5285,7 +6061,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         ctx.globalAlpha = impactAlpha * 0.26;
         ctx.strokeStyle = '#f6c95b';
         ctx.setLineDash([radius * 0.42, radius * 0.28]);
-        ctx.lineDashOffset = -now * 0.08;
+        ctx.lineDashOffset = prefersReducedMotion() ? 0 : -now * 0.08;
         ctx.beginPath();
         ctx.arc(t.x, t.y, (radius * 0.9 + impactT * radius * 2.25), 0, Math.PI * 2);
         ctx.stroke();
@@ -5346,24 +6122,19 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function fireAttack(attackerId, targetId, damage, killed, special, effect, meta) {
     meta = meta || {};
-    const horde = hordePlayer();
-    const attackerIsBoss = attackerId === BOSS_ID || meta.attackerScope === 'boss';
-    const targetIsBoss = targetId === BOSS_ID || meta.targetScope === 'boss';
-    const attackerIsHorde = attackerId === HORDE_ID || meta.attackerScope === 'horde';
-    const targetIsHorde = targetId === HORDE_ID || meta.targetScope === 'horde';
-    const rawFrom = attackerIsHorde
-      ? (horde ? getHordePosition() : null)
-      : attackerIsBoss
-        ? getBossPosition()
-        : getPositionForPlayer(attackerId, meta.attackerScope) || (horde ? getHordeEdgePosition(null) : null);
-    const rawTo = targetIsHorde
-      ? (horde ? getHordePosition() : null)
-      : targetIsBoss
-        ? getBossPosition()
-        : getPositionForPlayer(targetId, meta.targetScope) || (horde ? getHordeEdgePosition(rawFrom) : null);
-    let from = attackerIsBoss ? getBossEdgePosition(rawTo) : attackerIsHorde && horde ? getHordeEdgePosition(rawTo) : rawFrom;
-    let to = targetIsBoss ? getBossEdgePosition(rawFrom) : targetIsHorde && horde ? getHordeEdgePosition(rawFrom) : rawTo;
-    if (!from || !to) return false;
+    const source = resolveEffectEntity(attackerId, meta.attackerScope, 'attacker');
+    const target = resolveEffectEntity(targetId, meta.targetScope, 'target');
+    if (source?.unresolved) return dropUnresolvedEntity(source, 'missing_attacker', { type: 'attack' });
+    if (target?.unresolved) return dropUnresolvedEntity(target, 'missing_target', { type: 'attack' });
+    const attackerIsBoss = source.kind === 'boss';
+    const targetIsBoss = target.kind === 'boss';
+    const attackerIsHorde = source.kind === 'horde';
+    const targetIsHorde = target.kind === 'horde';
+    const rawFrom = entityAnchorPoint(source, target.point);
+    const rawTo = entityAnchorPoint(target, source.point);
+    let from = rawFrom;
+    let to = rawTo;
+    if (!from || !to) return recordDroppedEffect('unresolved_attack_path', { type: 'attack' });
     if (Math.abs(from.x - to.x) < 2 && Math.abs(from.y - to.y) < 2) {
       from.x -= 24;
       to.x += 24;
@@ -5379,7 +6150,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     else             { type = normalizeEffectType(overlaySettings.shotType); }
 
     const attackIntensity = meta.intensity != null ? meta.intensity : 0.5;
-    attacks.push(new Attack(from, to, type, {
+    const attack = pushAttackEffect(new Attack(from, to, type, {
       intensity:      attackIntensity,
       critical:       meta.critical       != null ? meta.critical       : false,
       streak:         meta.streak         != null ? meta.streak         : 0,
@@ -5388,9 +6159,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       killingBlow:    !!killed,
       color:          meta.laserColor || overlaySettings.laserColor,
       shotSpeed:      meta.shotSpeed  || overlaySettings.shotSpeed,
-    }));
+    }), { type: 'attack', source, target });
+    if (!attack) return false;
     const impactType = meta.shielded ? 'shield' : killed ? 'kill' : meta.critical ? 'critical' : 'hit';
-    addImpactBurst(to.x, to.y, {
+    const impactPoint = ownedPointWithinBounds(rawTo, target);
+    addImpactBurst(impactPoint.x, impactPoint.y, {
+      owner: target,
       type: impactType,
       color: meta.shielded ? THEME.cyan : killed ? THEME.gold : (meta.critical ? THEME.ember : THEME.red),
       accent: special || attackerIsBoss ? THEME.gold : THEME.cyan,
@@ -5411,7 +6185,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       pulseHorde(killed ? 'kill' : 'attack', killed ? THEME.gold : THEME.red, killed ? 1150 : 850);
       showBattlePrompt(killed ? 'Horde claimed a fighter' : 'Horde strikes', 'horde', 1900);
     } else {
-      setCardAccent(attackerId, special ? 'gift' : 'attack', special ? THEME.gold : THEME.cyan, 650);
+      setCardAccent(source.id, special ? 'gift' : 'attack', special ? THEME.gold : THEME.cyan, 650);
     }
     if (targetIsBoss) {
       pulseBoss(killed ? 'kill' : 'hit', killed ? THEME.gold : THEME.cyan, killed ? 1400 : 900);
@@ -5420,9 +6194,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       pulseHorde(killed ? 'kill' : 'hit', killed ? THEME.gold : THEME.ember, killed ? 1200 : 820);
       showBattlePrompt(killed ? 'Horde pressure broken' : 'Horde under fire', 'horde', 1900);
     } else {
-      setCardAccent(targetId, killed ? 'kill' : 'hit', killed ? THEME.gold : (meta.critical ? THEME.ember : THEME.red), killed ? 1400 : 850);
+      setCardAccent(target.id, killed ? 'kill' : 'hit', killed ? THEME.gold : (meta.critical ? THEME.ember : THEME.red), killed ? 1400 : 850);
     }
-    showDamage(to.x, to.y, damage || 0, !!killed, !!meta.critical);
+    showDamage(impactPoint.x, impactPoint.y, damage || 0, !!killed, !!meta.critical, target);
     playSound(killed ? 'kill' : 'attack');
     return true;
   }
@@ -5468,10 +6242,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const top = topPlayers();
     if (!top.length) return null;
     const wanted = String(playerId || '').toLowerCase();
+    if (!wanted) return null;
     let index = wanted
       ? top.findIndex(p => [p.uniqueId, p.id, p.nickname, p.name].some(value => String(value || '').toLowerCase() === wanted))
       : 0;
-    if (index < 0) index = 0;
+    if (index < 0) return null;
     const cardPos = getPlayerPosition(index, top.length);
     const metrics = getPlayerCardDrawMetrics(cardPos, top.length);
     return { x: cardPos.x, y: metrics.avatarY - metrics.avatarR * 0.12 };
@@ -5480,34 +6255,41 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function fireHeartEffect(playerId, hearts, intensity, meta) {
     meta = meta || {};
     hearts = hearts || 1; intensity = intensity || 0;
-    let pos = meta.kind === 'like' ? getLikeEffectPosition(playerId) : null;
-    if (!pos) pos = getPositionForPlayer(playerId);
-    if (!pos) { const top = topPlayers(); pos = top.length ? getPlayerPosition(0, top.length) : getHordePosition(); }
-    if (pos) {
-      attacks.push(new HeartBloom(pos, hearts, intensity, meta));
-      if (playerId && playerId !== HORDE_ID) {
-        const type = meta.kind === 'follow' || meta.kind === 'share' || meta.kind === 'repost'
-          ? 'follow'
-          : meta.kind === 'heal'
-            ? 'heal'
-            : 'like';
-        const color = meta.color || (type === 'heal' ? THEME.green : type === 'follow' ? THEME.cyan : '#ff7ab6');
-        setCardAccent(playerId, type, color, meta.kind === 'repost' ? 2200 : type === 'follow' ? 1400 : 820);
-      }
+    const owner = resolveEffectEntity(playerId, meta.scope || meta.targetScope, 'owner');
+    if (owner?.unresolved) return dropUnresolvedEntity(owner, 'missing_owner', { type: meta.kind || 'heart' });
+    const pos = owner.kind === 'player' && meta.kind === 'like'
+      ? (getLikeEffectPosition(playerId) || owner.point)
+      : owner.point;
+    const bloom = pushAttackEffect(new HeartBloom(pos, hearts, intensity, meta), { type: meta.kind || 'heart', owner });
+    if (!bloom) return false;
+    if (owner.kind === 'player') {
+      const type = meta.kind === 'follow' || meta.kind === 'share' || meta.kind === 'repost'
+        ? 'follow'
+        : meta.kind === 'heal'
+          ? 'heal'
+          : 'like';
+      const color = meta.color || (type === 'heal' ? THEME.green : type === 'follow' ? THEME.cyan : '#ff7ab6');
+      setCardAccent(owner.id, type, color, meta.kind === 'repost' ? 2200 : type === 'follow' ? 1400 : 820);
     }
 
     rememberCheer(playerId);
     if (!['follow', 'gift', 'share', 'repost'].includes(meta.kind)) applyHeal(playerId, hearts * 5);
+    return true;
   }
 
   function fireLikeMilestoneEffect(data) {
     const milestone = Number(data?.milestone) || 0;
     if (!milestone) return;
     const isMega = data.milestoneTier === 'mega' || milestone % 1000 === 0;
+    const owner = resolveEffectEntity(data.uniqueId, data.scope || data.targetScope, 'owner');
+    if (owner?.unresolved) return dropUnresolvedEntity(owner, 'missing_owner', { type: 'like_milestone' });
     const frame = arenaFrame();
-    const center = getLikeEffectPosition(data.uniqueId) || { x: frame.x + frame.w * 0.5, y: frame.y + frame.h * 0.47 };
+    const center = owner.kind === 'player'
+      ? (getLikeEffectPosition(data.uniqueId) || owner.point)
+      : owner.point;
     const atk = new Attack(center, center, 'static', { intensity: isMega ? 0.72 : 0.36 });
-    const count = isMega ? 42 : 18;
+    const count = motionParticleCount(isMega ? 42 : 18, { min: isMega ? 8 : 4, max: isMega ? 14 : 7 });
+    const motion = canvasMotionScale();
     const palette = isMega
       ? [THEME.gold, THEME.goldBright, THEME.cyan, '#ffffff', '#ff78b2']
       : ['#ff78b2', THEME.cyan, THEME.gold, '#ffffff'];
@@ -5524,12 +6306,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         decay: isMega ? 0.016 : 0.024,
         rise: isMega ? 0.55 : 0.32,
       });
-      particle.vx = Math.cos(angle) * speed * (0.34 + Math.random() * 0.3);
-      particle.vy = Math.sin(angle) * speed * 0.34 - (isMega ? 0.8 : 0.42);
+      particle.vx = Math.cos(angle) * speed * (0.34 + Math.random() * 0.3) * motion;
+      particle.vy = (Math.sin(angle) * speed * 0.34 - (isMega ? 0.8 : 0.42)) * motion;
       atk.particles.push(particle);
     }
-    attacks.push(atk);
+    pushAttackEffect(atk, { type: 'like_milestone', owner });
     addImpactBurst(center.x, center.y, {
+      owner,
       type: isMega ? 'kill' : 'hit',
       color: isMega ? THEME.gold : '#ff78b2',
       accent: isMega ? THEME.cyan : THEME.gold,
@@ -5543,7 +6326,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       kind: 'like',
       color: isMega ? THEME.gold : '#ff78b2',
     });
-    setCardAccent(data.uniqueId, isMega ? 'gift' : 'like', isMega ? THEME.gold : '#ff78b2', isMega ? 1800 : 1200);
+    if (owner.kind === 'player') setCardAccent(owner.id, isMega ? 'gift' : 'like', isMega ? THEME.gold : '#ff78b2', isMega ? 1800 : 1200);
     showBanner(isMega ? 'legendary' : 'special', {
       code: isMega ? '1K' : '+100',
       kicker: isMega ? 'Crowd eruption' : 'Crowd surge',
@@ -5575,15 +6358,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       charge: data.surgeTier === 'takeover' ? 100 : isRepost ? 92 : 72,
       priority: data.surgeTier ? 88 : isRepost ? 92 : 66,
     }, isRepost ? 3900 : 3100);
-    const pos = getPositionForPlayer(data.uniqueId);
-    const center = getHordePosition();
-    const origin = pos || center;
+    const target = resolveEffectEntity(HORDE_ID, 'horde', 'target');
+    if (target?.unresolved) return dropUnresolvedEntity(target, 'horde_missing', { type: 'social_boost' });
+    const actor = data.uniqueId ? resolveEffectEntity(data.uniqueId, data.attackerScope || data.scope, 'source') : null;
+    const source = actor && !actor.unresolved ? actor : target;
+    const center = target.point;
+    const origin = source.point;
     const atk = new Attack(origin, center, isRepost ? 'arc' : 'static', {
       intensity: isRepost ? 0.9 : 0.62,
       color: data.color || (isRepost ? THEME.gold : THEME.cyan),
     });
     const color = data.color || (isRepost ? THEME.gold : '#99ffda');
-    const count = isRepost ? 38 : 24;
+    const count = motionParticleCount(isRepost ? 38 : 24, { min: isRepost ? 7 : 5, max: isRepost ? 12 : 8 });
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 * i) / count;
       atk.particles.push(new Particle(center.x + Math.cos(angle) * (isRepost ? 40 : 24), center.y + Math.sin(angle) * 12, {
@@ -5594,9 +6380,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         rise: 1.4 + Math.random() * 1.8,
       }));
     }
-    attacks.push(atk);
-    fireHeartEffect(data.uniqueId, isRepost ? 6 : 4, isRepost ? 0.82 : 0.58, { ...data, kind: isRepost ? 'repost' : 'share', color });
-    setCardAccent(data.uniqueId, 'boost', color, isRepost ? 2100 : 1450);
+    pushAttackEffect(atk, { type: 'social_boost', source, target });
+    fireHeartEffect(source.kind === 'horde' ? HORDE_ID : source.id, isRepost ? 6 : 4, isRepost ? 0.82 : 0.58, {
+      ...data,
+      kind: isRepost ? 'repost' : 'share',
+      color,
+      scope: source.kind === 'horde' ? 'horde' : source.scope,
+    });
+    if (source.kind === 'player') setCardAccent(source.id, 'boost', color, isRepost ? 2100 : 1450);
     showBattlePrompt(isRepost ? 'Broadcast surge shielded the squad' : 'Share rally boosted the squad', 'return', isRepost ? 2500 : 2100);
   }
 
@@ -5617,16 +6408,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       priority: isTakeover ? 99 : isViral ? 93 : 86,
     }, isTakeover ? 4800 : isViral ? 4100 : 3400);
 
-    const frame = arenaFrame();
-    const center = { x: frame.x + frame.w * 0.5, y: frame.y + frame.h * 0.58 };
-    const horde = getHordePosition();
+    const owner = resolveEffectEntity(HORDE_ID, 'horde', 'owner');
+    if (owner?.unresolved) return dropUnresolvedEntity(owner, 'horde_missing', { type: 'engagement_surge' });
+    const center = owner.point;
     const color = data.color || (isTakeover ? THEME.gold : THEME.cyan);
-    const atk = new Attack(center, horde, isTakeover ? 'sphere' : isViral ? 'railgun' : 'pulse', {
+    const atk = new Attack(center, center, isTakeover ? 'sphere' : isViral ? 'railgun' : 'pulse', {
       intensity: isTakeover ? 1 : isViral ? 0.84 : 0.68,
       color,
       critical: isTakeover,
     });
-    const count = isTakeover ? 64 : isViral ? 46 : 32;
+    const count = motionParticleCount(isTakeover ? 64 : isViral ? 46 : 32, { min: isTakeover ? 10 : 7, max: isTakeover ? 18 : 13 });
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 * i) / count;
       atk.particles.push(new Particle(center.x + Math.cos(angle) * 42, center.y + Math.sin(angle) * 20, {
@@ -5637,19 +6428,22 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         rise: 1.3 + Math.random() * 2.2,
       }));
     }
-    attacks.push(atk);
+    pushAttackEffect(atk, { type: 'engagement_surge', owner });
     showBattlePrompt(label, 'return', isTakeover ? 2800 : 2300);
   }
 
   function spawnRespawnEffect(uniqueId) {
-    const pos = getPositionForPlayer(uniqueId);
-    if (!pos) return;
+    const owner = resolveEffectEntity(uniqueId, '', 'owner');
+    if (owner?.unresolved) return dropUnresolvedEntity(owner, 'missing_owner', { type: 'respawn' });
+    const pos = owner.point;
     const atk = new Attack(pos, pos, 'static');
-    for (let i = 0; i < 28; i++) {
+    const count = motionParticleCount(28, { min: 5, max: 9 });
+    for (let i = 0; i < count; i++) {
       atk.particles.push(new Particle(pos.x, pos.y, { speed: 3 + Math.random() * 6, color: '#ffaa00', radius: 2 + Math.random() * 3, decay: 0.022, rise: 1.5 }));
     }
-    attacks.push(atk);
-    setCardAccent(uniqueId, 'respawn', THEME.gold, 1400);
+    pushAttackEffect(atk, { type: 'respawn', owner });
+    if (owner.kind === 'player') setCardAccent(owner.id, 'respawn', THEME.gold, 1400);
+    if (owner.kind === 'horde') pulseHorde('respawn', THEME.gold, 900);
     showBattlePrompt('Fighter returned', 'return', 1800);
     playSound('respawn');
   }
@@ -5723,7 +6517,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     ctx.globalAlpha = 0.12;
     ctx.fillStyle = 'rgba(255,255,255,0.72)';
-    const scanY = ((now * 34) % (H + 80)) - 40;
+    const scanY = prefersReducedMotion() ? H * 0.16 : ((now * 34) % (H + 80)) - 40;
     ctx.fillRect(0, scanY, W, 1.5);
     ctx.restore();
 
@@ -5765,7 +6559,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const x = frame.x + frame.w * (0.075 + t * 0.85);
       ctx.beginPath();
       ctx.moveTo(x, playerBandY + 4 * ui);
-      ctx.lineTo(x + Math.sin(now * 0.8 + i) * 6 * ui, frame.y + frame.h - frame.h * 0.065);
+      ctx.lineTo(x + (prefersReducedMotion() ? 0 : Math.sin(now * 0.8 + i) * 6 * ui), frame.y + frame.h - frame.h * 0.065);
       ctx.stroke();
     }
     for (let i = 0; i <= 4; i += 1) {
@@ -5833,7 +6627,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const pad = Math.max(14, Math.min(W, H) * 0.025);
     const len = Math.max(54, Math.min(W, H) * 0.11);
     const now = Date.now() * 0.001;
-    const pulse = 0.58 + Math.sin(now * 2.1) * 0.16;
+    const pulse = prefersReducedMotion() ? 0.58 : 0.58 + Math.sin(now * 2.1) * 0.16;
 
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
@@ -5870,7 +6664,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.strokeStyle = 'rgba(246,201,91,0.28)';
     ctx.lineWidth = 1;
     for (let i = 0; i < 12; i++) {
-      const t = (i + ((now * 0.18) % 1)) / 12;
+      const t = (i + (prefersReducedMotion() ? 0 : ((now * 0.18) % 1))) / 12;
       const x = pad + len + t * (W - (pad + len) * 2);
       ctx.beginPath();
       ctx.moveTo(x, pad + 2);
@@ -6617,7 +7411,24 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     });
   }
 
+  function updateAndDrawAttackEffect(effect) {
+    const alive = effect.update();
+    if (!alive) return false;
+    if (effect.__effectBounds) {
+      const bounds = effect.__effectBounds;
+      ctx.save();
+      roundedRectPath(ctx, bounds.x, bounds.y, bounds.w, bounds.h, Math.max(8, Math.min(bounds.w, bounds.h) * 0.08));
+      ctx.clip();
+      effect.draw();
+      ctx.restore();
+    } else {
+      effect.draw();
+    }
+    return true;
+  }
+
   function draw() {
+    recordFrameHealth();
     ctx.clearRect(0, 0, cw(), ch());
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     drawBackground();
@@ -6699,11 +7510,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       })
       .filter(Boolean);
     const domLayerLeaks = overlayDiagnostics.domLayerLeakLabels(domObjects);
+    const damageObjects = domObjects.filter(item => item.type === 'damage');
+    const collisionDomObjects = domObjects.filter(item => item.type !== 'damage');
     const containedObjects = legacyLayoutPlayers
       .concat(legacyLayoutHorde ? [legacyLayoutHorde] : [])
       .concat(legacyLayoutBoss ? [legacyLayoutBoss] : [])
-      .concat(domObjects);
+      .concat(collisionDomObjects);
     const audit = overlayDiagnostics.auditObjectLayout(containedObjects, frame, stage.gap * 0.72);
+    const damageAudit = overlayDiagnostics.auditObjectLayout(damageObjects, frame, 0);
     window.__overlayLegacyLayout = {
       frame,
       safeFrame,
@@ -6714,17 +7528,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       boss: legacyLayoutBoss,
       domObjects,
       domLayerLeaks,
-      objects: audit.objects,
-      leaks: audit.leaks,
+      objects: audit.objects.concat(damageAudit.objects),
+      leaks: audit.leaks.concat(damageAudit.leaks),
       collisions: audit.collisions,
     };
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-    ctx.save();
-    const effectZone = computeOverlayLayout().zones.effects;
-    roundedRectPath(ctx, effectZone.x, effectZone.y, effectZone.w, effectZone.h, Math.max(16 * canvasUiScale(), effectZone.h * 0.14));
-    ctx.clip();
-    attacks = attacks.filter(a => { const alive = a.update(); if (alive) a.draw(); return alive; });
-    ctx.restore();
+    attacks = attacks.filter(updateAndDrawAttackEffect);
+    trimVisualEffects();
     ctx.restore();
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     drawArenaFrame();
@@ -6883,6 +7693,31 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return a.queuedAt - b.queuedAt;
   }
 
+  function visualQueueCounts() {
+    return VISUAL_EVENT_LANE_ORDER.reduce((summary, lane) => {
+      summary[lane] = visualEventQueue.filter(item => item.lane === lane).length;
+      return summary;
+    }, {});
+  }
+
+  function currentVisualQueueStatus() {
+    const now = Date.now();
+    const ages = visualEventQueue.map(item => Math.max(0, now - item.queuedAt));
+    return {
+      totalQueued: visualEventQueue.length,
+      byLane: visualQueueCounts(),
+      scheduled: visualEventScheduled,
+      oldestAgeMs: ages.length ? Math.max(...ages) : 0,
+      newestAgeMs: ages.length ? Math.min(...ages) : 0,
+      laneReadyInMs: VISUAL_EVENT_LANE_ORDER.reduce((summary, lane) => {
+        summary[lane] = Math.max(0, (visualLaneReadyAt[lane] || 0) - now);
+        return summary;
+      }, {}),
+      stats: { ...visualQueueStats },
+      lastError: lastVisualQueueError,
+    };
+  }
+
   function trimVisualLane(lane) {
     const config = visualLaneConfig(lane);
     const laneItems = [];
@@ -6892,6 +7727,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (laneItems.length <= config.maxQueued) return;
     laneItems.sort((a, b) => (a.item.priority || 0) - (b.item.priority || 0) || a.item.queuedAt - b.item.queuedAt);
     const drop = new Set(laneItems.slice(0, laneItems.length - config.maxQueued).map(entry => entry.index));
+    visualQueueStats.trimmed += drop.size;
     for (let i = visualEventQueue.length - 1; i >= 0; i -= 1) {
       if (drop.has(i)) visualEventQueue.splice(i, 1);
     }
@@ -6905,7 +7741,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const age = now - queued.queuedAt;
       const expired = age > config.ttlMs;
       const shouldDropDuringSponsor = sponsorActive && config.sponsorPolicy === 'drop' && queued.lane !== 'exclusive';
-      if (expired || shouldDropDuringSponsor) visualEventQueue.splice(i, 1);
+      if (expired || shouldDropDuringSponsor) {
+        if (expired) visualQueueStats.expired += 1;
+        else visualQueueStats.sponsorDropped += 1;
+        visualEventQueue.splice(i, 1);
+      }
     }
   }
 
@@ -6967,7 +7807,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const mergeKey = options.mergeKey ? options.mergeKey(data) : '';
     const priority = options.priority != null ? Number(options.priority) : visualEventPriority(type, data);
     const lane = visualEventLane(type, data, options);
-    if (seq && seenVisualSeqs.has(seq)) return;
+    if (seq && seenVisualSeqs.has(seq)) {
+      visualQueueStats.duplicateSeq += 1;
+      return;
+    }
 
     if (mergeKey) {
       for (let i = visualEventQueue.length - 1; i >= 0; i--) {
@@ -6977,6 +7820,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           queued.seq = Math.max(queued.seq || 0, seq || 0);
           queued.priority = Math.max(queued.priority || 0, priority || 0);
           queued.queuedAt = now;
+          visualQueueStats.merged += 1;
           scheduleVisualEvents();
           return;
         }
@@ -6984,6 +7828,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     visualEventQueue.push({ type, data, handler, seq, queuedAt: now, mergeKey, priority, lane });
+    visualQueueStats.enqueued += 1;
+    visualQueueStats.maxDepth = Math.max(visualQueueStats.maxDepth, visualEventQueue.length);
     trimVisualLane(lane);
     scheduleVisualEvents();
   }
@@ -7000,12 +7846,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       while (laneProcessed < config.budget && processed < maxPerTick) {
         const queued = pickNextVisualEvent(lane, Date.now());
         if (!queued) break;
-        if (queued.seq && queued.seq <= lastVisualEventSeq) continue;
-        if (queued.seq && seenVisualSeqs.has(queued.seq)) continue;
+        if (queued.seq && queued.seq <= lastVisualEventSeq) {
+          visualQueueStats.staleSeq += 1;
+          continue;
+        }
+        if (queued.seq && seenVisualSeqs.has(queued.seq)) {
+          visualQueueStats.duplicateSeq += 1;
+          continue;
+        }
         rememberVisualSeq(queued.seq);
         try {
           queued.handler(queued.data);
+          visualQueueStats.processed += 1;
         } catch (err) {
+          visualQueueStats.handlerErrors += 1;
+          lastVisualQueueError = {
+            type: queued.type,
+            message: String(err?.message || err || 'handler failed').slice(0, 160),
+            at: Date.now(),
+          };
           console.error('Overlay event handler failed', queued.type, err);
         }
         processed++;
@@ -7394,11 +8253,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       registerRetryTimer = null;
     }
 
+    connectionHealthStats.registerAttempts += 1;
+    connectionHealthStats.lastRegisterAttemptAt = Date.now();
     socket.emit('register', { type: 'overlay' }, ack => {
       if (ack && ack.success) {
         registerAcked = true;
+        connectionHealthStats.registerAcks += 1;
+        connectionHealthStats.lastRegisterAckAt = Date.now();
+        connectionHealthStats.lastError = '';
         if (Number.isFinite(Number(ack.eventSeq))) lastVisualEventSeq = Math.max(lastVisualEventSeq, Number(ack.eventSeq));
         fetch(withOverlayAuth('/state')).then(r => (r.ok ? r.json() : null)).then(s => { if (s) receiveGameState(s); }).catch(() => {});
+      } else {
+        connectionHealthStats.lastError = String(ack?.message || ack?.error || 'register not acknowledged').slice(0, 160);
       }
     });
 
@@ -7408,20 +8274,31 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function initSocket() {
-    if (typeof io === 'undefined') { enterDemoMode(); return; }
+    if (typeof io === 'undefined') {
+      connectionHealthStats.lastError = 'socket.io unavailable';
+      enterDemoMode();
+      return;
+    }
     try {
       socket = io(makeSocketOptions());
 
       socket.on('connect', () => {
         isDemoMode = false; stopDemoLoop();
+        connectionHealthStats.connectCount += 1;
+        connectionHealthStats.lastConnectAt = Date.now();
+        connectionHealthStats.lastReason = '';
+        connectionHealthStats.lastError = '';
         statusDiv.textContent = '🟢 LIVE · CONNECTED';
         statusDiv.className   = 'connected';
         registerAcked = false;
         registerOverlaySocket();
       });
 
-      socket.on('disconnect', () => {
+      socket.on('disconnect', reason => {
         registerAcked = false;
+        connectionHealthStats.disconnectCount += 1;
+        connectionHealthStats.lastDisconnectAt = Date.now();
+        connectionHealthStats.lastReason = String(reason || 'disconnect').slice(0, 120);
         if (registerRetryTimer) {
           clearTimeout(registerRetryTimer);
           registerRetryTimer = null;
@@ -7430,7 +8307,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         statusDiv.className   = 'disconnected';
       });
 
-      socket.on('connect_error', () => {
+      socket.on('connect_error', err => {
+        connectionHealthStats.connectErrorCount += 1;
+        connectionHealthStats.lastConnectErrorAt = Date.now();
+        connectionHealthStats.lastError = String(err?.message || err || 'connect error').slice(0, 160);
         statusDiv.textContent = '⚠️ SERVER ERROR · retrying';
         statusDiv.className   = 'disconnected';
         if (Object.keys(players).length === 0) enterDemoMode();
@@ -7468,14 +8348,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       socket.on('laserColor',      data     => { const c = typeof data === 'string' ? data : (data && data.color); if (c) { overlaySettings.laserColor = c; setLaserColor(c); } });
 
       socket.on('backgroundChanged', data => {
-        const filename = data && data.filename;
-        if (!filename) { backgroundImg = null; return; }
-        const img = new Image();
-        img.onload = () => { backgroundImg = img; };
-        img.onerror = () => { console.warn('Overlay background failed to load', filename); };
-        img.src = data.url
-          ? withOverlayAuth(data.url, { v: Date.now() })
-          : withOverlayAuth(`/background/${encodeURIComponent(filename)}`, { v: Date.now() });
+        handleBackgroundChanged(data || {});
       });
 
       socket.on('attack', data => enqueueVisualEvent('attack', data, handleAttackEvent));
@@ -7553,6 +8426,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
   if (overlayParams.get('banner_preview') === '1') {
     setTimeout(() => {
+      const previewBannerDuration = clampBannerNumber(Number(overlayParams.get('banner_duration')), 1400, 5200, 4600);
       showBanner('legendary', {
         code: overlayParams.get('banner_code') || 'X7',
         kicker: overlayParams.get('banner_kicker') || 'Arena takeover',
@@ -7560,7 +8434,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         meta: overlayParams.get('banner_meta') || '7 total kills | streak x5 | momentum x4',
         charge: 100,
         priority: 98,
-      }, 4600);
+      }, previewBannerDuration);
     }, 900);
   }
   requestAnimationFrame(draw);
