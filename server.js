@@ -493,6 +493,10 @@ const CFG = {
   CRITICAL_HIT_THRESHOLD: 0.6,
 };
 
+const RECENT_STREAM_EVENT_LIMIT = 30;
+const RECENT_PLAYER_LIMIT = 20;
+const PLAYER_SOURCE_VALUES = new Set(['real', 'demo', 'test']);
+
 const likeRateTracker = {};
 
 // ────────────────────────────────
@@ -632,9 +636,13 @@ function dispatchRoomEvent(room, type, payload = {}, meta = {}) {
     recordRoomBattleAction(room, type);
     room.eventSeq = (room.eventSeq || 0) + 1;
     if (type === 'gameState') {
+      recordRecentStreamEvent(room, type, payload, { recordGameState: true });
       io.to(room.roomId).emit(type, payload);
+      emitRoomRealtimeStatus(room);
+      io.to(room.roomId).emit('sessionStatus', buildSessionStatus(room));
       return;
     }
+    const streamEvent = recordRecentStreamEvent(room, type, payload);
     const priority = meta.priority == null ? roomEventPriority(type, payload) : meta.priority;
     const lane = meta.lane || roomEventLane(type, payload);
     io.to(room.roomId).emit(type, roomEventEnvelope(room, type, payload, {
@@ -643,6 +651,8 @@ function dispatchRoomEvent(room, type, payload = {}, meta = {}) {
       priority,
       lane,
     }));
+    if (streamEvent) io.to(room.roomId).emit('streamEvent', streamEvent);
+    if (type === 'tiktokConnection' || type === 'setupMode' || type === 'roundEvent') emitRoomRealtimeStatus(room);
   } catch (err) {
     logger.error({ err, type, room: room?.roomId }, 'emitRoomEvent failed');
   }
@@ -1021,6 +1031,204 @@ function roomAlivePlayers(room) {
   return Object.values(room?.players || {}).filter(player => player?.alive);
 }
 
+function inferPlayerSource(room, explicitSource = '') {
+  const source = String(explicitSource || '').toLowerCase();
+  if (PLAYER_SOURCE_VALUES.has(source)) return source;
+  if (PLAYER_SOURCE_VALUES.has(String(room?.eventSourceOverride || '').toLowerCase())) return room.eventSourceOverride;
+  if (room?.setupRehearsal?.active) return 'demo';
+  if (room?.tiktokConnection?.status === 'connected' || room?.lastRealEventAt) return 'real';
+  return 'test';
+}
+
+function playerSummary(player, fallbackSource = '') {
+  if (!player || typeof player !== 'object') return null;
+  const maxHp = Math.max(1, Number(player.maxHp) || CFG.BASE_HP);
+  const hp = Math.max(0, Number(player.hp) || 0);
+  return {
+    uniqueId: player.uniqueId || player.id || '',
+    nickname: player.nickname || player.uniqueId || player.id || 'Player',
+    hp: Math.round(hp),
+    maxHp: Math.round(maxHp),
+    hpPct: Math.round((hp / maxHp) * 100),
+    kills: Number(player.kills) || 0,
+    alive: Boolean(player.alive),
+    source: inferPlayerSource(null, player.source || fallbackSource),
+    lastActive: Number(player.lastActive) || null,
+    firstSeenAt: Number(player.firstSeenAt) || null,
+    iconEmoji: player.iconEmoji || '',
+  };
+}
+
+function buildRecentPlayers(room, limit = RECENT_PLAYER_LIMIT) {
+  return roomAlivePlayers(room)
+    .map(player => playerSummary(player, inferPlayerSource(room)))
+    .filter(Boolean)
+    .sort((a, b) => (Number(b.lastActive) || 0) - (Number(a.lastActive) || 0))
+    .slice(0, limit);
+}
+
+function buildRoomPlayerRoster(room) {
+  const players = buildRecentPlayers(room, RECENT_PLAYER_LIMIT);
+  const bySource = players.reduce((counts, player) => {
+    counts[player.source] = (counts[player.source] || 0) + 1;
+    return counts;
+  }, { real: 0, demo: 0, test: 0 });
+  return {
+    success: true,
+    playerSource: inferPlayerSource(room),
+    count: players.length,
+    bySource,
+    players,
+    updatedAt: Date.now(),
+  };
+}
+
+function eventActorFromPayload(payload = {}) {
+  return payload.nickname
+    || payload.attackerNick
+    || payload.killerNick
+    || payload.sourceNick
+    || payload.targetNick
+    || payload.uniqueId
+    || payload.attacker
+    || payload.killer
+    || payload.sourceId
+    || payload.target
+    || '';
+}
+
+function eventDetailFromPayload(type, payload = {}) {
+  if (payload.comment) return String(payload.comment).slice(0, 120);
+  if (payload.commandDescription) return String(payload.commandDescription).slice(0, 120);
+  if (payload.effect) return String(payload.effect).slice(0, 80);
+  if (payload.giftName) return String(payload.giftName).slice(0, 80);
+  if (payload.rewardLabel) return String(payload.rewardLabel).slice(0, 80);
+  if (payload.title) return String(payload.title).slice(0, 100);
+  return String(type || 'event').slice(0, 80);
+}
+
+function inferRoomEventSource(room, type = '', payload = {}) {
+  const explicitSource = payload.source || payload.playerSource || room?.eventSourceOverride || '';
+  const source = String(explicitSource || '').toLowerCase();
+  if (PLAYER_SOURCE_VALUES.has(source)) return source;
+  if (room?.setupRehearsal?.active) return 'demo';
+  if (type === 'setupMode') return payload.active ? 'demo' : inferPlayerSource(room);
+  if (room?.tiktokConnection?.status === 'connected' || room?.lastRealEventAt) return 'real';
+  return 'test';
+}
+
+function recordRecentStreamEvent(room, type, payload = {}, options = {}) {
+  if (!room?.roomId || type === 'streamEvent' || type === 'playerRoster' || type === 'streamModeChanged') return null;
+  if (type === 'gameState' && options.recordGameState !== true) return null;
+  const source = inferRoomEventSource(room, type, payload);
+  const now = Date.now();
+  if (source === 'real') room.lastRealEventAt = now;
+  if (source === 'demo') room.lastDemoEventAt = now;
+  if (source === 'test') room.lastTestEventAt = now;
+  room.lastStreamEventAt = now;
+  room.lastStreamEventType = type;
+  if (type === 'gameState') return null;
+  const event = {
+    id: `${now}-${room.eventSeq || 0}-${type}`,
+    type,
+    source,
+    actor: String(eventActorFromPayload(payload)).slice(0, 80),
+    detail: eventDetailFromPayload(type, payload),
+    createdAt: now,
+  };
+  room.recentStreamEvents = [event, ...(room.recentStreamEvents || [])].slice(0, RECENT_STREAM_EVENT_LIMIT);
+  return event;
+}
+
+function buildStreamModeStatus(room) {
+  const stream = buildTikTokConnectionStatus(room);
+  const players = buildRecentPlayers(room, RECENT_PLAYER_LIMIT);
+  const realPlayers = players.filter(player => player.source === 'real').length;
+  const demoPlayers = players.filter(player => player.source === 'demo').length;
+  const testPlayers = players.filter(player => player.source === 'test').length;
+  const overlayConnected = Number(room?.overlayCount || 0) > 0;
+  let mode = 'disconnected';
+  let label = 'Disconnected';
+  let detail = 'Connect the setup preview, then attach TikTok LIVE.';
+  let playerSource = inferPlayerSource(room);
+
+  if (room?.setupRehearsal?.active) {
+    mode = 'setup-demo';
+    label = 'Setup Demo';
+    detail = 'Demo events are running for browser-source setup.';
+    playerSource = 'demo';
+  } else if (stream.status === 'connecting' || stream.status === 'reconnecting') {
+    mode = stream.status === 'reconnecting' ? 'real-reconnecting' : 'real-connecting';
+    label = stream.status === 'reconnecting' ? 'TikTok Reconnecting' : 'Connecting TikTok';
+    detail = stream.username ? `Trying to connect @${stream.username}.` : 'Trying to connect the TikTok stream.';
+    playerSource = 'real';
+  } else if (stream.status === 'error') {
+    mode = 'stream-error';
+    label = 'Stream Error';
+    detail = stream.error || stream.reason || 'TikTok connection failed.';
+    playerSource = 'real';
+  } else if (stream.connected) {
+    playerSource = 'real';
+    if (realPlayers > 0 || stream.eventCount > 0 || room?.lastRealEventAt) {
+      mode = realPlayers > 0 ? 'real-live' : 'real-waiting';
+      label = realPlayers > 0 ? 'Real Stream Live' : 'Real Stream Waiting';
+      detail = realPlayers > 0
+        ? `${realPlayers} real player${realPlayers === 1 ? '' : 's'} from @${stream.username || 'TikTok'}.`
+        : 'Connected to TikTok. Waiting for viewers to join or send commands.';
+    } else {
+      mode = 'real-waiting';
+      label = 'Real Stream Waiting';
+      detail = 'Connected to TikTok. Waiting for the first viewer event.';
+    }
+  } else if (overlayConnected) {
+    mode = demoPlayers || testPlayers ? 'setup-ready' : 'overlay-ready';
+    label = demoPlayers || testPlayers ? 'Setup Preview' : 'Overlay Ready';
+    detail = demoPlayers || testPlayers
+      ? 'Overlay is connected with setup/test players only.'
+      : 'Overlay source is connected. TikTok is not connected yet.';
+  }
+
+  const blockingReasons = [];
+  if (!overlayConnected) blockingReasons.push({ code: 'NO_OVERLAY', message: 'No browser source is connected.' });
+  if (!stream.connected && !['connecting', 'reconnecting'].includes(stream.status)) {
+    blockingReasons.push({ code: 'NO_TIKTOK', message: 'TikTok LIVE is not connected.' });
+  }
+  if (stream.connected && !room?.lastRealEventAt) {
+    blockingReasons.push({ code: 'NO_REAL_EVENTS', message: 'No real TikTok events have arrived yet.' });
+  }
+  if (stream.connected && realPlayers === 0) {
+    blockingReasons.push({ code: 'NO_PLAYERS', message: 'No real players are in the arena yet.' });
+  }
+
+  return {
+    mode,
+    label,
+    detail,
+    playerSource,
+    readyForLive: stream.connected && overlayConnected && realPlayers > 0,
+    overlayConnected,
+    overlayCount: Number(room?.overlayCount || 0),
+    stream,
+    playerCount: players.length,
+    realPlayerCount: realPlayers,
+    demoPlayerCount: demoPlayers,
+    testPlayerCount: testPlayers,
+    lastRealEventAt: room?.lastRealEventAt || null,
+    lastDemoEventAt: room?.lastDemoEventAt || null,
+    lastTestEventAt: room?.lastTestEventAt || null,
+    lastStreamEventAt: room?.lastStreamEventAt || null,
+    lastStreamEventType: room?.lastStreamEventType || '',
+    blockingReasons,
+    updatedAt: Date.now(),
+  };
+}
+
+function emitRoomRealtimeStatus(room) {
+  if (!room?.roomId) return;
+  io.to(room.roomId).emit('playerRoster', buildRoomPlayerRoster(room));
+  io.to(room.roomId).emit('streamModeChanged', buildStreamModeStatus(room));
+}
+
 function topSessionPlayers(room, limit = 5) {
   return getTopPlayers(room, limit).map(player => ({
     uniqueId: player.uniqueId,
@@ -1030,6 +1238,7 @@ function topSessionPlayers(room, limit = 5) {
     strength: Math.round(Number(player.strength) || CFG.BASE_STRENGTH),
     kills: Number(player.kills) || 0,
     alive: Boolean(player.alive),
+    source: inferPlayerSource(room, player.source),
   }));
 }
 
@@ -1562,6 +1771,7 @@ function buildSessionStatus(room) {
   const now = Date.now();
   const recap = room?.lastSessionRecap || null;
   const phase = currentRoomPhase(room);
+  const streamMode = buildStreamModeStatus(room);
   return {
     success: true,
     active,
@@ -1582,6 +1792,9 @@ function buildSessionStatus(room) {
     commandText: viewerCommandText(),
     metrics: {
       players: roomAlivePlayers(room).length,
+      realPlayers: streamMode.realPlayerCount,
+      demoPlayers: streamMode.demoPlayerCount,
+      testPlayers: streamMode.testPlayerCount,
       roundsCompleted: Number(session?.roundsCompleted) || 0,
       bossDefeats: Number(session?.bossDefeats) || 0,
     },
@@ -2073,6 +2286,7 @@ function emitTikTokConnectionStatus(room, patch = {}) {
     updatedAt: Date.now(),
   };
   emitRoomEvent(room, 'tiktokConnection', buildTikTokConnectionStatus(room));
+  emitRoomRealtimeStatus(room);
 }
 
 function resetRoomLiveRuntime(room, options = {}) {
@@ -2103,6 +2317,12 @@ function resetRoomLiveRuntime(room, options = {}) {
   room.lastHighIntensityBattleAt = 0;
   room.likeStats = { total: 0, lastMilestone: 0 };
   room.engagementStats = null;
+  room.lastRealEventAt = null;
+  room.lastDemoEventAt = null;
+  room.lastTestEventAt = null;
+  room.lastStreamEventAt = null;
+  room.lastStreamEventType = '';
+  room.recentStreamEvents = [];
   room.setupRehearsal = {
     active: false,
     reason,
@@ -2199,9 +2419,18 @@ function isActiveTikTokConnection(room, tiktokClient, connectionId, sessionId = 
 
 function markTikTokEventAccepted(room, eventType) {
   if (!room?.tiktokConnection) return;
-  room.tiktokConnection.lastEventAt = Date.now();
+  const now = Date.now();
+  room.tiktokConnection.lastEventAt = now;
   room.tiktokConnection.lastEventType = eventType;
   room.tiktokConnection.eventCount = (Number(room.tiktokConnection.eventCount) || 0) + 1;
+  room.lastRealEventAt = now;
+  room.lastStreamEventAt = now;
+  room.lastStreamEventType = eventType;
+  recordRecentStreamEvent(room, eventType, {
+    source: 'real',
+    nickname: room.tiktokConnection.username || room.streamerUsername || '',
+    title: `TikTok ${eventType}`,
+  });
 }
 
 function markTikTokEventDropped(room, connectionId, eventType) {
@@ -3443,14 +3672,17 @@ function updateRoomLikeMilestone(room, increment = 1) {
   };
 }
 
-function spawnPlayer(room, uniqueId, nickname) {
+function spawnPlayer(room, uniqueId, nickname, options = {}) {
   if (!room || !uniqueId) return;
+  const source = inferPlayerSource(room, options.source);
   if (room.players[uniqueId]?.alive) {
     room.players[uniqueId].lastActive = Date.now();
     if (nickname) room.players[uniqueId].nickname = nickname;
+    if (source === 'real' || !room.players[uniqueId].source) room.players[uniqueId].source = source;
     return;
   }
   const ex = room.players[uniqueId];
+  const now = Date.now();
   room.players[uniqueId] = {
     uniqueId,
     nickname:            nickname || uniqueId,
@@ -3461,7 +3693,9 @@ function spawnPlayer(room, uniqueId, nickname) {
     kills:               ex?.kills    || 0,
     killStreak:          0,
     lastKillTime:        0,
-    lastActive:          Date.now(),
+    firstSeenAt:         ex?.firstSeenAt || now,
+    lastActive:          now,
+    source,
     x:  Math.random() * 760 + 20,
     y:  Math.random() * 380 + 20,
     vx: (Math.random() - 0.5) * 2,
@@ -5803,6 +6037,7 @@ io.on('connection', (socket) => {
     laserColor: room.overlaySettings.laserColor,
     gameStateCount: Object.values(room.players).filter(p => p.alive).length,
     stream: buildTikTokConnectionStatus(room),
+    streamMode: buildStreamModeStatus(room),
   });
 
   socket.on('register', ({ type } = {}, ack) => {
@@ -5823,6 +6058,8 @@ io.on('connection', (socket) => {
       socket.emit('sessionStatus',    buildSessionStatus(room));
       socket.emit('tiktokConnection',  buildTikTokConnectionStatus(room));
       socket.emit('setupMode',         room.setupRehearsal || { active: false });
+      socket.emit('playerRoster',      buildRoomPlayerRoster(room));
+      socket.emit('streamModeChanged', buildStreamModeStatus(room));
       const bossStatus = currentBossStatus(room);
       if (bossStatus?.active) socket.emit('bossWave', { type: 'started', ...bossStatus });
       const background = buildBackgroundPayload(room, { v: Date.now() });
@@ -5840,6 +6077,8 @@ io.on('connection', (socket) => {
       socket.emit('sessionStatus',   buildSessionStatus(room));
       socket.emit('tiktokConnection', buildTikTokConnectionStatus(room));
       socket.emit('setupMode',        room.setupRehearsal || { active: false });
+      socket.emit('playerRoster',     buildRoomPlayerRoster(room));
+      socket.emit('streamModeChanged', buildStreamModeStatus(room));
     }
 
     if (typeof ack === 'function') {
@@ -5947,6 +6186,8 @@ app.get('/state', (req, res) => {
 
 app.get('/api/status', requireRoom, (req, res) => {
   const stream = buildTikTokConnectionStatus(req.room);
+  const streamMode = buildStreamModeStatus(req.room);
+  const playerRoster = buildRoomPlayerRoster(req.room);
   res.json({
     roomId:           req.room.roomId,
     overlayUrl:       buildOverlayUrl(req, req.room.roomId),
@@ -5957,9 +6198,22 @@ app.get('/api/status', requireRoom, (req, res) => {
     username:         req.room.streamerUsername || '',
     connected:        stream.connected,
     stream,
+    mode:             streamMode.mode,
+    streamMode,
+    playerSource:     streamMode.playerSource,
     overlayConnected: req.room.overlayCount > 0,
     overlayCount:     req.room.overlayCount,
     playerCount:      Object.values(req.room.players).filter(p => p.alive).length,
+    realPlayerCount:  streamMode.realPlayerCount,
+    demoPlayerCount:  streamMode.demoPlayerCount,
+    testPlayerCount:  streamMode.testPlayerCount,
+    recentPlayers:    playerRoster.players,
+    recentEvents:     req.room.recentStreamEvents || [],
+    lastRealEventAt:  req.room.lastRealEventAt || null,
+    lastDemoEventAt:  req.room.lastDemoEventAt || null,
+    lastTestEventAt:  req.room.lastTestEventAt || null,
+    lastStreamEventAt: req.room.lastStreamEventAt || null,
+    blockingReasons:  streamMode.blockingReasons,
     background:       buildBackgroundPayload(req.room, { v: Date.now() }),
     overlaySettings:  req.room.overlaySettings,
     devTestMode:      DEV_TEST_MODE,
@@ -6047,12 +6301,15 @@ function ensureRoomLiveTestPlayers(room) {
     { id: 'arena_nova', nick: 'Nova', x: 390, y: 315, icon: '\ud83d\udc8e' },
   ];
   testPlayers.forEach((player, index) => {
-    if (!room.players[player.id]) spawnPlayer(room, player.id, player.nick);
+    const source = room.setupRehearsal?.active ? 'demo' : 'test';
+    if (!room.players[player.id]) spawnPlayer(room, player.id, player.nick, { source });
     const record = room.players[player.id];
     if (!record) return;
     record.uniqueId = player.id;
     record.nickname = player.nick;
     record.alive = true;
+    record.source = source;
+    record.firstSeenAt = record.firstSeenAt || Date.now();
     record.hp = Math.max(80, Number(record.hp) || CFG.BASE_HP);
     record.maxHp = Math.max(CFG.BASE_HP, Number(record.maxHp) || CFG.BASE_HP);
     record.strength = Math.max(CFG.BASE_STRENGTH, Number(record.strength) || CFG.BASE_STRENGTH);
@@ -6070,6 +6327,16 @@ function ensureRoomLiveTestPlayers(room) {
 
 function runRoomOverlayTest(room, action) {
   const normalizedAction = String(action || '').toLowerCase();
+  const previousEventSource = room?.eventSourceOverride;
+  if (room) room.eventSourceOverride = room.setupRehearsal?.active ? 'demo' : 'test';
+  try {
+    return runRoomOverlayTestAction(room, normalizedAction);
+  } finally {
+    if (room) room.eventSourceOverride = previousEventSource;
+  }
+}
+
+function runRoomOverlayTestAction(room, normalizedAction) {
   ensureRoomLiveTestPlayers(room);
   const attackerId = 'arena_orion';
   const targetId = 'arena_blaze';
@@ -6599,6 +6866,7 @@ function ensureTestPlayers(options = {}) {
       room.players[item.id].alive = room.players[item.id].alive !== false;
       room.players[item.id].forceSpawn = true;
       room.players[item.id].lastActive = Date.now();
+      room.players[item.id].source = 'test';
       return;
     }
     const maxHp = item.hp || CFG.BASE_HP;
@@ -6607,7 +6875,9 @@ function ensureTestPlayers(options = {}) {
       hp: maxHp, maxHp,
       strength: CFG.BASE_STRENGTH, alive: true, kills: 0,
       killStreak: 0, lastKillTime: 0,
+      firstSeenAt: Date.now(),
       lastActive: Date.now(),
+      source: 'test',
       x: 100 + index * 100, y: 100 + index * 40,
       vx: (Math.random() - 0.5) * 1.5,
       vy: (Math.random() - 0.5) * 1.5,

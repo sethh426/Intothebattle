@@ -71,6 +71,36 @@
     .ops-stat { min-width:0; padding:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.22); border-radius:18px; }
     .ops-stat span { display:block; color:var(--muted); font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
     .ops-stat strong { display:block; margin-top:6px; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .stream-health { display:grid; gap:12px; margin-top:16px; padding:16px; border-radius:20px; border:1px solid rgba(120,232,255,.22); background:linear-gradient(135deg,rgba(120,232,255,.1),rgba(255,255,255,.04)); }
+    .stream-health-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+    .stream-mode-label { color:#fff; font-size:18px; font-weight:950; line-height:1.1; }
+    .stream-mode-detail { margin-top:5px; color:var(--muted); font-size:13px; font-weight:800; line-height:1.45; }
+    .mode-pill { flex:0 0 auto; min-height:32px; display:inline-flex; align-items:center; justify-content:center; padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.14); color:var(--muted); background:rgba(255,255,255,.06); font-size:10px; font-weight:950; text-transform:uppercase; letter-spacing:.08em; white-space:nowrap; }
+    .mode-pill.live { color:var(--green); border-color:rgba(128,255,210,.32); background:rgba(128,255,210,.09); }
+    .mode-pill.waiting,.mode-pill.demo { color:#fff0a7; border-color:rgba(255,214,102,.32); background:rgba(255,214,102,.09); }
+    .mode-pill.error { color:#ff9bc5; border-color:rgba(255,79,140,.34); background:rgba(255,79,140,.1); }
+    .blocker-list { display:grid; gap:8px; }
+    .blocker-item { display:flex; gap:8px; align-items:flex-start; padding:9px 10px; border-radius:14px; border:1px solid rgba(255,214,102,.2); background:rgba(255,214,102,.07); color:#fff4c4; font-size:12px; font-weight:850; line-height:1.35; }
+    .blocker-item::before { content:'!'; flex:0 0 18px; width:18px; height:18px; display:grid; place-items:center; border-radius:999px; color:#071018; background:#ffd666; font-size:11px; font-weight:950; }
+    .live-grid { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr); gap:16px; margin-top:16px; }
+    .live-panel { min-width:0; padding:16px; border-radius:20px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.18); }
+    .live-panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
+    .live-panel-title { color:#fff; font-size:13px; font-weight:950; text-transform:uppercase; letter-spacing:.08em; }
+    .source-counts { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+    .source-count { min-height:26px; display:inline-flex; align-items:center; padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.12); color:var(--muted); font-size:10px; font-weight:950; text-transform:uppercase; }
+    .source-count.real { color:var(--green); border-color:rgba(128,255,210,.28); background:rgba(128,255,210,.08); }
+    .source-count.demo { color:#fff0a7; border-color:rgba(255,214,102,.28); background:rgba(255,214,102,.08); }
+    .source-count.test { color:#bfeeff; border-color:rgba(120,232,255,.26); background:rgba(120,232,255,.07); }
+    .player-roster,.activity-feed { display:grid; gap:8px; max-height:310px; overflow:auto; padding-right:4px; }
+    .player-row,.activity-row { display:grid; gap:4px; padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); }
+    .player-main,.activity-main { display:flex; justify-content:space-between; align-items:center; gap:10px; min-width:0; }
+    .player-name,.activity-title { min-width:0; color:#fff; font-weight:950; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .player-meta,.activity-meta { display:flex; flex-wrap:wrap; gap:6px; color:var(--muted); font-size:11px; font-weight:850; line-height:1.3; }
+    .source-tag { flex:0 0 auto; min-height:22px; display:inline-flex; align-items:center; padding:3px 7px; border-radius:999px; color:#071018; background:#bfeeff; font-size:9px; font-weight:950; text-transform:uppercase; letter-spacing:.06em; }
+    .source-tag.real { background:var(--green); }
+    .source-tag.demo { background:#ffd666; }
+    .source-tag.test { background:#bfeeff; }
+    .empty-live-state { padding:18px; border-radius:16px; border:1px dashed rgba(255,255,255,.18); color:var(--muted); font-size:13px; font-weight:850; line-height:1.45; text-align:center; }
     .readiness-panel { padding:24px; display:grid; align-content:start; gap:14px; }
     .readiness-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
     .readiness-score { min-width:70px; text-align:center; padding:10px 12px; border-radius:18px; color:#071009; background:linear-gradient(135deg,var(--gold),#fff0b9); font-weight:900; }
@@ -389,9 +419,9 @@
     .boss-fill { background:linear-gradient(90deg,#ff2d88,#ff9f3d,#ffd666); box-shadow:0 0 20px rgba(255,45,136,.24); }
     .weekly-event { border-color:rgba(255,214,102,.22); background:rgba(255,214,102,.065); }
     #toast { border-color:rgba(0,229,255,.28); background:rgba(5,7,17,.94); }
-    @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,#audioManagerCard .audio-layout,.sponsor-layout,.sponsor-upgrade,.ops-strip,.session-layout,.launch-checklist{grid-template-columns:1fr}#audioManagerCard,#toolsRail,#creatorSponsorCard{order:initial}}
+    @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,#audioManagerCard .audio-layout,.sponsor-layout,.sponsor-upgrade,.ops-strip,.session-layout,.launch-checklist,.live-grid{grid-template-columns:1fr}#audioManagerCard,#toolsRail,#creatorSponsorCard{order:initial}}
     @media(max-width:860px){.session-status-grid,.session-control-grid{grid-template-columns:1fr}}
-    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.dashboard-nav{position:relative;top:auto}.dashboard-nav a{flex:1 1 120px}.workflow-summary{grid-template-columns:1fr;align-items:start}.workflow-status{width:fit-content}.workflow-toggle{position:absolute;right:18px;top:18px}.workflow-body{padding:14px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.stream-coach{grid-template-columns:1fr}.coach-actions{justify-content:stretch}.coach-actions .btn,.secondary-launch-actions .btn{width:100%}.launch-action-grid{grid-template-columns:1fr}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}.setup-steps,.next-action-panel{grid-template-columns:1fr}.next-action-actions{justify-content:stretch}.footer{position:sticky;bottom:10px;z-index:35;padding:10px;border:1px solid rgba(246,201,91,.24);border-radius:20px;background:rgba(5,7,11,.9);backdrop-filter:blur(16px);box-shadow:0 18px 60px rgba(0,0,0,.38)}.footer-btn{flex:1 1 130px}}
+    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.dashboard-nav{position:relative;top:auto}.dashboard-nav a{flex:1 1 120px}.workflow-summary{grid-template-columns:1fr;align-items:start}.workflow-status{width:fit-content}.workflow-toggle{position:absolute;right:18px;top:18px}.workflow-body{padding:14px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.stream-coach,.stream-health-head{grid-template-columns:1fr}.stream-health-head{display:grid}.mode-pill{width:fit-content}.coach-actions{justify-content:stretch}.coach-actions .btn,.secondary-launch-actions .btn{width:100%}.launch-action-grid{grid-template-columns:1fr}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}.setup-steps,.next-action-panel{grid-template-columns:1fr}.next-action-actions{justify-content:stretch}.footer{position:sticky;bottom:10px;z-index:35;padding:10px;border:1px solid rgba(246,201,91,.24);border-radius:20px;background:rgba(5,7,11,.9);backdrop-filter:blur(16px);box-shadow:0 18px 60px rgba(0,0,0,.38)}.footer-btn{flex:1 1 130px}}
     @media(max-width:700px){.launch-action{grid-template-columns:32px minmax(0,1fr); gap:3px 10px; padding:12px}.launch-action b{grid-row:1 / span 2}.launch-action strong{font-size:14px}.launch-action span{font-size:11px}.secondary-launch-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.secondary-launch-actions .btn:last-child{grid-column:1 / -1}}
     @media(max-width:700px){.audio-row{display:grid;grid-template-columns:minmax(0,1fr);align-items:start}.audio-name{white-space:normal;overflow-wrap:anywhere}.audio-size{font-size:12px}.audio-actions,.assign-actions,.sponsor-row-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;padding-left:0;justify-content:stretch}.audio-actions .btn,.assign-actions .btn,.sponsor-row-actions .btn{width:100%}.assign-table,.assign-table tbody,.assign-table tr,.assign-table td{display:block;width:100%}.assign-table tr{padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)}.assign-table td{padding:6px 0;border-bottom:0}.assign-select-cell{padding-left:0}.event-pill{width:100%;justify-content:center}.sponsor-row{display:grid;grid-template-columns:1fr}.sponsor-thumb{width:100%;max-width:260px}.sponsor-selected,.sponsor-upgrade,.sponsor-readiness-head,.sponsor-step-track{grid-template-columns:1fr}.sponsor-step-track{display:grid}}
   </style>
@@ -436,6 +466,16 @@
         <div class="ops-stat"><span>Overlay source</span><strong id="overlay-url-state">Loading URL</strong></div>
         <div class="ops-stat"><span>TikTok</span><strong id="tiktok-username-copy">Not connected</strong></div>
         <div class="ops-stat"><span>Plan</span><strong id="plan-label-copy">Checking</strong></div>
+      </div>
+      <div class="stream-health" id="streamHealthPanel">
+        <div class="stream-health-head">
+          <div>
+            <div class="stream-mode-label" id="streamModeLabel">Checking stream mode</div>
+            <div class="stream-mode-detail" id="streamModeDetail">The dashboard is loading overlay, TikTok, and player status.</div>
+          </div>
+          <span class="mode-pill waiting" id="streamModePill">Loading</span>
+        </div>
+        <div class="blocker-list" id="streamBlockers"></div>
       </div>
     </div>
     <aside class="hero-card readiness-panel">
@@ -491,12 +531,12 @@
         <div class="next-action-actions" id="nextActionButtons"></div>
       </div>
       <div class="launch-action-grid" id="launchActionGrid" aria-label="Streaming setup actions">
-        <button type="button" class="launch-action active" data-launch-action="demo" onclick="startSetupRehearsal()"><b>1</b><strong>Start demo</strong><span>Generate motion before the live stream connects.</span></button>
-        <button type="button" class="launch-action locked" data-launch-action="copy" onclick="copySetupOverlayUrl()"><b>2</b><strong>Copy source</strong><span>Paste the signed browser source into TikTok Studio.</span></button>
+        <button type="button" class="launch-action active" data-launch-action="demo" onclick="startSetupRehearsal()"><b>1</b><strong>Open setup preview</strong><span>Generate test motion before the real stream connects.</span></button>
+        <button type="button" class="launch-action locked" data-launch-action="copy" onclick="copySetupOverlayUrl()"><b>2</b><strong>Copy setup source</strong><span>Paste the signed setup browser source into TikTok Studio.</span></button>
         <button type="button" class="launch-action locked" data-launch-action="source" onclick="openSetupOverlay()"><b>3</b><strong>Open source</strong><span>Confirm the source is visible and connected.</span></button>
-        <button type="button" class="launch-action locked" data-launch-action="test" onclick="testOverlayBurst()"><b>4</b><strong>Test overlay</strong><span>Send chat, likes, gifts, and battle events.</span></button>
+        <button type="button" class="launch-action locked" data-launch-action="test" onclick="testOverlayBurst()"><b>4</b><strong>Send test event</strong><span>Preview chat, likes, gifts, and battle effects.</span></button>
         <button type="button" class="launch-action locked" data-launch-action="connect" onclick="focusTikTokUsername()"><b>5</b><strong>Connect TikTok</strong><span>Attach the real live feed after setup passes.</span></button>
-        <button type="button" class="launch-action locked" data-launch-action="live" onclick="sessionAction('/api/session/start','Session started')"><b>6</b><strong>Start session</strong><span>Begin the first live battle round.</span></button>
+        <button type="button" class="launch-action locked" data-launch-action="live" onclick="sessionAction('/api/session/start','Session started')"><b>6</b><strong>Start live battle</strong><span>Begin the first live battle round.</span></button>
       </div>
     </article>
 
@@ -607,6 +647,30 @@
             <button class="btn btn-secondary" onclick="copyViewerCommands()">Copy Commands</button>
           </div>
           <textarea id="viewerCommandText" readonly>Loading viewer commands...</textarea>
+          <div class="live-grid">
+            <div class="live-panel">
+              <div class="live-panel-head">
+                <div class="live-panel-title">Players from stream</div>
+                <div class="source-counts" id="playerSourceCounts">
+                  <span class="source-count real">Real 0</span>
+                  <span class="source-count demo">Demo 0</span>
+                  <span class="source-count test">Test 0</span>
+                </div>
+              </div>
+              <div class="player-roster" id="playerRoster">
+                <div class="empty-live-state">No players yet. Connect TikTok and ask viewers to type !join.</div>
+              </div>
+            </div>
+            <div class="live-panel">
+              <div class="live-panel-head">
+                <div class="live-panel-title">Recent stream activity</div>
+                <span class="source-count" id="lastEventAge">No events</span>
+              </div>
+              <div class="activity-feed" id="streamActivityFeed">
+                <div class="empty-live-state">Stream activity will appear here as viewers join, attack, gift, follow, or use commands.</div>
+              </div>
+            </div>
+          </div>
           <div>
             <div class="section-title">Last session recap</div>
             <div id="sessionRecap" class="muted">No completed session yet.</div>
@@ -778,6 +842,16 @@ const dashboardState = {
   sponsorCount: 0,
   devTestMode: false,
   setupRehearsalActive: false,
+  streamMode: { mode: 'loading', label: 'Checking stream mode', detail: 'The dashboard is loading stream status.', blockingReasons: [] },
+  playerSource: 'test',
+  playerRoster: [],
+  recentEvents: [],
+  realPlayerCount: 0,
+  demoPlayerCount: 0,
+  testPlayerCount: 0,
+  lastStreamEventAt: null,
+  tiktokStatus: 'disconnected',
+  connectedUsername: '',
   planLabel: 'Checking',
   overlayUrlCopied: false,
   overlayTested: false,
@@ -866,12 +940,13 @@ function updateFooterActions() {
 }
 function updateWorkflowStatuses() {
   const launchReady = setupGateReady();
+  const mode = dashboardState.streamMode?.mode || '';
   setWorkflowStatus(
     'launchWorkflowStatus',
     launchReady
-      ? (dashboardState.tiktokConnected ? 'Live ready' : (dashboardState.setupRehearsalActive || dashboardState.overlayTested ? 'Demo ready' : 'Setup demo'))
+      ? (mode === 'real-live' ? 'Live ready' : dashboardState.tiktokConnected ? 'Waiting players' : (dashboardState.setupRehearsalActive || dashboardState.overlayTested ? 'Setup ready' : 'Setup preview'))
       : 'Loading URL',
-    launchReady ? (dashboardState.tiktokConnected || dashboardState.setupRehearsalActive || dashboardState.overlayTested ? 'ready' : 'warn') : 'blocked'
+    launchReady ? (mode === 'real-live' || dashboardState.setupRehearsalActive || dashboardState.overlayTested ? 'ready' : 'warn') : 'blocked'
   );
   setWorkflowStatus(
     'overlayWorkflowStatus',
@@ -880,7 +955,7 @@ function updateWorkflowStatuses() {
   );
   const bossActive = !!sessionStatusData?.bossWave?.active;
   const sessionActive = !!sessionStatusData?.active;
-  setWorkflowStatus('liveWorkflowStatus', bossActive ? 'Boss live' : sessionActive ? 'Session live' : 'Idle', bossActive || sessionActive ? 'ready' : 'warn');
+  setWorkflowStatus('liveWorkflowStatus', bossActive ? 'Boss live' : sessionActive ? 'Session live' : (dashboardState.tiktokConnected ? (dashboardState.realPlayerCount ? 'Ready' : 'Waiting players') : 'Idle'), bossActive || sessionActive || dashboardState.realPlayerCount ? 'ready' : 'warn');
   setWorkflowStatus(
     'brandWorkflowStatus',
     canUseCreatorSponsors ? (dashboardState.sponsorCount ? `${dashboardState.sponsorCount} video${dashboardState.sponsorCount === 1 ? '' : 's'}` : 'No videos') : 'Platform managed',
@@ -935,10 +1010,17 @@ function renderNextAction() {
     titleText = 'Connect TikTok when ready';
     copyText = 'Now that the overlay has been tested, enter the TikTok username and connect the live stream.';
     actions = [{ label: 'Connect TikTok', className: 'btn btn-primary', onClick: focusTikTokUsername }];
+  } else if (dashboardState.realPlayerCount <= 0) {
+    titleText = 'Real stream connected. Waiting for players.';
+    copyText = 'Ask viewers to type !join or use a battle command. Real players will appear in the roster below.';
+    actions = [
+      { label: 'Copy Viewer Commands', className: 'btn btn-primary', onClick: copyViewerCommands },
+      { label: 'Send Test Event', className: 'btn btn-secondary', onClick: testOverlayBurst },
+    ];
   } else if (!dashboardState.eventStarted) {
     titleText = 'Ready for the first battle';
-    copyText = 'The core setup is online. Start a session or run a boss wave when the live begins.';
-    actions = [{ label: 'Start Session', className: 'btn btn-primary', onClick: () => sessionAction('/api/session/start','Session started') }];
+    copyText = 'Real players are joining from the stream. Start the live battle when you are ready.';
+    actions = [{ label: 'Start Live Battle', className: 'btn btn-primary', onClick: () => sessionAction('/api/session/start','Session started') }];
   } else {
     titleText = 'Live control is ready';
     copyText = 'Monitor the overlay, run tests carefully, and use the live controls during the stream.';
@@ -967,6 +1049,141 @@ const SPONSOR_TIMING_PRESETS = {
 function text(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
 function toast(msg, isError = false) { const el = document.getElementById('toast'); el.textContent = msg; el.style.borderColor = isError ? 'rgba(232,59,95,.5)' : 'rgba(246,201,91,.35)'; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3000); }
 function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
+function normalizeSource(value) {
+  const source = String(value || '').toLowerCase();
+  return ['real', 'demo', 'test'].includes(source) ? source : 'test';
+}
+function formatTimeAgo(timestamp) {
+  const value = Number(timestamp);
+  if (!Number.isFinite(value) || value <= 0) return 'No events';
+  const seconds = Math.max(0, Math.round((Date.now() - value) / 1000));
+  if (seconds < 5) return 'Just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  return `${hours}h ago`;
+}
+function sourceLabel(source) {
+  const value = normalizeSource(source);
+  if (value === 'real') return 'Real';
+  if (value === 'demo') return 'Demo';
+  return 'Test';
+}
+function modePillClass(mode = '') {
+  const value = String(mode || '').toLowerCase();
+  if (value === 'real-live') return 'mode-pill live';
+  if (value.includes('error')) return 'mode-pill error';
+  if (value.includes('demo') || value.includes('setup')) return 'mode-pill demo';
+  return 'mode-pill waiting';
+}
+function buildRosterFromGameState(state = {}) {
+  return Object.values(state || {})
+    .filter(player => player && player.alive)
+    .map(player => ({
+      uniqueId: player.uniqueId || player.id || '',
+      nickname: player.nickname || player.uniqueId || player.id || 'Player',
+      hp: Math.round(Number(player.hp) || 0),
+      maxHp: Math.max(1, Math.round(Number(player.maxHp) || 100)),
+      kills: Number(player.kills) || 0,
+      source: normalizeSource(player.source || dashboardState.playerSource),
+      lastActive: Number(player.lastActive) || Date.now(),
+      iconEmoji: player.iconEmoji || '',
+    }))
+    .sort((a, b) => (Number(b.lastActive) || 0) - (Number(a.lastActive) || 0));
+}
+function updatePlayerSourceCounts(counts = {}) {
+  dashboardState.realPlayerCount = Number(counts.real) || 0;
+  dashboardState.demoPlayerCount = Number(counts.demo) || 0;
+  dashboardState.testPlayerCount = Number(counts.test) || 0;
+  const wrap = document.getElementById('playerSourceCounts');
+  if (wrap) {
+    wrap.innerHTML = [
+      `<span class="source-count real">Real ${dashboardState.realPlayerCount}</span>`,
+      `<span class="source-count demo">Demo ${dashboardState.demoPlayerCount}</span>`,
+      `<span class="source-count test">Test ${dashboardState.testPlayerCount}</span>`,
+    ].join('');
+  }
+}
+function renderPlayerRoster(data = {}) {
+  const players = Array.isArray(data.players) ? data.players : [];
+  dashboardState.playerRoster = players;
+  dashboardState.playerCount = Number(data.count ?? players.length) || 0;
+  const counts = data.bySource || players.reduce((acc, player) => {
+    const source = normalizeSource(player.source);
+    acc[source] = (acc[source] || 0) + 1;
+    return acc;
+  }, { real: 0, demo: 0, test: 0 });
+  updatePlayerSourceCounts(counts);
+  text('player-count', dashboardState.playerCount ? String(dashboardState.playerCount) : '0');
+  text('sessionPlayers', String(dashboardState.realPlayerCount || dashboardState.playerCount || 0));
+  const list = document.getElementById('playerRoster');
+  if (!list) return;
+  if (!players.length) {
+    const waitingCopy = dashboardState.tiktokConnected
+      ? 'Connected to TikTok. Waiting for viewers to type !join or send battle commands.'
+      : 'No players yet. Connect TikTok and ask viewers to type !join.';
+    list.innerHTML = `<div class="empty-live-state">${escapeHtml(waitingCopy)}</div>`;
+    return;
+  }
+  list.innerHTML = players.slice(0, 12).map(player => {
+    const source = normalizeSource(player.source);
+    const hp = Math.max(0, Math.round(Number(player.hp) || 0));
+    const maxHp = Math.max(1, Math.round(Number(player.maxHp) || 100));
+    return `<div class="player-row">
+      <div class="player-main"><span class="player-name">${escapeHtml(player.iconEmoji || '')} ${escapeHtml(player.nickname || player.uniqueId || 'Player')}</span><span class="source-tag ${source}">${sourceLabel(source)}</span></div>
+      <div class="player-meta"><span>${hp}/${maxHp} HP</span><span>${Number(player.kills) || 0} K</span><span>${formatTimeAgo(player.lastActive)}</span></div>
+    </div>`;
+  }).join('');
+}
+function renderStreamEvents(events = dashboardState.recentEvents) {
+  dashboardState.recentEvents = Array.isArray(events) ? events.slice(0, 30) : [];
+  const feed = document.getElementById('streamActivityFeed');
+  const latest = dashboardState.recentEvents[0];
+  text('lastEventAge', latest?.createdAt ? formatTimeAgo(latest.createdAt) : formatTimeAgo(dashboardState.lastStreamEventAt));
+  if (!feed) return;
+  if (!dashboardState.recentEvents.length) {
+    feed.innerHTML = '<div class="empty-live-state">Stream activity will appear here as viewers join, attack, gift, follow, or use commands.</div>';
+    return;
+  }
+  feed.innerHTML = dashboardState.recentEvents.slice(0, 12).map(event => {
+    const source = normalizeSource(event.source);
+    const actor = event.actor ? `${event.actor} - ` : '';
+    return `<div class="activity-row">
+      <div class="activity-main"><span class="activity-title">${escapeHtml(actor)}${escapeHtml(event.type || 'event')}</span><span class="source-tag ${source}">${sourceLabel(source)}</span></div>
+      <div class="activity-meta"><span>${escapeHtml(event.detail || 'Stream event')}</span><span>${formatTimeAgo(event.createdAt)}</span></div>
+    </div>`;
+  }).join('');
+}
+function renderStreamBlockers(blockers = []) {
+  const list = document.getElementById('streamBlockers');
+  if (!list) return;
+  const visible = Array.isArray(blockers) ? blockers.slice(0, 4) : [];
+  if (!visible.length) {
+    list.innerHTML = '<div class="blocker-item">Core live path is ready.</div>';
+    return;
+  }
+  list.innerHTML = visible.map(item => `<div class="blocker-item">${escapeHtml(item.message || item.code || 'Setup needs attention.')}</div>`).join('');
+}
+function applyStreamModeStatus(data = {}) {
+  const mode = data.mode || 'loading';
+  dashboardState.streamMode = data;
+  dashboardState.playerSource = normalizeSource(data.playerSource || dashboardState.playerSource);
+  dashboardState.realPlayerCount = Number(data.realPlayerCount) || dashboardState.realPlayerCount || 0;
+  dashboardState.demoPlayerCount = Number(data.demoPlayerCount) || dashboardState.demoPlayerCount || 0;
+  dashboardState.testPlayerCount = Number(data.testPlayerCount) || dashboardState.testPlayerCount || 0;
+  dashboardState.lastStreamEventAt = data.lastStreamEventAt || dashboardState.lastStreamEventAt;
+  text('streamModeLabel', data.label || 'Checking stream mode');
+  text('streamModeDetail', data.detail || 'The dashboard is checking stream status.');
+  const pill = document.getElementById('streamModePill');
+  if (pill) {
+    pill.className = modePillClass(mode);
+    pill.textContent = data.label || mode;
+  }
+  renderStreamBlockers(data.blockingReasons || []);
+  updatePlayerSourceCounts({ real: dashboardState.realPlayerCount, demo: dashboardState.demoPlayerCount, test: dashboardState.testPlayerCount });
+  updateReadinessChecklist();
+}
 function formatBytes(bytes) { if (bytes < 1024) return bytes + ' B'; if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB'; return (bytes/(1024*1024)).toFixed(1) + ' MB'; }
 function formatDuration(seconds) { const value = Number(seconds); return Number.isFinite(value) && value > 0 ? `${Math.round(value)}s` : 'unknown duration'; }
 function clampSponsorMs(value, fallback = 12000) {
