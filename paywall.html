@@ -365,12 +365,12 @@
 
       <div class="kicker">
         <span class="kicker-dot" aria-hidden="true"></span>
-        Creator Pro · After 7 days unlocked
+        Creator Pro - custom brand controls
       </div>
 
-      <h1>Unlock custom brand <span>control.</span></h1>
+      <h1>Upgrade only when you need custom brand <span>control.</span></h1>
 
-      <p class="sub">Your first 7 days unlock everything. Upgrade when you want paid creator control over custom video moments, premium stream polish, and advanced room presentation.</p>
+      <p class="sub">The battle overlay can be tested before you pay. Creator Pro is for creators who want their own video moments, premium stream polish, and advanced room presentation.</p>
 
       <div class="clip-frame" aria-label="IntoTheBattle battle clip preview">
         <iframe src="/battle-clip" title="IntoTheBattle battle clip" loading="eager"></iframe>
@@ -378,13 +378,13 @@
 
       <div class="features">
         <div class="feature-item">
-          <strong>Overlay control:</strong> browser-source overlay, reload controls, room state, and stream-ready setup.
+          <strong>Core overlay:</strong> browser-source setup, room state, reload controls, and a dashboard test path before the real stream connects.
         </div>
         <div class="feature-item">
-          <strong>Video moments:</strong> free rooms receive platform-managed breaks; Creator Pro unlocks your custom uploads and timing.
+          <strong>Video moments:</strong> free rooms can use platform-managed breaks; Creator Pro unlocks your custom uploads, previews, and timing.
         </div>
         <div class="feature-item">
-          <strong>Creator assets:</strong> custom backgrounds, sounds, event assignments, and premium stream polish.
+          <strong>Creator assets:</strong> custom backgrounds, sounds, event assignments, and owned brand presentation.
         </div>
       </div>
     </section>
@@ -398,10 +398,10 @@
         <span class="price-amount">$12</span>
         <span class="price-period">/mo<br>+ applicable tax</span>
       </div>
-      <div class="billing-note">Billed through PayPal. Cancel anytime — no long-term contract.</div>
+      <div class="billing-note">Billed through PayPal. Cancel anytime - no long-term contract.</div>
 
       <ul class="check-list">
-        <li>Battle rooms and creator dashboard</li>
+        <li>Battle rooms and creator dashboard setup</li>
         <li>Custom audio and visual controls</li>
         <li>Creator-controlled video moments after the unlocked trial</li>
         <li>Overlay support for OBS and TikTok Studio</li>
@@ -421,7 +421,7 @@
       </button>
 
       <div class="card-footer">
-        Questions? <a href="mailto:support@intothebattle.com">Contact support</a>
+        Questions about billing, setup, or cancellation? <a href="mailto:support@intothebattle.com">Contact support</a>
       </div>
     </section>
 
@@ -472,7 +472,7 @@
 
         if (config.fallbackUrl) fallbackPayPalUrl = config.fallbackUrl;
         if (!config.configured) {
-          showFallback('PayPal subscription checkout needs PAYPAL_PLAN_ID on the server. The hosted PayPal link is available as a fallback.', 'error');
+          showFallback('PayPal checkout is temporarily using the hosted payment link. Your account will unlock after PayPal confirms the subscription.', 'error');
           return;
         }
 

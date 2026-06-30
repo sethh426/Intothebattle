@@ -1490,23 +1490,23 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         <div class="section-in" style="padding-top:10px">
           <div class="ctrl">
             <div class="ctrl-row"><span class="ctrl-lbl">Column Gap</span><span class="ctrl-val" id="gapValue">0</span></div>
-            <input id="gapControl" type="range" min="0" max="200" value="0" />
+            <input id="gapControl" type="range" min="0" max="200" value="0" aria-label="Column gap" />
           </div>
           <div class="ctrl">
             <div class="ctrl-row"><span class="ctrl-lbl">Horizontal Offset</span><span class="ctrl-val" id="offsetXValue">0</span></div>
-            <input id="offsetXControl" type="range" min="-160" max="160" value="0" />
+            <input id="offsetXControl" type="range" min="-160" max="160" value="0" aria-label="Horizontal offset" />
           </div>
           <div class="ctrl">
             <div class="ctrl-row"><span class="ctrl-lbl">Vertical Position</span><span class="ctrl-val" id="offsetYValue">0</span></div>
-            <input id="offsetYControl" type="range" min="-80" max="80" value="0" />
+            <input id="offsetYControl" type="range" min="-80" max="80" value="0" aria-label="Vertical position" />
           </div>
           <div class="ctrl">
             <div class="ctrl-row"><span class="ctrl-lbl">Layout Height</span><span class="ctrl-val" id="heightValue">85%</span></div>
-            <input id="heightControl" type="range" min="30" max="100" value="85" />
+            <input id="heightControl" type="range" min="30" max="100" value="85" aria-label="Layout height" />
           </div>
           <div class="ctrl">
             <div class="ctrl-row"><span class="ctrl-lbl">Zoom</span><span class="ctrl-val" id="zoomValue">100%</span></div>
-            <input id="zoomControl" type="range" min="80" max="112" value="100" />
+            <input id="zoomControl" type="range" min="80" max="112" value="100" aria-label="Overlay zoom" />
           </div>
         </div>
       </div>
@@ -1564,7 +1564,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           </div>
           <div class="ctrl" style="margin-top:10px">
             <div class="ctrl-row"><span class="ctrl-lbl">Shot Speed</span><span class="ctrl-val" id="shotSpeedValue">1.0×</span></div>
-            <input id="shotSpeedControl" type="range" min="40" max="300" value="100" step="10" />
+            <input id="shotSpeedControl" type="range" min="40" max="300" value="100" step="10" aria-label="Shot speed" />
           </div>
         </div>
       </div>
@@ -1671,6 +1671,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const APPROVED_EFFECTS = overlayNormalizers.approvedEffects;
   const DEFAULT_EFFECT = overlayNormalizers.defaultEffect;
   let isDemoMode      = false;
+  let streamModeState = {
+    mode: 'connecting',
+    label: 'Connecting',
+    detail: '',
+    lastStreamEventAt: null,
+  };
   let darkMode        = true;
   let _demoTimer      = null;
   let sponsorTimer    = null;
@@ -1850,9 +1856,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const overlayRoomId = overlayParams.get('room_id') || '';
   const overlayToken  = overlayParams.get('overlay_token') || overlayParams.get('overlayToken') || '';
   const isSignedOverlay = Boolean(overlayRoomId && overlayToken);
-  const isSetupMode = overlayParams.get('setup') === '1' || overlayParams.get('rehearsal') === '1';
+  const overlayModeParam = String(overlayParams.get('mode') || '').toLowerCase();
+  const isSetupMode = overlayModeParam === 'setup' || overlayParams.get('setup') === '1' || overlayParams.get('rehearsal') === '1';
+  const isExplicitLiveMode = overlayModeParam === 'live';
   const isPublicDemo = overlayParams.get('demo') === '1'
+    || overlayModeParam === 'demo'
     || /^\/overlay-(demo|preview)(?:\.html)?\/?$/i.test(window.location.pathname);
+  const isPreviewMode = overlayParams.get('sponsor_preview') === '1' || overlayParams.get('banner_preview') === '1';
   const disableDemoAutoplay = overlayParams.get('demo_autoplay') === '0';
   const allowLayoutCustomization = !isSignedOverlay
     || isSetupMode
@@ -1901,9 +1911,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
   if (isPublicDemo) {
     document.body.classList.add('public-demo-overlay');
+    streamModeState = { ...streamModeState, mode: 'demo', label: 'Demo' };
   }
   if (isSetupMode) {
     document.body.classList.add('setup-overlay');
+    streamModeState = { ...streamModeState, mode: 'setup-demo', label: 'Setup Demo' };
   }
   if ((isSignedOverlay || isPublicDemo) && overlayParams.get('controls') !== '1') {
     document.body.classList.add('hide-overlay-controls');
@@ -2059,12 +2071,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       signed: isSignedOverlay,
       setupMode: isSetupMode,
       publicDemo: isPublicDemo,
+      overlayMode: overlayModeParam || (isSetupMode ? 'setup' : isPublicDemo ? 'demo' : 'live'),
       roomId: overlayRoomId || '',
       hasOverlayToken: Boolean(overlayToken),
       hasSocket,
       connected,
       registered: registerAcked,
       demoMode: isDemoMode,
+      streamMode: streamModeState.mode || '',
+      waitingForPlayers: isLiveWaitingForPlayers(),
       retryTimerActive: Boolean(registerRetryTimer),
       playerCount: Object.keys(players).length,
       statusText: String(statusDiv?.textContent || '').slice(0, 120),
@@ -3055,9 +3070,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     { uniqueId:'h3', nickname:'Grunt3',    hp:70,  maxHp:100, alive:true, iconEmoji:'💀', kills:0 },
   ];
 
+  function canUseDemoFallback() {
+    return !isExplicitLiveMode && (isPublicDemo || isSetupMode || isPreviewMode || !isSignedOverlay);
+  }
+
+  function isLiveWaitingForPlayers() {
+    return !canUseDemoFallback() && Object.keys(players).length === 0;
+  }
+
   function activePlayers() {
     const real = Object.values(players);
-    return real.length > 0 ? real : DEMO_PLAYERS;
+    if (real.length > 0) return real;
+    return canUseDemoFallback() ? DEMO_PLAYERS : [];
   }
 
   // ── Canvas ──
@@ -7427,6 +7451,36 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return true;
   }
 
+  function drawWaitingForPlayers(stage) {
+    if (!isLiveWaitingForPlayers() || sponsorState !== 'battle') return;
+    const frame = stage?.safe || stage?.frame || { x: 0, y: 0, w: cw(), h: ch() };
+    const ui = canvasUiScale();
+    const boxW = Math.min(frame.w * 0.78, 720 * ui);
+    const boxH = Math.max(118 * ui, Math.min(168 * ui, frame.h * 0.26));
+    const x = frame.x + (frame.w - boxW) / 2;
+    const y = frame.y + frame.h * 0.36 - boxH / 2;
+    ctx.save();
+    ctx.globalAlpha = 0.94;
+    const grad = ctx.createLinearGradient(x, y, x, y + boxH);
+    grad.addColorStop(0, 'rgba(5,12,28,0.88)');
+    grad.addColorStop(1, 'rgba(10,22,48,0.72)');
+    roundedRectPath(ctx, x, y, boxW, boxH, 20 * ui);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.lineWidth = Math.max(1, 2 * ui);
+    ctx.strokeStyle = 'rgba(122,252,255,0.34)';
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `900 ${Math.max(20, 32 * ui)}px Rajdhani, sans-serif`;
+    ctx.fillText('Waiting for players', x + boxW / 2, y + boxH * 0.42);
+    ctx.fillStyle = '#b8c8ee';
+    ctx.font = `800 ${Math.max(12, 16 * ui)}px DM Sans, sans-serif`;
+    ctx.fillText('Ask viewers to type !join or use a battle command.', x + boxW / 2, y + boxH * 0.68);
+    ctx.restore();
+  }
+
   function draw() {
     recordFrameHealth();
     ctx.clearRect(0, 0, cw(), ch());
@@ -7439,6 +7493,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const top = topPlayers();
     const horde = hordePlayer();
     drawArenaDepth(top.length, Boolean(horde), Boolean(bossWaveState?.active));
+    drawWaitingForPlayers(computeOverlayLayout());
     drawImpactBursts();
     const legacyLayoutPlayers = [];
     top.forEach((p, i) => {
@@ -7577,6 +7632,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function enterDemoMode() {
+    if (!canUseDemoFallback()) {
+      isDemoMode = false;
+      stopDemoLoop();
+      statusDiv.textContent = socket?.connected ? 'LIVE - WAITING FOR PLAYERS' : 'LIVE - WAITING FOR DATA';
+      statusDiv.className   = socket?.connected ? 'connected' : 'disconnected';
+      showBattlePrompt(socket?.connected ? 'Waiting for players' : 'Waiting for live data', '', 2200, true);
+      return;
+    }
     if (isDemoMode) return;
     isDemoMode = true;
     statusDiv.textContent = '🟡 DEMO MODE · no server';
@@ -7621,6 +7684,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
     isDemoMode = false;
     stopDemoLoop();
+    if (isLiveWaitingForPlayers()) {
+      statusDiv.textContent = 'LIVE - WAITING FOR PLAYERS';
+      statusDiv.className = 'connected';
+      showBattlePrompt('Waiting for players', '', 2200);
+    } else if (socket?.connected) {
+      statusDiv.textContent = 'LIVE - CONNECTED';
+      statusDiv.className = 'connected';
+    }
     if (sponsorState !== 'battle') renderSponsorStats(true);
     updateBattlePromptFromState();
     if (!Object.keys(players).length && !stateFetchInFlight) {
@@ -7630,6 +7701,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         .then(s => { if (s) receiveGameState(s); })
         .catch(() => {})
         .finally(() => { stateFetchInFlight = false; });
+    }
+  }
+
+  function applyStreamModeStatus(data = {}) {
+    if (!data || typeof data !== 'object') return;
+    streamModeState = { ...streamModeState, ...data };
+    if (isSetupMode || isPublicDemo) return;
+    if (data.mode === 'real-waiting' || isLiveWaitingForPlayers()) {
+      isDemoMode = false;
+      stopDemoLoop();
+      statusDiv.textContent = 'LIVE - WAITING FOR PLAYERS';
+      statusDiv.className = 'connected';
+      showBattlePrompt('Waiting for players', '', 2200);
+    } else if (data.mode === 'real-live') {
+      statusDiv.textContent = 'LIVE - CONNECTED';
+      statusDiv.className = 'connected';
+    } else if (data.mode === 'stream-error') {
+      statusDiv.textContent = 'STREAM ERROR';
+      statusDiv.className = 'disconnected';
     }
   }
 
@@ -8290,6 +8380,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         connectionHealthStats.lastError = '';
         statusDiv.textContent = '🟢 LIVE · CONNECTED';
         statusDiv.className   = 'connected';
+        statusDiv.textContent = isLiveWaitingForPlayers() ? 'LIVE - WAITING FOR PLAYERS' : 'LIVE - CONNECTED';
         registerAcked = false;
         registerOverlaySocket();
       });
@@ -8313,10 +8404,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         connectionHealthStats.lastError = String(err?.message || err || 'connect error').slice(0, 160);
         statusDiv.textContent = '⚠️ SERVER ERROR · retrying';
         statusDiv.className   = 'disconnected';
-        if (Object.keys(players).length === 0) enterDemoMode();
+        if (Object.keys(players).length === 0 && canUseDemoFallback()) enterDemoMode();
       });
 
       socket.on('gameState', receiveGameState);
+      socket.on('streamModeChanged', data => applyStreamModeStatus(data || {}));
       socket.on('setupMode', data => {
         if (data && data.active) {
           statusDiv.textContent = 'SETUP MODE';
@@ -8388,7 +8480,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         const iv = setInterval(() => { rem--; const rc = document.getElementById('rc'); if (rem <= 0) { clearInterval(iv); location.reload(); } else if (rc) rc.textContent = rem; }, 1000);
       });
 
-      setTimeout(() => { if (Object.keys(players).length === 0) enterDemoMode(); }, 3000);
+      setTimeout(() => { if (Object.keys(players).length === 0 && canUseDemoFallback()) enterDemoMode(); }, 3000);
 
     } catch (err) {
       statusDiv.textContent = '❌ SOCKET ERROR · no live data';

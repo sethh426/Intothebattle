@@ -187,10 +187,7 @@ test('dashboard renders with E2E auth fixture', async ({ context, page }, testIn
   await expect(page.locator('#nextActionPanel')).toBeVisible();
   await expect(page.locator('#backgroundFitInput')).toBeAttached();
   await expect(page.getByRole('button', { name: 'Open Live Overlay' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Copy 1080p Source' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Copy 1440p Source' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Preview Phaser V2' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Open V2 1080p' })).toBeVisible();
+  await expect(page.locator('[data-beta-feature="overlay-v2"]')).toBeHidden();
   await page.locator('#liveWorkflow').evaluate(el => { el.open = true; });
   await expect(page.getByText('Live Session Director')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Boss Wave' })).toBeVisible();
@@ -199,15 +196,35 @@ test('dashboard renders with E2E auth fixture', async ({ context, page }, testIn
   expect(errors).toEqual([]);
 });
 
-test('signed overlay renders a nonblank canvas', async ({ page }, testInfo) => {
+test('conversion pages clarify proof before payment and Creator Pro scope', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
-  await page.goto(`${baseUrl}/overlay?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, { waitUntil: 'domcontentloaded' });
+
+  await page.goto(`${baseUrl}/signup`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('Open setup preview, copy the source, and test the battle.')).toBeVisible();
+  await expect(page.getByText('Free means you can create and test the battle overlay.')).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'conversion-signup-copy');
+
+  await page.goto(`${baseUrl}/paywall`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: /Upgrade only when you need custom brand control/i })).toBeVisible();
+  await expect(page.getByText('The battle overlay can be tested before you pay.')).toBeVisible();
+  await expect(page.getByText('Questions about billing, setup, or cancellation?')).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'conversion-paywall-copy');
+
+  expect(errors).toEqual([]);
+});
+
+test('signed live overlay waits for real players instead of demo fallback', async ({ page }, testInfo) => {
+  const errors = await watchPage(page);
+  await page.goto(`${baseUrl}/overlay?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}&mode=live`, { waitUntil: 'domcontentloaded' });
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
   await page.waitForFunction(() => {
     const layout = window.__overlayLegacyLayout;
-    return Array.isArray(layout?.players) && layout.players.length >= 5 && layout.horde;
+    return Array.isArray(layout?.players) && layout.players.length === 0 && layout.frame;
   }, null, { timeout: 7000 });
+  await expect(page.locator('#status-badge')).toContainText(/WAITING FOR PLAYERS|WAITING FOR DATA|CONNECTED/);
 
   const hasVisiblePixels = await canvas.evaluate(el => {
     if (!el.width || !el.height) return false;
@@ -221,16 +238,8 @@ test('signed overlay renders a nonblank canvas', async ({ page }, testInfo) => {
   expect(hasVisiblePixels).toBe(true);
   const legacyLayout = await page.evaluate(() => window.__overlayLegacyLayout);
   expect(legacyLayout.leaks || []).toEqual([]);
-  const playerTop = Math.min(...legacyLayout.players.map(player => player.top));
-  const playerBottom = Math.max(...legacyLayout.players.map(player => player.bottom));
-  const frameTop = legacyLayout.frame.y;
-  const frameHeight = legacyLayout.frame.h;
-  expect(playerTop).toBeGreaterThan(frameTop + frameHeight * 0.18);
-  expect(legacyLayout.horde.top).toBeGreaterThan(playerBottom + frameHeight * 0.22);
-  expect(legacyLayout.horde.top).toBeLessThan(frameTop + frameHeight * 0.78);
-  if (legacyLayout.boss) {
-    expect(legacyLayout.horde.top - legacyLayout.boss.bottom).toBeGreaterThan(frameHeight * 0.02);
-  }
+  expect(legacyLayout.players).toEqual([]);
+  expect(legacyLayout.horde).toBeNull();
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'overlay');
   expect(errors).toEqual([]);

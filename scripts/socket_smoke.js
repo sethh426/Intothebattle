@@ -175,11 +175,17 @@ try {
   const initialDashboardCountPromise = waitForEvent(dashboard, 'overlayCount', payload => payload.count === 0);
   const dashboardSettingsPromise = waitForEvent(dashboard, 'overlaySettings', payload => payload && typeof payload === 'object');
   const dashboardGameStatePromise = waitForEvent(dashboard, 'gameState', payload => payload && typeof payload === 'object');
+  const dashboardRosterPromise = waitForEvent(dashboard, 'playerRoster', payload => Array.isArray(payload.players));
+  const dashboardModePromise = waitForEvent(dashboard, 'streamModeChanged', payload => payload && typeof payload.mode === 'string');
   dashboard.emit('register', { type: 'dashboard' });
   const initialDashboardCount = await initialDashboardCountPromise;
   assert(initialDashboardCount.count === 0, 'dashboard should initially see zero overlays');
   await dashboardSettingsPromise;
   await dashboardGameStatePromise;
+  const initialRoster = await dashboardRosterPromise;
+  const initialMode = await dashboardModePromise;
+  assert(initialRoster.count === 0, 'dashboard roster should initially be empty');
+  assert(Array.isArray(initialMode.blockingReasons), 'stream mode should include blocking reasons');
 
   const overlaySockets = [];
   for (let index = 0; index < overlayClientCount; index++) {
@@ -231,6 +237,11 @@ try {
   const dashboardStatus = await dashboardStatusRes.json();
   assert(dashboardStatus.setupOverlayUrl?.includes('setup=1'), 'status should expose signed setup overlay URL');
   assert(dashboardStatus.setupOverlayV2Url?.includes('setup=1'), 'status should expose signed setup V2 overlay URL');
+  assert(dashboardStatus.overlayUrl?.includes('mode=live'), 'live overlay URL should carry mode=live');
+  assert(dashboardStatus.setupOverlayUrl?.includes('mode=setup'), 'setup overlay URL should carry mode=setup');
+  assert(dashboardStatus.streamMode && typeof dashboardStatus.streamMode.mode === 'string', 'status should expose stream mode');
+  assert(Array.isArray(dashboardStatus.recentPlayers), 'status should expose recentPlayers');
+  assert(Array.isArray(dashboardStatus.recentEvents), 'status should expose recentEvents');
 
   const sessionStartedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.active === true && payload.sessionId, 10000);
   const overlaySessionStartedPromise = waitForEvent(primaryOverlay, 'roundEvent', payload => payload.type === 'session_started', 10000);
@@ -390,12 +401,20 @@ try {
     payload => Object.values(payload || {}).some(player => player?.alive),
     10000
   );
+  const dashboardTestRosterPromise = waitForEvent(
+    dashboard,
+    'playerRoster',
+    payload => Array.isArray(payload.players) && payload.players.some(player => player.source === 'test'),
+    10000
+  );
   const followTestRes = await request('/api/overlay/test/follow', {
     method: 'POST',
     headers: authedHeaders,
   });
   assert(followTestRes.status === 200, `overlay follow test should return 200, got ${followTestRes.status}`);
   await livePlayersPromise;
+  const dashboardTestRoster = await dashboardTestRosterPromise;
+  assert(dashboardTestRoster.bySource?.test > 0, 'overlay test players should be tagged as test source');
 
   const resetStreamPromise = waitForEvent(dashboard, 'tiktokConnection', payload => payload.status === 'disconnected', 10000);
   const resetSessionStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.active === false && payload.phase === 'idle', 10000);
@@ -422,6 +441,12 @@ try {
     payload => Object.values(payload || {}).filter(player => player?.alive).length > 0,
     10000
   );
+  const setupRosterPromise = waitForEvent(
+    dashboard,
+    'playerRoster',
+    payload => Array.isArray(payload.players) && payload.players.some(player => player.source === 'demo'),
+    10000
+  );
   const setupStartRes = await request('/api/stream/setup/start', {
     method: 'POST',
     headers: authedHeaders,
@@ -434,6 +459,8 @@ try {
   await setupActiveDashboardPromise;
   await setupActiveOverlayPromise;
   await setupPlayersPromise;
+  const setupRoster = await setupRosterPromise;
+  assert(setupRoster.bySource?.demo > 0, 'setup rehearsal players should be tagged as demo source');
 
   const setupResetDashboardPromise = waitForEvent(dashboard, 'setupMode', payload => payload.active === false, 10000);
   const setupResetOverlayPromise = waitForEvent(primaryOverlay, 'setupMode', payload => payload.active === false, 10000);

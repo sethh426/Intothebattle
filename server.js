@@ -346,7 +346,11 @@ function buildOverlayUrl(req, roomId, overlayPath = '/overlay', extraParams = {}
   const configuredBase = process.env.APP_BASE_URL;
   const inferredBase = req ? `${req.protocol}://${req.get('host')}` : `http://localhost:${PORT}`;
   const base = (configuredBase || inferredBase).replace(/\/$/, '');
-  return `${base}${appendOverlayAuth(overlayPath, normalizedRoomId, token, extraParams)}`;
+  const params = {
+    mode: extraParams.mode || (extraParams.setup === '1' || extraParams.rehearsal === '1' ? 'setup' : 'live'),
+    ...extraParams,
+  };
+  return `${base}${appendOverlayAuth(overlayPath, normalizedRoomId, token, params)}`;
 }
 
 function publicBaseUrl(req = null) {
@@ -1111,6 +1115,7 @@ function inferRoomEventSource(room, type = '', payload = {}) {
   const explicitSource = payload.source || payload.playerSource || room?.eventSourceOverride || '';
   const source = String(explicitSource || '').toLowerCase();
   if (PLAYER_SOURCE_VALUES.has(source)) return source;
+  if (type === 'tiktokConnection') return 'real';
   if (room?.setupRehearsal?.active) return 'demo';
   if (type === 'setupMode') return payload.active ? 'demo' : inferPlayerSource(room);
   if (room?.tiktokConnection?.status === 'connected' || room?.lastRealEventAt) return 'real';
@@ -1122,7 +1127,7 @@ function recordRecentStreamEvent(room, type, payload = {}, options = {}) {
   if (type === 'gameState' && options.recordGameState !== true) return null;
   const source = inferRoomEventSource(room, type, payload);
   const now = Date.now();
-  if (source === 'real') room.lastRealEventAt = now;
+  if (source === 'real' && type !== 'tiktokConnection') room.lastRealEventAt = now;
   if (source === 'demo') room.lastDemoEventAt = now;
   if (source === 'test') room.lastTestEventAt = now;
   room.lastStreamEventAt = now;

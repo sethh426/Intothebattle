@@ -82,6 +82,8 @@
     .blocker-list { display:grid; gap:8px; }
     .blocker-item { display:flex; gap:8px; align-items:flex-start; padding:9px 10px; border-radius:14px; border:1px solid rgba(255,214,102,.2); background:rgba(255,214,102,.07); color:#fff4c4; font-size:12px; font-weight:850; line-height:1.35; }
     .blocker-item::before { content:'!'; flex:0 0 18px; width:18px; height:18px; display:grid; place-items:center; border-radius:999px; color:#071018; background:#ffd666; font-size:11px; font-weight:950; }
+    .blocker-item.ready { border-color:rgba(128,255,210,.22); background:rgba(128,255,210,.08); color:#bfffe9; }
+    .blocker-item.ready::before { content:'OK'; background:var(--green); font-size:9px; }
     .live-grid { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr); gap:16px; margin-top:16px; }
     .live-panel { min-width:0; padding:16px; border-radius:20px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.18); }
     .live-panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
@@ -143,6 +145,7 @@
     .copy-field { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; margin:14px 0; }
     .copy-field input { min-width:0; font-size:12px; color:#dfe8f8; }
     .overlay-v2-panel { margin-top:14px; padding:14px; border-radius:18px; border:1px solid rgba(85,231,255,.2); background:linear-gradient(180deg,rgba(85,231,255,.075),rgba(0,0,0,.16)); display:grid; gap:12px; }
+    .overlay-v2-panel[hidden] { display:none !important; }
     .overlay-v2-panel strong { color:#fff8e6; font-size:13px; text-transform:uppercase; letter-spacing:.08em; }
     .overlay-v2-panel p { margin:0; color:var(--muted); font-size:12px; line-height:1.45; font-weight:800; }
     .overlay-v2-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
@@ -563,7 +566,7 @@
           <button class="btn btn-danger" onclick="resetSetupRehearsal()">Reset Demo</button>
         </div>
       </div>
-      <div class="overlay-v2-panel">
+      <div class="overlay-v2-panel" data-beta-feature="overlay-v2" hidden>
         <div><strong>Phaser V2 test overlay</strong><p>Use these for sharp browser-source testing before switching the default overlay.</p></div>
         <div class="overlay-v2-grid">
           <button class="btn btn-secondary" onclick="copyOverlayV2SourceUrl('1080p')">Copy 1080p Source</button>
@@ -859,6 +862,7 @@ const dashboardState = {
   backgroundFit: 'contain',
 };
 const WORKFLOW_STORAGE_KEY = 'intothebattle.dashboard.workflows';
+const OVERLAY_V2_BETA_KEY = 'intothebattle.beta.overlayV2';
 function workflowDetails() {
   return Array.from(document.querySelectorAll('details.workflow[data-workflow-key]'));
 }
@@ -876,6 +880,13 @@ function initDashboardWorkflows() {
     const key = details.dataset.workflowKey;
     if (Object.prototype.hasOwnProperty.call(state, key)) details.open = !!state[key];
     details.addEventListener('toggle', persistWorkflowState);
+  });
+}
+function initBetaFeatureVisibility() {
+  const params = new URLSearchParams(window.location.search);
+  const enabled = params.get('overlay_v2') === '1' || localStorage.getItem(OVERLAY_V2_BETA_KEY) === '1';
+  document.querySelectorAll('[data-beta-feature="overlay-v2"]').forEach(el => {
+    el.hidden = !enabled;
   });
 }
 function setWorkflowStatus(id, label, state = 'warn') {
@@ -1160,7 +1171,7 @@ function renderStreamBlockers(blockers = []) {
   if (!list) return;
   const visible = Array.isArray(blockers) ? blockers.slice(0, 4) : [];
   if (!visible.length) {
-    list.innerHTML = '<div class="blocker-item">Core live path is ready.</div>';
+    list.innerHTML = '<div class="blocker-item ready">Core live path is ready.</div>';
     return;
   }
   list.innerHTML = visible.map(item => `<div class="blocker-item">${escapeHtml(item.message || item.code || 'Setup needs attention.')}</div>`).join('');
@@ -1416,7 +1427,7 @@ function updateSetupChecklist() {
     {
       title: 'Setup demo',
       ready: dashboardState.setupRehearsalActive || dashboardState.overlayConnected || dashboardState.overlayTested,
-      detail: dashboardState.setupRehearsalActive ? 'Pre-live rehearsal running' : 'Start the demo before TikTok',
+      detail: dashboardState.setupRehearsalActive ? 'Setup preview running' : 'Open the setup preview before TikTok',
     },
     {
       title: 'Copy overlay',
@@ -1431,7 +1442,9 @@ function updateSetupChecklist() {
     {
       title: 'Connect live',
       ready: dashboardState.tiktokConnected,
-      detail: dashboardState.tiktokConnected ? 'Stream input connected' : 'Connect TikTok after setup',
+      detail: dashboardState.tiktokConnected
+        ? (dashboardState.realPlayerCount ? `${dashboardState.realPlayerCount} real player${dashboardState.realPlayerCount === 1 ? '' : 's'}` : 'Connected, waiting for players')
+        : 'Connect TikTok after setup',
     },
   ];
   list.innerHTML = steps.map(step => setupStep(step.title, step.detail, step.ready)).join('');
@@ -1440,13 +1453,14 @@ function updateSetupChecklist() {
   updateWorkflowStatuses();
 }
 function updateReadinessChecklist() {
+  const mode = dashboardState.streamMode?.mode || '';
   const items = [
     {
       title: 'TikTok LIVE',
       ready: dashboardState.tiktokConnected,
-      detail: dashboardState.tiktokConnected ? 'Stream connected' : 'Disconnected',
-      status: dashboardState.tiktokConnected ? 'ready' : 'blocked',
-      label: dashboardState.tiktokConnected ? 'Ready' : 'Needed',
+      detail: dashboardState.tiktokConnected ? (dashboardState.connectedUsername ? `Connected to @${dashboardState.connectedUsername}` : 'Stream connected') : (dashboardState.tiktokStatus === 'connecting' ? 'Connecting' : 'Disconnected'),
+      status: dashboardState.tiktokConnected ? 'ready' : (dashboardState.tiktokStatus === 'connecting' || dashboardState.tiktokStatus === 'reconnecting' ? 'warn' : 'blocked'),
+      label: dashboardState.tiktokConnected ? 'Ready' : (dashboardState.tiktokStatus === 'connecting' || dashboardState.tiktokStatus === 'reconnecting' ? 'Wait' : 'Needed'),
     },
     {
       title: 'Overlay',
@@ -1456,11 +1470,13 @@ function updateReadinessChecklist() {
       label: dashboardState.overlayConnected ? 'Ready' : 'Needed',
     },
     {
-      title: 'Scene media',
-      ready: dashboardState.backgroundReady,
-      detail: dashboardState.backgroundReady ? 'Background set' : 'Default scene',
-      status: dashboardState.backgroundReady ? 'ready' : 'warn',
-      label: dashboardState.backgroundReady ? 'Ready' : 'Optional',
+      title: 'Real players',
+      ready: dashboardState.realPlayerCount > 0,
+      detail: dashboardState.realPlayerCount > 0
+        ? `${dashboardState.realPlayerCount} from the stream`
+        : (dashboardState.tiktokConnected ? 'Waiting for !join or commands' : 'Connect TikTok first'),
+      status: dashboardState.realPlayerCount > 0 ? 'ready' : (dashboardState.tiktokConnected || mode === 'real-waiting' ? 'warn' : 'blocked'),
+      label: dashboardState.realPlayerCount > 0 ? 'Ready' : (dashboardState.tiktokConnected ? 'Waiting' : 'Needed'),
     },
     {
       title: 'Audio',
@@ -1470,11 +1486,11 @@ function updateReadinessChecklist() {
       label: dashboardState.audioCount ? 'Ready' : 'Optional',
     },
     {
-      title: 'Brand moments',
-      ready: !canUseCreatorSponsors || dashboardState.sponsorCount > 0,
-      detail: canUseCreatorSponsors ? (dashboardState.sponsorCount ? `${dashboardState.sponsorCount} creative${dashboardState.sponsorCount !== 1 ? 's' : ''} ready` : 'No creator videos') : 'Platform-managed',
-      status: (!canUseCreatorSponsors || dashboardState.sponsorCount > 0) ? 'ready' : 'warn',
-      label: canUseCreatorSponsors && dashboardState.sponsorCount === 0 ? 'Optional' : 'Ready',
+      title: 'Scene media',
+      ready: dashboardState.backgroundReady,
+      detail: dashboardState.backgroundReady ? 'Background set' : 'Default scene',
+      status: dashboardState.backgroundReady ? 'ready' : 'warn',
+      label: dashboardState.backgroundReady ? 'Ready' : 'Optional',
     },
   ];
   const readyCount = items.filter(item => item.status !== 'blocked').length;
@@ -1482,10 +1498,11 @@ function updateReadinessChecklist() {
   text('readiness-score', `${readyCount}/${items.length}`);
   text('readiness-title', blockers ? 'Needs attention' : 'Ready to run');
   text('readiness-summary', blockers
-    ? (dashboardState.setupRehearsalActive ? 'Setup rehearsal is running. Connect TikTok when ready.' : 'Open the setup demo, then connect TikTok before going live.')
-    : 'Core stream systems are online.');
+    ? (dashboardState.setupRehearsalActive ? 'Setup preview is running. Connect TikTok when ready.' : 'Open the setup preview, connect TikTok, then wait for real players.')
+    : (dashboardState.realPlayerCount ? 'Real stream players are visible.' : 'Core stream systems are online.'));
+  const summary = dashboardState.streamMode?.detail || '';
   text('dashboard-summary', blockers
-    ? (dashboardState.setupRehearsalActive ? 'Use the rehearsal to configure OBS before connecting TikTok.' : 'Start the setup demo before connecting TikTok.')
+    ? (summary || (dashboardState.setupRehearsalActive ? 'Use the setup preview to configure OBS before connecting TikTok.' : 'Start the setup preview before connecting TikTok.'))
     : `Room ${currentRoomId || ''} is ready for live control.`);
   const list = document.getElementById('readiness-list');
   if (list) list.innerHTML = items.map(item => readinessItem(item.title, item.detail, item.status, item.label)).join('');
@@ -1525,7 +1542,11 @@ function renderSessionStatus(data = {}) {
   const badge = document.getElementById('sessionStateBadge');
   if (badge) badge.textContent = active ? 'Live' : 'Idle';
   text('sessionElapsed', active ? formatClock(sessionStatusData.elapsedMs) : 'Idle');
-  text('sessionPlayers', String(sessionStatusData.metrics?.players ?? dashboardState.playerCount ?? 0));
+  const sessionPlayerCount = sessionStatusData.metrics?.realPlayers
+    ?? (dashboardState.tiktokConnected ? dashboardState.realPlayerCount : sessionStatusData.metrics?.players)
+    ?? dashboardState.playerCount
+    ?? 0;
+  text('sessionPlayers', String(sessionPlayerCount));
   const round = sessionStatusData.round;
   if (round?.active) {
     text('sessionRound', `R${round.number} - ${formatClock(round.remainingMs)}`);
@@ -1557,6 +1578,10 @@ function tickSessionClock() {
   }
 }
 async function sessionAction(endpoint, successMessage) {
+  if (/\/session\/start$/.test(endpoint)) {
+    if (!dashboardState.tiktokConnected && !confirm('TikTok is not connected. Start a practice session anyway?')) return;
+    if (dashboardState.tiktokConnected && dashboardState.realPlayerCount <= 0 && !confirm('TikTok is connected, but no real players are visible yet. Start the live battle anyway?')) return;
+  }
   const result = await apiCall(endpoint, 'POST');
   if (result.success && /\/start$/.test(endpoint)) dashboardState.eventStarted = true;
   if (result.session) renderSessionStatus(result.session);
@@ -1584,7 +1609,27 @@ async function apiCall(endpoint, method = 'POST', body = null) {
 }
 
 socket.on('overlayCount', data => setOverlayCount(data?.count ?? data));
-socket.on('gameState', state => { const alive = Object.values(state || {}).filter(p => p.alive).length; dashboardState.playerCount = alive; text('player-count', alive); });
+socket.on('gameState', state => {
+  const players = buildRosterFromGameState(state || {});
+  const counts = players.reduce((acc, player) => {
+    const source = normalizeSource(player.source);
+    acc[source] = (acc[source] || 0) + 1;
+    return acc;
+  }, { real: 0, demo: 0, test: 0 });
+  renderPlayerRoster({ players, count: players.length, bySource: counts, playerSource: dashboardState.playerSource });
+  updateReadinessChecklist();
+});
+socket.on('playerRoster', data => {
+  dashboardState.playerSource = normalizeSource(data?.playerSource || dashboardState.playerSource);
+  renderPlayerRoster(data || {});
+  updateReadinessChecklist();
+});
+socket.on('streamModeChanged', data => applyStreamModeStatus(data || {}));
+socket.on('streamEvent', event => {
+  dashboardState.recentEvents = [event, ...dashboardState.recentEvents.filter(item => item.id !== event.id)].slice(0, 30);
+  dashboardState.lastStreamEventAt = event.createdAt || Date.now();
+  renderStreamEvents();
+});
 socket.on('devModeChanged', data => { dashboardState.devTestMode = !!data.enabled; const value = data.enabled ? 'ON' : 'OFF'; text('dev-mode-badge', value); updateReadinessChecklist(); });
 socket.on('audioConfig', cfg => { if (cfg) audioConfigData = cfg; renderAssignTable(); });
 socket.on('sponsorBreakStatus', data => updateSponsorBreakStatus(data || {}));
@@ -1619,6 +1664,8 @@ function setTikTokStatus(state, username) {
   const label = document.getElementById('tiktok-label');
   const displayUsername = username ? `@${String(username).replace(/^@/, '')}` : '';
   dashboardState.tiktokConnected = state === 'connected';
+  dashboardState.tiktokStatus = state || 'disconnected';
+  dashboardState.connectedUsername = displayUsername.replace(/^@/, '');
   if (state === 'connected') {
     chip.className = 'status-chip online';
     label.textContent = `Connected to ${displayUsername}`;
@@ -1755,11 +1802,34 @@ async function fetchStatus() {
     setRoomLabel(data.roomId || null);
     setOverlayUrl(data.overlayUrl || null, data.overlayV2Url || null, data.setupOverlayUrl || null, data.setupOverlayV2Url || null);
     setSetupRehearsalStatus(data.setupRehearsal || { active: false });
+    applyStreamModeStatus(data.streamMode || {
+      mode: data.mode || 'loading',
+      playerSource: data.playerSource || 'test',
+      realPlayerCount: data.realPlayerCount || 0,
+      demoPlayerCount: data.demoPlayerCount || 0,
+      testPlayerCount: data.testPlayerCount || 0,
+      blockingReasons: data.blockingReasons || [],
+      lastStreamEventAt: data.lastStreamEventAt || null,
+    });
+    renderPlayerRoster({
+      players: data.recentPlayers || [],
+      count: data.playerCount || 0,
+      bySource: {
+        real: data.realPlayerCount || 0,
+        demo: data.demoPlayerCount || 0,
+        test: data.testPlayerCount || 0,
+      },
+      playerSource: data.playerSource || dashboardState.playerSource,
+    });
+    renderStreamEvents(data.recentEvents || []);
     if (initialLoad) {
       document.getElementById('username').value = data.username || '';
       initialLoad = false;
     }
     dashboardState.playerCount = Number(data.playerCount || 0);
+    dashboardState.realPlayerCount = Number(data.realPlayerCount || dashboardState.realPlayerCount || 0);
+    dashboardState.demoPlayerCount = Number(data.demoPlayerCount || dashboardState.demoPlayerCount || 0);
+    dashboardState.testPlayerCount = Number(data.testPlayerCount || dashboardState.testPlayerCount || 0);
     dashboardState.devTestMode = !!data.devTestMode;
     text('player-count', dashboardState.playerCount);
     applyBackgroundFit(data.overlaySettings?.backgroundFit || dashboardState.backgroundFit);
@@ -1858,7 +1928,10 @@ async function resetSetupRehearsal() {
   setSetupRehearsalStatus(result.setupRehearsal || { active: false });
   dashboardState.overlayTested = false;
   dashboardState.playerCount = 0;
+  dashboardState.demoPlayerCount = 0;
+  dashboardState.testPlayerCount = 0;
   text('player-count', '0');
+  renderPlayerRoster({ players: [], count: 0, bySource: { real: dashboardState.realPlayerCount, demo: 0, test: 0 } });
   toast('Setup demo reset');
 }
 function copyOverlayV2SourceUrl(render = '1080p') {
@@ -1884,8 +1957,8 @@ function openOverlayV2Source(render = '1080p') {
 
 const usernameInput = document.getElementById('username');
 if (usernameInput) usernameInput.addEventListener('input', event => { const input = event.target; const start = input.selectionStart; const end = input.selectionEnd; const normalized = input.value.toLowerCase(); if (normalized !== input.value) { input.value = normalized; if (typeof start === 'number' && typeof end === 'number') input.setSelectionRange(start, end); } });
-function connect() { let username = document.getElementById('username').value.trim().replace(/^@/, '').toLowerCase(); if (!username) return toast('Enter a username', true); setTikTokStatus('connecting', username); fetch('/api/connect', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body:JSON.stringify({ username }) }).then(r=>r.json()).then(d=>{ if(d.success){ setTikTokStatus(d.status || 'connecting', d.username || username); toast(`Connecting to @${d.username || username}`); } else { setTikTokStatus('error'); toast(d.error || 'Connection failed', true); }}).catch(()=>{ setTikTokStatus('error'); toast('Connection failed', true); }); }
-function resetTikTok(){ if(dashboardState.tiktokConnected && !confirm('Disconnect TikTok LIVE for this room? The overlay stays signed, but the live feed will stop.')) return; apiCall('/api/reset').then(()=>{ setTikTokStatus('disconnected'); toast('TikTok disconnected'); }); }
+function connect() { let username = document.getElementById('username').value.trim().replace(/^@/, '').toLowerCase(); if (!username) return toast('Enter a username', true); setTikTokStatus('connecting', username); applyStreamModeStatus({ mode:'real-connecting', label:'Connecting TikTok', detail:`Trying to connect @${username}.`, playerSource:'real', realPlayerCount:0, demoPlayerCount:0, testPlayerCount:0, blockingReasons:[{ code:'NO_REAL_EVENTS', message:'Waiting for TikTok to send the first real event.' }] }); fetch('/api/connect', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body:JSON.stringify({ username }) }).then(r=>r.json()).then(d=>{ if(d.success){ setTikTokStatus(d.status || 'connecting', d.username || username); toast(`Connecting to @${d.username || username}`); fetchStatus(); } else { setTikTokStatus('error'); toast(d.error || 'Connection failed', true); }}).catch(()=>{ setTikTokStatus('error'); toast('Connection failed', true); }); }
+function resetTikTok(){ if(dashboardState.tiktokConnected && !confirm('Disconnect TikTok LIVE for this room? The overlay stays signed, but the live feed will stop.')) return; apiCall('/api/reset').then(()=>{ setTikTokStatus('disconnected'); renderPlayerRoster({ players: [], count: 0, bySource: { real: 0, demo: 0, test: 0 } }); renderStreamEvents([]); fetchStatus(); toast('TikTok disconnected'); }); }
 function reloadOverlay(){ if(overlayCount <= 0) return toast('No overlay source is connected to reload', true); apiCall('/api/overlay/reload'); toast('Overlay reload signal sent'); }
 function clearPlayers(){ if(confirm('Clear all players from this room now? This affects the live overlay immediately.')) apiCall('/api/players/clear').then(()=>toast('Players cleared from this room')); }
 function toggleDevMode(){ fetchStatus().then(()=>apiCall('/api/dev/test-mode','POST',{ enabled: document.getElementById('dev-mode-badge').textContent !== 'ON' })); }
@@ -2396,6 +2469,7 @@ dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'))
 dropZone.addEventListener('drop', e=>{ e.preventDefault(); dropZone.classList.remove('dragover'); const file=e.dataTransfer.files[0]; if(file) uploadAudioFile(file); });
 fetch('/api/audio').then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData=d.library || []; audioConfigData=d.config || {}; renderAudioLibrary(); renderAssignTable(); }}).catch(()=>{});
 initDashboardWorkflows();
+initBetaFeatureVisibility();
 fetchStatus(); fetchSubscriptionStatus(); setInterval(fetchStatus,10000); setInterval(fetchSubscriptionStatus,60000); setInterval(tickSessionClock,1000);
 </script>
 </body>
