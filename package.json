@@ -33,6 +33,7 @@
     "marketing:publish:dry-run": "node scripts/publish_marketing_posts.js",
     "marketing:publish": "node scripts/publish_marketing_posts.js --live",
     "video:studio": "remotion studio remotion/index.jsx --port=3002",
+    "video:capture:homepage-overlay": "cross-env HERO_MP4_PATH=media/remotion/homepage-real-overlay-source.mp4 HERO_POSTER_PATH=media/remotion/homepage-real-overlay-poster.jpg node scripts/capture_hero_source.js",
     "video:render:homepage": "remotion render remotion/index.jsx battle-homepage media/remotion/homepage-battle-demo.mp4 --codec=h264 --crf=20 --muted --overwrite",
     "video:render:growth": "remotion render remotion/index.jsx battle-growth-vertical media/remotion/growth-battle-demo-vertical.mp4 --codec=h264 --crf=20 --muted --overwrite",
     "video:render:all": "npm run video:render:homepage && npm run video:render:growth",
