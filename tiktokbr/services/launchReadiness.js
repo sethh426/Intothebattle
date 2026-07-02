@@ -31,6 +31,24 @@ function envPresent(env, name) {
   return present(env[name]) && !looksLikePlaceholder(env[name]);
 }
 
+function urlPresent(env, name) {
+  if (!envPresent(env, name)) return false;
+  try {
+    const url = new URL(env[name]);
+    return ['http:', 'https:'].includes(url.protocol);
+  } catch (_err) {
+    return false;
+  }
+}
+
+function recentIsoDatePresent(env, name, maxAgeDays = 30) {
+  if (!envPresent(env, name)) return false;
+  const date = new Date(env[name]);
+  if (Number.isNaN(date.getTime())) return false;
+  const maxAgeMs = Math.max(1, Number(maxAgeDays) || 30) * 24 * 60 * 60 * 1000;
+  return date.getTime() <= Date.now() && Date.now() - date.getTime() <= maxAgeMs;
+}
+
 export function buildLaunchReadinessReport({
   env = process.env,
   storage = null,
@@ -40,6 +58,7 @@ export function buildLaunchReadinessReport({
 } = {}) {
   const checks = [];
   const production = env.NODE_ENV === 'production';
+  const productionInstanceCount = Math.max(1, Number(env.PRODUCTION_INSTANCE_COUNT || env.WEB_CONCURRENCY || 1) || 1);
 
   addCheck(
     checks,
@@ -57,7 +76,25 @@ export function buildLaunchReadinessReport({
   addCheck(checks, 'runtime', 'diagnostics-token', 'DIAGNOSTICS_TOKEN is configured', envPresent(env, 'DIAGNOSTICS_TOKEN'), 'Protects launch diagnostics in production.', 'Set DIAGNOSTICS_TOKEN to a long random value.');
   addCheck(checks, 'overlay', 'overlay-secret', 'OVERLAY_TOKEN_SECRET is configured', envPresent(env, 'OVERLAY_TOKEN_SECRET'), 'JWT_SECRET fallback exists, but a separate overlay secret is safer.', 'Set OVERLAY_TOKEN_SECRET.', 'warn');
 
-  addCheck(checks, 'database', 'database-url', 'DATABASE_URL is configured', envPresent(env, 'DATABASE_URL') || env.SKIP_DB === 'true', env.SKIP_DB === 'true' ? 'SKIP_DB=true' : (envPresent(env, 'DATABASE_URL') ? 'Database URL present.' : 'DATABASE_URL unset.'), 'Set DATABASE_URL to managed Postgres.');
+  addCheck(
+    checks,
+    'database',
+    'database-url',
+    'DATABASE_URL is configured',
+    envPresent(env, 'DATABASE_URL') || (!production && env.SKIP_DB === 'true'),
+    env.SKIP_DB === 'true' ? 'SKIP_DB=true' : (envPresent(env, 'DATABASE_URL') ? 'Database URL present.' : 'DATABASE_URL unset.'),
+    'Set DATABASE_URL to managed Postgres.'
+  );
+  addCheck(
+    checks,
+    'database',
+    'database-not-stubbed',
+    'Production database is not stubbed',
+    !(production && env.SKIP_DB === 'true'),
+    `SKIP_DB=${env.SKIP_DB || 'unset'}`,
+    'Never run production with SKIP_DB=true.',
+    'fail'
+  );
   if (database) {
     addCheck(checks, 'database', 'database-ready', 'Database initialized', database.mode === 'stub' || Boolean(database.initialized), database.lastError || database.mode || '', 'Fix Postgres connection or migrations.');
   }
@@ -75,6 +112,77 @@ export function buildLaunchReadinessReport({
   addCheck(checks, 'oauth', 'google-client-id', 'Google client ID is configured', envPresent(env, 'GOOGLE_CLIENT_ID'), 'Required for Google login.', 'Set GOOGLE_CLIENT_ID.');
   addCheck(checks, 'oauth', 'google-client-secret', 'Google client secret is configured', envPresent(env, 'GOOGLE_CLIENT_SECRET'), 'Required for Google login.', 'Set GOOGLE_CLIENT_SECRET.');
   addCheck(checks, 'oauth', 'google-redirect', 'Google redirect URI is HTTPS', httpsUrl(env.GOOGLE_OAUTH_REDIRECT_URI), env.GOOGLE_OAUTH_REDIRECT_URI || 'unset', 'Set GOOGLE_OAUTH_REDIRECT_URI=https://www.intothebattle.com/auth/google/callback.');
+
+  addCheck(
+    checks,
+    'observability',
+    'sentry-dsn',
+    'Error monitoring is configured',
+    envPresent(env, 'SENTRY_DSN'),
+    envPresent(env, 'SENTRY_DSN') ? 'Configured.' : 'unset',
+    'Configure Sentry or an equivalent error monitor before production launch.',
+    production ? 'fail' : 'warn'
+  );
+  addCheck(
+    checks,
+    'observability',
+    'metrics-token',
+    'Metrics scraping is protected and configured',
+    envPresent(env, 'METRICS_TOKEN'),
+    envPresent(env, 'METRICS_TOKEN') ? 'Configured.' : 'unset',
+    'Set METRICS_TOKEN and wire a trusted metrics scraper.',
+    production ? 'fail' : 'warn'
+  );
+  addCheck(
+    checks,
+    'operations',
+    'support-contact',
+    'Support contact is configured',
+    envPresent(env, 'SUPPORT_EMAIL') || envPresent(env, 'EMAIL_REPLY_TO'),
+    env.SUPPORT_EMAIL || env.EMAIL_REPLY_TO || 'unset',
+    'Set SUPPORT_EMAIL or EMAIL_REPLY_TO for customer recovery paths.',
+    production ? 'fail' : 'warn'
+  );
+  addCheck(
+    checks,
+    'operations',
+    'incident-runbook',
+    'Incident runbook is published',
+    urlPresent(env, 'INCIDENT_RUNBOOK_URL') || urlPresent(env, 'LAUNCH_RUNBOOK_URL'),
+    env.INCIDENT_RUNBOOK_URL || env.LAUNCH_RUNBOOK_URL || 'unset',
+    'Publish an incident/deploy rollback runbook URL.',
+    production ? 'fail' : 'warn'
+  );
+  addCheck(
+    checks,
+    'operations',
+    'alert-route',
+    'Operations alert route is configured',
+    envPresent(env, 'OPERATIONS_ALERT_EMAIL') || urlPresent(env, 'ALERT_WEBHOOK_URL') || urlPresent(env, 'SENTRY_DSN'),
+    env.OPERATIONS_ALERT_EMAIL || env.ALERT_WEBHOOK_URL || (envPresent(env, 'SENTRY_DSN') ? 'SENTRY_DSN configured' : 'unset'),
+    'Configure an error/uptime alert route.',
+    production ? 'fail' : 'warn'
+  );
+  addCheck(
+    checks,
+    'operations',
+    'backup-restore',
+    'Backup restore drill is recent',
+    recentIsoDatePresent(env, 'BACKUP_RESTORE_VERIFIED_AT', env.BACKUP_RESTORE_MAX_AGE_DAYS || 30),
+    env.BACKUP_RESTORE_VERIFIED_AT || 'unset',
+    'Set BACKUP_RESTORE_VERIFIED_AT after a successful restore drill within the configured window.',
+    production ? 'fail' : 'warn'
+  );
+  addCheck(
+    checks,
+    'realtime',
+    'redis-scaling-configured',
+    'Realtime scaling adapter is configured',
+    !production || productionInstanceCount === 1 || (envPresent(env, 'REDIS_URL') && String(env.ENABLE_REDIS_ADAPTER || '').toLowerCase() === 'true'),
+    `instances=${productionInstanceCount}, REDIS_URL=${envPresent(env, 'REDIS_URL') ? 'present' : 'unset'}, ENABLE_REDIS_ADAPTER=${env.ENABLE_REDIS_ADAPTER || 'unset'}`,
+    'Set PRODUCTION_INSTANCE_COUNT=1 for single-instance deploys, or configure REDIS_URL and ENABLE_REDIS_ADAPTER=true for multi-instance realtime scaling.',
+    production ? 'fail' : 'warn'
+  );
 
   if (storage) {
     addCheck(checks, 'storage', 'storage-writable', 'Persistent storage is writable', Boolean(storage.ok), storage.error || storage.root || '', 'Fix DISK_PATH and persistent disk mount.');

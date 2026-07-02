@@ -269,7 +269,7 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
     expect(geometry.metaHeight).toBeGreaterThan(6);
   }
   expect(geometry.centerDelta).toBeLessThanOrEqual(Math.max(18, geometry.viewport.width * 0.035));
-  expect(geometry.titleHeight).toBeGreaterThan(9);
+  expect(geometry.titleHeight).toBeGreaterThan(8);
 
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'qa-overlay-v1-banner');

@@ -57,7 +57,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\",\n    \"name\": \"IntoTheBattle Login\",\n    \"url\": \"https://intothebattle.com/login\",\n    \"description\": \"Log into IntoTheBattle to access your TikTok LIVE battle overlay, creator dashboard, and stream management tools.\",\n    \"isPartOf\": { \"@type\": \"WebSite\", \"name\": \"IntoTheBattle\", \"url\": \"https://intothebattle.com/\" }\n  }",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\",\n    \"name\": \"IntoTheBattle Login\",\n    \"url\": \"https://intothebattle.com/login\",\n    \"description\": \"Log into IntoTheBattle to access your TikTok LIVE battle overlay, Command Center, and stream management tools.\",\n    \"isPartOf\": { \"@type\": \"WebSite\", \"name\": \"IntoTheBattle\", \"url\": \"https://intothebattle.com/\" }\n  }",
           "ok": true,
           "errors": [],
           "warnings": []

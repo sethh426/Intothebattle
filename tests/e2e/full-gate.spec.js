@@ -184,13 +184,40 @@ test('@dashboard setup rehearsal changes demo state and then resets toward real 
     expect(status.realPlayerCount).toBe(0);
   });
 
+  await test.step('post-reset test events stay clearly separated from real stream players', async () => {
+    const testEvent = await context.request.post(`${harness.baseUrl}/api/overlay/test/follow`);
+    const testBody = await parseJsonResponse(testEvent);
+    expect(testBody.success).toBe(true);
+    await expect.poll(async () => {
+      const res = await context.request.get(`${harness.baseUrl}/api/status`);
+      const body = await res.json();
+      return {
+        playerSource: body.streamMode?.playerSource,
+        demoPlayerCount: body.demoPlayerCount,
+        testPlayerCount: body.testPlayerCount,
+        realPlayerCount: body.realPlayerCount,
+        recentPlayerSources: (body.recentPlayers || []).map(player => player.source),
+      };
+    }, { timeout: 9000 }).toMatchObject({
+      playerSource: 'test',
+      demoPlayerCount: 0,
+      realPlayerCount: 0,
+    });
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(page.locator('#playerSourceCounts')).toContainText(/Test [1-9]/);
+    await expect(page.locator('#playerSourceCounts')).toContainText('Demo 0');
+    await expect(page.locator('#playerSourceCounts')).toContainText('Real 0');
+  });
+
   await expectNoHorizontalOverflow(page);
   await attachScreenshot(page, testInfo, 'dashboard-setup-reset');
   await expectNoPageErrors(errors, testInfo, 'dashboard-setup');
 });
 
-test('@dashboard signed overlay state does not leak secrets in debug status', async ({ page }, testInfo) => {
+test('@dashboard signed overlay state does not leak secrets in debug status', async ({ context, page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop', 'signed overlay confidence runs once in desktop Chromium');
+  await addAuthCookie(context, harness);
+  await parseJsonResponse(await context.request.post(`${harness.baseUrl}/api/reset`));
   const errors = await watchPage(page, harness.baseUrl);
   const overlayUrl = `${harness.baseUrl}/overlay?room_id=${encodeURIComponent(harness.roomId)}&overlay_token=${encodeURIComponent(harness.overlayToken)}&mode=live&debug=1`;
 

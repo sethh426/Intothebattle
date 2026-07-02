@@ -28,9 +28,11 @@ function normalizeUrl(value) {
 
 async function fetchRemoteReport(baseUrl, token) {
   const url = new URL('/api/runtime/launch-readiness', baseUrl);
-  if (token) url.searchParams.set('token', token);
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   const response = await fetch(url, { headers });
+  if (response.status === 401) {
+    throw new Error('Remote launch readiness requires LAUNCH_READINESS_TOKEN or DIAGNOSTICS_TOKEN with access to /api/runtime/launch-readiness.');
+  }
   let body;
   try {
     body = await response.json();

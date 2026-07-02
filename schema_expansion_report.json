@@ -267,7 +267,7 @@
               ],
               "https://schema.org/description": [
                 {
-                  "@value": "Log into IntoTheBattle to access your TikTok LIVE battle overlay, creator dashboard, and stream management tools."
+                  "@value": "Log into IntoTheBattle to access your TikTok LIVE battle overlay, Command Center, and stream management tools."
                 }
               ],
               "https://schema.org/isPartOf": [
@@ -484,7 +484,7 @@
               ],
               "https://schema.org/description": [
                 {
-                  "@value": "A TikTok LIVE battle overlay platform with viewer commands, creator dashboard controls, sponsor video moments, and stream-ready OBS presentation."
+                  "@value": "A TikTok LIVE battle overlay platform with viewer commands, Command Center controls, sponsor video moments, and stream-ready OBS presentation."
                 }
               ],
               "https://schema.org/name": [

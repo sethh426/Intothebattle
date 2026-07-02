@@ -10,11 +10,18 @@ Run these before pushing a release:
 npm ci
 node --check server.js
 npm run audit:stability
+npm run test:security:contracts
 npm run validate:schemas
 npm run test:logic
 npm run test:http
 npm run test:socket
-npm run test:e2e
+npm run test:e2e:full
+```
+
+Or run the company gate, which first checks that local smoke-test ports are not already occupied:
+
+```bash
+npm run test:company:full
 ```
 
 Run local launch readiness:
@@ -27,6 +34,7 @@ Run production launch readiness after deploy:
 
 ```bash
 DIAGNOSTICS_TOKEN=your-token npm run launch:check:remote
+npm run test:production:smoke
 ```
 
 The production readiness endpoint is protected at `/api/runtime/launch-readiness` and should be called with `Authorization: Bearer <token>` or `x-diagnostics-token`. Do not put production tokens in query strings.
@@ -34,7 +42,7 @@ The production readiness endpoint is protected at `/api/runtime/launch-readiness
 ## Required Production Environment
 
 - `NODE_ENV=production`
-- `APP_BASE_URL=https://www.intothebattle.com`
+- `APP_BASE_URL=https://intothebattle.com`
 - `DATABASE_URL`
 - `DISK_PATH=/var/data`
 - `JWT_SECRET`
@@ -51,7 +59,15 @@ The production readiness endpoint is protected at `/api/runtime/launch-readiness
 - `PAYPAL_WEBHOOK_ID`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
-- `GOOGLE_OAUTH_REDIRECT_URI=https://www.intothebattle.com/auth/google/callback`
+- `GOOGLE_OAUTH_REDIRECT_URI=https://intothebattle.com/auth/google/callback`
+- `SENTRY_DSN`
+- `METRICS_TOKEN`
+- `SUPPORT_EMAIL` or `EMAIL_REPLY_TO`
+- `INCIDENT_RUNBOOK_URL` or `LAUNCH_RUNBOOK_URL`
+- `OPERATIONS_ALERT_EMAIL` or `ALERT_WEBHOOK_URL`
+- `BACKUP_RESTORE_VERIFIED_AT=<ISO timestamp from a successful restore drill>`
+- `REDIS_URL`
+- `ENABLE_REDIS_ADAPTER=true` when production uses more than one app instance
 
 Optional public blog redirect:
 
@@ -88,4 +104,7 @@ Do not launch if any of these are true:
 - Postmark diagnostics say email is disabled, missing, or using a placeholder.
 - Google redirect URI does not match production exactly.
 - `/api/runtime/launch-readiness` has hard failures.
+- `/api/runtime/launch-readiness` has warnings that have not been intentionally waived.
 - Sponsor videos cannot reach `ready`, `started`, `first_frame`, and `completed` events during a live overlay test.
+- CI is not green on the exact commit being deployed.
+- No successful backup restore drill is recorded in `BACKUP_RESTORE_VERIFIED_AT`.

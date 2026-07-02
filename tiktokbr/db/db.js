@@ -241,6 +241,20 @@ async function initDb() {
       try { await client.query(sql); } catch (_) {}
     };
 
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS schema_migrations (
+        version TEXT PRIMARY KEY,
+        description TEXT,
+        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await client.query(
+      `INSERT INTO schema_migrations (version, description)
+       VALUES ($1, $2)
+       ON CONFLICT (version) DO NOTHING`,
+      ['2026-07-02-baseline', 'Baseline schema tracking before versioned migration runner']
+    );
+
     const requireColumnType = async (tableName, columnName, expectedType) => {
       const result = await client.query(
         `SELECT data_type

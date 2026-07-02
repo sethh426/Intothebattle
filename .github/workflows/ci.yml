@@ -70,6 +70,9 @@ jobs:
       - name: Stability audit and syntax check
         run: npm run audit:stability
 
+      - name: Route and database contract checks
+        run: npm run test:security:contracts
+
       - name: Business logic smoke tests
         run: npm run test:logic
 
@@ -132,7 +135,6 @@ jobs:
           if-no-files-found: ignore
 
       - name: Audit production dependencies
-        continue-on-error: true
         run: npm audit --audit-level=high
 
   postgres-migrations:

@@ -1,0 +1,178 @@
+{
+  "version": 1,
+  "csrfEquivalent": {
+    "sameOriginMutationGuard": true,
+    "adminSameSiteCookie": "strict",
+    "notes": "Admin form mutations rely on same-origin Origin/Referer enforcement plus Strict HttpOnly admin cookies. PayPal webhooks are exempt and must verify provider signatures."
+  },
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/dashboard",
+      "category": "creator",
+      "access": "dashboard-session",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/api/connect",
+      "category": "creator-control",
+      "access": "room-session",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/api/reset",
+      "category": "creator-control",
+      "access": "room-session",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/api/stream/setup/start",
+      "category": "creator-control",
+      "access": "room-session",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/api/stream/setup/reset",
+      "category": "creator-control",
+      "access": "room-session",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "GET",
+      "path": "/overlay",
+      "category": "overlay",
+      "access": "signed-room-overlay-token",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "GET",
+      "path": "/overlay-v2",
+      "category": "overlay-experimental",
+      "access": "signed-room-overlay-token",
+      "unauthenticated": 401,
+      "production": "hidden-beta"
+    },
+    {
+      "method": "GET",
+      "path": "/state",
+      "category": "overlay-state",
+      "access": "signed-room-overlay-token",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/api/sponsor/upload",
+      "category": "creator-media",
+      "access": "room-session-and-creator-sponsor-entitlement",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/api/sponsor/play",
+      "category": "creator-media",
+      "access": "room-session-and-creator-sponsor-entitlement",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "GET",
+      "path": "/sponsor/:filename",
+      "category": "overlay-media",
+      "access": "signed-room-overlay-token",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "GET",
+      "path": "/metrics",
+      "category": "diagnostics",
+      "access": "metrics-token",
+      "unauthenticated": 401,
+      "production": "enabled-when-token-configured"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runtime/diagnostics",
+      "category": "diagnostics",
+      "access": "diagnostics-token",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runtime/launch-readiness",
+      "category": "diagnostics",
+      "access": "diagnostics-token",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/api/paypal/webhook",
+      "category": "webhook",
+      "access": "paypal-signature",
+      "unauthenticated": 400,
+      "production": "enabled"
+    },
+    {
+      "method": "GET",
+      "path": "/admin",
+      "category": "admin",
+      "access": "admin-session",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/issue-code",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/sponsors/upload",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/marketing/publish",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/api/dev/test-mode",
+      "category": "development",
+      "access": "non-production-only",
+      "unauthenticated": 404,
+      "production": "disabled"
+    },
+    {
+      "method": "POST",
+      "path": "/api/test/spawn",
+      "category": "development",
+      "access": "non-production-dev-test-mode-only",
+      "unauthenticated": 404,
+      "production": "disabled"
+    }
+  ]
+}

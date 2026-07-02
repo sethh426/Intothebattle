@@ -28,6 +28,11 @@ const server = spawn(process.execPath, ['server.js'], {
     DISK_PATH: diskPath,
     METRICS_TOKEN: metricsToken,
     DIAGNOSTICS_TOKEN: metricsToken,
+    SENTRY_DSN: 'https://public@example.ingest.sentry.io/1',
+    SUPPORT_EMAIL: 'support@intothebattle.test',
+    INCIDENT_RUNBOOK_URL: 'https://intothebattle.test/runbooks/incident-response',
+    OPERATIONS_ALERT_EMAIL: 'ops@intothebattle.test',
+    BACKUP_RESTORE_VERIFIED_AT: new Date().toISOString(),
     APP_BASE_URL: 'https://intothebattle.test',
     POSTMARK_API_TOKEN: 'postmark-smoke-token',
     POSTMARK_MESSAGE_STREAM: 'outbound',
@@ -114,6 +119,11 @@ try {
 
   const adminMarketing = await expectStatus('/admin/marketing', 302);
   assert((adminMarketing.headers.get('location') || '').startsWith('/admin/login'), '/admin/marketing should redirect to /admin/login');
+  await expectStatus('/admin/issue-code', 403, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: 'https://evil.example' },
+    body: 'email=evil@example.com',
+  });
 
   await expectStatus('/server.js', 404);
   await expectStatus('/package.json', 404);
@@ -166,9 +176,13 @@ try {
   assert(diagnosticsBody.database?.mode === 'stub', 'diagnostics should report stub database in smoke mode');
   assert(diagnosticsBody.growth?.enabled === false, 'growth API sync should be disabled by default');
   await expectStatus('/api/runtime/launch-readiness', 401);
-  const readiness = await expectStatus('/api/runtime/launch-readiness', 200, { headers: { Authorization: `Bearer ${metricsToken}` } });
+  const readiness = await expectStatus('/api/runtime/launch-readiness', 503, { headers: { Authorization: `Bearer ${metricsToken}` } });
   const readinessBody = await readiness.json();
-  assert(readinessBody.ok === true, 'launch readiness should have no hard failures in smoke mode');
+  assert(readinessBody.ok === false, 'production-mode launch readiness should fail when the smoke uses stub DB');
+  assert(
+    readinessBody.checks?.some(check => check.id === 'database-not-stubbed' && check.status === 'fail'),
+    'launch readiness should block production when SKIP_DB=true'
+  );
   assert(readinessBody.checks?.some(check => check.id === 'storage-writable' && check.status === 'pass'), 'launch readiness should include storage check');
   await expectStatus('/api/runtime/growth-sync-test', 401, {
     method: 'POST',
@@ -182,6 +196,13 @@ try {
   });
   const growthTestBody = await growthTest.json();
   assert(growthTestBody.success === true && growthTestBody.skipped === true, 'growth sync test should skip safely when disabled');
+  await expectStatus('/api/dev/test-mode', 404, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', Origin: baseUrl },
+    body: JSON.stringify({ enabled: true }),
+  });
+  await expectStatus('/api/test/status', 404);
+  await expectStatus('/api/test/spawn', 404, { method: 'POST', headers: { Origin: baseUrl } });
 
   await expectStatus(`/overlay?room_id=${roomId}`, 401);
   await expectStatus(`/overlay?room_id=${roomId}&overlay_token=bad`, 401);

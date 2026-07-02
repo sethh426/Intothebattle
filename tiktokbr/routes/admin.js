@@ -295,6 +295,45 @@ function compareAdminPassword(password) {
   return timingSafeCompare(password, stored);
 }
 
+function safeOrigin(value) {
+  try {
+    return value ? new URL(value).origin : '';
+  } catch (_err) {
+    return '';
+  }
+}
+
+function adminRequestOrigin(req) {
+  const host = req.get('host');
+  return host ? `${req.protocol}://${host}` : '';
+}
+
+function isAllowedAdminMutationOrigin(req, value) {
+  const origin = safeOrigin(value);
+  if (!origin) return false;
+  const allowed = new Set([
+    adminRequestOrigin(req),
+    safeOrigin(process.env.APP_BASE_URL),
+  ].filter(Boolean));
+  return allowed.has(origin);
+}
+
+function requireAdminMutationOrigin(req, res, next) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || req.path === '/login') return next();
+
+  const origin = req.get('origin');
+  const referer = req.get('referer');
+  if (
+    (origin && isAllowedAdminMutationOrigin(req, origin)) ||
+    (!origin && referer && isAllowedAdminMutationOrigin(req, referer))
+  ) {
+    return next();
+  }
+
+  if (!origin && !referer && process.env.NODE_ENV !== 'production') return next();
+  return res.status(403).send('Admin mutation blocked by same-origin protection.');
+}
+
 function requireAdminAuth(req, res, next) {
   const token = req.cookies[COOKIE_NAME];
   if (!token) return res.redirect('/admin/login');
@@ -306,6 +345,8 @@ function requireAdminAuth(req, res, next) {
   req.adminSession = row;
   next();
 }
+
+router.use(requireAdminMutationOrigin);
 
 function parseAdminDate(value) {
   if (!value) return null;

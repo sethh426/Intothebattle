@@ -112,6 +112,42 @@ async function assertSponsorMediaAgent(page, testInfo, label) {
 }
 
 async function assertSponsorSceneFits(page, testInfo, label, options = {}) {
+  const minVisibleCount = options.minVisibleCount ?? 5;
+  await page.waitForFunction((expectedVisibleCount) => {
+    function effectiveOpacity(el) {
+      let node = el;
+      let opacity = 1;
+      while (node && node.nodeType === 1) {
+        const style = getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden') return 0;
+        opacity *= Number(style.opacity) || 0;
+        node = node.parentElement;
+      }
+      return opacity;
+    }
+    const scene = document.getElementById('sponsorScene');
+    if (!scene?.classList.contains('active') || !scene.classList.contains('stats-visible')) return false;
+    const selectors = [
+      '#sponsorDisclosure',
+      '#sponsorBrand',
+      '#sponsorProgress',
+      '#sponsorLiveStats',
+      '.sponsor-stats-head',
+      '.sponsor-stat',
+      '.sponsor-stat-value',
+      '.sponsor-stat-sub',
+      '.sponsor-leader-row',
+    ];
+    let visibleCount = 0;
+    for (const selector of selectors) {
+      for (const el of document.querySelectorAll(selector)) {
+        const rect = el.getBoundingClientRect();
+        if (effectiveOpacity(el) > 0.05 && rect.width > 0 && rect.height > 0) visibleCount += 1;
+      }
+    }
+    return visibleCount >= expectedVisibleCount;
+  }, minVisibleCount, { timeout: options.visibleTimeout ?? 5000 });
+
   const result = await page.evaluate(() => {
     function effectiveOpacity(el) {
       let node = el;
@@ -188,7 +224,7 @@ async function assertSponsorSceneFits(page, testInfo, label, options = {}) {
   expect(result.missing).toBe(false);
   expect(result.sceneClass).toContain('active');
   expect(result.sceneClass).toContain('stats-visible');
-  expect(result.visibleCount).toBeGreaterThanOrEqual(options.minVisibleCount ?? 5);
+  expect(result.visibleCount).toBeGreaterThanOrEqual(minVisibleCount);
   expect(result.hasStats).toBe(true);
   expect(result.outside).toEqual([]);
   expect(result.offCenterText).toEqual([]);

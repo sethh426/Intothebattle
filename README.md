@@ -140,7 +140,7 @@ POSTMARK_TEST_EMAIL=
 
 `PAYPAL_PLAN_ID` (or `PAYPAL_SUBSCRIPTION_PLAN_ID`) is required for the in-app Creator Pro subscription button. `PAYPAL_PAYMENT_LINK` is only a hosted-link fallback.
 
-Optional production/diagnostic variables:
+Production observability/diagnostic variables:
 
 ```text
 SENTRY_DSN=
@@ -168,7 +168,7 @@ SEGMENT_WRITE_KEY=
 
 `METRICS_TOKEN` is only needed if Prometheus or another monitor scrapes `/metrics`. In production, `/metrics` returns 404 when no token is configured.
 
-`DIAGNOSTICS_TOKEN` is optional. If it is unset, `/api/runtime/diagnostics` accepts `METRICS_TOKEN`.
+`DIAGNOSTICS_TOKEN` is required for the production launch-readiness gate. `/api/runtime/diagnostics` can fall back to `METRICS_TOKEN`, but production launch checks should use a separate diagnostics token.
 
 Sponsor video uploads can use FFmpeg/ffprobe when those tools are installed on the server:
 
@@ -390,7 +390,8 @@ Recommended production settings:
 
 ```text
 REDIS_URL=<managed Redis connection string>
-SENTRY_DSN=<optional Sentry DSN>
+ENABLE_REDIS_ADAPTER=true
+SENTRY_DSN=<Sentry DSN or equivalent error monitor DSN>
 LOG_LEVEL=info
 DISK_PATH=/var/data
 TRUST_PROXY_HOPS=1
@@ -409,7 +410,11 @@ EMAIL_REPLY_TO=support@intothebattle.com
 OVERLAY_TOKEN_SECRET=<long random overlay signing secret>
 ENABLE_ROOM_SCOPED=true
 METRICS_TOKEN=<long random metrics scrape token>
-DIAGNOSTICS_TOKEN=<optional separate diagnostics token>
+DIAGNOSTICS_TOKEN=<separate launch diagnostics token>
+SUPPORT_EMAIL=support@intothebattle.com
+INCIDENT_RUNBOOK_URL=<internal incident-response runbook URL>
+OPERATIONS_ALERT_EMAIL=<ops alert email or paging route>
+BACKUP_RESTORE_VERIFIED_AT=<ISO timestamp from the last successful restore drill>
 MARKETING_PLATFORMS=x,linkedin,facebook,instagram,tiktok,youtube_shorts
 MARKETING_AUTOMATION_ENABLED=false
 MARKETING_AUTO_POST_ENABLED=true
@@ -498,6 +503,9 @@ npm start
 npm run start:dev
 npm run test:http
 npm run test:e2e
+npm run test:security:contracts
+npm run test:company:full
+npm run test:production:smoke
 npm run test:e2e:install
 npm run test:postmark
 npm run validate:schema
