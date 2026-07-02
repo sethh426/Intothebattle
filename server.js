@@ -1281,9 +1281,9 @@ const VIEWER_COMMAND_GROUPS = Object.freeze([
   },
   {
     code: 'ATK',
-    kicker: 'Attack commands',
-    title: 'Target players or the boss',
-    meta: 'Use @name or @boss after the command',
+    kicker: 'Effect commands',
+    title: 'Choose your attack effect',
+    meta: 'Add @name or @boss after the command',
     durationMs: 5000,
     charge: 92,
     commands: [
