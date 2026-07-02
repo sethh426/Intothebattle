@@ -656,7 +656,7 @@
       <p class="lede">Use email to create your creator account, then land in setup with 7 days of full access, a signed overlay URL, and test buttons that prove the battle works before viewers arrive.</p>
       <ul class="trust-list">
         <li>Works with OBS browser sources and TikTok Studio window capture.</li>
-        <li>Dashboard controls for rooms, visuals, audio, and stream state.</li>
+        <li>Command Center controls for rooms, visuals, audio, and stream state.</li>
         <li>Viewer-powered attacks, shields, healing, and gift-triggered effects built for LIVE chaos.</li>
       </ul>
       <div class="mini-panel" aria-label="Registration outcome preview">
@@ -739,12 +739,13 @@
     const captchaTokenInput = document.getElementById('captchaToken');
     const captchaAnswerInput = document.getElementById('captchaAnswer');
     let selectedChallenge = '';
+    const DEFAULT_ONBOARDING_PATH = '/dashboard?welcome=1';
     const nextPath = (() => {
-      const value = new URLSearchParams(window.location.search).get('next') || '/dashboard/welcome';
-      return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : '/dashboard/welcome';
+      const value = new URLSearchParams(window.location.search).get('next') || DEFAULT_ONBOARDING_PATH;
+      return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : DEFAULT_ONBOARDING_PATH;
     })();
     const googleBtn = document.querySelector('.google-option a[href="/auth/google"]');
-    if (googleBtn && nextPath !== '/dashboard/welcome') {
+    if (googleBtn) {
       googleBtn.href = `/auth/google?next=${encodeURIComponent(nextPath)}`;
     }
 

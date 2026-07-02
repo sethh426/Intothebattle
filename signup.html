@@ -828,7 +828,7 @@
       <p class="lede">Turn your TikTok LIVE chat into a playable battle arena. Create a room, open a setup preview, copy your signed browser-source URL, and fire a test event before your next LIVE starts.</p>
       <div class="outcome-grid" aria-label="Signup outcomes">
         <div class="outcome-item"><b>Room</b><span>Your creator room is created after signup.</span></div>
-        <div class="outcome-item"><b>Overlay</b><span>Copy the OBS or TikTok Studio source from the dashboard.</span></div>
+        <div class="outcome-item"><b>Overlay</b><span>Copy the OBS or TikTok Studio source from the Command Center.</span></div>
         <div class="outcome-item"><b>Proof</b><span>Run test attacks before you connect the real stream.</span></div>
       </div>
       <div class="trust-chips" aria-label="Account highlights">
@@ -868,7 +868,7 @@
             <strong>After you click, the path is simple:</strong>
             <ol>
               <li>Create your account.</li>
-              <li>Open the welcome dashboard.</li>
+              <li>Open the Command Center setup flow.</li>
               <li>Open setup preview, copy the source, and test the battle.</li>
             </ol>
           </div>
@@ -880,7 +880,7 @@
                 <b>7-Day Unlocked <span>Trial</span></b>
                 <ul>
                   <li>Battle overlay and room setup</li>
-                  <li>Dashboard controls</li>
+                  <li>Command Center controls</li>
                   <li>Viewer actions and effects</li>
                   <li>Creator video moments and test controls</li>
                 </ul>
@@ -937,16 +937,15 @@
       }
     }
 
+    const DEFAULT_ONBOARDING_PATH = '/dashboard?welcome=1';
     const nextPath = (() => {
-      const value = new URLSearchParams(window.location.search).get('next') || '';
-      return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : '';
+      const value = new URLSearchParams(window.location.search).get('next') || DEFAULT_ONBOARDING_PATH;
+      return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : DEFAULT_ONBOARDING_PATH;
     })();
-    if (nextPath) {
-      const nextQuery = `?next=${encodeURIComponent(nextPath)}`;
-      if (googleSignupLink) googleSignupLink.href = `/auth/google${nextQuery}`;
-      if (emailSignupLink) emailSignupLink.href = `/register${nextQuery}`;
-      if (loginLink) loginLink.href = `/login${nextQuery}`;
-    }
+    const nextQuery = `?next=${encodeURIComponent(nextPath)}`;
+    if (googleSignupLink) googleSignupLink.href = `/auth/google${nextQuery}`;
+    if (emailSignupLink) emailSignupLink.href = `/register${nextQuery}`;
+    if (loginLink && nextPath !== '/dashboard') loginLink.href = `/login${nextQuery}`;
 
     [
       [googleSignupLink, 'signup_google_click', 'google', true],

@@ -6387,7 +6387,7 @@ app.get('/dashboard', requireDashboardAccess, (_req, res) => {
 });
 
 app.get('/dashboard/welcome', requireDashboardAccess, (_req, res) => {
-  res.sendFile(path.join(__dirname, 'dashboard-welcome.html'));
+  res.redirect(302, '/dashboard?welcome=1');
 });
 
 // Debug endpoint: return session-backed auth record for troubleshooting (non-production only)

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title>Creator Dashboard — IntoTheBattle Command Center</title>
+  <title>Creator Command Center - IntoTheBattle</title>
   <meta name="description" content="Manage your IntoTheBattle TikTok LIVE battle overlay, stream room, sponsor moments, audio, and visual effects." />
   <meta name="robots" content="noindex, follow" />
   <link rel="canonical" href="https://intothebattle.com/dashboard" />
@@ -60,6 +60,11 @@
     .btn-warning { color:#170c02; background:var(--gold); }
     .btn-purple { color:#071009; background:var(--cyan); }
     .stream-coach { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; align-items:center; margin-top:22px; padding:18px; border-radius:22px; border:1px solid rgba(119,240,161,.26); background:linear-gradient(135deg,rgba(119,240,161,.12),rgba(85,231,255,.055)); box-shadow:inset 0 1px 0 rgba(255,255,255,.08); }
+    .welcome-setup-panel { display:grid; gap:10px; margin-bottom:18px; padding-bottom:18px; border-bottom:1px solid rgba(255,255,255,.11); }
+    .welcome-setup-panel[hidden] { display:none !important; }
+    .welcome-setup-panel span { width:fit-content; color:var(--green); font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.12em; }
+    .welcome-setup-panel strong { color:#fff; font-size:24px; line-height:1.08; }
+    .welcome-setup-panel p { max-width:720px; color:#d1ddf7; font-size:14px; line-height:1.55; font-weight:800; }
     .coach-label { display:inline-flex; width:fit-content; min-height:26px; align-items:center; margin-bottom:8px; padding:4px 9px; border-radius:999px; color:#071009; background:linear-gradient(135deg,var(--green),#bcffd1); font-size:10px; font-weight:950; text-transform:uppercase; letter-spacing:.1em; }
     .coach-copy strong { display:block; color:#fff; font-size:20px; line-height:1.08; }
     .coach-copy p { margin-top:6px; max-width:680px; color:#cbd3df; font-size:13px; line-height:1.5; font-weight:800; }
@@ -424,7 +429,7 @@
     #toast { border-color:rgba(0,229,255,.28); background:rgba(5,7,17,.94); }
     @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,#audioManagerCard .audio-layout,.sponsor-layout,.sponsor-upgrade,.ops-strip,.session-layout,.launch-checklist,.live-grid{grid-template-columns:1fr}#audioManagerCard,#toolsRail,#creatorSponsorCard{order:initial}}
     @media(max-width:860px){.session-status-grid,.session-control-grid{grid-template-columns:1fr}}
-    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.dashboard-nav{position:relative;top:auto}.dashboard-nav a{flex:1 1 120px}.workflow-summary{grid-template-columns:1fr;align-items:start}.workflow-status{width:fit-content}.workflow-toggle{position:absolute;right:18px;top:18px}.workflow-body{padding:14px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.stream-coach,.stream-health-head{grid-template-columns:1fr}.stream-health-head{display:grid}.mode-pill{width:fit-content}.coach-actions{justify-content:stretch}.coach-actions .btn,.secondary-launch-actions .btn{width:100%}.launch-action-grid{grid-template-columns:1fr}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}.setup-steps,.next-action-panel{grid-template-columns:1fr}.next-action-actions{justify-content:stretch}.footer{position:sticky;bottom:10px;z-index:35;padding:10px;border:1px solid rgba(246,201,91,.24);border-radius:20px;background:rgba(5,7,11,.9);backdrop-filter:blur(16px);box-shadow:0 18px 60px rgba(0,0,0,.38)}.footer-btn{flex:1 1 130px}}
+    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.dashboard-nav{position:relative;top:auto}.dashboard-nav a{flex:1 1 120px}.workflow-summary{grid-template-columns:1fr;align-items:start}.workflow-status{width:fit-content}.workflow-toggle{position:absolute;right:18px;top:18px}.workflow-body{padding:14px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.welcome-setup-panel strong{font-size:20px}.stream-coach,.stream-health-head{grid-template-columns:1fr}.stream-health-head{display:grid}.mode-pill{width:fit-content}.coach-actions{justify-content:stretch}.coach-actions .btn,.secondary-launch-actions .btn{width:100%}.launch-action-grid{grid-template-columns:1fr}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}.setup-steps,.next-action-panel{grid-template-columns:1fr}.next-action-actions{justify-content:stretch}.footer{position:sticky;bottom:10px;z-index:35;padding:10px;border:1px solid rgba(246,201,91,.24);border-radius:20px;background:rgba(5,7,11,.9);backdrop-filter:blur(16px);box-shadow:0 18px 60px rgba(0,0,0,.38)}.footer-btn{flex:1 1 130px}}
     @media(max-width:700px){.launch-action{grid-template-columns:32px minmax(0,1fr); gap:3px 10px; padding:12px}.launch-action b{grid-row:1 / span 2}.launch-action strong{font-size:14px}.launch-action span{font-size:11px}.secondary-launch-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.secondary-launch-actions .btn:last-child{grid-column:1 / -1}}
     @media(max-width:700px){.audio-row{display:grid;grid-template-columns:minmax(0,1fr);align-items:start}.audio-name{white-space:normal;overflow-wrap:anywhere}.audio-size{font-size:12px}.audio-actions,.assign-actions,.sponsor-row-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;padding-left:0;justify-content:stretch}.audio-actions .btn,.assign-actions .btn,.sponsor-row-actions .btn{width:100%}.assign-table,.assign-table tbody,.assign-table tr,.assign-table td{display:block;width:100%}.assign-table tr{padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)}.assign-table td{padding:6px 0;border-bottom:0}.assign-select-cell{padding-left:0}.event-pill{width:100%;justify-content:center}.sponsor-row{display:grid;grid-template-columns:1fr}.sponsor-thumb{width:100%;max-width:260px}.sponsor-selected,.sponsor-upgrade,.sponsor-readiness-head,.sponsor-step-track{grid-template-columns:1fr}.sponsor-step-track{display:grid}}
   </style>
@@ -446,6 +451,11 @@
 
   <section class="hero">
     <div class="hero-card">
+      <div class="welcome-setup-panel" id="welcomeSetupPanel" data-testid="welcome-setup-panel" hidden>
+        <span>Welcome to the Command Center</span>
+        <strong>Your room is ready. Start with the setup demo.</strong>
+        <p>The signed setup flow gives you motion, demo players, and a safe source URL before your real TikTok LIVE connects.</p>
+      </div>
       <div class="kicker">Creator command center</div>
       <h2>Stream room <span id="room-id-title">loading</span></h2>
       <p id="dashboard-summary">Checking stream, overlay, and media readiness.</p>
@@ -453,7 +463,7 @@
         <div class="coach-copy">
           <span class="coach-label">Do this next</span>
           <strong id="heroNextActionTitle">Preparing your stream path</strong>
-          <p id="heroNextActionCopy">The dashboard is checking your room, overlay URL, and setup status.</p>
+          <p id="heroNextActionCopy">The Command Center is checking your room, overlay URL, and setup status.</p>
         </div>
         <div class="coach-actions" id="heroNextActionButtons">
           <button class="btn btn-primary" onclick="startSetupRehearsal()">Start Setup Demo</button>
@@ -474,7 +484,7 @@
         <div class="stream-health-head">
           <div>
             <div class="stream-mode-label" id="streamModeLabel">Checking stream mode</div>
-            <div class="stream-mode-detail" id="streamModeDetail">The dashboard is loading overlay, TikTok, and player status.</div>
+            <div class="stream-mode-detail" id="streamModeDetail">The Command Center is loading overlay, TikTok, and player status.</div>
           </div>
           <span class="mode-pill waiting" id="streamModePill">Loading</span>
         </div>
@@ -496,7 +506,7 @@
     </aside>
   </section>
 
-  <nav class="dashboard-nav" aria-label="Dashboard sections">
+  <nav class="dashboard-nav" aria-label="Command Center sections">
     <a href="#launchWorkflow">Launch</a>
     <a href="#liveWorkflow">Live</a>
     <a href="#overlayWorkflow">Overlay</a>
@@ -529,12 +539,12 @@
       <div class="next-action-panel" id="nextActionPanel">
         <div>
           <div class="next-action-title" id="nextActionTitle">Preparing your setup flow</div>
-          <div class="next-action-copy" id="nextActionCopy">The dashboard is checking the room and signed overlay URL.</div>
+          <div class="next-action-copy" id="nextActionCopy">The Command Center is checking the room and signed overlay URL.</div>
         </div>
         <div class="next-action-actions" id="nextActionButtons"></div>
       </div>
       <div class="launch-action-grid" id="launchActionGrid" aria-label="Streaming setup actions">
-        <button type="button" class="launch-action active" data-launch-action="demo" onclick="startSetupRehearsal()"><b>1</b><strong>Open setup preview</strong><span>Generate test motion before the real stream connects.</span></button>
+        <button type="button" class="launch-action active" data-launch-action="demo" onclick="startSetupRehearsal()"><b>1</b><strong>Start setup demo</strong><span>Generate demo players and motion before the real stream connects.</span></button>
         <button type="button" class="launch-action locked" data-launch-action="copy" onclick="copySetupOverlayUrl()"><b>2</b><strong>Copy setup source</strong><span>Paste the signed setup browser source into TikTok Studio.</span></button>
         <button type="button" class="launch-action locked" data-launch-action="source" onclick="openSetupOverlay()"><b>3</b><strong>Open source</strong><span>Confirm the source is visible and connected.</span></button>
         <button type="button" class="launch-action locked" data-launch-action="test" onclick="testOverlayBurst()"><b>4</b><strong>Send test event</strong><span>Preview chat, likes, gifts, and battle effects.</span></button>
@@ -838,6 +848,8 @@ let activeSponsorBreakId = '';
 let sponsorFileObjectUrl = '';
 let sponsorUploadProbe = null;
 let sessionStatusData = null;
+const dashboardParams = new URLSearchParams(window.location.search);
+const initialWelcomeMode = dashboardParams.get('welcome') === '1';
 const dashboardState = {
   socketConnected: false,
   tiktokConnected: false,
@@ -861,6 +873,8 @@ const dashboardState = {
   planLabel: 'Checking',
   overlayUrlCopied: false,
   overlayTested: false,
+  setupPreviewOpened: false,
+  welcomeMode: initialWelcomeMode,
   eventStarted: false,
   backgroundFit: 'contain',
 };
@@ -886,11 +900,18 @@ function initDashboardWorkflows() {
   });
 }
 function initBetaFeatureVisibility() {
-  const params = new URLSearchParams(window.location.search);
+  const params = dashboardParams;
   const enabled = params.get('overlay_v2') === '1' || localStorage.getItem(OVERLAY_V2_BETA_KEY) === '1';
   document.querySelectorAll('[data-beta-feature="overlay-v2"]').forEach(el => {
     el.hidden = !enabled;
   });
+}
+function syncWelcomeSetupPanel() {
+  const panel = document.getElementById('welcomeSetupPanel');
+  if (!panel) return;
+  const setupIncomplete = !dashboardState.tiktokConnected && !dashboardState.overlayConnected && !dashboardState.overlayTested && !dashboardState.eventStarted;
+  panel.hidden = !(dashboardState.welcomeMode || setupIncomplete);
+  document.body.classList.toggle('dashboard-welcome-mode', !panel.hidden);
 }
 function setWorkflowStatus(id, label, state = 'warn') {
   const el = document.getElementById(id);
@@ -996,12 +1017,19 @@ function renderNextAction() {
   let actions = [];
   if (!currentOverlayUrl && !currentSetupOverlayUrl) {
     titleText = 'Signed overlay URL is loading';
-    copyText = 'Wait a moment for the dashboard to receive a room-safe OBS URL.';
+    copyText = 'Wait a moment for the Command Center to receive a room-safe OBS URL.';
     actions = [{ label: 'Refresh Status', className: 'btn btn-secondary', onClick: fetchStatus }];
   } else if (!dashboardState.setupRehearsalActive && !dashboardState.overlayTested) {
     titleText = 'Start the setup demo first';
     copyText = 'This creates activity in the overlay before TikTok connects, so the browser source can be positioned with confidence.';
     actions = [{ label: 'Start Setup Demo', className: 'btn btn-primary', onClick: startSetupRehearsal }];
+  } else if (dashboardState.setupRehearsalActive && !dashboardState.setupPreviewOpened) {
+    titleText = 'Open the signed setup preview';
+    copyText = 'Demo players are running now. Open the setup source or copy it into OBS/TikTok Studio before connecting the real stream.';
+    actions = [
+      { label: 'Open Setup Preview', className: 'btn btn-primary', onClick: openSetupOverlay },
+      { label: 'Copy Setup URL', className: 'btn btn-secondary', onClick: copySetupOverlayUrl },
+    ];
   } else if (!dashboardState.overlayUrlCopied) {
     titleText = 'Copy the OBS browser-source URL';
     copyText = 'Paste the signed URL into TikTok Studio or OBS as a browser source.';
@@ -1011,7 +1039,7 @@ function renderNextAction() {
     ];
   } else if (!dashboardState.overlayConnected) {
     titleText = 'Open or activate the overlay source';
-    copyText = 'The dashboard has not seen a browser source connect yet. Open the setup demo or refresh the source in TikTok Studio.';
+    copyText = 'The Command Center has not seen a browser source connect yet. Open the setup demo or refresh the source in TikTok Studio.';
     actions = [
       { label: 'Open Setup', className: 'btn btn-primary', onClick: openSetupOverlay },
       { label: 'Open Live Overlay', className: 'btn btn-secondary', onClick: openOverlay },
@@ -1188,7 +1216,7 @@ function applyStreamModeStatus(data = {}) {
   dashboardState.testPlayerCount = Number(data.testPlayerCount) || dashboardState.testPlayerCount || 0;
   dashboardState.lastStreamEventAt = data.lastStreamEventAt || dashboardState.lastStreamEventAt;
   text('streamModeLabel', data.label || 'Checking stream mode');
-  text('streamModeDetail', data.detail || 'The dashboard is checking stream status.');
+  text('streamModeDetail', data.detail || 'The Command Center is checking stream status.');
   const pill = document.getElementById('streamModePill');
   if (pill) {
     pill.className = modePillClass(mode);
@@ -1275,7 +1303,7 @@ function setSocketStatus(status) {
   if (!chip || !label) return;
   if (status === 'connected') {
     chip.className = 'chip live';
-    label.textContent = 'Dashboard online';
+    label.textContent = 'Command Center online';
   } else if (status === 'error') {
     chip.className = 'chip offline';
     label.textContent = 'Server issue';
@@ -1450,6 +1478,7 @@ function updateSetupChecklist() {
         : 'Connect TikTok after setup',
     },
   ];
+  syncWelcomeSetupPanel();
   list.innerHTML = steps.map(step => setupStep(step.title, step.detail, step.ready)).join('');
   renderNextAction();
   updateDashboardProgressLocks();
@@ -1852,7 +1881,7 @@ async function fetchStatus() {
     socket.emit('register', { type: 'dashboard' });
     updateReadinessChecklist();
   } catch (_err) {
-    text('dashboard-summary', 'Dashboard status is temporarily unavailable.');
+    text('dashboard-summary', 'Command Center status is temporarily unavailable.');
     setSocketStatus(socket.connected ? 'connected' : 'error');
   }
 }
@@ -1911,14 +1940,17 @@ async function startSetupRehearsal() {
     currentSetupOverlayV2Url = result.overlayV2Url || currentSetupOverlayV2Url;
   }
   setSetupRehearsalStatus(result.setupRehearsal || { active: true });
+  dashboardState.setupPreviewOpened = false;
   dashboardState.overlayTested = true;
   updateSetupChecklist();
-  toast('Setup demo started. Open or copy the setup URL next.');
+  toast('Setup demo started. Open the signed setup preview next.');
 }
 function openSetupOverlay() {
   const url = setupOverlayUrl();
   if (!url) return toast('Setup demo URL is still loading', true);
   window.open(url, '_blank');
+  dashboardState.setupPreviewOpened = true;
+  updateSetupChecklist();
   toast('Opened signed setup demo');
 }
 function copySetupOverlayUrl() {
@@ -1935,12 +1967,13 @@ async function resetSetupRehearsal() {
   if (!result.success) return;
   setSetupRehearsalStatus(result.setupRehearsal || { active: false });
   dashboardState.overlayTested = false;
+  dashboardState.setupPreviewOpened = false;
   dashboardState.playerCount = 0;
   dashboardState.demoPlayerCount = 0;
   dashboardState.testPlayerCount = 0;
   text('player-count', '0');
   renderPlayerRoster({ players: [], count: 0, bySource: { real: dashboardState.realPlayerCount, demo: 0, test: 0 } });
-  toast('Setup demo reset');
+  toast('Setup demo reset. Demo players are cleared; real stream state is unchanged.');
 }
 function copyOverlayV2SourceUrl(render = '1080p') {
   const url = overlayV2VariantUrl(render, true);
@@ -2478,6 +2511,7 @@ dropZone.addEventListener('drop', e=>{ e.preventDefault(); dropZone.classList.re
 fetch('/api/audio').then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData=d.library || []; audioConfigData=d.config || {}; renderAudioLibrary(); renderAssignTable(); }}).catch(()=>{});
 initDashboardWorkflows();
 initBetaFeatureVisibility();
+syncWelcomeSetupPanel();
 fetchStatus(); fetchSubscriptionStatus(); setInterval(fetchStatus,10000); setInterval(fetchSubscriptionStatus,60000); setInterval(tickSessionClock,1000);
 </script>
 </body>

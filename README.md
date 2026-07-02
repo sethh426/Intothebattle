@@ -1,6 +1,6 @@
 # Intothebattle / TIKTOKBR
 
-A TikTok LIVE interactive battle overlay platform. Intothebattle turns TikTok LIVE chat activity into a real-time PvP battle experience with overlay visuals, streamer dashboard controls, room-based configuration, subscriptions, and live game state updates.
+A TikTok LIVE interactive battle overlay platform. Intothebattle turns TikTok LIVE chat activity into a real-time PvP battle experience with overlay visuals, Command Center controls, room-based configuration, subscriptions, and live game state updates.
 
 ## Current Project Status
 
@@ -27,7 +27,7 @@ Core product areas:
 - TikTok LIVE event ingestion.
 - Real-time Socket.IO broadcasting.
 - Canvas/overlay battle display.
-- Streamer dashboard controls.
+- Command Center controls.
 - Room-based overlay configuration.
 - Background and audio uploads.
 - Trial, access-code, paywall, and PayPal subscription flows.
@@ -190,7 +190,7 @@ With those tools available, uploaded sponsor videos are normalized to MP4 H.264/
 
 ### Company Growth Outbox
 
-The app includes an admin-only company growth workflow at `/admin/marketing`. It is for IntoTheBattle-owned sales channels and outreach, not streamer accounts or creator dashboard controls. It generates daily SEO and UTM-tagged post drafts from public site pages, then requires approval before anything can be published. Live publishing is intentionally disabled unless all of these are true:
+The app includes an admin-only company growth workflow at `/admin/marketing`. It is for IntoTheBattle-owned sales channels and outreach, not streamer accounts or Command Center controls. It generates daily SEO and UTM-tagged post drafts from public site pages, then requires approval before anything can be published. Live publishing is intentionally disabled unless all of these are true:
 
 ```text
 MARKETING_AUTOMATION_ENABLED=true
@@ -325,7 +325,7 @@ Protected creator pages:
 
 ```text
 GET /dashboard
-GET /dashboard/welcome
+GET /dashboard/welcome (compatibility redirect to /dashboard?welcome=1)
 GET /stats
 GET /profile
 ```

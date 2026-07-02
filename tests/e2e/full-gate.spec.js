@@ -44,6 +44,9 @@ test('@cross-browser marketing, auth, and conversion pages keep semantic structu
   let errors = await gotoWatched(page, '/signup', testInfo, page => page.getByRole('main'), 'signup-conversion');
   await expect(page.getByRole('heading', { name: /Launch your first battle overlay/i })).toBeVisible();
   await expect(page.getByRole('link', { name: /Start free with Google/i })).toBeVisible();
+  await expect(page.locator('#googleSignupLink')).toHaveAttribute('href', '/auth/google?next=%2Fdashboard%3Fwelcome%3D1');
+  await expect(page.locator('#emailSignupLink')).toHaveAttribute('href', '/register?next=%2Fdashboard%3Fwelcome%3D1');
+  await expect(page.locator('#loginLink')).toHaveAttribute('href', '/login?next=%2Fdashboard%3Fwelcome%3D1');
   await expect(page.getByText('Open setup preview, copy the source, and test the battle.')).toBeVisible();
   await expect(page.getByText('Free means you can create and test the battle overlay.')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Create creator account' })).toMatchAriaSnapshot(`
@@ -57,21 +60,26 @@ test('@cross-browser marketing, auth, and conversion pages keep semantic structu
   errors = await gotoWatched(page, '/paywall', testInfo, page => page.getByRole('main'), 'paywall-conversion');
   await expect(page.getByRole('heading', { name: /Upgrade only when you need custom brand control/i })).toBeVisible();
   await expect(page.getByText('The battle overlay can be tested before you pay.')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Back to dashboard/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Back to Command Center/i })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Creator Pro subscription' })).toMatchAriaSnapshot(`
     - region "Creator Pro subscription":
       - button /Log in to upgrade|Continue to PayPal/
-      - button /Back to dashboard/
+      - button /Back to Command Center/
       - link /Contact support/
   `);
   await expectNoPageErrors(errors, testInfo, 'paywall');
 
   errors = await gotoWatched(page, '/login', testInfo, page => page.locator('#accountLoginForm'), 'login');
   await expect(page.getByRole('heading', { name: /Enter your command center/i })).toBeVisible();
+  await expect(page.locator('#googleLoginBtn')).toHaveAttribute('href', '/auth/google?next=%2Fdashboard');
   await expect(page.getByLabel('Email address')).toBeVisible();
   await expect(page.getByLabel('Password')).toBeVisible();
   await expect(page.getByRole('button', { name: /^Sign in$/i })).toBeVisible();
   await expectNoPageErrors(errors, testInfo, 'login');
+
+  errors = await gotoWatched(page, '/register', testInfo, page => page.locator('#registerBtn'), 'register');
+  await expect(page.locator('.google-option a')).toHaveAttribute('href', '/auth/google?next=%2Fdashboard%3Fwelcome%3D1');
+  await expectNoPageErrors(errors, testInfo, 'register');
 });
 
 test('@cross-browser sponsor page keeps the partner story inspectable', async ({ page }, testInfo) => {
@@ -92,8 +100,13 @@ test('@cross-browser sponsor page keeps the partner story inspectable', async ({
 
 test('@cross-browser authenticated dashboard exposes real creator controls', async ({ context, page }, testInfo) => {
   await addAuthCookie(context, harness);
-  const errors = await gotoWatched(page, '/dashboard', testInfo, page => page.getByRole('heading', { name: 'IntoTheBattle Command Center' }), 'dashboard-command-center');
+  const welcomeRedirect = await context.request.get(`${harness.baseUrl}/dashboard/welcome`, { maxRedirects: 0 });
+  expect(welcomeRedirect.status()).toBe(302);
+  expect(welcomeRedirect.headers().location).toBe('/dashboard?welcome=1');
 
+  const errors = await gotoWatched(page, '/dashboard?welcome=1', testInfo, page => page.getByRole('heading', { name: 'IntoTheBattle Command Center' }), 'dashboard-command-center');
+
+  await expect(page.getByTestId('welcome-setup-panel')).toBeVisible();
   await expect(page.locator('#subscription-chip')).toBeVisible();
   await expect(page.locator('#nextActionPanel')).toBeVisible();
   await expect(page.locator('#streamModeLabel')).toBeVisible();
@@ -105,7 +118,7 @@ test('@cross-browser authenticated dashboard exposes real creator controls', asy
   await expect(page.getByRole('button', { name: 'Boss Wave' })).toBeVisible();
   await expect(page.locator('[data-beta-feature="overlay-v2"]')).toBeHidden();
   await expect(page.locator('#launchActionGrid')).toMatchAriaSnapshot(`
-    - button /Open setup preview/
+    - button /Start setup demo/
     - button /Copy setup source/
     - button /Open source/
     - button /Send test event/
@@ -114,7 +127,7 @@ test('@cross-browser authenticated dashboard exposes real creator controls', asy
   `);
   await expect(page.locator('#setupChecklistCard')).toMatchAriaSnapshot(`
     - heading "Get live without guessing."
-    - button /Open setup preview/
+    - button /Start setup demo/
     - button /Copy setup source/
     - button /Open source/
   `);
@@ -154,6 +167,9 @@ test('@dashboard setup rehearsal changes demo state and then resets toward real 
     await expect(page.locator('#streamModeDetail')).toContainText('Demo events are running');
     await expect(page.locator('#streamModePill')).toContainText('Setup Demo');
     await expect(page.locator('#playerSourceCounts')).toContainText(/Demo [1-9]/);
+    await expect(page.locator('#nextActionPanel')).toContainText('Open the signed setup preview');
+    await expect(page.locator('#nextActionButtons').getByRole('button', { name: 'Open Setup Preview' })).toBeVisible();
+    await expect(page.locator('#nextActionButtons').getByRole('button', { name: 'Copy Setup URL' })).toBeVisible();
   });
 
   await test.step('reset clears demo state without pretending real stream players exist', async () => {

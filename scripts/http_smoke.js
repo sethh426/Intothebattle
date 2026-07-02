@@ -103,6 +103,9 @@ try {
   const dashboard = await expectStatus('/dashboard', 302);
   assert((dashboard.headers.get('location') || '').startsWith('/login'), '/dashboard should redirect to /login');
 
+  const dashboardWelcome = await expectStatus('/dashboard/welcome', 302);
+  assert((dashboardWelcome.headers.get('location') || '').startsWith('/login'), '/dashboard/welcome should redirect to /login when signed out');
+
   const profile = await expectStatus('/profile', 302);
   assert((profile.headers.get('location') || '').startsWith('/login'), '/profile should redirect to /login');
 

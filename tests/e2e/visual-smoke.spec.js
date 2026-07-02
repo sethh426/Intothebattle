@@ -181,8 +181,9 @@ test('profile redirects unauthenticated users to login', async ({ page }, testIn
 test('dashboard renders with E2E auth fixture', async ({ context, page }, testInfo) => {
   await context.addCookies([{ name: 'session_token', value: e2eSessionToken, url: baseUrl }]);
   const errors = await watchPage(page);
-  await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${baseUrl}/dashboard?welcome=1`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByText('IntoTheBattle Command Center')).toBeVisible();
+  await expect(page.getByTestId('welcome-setup-panel')).toBeVisible();
   await expect(page.locator('#subscription-chip')).toBeVisible();
   await expect(page.locator('#nextActionPanel')).toBeVisible();
   await expect(page.locator('#backgroundFitInput')).toBeAttached();

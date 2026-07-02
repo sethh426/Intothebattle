@@ -25,12 +25,14 @@ function getGoogleRedirectUri() {
   return `${base.replace(/\/$/, '')}/auth/google/callback`;
 }
 
-function createOAuthState(nextPath = '/dashboard/welcome') {
+const DEFAULT_ONBOARDING_REDIRECT = '/dashboard?welcome=1';
+
+function createOAuthState(nextPath = DEFAULT_ONBOARDING_REDIRECT) {
   return jwt.sign(
     {
       purpose: 'google_oauth',
       nonce: crypto.randomBytes(16).toString('hex'),
-      next: safeRedirectPath(nextPath, '/dashboard/welcome'),
+      next: safeRedirectPath(nextPath, DEFAULT_ONBOARDING_REDIRECT),
     },
     process.env.JWT_SECRET,
     { expiresIn: '10m' }
@@ -845,7 +847,7 @@ router.get('/auth/user/register-challenge', (req, res) => {
 router.post('/auth/user/register', registrationLimiter, express.json(), async (req, res) => {
   const captchaToken = String(req.body.captchaToken || '').trim();
   const captchaAnswer = String(req.body.captchaAnswer || '').trim();
-  const redirectUrl = safeRedirectPath(req.body.next, '/dashboard/welcome');
+  const redirectUrl = safeRedirectPath(req.body.next, DEFAULT_ONBOARDING_REDIRECT);
   if (!verifyRegistrationChallenge(captchaToken, captchaAnswer)) {
     return res.status(400).json({ success: false, error: 'Please complete the registration security check correctly.' });
   }
@@ -1017,7 +1019,7 @@ router.get('/auth/google/callback', async (req, res) => {
       return res.status(400).send('Invalid Google OAuth state.');
     }
     const statePayload = getOAuthStatePayload(String(state));
-    const redirectUrl = safeRedirectPath(statePayload?.next, '/dashboard/welcome');
+    const redirectUrl = safeRedirectPath(statePayload?.next, DEFAULT_ONBOARDING_REDIRECT);
 
     const clientId = getGoogleClientId();
     const clientSecret = getGoogleClientSecret();

@@ -143,7 +143,7 @@ test.beforeAll(async () => {
       ENABLE_ROOM_SCOPED: 'true',
       SKIP_DB: 'true',
       DEV_TEST_MODE: 'true',
-      SPONSOR_TRANSCODE_ENABLED: 'false',
+      SPONSOR_TRANSCODE_ENABLED: 'true',
       DISK_PATH: diskPath,
       APP_BASE_URL: baseUrl,
       E2E_SESSION_TOKEN: e2eSessionToken,
@@ -253,11 +253,17 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
   expect(geometry.bottom).toBeLessThanOrEqual(geometry.viewport.height);
   expect(geometry.width).toBeGreaterThanOrEqual(Math.min(240, geometry.viewport.width * 0.6));
   expect(geometry.width).toBeLessThanOrEqual(geometry.viewport.width * 0.86);
-  const compactBanner = geometry.className.includes('is-nano') || geometry.metaHeight === 0 || geometry.height < 44;
-  if (compactBanner) {
+  const nanoBanner = geometry.className.includes('is-nano');
+  const smallBanner = nanoBanner || geometry.height < 44;
+  if (smallBanner) {
     expect(geometry.height).toBeGreaterThanOrEqual(26);
     expect(geometry.height).toBeLessThanOrEqual(36);
-    expect(geometry.metaHeight).toBe(0);
+    if (nanoBanner) {
+      expect(geometry.metaHeight).toBe(0);
+    } else {
+      expect(geometry.metaHeight).toBeGreaterThan(4);
+      expect(geometry.metaHeight).toBeLessThanOrEqual(10);
+    }
   } else {
     expect(geometry.height).toBeGreaterThanOrEqual(44);
     expect(geometry.metaHeight).toBeGreaterThan(6);
@@ -313,7 +319,11 @@ test('creator pro sponsor video upload, serving, and v1 overlay playback work to
   });
   const upload = await parseJsonResponse(uploadResponse);
   expect(upload.success).toBe(true);
-  expect(upload.file?.filename).toMatch(/\.webm$/);
+  expect(upload.file?.filename).toMatch(/-normalized\.mp4$/);
+  expect(upload.file?.originalName).toBe('qa-sponsor.webm');
+  expect(upload.file?.mimeType).toBe('video/mp4');
+  expect(upload.file?.normalized).toBe(true);
+  expect(upload.file?.processingStatus).toBe('normalized');
   expect(upload.file?.readinessStatus).toBe('ready');
   const filename = upload.file.filename;
 
@@ -329,7 +339,7 @@ test('creator pro sponsor video upload, serving, and v1 overlay playback work to
 
   const fullMediaResponse = await context.request.get(mediaUrl(filename));
   expect(fullMediaResponse.status()).toBe(200);
-  expect(fullMediaResponse.headers()['content-type']).toContain('video/webm');
+  expect(fullMediaResponse.headers()['content-type']).toContain('video/mp4');
   const etag = fullMediaResponse.headers().etag;
   expect(etag).toBeTruthy();
   const cachedMediaResponse = await context.request.get(mediaUrl(filename), { headers: { 'If-None-Match': etag } });

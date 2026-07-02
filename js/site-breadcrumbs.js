@@ -11,8 +11,7 @@ const ROUTES = new Map([
   ['/site-map', 'Site Map'],
   ['/paywall', 'Creator Pro'],
   ['/profile', 'Profile'],
-  ['/dashboard', 'Dashboard'],
-  ['/dashboard/welcome', 'Welcome'],
+  ['/dashboard', 'Command Center'],
   ['/stats', 'Stats'],
 ]);
 
@@ -30,13 +29,6 @@ function labelForPath(pathname) {
 function buildTrail(pathname) {
   const path = normalizePath(pathname);
   if (path === '/' || path === '/home') return [];
-  if (path === '/dashboard/welcome') {
-    return [
-      { href: '/', label: 'Home' },
-      { href: '/dashboard', label: 'Dashboard' },
-      { href: path, label: 'Welcome', current: true },
-    ];
-  }
   return [
     { href: '/', label: 'Home' },
     { href: path, label: labelForPath(path), current: true },
