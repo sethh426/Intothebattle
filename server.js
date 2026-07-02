@@ -36,6 +36,7 @@ import { buildUploadDecision, getStorageUsage, uploadLimitBytes } from './tiktok
 import { growthIntegrationDiagnostics, syncLeadToGrowthApis } from './tiktokbr/services/growthIntegrations.js';
 import { marketingAutomationDiagnostics, publishApprovedMarketingPosts, recordMarketingVisit } from './tiktokbr/services/marketingAutomation.js';
 import { getBlogPostBySlug, listBlogPosts } from './tiktokbr/services/blogEngine.js';
+import { extractIconEmojiCommand } from './tiktokbr/services/chatCommands.js';
 import {
   getOrCreateRoom,
   getRoom,
@@ -1250,7 +1251,7 @@ function topSessionPlayers(room, limit = 5) {
 function viewerCommandText() {
   return [
     '!join - enter the arena',
-    '!emoji <symbol> - change your fighter icon',
+    '!emoji <symbol> or !<emoji> - change your fighter icon',
     '!shield - reduce incoming damage',
     '!heal @name - restore a fighter',
     '!laser @name - quick cyber attack',
@@ -4096,12 +4097,6 @@ function parseAttackCommand(text = '') {
 // ────────────────────────────────
 // REWRITTEN handleMentionAttack
 // ────────────────────────────────
-function sanitizeIconEmoji(value = '') {
-  const token = String(value || '').trim().split(/\s+/)[0] || '';
-  const cleaned = token.replace(/[<>{}[\]\\]/g, '').trim();
-  return Array.from(cleaned).slice(0, 4).join('');
-}
-
 function healPlayer(room, targetId, amount) {
   const player = room.players[targetId];
   if (!player) return 0;
@@ -4346,10 +4341,9 @@ function handlePlayerUtilityCommand(room, playerId, nickname, comment) {
   const text = String(comment || '').trim();
   if (!text) return { handled: false, stop: false };
 
-  const emojiMatch = text.match(/^\s*(?:!|\/)?emoji\s+(.+)/i);
-  if (emojiMatch) {
+  const iconEmoji = extractIconEmojiCommand(text);
+  if (iconEmoji) {
     if (!room.players[playerId]?.alive) spawnPlayer(room, playerId, nickname);
-    const iconEmoji = sanitizeIconEmoji(emojiMatch[1]);
     if (room.players[playerId] && iconEmoji) {
       room.players[playerId].iconEmoji = iconEmoji;
       room.players[playerId].forceSpawn = true;
@@ -4362,7 +4356,7 @@ function handlePlayerUtilityCommand(room, playerId, nickname, comment) {
         message: `${nickname} changed their fighter icon`,
       });
     }
-    return { handled: true, stop: true };
+    return { handled: true, stop: true, reason: `emoji ${iconEmoji}` };
   }
 
   const commandMatch = text.match(/^\s*(?:!|\/)?(join|spawn|play|help|commands|team|heal|shield|guard|block)\b(?:\s+(.+))?/i);
@@ -7161,24 +7155,6 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
     if (utilityCommand.handled) console.log(`Player command from @${nickname}: ${utilityCommand.reason || comment}`);
     if (utilityCommand.stop) {
       emitRoomEvent(room, 'gameState', room.players);
-      return;
-    }
-
-    const iconMatch = comment.match(/^\s*(?:!emoji|\/emoji|emoji)\s+(.+)/i);
-    if (iconMatch) {
-      const requestedIcon = String(iconMatch[1]).trim().split(/\s+/)[0];
-      const topPlayers = getTopPlayers(room, 5).map(p => p.uniqueId);
-      if (topPlayers.includes(id)) {
-        if (!room.players[id]) spawnPlayer(room, id, nickname);
-        if (room.players[id]) {
-          room.players[id].iconEmoji  = requestedIcon || room.players[id].iconEmoji || '💎';
-          room.players[id].lastActive = Date.now();
-          emitRoomEvent(room, 'gameState', room.players);
-          console.log(`🎭 @${nickname} updated icon emoji to ${room.players[id].iconEmoji}`);
-        }
-      } else {
-        console.log(`⚠️ @${nickname} is not in the top 5 and cannot change icon emoji`);
-      }
       return;
     }
 

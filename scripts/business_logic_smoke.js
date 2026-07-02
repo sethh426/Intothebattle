@@ -11,6 +11,7 @@ import {
   localStatusForPayPalWebhookEvent,
   normalizePayPalSubscriptionStatus,
 } from '../tiktokbr/services/billingPolicy.js';
+import { extractIconEmojiCommand } from '../tiktokbr/services/chatCommands.js';
 import { buildLaunchReadinessReport } from '../tiktokbr/services/launchReadiness.js';
 import { evaluateSponsorMediaQuality } from '../tiktokbr/sponsorMediaProcessor.js';
 
@@ -155,6 +156,21 @@ function testBillingPolicy() {
   assert.equal(isSubscriptionAccessBlocked('pending'), false);
 }
 
+function testChatIconCommands() {
+  assert.equal(extractIconEmojiCommand('!🌟'), '🌟');
+  assert.equal(extractIconEmojiCommand('!emoji🔱'), '🔱');
+  assert.equal(extractIconEmojiCommand('!emoji 🔱'), '🔱');
+  assert.equal(extractIconEmojiCommand('/emoji 🔱'), '🔱');
+  assert.equal(extractIconEmojiCommand('  !emoji   🔱  extra text'), '🔱');
+
+  assert.equal(extractIconEmojiCommand('🌟'), '');
+  assert.equal(extractIconEmojiCommand('emoji 🔱'), '');
+  assert.equal(extractIconEmojiCommand('!emoji'), '');
+  assert.equal(extractIconEmojiCommand('!emojifoo'), '');
+  assert.equal(extractIconEmojiCommand('!join'), '');
+  assert.equal(extractIconEmojiCommand('!shield'), '');
+}
+
 function testSponsorMediaQualityGate() {
   const tools = { ffmpegAvailable: false, ffprobeAvailable: true };
   const goodMp4 = evaluateSponsorMediaQuality({
@@ -219,6 +235,7 @@ function testLaunchReadinessSponsorMediaGate() {
 
 testEntitlements();
 testBillingPolicy();
+testChatIconCommands();
 testSponsorMediaQualityGate();
 testLaunchReadinessSponsorMediaGate();
 console.log('Business logic smoke checks passed');
