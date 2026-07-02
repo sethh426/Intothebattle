@@ -113,11 +113,11 @@ jobs:
       - name: Socket.IO room smoke tests
         run: npm run test:socket
 
-      - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox webkit
 
-      - name: Playwright visual smoke tests
-        run: npm run test:e2e
+      - name: Playwright full confidence gate
+        run: npm run test:e2e:full
 
       - name: Upload Playwright artifacts
         if: always()
@@ -127,6 +127,8 @@ jobs:
           path: |
             playwright-report/
             test-results/playwright/
+            test-results/
+            tests/e2e/__screenshots__/
           if-no-files-found: ignore
 
       - name: Audit production dependencies

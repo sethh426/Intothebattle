@@ -1462,9 +1462,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 </head>
 <body>
 
-<div id="overlay-container">
-  <canvas id="canvas"></canvas>
-  <div id="sponsorScene" class="sponsor-scene" aria-hidden="true">
+<div id="overlay-container" data-testid="overlay-source-frame">
+  <canvas id="canvas" data-testid="overlay-canvas"></canvas>
+  <div id="sponsorScene" class="sponsor-scene" role="region" aria-label="Sponsor scene" aria-hidden="true" data-testid="sponsor-scene">
     <video id="sponsorVideo" playsinline preload="metadata"></video>
     <div id="sponsorPoster" class="sponsor-poster" aria-hidden="true"></div>
     <div class="sponsor-intro" aria-hidden="true">
@@ -1664,6 +1664,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const sponsorScene = document.getElementById('sponsorScene');
   const sponsorVideo = document.getElementById('sponsorVideo');
   const sponsorPoster = document.getElementById('sponsorPoster');
+  const sponsorIntroLayer = sponsorScene?.querySelector('.sponsor-intro');
+  const sponsorLiveLayer = sponsorScene?.querySelector('.sponsor-live');
+  const sponsorOutroLayer = sponsorScene?.querySelector('.sponsor-outro');
   const sponsorIntroPartner = document.getElementById('sponsorIntroPartner');
   const sponsorDisclosure = document.getElementById('sponsorDisclosure');
   const sponsorBrand = document.getElementById('sponsorBrand');
@@ -1702,6 +1705,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   // ── State ──
   let players         = {};
   let attacks         = [];
+  let overlayVisualsFrozen = false;
   let layoutGap       = 0;
   let offsetX         = 0;
   let offsetY         = 0;
@@ -2421,6 +2425,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
   }
 
+  function currentSponsorMediaStatus() {
+    const status = sponsorVideoAgent.status(activeSponsorPayload || preparedSponsorPayload || {});
+    return {
+      ...status,
+      loadedVideoUrl: scrubOverlayUrl(status.loadedVideoUrl),
+      activeVideoUrl: scrubOverlayUrl(status.activeVideoUrl),
+      currentSrc: scrubOverlayUrl(status.currentSrc),
+    };
+  }
+
   function enqueueSponsorScenePayload(scenePayload) {
     if (!scenePayload) return currentSponsorSceneStatus();
     const key = sponsorQueueKey(scenePayload);
@@ -2459,6 +2473,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         sponsorScene.classList.add(nextState);
       }
     }
+    sponsorIntroLayer?.setAttribute('aria-hidden', nextState === 'intro' ? 'false' : 'true');
+    sponsorLiveLayer?.setAttribute('aria-hidden', nextState === 'live' ? 'false' : 'true');
+    sponsorOutroLayer?.setAttribute('aria-hidden', nextState === 'outro' ? 'false' : 'true');
   }
 
   function setSponsorMediaStatus(message, stateClass) {
@@ -2671,6 +2688,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       sponsorScene.classList.remove('active', 'intro', 'live', 'outro', 'contain', 'clock-running', 'clock-paused', 'stats-visible', 'stats-endcap', 'stats-overlay', 'stats-delayed');
       sponsorScene.setAttribute('aria-hidden', 'true');
     }
+    setSponsorSceneState('');
     document.body.classList.remove('sponsor-active');
     sponsorState = 'battle';
     activeSponsorPayload = null;
@@ -3020,6 +3038,22 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
   }
 
+  function freezeOverlayVisuals() {
+    overlayVisualsFrozen = true;
+    return {
+      frozen: true,
+      layout: window.__overlayLegacyLayout || null,
+      status: currentConnectionStatus(),
+    };
+  }
+
+  function resumeOverlayVisuals() {
+    if (!overlayVisualsFrozen) return { frozen: false };
+    overlayVisualsFrozen = false;
+    requestAnimationFrame(draw);
+    return { frozen: false };
+  }
+
   window.overlayEventEngine = {
     status: () => ({
       sponsorState,
@@ -3032,7 +3066,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       banner: currentBannerStatus(),
       visualQueue: currentVisualQueueStatus(),
       sponsor: currentSponsorSceneStatus(),
-      sponsorMedia: sponsorVideoAgent.status(activeSponsorPayload || preparedSponsorPayload || {}),
+      sponsorMedia: currentSponsorMediaStatus(),
       background: currentBackgroundStatus(),
       audio: currentAudioStatus(),
       motion: currentOverlayMotionStatus(),
@@ -3042,6 +3076,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       resetFrameHealth();
       return currentFrameHealthStatus();
     },
+    freezeVisuals: freezeOverlayVisuals,
+    resumeVisuals: resumeOverlayVisuals,
     flush: (lane = '') => {
       for (let i = visualEventQueue.length - 1; i >= 0; i -= 1) {
         if (!lane || visualEventQueue[i].lane === lane) visualEventQueue.splice(i, 1);
@@ -4100,7 +4136,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       filename,
       readyState: audio ? audio.readyState : 0,
       networkState: audio ? audio.networkState : 0,
-      currentSrc: audio ? audio.currentSrc || audio.src || '' : '',
+      currentSrc: scrubOverlayUrl(audio ? audio.currentSrc || audio.src || '' : ''),
       errorCode: audio?.error?.code || 0,
     }));
     return {
@@ -7874,7 +7910,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     drawArenaFrame();
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     if (sponsorState !== 'battle') renderSponsorStats();
-    requestAnimationFrame(draw);
+    if (!overlayVisualsFrozen) requestAnimationFrame(draw);
   }
 
   // ═══════════════════════════════════════

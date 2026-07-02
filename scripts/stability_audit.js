@@ -258,49 +258,53 @@ function checkOverlayModuleContracts() {
   if (!overlayHtml.includes('testEventStorm') || !overlayHtml.includes('runVisualEventStorm')) {
     addError('overlay.html is missing the deterministic visual event storm probe.');
   }
-  if (!readText('scripts/overlay_visual_audit.js').includes("emulateMedia({ reducedMotion: 'reduce' })")) {
+  const overlayVisualCoverageText = [
+    readText('scripts/overlay_visual_audit.js'),
+    readText('tests/e2e/visual-confidence.spec.js'),
+  ].join('\n');
+  if (!overlayVisualCoverageText.includes("emulateMedia({ reducedMotion: 'reduce' })")) {
     addError('Overlay visual audit no longer verifies reduced-motion rendering.');
   }
-  if (!readText('scripts/overlay_visual_audit.js').includes('testMotionImpact')) {
+  if (!overlayVisualCoverageText.includes('testMotionImpact')) {
     addError('Overlay visual audit no longer verifies reduced-motion canvas effects.');
   }
-  if (!readText('scripts/overlay_visual_audit.js').includes('assertSponsorMediaAgent')) {
+  if (!overlayVisualCoverageText.includes('assertSponsorMediaAgent')) {
     addError('Overlay visual audit no longer verifies sponsor video-agent wiring.');
   }
-  if (!readText('scripts/overlay_visual_audit.js').includes('assertConnectionStatus')) {
+  if (!overlayVisualCoverageText.includes('assertConnectionStatus')) {
     addError('Overlay visual audit no longer verifies overlay connection health.');
   }
-  if (!readText('scripts/overlay_visual_audit.js').includes('assertBackgroundStatus')) {
+  if (!overlayVisualCoverageText.includes('assertBackgroundStatus')) {
     addError('Overlay visual audit no longer verifies background asset health.');
   }
-  if (!readText('scripts/overlay_visual_audit.js').includes('auditBackgroundViewport')) {
+  if (!overlayVisualCoverageText.includes('auditBackgroundViewport')) {
     addError('Overlay visual audit no longer verifies background load/error/clear behavior.');
   }
   if (!readText('tests/e2e/v1-qa.spec.js').includes('connectionStatus')) {
     addError('V1 QA e2e no longer verifies signed overlay connection health.');
   }
-  if (!readText('scripts/overlay_visual_audit.js').includes('assertSponsorQueueHealth')) {
+  if (!overlayVisualCoverageText.includes('assertSponsorQueueHealth')) {
     addError('Overlay visual audit no longer verifies sponsor queue health.');
   }
-  if (!readText('scripts/overlay_visual_audit.js').includes('auditSponsorQueueViewport')) {
+  if (!overlayVisualCoverageText.includes('auditSponsorQueueViewport')) {
     addError('Overlay visual audit no longer verifies sponsor queue stress behavior.');
   }
-  if (!readText('scripts/overlay_visual_audit.js').includes('assertOverlayAudioStatus')) {
+  if (!overlayVisualCoverageText.includes('assertOverlayAudioStatus')) {
     addError('Overlay visual audit no longer verifies overlay audio preload/status.');
   }
-  if (!readText('scripts/overlay_visual_audit.js').includes('assertVisualQueueHealth')) {
+  if (!overlayVisualCoverageText.includes('assertVisualQueueHealth')) {
     addError('Overlay visual audit no longer verifies visual event queue health.');
   }
-  if (!readText('scripts/overlay_visual_audit.js').includes('assertEffectOwnership') || !readText('scripts/overlay_visual_audit.js').includes('auditEffectOwnershipViewport')) {
+  if (!overlayVisualCoverageText.includes('assertEffectOwnership') || !overlayVisualCoverageText.includes('auditEffectOwnershipViewport')) {
     addError('Overlay visual audit no longer verifies combat effect ownership.');
   }
-  if (!readText('scripts/overlay_visual_audit.js').includes('assertFrameHealth')) {
+  if (!overlayVisualCoverageText.includes('assertFrameHealth')) {
     addError('Overlay visual audit no longer verifies render frame health.');
   }
-  if (!readText('scripts/overlay_visual_audit.js').includes('assertBannerBacklog')) {
+  if (!overlayVisualCoverageText.includes('assertBannerBacklog')) {
     addError('Overlay visual audit no longer verifies banner backlog health.');
   }
-  if (!readText('scripts/overlay_visual_audit.js').includes('auditEventStormViewport')) {
+  if (!overlayVisualCoverageText.includes('auditEventStormViewport')) {
     addError('Overlay visual audit no longer verifies event-storm resilience.');
   }
 }

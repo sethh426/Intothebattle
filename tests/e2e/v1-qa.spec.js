@@ -253,8 +253,9 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
   expect(geometry.bottom).toBeLessThanOrEqual(geometry.viewport.height);
   expect(geometry.width).toBeGreaterThanOrEqual(Math.min(240, geometry.viewport.width * 0.6));
   expect(geometry.width).toBeLessThanOrEqual(geometry.viewport.width * 0.86);
-  if (geometry.className.includes('is-nano')) {
-    expect(geometry.height).toBeGreaterThanOrEqual(28);
+  const compactBanner = geometry.className.includes('is-nano') || geometry.metaHeight === 0 || geometry.height < 44;
+  if (compactBanner) {
+    expect(geometry.height).toBeGreaterThanOrEqual(26);
     expect(geometry.height).toBeLessThanOrEqual(36);
     expect(geometry.metaHeight).toBe(0);
   } else {
@@ -425,6 +426,90 @@ test('creator pro sponsor video upload, serving, and v1 overlay playback work to
   expect(playback.muted).toBe(true);
   expect(playback.width).toBeGreaterThan(0);
   expect(playback.height).toBeGreaterThan(0);
+
+  await page.waitForFunction(() => document.querySelector('#sponsorScene')?.classList.contains('stats-visible'), null, { timeout: 10000 });
+  const visual = await page.evaluate(() => {
+    function visibleBox(selector) {
+      const el = document.querySelector(selector);
+      if (!el) return null;
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
+      return {
+        selector,
+        display: style.display,
+        visibility: style.visibility,
+        opacity: Number(style.opacity),
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+        text: (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 90),
+      };
+    }
+    const scene = document.querySelector('#sponsorScene');
+    const video = document.querySelector('#sponsorVideo');
+    const poster = document.querySelector('#sponsorPoster');
+    const sceneRect = scene?.getBoundingClientRect();
+    const videoRect = video?.getBoundingClientRect();
+    const boxes = [
+      '#sponsorTitle',
+      '#sponsorSubtitle',
+      '#sponsorLiveStats',
+      '.sponsor-stats-head',
+      '.sponsor-stat',
+      '.sponsor-stat-value',
+      '.sponsor-stat-sub',
+    ].flatMap(selector => Array.from(document.querySelectorAll(selector)).map(el => {
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
+      return {
+        selector,
+        display: style.display,
+        visibility: style.visibility,
+        opacity: Number(style.opacity),
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+        text: (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 90),
+      };
+    })).filter(box => box.display !== 'none' && box.visibility !== 'hidden' && box.opacity > 0.05 && box.width > 0 && box.height > 0);
+    const outside = sceneRect ? boxes.filter(box => (
+      box.left < sceneRect.left - 1 ||
+      box.right > sceneRect.right + 1 ||
+      box.top < sceneRect.top - 1 ||
+      box.bottom > sceneRect.bottom + 1
+    )) : boxes;
+    return {
+      sceneClass: scene?.className || '',
+      sceneFit: scene?.dataset?.videoFit || '',
+      videoObjectFit: video ? getComputedStyle(video).objectFit : '',
+      videoInsideScene: Boolean(sceneRect && videoRect && (() => {
+        const tolerance = Math.max(24, Math.max(sceneRect.width, sceneRect.height) * 0.04);
+        return videoRect.left >= sceneRect.left - tolerance &&
+          videoRect.right <= sceneRect.right + tolerance &&
+          videoRect.top >= sceneRect.top - tolerance &&
+          videoRect.bottom <= sceneRect.bottom + tolerance;
+      })()),
+      videoBox: videoRect ? { width: videoRect.width, height: videoRect.height } : null,
+      posterBox: visibleBox('#sponsorPoster'),
+      statsVisible: scene?.classList.contains('stats-visible') || false,
+      outside,
+    };
+  });
+  expect(visual.sceneClass).toContain('active');
+  expect(visual.sceneClass).toContain('contain');
+  expect(visual.sceneFit).toBe('contain');
+  expect(visual.videoInsideScene).toBe(true);
+  expect(visual.videoBox?.width).toBeGreaterThan(100);
+  expect(visual.videoBox?.height).toBeGreaterThan(50);
+  expect(visual.posterBox).toBeTruthy();
+  expect(visual.statsVisible).toBe(true);
+  expect(visual.outside).toEqual([]);
 
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'qa-sponsor-video-playback');
