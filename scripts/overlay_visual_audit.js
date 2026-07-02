@@ -192,6 +192,8 @@ async function assertSponsorSceneFits(page, label, options = {}) {
     const scene = document.getElementById('sponsorScene');
     if (!scene) return { missing: true };
     const sceneRect = scene.getBoundingClientRect();
+    const statsEl = document.getElementById('sponsorLiveStats');
+    const statsRect = statsEl?.getBoundingClientRect();
     const selectors = [
       '#sponsorDisclosure',
       '#sponsorBrand',
@@ -222,6 +224,22 @@ async function assertSponsorSceneFits(page, label, options = {}) {
       }
     }
 
+    const offCenterText = [];
+    for (const selector of ['.sponsor-stats-head', '.sponsor-stat', '.sponsor-stat-label', '.sponsor-stat-value', '.sponsor-stat-sub']) {
+      for (const el of document.querySelectorAll(`#sponsorLiveStats ${selector}`)) {
+        const rect = el.getBoundingClientRect();
+        if (effectiveOpacity(el) <= 0.05 || rect.width === 0 || rect.height === 0) continue;
+        const style = getComputedStyle(el);
+        if (style.textAlign !== 'center') {
+          offCenterText.push({
+            selector,
+            textAlign: style.textAlign,
+            text: (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 80),
+          });
+        }
+      }
+    }
+
     const outside = boxes.filter(item => (
       item.left < sceneRect.left - 1 ||
       item.right > sceneRect.right + 1 ||
@@ -233,8 +251,11 @@ async function assertSponsorSceneFits(page, label, options = {}) {
       sceneClass: scene.className,
       stageClass: document.getElementById('overlay-container')?.className || '',
       outside,
+      offCenterText,
       visibleCount: boxes.length,
-      hasStats: Boolean(document.querySelector('#sponsorLiveStats')?.getBoundingClientRect().height),
+      hasStats: Boolean(statsRect?.height),
+      statsCenterDelta: statsRect ? Math.abs((statsRect.left + statsRect.width / 2) - (sceneRect.left + sceneRect.width / 2)) : null,
+      sceneWidth: sceneRect.width,
     };
   });
 
@@ -244,6 +265,8 @@ async function assertSponsorSceneFits(page, label, options = {}) {
   assert(result.hasStats, `${label} sponsor stats have no visible box`);
   assert(result.visibleCount >= (options.minVisibleCount ?? 5), `${label} sponsor scene has too few visible elements: ${JSON.stringify(result)}`);
   assert(result.outside.length === 0, `${label} sponsor elements escaped frame: ${JSON.stringify(result.outside)}`);
+  assert(result.statsCenterDelta != null && result.statsCenterDelta <= Math.max(2, result.sceneWidth * 0.01), `${label} sponsor stats are not centered: ${JSON.stringify(result)}`);
+  assert(result.offCenterText.length === 0, `${label} sponsor stats text is not centered: ${JSON.stringify(result.offCenterText)}`);
 }
 
 async function assertSponsorMediaAgent(page, label) {
