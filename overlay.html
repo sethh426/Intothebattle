@@ -7998,14 +7998,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function handleGiftAttackEvent(data) {
     if (!data) return;
-    const forcedEffect = normalizeEffectType(overlaySettings.shotType);
-    const fired = fireAttack(data.attacker, data.target, data.damage, data.killed, true, forcedEffect, {
+    const giftEffect = normalizeEffectType(data.effect || data.commandDescription || data.shotType || overlaySettings.shotType);
+    const fired = fireAttack(data.attacker, data.target, data.damage, data.killed, true, giftEffect, {
       intensity: data.intensity || 0.5, giftBoosted: true,
       remainingHpPct: data.killed ? 0 : 1,
       killingBlow: !!data.killed, laserColor: data.giftColor,
       attackerScope: data.attackerScope, targetScope: data.targetScope,
     });
-    if (fired) rememberAttack(data.attacker, data.target, forcedEffect);
+    if (fired) rememberAttack(data.attacker, data.target, giftEffect);
   }
 
   function handleLikeEvent(data) {

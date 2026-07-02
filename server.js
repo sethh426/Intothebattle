@@ -3004,6 +3004,15 @@ Object.assign(EFFECT_COMMANDS, {
 });
 
 const RANDOM_ATTACK_EFFECTS = ['laser', 'beam', 'fire', 'bullet', 'railgun', 'comet', 'arc'];
+const GIFT_ATTACK_EFFECTS = ['laser', 'arc', 'railgun', 'comet', 'sphere', 'pulse'];
+const GIFT_ATTACK_COLORS = Object.freeze({
+  laser: '#7afcff',
+  arc: '#99ffda',
+  railgun: '#f6c95b',
+  comet: '#ff8f45',
+  sphere: '#c77dff',
+  pulse: '#ff78b2',
+});
 
 // ────────────────────────────────
 // HELPER FUNCTIONS (unchanged)
@@ -4137,17 +4146,45 @@ function chooseHordeDamageTarget(room, attackerId, snapshot = null) {
     : options[Math.floor(Math.random() * options.length)];
 }
 
-function chooseGiftAttackTargets(room, attackerId, limit = 3) {
-  const snapshot = getBattleSideSnapshot(room);
-  const attackerScope = battleScopeForPlayer(room, attackerId, snapshot);
-  const pool = attackerScope === 'top' ? snapshot.hordePlayers : snapshot.topPlayers;
-  const available = pool.filter(player => player?.alive && player.uniqueId !== attackerId);
+function takeRandomTargets(pool, limit, excluded = new Set()) {
+  const available = pool
+    .filter(player => player?.alive && !excluded.has(String(player.uniqueId)))
+    .map(player => player);
   const targets = [];
   while (targets.length < limit && available.length) {
     const idx = Math.floor(Math.random() * available.length);
-    targets.push(available.splice(idx, 1)[0]);
+    const [target] = available.splice(idx, 1);
+    if (!target?.uniqueId) continue;
+    excluded.add(String(target.uniqueId));
+    targets.push(target);
   }
-  return { attackerScope, targets, snapshot };
+  return targets;
+}
+
+function chooseGiftAttackTargets(room, attackerId) {
+  const snapshot = getBattleSideSnapshot(room);
+  const attackerScope = battleScopeForPlayer(room, attackerId, snapshot);
+  const excluded = new Set([String(attackerId)]);
+  const playerTargets = takeRandomTargets(snapshot.topPlayers, 2, excluded);
+  const fallbackPlayers = Object.values(room?.players || {})
+    .filter(player => player?.alive && isPersistablePlayerId(player.uniqueId));
+  if (playerTargets.length < 2) {
+    playerTargets.push(...takeRandomTargets(fallbackPlayers, 2 - playerTargets.length, excluded));
+  }
+  const hordeTarget = chooseHordeDamageTarget(room, attackerId, snapshot)
+    || snapshot.hordePlayers.find(player => player?.alive && player.uniqueId !== attackerId)
+    || null;
+  return { attackerScope, playerTargets, hordeTarget, snapshot };
+}
+
+function nextGiftAttackEffect(room) {
+  const current = Math.max(0, Math.floor(Number(room?.giftAttackEffectIndex) || 0));
+  if (room) room.giftAttackEffectIndex = current + 1;
+  return GIFT_ATTACK_EFFECTS[current % GIFT_ATTACK_EFFECTS.length];
+}
+
+function giftAttackColor(effect, fallback = '') {
+  return GIFT_ATTACK_COLORS[effect] || fallback || '#7afcff';
 }
 
 function applyGiftAttackToTarget(room, attackerId, target, options = {}) {
@@ -4157,7 +4194,7 @@ function applyGiftAttackToTarget(room, attackerId, target, options = {}) {
   const snapshot = options.snapshot || getBattleSideSnapshot(room);
   const attackerScope = battleScopeForPlayer(room, attackerId, snapshot);
   const actualTargetScope = battleScopeForPlayer(room, target.uniqueId, snapshot);
-  const visualizesHorde = attackerScope === 'top' && actualTargetScope === 'horde';
+  const visualizesHorde = options.forceHordeVisual || (attackerScope === 'top' && actualTargetScope === 'horde');
   const visualTargetId = visualizesHorde ? SERVER_HORDE_ID : target.uniqueId;
   const visualTargetNick = visualizesHorde ? 'The Horde' : (target.nickname || target.uniqueId);
 
@@ -4196,6 +4233,67 @@ function applyGiftAttackToTarget(room, attackerId, target, options = {}) {
     attackerScope,
     targetScope: visualizesHorde ? 'horde' : actualTargetScope,
   };
+}
+
+function buildVisualHordeGiftAttack(room, attackerId, options = {}) {
+  if (!room?.players?.[attackerId]) return null;
+  const diamonds = Math.max(1, Math.round(Number(options.diamonds) || 1));
+  const snapshot = options.snapshot || getBattleSideSnapshot(room);
+  return {
+    attacker: attackerId,
+    target: SERVER_HORDE_ID,
+    targetNick: 'The Horde',
+    actualTarget: SERVER_HORDE_ID,
+    actualTargetNick: 'The Horde',
+    damage: diamonds,
+    killed: false,
+    diamonds,
+    effect: options.effect || 'laser',
+    intensity: options.intensity || 0.7,
+    giftColor: options.giftColor || '#7afcff',
+    attackerScope: battleScopeForPlayer(room, attackerId, snapshot),
+    targetScope: 'horde',
+  };
+}
+
+function emitGiftAttacksForGift(room, attackerId, options = {}) {
+  const diamonds = Math.max(1, Math.round(Number(options.diamonds) || 1));
+  const intensity = options.intensity || 0.7;
+  const tier = options.tier || (diamonds > 100 ? 'legendary' : 'common');
+  const giftTargets = chooseGiftAttackTargets(room, attackerId);
+  const assignments = [
+    ...giftTargets.playerTargets.map(target => ({ target, forceHordeVisual: false })),
+    { target: giftTargets.hordeTarget, forceHordeVisual: true },
+  ];
+  const attacksMade = [];
+
+  assignments.forEach((assignment, index) => {
+    const effect = nextGiftAttackEffect(room);
+    const giftColor = giftAttackColor(effect, options.giftColor);
+    const attack = assignment.target
+      ? applyGiftAttackToTarget(room, attackerId, assignment.target, {
+          diamonds,
+          effect,
+          intensity,
+          giftColor,
+          snapshot: giftTargets.snapshot,
+          forceHordeVisual: assignment.forceHordeVisual,
+        })
+      : buildVisualHordeGiftAttack(room, attackerId, {
+          diamonds,
+          effect,
+          intensity,
+          giftColor,
+          snapshot: giftTargets.snapshot,
+        });
+    if (!attack) return;
+    attack.giftAttackIndex = index + 1;
+    attacksMade.push(attack);
+    emitGiftAttackAndSync(room, attack);
+    emitSoundAndSync(room, attack.killed ? 'kill' : 'gift', { intensity: attack.intensity, tier });
+  });
+
+  return attacksMade;
 }
 
 function mentionTargetsHorde(value = '') {
@@ -6962,8 +7060,6 @@ app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) =>
   const room = getDefaultRoom();
   const attackerId  = 'test_charlie';
   const diamonds    = 25;
-  const targets     = ['test_alpha', 'test_bravo', 'test_delta'];
-  const attacksMade = [];
 
   awardStats(room, attackerId, room.players[attackerId].nickname,
     diamonds * CFG.GIFT_HP_PER_DIAMOND,
@@ -6974,38 +7070,12 @@ app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) =>
   }
   emitRoomEvent(room, 'gameState', room.players);
 
-  // Determine gift effect based on diamond amount (new rule)
-  const giftEffect = diamonds > 100 ? 'fire' : 'laser';  // meteor or laser
-
-  const topBeforeGift = new Set(getTopPlayers(room, 5).map(p => p.uniqueId));
-  targets.forEach(targetId => {
-    const target = room.players[targetId];
-    if (!target?.alive) return;
-    const damage = diamonds;
-    target.hp    = Math.max(0, target.hp - damage);
-    let killed   = false;
-    if (target.hp === 0) {
-      killed = true; target.alive = false; room.players[attackerId].kills++;
-      setTimeout(() => {
-        spawnPlayer(room, target.uniqueId, target.nickname);
-        emitRoomEvent(room, 'respawn', { uniqueId: target.uniqueId, respawnEffect: 'beam_down' });
-        emitRoomEvent(room, 'gameState', room.players);
-      }, CFG.RESPAWN_DELAY_MS);
-    }
-    const giftAttack = {
-      attacker: attackerId, target: targetId, damage, killed, diamonds,
-      effect: giftEffect,
-      intensity: diamonds > 100 ? 1.0 : 0.7,
-      giftColor: diamonds > 100 ? '#FF4500' : '#7afcff',
-      attackerScope: topBeforeGift.has(attackerId) ? 'top' : 'horde',
-      targetScope: topBeforeGift.has(targetId) ? 'top' : 'horde',
-    };
-    attacksMade.push(giftAttack);
-    emitGiftAttackAndSync(room, giftAttack);
-    emitSoundAndSync(room, killed ? 'kill' : 'gift', { intensity: giftAttack.intensity, tier: diamonds > 100 ? 'legendary' : 'common' });
-  });
-
   const giftMeta = classifyGift(diamonds);
+  const attacksMade = emitGiftAttacksForGift(room, attackerId, {
+    diamonds,
+    intensity: diamonds > 100 ? 1.0 : 0.7,
+    tier: giftMeta.tier || 'common',
+  });
   emitRoomEvent(room, 'giftEffect', { attacker: attackerId, giftName: 'Test Gift', diamonds, ...giftMeta });
   setTimeout(() => {
     emitRoomEvent(room, 'giftCelebration', {
@@ -7149,24 +7219,16 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
 
     emitRoomEvent(room, 'gameState', room.players);
 
-    // --- Gift attack effect rules ---
-    // Big gifts (>100 diamonds) → meteor (fire), otherwise → laser
-    const giftEffect = diamonds > 100 ? 'fire' : 'laser';
+    // Gift attacks rotate effects across two player targets and the horde.
+    const giftMeta = classifyGift(diamonds);
     const giftIntensity = diamonds > 100 ? 1.0 : Math.min(diamonds / 100, 0.8);
-
-    const giftTargets = chooseGiftAttackTargets(room, id, 3);
-    giftTargets.targets.forEach(target => {
-      const giftAttack = applyGiftAttackToTarget(room, id, target, {
-        diamonds,
-        effect: giftEffect,
-        intensity: giftIntensity,
-        giftColor: diamonds > 100 ? '#FF4500' : '#7afcff',
-        snapshot: giftTargets.snapshot,
-      });
-      if (!giftAttack) return;
-      emitGiftAttackAndSync(room, giftAttack);
-      emitSoundAndSync(room, giftAttack.killed ? 'kill' : 'gift', { intensity: giftIntensity, tier: diamonds > 100 ? 'legendary' : 'common' });
-      console.log(`Gift attack: @${id} -> ${giftAttack.targetNick || giftAttack.target} for ${giftAttack.damage} dmg${giftAttack.killed ? ' (KILL!)' : ''}`);
+    const giftAttacks = emitGiftAttacksForGift(room, id, {
+      diamonds,
+      intensity: giftIntensity,
+      tier: giftMeta.tier || (diamonds > 100 ? 'legendary' : 'common'),
+    });
+    giftAttacks.forEach(giftAttack => {
+      console.log(`Gift attack: @${id} -> ${giftAttack.targetNick || giftAttack.target} using ${giftAttack.effect} for ${giftAttack.damage} dmg${giftAttack.killed ? ' (KILL!)' : ''}`);
     });
 
     const aliveTargets = [];
@@ -7214,7 +7276,6 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
       });
     }
 
-    const giftMeta = classifyGift(diamonds);
     emitRoomEvent(room, 'giftEffect', { attacker: id, giftName: e.giftName, diamonds, ...giftMeta });
 
     setTimeout(() => {
