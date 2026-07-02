@@ -416,6 +416,31 @@ try {
   const dashboardTestRoster = await dashboardTestRosterPromise;
   assert(dashboardTestRoster.bySource?.test > 0, 'overlay test players should be tagged as test source');
 
+  const bossHordeAttackPromise = waitForEvent(
+    primaryOverlay,
+    'attack',
+    payload => payload?.attacker === '__BOSS__' && payload?.target === '__HORDE__' && payload?.targetScope === 'horde',
+    9000
+  );
+  const bossAttackSummaryPromise = waitForEvent(
+    primaryOverlay,
+    'bossWave',
+    payload => payload?.type === 'attack'
+      && Array.isArray(payload.targets)
+      && payload.targets.some(target => target.uniqueId === '__HORDE__' && target.targetScope === 'horde')
+      && payload.targets.filter(target => target.targetScope === 'top').length >= 5,
+    9000
+  );
+  const bossOverlayTestRes = await request('/api/overlay/test/boss', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(bossOverlayTestRes.status === 200, `overlay boss test should return 200, got ${bossOverlayTestRes.status}`);
+  const bossHordeAttack = await bossHordeAttackPromise;
+  const bossAttackSummary = await bossAttackSummaryPromise;
+  assert(bossHordeAttack.affectedCount > 0, 'boss horde attack should damage reserve players');
+  assert(bossAttackSummary.targets.length >= 6, 'boss attack summary should include five players plus the horde');
+
   const resetStreamPromise = waitForEvent(dashboard, 'tiktokConnection', payload => payload.status === 'disconnected', 10000);
   const resetSessionStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.active === false && payload.phase === 'idle', 10000);
   const resetGameStatePromise = waitForEvent(

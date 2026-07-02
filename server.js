@@ -267,6 +267,7 @@ const ROOM_EVENT_QUEUE_TYPES = new Set([
   'like',
   'heal',
   'playerCommand',
+  'commandBannerShowcase',
   'killEvent',
   'streakEvent',
   'follow',
@@ -585,7 +586,7 @@ function roomEventLane(type, payload = {}) {
   if (type === 'sponsorPrepare' || type === 'sponsorScene') return 'exclusive';
   if (type === 'soundEvent') return 'sound';
   if (type === 'like' || type === 'giftEffect') return 'ambient';
-  if (type === 'killEvent' || type === 'streakEvent' || type === 'giftCelebration' || type === 'follow' || type === 'engagementSurge') return 'celebration';
+  if (type === 'killEvent' || type === 'streakEvent' || type === 'giftCelebration' || type === 'follow' || type === 'engagementSurge' || type === 'commandBannerShowcase') return 'celebration';
   if (type === 'bossWave') return ['started', 'defeated', 'expired', 'ended'].includes(payload?.type) ? 'celebration' : 'gameplay';
   return 'gameplay';
 }
@@ -596,6 +597,7 @@ function roomEventPriority(type, payload = {}) {
   if (type === 'bossWave') return payload.type === 'defeated' ? 104 : payload.type === 'started' ? 98 : 86;
   if (type === 'killEvent' || type === 'streakEvent') return 94;
   if (type === 'giftCelebration' || type === 'engagementSurge') return 88;
+  if (type === 'commandBannerShowcase') return 80;
   if (type === 'giftAttack') return 82;
   if (type === 'attack' || type === 'commentDamage') return payload.critical || payload.killed ? 78 : 68;
   if (type === 'follow' || type === 'socialBoost' || type === 'playerCommand') return 62;
@@ -608,6 +610,7 @@ function roomEventPriority(type, payload = {}) {
 function roomEventTtl(type) {
   if (type === 'sponsorPrepare' || type === 'sponsorScene') return 120000;
   if (type === 'bossWave') return 30000;
+  if (type === 'commandBannerShowcase') return 22000;
   if (type === 'attack' || type === 'commentDamage' || type === 'giftAttack') return 9000;
   if (type === 'like' || type === 'soundEvent') return 3500;
   return 15000;
@@ -618,6 +621,7 @@ function roomEventMergeKey(type, payload = {}) {
   if (type === 'like' && payload.milestone) return `like:${payload.milestone}`;
   if (type === 'sponsorPrepare' || type === 'sponsorScene') return `${type}:${payload.breakId || payload.filename || payload.action || 'active'}`;
   if (type === 'bossWave' && payload.type !== 'attack') return `boss:${payload.type || 'status'}`;
+  if (type === 'commandBannerShowcase') return 'command-banner-showcase';
   if (type === 'playerCommand') return `cmd:${payload.type || 'command'}:${payload.uniqueId || payload.nickname || ''}`;
   return '';
 }
@@ -1248,16 +1252,78 @@ function topSessionPlayers(room, limit = 5) {
   }));
 }
 
+const VIEWER_COMMAND_GROUPS = Object.freeze([
+  {
+    code: 'JOIN',
+    kicker: 'Chat commands',
+    title: 'Join and customize',
+    meta: 'Type commands in TikTok chat',
+    durationMs: 4300,
+    charge: 74,
+    commands: [
+      { command: '!spawn', detail: 'enter arena' },
+      { command: '!emoji <symbol>', detail: 'set fighter icon' },
+      { command: '!team <name>', detail: 'join a team' },
+    ],
+  },
+  {
+    code: 'DEF',
+    kicker: 'Protect and support',
+    title: 'Shield, heal, and help',
+    meta: 'Support commands keep fighters alive',
+    durationMs: 4300,
+    charge: 68,
+    commands: [
+      { command: '!shield', detail: 'reduce damage' },
+      { command: '!heal @name', detail: 'restore HP' },
+      { command: '!commands', detail: 'show this list' },
+    ],
+  },
+  {
+    code: 'ATK',
+    kicker: 'Attack commands',
+    title: 'Target players or the boss',
+    meta: 'Use @name or @boss after the command',
+    durationMs: 5000,
+    charge: 92,
+    commands: [
+      { command: '!nova', detail: 'pulse blast' },
+      { command: '!laser', detail: 'beam strike' },
+      { command: '!arc', detail: 'electric hit' },
+      { command: '!sphere', detail: 'orb impact' },
+      { command: '!railgun', detail: 'piercing shot' },
+      { command: '!comet', detail: 'meteor hit' },
+      { command: '!bullet', detail: 'fast shot' },
+      { command: '!fire', detail: 'flame burst' },
+      { command: '!nuke', detail: 'heavy blast' },
+      { command: '!neon', detail: 'light strike' },
+    ],
+  },
+]);
+
 function viewerCommandText() {
-  return [
-    '!join - enter the arena',
-    '!emoji <symbol> or !<emoji> - change your fighter icon',
-    '!shield - reduce incoming damage',
-    '!heal @name - restore a fighter',
-    '!laser @name - quick cyber attack',
-    '!fire @name - heavy fire attack',
-    '!fire @boss - damage the boss wave when active',
-  ].join('\n');
+  return VIEWER_COMMAND_GROUPS
+    .map(group => [
+      `${group.title}:`,
+      ...group.commands.map(entry => `${entry.command} - ${entry.detail}`),
+    ].join('\n'))
+    .join('\n\n');
+}
+
+function commandBannerShowcasePayload() {
+  return {
+    banners: VIEWER_COMMAND_GROUPS.map(group => ({
+      code: group.code,
+      kicker: group.kicker,
+      title: group.title,
+      meta: group.meta,
+      commands: group.commands,
+      durationMs: group.durationMs,
+      priority: 80,
+      charge: group.charge,
+    })),
+    createdAt: Date.now(),
+  };
 }
 
 function buildSessionRecap(room, session, reason = 'manual_end') {
@@ -1923,13 +1989,18 @@ function clearBossWaveTimers(room) {
 }
 
 function bossWaveTargets(room) {
-  return getTopPlayers(room, 5)
-    .filter(player => player?.alive && player.uniqueId !== SERVER_HORDE_ID)
-    .slice(0, 5);
+  const rankedCount = Math.max(5, Object.keys(room?.players || {}).length);
+  const eligiblePlayers = getTopPlayers(room, rankedCount)
+    .filter(player => player?.alive && player.uniqueId && player.uniqueId !== SERVER_HORDE_ID && player.uniqueId !== SERVER_BOSS_ID);
+  return {
+    topPlayers: eligiblePlayers.slice(0, 5),
+    hordePlayers: eligiblePlayers.slice(5),
+  };
 }
 
-function applyBossDamageToPlayer(room, target, damage) {
+function applyBossDamageToPlayer(room, target, damage, options = {}) {
   if (!room || !target?.uniqueId || !room.players[target.uniqueId]?.alive) return null;
+  const targetScope = options.targetScope || 'top';
   const player = room.players[target.uniqueId];
   let dmg = Math.max(1, Math.round(Number(damage) || BOSS_WAVE_ATTACK_DAMAGE));
   let shieldAbsorbed = 0;
@@ -1954,7 +2025,7 @@ function applyBossDamageToPlayer(room, target, damage) {
       damage: dmg,
       effect: 'boss',
       attackerScope: 'boss',
-      targetScope: 'top',
+      targetScope,
     });
   }
 
@@ -1972,8 +2043,66 @@ function applyBossDamageToPlayer(room, target, damage) {
     shielded: shieldAbsorbed > 0,
     shieldAbsorbed,
     attackerScope: 'boss',
-    targetScope: 'top',
+    targetScope,
     remainingHpPct: Math.max(0, Number(player.hp) || 0) / Math.max(1, Number(player.maxHp) || CFG.BASE_HP),
+  };
+}
+
+function applyBossDamageToHorde(room, hordePlayers, damage) {
+  const candidates = Array.isArray(hordePlayers)
+    ? hordePlayers.filter(player => player?.alive && player.uniqueId && room?.players?.[player.uniqueId]?.alive)
+    : [];
+  if (!candidates.length) return null;
+
+  const affectedPlayers = candidates
+    .slice()
+    .sort((a, b) => {
+      const hpDiff = (Number(a.hp) || 0) - (Number(b.hp) || 0);
+      if (hpDiff !== 0) return hpDiff;
+      return String(a.nickname || a.uniqueId || '').localeCompare(String(b.nickname || b.uniqueId || ''));
+    })
+    .slice(0, Math.min(3, candidates.length));
+  const perPlayerDamage = Math.max(1, Math.round((Number(damage) || BOSS_WAVE_ATTACK_DAMAGE) / Math.max(2, affectedPlayers.length)));
+  const affected = [];
+  let totalDamage = 0;
+  let killed = false;
+  let shieldAbsorbed = 0;
+
+  affectedPlayers.forEach(player => {
+    const result = applyBossDamageToPlayer(room, player, perPlayerDamage, { targetScope: 'horde' });
+    if (!result) return;
+    totalDamage += result.damage;
+    killed = killed || result.killed;
+    shieldAbsorbed += Number(result.shieldAbsorbed) || 0;
+    affected.push({
+      uniqueId: result.target,
+      nickname: result.targetNick,
+      damage: result.damage,
+      killed: result.killed,
+      remainingHpPct: result.remainingHpPct,
+    });
+  });
+
+  if (!affected.length) return null;
+  const aliveReserveCount = candidates.filter(player => room?.players?.[player.uniqueId]?.alive).length;
+  return {
+    attacker: SERVER_BOSS_ID,
+    attackerNick: 'Boss Wave',
+    target: SERVER_HORDE_ID,
+    targetNick: 'The Horde',
+    damage: totalDamage,
+    killed,
+    special: true,
+    effect: killed ? 'explosion' : 'boss',
+    intensity: killed ? 0.92 : 0.76,
+    critical: totalDamage >= Math.max(14, candidates.length * 4),
+    shielded: shieldAbsorbed > 0,
+    shieldAbsorbed,
+    attackerScope: 'boss',
+    targetScope: 'horde',
+    affectedCount: affected.length,
+    hordeCount: aliveReserveCount,
+    affected,
   };
 }
 
@@ -1982,6 +2111,9 @@ function runBossWaveAttack(room, reason = 'pulse') {
   if (!boss?.active) return [];
   if (boss.sessionId && currentRoomSessionId(room) && boss.sessionId !== currentRoomSessionId(room)) return [];
   const targets = bossWaveTargets(room);
+  const topTargets = targets.topPlayers || [];
+  const hordeTargets = targets.hordePlayers || [];
+  const totalVisualTargets = topTargets.length + (hordeTargets.length ? 1 : 0);
   const attacks = [];
   const baseDamage = Math.max(4, Math.round(Number(boss.attackDamage) || BOSS_WAVE_ATTACK_DAMAGE));
   const remainingAfterStrike = boss.endsAt ? Math.max(0, boss.endsAt - Date.now()) : boss.attackIntervalMs;
@@ -1990,18 +2122,32 @@ function runBossWaveAttack(room, reason = 'pulse') {
     : null;
   boss.nextAttackAt = projectedNextAttackAt;
 
-  targets.forEach((target, index) => {
+  topTargets.forEach((target, index) => {
     const variance = 0.82 + Math.random() * 0.42;
     const falloff = Math.max(0.72, 1 - index * 0.06);
     const payload = applyBossDamageToPlayer(room, target, baseDamage * variance * falloff);
     if (!payload) return;
     payload.sequenceIndex = index;
-    payload.totalTargets = targets.length;
+    payload.totalTargets = totalVisualTargets;
     payload.impactDelayMs = 160 + index * 135;
     payload.bossSweep = true;
     attacks.push(payload);
     emitRoomEvent(room, 'attack', payload);
   });
+
+  if (hordeTargets.length) {
+    const hordeDamage = baseDamage * (0.92 + Math.random() * 0.18);
+    const payload = applyBossDamageToHorde(room, hordeTargets, hordeDamage);
+    if (payload) {
+      const index = attacks.length;
+      payload.sequenceIndex = index;
+      payload.totalTargets = totalVisualTargets;
+      payload.impactDelayMs = 160 + index * 135;
+      payload.bossSweep = true;
+      attacks.push(payload);
+      emitRoomEvent(room, 'attack', payload);
+    }
+  }
 
   emitRoomEvent(room, 'bossWave', {
     type: 'attack',
@@ -2014,6 +2160,9 @@ function runBossWaveAttack(room, reason = 'pulse') {
       nickname: attack.targetNick,
       damage: attack.damage,
       killed: attack.killed,
+      targetScope: attack.targetScope,
+      affectedCount: attack.affectedCount,
+      affected: attack.affected,
     })),
     reason,
     durationMs: boss.durationMs,
@@ -2991,6 +3140,7 @@ for (const deprecatedEffectCommand of ['bubble', 'bubbles', 'water', 'ripple']) 
 }
 
 Object.assign(EFFECT_COMMANDS, {
+  nova:     { effect: 'pulse',     multiplier: 3.0, description: 'NOVA BLAST' },
   wave:     { effect: 'arc',       multiplier: 2.5, description: 'SHOCK WAVE' },
   spiral:   { effect: 'arc',       multiplier: 3.4, description: 'ARC SPIRAL' },
   shock:    { effect: 'arc',       multiplier: 2.5, description: 'SHOCK ARC' },
@@ -6391,12 +6541,21 @@ app.get('/api/subscription/status', (req, res) => {
   }
 });
 
-function ensureRoomLiveTestPlayers(room) {
+function ensureRoomLiveTestPlayers(room, options = {}) {
+  const includeHordeReserve = Boolean(options.includeHordeReserve);
   const testPlayers = [
     { id: 'arena_orion', nick: 'Orion', x: 240, y: 170, icon: '\u2694\ufe0f' },
     { id: 'arena_blaze', nick: 'Blaze', x: 540, y: 195, icon: '\ud83d\udd25' },
     { id: 'arena_nova', nick: 'Nova', x: 390, y: 315, icon: '\ud83d\udc8e' },
   ];
+  if (includeHordeReserve) {
+    testPlayers.push(
+      { id: 'arena_vex', nick: 'Vex', x: 185, y: 355, icon: '\u26a1' },
+      { id: 'arena_rift', nick: 'Rift', x: 620, y: 348, icon: '\u25c6' },
+      { id: 'arena_echo', nick: 'Echo', x: 315, y: 405, icon: '\u2605' },
+      { id: 'arena_pulse', nick: 'Pulse', x: 485, y: 420, icon: '\u25cf' }
+    );
+  }
   testPlayers.forEach((player, index) => {
     const source = room.setupRehearsal?.active ? 'demo' : 'test';
     if (!room.players[player.id]) spawnPlayer(room, player.id, player.nick, { source });
@@ -6408,7 +6567,8 @@ function ensureRoomLiveTestPlayers(room) {
     record.source = source;
     record.firstSeenAt = record.firstSeenAt || Date.now();
     record.hp = Math.max(80, Number(record.hp) || CFG.BASE_HP);
-    record.maxHp = Math.max(CFG.BASE_HP, Number(record.maxHp) || CFG.BASE_HP);
+    const rankBonus = includeHordeReserve ? Math.max(0, testPlayers.length - index) : 0;
+    record.maxHp = Math.max(CFG.BASE_HP, Number(record.maxHp) || CFG.BASE_HP, CFG.BASE_HP + rankBonus);
     record.strength = Math.max(CFG.BASE_STRENGTH, Number(record.strength) || CFG.BASE_STRENGTH);
     record.x = player.x;
     record.y = player.y;
@@ -6434,7 +6594,9 @@ function runRoomOverlayTest(room, action) {
 }
 
 function runRoomOverlayTestAction(room, normalizedAction) {
-  ensureRoomLiveTestPlayers(room);
+  ensureRoomLiveTestPlayers(room, {
+    includeHordeReserve: normalizedAction === 'boss' || normalizedAction === 'burst',
+  });
   const attackerId = 'arena_orion';
   const targetId = 'arena_blaze';
   const supportId = 'arena_nova';
@@ -6559,7 +6721,7 @@ function runRoomOverlayTestAction(room, normalizedAction) {
       action: normalizedAction,
       session: buildSessionStatus(room),
       sessionId: session?.sessionId || null,
-      bossWave,
+      bossWave: currentBossStatus(room) || bossWave,
     };
   }
 
@@ -6603,6 +6765,20 @@ function runRoomOverlayTestAction(room, normalizedAction) {
 app.post('/api/overlay/test/:action', requireRoom, (req, res) => {
   const result = runRoomOverlayTest(req.room, req.params.action);
   res.status(result.success ? 200 : 400).json(result);
+});
+
+app.post('/api/overlay/command-banners', requireRoom, (req, res) => {
+  const payload = commandBannerShowcasePayload();
+  emitRoomEvent(req.room, 'commandBannerShowcase', payload);
+  const overlayConnected = Number(req.room.overlayCount || 0) > 0;
+  res.json({
+    success: true,
+    banners: payload.banners.length,
+    overlayConnected,
+    message: overlayConnected
+      ? 'Command banners sent to overlay.'
+      : 'Command banners queued, but no overlay source is connected.',
+  });
 });
 
 app.post('/api/stream/setup/start', requireRoom, (req, res) => {
@@ -7207,6 +7383,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
       console.log(`Gift attack: @${id} -> ${giftAttack.targetNick || giftAttack.target} using ${giftAttack.effect} for ${giftAttack.damage} dmg${giftAttack.killed ? ' (KILL!)' : ''}`);
     });
 
+    /*
     const aliveTargets = [];
 
     if (aliveTargets.length > 0) {
@@ -7252,6 +7429,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
       });
     }
 
+    */
     emitRoomEvent(room, 'giftEffect', { attacker: id, giftName: e.giftName, diamonds, ...giftMeta });
 
     setTimeout(() => {

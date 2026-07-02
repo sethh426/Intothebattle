@@ -210,6 +210,7 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
     banner_preview: '1',
     banner_title: 'NeonAce eliminated ShadowByte',
     banner_meta: '7 total kills | streak x5 | momentum x4',
+    banner_duration: '5200',
   });
   await page.goto(`${baseUrl}/overlay?${params.toString()}`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.__overlayLegacyLayout?.players?.length >= 5, null, { timeout: 7000 });
@@ -220,11 +221,12 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
     const rect = banner.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0 && getComputedStyle(banner).visibility !== 'hidden';
   }, null, { timeout: 5000 });
-  const banner = page.locator('.banner', { hasText: 'NEONACE' }).last();
-  await expect(banner).toBeVisible({ timeout: 5000 });
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(300);
 
-  const geometry = await banner.evaluate(el => {
+  const geometry = await page.evaluate(() => {
+    const el = Array.from(document.querySelectorAll('.banner'))
+      .find(node => /NEONACE/i.test(node.textContent || '') && !node.classList.contains('closing'));
+    if (!el) return null;
     const rect = el.getBoundingClientRect();
     const viewport = { width: window.innerWidth, height: window.innerHeight };
     const title = el.querySelector('.banner-title')?.getBoundingClientRect();
@@ -244,6 +246,7 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
     };
   });
 
+  expect(geometry).toBeTruthy();
   expect(geometry.left).toBeGreaterThanOrEqual(0);
   expect(geometry.right).toBeLessThanOrEqual(geometry.viewport.width);
   expect(geometry.top).toBeGreaterThanOrEqual(0);

@@ -21,6 +21,7 @@
     flame: 'comet',
     meteor: 'comet',
     pulse: 'pulse',
+    nova: 'pulse',
     ripple: 'pulse',
     wave: 'pulse',
     bubble: 'pulse',

@@ -97,6 +97,17 @@ function assertStageDomLayer(layout, label, type) {
   );
 }
 
+function assertBossHudIntegrated(layout, label) {
+  const boss = layout?.boss;
+  const panel = boss?.panel;
+  assert(boss && panel, `${label} missing boss HUD layout`);
+  const tolerance = 2;
+  assert(Math.abs(boss.left - panel.left) <= tolerance, `${label} boss left edge is split from panel`);
+  assert(Math.abs(boss.right - panel.right) <= tolerance, `${label} boss right edge is split from panel`);
+  assert(Math.abs(boss.top - panel.top) <= tolerance, `${label} boss top edge is split from panel`);
+  assert(Math.abs(boss.bottom - panel.bottom) <= tolerance, `${label} boss bottom edge is split from panel`);
+}
+
 async function waitForStageDomLayer(page, label, type, pageErrors) {
   await page.waitForFunction(expectedType => {
     const layout = window.__overlayLegacyLayout;
@@ -458,12 +469,14 @@ async function auditEffectOwnershipViewport(browser, viewport) {
   assert(probe?.results?.hordeToPlayer === true, `${label} horde-to-player attack did not render: ${JSON.stringify(probe)}`);
   assert(probe?.results?.playerToBoss === true, `${label} player-to-boss attack did not render: ${JSON.stringify(probe)}`);
   assert(probe?.results?.bossToPlayer === true, `${label} boss-to-player attack did not render: ${JSON.stringify(probe)}`);
+  assert(probe?.results?.bossToPlayer5 === true, `${label} boss-to-player-five attack did not render: ${JSON.stringify(probe)}`);
+  assert(probe?.results?.bossToHorde === true, `${label} boss-to-horde attack did not render: ${JSON.stringify(probe)}`);
   assert(probe?.results?.invalidPlayer === false, `${label} invalid player attack should be dropped: ${JSON.stringify(probe)}`);
   assert(probe?.results?.inactiveBoss === false, `${label} inactive boss attack should be dropped: ${JSON.stringify(probe)}`);
   assert(probe.droppedDuringProbe >= 2, `${label} did not count invalid ownership drops: ${JSON.stringify(probe)}`);
   await page.waitForTimeout(180);
   const after = await assertEffectOwnership(page, `${label} probe`, {
-    minOwnedEffects: 5,
+    minOwnedEffects: 7,
     minDroppedEffects: before.droppedEffects + 2,
   });
   assert(after.droppedByReason?.missing_player >= 1, `${label} missing-player drop reason not recorded: ${JSON.stringify(after)}`);
@@ -521,7 +534,8 @@ async function auditViewport(browser, viewport) {
   await page.waitForTimeout(900);
   await waitForFrameSamples(page, `${label} boss frame`, 40);
   await assertFrameHealth(page, `${label} boss frame`, { minSamples: 40 });
-  await readLayout(page, `${label} boss`, pageErrors);
+  const bossLayout = await readLayout(page, `${label} boss`, pageErrors);
+  assertBossHudIntegrated(bossLayout, `${label} boss`);
   await assertCanvasHasVisibleContent(page, `${label} boss`);
   await assertEffectOwnership(page, `${label} boss`);
   await assertVisualQueueHealth(page, `${label} boss`, { maxQueued: 10, minProcessed: 1 });

@@ -381,6 +381,41 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.special { --banner-accent:#9dff8b; --banner-accent-rgb:157,255,139; --banner-accent-soft:rgba(157,255,139,0.15); }
 .banner.follow { --banner-accent:#6dffcb; --banner-accent-rgb:109,255,203; --banner-accent-soft:rgba(109,255,203,0.15); }
 .banner.heal { --banner-accent:#8fffd2; --banner-accent-rgb:143,255,210; --banner-accent-soft:rgba(143,255,210,0.16); }
+.banner.commands {
+  --banner-accent:#55e7ff; --banner-accent-rgb:85,231,255; --banner-accent-soft:rgba(246,201,91,0.15);
+  min-height:88px; max-height:116px; padding:0 16px;
+  grid-template-columns:54px minmax(0,1fr) 6px;
+  background:
+    linear-gradient(90deg, rgba(4,6,12,0.98), rgba(9,22,33,0.96) 42%, rgba(18,7,12,0.96)),
+    radial-gradient(circle at 18% 52%, rgba(85,231,255,0.18), transparent 36%),
+    radial-gradient(circle at 86% 42%, rgba(246,201,91,0.12), transparent 38%);
+  box-shadow:
+    0 18px 48px rgba(0,0,0,0.6),
+    0 0 34px rgba(85,231,255,0.18),
+    0 0 54px rgba(246,201,91,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.16);
+}
+.banner.commands .banner-copy { justify-items:center; text-align:center; gap:3px; }
+.banner.commands .banner-title { font-size:19px; letter-spacing:.45px; }
+.banner-command-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(154px,1fr));
+  justify-content:stretch; align-items:stretch;
+  width:100%; max-width:100%; max-height:66px; gap:5px; overflow:hidden;
+}
+.banner-command-chip {
+  display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:0; max-width:100%; min-height:30px;
+  gap:2px; padding:4px 8px; box-sizing:border-box;
+  border:1px solid rgba(var(--banner-accent-rgb),0.34);
+  background:linear-gradient(180deg, rgba(var(--banner-accent-rgb),0.14), rgba(255,255,255,0.035));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.1),0 0 12px rgba(var(--banner-accent-rgb),0.08);
+  color:#eef8ff; font-size:12px; line-height:1; font-weight:900; letter-spacing:.2px; text-transform:uppercase;
+  white-space:nowrap; overflow:hidden;
+}
+.banner-command-chip strong,
+.banner-command-chip span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.banner-command-chip strong { width:100%; color:var(--banner-accent); font-size:12.5px; font-weight:950; }
+.banner-command-chip span { width:100%; color:#c6cedd; font-size:8px; font-weight:800; }
 .banner.legendary {
   --banner-accent:#ffe36f; --banner-accent-rgb:255,227,111; --banner-accent-soft:rgba(255,174,41,0.24);
   box-shadow:
@@ -402,6 +437,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.legendary.is-compact .banner-title { font-size:14px; letter-spacing:.36px; }
 .banner.is-compact .banner-meta { font-size:8px; letter-spacing:.45px; }
 .banner.is-compact .banner-meter { width:5px; height:28px; }
+.banner.commands.is-compact { min-height:58px; max-height:74px; padding:0 10px; }
+.banner.commands.is-compact .banner-title { font-size:14px; }
+.banner.commands.is-compact .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(84px,1fr)); max-height:24px; gap:3px; }
+.banner.commands.is-compact .banner-command-chip { min-height:20px; padding:2px 5px; font-size:8px; letter-spacing:.16px; }
+.banner.commands.is-compact .banner-command-chip strong { font-size:8px; }
+.banner.commands.is-compact .banner-command-chip span { display:none; }
 .banner.is-micro {
   min-height:38px; max-height:44px; padding:0 8px; gap:6px;
   grid-template-columns:30px minmax(0,1fr) 4px;
@@ -414,6 +455,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.legendary.is-micro .banner-title { font-size:12px; letter-spacing:.28px; }
 .banner.is-micro .banner-meta { display:block; font-size:7px; letter-spacing:.38px; }
 .banner.is-micro .banner-meter { width:4px; height:24px; }
+.banner.commands.is-micro .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(64px,1fr)); max-height:16px; gap:2px; }
+.banner.commands.is-micro .banner-command-chip { min-height:14px; padding:1px 4px; font-size:7px; }
+.banner.commands.is-micro .banner-command-chip strong { font-size:7px; }
+.banner.commands.is-micro .banner-title { font-size:11px; }
+.banner.commands.is-nano { min-height:30px; max-height:34px; }
 .banner.is-nano {
   min-height:30px; max-height:34px; padding:0 6px; gap:5px;
   grid-template-columns:minmax(0,1fr) 3px;
@@ -425,6 +471,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.is-nano .banner-copy { gap:0; }
 .banner.is-nano .banner-title,
 .banner.legendary.is-nano .banner-title { font-size:10px; line-height:1; letter-spacing:.2px; }
+.banner.is-nano .banner-command-grid { display:none; }
 .banner.is-nano .banner-meter { width:3px; height:20px; }
 @keyframes cyberBannerIn {
   0% { opacity:0; transform:translate(-50%,-14px) scaleX(.72); filter:blur(5px) brightness(1.45); }
@@ -479,6 +526,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .banner-title,.banner.legendary .banner-title { font-size:13px; letter-spacing:.35px; }
   .banner-meta { font-size:7px; }
   .banner-meter { height:26px; }
+  .banner.commands:not(.is-nano) { min-height:58px; max-height:74px; }
+  .banner.commands .banner-title { font-size:12px; }
+  .banner.commands .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(72px,1fr)); max-height:22px; gap:3px; }
+  .banner.commands .banner-command-chip { min-height:18px; padding:1px 4px; font-size:7px; }
+  .banner.commands .banner-command-chip strong { font-size:7px; }
+  .banner.commands .banner-command-chip span { display:none; }
+  .banner.commands.is-nano { min-height:30px; max-height:34px; }
 }
 @keyframes battleReturnFrame {
   0%   { filter:brightness(1.35) saturate(1.25); box-shadow:0 0 0 2px rgba(255,255,255,0.55),0 0 80px rgba(246,201,91,0.35),0 0 150px rgba(85,231,255,0.22); }
@@ -2932,6 +2986,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const second = top[1]?.uniqueId || first;
     const third = top[2]?.uniqueId || first;
     const fourth = top[3]?.uniqueId || second;
+    const fifth = top[4]?.uniqueId || fourth;
     const beforeDropped = effectOwnershipStats.droppedEffects;
     const previousBossState = bossWaveState ? { ...bossWaveState } : null;
     bossWaveState = null;
@@ -2956,6 +3011,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     });
     results.playerToBoss = fireAttack(third, BOSS_ID, 32, false, true, 'railgun', { attackerScope: 'top', targetScope: 'boss' });
     results.bossToPlayer = fireAttack(BOSS_ID, fourth, 24, false, false, 'comet', { attackerScope: 'boss', targetScope: 'top' });
+    results.bossToPlayer5 = fireAttack(BOSS_ID, fifth, 24, false, false, 'comet', { attackerScope: 'boss', targetScope: 'top' });
+    results.bossToHorde = fireAttack(BOSS_ID, HORDE_ID, 28, false, false, 'boss', { attackerScope: 'boss', targetScope: 'horde' });
     return {
       results,
       droppedDuringProbe: effectOwnershipStats.droppedEffects - beforeDropped,
@@ -3035,7 +3092,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         active: true,
         hp: 680,
         maxHp: 1000,
-        targets: topPlayers().slice(0, 4),
+        targets: topPlayers().slice(0, 5).concat(hordePlayer() ? [{
+          uniqueId: HORDE_ID,
+          nickname: 'The Horde',
+          targetScope: 'horde',
+        }] : []),
         remainingMs: 73000,
         durationMs: 90000,
         nextAttackAt: Date.now() + 2400,
@@ -3104,10 +3165,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const rect = container.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     const requestedQuality = Number(overlayParams.get('quality_scale'));
-    const sourceQuality = Number.isFinite(requestedQuality) && requestedQuality > 0
+    const hasRequestedQuality = Number.isFinite(requestedQuality) && requestedQuality > 0;
+    const largePublicPreview = isPublicDemo && !isSignedOverlay && rect.width * rect.height >= 1000 * 650;
+    const sourceQuality = hasRequestedQuality
       ? requestedQuality
-      : (isSignedOverlay ? 2 : 1);
-    renderScale = Math.max(1, Math.min(Math.max(window.devicePixelRatio || 1, sourceQuality), 2.5));
+      : largePublicPreview ? 0.72 : (isSignedOverlay ? 2 : 1);
+    renderScale = hasRequestedQuality || largePublicPreview
+      ? Math.max(0.5, Math.min(sourceQuality, 2.5))
+      : Math.max(1, Math.min(Math.max(window.devicePixelRatio || 1, sourceQuality), 2.5));
     canvas.width  = Math.max(1, Math.round(rect.width * renderScale));
     canvas.height = Math.max(1, Math.round(rect.height * renderScale));
     ctx.setTransform(renderScale, 0, 0, renderScale, 0, 0);
@@ -3589,33 +3654,44 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const bossZone = stage.zones.boss;
     const ui = canvasUiScale();
     const hordeLayout = getHordeLayout();
-    const r = Math.max(28 * ui, Math.min(52 * ui, bossZone.h * 0.28, frame.h * 0.068));
-    const x = clampNumber(bossZone.x + bossZone.w / 2, bossZone.x + r * 1.5, bossZone.right - r * 1.5);
-    const panelH = Math.max(44 * ui, Math.min(58 * ui, bossZone.h * 0.28));
-    const panelGap = Math.max(5 * ui, stage.gap * 0.28);
-    const desiredY = bossZone.y + bossZone.h * 0.34;
-    const bossPlayers = topPlayers();
+    const cardH = Math.max(64 * ui, Math.min(106 * ui, bossZone.h * 0.42, frame.h * 0.098));
+    const cardW = Math.max(300 * ui, Math.min(bossZone.w * 0.98, 520 * ui));
+    const bossPlayers = topPlayers().slice(0, 5);
     const playerBottom = bossPlayers.reduce((bottom, _player, index) => {
       const pos = getPlayerPosition(index, bossPlayers.length);
       return Math.max(bottom, getPlayerCardDrawMetrics(pos, bossPlayers.length).bottom);
     }, bossZone.y);
-    const minY = Math.max(bossZone.y + r * 1.28, playerBottom + stage.gap * 0.9 + r * 1.45);
-    const maxY = Math.min(
-      bossZone.bottom - panelH - panelGap - r * 1.18,
-      hordeLayout.barY - stage.gap * 0.72 - panelH - panelGap - r * 1.18
-    );
-    const y = Math.max(minY, Math.min(maxY, desiredY));
-    const panelW = Math.max(230 * ui, Math.min(bossZone.w * 0.94, 380 * ui));
-    const panelX = clampNumber(x - panelW / 2, bossZone.x, bossZone.right - panelW);
-    const panelY = clampNumber(y + r * 1.18 + panelGap, bossZone.y, bossZone.bottom - panelH);
+    let minCardY = Math.max(bossZone.y, playerBottom + stage.gap * 0.58);
+    let maxCardY = Math.min(bossZone.bottom - cardH, hordeLayout.barY - stage.gap * 0.62 - cardH);
+    if (maxCardY < minCardY) {
+      minCardY = Math.max(bossZone.y, Math.min(bossZone.bottom - cardH, playerBottom + stage.gap * 0.24));
+      maxCardY = Math.max(minCardY, bossZone.bottom - cardH);
+    }
+    const cardX = clampNumber(bossZone.x + bossZone.w / 2 - cardW / 2, bossZone.x, bossZone.right - cardW);
+    const cardY = clampNumber(bossZone.y + bossZone.h * 0.43 - cardH / 2, minCardY, maxCardY);
+    const r = Math.max(24 * ui, Math.min(42 * ui, cardH * 0.36, frame.h * 0.05));
+    const x = clampNumber(cardX + cardH * 0.52, cardX + r * 1.25, cardX + cardW - r * 1.4);
+    const y = cardY + cardH * 0.5;
+    const contentX = Math.min(cardX + cardW - cardH * 0.62, x + r + Math.max(14 * ui, cardH * 0.16));
+    const pad = Math.max(12 * ui, cardH * 0.16);
+    const trackX = contentX;
+    const trackW = Math.max(84 * ui, cardX + cardW - pad - trackX);
     return {
       x,
       y,
       r,
-      panelX,
-      panelY,
-      panelW,
-      panelH,
+      panelX: cardX,
+      panelY: cardY,
+      panelW: cardW,
+      panelH: cardH,
+      cardX,
+      cardY,
+      cardW,
+      cardH,
+      contentX,
+      trackX,
+      trackW,
+      pad,
     };
   }
 
@@ -3627,13 +3703,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function getBossEdgePosition(otherPos) {
     const layout = getBossLayout();
     if (!otherPos) return { x: layout.x, y: layout.y };
+    const left = layout.cardX + layout.r * 0.18;
+    const right = layout.cardX + layout.cardW - layout.r * 0.18;
+    const top = layout.cardY + layout.cardH * 0.16;
+    const bottom = layout.cardY + layout.cardH * 0.84;
     const dx = otherPos.x - layout.x;
     const dy = otherPos.y - layout.y;
-    const len = Math.max(1, Math.hypot(dx, dy));
-    return {
-      x: layout.x + (dx / len) * layout.r * 0.88,
-      y: layout.y + (dy / len) * layout.r * 0.88,
-    };
+    if (Math.abs(dx) > Math.abs(dy)) {
+      return { x: dx < 0 ? left : right, y: clampNumber(otherPos.y, top, bottom) };
+    }
+    return { x: clampNumber(otherPos.x, left, right), y: dy < 0 ? top : bottom };
   }
 
   function pulseBoss(type = 'attack', color = THEME.ember, duration = 1000) {
@@ -3734,18 +3813,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function bossEntityBounds() {
     const layout = getBossLayout();
-    const coreBounds = makeRect(
-      layout.x - layout.r * 1.45,
-      layout.y - layout.r * 1.45,
-      layout.r * 2.9,
-      layout.r * 2.9
-    );
-    const panelBounds = makeRect(layout.panelX, layout.panelY, layout.panelW, layout.panelH);
-    const left = Math.min(coreBounds.left, panelBounds.left);
-    const top = Math.min(coreBounds.top, panelBounds.top);
-    const right = Math.max(coreBounds.right, panelBounds.right);
-    const bottom = Math.max(coreBounds.bottom, panelBounds.bottom);
-    return makeRect(left, top, right - left, bottom - top);
+    return makeRect(layout.cardX, layout.cardY, layout.cardW, layout.cardH);
   }
 
   function buildEntity(kind, id, point, bounds, scope = kind) {
@@ -4158,6 +4226,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     special: { code: 'CMD', kicker: 'Special strike', duration: 2250, priority: 54, charge: 58 },
     follow: { code: 'NEW', kicker: 'Crowd signal', duration: 2100, priority: 38, charge: 46 },
     heal: { code: 'HP', kicker: 'Support pulse', duration: 2300, priority: 50, charge: 56 },
+    commands: { code: 'CMD', kicker: 'Chat commands', duration: 4300, priority: 80, charge: 78 },
     legendary: { code: 'MAX', kicker: 'Legendary moment', duration: 3950, priority: 96, charge: 100 },
   };
   const bannerQueue = [];
@@ -4195,6 +4264,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const metaHtml = objectContent && objectContent.meta ? escapeHtml(objectContent.meta) : '';
     const kickerHtml = escapeHtml((objectContent && objectContent.kicker) || (options && options.kicker) || config.kicker);
     const codeHtml = escapeHtml((objectContent && objectContent.code) || (options && options.code) || config.code);
+    const commands = objectContent && Array.isArray(objectContent.commands)
+      ? objectContent.commands
+        .slice(0, 12)
+        .map(entry => {
+          const command = String(entry && (entry.command || entry.label || entry.name) || '').trim().slice(0, 72);
+          const detail = String(entry && (entry.detail || entry.meta || entry.description) || '').trim().slice(0, 56);
+          return command ? { command, detail } : null;
+        })
+        .filter(Boolean)
+      : [];
     const duration = clampBannerNumber(
       durationMs || (objectContent && objectContent.durationMs) || (options && options.durationMs),
       1400,
@@ -4213,7 +4292,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       100,
       config.charge
     );
-    const signature = `${cls}|${stripBannerHtml(titleHtml)}|${stripBannerHtml(metaHtml)}`.toLowerCase();
+    const commandSignature = commands.map(entry => `${entry.command}:${entry.detail}`).join('|');
+    const signature = `${cls}|${stripBannerHtml(titleHtml)}|${stripBannerHtml(metaHtml)}|${commandSignature}`.toLowerCase();
     const transition = ['transition-slam', 'transition-sweep', 'transition-signal', 'transition-surge'].includes(requestedTransition)
       ? requestedTransition
       : cls === 'legendary' ? 'transition-surge'
@@ -4228,6 +4308,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       kickerHtml,
       titleHtml: titleHtml || escapeHtml(config.kicker),
       metaHtml,
+      commands,
       duration,
       priority,
       charge,
@@ -4264,6 +4345,20 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (renderNext) setTimeout(renderNextBanner, 280);
   }
 
+  function bannerCommandGridHtml(commands) {
+    if (!Array.isArray(commands) || !commands.length) return '';
+    return `
+        <span class="banner-command-grid">
+          ${commands.map(entry => `
+            <span class="banner-command-chip">
+              <strong>${escapeHtml(entry.command)}</strong>
+              ${entry.detail ? `<span>${escapeHtml(entry.detail)}</span>` : ''}
+            </span>
+          `).join('')}
+        </span>
+      `;
+  }
+
   function renderBannerItem(item) {
     const el = document.createElement('div');
     item.el = el;
@@ -4279,6 +4374,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       <span class="banner-copy">
         <span class="banner-kicker">${item.kickerHtml}</span>
         <span class="banner-title">${item.titleHtml}</span>
+        ${bannerCommandGridHtml(item.commands)}
         ${item.metaHtml ? `<span class="banner-meta">${item.metaHtml}</span>` : ''}
       </span>
       <span class="banner-meter" aria-hidden="true"><span class="banner-meter-fill"></span></span>
@@ -4367,6 +4463,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const frame = canvasRectToOverlay(stage.frame);
     const bannerZone = canvasRectToOverlay(stage.zones.banner);
     const playersZone = canvasRectToOverlay(stage.zones.players);
+    const isCommandBanner = el.classList.contains('commands');
     const gapX = stage.gap * scale.x;
     const gapY = stage.gap * scale.y;
     const topBandY = frame.y + gapY;
@@ -4374,12 +4471,19 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const topBand = makeRect(frame.x + gapX, topBandY, Math.max(1, frame.w - gapX * 2), Math.max(1, topBandBottom - topBandY));
     const forceNano = stage.frame.h < 260 || stage.frame.w < 430 || topBand.h < 42;
     const zone = forceNano ? topBand : bannerZone;
-    const frameMaxWidth = Math.max(180, frame.w * 0.76);
+    const verticalZone = bannerZone;
+    const placementZone = topBand;
+    const availableWidth = Math.max(1, placementZone.w);
+    const frameMaxWidth = Math.min(availableWidth, Math.max(180, frame.w * (isCommandBanner ? 0.84 : 0.76)));
     const readableMinWidth = Math.min(frameMaxWidth, Math.max(240, frame.w * 0.42));
-    const maxWidth = Math.max(readableMinWidth, Math.min(frameMaxWidth, zone.w * 1.08));
-    const preferredWidth = Math.min(maxWidth, Math.max(readableMinWidth, zone.w * 0.96));
-    const forceCompact = zone.h <= 72 || preferredWidth < 720;
-    const forceMicro = zone.h <= 48 || preferredWidth < 500;
+    const zoneWidthLimit = isCommandBanner ? frameMaxWidth : Math.min(frameMaxWidth, zone.w * 1.08);
+    const maxWidth = Math.min(availableWidth, Math.max(readableMinWidth, zoneWidthLimit));
+    const preferredWidth = isCommandBanner
+      ? maxWidth
+      : Math.min(maxWidth, Math.max(Math.min(readableMinWidth, maxWidth), zone.w * 0.96));
+    const compactHeightZone = isCommandBanner ? placementZone : zone;
+    const forceCompact = compactHeightZone.h <= (isCommandBanner ? 66 : 72) || preferredWidth < (isCommandBanner ? 560 : 720);
+    const forceMicro = compactHeightZone.h <= 48 || preferredWidth < (isCommandBanner ? 420 : 500);
     el.classList.remove('is-compact', 'is-micro', 'is-nano');
     if (forceCompact) el.classList.add('is-compact');
     if (forceMicro) el.classList.add('is-micro');
@@ -4388,18 +4492,23 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     el.style.maxWidth = `${maxWidth}px`;
 
     let rect = elementLayoutSize(el);
-    if (rect.height > zone.h && !el.classList.contains('is-compact')) {
+    if (rect.height > placementZone.h && !el.classList.contains('is-compact')) {
       el.classList.add('is-compact');
       rect = elementLayoutSize(el);
     }
-    if (rect.height > zone.h && !el.classList.contains('is-micro')) {
+    if (rect.height > placementZone.h && !el.classList.contains('is-micro')) {
       el.classList.add('is-micro');
       rect = elementLayoutSize(el);
     }
+    if (rect.height > placementZone.h && !el.classList.contains('is-nano')) {
+      el.classList.add('is-nano');
+      rect = elementLayoutSize(el);
+    }
     const halfWidth = rect.width / 2;
-    const centerX = clampNumber(zone.x + zone.w / 2, zone.x + halfWidth, zone.right - halfWidth);
-    const maxTop = Math.max(zone.y, zone.bottom - rect.height);
-    const top = clampNumber(zone.y + (zone.h - rect.height) / 2, zone.y, maxTop);
+    const centerX = clampNumber(frame.x + frame.w / 2, placementZone.x + halfWidth, placementZone.right - halfWidth);
+    const maxTop = Math.max(placementZone.y, placementZone.bottom - rect.height);
+    const dropY = Math.max(0, frame.h * 0.05);
+    const top = clampNumber(verticalZone.y + dropY + (verticalZone.h - rect.height) / 2, placementZone.y, maxTop);
     el.style.left = `${centerX}px`;
     el.style.top = `${top}px`;
   }
@@ -7024,7 +7133,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     roundedRectPath(ctx, barX, barY, barW, barH, barH / 2);
     ctx.stroke();
 
-    const hpText = `${Math.round(hp)} / ${Math.round(maxHp)} HP`;
+    const hpText = `${Math.round(hp)} HP`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const fittedHpText = fitCanvasText(ctx, hpText, barW * 0.94, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(11 * ui, plateH * 0.095), Math.max(6, 9 * ui));
     ctx.strokeStyle = 'rgba(0,0,0,0.9)'; ctx.lineWidth = 2.5;
@@ -7084,7 +7193,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function drawBossTargetWarnings(layout, nextAttackMs, nextAttackPct) {
     if (nextAttackMs == null || nextAttackMs > 3600) return;
     const targets = topPlayers().slice(0, 5);
-    if (!targets.length) return;
+    const horde = hordePlayer();
+    if (!targets.length && !horde) return;
     const ui = canvasUiScale();
     const intensity = clamp01(1 - nextAttackMs / 3600);
     const pulse = 0.5 + Math.sin(Date.now() * 0.016) * 0.5;
@@ -7096,17 +7206,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.lineDashOffset = -Date.now() * 0.06;
     targets.forEach((player, index) => {
       const target = getPlayerPosition(index, targets.length);
-      const dx = target.x - layout.x;
-      const dy = target.y - layout.y;
-      const dist = Math.max(1, Math.hypot(dx, dy));
-      const sx = layout.x + (dx / dist) * layout.r * 1.26;
-      const sy = layout.y + (dy / dist) * layout.r * 1.26;
+      const start = getBossEdgePosition(target);
       const lockR = Math.max(10 * ui, layout.r * (0.22 + intensity * 0.1));
       ctx.globalAlpha = (0.14 + intensity * 0.28) * (0.72 + pulse * 0.28);
       ctx.strokeStyle = index % 2 ? THEME.gold : THEME.red;
       ctx.lineWidth = Math.max(1, 1.4 * ui + intensity * 1.8 * ui);
       ctx.beginPath();
-      ctx.moveTo(sx, sy);
+      ctx.moveTo(start.x, start.y);
       ctx.lineTo(target.x, target.y - layout.r * 0.18);
       ctx.stroke();
       ctx.setLineDash([]);
@@ -7123,6 +7229,32 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.stroke();
       ctx.setLineDash([Math.max(8, 12 * ui), Math.max(10, 18 * ui)]);
     });
+    if (horde) {
+      const hordeLayout = getHordeLayout();
+      const target = getHordePosition();
+      const start = getBossEdgePosition(target);
+      const end = getHordeEdgePosition({ x: layout.x, y: layout.y });
+      ctx.globalAlpha = (0.18 + intensity * 0.34) * (0.7 + pulse * 0.3);
+      ctx.strokeStyle = nextAttackPct > 0.82 ? THEME.red : THEME.gold;
+      ctx.lineWidth = Math.max(1.5, 1.8 * ui + intensity * 2.2 * ui);
+      ctx.beginPath();
+      ctx.moveTo(start.x, start.y);
+      ctx.lineTo(end.x, end.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 0.16 + intensity * 0.38;
+      ctx.strokeStyle = colorWithAlpha(THEME.red, 0.45 + intensity * 0.4);
+      ctx.lineWidth = Math.max(1, 1.6 * ui);
+      roundedRectPath(
+        ctx,
+        hordeLayout.barX - 5 * ui,
+        hordeLayout.barY - 4 * ui,
+        hordeLayout.barW + 10 * ui,
+        hordeLayout.barH + 8 * ui,
+        hordeLayout.radius + 4 * ui
+      );
+      ctx.stroke();
+    }
     ctx.setLineDash([]);
     ctx.restore();
   }
@@ -7155,13 +7287,42 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.clip();
     drawBossTargetWarnings(layout, nextAttackMs, nextAttackPct);
 
-    const aura = ctx.createRadialGradient(layout.x, layout.y, 0, layout.x, layout.y, layout.r * 2.9);
-    aura.addColorStop(0, `rgba(255,106,61,${0.24 + Math.sin(now * 4) * 0.05})`);
-    aura.addColorStop(0.48, 'rgba(85,231,255,0.12)');
+    const cardX = layout.cardX;
+    const cardY = layout.cardY;
+    const cardW = layout.cardW;
+    const cardH = layout.cardH;
+    const radius = Math.max(14 * ui, cardH * 0.24);
+    const trackX = layout.trackX;
+    const trackW = layout.trackW;
+    const rightX = trackX + trackW;
+
+    const aura = ctx.createRadialGradient(layout.x, layout.y, 0, layout.x, layout.y, layout.r * 3.5);
+    aura.addColorStop(0, `rgba(255,106,61,${0.22 + Math.sin(now * 4) * 0.05})`);
+    aura.addColorStop(0.46, 'rgba(246,201,91,0.11)');
     aura.addColorStop(1, 'rgba(232,59,95,0)');
     ctx.fillStyle = aura;
     ctx.beginPath();
-    ctx.arc(layout.x, layout.y, layout.r * 2.9, 0, Math.PI * 2);
+    ctx.arc(layout.x, layout.y, layout.r * 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.shadowColor = 'rgba(232,59,95,0.42)';
+    ctx.shadowBlur = 22 + nextAttackPct * 12;
+    drawGlassPanel(cardX, cardY, cardW, cardH, radius, {
+      start: 'rgba(38,6,18,0.93)',
+      mid: 'rgba(8,14,28,0.92)',
+      end: 'rgba(4,7,14,0.96)',
+      stroke: colorWithAlpha(nextAttackMs != null && nextAttackMs < 2600 ? THEME.red : THEME.ember, 0.52),
+      lineWidth: Math.max(1.2, 1.4 * ui),
+    });
+    ctx.shadowBlur = 0;
+
+    const railGrad = ctx.createLinearGradient(cardX, 0, cardX + cardW, 0);
+    railGrad.addColorStop(0, colorWithAlpha(THEME.red, 0.98));
+    railGrad.addColorStop(0.42, colorWithAlpha(THEME.ember, 0.84));
+    railGrad.addColorStop(0.74, colorWithAlpha(THEME.gold, 0.7));
+    railGrad.addColorStop(1, colorWithAlpha(THEME.cyan, 0.58));
+    ctx.fillStyle = railGrad;
+    roundedRectPath(ctx, cardX + 8 * ui, cardY + 6 * ui, cardW - 16 * ui, Math.max(4 * ui, cardH * 0.055), 4 * ui);
     ctx.fill();
 
     for (let i = bossPulses.length - 1; i >= 0; i -= 1) {
@@ -7171,14 +7332,20 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         bossPulses.splice(i, 1);
         continue;
       }
-      const alpha = Math.sin(progress * Math.PI) * (item.type === 'kill' ? 0.6 : 0.42);
+      const alpha = Math.sin(progress * Math.PI) * (item.type === 'kill' ? 0.54 : 0.36);
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = alpha;
       ctx.strokeStyle = item.color || THEME.ember;
-      ctx.lineWidth = Math.max(2, layout.r * (0.06 + progress * 0.06));
-      ctx.beginPath();
-      ctx.arc(layout.x, layout.y, layout.r * (1.05 + progress * 1.25), 0, Math.PI * 2);
+      ctx.lineWidth = Math.max(2, layout.r * (0.06 + progress * 0.05));
+      roundedRectPath(
+        ctx,
+        cardX - progress * 14 * ui,
+        cardY - progress * 9 * ui,
+        cardW + progress * 28 * ui,
+        cardH + progress * 18 * ui,
+        radius + progress * 8 * ui
+      );
       ctx.stroke();
       ctx.restore();
     }
@@ -7189,14 +7356,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       layout.r * 0.12,
       layout.x,
       layout.y,
-      layout.r * 1.18
+      layout.r * 1.2
     );
     coreGrad.addColorStop(0, '#fff1ba');
     coreGrad.addColorStop(0.2, '#ff6a3d');
     coreGrad.addColorStop(0.58, '#481422');
     coreGrad.addColorStop(1, '#050711');
     ctx.shadowColor = 'rgba(255,106,61,0.72)';
-    ctx.shadowBlur = 24;
+    ctx.shadowBlur = 18;
     ctx.fillStyle = coreGrad;
     ctx.beginPath();
     ctx.arc(layout.x, layout.y, layout.r, 0, Math.PI * 2);
@@ -7234,85 +7401,111 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     const hpStart = -Math.PI / 2;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = Math.max(4 * ui, layout.r * 0.09);
     ctx.beginPath();
-    ctx.arc(layout.x, layout.y, layout.r * 1.18, 0, Math.PI * 2);
+    ctx.arc(layout.x, layout.y, layout.r * 1.15, 0, Math.PI * 2);
     ctx.stroke();
     ctx.strokeStyle = hpPct <= 0.25 ? THEME.gold : hpPct <= 0.5 ? THEME.ember : THEME.cyan;
     ctx.beginPath();
-    ctx.arc(layout.x, layout.y, layout.r * 1.18, hpStart, hpStart + Math.PI * 2 * hpPct);
+    ctx.arc(layout.x, layout.y, layout.r * 1.15, hpStart, hpStart + Math.PI * 2 * hpPct);
     ctx.stroke();
 
     if (nextAttackPct > 0) {
-      ctx.strokeStyle = colorWithAlpha(THEME.red, 0.35 + nextAttackPct * 0.4);
+      ctx.strokeStyle = colorWithAlpha(THEME.red, 0.34 + nextAttackPct * 0.42);
       ctx.lineWidth = Math.max(2 * ui, layout.r * 0.045);
       ctx.beginPath();
-      ctx.arc(layout.x, layout.y, layout.r * (1.34 + nextAttackPct * 0.16), hpStart, hpStart + Math.PI * 2 * nextAttackPct);
+      ctx.arc(layout.x, layout.y, layout.r * (1.28 + nextAttackPct * 0.12), hpStart, hpStart + Math.PI * 2 * nextAttackPct);
       ctx.stroke();
     }
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = `900 ${Math.max(15 * ui, layout.r * 0.36)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.font = `900 ${Math.max(13 * ui, layout.r * 0.31)}px 'Rajdhani','Segoe UI',sans-serif`;
     ctx.fillStyle = '#fff7e8';
     ctx.shadowColor = 'rgba(0,0,0,0.82)';
     ctx.shadowBlur = 8;
-    ctx.fillText('BOSS', layout.x, layout.y - layout.r * 0.08);
-    ctx.font = `800 ${Math.max(10 * ui, layout.r * 0.18)}px 'Rajdhani','Segoe UI',sans-serif`;
-    ctx.fillStyle = '#ffe08f';
-    ctx.fillText(formatBossTime(remainingMs), layout.x, layout.y + layout.r * 0.35);
+    ctx.fillText('BOSS', layout.x, layout.y + layout.r * 0.14);
     ctx.shadowBlur = 0;
 
-    drawGlassPanel(layout.panelX, layout.panelY, layout.panelW, layout.panelH, Math.max(12 * ui, layout.panelH * 0.26), {
-      start: 'rgba(32,6,18,0.88)',
-      mid: 'rgba(8,14,28,0.9)',
-      end: 'rgba(4,7,14,0.94)',
-      stroke: colorWithAlpha(THEME.ember, 0.42),
-    });
-    const pad = Math.max(12 * ui, layout.panelH * 0.22);
-    const trackX = layout.panelX + pad;
-    const trackY = layout.panelY + layout.panelH * 0.56;
-    const trackW = layout.panelW - pad * 2;
-    const trackH = Math.max(6 * ui, layout.panelH * 0.12);
-    ctx.fillStyle = 'rgba(0,0,0,0.48)';
-    roundedRectPath(ctx, trackX, trackY, trackW, trackH, trackH / 2);
+    const titleY = cardY + cardH * 0.28;
+    const hpTrackY = cardY + cardH * 0.45;
+    const hpTrackH = Math.max(10 * ui, cardH * 0.14);
+    const lowerTrackY = cardY + cardH * 0.68;
+    const lowerTrackH = Math.max(5 * ui, cardH * 0.07);
+    const footerY = cardY + cardH * 0.86;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.font = `900 ${Math.max(12 * ui, cardH * 0.19)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.fillStyle = '#fff4d8';
+    ctx.fillText(
+      fitCanvasText(ctx, 'BOSS WAVE', trackW * 0.54, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(12 * ui, cardH * 0.19), Math.max(7, 9 * ui)),
+      trackX,
+      titleY
+    );
+    ctx.textAlign = 'right';
+    const hpLabel = fitCanvasText(ctx, `${Math.round(hp)} / ${Math.round(maxHp)} HP`, trackW * 0.44, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10 * ui, cardH * 0.16), Math.max(7, 8 * ui));
+    ctx.fillStyle = '#ffd9a8';
+    ctx.fillText(hpLabel, rightX, titleY);
+
+    ctx.fillStyle = 'rgba(0,0,0,0.58)';
+    roundedRectPath(ctx, trackX, hpTrackY, trackW, hpTrackH, hpTrackH / 2);
     ctx.fill();
-    const timeGrad = ctx.createLinearGradient(trackX, 0, trackX + trackW, 0);
-    timeGrad.addColorStop(0, THEME.red);
-    timeGrad.addColorStop(0.55, THEME.ember);
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1;
+    roundedRectPath(ctx, trackX, hpTrackY, trackW, hpTrackH, hpTrackH / 2);
+    ctx.stroke();
+    const hpFillW = hpPct > 0 ? Math.max(hpTrackH, trackW * hpPct) : 0;
+    if (hpFillW > 0) {
+      const hpGrad = ctx.createLinearGradient(trackX, 0, rightX, 0);
+      hpGrad.addColorStop(0, THEME.red);
+      hpGrad.addColorStop(0.5, THEME.ember);
+      hpGrad.addColorStop(0.78, THEME.gold);
+      hpGrad.addColorStop(1, THEME.cyan);
+      ctx.fillStyle = hpGrad;
+      roundedRectPath(ctx, trackX + 2, hpTrackY + 2, Math.max(0, hpFillW - 4), hpTrackH - 4, (hpTrackH - 4) / 2);
+      ctx.fill();
+    }
+
+    const lowerGap = Math.max(8 * ui, cardH * 0.1);
+    const timeTrackW = Math.max(52 * ui, (trackW - lowerGap) * 0.48);
+    const strikeTrackX = trackX + timeTrackW + lowerGap;
+    const strikeTrackW = Math.max(52 * ui, rightX - strikeTrackX);
+    ctx.fillStyle = 'rgba(0,0,0,0.46)';
+    roundedRectPath(ctx, trackX, lowerTrackY, timeTrackW, lowerTrackH, lowerTrackH / 2);
+    ctx.fill();
+    roundedRectPath(ctx, strikeTrackX, lowerTrackY, strikeTrackW, lowerTrackH, lowerTrackH / 2);
+    ctx.fill();
+    const timeGrad = ctx.createLinearGradient(trackX, 0, trackX + timeTrackW, 0);
+    timeGrad.addColorStop(0, THEME.ember);
     timeGrad.addColorStop(1, THEME.gold);
     ctx.fillStyle = timeGrad;
-    roundedRectPath(ctx, trackX, trackY, Math.max(trackH, trackW * timePct), trackH, trackH / 2);
-    ctx.fill();
-    ctx.textBaseline = 'alphabetic';
+    if (timePct > 0) roundedRectPath(ctx, trackX, lowerTrackY, Math.max(lowerTrackH, timeTrackW * timePct), lowerTrackH, lowerTrackH / 2);
+    if (timePct > 0) ctx.fill();
+    const strikeGrad = ctx.createLinearGradient(strikeTrackX, 0, strikeTrackX + strikeTrackW, 0);
+    strikeGrad.addColorStop(0, THEME.red);
+    strikeGrad.addColorStop(1, THEME.gold);
+    ctx.fillStyle = strikeGrad;
+    if (nextAttackPct > 0) roundedRectPath(ctx, strikeTrackX, lowerTrackY, Math.max(lowerTrackH, strikeTrackW * nextAttackPct), lowerTrackH, lowerTrackH / 2);
+    if (nextAttackPct > 0) ctx.fill();
+
+    ctx.font = `900 ${Math.max(9 * ui, cardH * 0.13)}px 'Rajdhani','Segoe UI',sans-serif`;
+    const strikeSoon = nextAttackMs != null && nextAttackMs < 2600;
+    const strikeLabel = nextAttackMs == null ? 'STRIKE CHARGING' : (strikeSoon ? 'STRIKE READY' : `NEXT ${formatBossTime(nextAttackMs)}`);
     ctx.textAlign = 'left';
-    ctx.font = `900 ${Math.max(10 * ui, layout.panelH * 0.2)}px 'Rajdhani','Segoe UI',sans-serif`;
-    ctx.fillStyle = '#fff4d8';
-    ctx.fillText('BOSS WAVE', trackX, layout.panelY + layout.panelH * 0.3);
+    ctx.fillStyle = strikeSoon ? '#ffe8ea' : '#bdefff';
+    ctx.shadowColor = strikeSoon ? colorWithAlpha(THEME.red, 0.72) : colorWithAlpha(THEME.cyan, 0.45);
+    ctx.shadowBlur = strikeSoon ? 11 : 6;
+    ctx.fillText(
+      fitCanvasText(ctx, strikeLabel, trackW * 0.58, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(9 * ui, cardH * 0.13), Math.max(6, 7 * ui)),
+      trackX,
+      footerY
+    );
+    ctx.shadowBlur = 0;
     ctx.textAlign = 'right';
-    const hpLabel = fitCanvasText(ctx, `${Math.round(hp)} / ${Math.round(maxHp)} HP`, trackW * 0.5, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10 * ui, layout.panelH * 0.18), Math.max(7, 8 * ui));
-    ctx.fillStyle = '#ffd9a8';
-    ctx.fillText(hpLabel, trackX + trackW, layout.panelY + layout.panelH * 0.3);
-    if (nextAttackMs != null) {
-      const strikeSoon = nextAttackMs < 2600;
-      const strikeLabel = strikeSoon ? 'STRIKE READY' : `NEXT STRIKE ${formatBossTime(nextAttackMs)}`;
-      ctx.textAlign = 'left';
-      ctx.font = `900 ${Math.max(9 * ui, layout.panelH * 0.15)}px 'Rajdhani','Segoe UI',sans-serif`;
-      ctx.fillStyle = strikeSoon ? '#ffe8ea' : '#bdefff';
-      ctx.shadowColor = strikeSoon ? colorWithAlpha(THEME.red, 0.72) : colorWithAlpha(THEME.cyan, 0.5);
-      ctx.shadowBlur = strikeSoon ? 14 : 8;
-      ctx.fillText(
-        fitCanvasText(ctx, strikeLabel, trackW * 0.66, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(9 * ui, layout.panelH * 0.15), Math.max(6, 7 * ui)),
-        trackX,
-        layout.panelY + layout.panelH * 0.86
-      );
-      ctx.shadowBlur = 0;
-      ctx.textAlign = 'right';
-      const pressure = Math.round(nextAttackPct * 100);
-      ctx.fillStyle = strikeSoon ? '#ffd0a1' : '#ffe3ad';
-      ctx.fillText(`${pressure}%`, trackX + trackW, layout.panelY + layout.panelH * 0.86);
-    }
+    ctx.fillStyle = '#ffe3ad';
+    const timeLabel = fitCanvasText(ctx, formatBossTime(remainingMs), trackW * 0.28, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(9 * ui, cardH * 0.13), Math.max(6, 7 * ui));
+    ctx.fillText(timeLabel, rightX, footerY);
     ctx.restore();
   }
 
@@ -7622,14 +7815,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const bossPos = getBossPosition();
       rememberPosition(BOSS_ID, bossPos, 'boss');
       const bossLayout = getBossLayout();
+      const bossBounds = bossEntityBounds();
       legacyLayoutBoss = {
         id: BOSS_ID,
         x: bossLayout.x,
         y: bossLayout.y,
-        left: bossLayout.x - bossLayout.r * 1.45,
-        right: bossLayout.x + bossLayout.r * 1.45,
-        top: bossLayout.y - bossLayout.r * 1.45,
-        bottom: Math.max(bossLayout.y + bossLayout.r * 1.45, bossLayout.panelY + bossLayout.panelH),
+        left: bossBounds.left,
+        right: bossBounds.right,
+        top: bossBounds.top,
+        bottom: bossBounds.bottom,
         panel: {
           left: bossLayout.panelX,
           right: bossLayout.panelX + bossLayout.panelW,
@@ -7834,6 +8028,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (type === 'bossWave') return data.type === 'defeated' ? 98 : 84;
     if (type === 'engagementSurge') return data.tier === 'takeover' ? 99 : data.tier === 'viral' ? 92 : 84;
     if (type === 'roundEvent') return ['boss_started', 'boss_defeated', 'session_ended'].includes(data.type) ? 92 : 72;
+    if (type === 'commandBannerShowcase') return 80;
     if (type === 'killEvent' || type === 'streakEvent') return 95;
     if (type === 'giftAttack' || type === 'giftCelebration') return 88;
     if (type === 'attack' || type === 'commentDamage') return data.special ? 82 : 70;
@@ -7852,7 +8047,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (type === 'like' && data.milestone) return 'celebration';
     if (type === 'engagementSurge') return 'celebration';
     if (type === 'like' || type === 'heal' || type === 'socialBoost') return 'ambient';
-    if (type === 'killEvent' || type === 'streakEvent' || type === 'giftCelebration' || type === 'follow' || type === 'playerCommand' || type === 'roundEvent' || type === 'bossWave') return 'celebration';
+    if (type === 'killEvent' || type === 'streakEvent' || type === 'giftCelebration' || type === 'follow' || type === 'playerCommand' || type === 'roundEvent' || type === 'bossWave' || type === 'commandBannerShowcase') return 'celebration';
     if (type === 'respawn' || type === 'attack' || type === 'commentDamage' || type === 'giftAttack' || data.attacker || data.target) return 'gameplay';
     return 'gameplay';
   }
@@ -8215,6 +8410,31 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     showBattlePrompt('Recruit shield activated', 'return', 2200);
   }
 
+  function handleCommandBannerShowcase(data) {
+    const banners = Array.isArray(data?.banners) ? data.banners.slice(0, 3) : [];
+    if (!banners.length) return;
+    const transitions = ['transition-signal', 'transition-sweep', 'transition-surge'];
+    banners.forEach((banner, index) => {
+      const duration = Math.max(3200, Math.min(5200, Number(banner?.durationMs) || (index === 2 ? 5000 : 4300)));
+      setTimeout(() => {
+        showBanner('commands', {
+          code: banner?.code || `CMD${index + 1}`,
+          kicker: banner?.kicker || 'Chat commands',
+          title: banner?.title || 'Viewer commands',
+          meta: banner?.meta || 'Type commands in TikTok chat',
+          commands: Array.isArray(banner?.commands) ? banner.commands : [],
+          charge: banner?.charge || 78,
+          priority: 82 - index,
+          transition: transitions[index] || 'transition-signal',
+        }, duration);
+      }, index * 180);
+    });
+  }
+
+  if (isPublicDemo || overlayParams.get('debug') === '1') {
+    window.__showCommandBannerShowcase = handleCommandBannerShowcase;
+  }
+
   function handlePlayerCommand(data) {
     if (!data) return;
     const name = data.nickname || data.sourceNick || data.uniqueId || 'Viewer';
@@ -8534,6 +8754,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       socket.on('like', data => enqueueVisualEvent('like', data, handleLikeEvent, { mergeKey: payload => payload.milestone ? `like-${payload.milestone}` : (payload.uniqueId || payload.nickname || 'viewer') }));
       socket.on('heal', data => enqueueVisualEvent('heal', data, handleHealEvent, { mergeKey: payload => payload.uniqueId || 'viewer' }));
       socket.on('playerCommand', data => enqueueVisualEvent('playerCommand', data, handlePlayerCommand, { mergeKey: payload => payload.uniqueId || payload.nickname || 'viewer' }));
+      socket.on('commandBannerShowcase', data => enqueueVisualEvent('commandBannerShowcase', data || {}, handleCommandBannerShowcase, { mergeKey: () => 'command-banner-showcase' }));
       socket.on('roundEvent', data => enqueueVisualEvent('roundEvent', data, handleRoundEvent, { mergeKey: payload => payload.type || 'round' }));
       socket.on('bossWave', data => enqueueVisualEvent('bossWave', data, handleBossWave, { mergeKey: () => 'boss-wave' }));
 

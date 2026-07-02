@@ -647,7 +647,10 @@
         <div class="session-panel command-panel">
           <div class="card-head" style="margin-bottom:0;">
             <div><div class="section-title" style="margin-bottom:6px;">Viewer command panel</div><p class="muted">Copy this into chat, pinned comments, or your stream description.</p></div>
-            <button class="btn btn-secondary" onclick="copyViewerCommands()">Copy Commands</button>
+            <div class="btn-row">
+              <button class="btn btn-secondary" onclick="copyViewerCommands()">Copy Commands</button>
+              <button class="btn btn-primary" onclick="showCommandBanners()">Show Command Banners</button>
+            </div>
           </div>
           <textarea id="viewerCommandText" readonly>Loading viewer commands...</textarea>
           <div class="live-grid">
@@ -1591,6 +1594,11 @@ async function sessionAction(endpoint, successMessage) {
 function copyViewerCommands() {
   const value = document.getElementById('viewerCommandText')?.value || '!join\n!emoji <symbol>\n!shield\n!heal @name\n!laser @name\n!fire @boss';
   navigator.clipboard?.writeText(value).then(() => toast('Viewer commands copied')).catch(() => toast('Copy failed', true));
+}
+async function showCommandBanners() {
+  const result = await apiCall('/api/overlay/command-banners', 'POST');
+  if (!result.success) return;
+  toast(result.overlayConnected ? 'Command banners sent to overlay' : (result.message || 'Open the overlay to see command banners'));
 }
 function copyRecapShareUrl(url) {
   navigator.clipboard?.writeText(url).then(() => toast('Recap link copied')).catch(() => toast('Copy failed', true));
