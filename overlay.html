@@ -4974,6 +4974,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       this.rate      = Number(meta.rate) || 0;
       this.kind      = meta.kind || 'like';
       this.color     = meta.color || '#ff4f8f';
+      this.amount    = this.kind === 'heal'
+        ? Math.max(1, Math.round(Number(meta.amount) || this.hearts * 5))
+        : this.hearts;
       this.start     = Date.now();
       this.duration  = 1320 + this.intensity * 420;
       const palette  = this.kind === 'heal'
@@ -4985,9 +4988,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
             : this.kind === 'repost'
               ? [this.color, '#f6c95b', '#ff6a3d', '#ffffff', '#55e7ff']
               : [this.color, '#ff4f8f', '#ff8bc2', '#ffd1e3', '#ffd166'];
-      const baseCount = this.kind === 'like' ? 2 + this.hearts : this.kind === 'repost' ? 12 + this.hearts * 3 : 6 + this.hearts * 2;
-      const rawCount = Math.min(this.kind === 'like' ? 7 : this.kind === 'repost' ? 26 : 18, Math.max(3, baseCount + Math.floor(this.intensity * (this.kind === 'like' ? 3 : 6))));
-      const count    = motionParticleCount(rawCount, { min: this.kind === 'like' ? 2 : 4, max: this.kind === 'repost' ? 9 : 7 });
+      const isCompactMarker = this.kind === 'like' || this.kind === 'heal';
+      const baseCount = isCompactMarker ? 0 : this.kind === 'repost' ? 12 + this.hearts * 3 : 6 + this.hearts * 2;
+      const rawCount = isCompactMarker ? 0 : Math.min(this.kind === 'repost' ? 26 : 18, Math.max(3, baseCount + Math.floor(this.intensity * 6)));
+      const count    = isCompactMarker ? 0 : motionParticleCount(rawCount, { min: 4, max: this.kind === 'repost' ? 9 : 7 });
       const motion   = canvasMotionScale();
 
       this.motes = Array.from({ length: count }, (_, i) => {
@@ -5014,6 +5018,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const p = clamp01(this.progress);
       const { x, y } = this.pos;
       const lift = easeOutCubic(p);
+
+      if (this.kind === 'like' || this.kind === 'heal') {
+        this.drawCompactMarker(p, x, y, lift);
+        return;
+      }
 
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
@@ -5099,6 +5108,75 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         ctx.fillText(text, x, labelY + 1);
         ctx.restore();
       }
+    }
+
+    drawCompactMarker(p, x, y, lift) {
+      if (p >= 0.86) return;
+      const ui = canvasUiScale();
+      const markerAlpha = Math.min(1, p / 0.12) * (1 - Math.max(0, p - 0.62) / 0.24);
+      const markerY = y - (this.kind === 'like' ? 18 : 24) * ui - (this.kind === 'like' ? 14 : 22) * ui * lift;
+      const text = this.kind === 'heal' ? `HEAL +${this.amount}` : `LIKE +${this.hearts}`;
+      const accent = this.kind === 'heal' ? (this.color || '#8fffd2') : (this.color || '#ff78b2');
+      const iconFill = this.kind === 'heal' ? '#d8ffe9' : '#ffe3f0';
+      const glowFill = this.kind === 'heal' ? 'rgba(143,255,210,' : 'rgba(255,120,180,';
+      const fontSize = this.kind === 'heal' ? Math.max(12, ch() * 0.03) : Math.max(10, ch() * 0.025);
+      const height = Math.max(this.kind === 'heal' ? 28 : 24, fontSize * 1.85);
+      const iconBox = height * 0.82;
+      const gap = Math.max(7 * ui, height * 0.26);
+      const padX = Math.max(10 * ui, height * 0.38);
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, markerAlpha);
+      ctx.font = `900 ${fontSize}px 'Rajdhani','Segoe UI',sans-serif`;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      const textW = ctx.measureText(text).width;
+      const width = padX * 2 + iconBox + gap + textW;
+      const left = x - width / 2;
+      const top = markerY - height / 2;
+      const radius = height / 2;
+
+      ctx.shadowColor = accent;
+      ctx.shadowBlur = 16;
+      ctx.fillStyle = `${glowFill}${0.18 * markerAlpha})`;
+      roundedRectPath(ctx, left - 4 * ui, top - 4 * ui, width + 8 * ui, height + 8 * ui, radius + 4 * ui);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      const grad = ctx.createLinearGradient(left, top, left + width, top + height);
+      grad.addColorStop(0, this.kind === 'heal' ? 'rgba(10,36,30,0.9)' : 'rgba(40,8,25,0.9)');
+      grad.addColorStop(0.58, 'rgba(7,12,24,0.88)');
+      grad.addColorStop(1, 'rgba(3,6,14,0.94)');
+      ctx.fillStyle = grad;
+      roundedRectPath(ctx, left, top, width, height, radius);
+      ctx.fill();
+      ctx.strokeStyle = colorWithAlpha(accent, 0.72);
+      ctx.lineWidth = Math.max(1, 1.2 * ui);
+      roundedRectPath(ctx, left + 0.5, top + 0.5, width - 1, height - 1, Math.max(1, radius - 0.5));
+      ctx.stroke();
+
+      const iconX = left + padX + iconBox / 2;
+      const iconY = markerY;
+      ctx.save();
+      ctx.globalAlpha *= 0.94;
+      if (this.kind === 'heal') {
+        ctx.fillStyle = iconFill;
+        const plusW = iconBox * 0.62;
+        const plusH = iconBox * 0.18;
+        roundedRectPath(ctx, iconX - plusW / 2, iconY - plusH / 2, plusW, plusH, plusH / 2);
+        ctx.fill();
+        roundedRectPath(ctx, iconX - plusH / 2, iconY - plusW / 2, plusH, plusW, plusH / 2);
+        ctx.fill();
+      } else {
+        drawHeartShape(ctx, iconX, iconY + iconBox * 0.04, iconBox * 0.44, iconFill, 1, 0);
+      }
+      ctx.restore();
+
+      ctx.shadowColor = accent;
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = this.kind === 'heal' ? '#d8ffe9' : '#ffe3f0';
+      ctx.fillText(text, left + padX + iconBox + gap, markerY + 1);
+      ctx.restore();
     }
   }
 
