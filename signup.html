@@ -146,8 +146,8 @@
       --border: rgba(255, 255, 255, .09);
       --shadow: 0 34px 95px rgba(0, 0, 0, .58);
       --glow: 0 0 54px rgba(245, 200, 66, .22);
-      --r-xl: 34px;
-      --r-lg: 24px;
+      --r-xl: 12px;
+      --r-lg: 8px;
       --max: 1180px;
     }
 
@@ -158,9 +158,9 @@
       font-family: 'Inter', system-ui, sans-serif;
       color: var(--txt);
       background:
-        radial-gradient(circle at 18% 2%, rgba(246, 201, 91, .2), transparent 30%),
-        radial-gradient(circle at 84% 14%, rgba(232, 59, 95, .16), transparent 28%),
-        radial-gradient(circle at 76% 86%, rgba(85, 231, 255, .13), transparent 32%),
+        linear-gradient(130deg, rgba(246, 201, 91, .12), transparent 34%),
+        linear-gradient(310deg, rgba(85, 231, 255, .1), transparent 42%),
+        linear-gradient(24deg, rgba(232, 59, 95, .08), transparent 48%),
         linear-gradient(180deg, #050608 0%, #070a12 44%, #030406 100%);
       overflow-x: hidden;
     }
@@ -210,7 +210,7 @@
       gap: 18px;
       padding: 12px 14px;
       border: 1px solid var(--b-gold);
-      border-radius: 24px;
+      border-radius: 12px;
       background: rgba(5, 7, 11, .78);
       backdrop-filter: blur(22px);
       box-shadow: 0 20px 70px rgba(0, 0, 0, .32), inset 0 1px 0 rgba(255, 255, 255, .08);
@@ -234,8 +234,8 @@
       flex: 0 0 auto;
     }
 
-    .brand-mark { width: 48px; height: 48px; border-radius: 16px; padding: 3px; }
-    .card-logo { width: 86px; height: 86px; margin: 0 auto 16px; border-radius: 26px; padding: 6px; }
+    .brand-mark { width: 48px; height: 48px; border-radius: 8px; padding: 3px; }
+    .card-logo { width: 64px; height: 64px; margin: 0 0 16px; border-radius: 8px; padding: 6px; }
 
     .brand-mark img,
     .card-logo img {
@@ -269,7 +269,7 @@
     .nav-links { display: flex; align-items: center; gap: 8px; }
     .nav-link {
       padding: 11px 14px;
-      border-radius: 999px;
+      border-radius: 8px;
       color: var(--muted);
       font-size: 14px;
       font-weight: 800;
@@ -282,7 +282,7 @@
       justify-content: center;
       min-height: 42px;
       padding: 0 18px;
-      border-radius: 999px;
+      border-radius: 8px;
       color: #160d02;
       font-weight: 900;
       font-size: 14px;
@@ -295,27 +295,36 @@
       min-height: calc(100vh - 88px);
       margin: 0 auto;
       display: grid;
-      grid-template-columns: repeat(12, minmax(0, 1fr));
-      gap: clamp(24px, 4vw, 52px);
-      align-items: start;
+      grid-template-columns: minmax(0, 1fr) minmax(360px, 480px);
+      gap: clamp(22px, 4vw, 46px);
+      align-items: center;
       padding: clamp(18px, 3vw, 38px) 0 58px;
     }
     .signup-card-wrap {
-      grid-column: 7 / -1;
+      grid-column: 2;
       order: 2;
     }
     .hero-copy {
-      grid-column: 1 / span 6;
+      grid-column: 1;
       order: 1;
       display: grid;
       justify-items: start;
       text-align: left;
-      max-width: 620px;
+      max-width: 680px;
       margin: 0;
+    }
+    .signup-detail-grid {
+      grid-column: 1 / -1;
+      order: 3;
+      display: grid;
+      grid-template-columns: minmax(280px, .72fr) minmax(0, 1.28fr);
+      gap: 16px;
+      align-items: stretch;
+      margin-top: 4px;
     }
     .signup-preview-panel {
       grid-column: 1 / -1;
-      order: 3;
+      order: 4;
       display: grid;
       align-self: start;
       justify-items: center;
@@ -338,7 +347,7 @@
       margin: 0;
       padding: 9px 13px;
       border: 1px solid rgba(246, 201, 91, .3);
-      border-radius: 999px;
+      border-radius: 8px;
       background: rgba(246, 201, 91, .08);
       color: var(--gold-l);
       font-size: 12px;
@@ -350,7 +359,7 @@
       content: '';
       width: 8px;
       height: 8px;
-      border-radius: 999px;
+      border-radius: 8px;
       background: var(--green);
       box-shadow: 0 0 18px rgba(119, 240, 161, .8);
     }
@@ -371,8 +380,8 @@
     .hero-copy h1 {
       max-width: 1120px;
       font-family: 'Black Ops One', 'Rajdhani', sans-serif;
-      font-size: clamp(44px, 5.9vw, 88px);
-      line-height: 1.02;
+      font-size: clamp(42px, 5.2vw, 74px);
+      line-height: .98;
       letter-spacing: 0;
       text-transform: uppercase;
       text-align: left;
@@ -397,7 +406,7 @@
       max-width: 640px;
       color: #c7cedd;
       font-size: clamp(17px, 2vw, 21px);
-      line-height: 1.7;
+      line-height: 1.55;
       text-align: left;
       text-wrap: balance;
       margin: 0 0 26px;
@@ -407,7 +416,7 @@
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
-      max-width: 620px;
+      max-width: 680px;
       margin: 0 0 26px;
     }
     .outcome-item {
@@ -440,7 +449,7 @@
       flex-wrap: wrap;
       justify-content: flex-start;
       gap: 10px;
-      max-width: 620px;
+      max-width: 680px;
       margin: 0 0 28px;
     }
     .trust-chips span {
@@ -448,15 +457,13 @@
       align-items: center;
       gap: 8px;
       padding: 9px 12px;
-      border-radius: 999px;
+      border-radius: 8px;
       color: #dfe6f3;
       font-size: 13px;
       font-weight: 800;
       border: 1px solid rgba(255, 255, 255, .09);
       background: rgba(255, 255, 255, .045);
     }
-    .trust-chips span::before { content: '✦'; color: var(--gold); }
-
     .trust-chips span::before {
       content: '';
       width: 7px;
@@ -468,15 +475,15 @@
     }
 
     .battle-preview {
-      max-width: 720px;
+      max-width: 980px;
       width: 100%;
       padding: 1px;
-      border-radius: 28px;
+      border-radius: 10px;
       background: linear-gradient(145deg, rgba(246, 201, 91, .62), rgba(255, 255, 255, .1) 35%, rgba(232, 59, 95, .36), rgba(85, 231, 255, .24));
       box-shadow: var(--shadow), 0 0 90px rgba(85, 231, 255, .08);
     }
     .battle-preview-inner {
-      border-radius: 27px;
+      border-radius: 9px;
       padding: 12px;
       background: linear-gradient(180deg, rgba(15, 20, 32, .96), rgba(4, 6, 10, .97));
       border: 1px solid rgba(255, 255, 255, .08);
@@ -499,7 +506,7 @@
     }
     .preview-frame {
       aspect-ratio: 16 / 9;
-      border-radius: 20px;
+      border-radius: 8px;
       overflow: hidden;
       border: 1px solid rgba(85, 231, 255, .2);
       background: #02040a;
@@ -519,37 +526,26 @@
       inset: -1px;
       border-radius: var(--r-xl);
       background: linear-gradient(145deg, rgba(246, 201, 91, .74), rgba(255, 255, 255, .1) 28%, rgba(232, 59, 95, .45) 62%, rgba(85, 231, 255, .25));
-      filter: drop-shadow(0 28px 95px rgba(0, 0, 0, .58));
+      filter: drop-shadow(0 22px 70px rgba(0, 0, 0, .5));
       z-index: -1;
     }
     .signup-card {
       position: relative;
       overflow: hidden;
-      padding: clamp(28px, 4vw, 42px);
-      border-radius: 33px;
+      padding: clamp(24px, 3vw, 34px);
+      border-radius: var(--r-xl);
       border: 1px solid rgba(255, 255, 255, .1);
       background:
-        radial-gradient(circle at 50% 8%, rgba(246, 201, 91, .17), transparent 28%),
+        linear-gradient(145deg, rgba(246, 201, 91, .08), transparent 34%),
         linear-gradient(180deg, var(--panel-strong), rgba(4, 6, 10, .96));
       box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08);
     }
     .signup-card::after {
-      content: '';
-      position: absolute;
-      left: 24px;
-      right: 24px;
-      bottom: 20px;
-      height: 70px;
-      border-radius: 22px;
-      border: 1px solid rgba(232, 59, 95, .25);
-      background: linear-gradient(90deg, rgba(232, 59, 95, .14), rgba(246, 201, 91, .06));
-      opacity: .7;
-      pointer-events: none;
-      z-index: 0;
+      display: none;
     }
     .card-content { position: relative; z-index: 1; }
     .card-logo { display: none; }
-    .card-top { text-align: center; margin-bottom: 18px; }
+    .card-top { text-align: left; margin-bottom: 18px; }
     .eyebrow {
       display: inline-flex;
       align-items: center;
@@ -557,7 +553,7 @@
       width: fit-content;
       margin-bottom: 14px;
       padding: 8px 12px;
-      border-radius: 999px;
+      border-radius: 8px;
       border: 1px solid rgba(119, 240, 161, .24);
       background: rgba(119, 240, 161, .08);
       color: #b8ffd0;
@@ -578,7 +574,7 @@
       font-family: 'Black Ops One', 'Rajdhani', sans-serif;
       font-size: clamp(30px, 3.4vw, 42px);
       line-height: 1;
-      text-align: center;
+      text-align: left;
       text-transform: uppercase;
       margin-bottom: 12px;
     }
@@ -587,7 +583,7 @@
       line-height: 1.65;
       font-size: 15px;
       max-width: 430px;
-      margin: 0 auto;
+      margin: 0;
     }
     .recommended-path {
       display: flex;
@@ -603,12 +599,12 @@
       font-size: 13px;
       font-weight: 900;
       line-height: 1.35;
-      text-align: center;
+      text-align: left;
     }
     .recommended-path span {
       flex: 0 0 auto;
       padding: 6px 9px;
-      border-radius: 999px;
+      border-radius: 8px;
       color: #06130b;
       background: var(--green);
       font-size: 11px;
@@ -622,7 +618,7 @@
       justify-content: center;
       min-height: 58px;
       padding: 0 20px;
-      border-radius: 16px;
+      border-radius: 8px;
       border: 1px solid transparent;
       font-size: 16px;
       font-weight: 900;
@@ -645,15 +641,16 @@
     .microcopy {
       color: var(--muted);
       font-size: 13px;
-      text-align: center;
+      text-align: left;
       line-height: 1.55;
       margin-bottom: 22px;
     }
     .setup-path {
       display: grid;
       gap: 10px;
-      margin-bottom: 18px;
-      padding: 15px;
+      min-height: 100%;
+      margin: 0;
+      padding: 18px;
       border-radius: 8px;
       border: 1px solid rgba(85, 231, 255, .16);
       background: rgba(85, 231, 255, .055);
@@ -661,7 +658,7 @@
     .setup-path strong {
       color: #effbff;
       font-size: 14px;
-      text-align: center;
+      text-align: left;
     }
     .setup-path ol {
       display: grid;
@@ -686,7 +683,7 @@
       place-items: center;
       width: 28px;
       height: 28px;
-      border-radius: 999px;
+      border-radius: 8px;
       color: #061016;
       background: linear-gradient(135deg, var(--cyan), #b9fbff);
       font-weight: 900;
@@ -694,8 +691,9 @@
     .access-panel {
       display: grid;
       gap: 14px;
+      min-height: 100%;
       padding: 18px;
-      border-radius: 22px;
+      border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, .1);
       background: rgba(255, 255, 255, .045);
     }
@@ -703,7 +701,7 @@
       display: block;
       color: #fff;
       font-size: 14px;
-      text-align: center;
+      text-align: left;
       text-transform: uppercase;
       letter-spacing: 0;
     }
@@ -715,7 +713,7 @@
     .plan-column {
       min-width: 0;
       padding: 14px;
-      border-radius: 18px;
+      border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, .08);
       background: rgba(0, 0, 0, .24);
     }
@@ -784,7 +782,8 @@
     @media (max-width: 980px) {
       .signup-shell { grid-template-columns: 1fr; padding-top: 24px; }
       .hero-copy { text-align: center; justify-items: center; max-width: 1180px; margin: 0 auto; }
-      .hero-copy, .signup-card-wrap, .signup-preview-panel { grid-column: 1 / -1; }
+      .hero-copy, .signup-card-wrap, .signup-detail-grid, .signup-preview-panel { grid-column: 1 / -1; }
+      .signup-detail-grid { grid-template-columns: 1fr; }
       .kicker, .lede, .outcome-grid, .battle-preview { margin-left: auto; margin-right: auto; }
       .hero-header-row { justify-content: center; }
       .hero-copy h1, .lede { text-align: center; }
@@ -792,7 +791,7 @@
     }
     @media (max-width: 620px) {
       .nav-wrap { padding: 12px 12px 0; }
-      nav { border-radius: 18px; }
+      nav { border-radius: 8px; }
       .brand-text, .nav-link:not(.login-link-nav) { display: none; }
       .nav-links { gap: 6px; }
       .nav-link.login-link-nav {
@@ -810,9 +809,10 @@
       }
       .brand-mark { width: 42px; height: 42px; }
       .signup-shell { width: min(100% - 24px, var(--max)); padding-top: 16px; }
-      .signup-card-wrap { order: 1; }
-      .hero-copy { order: 2; }
-      .signup-preview-panel { order: 3; }
+      .hero-copy { order: 1; }
+      .signup-card-wrap { order: 2; }
+      .signup-detail-grid { order: 3; }
+      .signup-preview-panel { order: 4; }
       .hero-header-row { gap: 8px; margin-bottom: 14px; }
       .kicker, .hero-proof { width: 100%; justify-content: center; }
       .hero-copy h1 { font-size: clamp(36px, 11vw, 54px); }
@@ -831,10 +831,10 @@
       .card-title { margin-bottom: 8px; font-size: clamp(29px, 9vw, 38px); }
       .card-sub { font-size: 14px; line-height: 1.45; }
       .actions { gap: 10px; margin-bottom: 12px; }
-      .btn { min-height: 54px; border-radius: 14px; }
+      .btn { min-height: 54px; border-radius: 8px; }
       .login-link { margin-top: 12px; padding-top: 12px; }
       .battle-preview-inner { padding: 10px; }
-      .preview-frame { border-radius: 18px; }
+      .preview-frame { border-radius: 8px; }
     }
   </style>
   <link rel="stylesheet" href="/css/site-refresh.css" />
@@ -865,10 +865,10 @@
         <div class="hero-proof">Setup built for OBS and TikTok Studio</div>
       </div>
       <h1 id="signup-title">
-        <span class="headline-main">Launch your first battle overlay</span>
-        <span class="headline-accent">in under 5 minutes.</span>
+        <span class="headline-main">Create your battle room.</span>
+        <span class="headline-accent">Test it before you go live.</span>
       </h1>
-      <p class="lede">Turn your TikTok LIVE chat into a playable battle arena. Create a room, open a setup preview, copy your signed browser-source URL, and fire a test event before your next LIVE starts.</p>
+      <p class="lede">Turn your TikTok LIVE chat into a playable battle arena. Pick Google or email, open the Command Center, copy your signed browser-source URL, and fire a test event before viewers arrive.</p>
       <div class="outcome-grid" aria-label="Signup outcomes">
         <div class="outcome-item"><b>Room</b><span>Your creator room is created after signup.</span></div>
         <div class="outcome-item"><b>Overlay</b><span>Copy the OBS or TikTok Studio source from the Command Center.</span></div>
@@ -888,60 +888,62 @@
             <a class="card-logo" href="/" aria-label="IntoTheBattle home">
               <img src="/intothebattlelogo_logo_only.svg" style="transform:scale(1.1);transform-origin:center;" alt="IntoTheBattle logo" />
             </a>
-            <div class="eyebrow">7-day full access · No card needed</div>
-            <h2 class="card-title">Create your room</h2>
-            <p class="card-sub">Use Google for the fastest setup. Email signup is also available. No credit card — your first 7 days unlock everything.</p>
+            <div class="eyebrow">7-day full access &middot; No card needed</div>
+            <h2 class="card-title">Start free</h2>
+            <p class="card-sub">Use Google for the fastest setup. Email signup is available when you want a separate login.</p>
           </div>
 
           <div class="recommended-path">
-            <strong>Recommended: Google gets you into setup in one click.</strong>
-            <span>Fastest</span>
+            <strong>Recommended: Google keeps setup moving in one click.</strong>
+            <span>1 click</span>
           </div>
 
           <div class="actions">
-            <a href="/auth/google" class="btn btn-primary" id="googleSignupLink">Start free with Google →</a>
+            <a href="/auth/google" class="btn btn-primary" id="googleSignupLink">Start free with Google &rarr;</a>
             <a href="/register" class="btn btn-secondary" id="emailSignupLink">Use email instead</a>
           </div>
 
-          <p class="microcopy">No credit card. No paywall before setup. Your first 7 days give you full access — every creator control, the overlay, test attacks — so you can prove it works before spending a cent.</p>
+          <p class="microcopy">No credit card and no paywall before setup. The trial unlocks the overlay, creator controls, test attacks, and video moments.</p>
 
           <div class="login-link">Already have an account? <a href="/login" id="loginLink">Sign in here</a>.</div>
 
-          <div class="setup-path" aria-label="What happens after signup">
-            <strong>After you click, the path is simple:</strong>
-            <ol>
-              <li>Create your account.</li>
-              <li>Open the Command Center setup flow.</li>
-              <li>Open setup preview, copy the source, and test the battle.</li>
-            </ol>
-          </div>
-
-          <div class="access-panel">
-            <strong>What is included?</strong>
-            <div class="plan-compare">
-              <div class="plan-column">
-                <b>7-Day Unlocked <span>Trial</span></b>
-                <ul>
-                  <li>Battle overlay and room setup</li>
-                  <li>Command Center controls</li>
-                  <li>Viewer actions and effects</li>
-                  <li>Creator video moments and test controls</li>
-                </ul>
-              </div>
-              <div class="plan-column pro">
-                <b>Creator Pro <span>$12/mo</span></b>
-                <ul>
-                  <li>Upload your own custom video moments</li>
-                  <li>Preview and trigger breaks live</li>
-                  <li>Custom timing and presentation controls</li>
-                  <li>Advanced creator branding tools</li>
-                </ul>
-              </div>
-            </div>
-            <p style="margin-top:12px;font-size:12px;color:var(--muted);text-align:center;line-height:1.5;">Free means you can create and test the battle overlay. The unlocked trial proves every control. Creator Pro adds custom brand moments and premium presentation tools.</p>
-          </div>
-
         </div>
+      </div>
+    </section>
+
+    <section class="signup-detail-grid" aria-label="Signup details">
+      <div class="setup-path" aria-label="What happens after signup">
+        <strong>Your first five minutes</strong>
+        <ol>
+          <li>Create your account with Google or email.</li>
+          <li>Open the Command Center setup flow.</li>
+          <li>Copy the browser source and test the battle before going live.</li>
+        </ol>
+      </div>
+
+      <div class="access-panel">
+        <strong>Included during trial</strong>
+        <div class="plan-compare">
+          <div class="plan-column">
+            <b>7-Day Unlocked <span>Trial</span></b>
+            <ul>
+              <li>Battle overlay and room setup</li>
+              <li>Command Center controls</li>
+              <li>Viewer actions and effects</li>
+              <li>Creator video moments and test controls</li>
+            </ul>
+          </div>
+          <div class="plan-column pro">
+            <b>Creator Pro <span>$12/mo</span></b>
+            <ul>
+              <li>Upload your own custom video moments</li>
+              <li>Preview and trigger breaks live</li>
+              <li>Custom timing and presentation controls</li>
+              <li>Advanced creator branding tools</li>
+            </ul>
+          </div>
+        </div>
+        <p style="margin-top:12px;font-size:12px;color:var(--muted);text-align:left;line-height:1.5;">Free means you can create and test the battle overlay. The unlocked trial proves every control. Creator Pro adds custom brand moments and premium presentation tools.</p>
       </div>
     </section>
 
