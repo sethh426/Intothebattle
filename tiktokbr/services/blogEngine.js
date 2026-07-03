@@ -4,6 +4,7 @@ import { readSiteMarketingFacts } from './marketingAutomation.js';
 const ALLOWED_STATUSES = new Set(['draft', 'queued', 'published', 'archived']);
 const ALLOWED_SOURCES = new Set(['manual', 'site-context']);
 const SAFE_CONTENT_TAGS = new Set(['p', 'br', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'strong', 'b', 'em', 'i', 'code', 'pre', 'blockquote', 'a']);
+const GENERATED_DRAFT_NOTICE = 'This is a generated draft from live site context and is ready for SEO review before publishing.';
 
 function clampNumber(value, fallback, min, max) {
   const number = Number(value);
@@ -103,8 +104,16 @@ function sanitizeText(value = '', maxLength = 260) {
 function sanitizeRichText(value = '') {
   const text = safeString(value);
   if (!text) return '';
-  if (hasHtmlTags(text)) return sanitizeHtmlSubset(text);
-  return `<p>${htmlEscape(text).replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br />')}</p>`;
+  if (hasHtmlTags(text)) return stripGeneratedDraftNotice(sanitizeHtmlSubset(text));
+  return stripGeneratedDraftNotice(`<p>${htmlEscape(text).replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br />')}</p>`);
+}
+
+function stripGeneratedDraftNotice(value = '') {
+  return String(value || '')
+    .replace(new RegExp(`<p>\\s*${GENERATED_DRAFT_NOTICE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*</p>`, 'gi'), '')
+    .replace(new RegExp(GENERATED_DRAFT_NOTICE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
 function normalizeStatus(value, fallback = 'draft') {
@@ -137,7 +146,7 @@ function mapPost(row) {
     slug: row.slug,
     title: row.title || 'Untitled',
     summary: row.summary || '',
-    contentHtml: row.content_html || '',
+    contentHtml: stripGeneratedDraftNotice(row.content_html || ''),
     status: row.status || 'draft',
     source: row.source || 'manual',
     sourceKey: row.source_key || '',
@@ -206,7 +215,6 @@ function buildContextPost(fact, index = 0) {
       <li>${htmlEscape(`Why this feature improves viewer attention on ${fact.url ? 'your public page' : 'your stream'}.`)}</li>
     </ul>
     <p>Read more on: <a href="${htmlEscape(fact.url || '/')}" target="_blank" rel="noopener noreferrer">${htmlEscape(fact.url || '/')}</a>.</p>
-    <p>This is a generated draft from live site context and is ready for SEO review before publishing.</p>
   `.replace(/\s+/g, ' ').trim();
 
   return {
@@ -504,7 +512,7 @@ function markdownInline(value = '') {
 }
 
 export function buildWritefreelyPostBody(post = {}) {
-  const html = safeString(post.contentHtml || post.content || '');
+  const html = stripGeneratedDraftNotice(safeString(post.contentHtml || post.content || ''));
   if (!html) return safeString(post.summary || '');
   if (!hasHtmlTags(html)) return decodeHtmlEntities(html);
 
@@ -539,7 +547,7 @@ export function renderWritefreelyPayload(post, sourceUrl = '') {
     slug: post.slug,
     summary: post.summary,
     content: buildWritefreelyPostBody(post),
-    contentHtml: post.contentHtml,
+    contentHtml: stripGeneratedDraftNotice(post.contentHtml || ''),
     seo_title: post.seoTitle,
     seo_description: post.seoDescription,
     seo_keywords: post.seoKeywords,

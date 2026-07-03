@@ -45,6 +45,7 @@ const post = {
       <li>Why viewers understand the fight.</li>
     </ul>
     <p>Read more on: <a href="https://www.intothebattle.com/how-to-play">How to play</a>.</p>
+    <p>This is a generated draft from live site context and is ready for SEO review before publishing.</p>
   `,
 };
 
@@ -53,10 +54,12 @@ assert(body.includes('## What this page covers'), 'WriteFreely body should prese
 assert(body.includes('- How creators launch faster.'), 'WriteFreely body should preserve list items as Markdown');
 assert(body.includes('[How to play](https://www.intothebattle.com/how-to-play)'), 'WriteFreely body should preserve links as Markdown');
 assert(!body.includes('<p>') && !body.includes('<li>'), 'WriteFreely body should not contain raw HTML tags');
+assert(!body.includes('generated draft from live site context'), 'WriteFreely body should remove internal generated-draft notice');
 
 const payload = renderWritefreelyPayload(post);
 assert(payload.content === body, 'Webhook payload should include markdown-ready content');
 assert(payload.contentHtml.includes('<h2>What this page covers</h2>'), 'Webhook payload should retain sanitized HTML for bridges that use it');
+assert(!payload.contentHtml.includes('generated draft from live site context'), 'Webhook payload HTML should remove internal generated-draft notice');
 assert(payload.slug === post.slug, 'Webhook payload should include slug');
 
 const blogEngineSource = fs.readFileSync(new URL('../tiktokbr/services/blogEngine.js', import.meta.url), 'utf8');
