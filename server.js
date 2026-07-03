@@ -1571,11 +1571,103 @@ ${urls}
 </urlset>`;
 }
 
+const BLOG_DEFAULT_DESCRIPTION = 'Creator-first TikTok LIVE overlay guides, release notes, SEO playbooks, and launch notes from IntoTheBattle.';
+const BLOG_DEFAULT_KEYWORDS = [
+  'TikTok LIVE overlay',
+  'interactive stream game',
+  'OBS browser source',
+  'TikTok Studio overlay',
+  'live stream engagement',
+  'IntoTheBattle blog',
+];
+
+function stripHtmlForBlog(value = '') {
+  return String(value || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function blogWordCount(post = {}) {
+  const text = stripHtmlForBlog(`${post.summary || ''} ${post.contentHtml || ''}`);
+  return text ? text.split(/\s+/).filter(Boolean).length : 0;
+}
+
+function blogReadingMinutes(post = {}) {
+  return Math.max(1, Math.ceil(blogWordCount(post) / 220));
+}
+
+function blogSourceLabel(source = '') {
+  const cleaned = cleanPublicText(source, 60).replace(/[-_]+/g, ' ').trim();
+  if (!cleaned) return 'IntoTheBattle';
+  return cleaned.replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function blogKeywords(post = {}, max = 6) {
+  const source = post.source ? blogSourceLabel(post.source) : '';
+  const rawTerms = `${post.seoKeywords || ''},${source}`;
+  const seen = new Set();
+  const terms = [];
+  for (const term of rawTerms.split(',')) {
+    const cleaned = cleanPublicText(term, 48);
+    const key = cleaned.toLowerCase();
+    if (!cleaned || seen.has(key)) continue;
+    seen.add(key);
+    terms.push(cleaned);
+    if (terms.length >= max) break;
+  }
+  return terms;
+}
+
+function blogKeywordMeta(posts = []) {
+  const seen = new Set();
+  const terms = [];
+  for (const term of BLOG_DEFAULT_KEYWORDS) {
+    const key = term.toLowerCase();
+    seen.add(key);
+    terms.push(term);
+  }
+  for (const post of posts) {
+    for (const term of blogKeywords(post, 4)) {
+      const key = term.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      terms.push(term);
+      if (terms.length >= 14) return terms;
+    }
+  }
+  return terms;
+}
+
+function renderBlogKeywordTags(post = {}, max = 4) {
+  return blogKeywords(post, max).map(keyword => `<span>${escapeHtml(keyword)}</span>`).join('');
+}
+
 function renderBlogListPage(posts = []) {
   const baseUrl = publicBaseUrl();
   const blogUrl = new URL('/blog', `${baseUrl}/`).toString();
   const imageUrl = new URL('/og-intothebattle.png', `${baseUrl}/`).toString();
-  const description = 'Creator-first updates, guides, and launch notes from IntoTheBattle.';
+  const description = BLOG_DEFAULT_DESCRIPTION;
+  const keywords = blogKeywordMeta(posts);
+  const validPosts = posts.filter(post => post?.slug);
+  const featured = validPosts[0] || null;
+  const remainingPosts = featured ? validPosts.slice(1) : validPosts;
+  const topicChips = keywords.slice(0, 8).map(keyword => `<span>${escapeHtml(keyword)}</span>`).join('');
+  const postListItems = validPosts.slice(0, 12).map((post, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    url: new URL(`/blog/${encodeURIComponent(post.slug)}`, `${baseUrl}/`).toString(),
+    name: post.seoTitle || post.title,
+    description: post.seoDescription || post.summary || '',
+  }));
   const blogSchema = jsonLdScript({
     '@context': 'https://schema.org',
     '@graph': [
@@ -1587,6 +1679,13 @@ function renderBlogListPage(posts = []) {
         description,
         publisher: { '@id': `${baseUrl}/#organization` },
         isPartOf: { '@id': `${baseUrl}/#website` },
+        inLanguage: 'en-US',
+        keywords,
+        about: [
+          { '@type': 'Thing', name: 'TikTok LIVE overlays' },
+          { '@type': 'Thing', name: 'Interactive livestream games' },
+          { '@type': 'Thing', name: 'OBS browser source tools' },
+        ],
       },
       {
         '@type': 'WebPage',
@@ -1597,6 +1696,8 @@ function renderBlogListPage(posts = []) {
         isPartOf: { '@id': `${baseUrl}/#website` },
         mainEntity: { '@id': `${blogUrl}#blog` },
         primaryImageOfPage: { '@type': 'ImageObject', url: imageUrl, width: 1200, height: 630 },
+        breadcrumb: { '@id': `${blogUrl}#breadcrumb` },
+        inLanguage: 'en-US',
       },
       {
         '@type': 'BreadcrumbList',
@@ -1610,25 +1711,43 @@ function renderBlogListPage(posts = []) {
         '@type': 'ItemList',
         '@id': `${blogUrl}#posts`,
         name: 'IntoTheBattle published posts',
-        itemListElement: posts.slice(0, 12).filter(post => post.slug).map((post, index) => ({
-          '@type': 'ListItem',
-          position: index + 1,
-          url: new URL(`/blog/${encodeURIComponent(post.slug)}`, `${baseUrl}/`).toString(),
-          name: post.seoTitle || post.title,
-          description: post.seoDescription || post.summary || '',
-        })),
+        itemListElement: postListItems,
       },
     ],
   });
-  const cards = (posts.length ? posts : []).map(post => {
+  const featuredMarkup = featured ? (() => {
+    const link = `/blog/${encodeURIComponent(featured.slug)}`;
+    const published = formatBlogDate(featured.publishedAt || featured.createdAt);
+    return `<section class="featured-story" aria-labelledby="featured-title">
+      <a class="featured-art" href="${link}" aria-label="${escapeHtml(featured.title || 'Featured blog post')}">
+        <img src="/og-intothebattle.png" alt="IntoTheBattle live stream battle overlay key art" />
+        <span>Featured</span>
+      </a>
+      <div class="featured-copy">
+        <p class="eyebrow">${escapeHtml(blogSourceLabel(featured.source))}${published ? ` / ${escapeHtml(published)}` : ''}</p>
+        <h2 id="featured-title"><a href="${link}">${escapeHtml(featured.title || 'Untitled post')}</a></h2>
+        <p>${escapeHtml(featured.summary || featured.seoDescription || '')}</p>
+        <div class="tag-row">${renderBlogKeywordTags(featured, 5)}</div>
+        <a class="text-link" href="${link}">Read the dispatch</a>
+      </div>
+    </section>`;
+  })() : '';
+  const cards = remainingPosts.map(post => {
     const link = `/blog/${encodeURIComponent(post.slug)}`;
-    const byLine = [post.status, post.source].filter(Boolean).join(' • ');
     const published = formatBlogDate(post.publishedAt);
+    const minutes = blogReadingMinutes(post);
     return `<article class="blog-card">
-      <p class="blog-meta">${escapeHtml(byLine)}${published ? ` <span>- ${escapeHtml(published)}</span>` : ''}</p>
-      <h2><a href="${link}">${escapeHtml(post.title)}</a></h2>
+      <div class="blog-meta">
+        <span>${escapeHtml(blogSourceLabel(post.source))}</span>
+        <span>${escapeHtml(String(minutes))} min read</span>
+      </div>
+      <h3><a href="${link}">${escapeHtml(post.title || 'Untitled post')}</a></h3>
       <p>${escapeHtml(post.summary || '')}</p>
-      <a href="${link}" class="blog-link">Read full post</a>
+      <div class="tag-row">${renderBlogKeywordTags(post, 3)}</div>
+      <div class="card-foot">
+        <time datetime="${escapeHtml(toIsoDate(post.publishedAt || post.createdAt))}">${escapeHtml(published || 'Draft')}</time>
+        <a href="${link}" class="blog-link">Read</a>
+      </div>
     </article>`;
   }).join('');
 
@@ -1637,8 +1756,9 @@ function renderBlogListPage(posts = []) {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Blog - IntoTheBattle</title>
+  <title>IntoTheBattle Blog | TikTok LIVE Overlay Guides and Updates</title>
   <meta name="description" content="${escapeHtml(description)}" />
+  <meta name="keywords" content="${escapeHtml(keywords.join(', '))}" />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <link rel="canonical" href="${escapeHtml(blogUrl)}" />
@@ -1667,66 +1787,287 @@ function renderBlogListPage(posts = []) {
   ${blogSchema}
   <style>
     * { box-sizing: border-box; }
+    :root {
+      --ink: #05070d;
+      --paper: #fff8e6;
+      --muted: #abb8c7;
+      --gold: #f6c95b;
+      --cyan: #9ff5ff;
+      --ember: #ff6a3d;
+      --green: #7ee787;
+      --line: rgba(255,255,255,.13);
+      --panel: rgba(7,12,20,.78);
+    }
     body {
       margin: 0;
       min-height: 100vh;
       font-family: Inter, Arial, sans-serif;
-      color: #fff8e6;
-      background: radial-gradient(140% 95% at 50% 0%, #151c2e 0%, #05080d 58%, #020204 100%);
+      color: var(--paper);
+      background:
+        linear-gradient(130deg, rgba(246,201,91,.13), transparent 36%),
+        linear-gradient(320deg, rgba(159,245,255,.11), transparent 42%),
+        linear-gradient(180deg, #151b26 0%, #060911 54%, #020204 100%);
     }
+    a { color: inherit; }
     .wrap {
-      max-width: 980px;
+      width: min(1180px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 32px 24px 60px;
+      padding: 24px 0 68px;
     }
-    a { color: #9ff5ff; }
-    .top {
+    .blog-nav {
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
+      align-items: center;
       gap: 16px;
       flex-wrap: wrap;
-      margin-bottom: 24px;
-      border-bottom: 1px solid rgba(255,255,255,.12);
-      padding-bottom: 14px;
+      margin-bottom: 26px;
     }
-    .top h1 { margin: 0; text-transform: uppercase; letter-spacing: .08em; font-size: clamp(32px, 5vw, 56px); }
-    .top a { color: #f6c95b; text-transform: uppercase; font-size: 13px; letter-spacing: .08em; font-weight: 800; text-decoration: none; }
+    .brand-mark,
+    .nav-pill,
+    .primary-link,
+    .secondary-link {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 900;
+    }
+    .brand-mark { gap: 10px; color: var(--paper); }
+    .brand-mark img { width: 38px; height: 38px; }
+    .nav-links { display: flex; gap: 10px; flex-wrap: wrap; }
+    .nav-pill { padding: 0 14px; border: 1px solid var(--line); color: var(--cyan); background: rgba(255,255,255,.055); }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(280px, .92fr);
+      gap: clamp(22px, 4vw, 46px);
+      align-items: center;
+      min-height: min(620px, calc(100vh - 110px));
+      padding: clamp(28px, 5vw, 62px) 0;
+    }
+    .eyebrow,
+    .blog-meta,
+    .section-kicker {
+      margin: 0;
+      color: var(--cyan);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    h1 {
+      margin: 12px 0 16px;
+      max-width: 780px;
+      font-size: clamp(48px, 8vw, 96px);
+      line-height: .92;
+    }
+    .hero-copy {
+      max-width: 700px;
+      margin: 0;
+      color: #d8e1ee;
+      font-size: clamp(18px, 2vw, 23px);
+      line-height: 1.45;
+      font-weight: 700;
+    }
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 26px; }
+    .primary-link,
+    .secondary-link {
+      padding: 0 18px;
+      border: 1px solid transparent;
+    }
+    .primary-link {
+      color: #130d02;
+      background: linear-gradient(135deg, var(--gold), #fff0b9 52%, var(--ember));
+      box-shadow: 0 18px 42px rgba(246,201,91,.22);
+    }
+    .secondary-link { color: var(--paper); border-color: var(--line); background: rgba(255,255,255,.06); }
+    .hero-card {
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #050912;
+      box-shadow: 0 28px 90px rgba(0,0,0,.42);
+    }
+    .hero-card img { width: 100%; display: block; aspect-ratio: 1200 / 630; object-fit: cover; }
+    .hero-card div { padding: 14px 16px; display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; font-weight: 800; }
+    .topic-rail {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 16px 0 28px;
+      border-top: 1px solid var(--line);
+    }
+    .topic-rail span,
+    .tag-row span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border: 1px solid rgba(159,245,255,.20);
+      border-radius: 999px;
+      color: #d8fbff;
+      background: rgba(159,245,255,.07);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .featured-story {
+      display: grid;
+      grid-template-columns: minmax(250px, .9fr) minmax(0, 1.1fr);
+      gap: 24px;
+      align-items: stretch;
+      margin: 0 0 28px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(7,12,20,.72);
+    }
+    .featured-art {
+      position: relative;
+      display: block;
+      min-height: 280px;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: #050912;
+    }
+    .featured-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .featured-art span {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      background: rgba(0,0,0,.68);
+      color: var(--gold);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    .featured-copy { display: grid; align-content: center; gap: 14px; padding: clamp(8px, 2vw, 22px); }
+    .featured-copy h2,
+    .blog-card h3 { margin: 0; line-height: 1.04; }
+    .featured-copy h2 { font-size: clamp(32px, 4.5vw, 58px); }
+    .featured-copy h2 a,
+    .blog-card h3 a { text-decoration: none; }
+    .featured-copy p,
+    .blog-card p { margin: 0; color: var(--muted); line-height: 1.56; }
+    .tag-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .text-link,
+    .blog-link {
+      color: var(--gold);
+      font-weight: 900;
+      text-decoration: none;
+    }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      margin: 34px 0 16px;
+    }
+    .section-head h2 { margin: 4px 0 0; font-size: clamp(28px, 4vw, 46px); }
+    .post-count { color: var(--green); font-weight: 900; }
     .blog-grid {
       display: grid;
-      gap: 14px;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
     }
     .blog-card {
-      background: rgba(5,9,16,.78);
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 12px;
-      padding: 16px 16px 18px;
+      min-height: 300px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
       display: grid;
-      gap: 10px;
+      gap: 12px;
+      align-content: start;
     }
-    .blog-card h2 { margin: 0; font-size: 22px; line-height: 1.1; }
-    .blog-card p { margin: 0; color: #aeb7c7; line-height: 1.5; }
-    .blog-meta { margin: 0; color: #9ff5ff; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
-    .blog-link { color: #f6c95b; text-decoration: none; font-weight: 800; }
+    .blog-card h3 { font-size: 24px; }
+    .blog-meta { display: flex; justify-content: space-between; gap: 12px; color: var(--cyan); }
+    .card-foot {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      margin-top: auto;
+      color: #c8d2df;
+      font-size: 13px;
+      font-weight: 800;
+    }
     .blog-empty {
       border: 1px dashed rgba(255,255,255,.2);
       padding: 18px;
-      border-radius: 12px;
+      border-radius: 8px;
       color: #9ca7b6;
       text-align: center;
+      grid-column: 1 / -1;
     }
-    @media (max-width: 640px) { .top { align-items: flex-start; } }
+    @media (max-width: 820px) {
+      .hero,
+      .featured-story { grid-template-columns: 1fr; }
+      .hero { min-height: auto; padding-top: 18px; }
+      .section-head { align-items: flex-start; flex-direction: column; }
+    }
+    @media (max-width: 560px) {
+      .wrap { width: min(100% - 24px, 1180px); padding-top: 14px; }
+      .blog-nav { align-items: flex-start; }
+      .nav-links,
+      .hero-actions { width: 100%; }
+      .nav-pill,
+      .primary-link,
+      .secondary-link { flex: 1 1 140px; }
+      h1 { font-size: clamp(44px, 15vw, 66px); }
+      .hero-card div { flex-direction: column; }
+      .blog-meta,
+      .card-foot { flex-direction: column; align-items: flex-start; }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <header class="top">
-      <h1>IntoTheBattle Blog</h1>
-      <a href="/">Back to homepage</a>
+    <header class="blog-nav">
+      <a class="brand-mark" href="/">
+        <img src="/intothebattlelogo_logo_only.svg" alt="" />
+        <span>IntoTheBattle</span>
+      </a>
+      <nav class="nav-links" aria-label="Blog navigation">
+        <a class="nav-pill" href="/">Homepage</a>
+        <a class="nav-pill" href="/how-to-play">Commands</a>
+        <a class="nav-pill" href="/signup">Start setup</a>
+      </nav>
     </header>
-    <main class="blog-grid">
-      ${cards || '<p class="blog-empty">No published posts yet. Check again soon while we seed the first set of SEO-ready updates.</p>'}
+    <main>
+      <section class="hero" aria-labelledby="blog-title">
+        <div>
+          <p class="eyebrow">Battle notes</p>
+          <h1 id="blog-title">IntoTheBattle Blog</h1>
+          <p class="hero-copy">${escapeHtml(description)}</p>
+          <div class="hero-actions">
+            <a class="primary-link" href="/signup">Create your arena</a>
+            <a class="secondary-link" href="/how-to-play">View commands</a>
+          </div>
+        </div>
+        <aside class="hero-card" aria-label="IntoTheBattle visual">
+          <img src="/og-intothebattle.png" alt="IntoTheBattle TikTok LIVE arena overlay key art" />
+          <div><span>SEO guides</span><span>Release notes</span><span>Creator ops</span></div>
+        </aside>
+      </section>
+      <section class="topic-rail" aria-label="Blog topics">${topicChips}</section>
+      ${featuredMarkup}
+      <section aria-labelledby="latest-posts">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Latest</p>
+            <h2 id="latest-posts">Field dispatches</h2>
+          </div>
+          <span class="post-count">${escapeHtml(String(validPosts.length))} published</span>
+        </div>
+        <div class="blog-grid">
+          ${cards || (!featured ? '<p class="blog-empty">No published posts yet. Check again soon while the first SEO-ready updates are prepared.</p>' : '')}
+        </div>
+      </section>
     </main>
   </div>
 </body>
@@ -1746,6 +2087,13 @@ function renderBlogPostPage(post) {
   const title = escapeHtml(post.title || 'Untitled');
   const datePublished = toIsoDate(post.publishedAt || post.createdAt) || undefined;
   const dateModified = toIsoDate(post.updatedAt || post.publishedAt || post.createdAt) || datePublished;
+  const readingMinutes = blogReadingMinutes(post);
+  const wordCount = blogWordCount(post);
+  const keywords = blogKeywords(post, 10);
+  const keywordMeta = [...new Set([...BLOG_DEFAULT_KEYWORDS, ...keywords])].slice(0, 14);
+  const sourceLabel = blogSourceLabel(post.source);
+  const tagMeta = keywords.map(keyword => `<meta property="article:tag" content="${escapeHtml(keyword)}" />`).join('\n  ');
+  const tagMarkup = keywords.map(keyword => `<span>${escapeHtml(keyword)}</span>`).join('');
   const postSchema = jsonLdScript({
     '@context': 'https://schema.org',
     '@graph': [
@@ -1759,6 +2107,7 @@ function renderBlogPostPage(post) {
         breadcrumb: { '@id': `${postUrl}#breadcrumb` },
         primaryImageOfPage: { '@type': 'ImageObject', url: imageUrl, width: 1200, height: 630 },
         mainEntity: { '@id': `${postUrl}#article` },
+        inLanguage: 'en-US',
       },
       {
         '@type': 'BlogPosting',
@@ -1771,7 +2120,11 @@ function renderBlogPostPage(post) {
         author: { '@id': `${baseUrl}/#organization`, '@type': 'Organization', name: 'IntoTheBattle', url: `${baseUrl}/` },
         publisher: { '@id': `${baseUrl}/#organization`, '@type': 'Organization', name: 'IntoTheBattle', url: `${baseUrl}/` },
         mainEntityOfPage: { '@id': `${postUrl}#webpage` },
-        articleSection: post.source || 'IntoTheBattle updates',
+        articleSection: sourceLabel,
+        keywords,
+        wordCount,
+        timeRequired: `PT${readingMinutes}M`,
+        inLanguage: 'en-US',
         isAccessibleForFree: true,
       },
       {
@@ -1792,6 +2145,7 @@ function renderBlogPostPage(post) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title} | IntoTheBattle Blog</title>
   <meta name="description" content="${escapeHtml(rawDescription)}" />
+  <meta name="keywords" content="${escapeHtml(keywordMeta.join(', '))}" />
   <meta name="robots" content="${post.status === 'published' ? 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' : 'noindex, follow'}" />
   <link rel="canonical" href="${escapeHtml(postUrl)}" />
   <meta property="og:type" content="article" />
@@ -1808,6 +2162,8 @@ function renderBlogPostPage(post) {
   <meta property="og:site_name" content="IntoTheBattle" />
   ${datePublished ? `<meta property="article:published_time" content="${escapeHtml(datePublished)}" />` : ''}
   ${dateModified ? `<meta property="article:modified_time" content="${escapeHtml(dateModified)}" />` : ''}
+  <meta property="article:section" content="${escapeHtml(sourceLabel)}" />
+  ${tagMeta}
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${escapeHtml(rawTitle)}" />
   <meta name="twitter:description" content="${escapeHtml(rawDescription)}" />
@@ -1821,45 +2177,236 @@ function renderBlogPostPage(post) {
   ${postSchema}
   <style>
     * { box-sizing: border-box; }
+    :root {
+      --ink: #05070d;
+      --paper: #fff8e6;
+      --muted: #abb8c7;
+      --gold: #f6c95b;
+      --cyan: #9ff5ff;
+      --ember: #ff6a3d;
+      --green: #7ee787;
+      --line: rgba(255,255,255,.13);
+      --panel: rgba(7,12,20,.78);
+    }
     body {
       margin: 0;
       min-height: 100vh;
       font-family: Inter, Arial, sans-serif;
-      color: #fff8e6;
-      background: radial-gradient(150% 95% at 50% 0%, #151c2e 0%, #05080d 58%, #020204 100%);
+      color: var(--paper);
+      background:
+        linear-gradient(130deg, rgba(246,201,91,.12), transparent 34%),
+        linear-gradient(320deg, rgba(159,245,255,.10), transparent 42%),
+        linear-gradient(180deg, #151b26 0%, #060911 54%, #020204 100%);
     }
+    a { color: inherit; }
     .wrap {
-      max-width: 860px;
+      width: min(1120px, calc(100% - 32px));
       margin: 0 auto;
-      padding: 32px 24px 60px;
+      padding: 24px 0 72px;
     }
-    .nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .nav a { color: #9ff5ff; text-decoration: none; font-weight: 700; }
-    article { background: rgba(8,12,20,.78); border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 22px; }
-    h1 { margin: 0 0 10px; font-size: clamp(34px, 5vw, 56px); line-height: 1.05; }
-    .meta { margin-bottom: 16px; color: #9ff5ff; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
-    .summary { margin: 0 0 20px; color: #aeb7c7; line-height: 1.5; font-weight: 500; }
-    .content { color: #e6e9f4; line-height: 1.75; }
-    .content p { margin: 0 0 14px; }
-    .content h2 { margin: 26px 0 8px; font-size: 24px; line-height: 1.2; }
-    .content ul { padding-left: 20px; }
-    .content a { color: #9ff5ff; }
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 26px;
+    }
+    .nav a,
+    .aside-link {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 14px;
+      border-radius: 8px;
+      color: var(--cyan);
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.055);
+      text-decoration: none;
+      font-weight: 900;
+    }
+    .article-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 24px;
+      align-items: start;
+    }
+    article {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: rgba(7,12,20,.76);
+      box-shadow: 0 24px 80px rgba(0,0,0,.36);
+    }
+    .article-hero { padding: clamp(24px, 5vw, 52px); }
+    .eyebrow,
+    .meta,
+    .aside-kicker {
+      margin: 0;
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 12px 0 16px;
+      font-size: clamp(40px, 6vw, 76px);
+      line-height: .96;
+      max-width: 900px;
+    }
+    .summary {
+      margin: 0;
+      max-width: 780px;
+      color: #d8e1ee;
+      line-height: 1.5;
+      font-size: clamp(18px, 2vw, 22px);
+      font-weight: 700;
+    }
+    .article-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+      color: #c8d2df;
+      font-size: 13px;
+      font-weight: 900;
+    }
+    .article-meta span,
+    .article-meta time {
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.055);
+    }
+    .article-image {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1200 / 630;
+      object-fit: cover;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+    .content {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: clamp(26px, 5vw, 54px);
+      color: #e6e9f4;
+      line-height: 1.78;
+      font-size: 18px;
+    }
+    .content p { margin: 0 0 18px; }
+    .content h2 { margin: 34px 0 10px; font-size: clamp(26px, 3vw, 36px); line-height: 1.16; color: var(--paper); }
+    .content h3 { margin: 26px 0 8px; font-size: 24px; line-height: 1.22; color: var(--paper); }
+    .content ul,
+    .content ol { padding-left: 22px; }
+    .content li { margin-bottom: 8px; }
+    .content a { color: var(--cyan); font-weight: 800; }
+    .content blockquote {
+      margin: 28px 0;
+      padding: 16px 18px;
+      border-left: 4px solid var(--gold);
+      background: rgba(246,201,91,.08);
+      border-radius: 8px;
+    }
+    .article-aside {
+      position: sticky;
+      top: 18px;
+      display: grid;
+      gap: 14px;
+    }
+    .aside-panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      background: rgba(7,12,20,.74);
+    }
+    .aside-panel h2 {
+      margin: 4px 0 12px;
+      font-size: 22px;
+      line-height: 1.12;
+    }
+    .signal-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: #d8e1ee;
+      font-weight: 800;
+    }
+    .signal-list span { display: block; color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+    .tag-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tag-row span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 0 10px;
+      border: 1px solid rgba(159,245,255,.20);
+      border-radius: 999px;
+      color: #d8fbff;
+      background: rgba(159,245,255,.07);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    @media (max-width: 900px) {
+      .article-layout { grid-template-columns: 1fr; }
+      .article-aside { position: static; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      .wrap { width: min(100% - 24px, 1120px); padding-top: 14px; }
+      .nav a,
+      .aside-link { flex: 1 1 130px; }
+      .article-meta { flex-direction: column; align-items: flex-start; }
+      .content { font-size: 16px; }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="nav">
-      <a href="/blog">&lt; All posts</a>
+      <a href="/blog">All posts</a>
       <a href="/">Homepage</a>
     </div>
-    <article>
-      <div class="meta">${escapeHtml(formatBlogDate(post.publishedAt) || 'Draft')} - ${escapeHtml(post.source || 'manual')}</div>
-      <h1>${title}</h1>
-      <p class="summary">${escapeHtml(post.summary || '')}</p>
-      <div class="content">
-        ${post.contentHtml || `<p>No content available.</p>`}
-      </div>
-    </article>
+    <main class="article-layout">
+      <article>
+        <header class="article-hero">
+          <p class="eyebrow">${escapeHtml(sourceLabel)}</p>
+          <h1>${title}</h1>
+          <p class="summary">${escapeHtml(post.summary || rawDescription)}</p>
+          <div class="article-meta">
+            <time datetime="${escapeHtml(datePublished || '')}">${escapeHtml(formatBlogDate(post.publishedAt) || 'Draft')}</time>
+            <span>${escapeHtml(String(readingMinutes))} min read</span>
+            <span>${escapeHtml(String(wordCount))} words</span>
+          </div>
+        </header>
+        <img class="article-image" src="/og-intothebattle.png" alt="IntoTheBattle TikTok LIVE arena overlay key art" />
+        <div class="content">
+          ${post.contentHtml || `<p>No content available.</p>`}
+        </div>
+      </article>
+      <aside class="article-aside" aria-label="Article details">
+        <section class="aside-panel">
+          <p class="aside-kicker">Signals</p>
+          <h2>Article details</h2>
+          <ul class="signal-list">
+            <li><span>Section</span>${escapeHtml(sourceLabel)}</li>
+            <li><span>Updated</span>${escapeHtml(formatBlogDate(post.updatedAt || post.publishedAt || post.createdAt) || 'Not dated')}</li>
+            <li><span>Canonical</span>${escapeHtml(new URL(`/blog/${encodeURIComponent(post.slug || '')}`, `${baseUrl}/`).pathname)}</li>
+          </ul>
+        </section>
+        ${tagMarkup ? `<section class="aside-panel"><p class="aside-kicker">Topics</p><h2>Search terms</h2><div class="tag-row">${tagMarkup}</div></section>` : ''}
+        <section class="aside-panel">
+          <p class="aside-kicker">Next</p>
+          <h2>Keep building</h2>
+          <a class="aside-link" href="/signup">Create your arena</a>
+        </section>
+      </aside>
+    </main>
   </div>
 </body>
 </html>`;
