@@ -160,6 +160,38 @@
     },
     {
       "method": "POST",
+      "path": "/admin/blog/manual",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/blog/generate",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/blog/site-context/push",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/blog/site-context/generate-and-push",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
       "path": "/api/dev/test-mode",
       "category": "development",
       "access": "non-production-only",

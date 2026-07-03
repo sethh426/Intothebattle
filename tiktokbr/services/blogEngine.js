@@ -3,6 +3,7 @@ import { readSiteMarketingFacts } from './marketingAutomation.js';
 
 const ALLOWED_STATUSES = new Set(['draft', 'queued', 'published', 'archived']);
 const ALLOWED_SOURCES = new Set(['manual', 'site-context']);
+const SAFE_CONTENT_TAGS = new Set(['p', 'br', 'h2', 'h3', 'h4', 'ul', 'ol', 'li', 'strong', 'b', 'em', 'i', 'code', 'pre', 'blockquote', 'a']);
 
 function clampNumber(value, fallback, min, max) {
   const number = Number(value);
@@ -21,6 +22,56 @@ function htmlEscape(value = '') {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function decodeHtmlEntities(value = '') {
+  return String(value)
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>');
+}
+
+function hasHtmlTags(value = '') {
+  return /<\/?[a-z][\s\S]*>/i.test(String(value || ''));
+}
+
+function safeHref(value = '') {
+  const href = decodeHtmlEntities(value).trim();
+  if (!href) return '';
+  if (href.startsWith('/') || href.startsWith('#')) return href;
+  try {
+    const parsed = new URL(href);
+    return ['http:', 'https:'].includes(parsed.protocol) ? parsed.toString() : '';
+  } catch (_err) {
+    return '';
+  }
+}
+
+function sanitizeHtmlSubset(value = '') {
+  return String(value || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/\s+style\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+    .replace(/<\/?([a-z0-9]+)([^>]*)>/gi, (match, rawTag, attrs = '') => {
+      const tag = String(rawTag || '').toLowerCase();
+      const closing = /^<\//.test(match);
+      if (!SAFE_CONTENT_TAGS.has(tag)) return '';
+      if (closing) return tag === 'br' ? '' : `</${tag}>`;
+      if (tag === 'br') return '<br />';
+      if (tag === 'a') {
+        const hrefMatch = String(attrs).match(/\s+href\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i);
+        const href = safeHref(hrefMatch?.[2] || hrefMatch?.[3] || hrefMatch?.[4] || '');
+        if (!href) return '<a>';
+        return `<a href="${htmlEscape(href)}" target="_blank" rel="noopener noreferrer">`;
+      }
+      return `<${tag}>`;
+    })
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 function normalizeSlug(value, fallback = 'blog-post') {
@@ -42,7 +93,7 @@ function truncate(value, maxLength) {
 
 function sanitizeText(value = '', maxLength = 260) {
   return truncate(
-    safeString(value)
+    decodeHtmlEntities(safeString(value))
       .replace(/<[^>]*>/g, ' ')
       .replace(/\s+/g, ' '),
     maxLength
@@ -50,7 +101,10 @@ function sanitizeText(value = '', maxLength = 260) {
 }
 
 function sanitizeRichText(value = '') {
-  return htmlEscape(value).replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br />') || '';
+  const text = safeString(value);
+  if (!text) return '';
+  if (hasHtmlTags(text)) return sanitizeHtmlSubset(text);
+  return `<p>${htmlEscape(text).replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br />')}</p>`;
 }
 
 function normalizeStatus(value, fallback = 'draft') {
@@ -65,6 +119,11 @@ function normalizeSource(value, fallback = 'manual') {
 
 function nowISO() {
   return new Date().toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function normalizePublishedAt(value, status = 'draft') {
+  if (value) return value;
+  return status === 'published' ? nowISO() : null;
 }
 
 function ensureLimitSafe(limit, fallback = 10, max = 30) {
@@ -263,7 +322,7 @@ export function createBlogPost(input = {}) {
     sanitizeText(input.seoTitle || title, 170),
     sanitizeText(input.seoDescription || summary, 240),
     sanitizeText(input.seoKeywords || 'TikTok LIVE, IntoTheBattle, live streaming', 280),
-    input.publishedAt || null
+    normalizePublishedAt(input.publishedAt, status)
   );
 
   return getBlogPostBySlug(slug);
@@ -280,7 +339,7 @@ export function updateBlogPost(id, input = {}) {
   const summary = sanitizeText(input.summary || post.summary, 260);
   const contentHtml = sanitizeRichText(input.contentHtml || input.content || post.contentHtml);
   const status = normalizeStatus(input.status || post.status, post.status);
-  const publishedAt = input.publishedAt || post.publishedAt || null;
+  const publishedAt = normalizePublishedAt(input.publishedAt || post.publishedAt, status);
 
   db.prepare(`
     UPDATE local_blog_posts
@@ -317,8 +376,17 @@ export function setBlogPostStatus(id, status) {
   const normalizedStatus = normalizeStatus(status, 'draft');
   if (!Number.isFinite(safeId) || safeId <= 0) throw new Error('Invalid blog post id');
 
-  db.prepare('UPDATE local_blog_posts SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-    .run(normalizedStatus, safeId);
+  db.prepare(`
+    UPDATE local_blog_posts
+    SET
+      status = ?,
+      published_at = CASE
+        WHEN ? = 'published' AND published_at IS NULL THEN CURRENT_TIMESTAMP
+        ELSE published_at
+      END,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(normalizedStatus, normalizedStatus, safeId);
   return getBlogPostById(safeId);
 }
 
@@ -386,21 +454,92 @@ export function generateBlogDraftsFromSiteContext({ force = false } = {}) {
 export function writefreelyPublishConfig() {
   const webhookUrl = safeString(process.env.WRITEFREELY_POST_WEBHOOK_URL);
   const dashboardUrl = safeString(process.env.WRITEFREELY_MANUAL_POST_DASHBOARD_URL);
+  const apiUrl = safeString(
+    process.env.WRITEFREELY_API_URL
+      || process.env.WRITEFREELY_URL
+      || process.env.WRITEFREELY_PUBLIC_URL
+      || 'http://localhost:8080/'
+  ).replace(/\/+$/, '');
+  const publicUrl = safeString(process.env.WRITEFREELY_PUBLIC_URL || apiUrl).replace(/\/+$/, '');
+  const collectionAlias = normalizeSlug(
+    process.env.WRITEFREELY_COLLECTION_ALIAS
+      || process.env.WRITEFREELY_COLLECTION
+      || process.env.WRITEFREELY_USERNAME
+      || 'owner',
+    'owner'
+  );
+  const username = safeString(process.env.WRITEFREELY_USERNAME);
+  const password = safeString(process.env.WRITEFREELY_PASSWORD);
   const apiToken = safeString(process.env.WRITEFREELY_API_TOKEN);
+  const webhookToken = safeString(process.env.WRITEFREELY_POST_WEBHOOK_TOKEN || process.env.WRITEFREELY_API_TOKEN);
+  const directEnabled = Boolean(apiUrl && (apiToken || (username && password)));
+  const webhookEnabled = Boolean(webhookUrl);
+  const singleUser = process.env.WRITEFREELY_SINGLE_USER == null
+    ? true
+    : !['0', 'false', 'no'].includes(safeString(process.env.WRITEFREELY_SINGLE_USER).toLowerCase());
   return {
     webhookUrl,
     dashboardUrl: dashboardUrl || '',
+    apiUrl,
+    publicUrl,
+    collectionAlias,
+    username,
+    password,
     apiToken,
-    enabled: Boolean(webhookUrl),
+    webhookToken,
+    directEnabled,
+    webhookEnabled,
+    singleUser,
+    hasApiToken: Boolean(apiToken),
+    hasCredentials: Boolean(username && password),
+    publishMethod: directEnabled ? 'direct-api' : (webhookEnabled ? 'webhook' : 'disabled'),
+    enabled: directEnabled || webhookEnabled,
   };
 }
 
-function renderWritefreelyPayload(post, sourceUrl = '') {
+function markdownInline(value = '') {
+  return decodeHtmlEntities(String(value || '').replace(/<[^>]*>/g, ' '))
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function buildWritefreelyPostBody(post = {}) {
+  const html = safeString(post.contentHtml || post.content || '');
+  if (!html) return safeString(post.summary || '');
+  if (!hasHtmlTags(html)) return decodeHtmlEntities(html);
+
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+    .replace(/<\/?p[^>]*>/gi, '\n\n')
+    .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, (_match, text) => `\n\n## ${markdownInline(text)}\n\n`)
+    .replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, (_match, text) => `\n\n### ${markdownInline(text)}\n\n`)
+    .replace(/<h4[^>]*>([\s\S]*?)<\/h4>/gi, (_match, text) => `\n\n#### ${markdownInline(text)}\n\n`)
+    .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (_match, text) => `- ${markdownInline(text)}\n`)
+    .replace(/<\/?ul[^>]*>|<\/?ol[^>]*>/gi, '\n')
+    .replace(/<a\s+[^>]*href\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a>/gi, (_match, _raw, quoted, singleQuoted, bare, label) => {
+      const href = safeHref(quoted || singleQuoted || bare || '');
+      const text = markdownInline(label);
+      return href ? `[${text || href}](${href})` : text;
+    })
+    .replace(/<(strong|b)[^>]*>([\s\S]*?)<\/\1>/gi, (_match, _tag, text) => `**${markdownInline(text)}**`)
+    .replace(/<(em|i)[^>]*>([\s\S]*?)<\/\1>/gi, (_match, _tag, text) => `_${markdownInline(text)}_`)
+    .replace(/<code[^>]*>([\s\S]*?)<\/code>/gi, (_match, text) => `\`${markdownInline(text)}\``)
+    .replace(/<[^>]+>/g, ' ')
+    .split('\n')
+    .map(line => decodeHtmlEntities(line).replace(/[ \t]+/g, ' ').trim())
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+export function renderWritefreelyPayload(post, sourceUrl = '') {
   return {
     title: post.title,
     slug: post.slug,
     summary: post.summary,
-    content: post.contentHtml,
+    content: buildWritefreelyPostBody(post),
+    contentHtml: post.contentHtml,
     seo_title: post.seoTitle,
     seo_description: post.seoDescription,
     seo_keywords: post.seoKeywords,
@@ -408,33 +547,173 @@ function renderWritefreelyPayload(post, sourceUrl = '') {
   };
 }
 
+function writefreelyApiUrl(cfg, endpoint) {
+  const base = cfg.apiUrl || 'http://localhost:8080';
+  const safeEndpoint = String(endpoint || '').startsWith('/') ? endpoint : `/${endpoint || ''}`;
+  return `${base}${safeEndpoint}`;
+}
+
+async function readWritefreelyResponse(response) {
+  const text = await response.text().catch(() => '');
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch (_err) {
+    return { raw: text };
+  }
+}
+
+function writefreelyError(payload, fallback) {
+  return payload?.error_msg || payload?.error || payload?.raw || fallback;
+}
+
+async function writefreelyApiRequest(cfg, endpoint, { method = 'GET', token = '', body = null } = {}) {
+  const response = await fetch(writefreelyApiUrl(cfg, endpoint), {
+    method,
+    headers: {
+      'content-type': 'application/json',
+      ...(token ? { authorization: `Token ${token}` } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const payload = await readWritefreelyResponse(response);
+  if (!response.ok || Number(payload?.code || response.status) >= 400) {
+    throw new Error(writefreelyError(payload, `WriteFreely API returned status ${response.status}`));
+  }
+  return payload?.data ?? payload;
+}
+
+async function getWritefreelyAccessToken(cfg) {
+  if (cfg.apiToken) return cfg.apiToken;
+  if (!cfg.username || !cfg.password) {
+    throw new Error('Set WRITEFREELY_API_TOKEN or WRITEFREELY_USERNAME and WRITEFREELY_PASSWORD.');
+  }
+  const data = await writefreelyApiRequest(cfg, '/api/auth/login', {
+    method: 'POST',
+    body: { alias: cfg.username, pass: cfg.password },
+  });
+  const token = safeString(data?.access_token);
+  if (!token) throw new Error('WriteFreely login did not return an access token.');
+  return token;
+}
+
+function writefreelyPostApiPayload(post, includeSlug = true) {
+  const payload = {
+    title: post.title,
+    body: buildWritefreelyPostBody(post),
+  };
+  if (includeSlug) payload.slug = post.slug;
+  if (post.publishedAt) {
+    const created = new Date(post.publishedAt);
+    if (!Number.isNaN(created.getTime())) payload.created = created.toISOString();
+  }
+  return payload;
+}
+
+function writefreelyPostUrl(data = {}, cfg, fallbackSlug = '') {
+  if (data.url) return data.url;
+  const slug = data.slug || fallbackSlug;
+  if (slug && cfg.publicUrl && cfg.singleUser) {
+    return `${cfg.publicUrl}/${encodeURIComponent(slug)}`;
+  }
+  if (slug && cfg.publicUrl && cfg.collectionAlias) {
+    return `${cfg.publicUrl}/${encodeURIComponent(cfg.collectionAlias)}/${encodeURIComponent(slug)}`;
+  }
+  return data.id && cfg.publicUrl ? `${cfg.publicUrl}/${encodeURIComponent(data.id)}` : '';
+}
+
+async function findWritefreelyPostBySlug(cfg, token, slug) {
+  if (!slug) return null;
+  try {
+    return await writefreelyApiRequest(
+      cfg,
+      `/api/collections/${encodeURIComponent(cfg.collectionAlias)}/posts/${encodeURIComponent(slug)}`,
+      { token }
+    );
+  } catch (_err) {
+    return null;
+  }
+}
+
+async function pushViaDirectWritefreelyApi(post, cfg) {
+  const token = await getWritefreelyAccessToken(cfg);
+  const existing = post.writefreelyPostId
+    ? { id: post.writefreelyPostId }
+    : await findWritefreelyPostBySlug(cfg, token, post.slug);
+  const endpoint = existing?.id
+    ? `/api/posts/${encodeURIComponent(existing.id)}`
+    : `/api/collections/${encodeURIComponent(cfg.collectionAlias)}/posts`;
+  const data = await writefreelyApiRequest(cfg, endpoint, {
+    method: 'POST',
+    token,
+    body: writefreelyPostApiPayload(post, !existing?.id),
+  });
+
+  return {
+    ok: true,
+    status: 200,
+    method: 'direct-api',
+    postId: data?.id || existing?.id || '',
+    postUrl: writefreelyPostUrl(data || existing, cfg, post.slug),
+  };
+}
+
+async function pushViaWebhook(post, cfg) {
+  const response = await fetch(cfg.webhookUrl, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      ...(cfg.webhookToken ? { authorization: `Bearer ${cfg.webhookToken}` } : {}),
+    },
+    body: JSON.stringify(renderWritefreelyPayload(post)),
+  });
+  const payload = await readWritefreelyResponse(response);
+  if (!response.ok) {
+    throw new Error(writefreelyError(payload, `WriteFreely webhook returned status ${response.status}`));
+  }
+  const data = payload?.data || payload || {};
+  return {
+    ok: true,
+    status: response.status,
+    method: 'webhook',
+    postId: data.id || data.postId || data.post_id || '',
+    postUrl: data.url || data.postUrl || data.post_url || cfg.webhookUrl,
+  };
+}
+
+function recordWritefreelyPushSuccess(post, result) {
+  db.prepare(`
+    UPDATE local_blog_posts
+    SET
+      status = 'published',
+      published_at = COALESCE(published_at, CURRENT_TIMESTAMP),
+      writefreely_last_push_at = CURRENT_TIMESTAMP,
+      writefreely_last_push_error = '',
+      writefreely_post_id = COALESCE(NULLIF(?, ''), writefreely_post_id),
+      writefreely_post_url = COALESCE(NULLIF(?, ''), writefreely_post_url),
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(result.postId || '', result.postUrl || '', post.id);
+}
+
 export async function pushBlogPostToWritefreely(postId) {
   const post = getBlogPostById(postId);
   if (!post) return { ok: false, error: 'Post not found' };
 
   const cfg = writefreelyPublishConfig();
-  if (!cfg.enabled) return { ok: false, error: 'WRITEFREELY_POST_WEBHOOK_URL is not configured' };
+  if (!cfg.enabled) {
+    return {
+      ok: false,
+      error: 'Configure WRITEFREELY_API_TOKEN or WRITEFREELY_USERNAME/WRITEFREELY_PASSWORD. Legacy WRITEFREELY_POST_WEBHOOK_URL is also supported.',
+    };
+  }
 
   try {
-    const response = await fetch(cfg.webhookUrl, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        ...(cfg.apiToken ? { authorization: `Bearer ${cfg.apiToken}` } : {}),
-      },
-      body: JSON.stringify(renderWritefreelyPayload(post)),
-    });
-    const payload = await response.text().catch(() => '');
-    if (!response.ok) throw new Error(payload || `WriteFreely webhook returned status ${response.status}`);
-    db.prepare(`
-      UPDATE local_blog_posts
-      SET
-        writefreely_last_push_at = CURRENT_TIMESTAMP,
-        writefreely_last_push_error = '',
-        writefreely_post_url = COALESCE(NULLIF(writefreely_post_url, ''), ?)
-      WHERE id = ?
-    `).run(cfg.webhookUrl, post.id);
-    return { ok: true, status: response.status };
+    const result = cfg.directEnabled
+      ? await pushViaDirectWritefreelyApi(post, cfg)
+      : await pushViaWebhook(post, cfg);
+    recordWritefreelyPushSuccess(post, result);
+    return result;
   } catch (err) {
     const errorText = err?.message || 'WriteFreely publish failed';
     db.prepare(`

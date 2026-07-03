@@ -97,12 +97,20 @@ try {
     await expectStatus(pathname, 200);
   }
   const blog = await expectStatus('/blog', 200);
-  assert((await blog.text()).includes('IntoTheBattle'), '/blog should render the local blog index');
+  const blogText = await blog.text();
+  assert(blogText.includes('IntoTheBattle'), '/blog should render the local blog index');
+  assert(blogText.includes('rel="canonical"'), '/blog should include a canonical URL');
+  assert(blogText.includes('application/ld+json'), '/blog should include JSON-LD structured data');
   const updates = await expectStatus('/updates', 200);
   assert((await updates.text()).includes('IntoTheBattle'), '/updates should render the local blog index');
-  for (const pathname of ['/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/overlay-scene.js', '/js/overlay-v2.js', '/js/overlay/stage-config.js', '/js/overlay/overlay-normalizers.js', '/js/overlay/overlay-diagnostics.js', '/js/overlay/overlay-audio.js', '/js/overlay/video-agent.js', '/vendor/phaser/phaser.min.js']) {
+  for (const pathname of ['/favicon.ico', '/favicon-48.png', '/apple-touch-icon.png', '/site-icon-512.png', '/site.webmanifest', '/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/overlay-scene.js', '/js/overlay-v2.js', '/js/overlay/stage-config.js', '/js/overlay/overlay-normalizers.js', '/js/overlay/overlay-diagnostics.js', '/js/overlay/overlay-audio.js', '/js/overlay/video-agent.js', '/vendor/phaser/phaser.min.js']) {
     await expectStatus(pathname, 200);
   }
+  const sitemapXml = await expectStatus('/sitemap.xml', 200);
+  const sitemapText = await sitemapXml.text();
+  assert(sitemapXml.headers.get('content-type')?.includes('application/xml'), '/sitemap.xml should be served as XML');
+  assert(sitemapText.includes('xmlns:video'), '/sitemap.xml should expose the video sitemap namespace');
+  assert(sitemapText.includes('homepage-real-overlay-source.mp4'), '/sitemap.xml should include the homepage demo video');
   await expectStatus('/growth-assets/missing-growth-asset.png', 404);
 
   const dashboard = await expectStatus('/dashboard', 302);

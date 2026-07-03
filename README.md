@@ -337,6 +337,8 @@ GET /admin/login
 GET /admin
 GET /admin/sponsors
 GET /admin/marketing
+GET /admin/blog
+GET /admin/blog/manual
 ```
 
 Health/monitoring:
@@ -397,6 +399,12 @@ DISK_PATH=/var/data
 TRUST_PROXY_HOPS=1
 CLARITY_PROJECT_ID=x82yl0ggk3
 WRITEFREELY_PUBLIC_URL=https://blog.intothebattle.com/   # optional external publishing target
+WRITEFREELY_API_URL=https://blog.intothebattle.com/
+WRITEFREELY_COLLECTION_ALIAS=owner
+WRITEFREELY_SINGLE_USER=true
+WRITEFREELY_API_TOKEN=<WriteFreely token or leave empty and set username/password>
+WRITEFREELY_USERNAME=<optional WriteFreely username>
+WRITEFREELY_PASSWORD=<optional WriteFreely password>
 PAYPAL_CLIENT_ID=<PayPal client id>
 PAYPAL_CLIENT_SECRET=<PayPal client secret>
 PAYPAL_PLAN_ID=<PayPal subscription plan id>

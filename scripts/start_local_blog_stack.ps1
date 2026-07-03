@@ -36,6 +36,28 @@ if (-not (Wait-ForUrl "http://localhost:$blogPort/" 20)) {
     throw "WriteFreely did not respond at http://localhost:$blogPort/"
 }
 
+$writeFreelyCredentialsPath = Join-Path $workspace 'writefreely\ADMIN_CREDENTIALS.txt'
+$writeFreelyUsername = ''
+$writeFreelyPassword = ''
+if (Test-Path $writeFreelyCredentialsPath) {
+    $credentialText = Get-Content -Path $writeFreelyCredentialsPath -Raw
+    $usernameMatch = [regex]::Match($credentialText, '(?im)^\s*(?:username|user|alias)\s*[:=]\s*(\S+)\s*$')
+    $passwordMatch = [regex]::Match($credentialText, '(?im)^\s*(?:password|pass)\s*[:=]\s*(.+?)\s*$')
+    if ($usernameMatch.Success) {
+        $writeFreelyUsername = $usernameMatch.Groups[1].Value.Trim()
+    }
+    if ($passwordMatch.Success) {
+        $writeFreelyPassword = $passwordMatch.Groups[1].Value.Trim()
+    }
+    if (-not $writeFreelyUsername -or -not $writeFreelyPassword) {
+        $pairMatch = [regex]::Match($credentialText, '(?m)^\s*([^:\s]+)\s*:\s*(.+?)\s*$')
+        if ($pairMatch.Success) {
+            $writeFreelyUsername = $pairMatch.Groups[1].Value.Trim()
+            $writeFreelyPassword = $pairMatch.Groups[2].Value.Trim()
+        }
+    }
+}
+
 if (-not (Test-ListeningPort $appPort)) {
     $env:PORT = "$appPort"
     $env:HOST = '127.0.0.1'
@@ -48,7 +70,14 @@ if (-not (Test-ListeningPort $appPort)) {
     $env:METRICS_TOKEN = 'local_metrics_token'
     $env:DIAGNOSTICS_TOKEN = 'local_diagnostics_token'
     $env:APP_BASE_URL = "http://localhost:$appPort"
+    $env:WRITEFREELY_API_URL = "http://localhost:$blogPort"
     $env:WRITEFREELY_PUBLIC_URL = "http://localhost:$blogPort/"
+    $env:WRITEFREELY_COLLECTION_ALIAS = 'owner'
+    $env:WRITEFREELY_SINGLE_USER = 'true'
+    if ($writeFreelyUsername -and $writeFreelyPassword) {
+        $env:WRITEFREELY_USERNAME = $writeFreelyUsername
+        $env:WRITEFREELY_PASSWORD = $writeFreelyPassword
+    }
 
     $outLog = Join-Path $workspace '.tmp-main-app-blog.out.log'
     $errLog = Join-Path $workspace '.tmp-main-app-blog.err.log'

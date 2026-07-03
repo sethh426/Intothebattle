@@ -1293,6 +1293,39 @@ function buildBlogListMessage(summary = {}) {
   return `Blog generation complete: ${messageParts.join(', ')}.`;
 }
 
+function buildBlogPushMessage(summary = {}) {
+  const attempted = Number(summary.attempted || 0);
+  const posted = Number(summary.posted || 0);
+  const failed = Number(summary.failed || 0);
+  const skipped = Number(summary.skipped || 0);
+  if (!attempted && !skipped) return 'No site-context drafts are waiting to post.';
+  return `Site-context posting complete: posted ${posted}, failed ${failed}, skipped ${skipped}.`;
+}
+
+async function pushSiteContextBlogDrafts({ limit = 10 } = {}) {
+  const safeLimit = Math.max(1, Math.min(25, Number(limit) || 10));
+  const posts = listBlogPosts({ source: 'site-context', sort: 'updated', limit: 120 })
+    .filter(post => ['draft', 'queued'].includes(String(post.status || '').toLowerCase()))
+    .slice(0, safeLimit);
+  const summary = { attempted: posts.length, posted: 0, failed: 0, skipped: 0, errors: [] };
+
+  for (const post of posts) {
+    try {
+      const result = await pushBlogPostToWritefreely(post.id);
+      if (result.ok) summary.posted += 1;
+      else {
+        summary.failed += 1;
+        summary.errors.push(`${post.title || post.slug}: ${result.error || 'WriteFreely push failed'}`);
+      }
+    } catch (err) {
+      summary.failed += 1;
+      summary.errors.push(`${post.title || post.slug}: ${err?.message || 'WriteFreely push failed'}`);
+    }
+  }
+
+  return summary;
+}
+
 router.get('/blog', requireAdminAuth, (req, res) => {
   const status = String(req.query.status || '').trim().toLowerCase();
   const source = String(req.query.source || '').trim().toLowerCase();
@@ -1343,6 +1376,37 @@ router.post('/blog/manual', requireAdminAuth, async (req, res) => {
       error: err?.message || 'Failed to create post',
       post: payload.slug ? { ...payload } : null,
     }));
+  }
+});
+
+router.post('/blog/site-context/push', requireAdminAuth, async (req, res) => {
+  const cfg = writefreelyPublishConfig();
+  if (!cfg.enabled) {
+    return res.redirect(`/admin/blog?error=${encodeURIComponent('WriteFreely is not configured. Set WRITEFREELY_API_TOKEN or WRITEFREELY_USERNAME/WRITEFREELY_PASSWORD.')}`);
+  }
+  try {
+    const summary = await pushSiteContextBlogDrafts({ limit: req.body.limit });
+    const message = buildBlogPushMessage(summary);
+    const errorSuffix = summary.errors.length ? ` First error: ${summary.errors[0]}` : '';
+    return res.redirect(`/admin/blog?${summary.failed ? 'error' : 'message'}=${encodeURIComponent(`${message}${errorSuffix}`)}`);
+  } catch (err) {
+    return res.redirect(`/admin/blog?error=${encodeURIComponent(err?.message || 'Failed to post site-context drafts')}`);
+  }
+});
+
+router.post('/blog/site-context/generate-and-push', requireAdminAuth, async (req, res) => {
+  const cfg = writefreelyPublishConfig();
+  if (!cfg.enabled) {
+    return res.redirect(`/admin/blog?error=${encodeURIComponent('WriteFreely is not configured. Set WRITEFREELY_API_TOKEN or WRITEFREELY_USERNAME/WRITEFREELY_PASSWORD.')}`);
+  }
+  try {
+    const generation = generateBlogDraftsFromSiteContext({ force: String(req.body.force || '0') === '1' });
+    const pushSummary = await pushSiteContextBlogDrafts({ limit: req.body.limit });
+    const message = `${buildBlogListMessage(generation)} ${buildBlogPushMessage(pushSummary)}`;
+    const errorSuffix = pushSummary.errors.length ? ` First error: ${pushSummary.errors[0]}` : '';
+    return res.redirect(`/admin/blog?${pushSummary.failed ? 'error' : 'message'}=${encodeURIComponent(`${message}${errorSuffix}`)}`);
+  } catch (err) {
+    return res.redirect(`/admin/blog?error=${encodeURIComponent(err?.message || 'Failed to generate and post site-context drafts')}`);
   }
 });
 
@@ -1518,6 +1582,9 @@ function renderBlogPostRows(posts = []) {
     const statusClass = status === 'published' ? 'published' : status === 'queued' ? 'queued' : status === 'archived' ? 'archived' : 'draft';
     const summary = String(post.summary || '').slice(0, 220);
     const pushState = post.writefreelyLastPushError ? `Failed: ${post.writefreelyLastPushError}` : (post.writefreelyLastPushAt ? `Posted ${formatSponsorDate(post.writefreelyLastPushAt)}` : 'Not posted');
+    const writefreelyLink = post.writefreelyPostUrl
+      ? `<br /><a class="mini-link" href="${escapeAttr(post.writefreelyPostUrl)}" target="_blank" rel="noopener noreferrer">Open WriteFreely post</a>`
+      : '';
     return `<tr>
       <td data-label="Title"><strong>${escapeHtml(post.title || 'Untitled')}</strong><br /><small>${escapeHtml(post.slug || '')}</small></td>
       <td data-label="Source">
@@ -1528,14 +1595,14 @@ function renderBlogPostRows(posts = []) {
       <td data-label="Status"><span class="status-pill ${escapeAttr(statusClass)}">${escapeHtml(status)}</span></td>
       <td data-label="Summary">${escapeHtml(summary)}</td>
       <td data-label="Publish">${escapeHtml(post.publishedAt ? formatSponsorDate(post.publishedAt) : 'Draft')}</td>
-      <td data-label="Writer">${escapeHtml(pushState)}</td>
+      <td data-label="Writer">${escapeHtml(pushState)}${writefreelyLink}</td>
       <td data-label="Actions">
         <div class="actions-grid">
           <a class="text-link" href="/admin/blog/${escapeAttr(post.id)}/edit">Open editor</a>
-          <form method="POST" action="/admin/blog/${escapeAttr(post.id)}/push"><button type="submit">Push WriteFreely</button></form>
+          <form method="POST" action="/admin/blog/${escapeAttr(post.id)}/push"><button type="submit">Post WriteFreely</button></form>
           <form method="POST" action="/admin/blog/${escapeAttr(post.id)}/status">
             <input type="hidden" name="status" value="${status === 'published' ? 'archived' : 'published'}" />
-            <button type="submit">${status === 'published' ? 'Archive' : 'Publish'}</button>
+            <button type="submit">${status === 'published' ? 'Archive' : 'Publish locally'}</button>
           </form>
           <form method="POST" action="/admin/blog/${escapeAttr(post.id)}/status">
             <input type="hidden" name="status" value="${status === 'draft' ? 'queued' : 'draft'}" />
@@ -1583,8 +1650,9 @@ function renderBlogPostForm(post = null) {
             <label>SEO keywords</label>
             <input name="seoKeywords" value="${escapeAttr(safePost.seoKeywords || '')}" />
             <button type="submit">${editing ? 'Save changes' : 'Create draft'}</button>
-            ${editing ? '' : '<button type="submit" name="push" value="1" class="secondary">Create and push</button>'}
+            ${editing ? '' : '<button type="submit" name="push" value="1" class="secondary">Create and post to WriteFreely</button>'}
           </form>
+          ${editing ? `<form method="POST" action="/admin/blog/${escapeAttr(safePost.id)}/push" class="edit-form"><button type="submit" class="secondary">Post saved version to WriteFreely</button></form>` : ''}
         </div>
       </section>
   `;
@@ -1598,6 +1666,11 @@ function renderWritefreelyPosterPage({
   const writefreelyCfg = writefreelyPublishConfig();
   const canPush = writefreelyCfg.enabled;
   const dashboardLink = writefreelyCfg.dashboardUrl || '';
+  const methodLabel = writefreelyCfg.publishMethod === 'direct-api'
+    ? `Direct API (${writefreelyCfg.collectionAlias})`
+    : writefreelyCfg.publishMethod === 'webhook'
+      ? 'Legacy webhook'
+      : 'Not configured';
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1646,12 +1719,14 @@ function renderWritefreelyPosterPage({
     ${error ? `<div class="notice error">${escapeHtml(error)} </div>` : ''}
     <section class="panel">
       <h2>WriteFreely bridge</h2>
-      <p class="muted">Push writes to your configured webhook endpoint.</p>
+      <p class="muted">Create a local blog post, then send the same post to WriteFreely when API credentials or a webhook are configured.</p>
       <p class="status">
         <span>${canPush ? 'Enabled' : 'Disabled'}</span>
+        <span>${escapeHtml(methodLabel)}</span>
       </p>
+      <p class="field-note">API: ${escapeHtml(writefreelyCfg.apiUrl || 'Missing API URL')}</p>
       ${dashboardLink ? `<p class="field-note">Dashboard: <a class="text-link" href="${escapeAttr(dashboardLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(dashboardLink)}</a></p>` : ''}
-      <p class="field-note">Webhook: ${escapeHtml(writefreelyCfg.webhookUrl || 'Missing webhook URL')}</p>
+      <p class="field-note">Webhook fallback: ${escapeHtml(writefreelyCfg.webhookUrl || 'Not configured')}</p>
       ${renderBlogPostForm(post || null)}
     </section>
   </div>
@@ -1661,6 +1736,12 @@ function renderWritefreelyPosterPage({
 
 function renderBlogAdminPage({ message = '', error = '', posts = [] } = {}) {
   const sourceRows = renderBlogPostRows(posts);
+  const writefreelyCfg = writefreelyPublishConfig();
+  const methodLabel = writefreelyCfg.publishMethod === 'direct-api'
+    ? `direct API: ${writefreelyCfg.apiUrl} / ${writefreelyCfg.collectionAlias}`
+    : writefreelyCfg.publishMethod === 'webhook'
+      ? `webhook: ${writefreelyCfg.webhookUrl}`
+      : 'disabled';
   const postCounts = posts.reduce((acc, post) => {
     const source = String(post.source || 'manual');
     acc[source] = (acc[source] || 0) + 1;
@@ -1699,6 +1780,7 @@ function renderBlogAdminPage({ message = '', error = '', posts = [] } = {}) {
     .toolbar { display:flex; flex-wrap:wrap; gap:12px; }
     .toolbar a, .toolbar button, .text-link { display:inline-flex; min-height:40px; align-items:center; justify-content:center; border-radius:12px; width:100%; }
     .toolbar a, .text-link { text-decoration:none; padding:0 14px; color:#ffdf8a; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.07); }
+    .mini-link { display:inline-flex; margin-top:6px; color:#9fefff; font-size:12px; font-weight:800; text-decoration:none; }
     button, .toolbar button, .text-link { cursor:pointer; border:0; font-weight:900; }
     .toolbar button, form button { width:100%; min-height:34px; border-radius:10px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.07); color:#fff8e6; }
     .toolbar form { margin:0; }
@@ -1748,6 +1830,7 @@ function renderBlogAdminPage({ message = '', error = '', posts = [] } = {}) {
         <div>
           <h2>Blog engine controls</h2>
           <p class="muted">Generate SEO-ready draft posts from your public pages, then review status and push selected posts to WriteFreely.</p>
+          <p class="muted">WriteFreely: ${escapeHtml(methodLabel)}</p>
           <div class="toolbar">
             <form method="POST" action="/admin/blog/generate" style="margin:0;">
               <button type="submit" title="Regenerate daily drafts from current site pages">Generate from site context</button>
@@ -1755,6 +1838,14 @@ function renderBlogAdminPage({ message = '', error = '', posts = [] } = {}) {
             <form method="POST" action="/admin/blog/generate" style="margin:0;">
               <input type="hidden" name="force" value="1" />
               <button type="submit">Generate and overwrite drafts</button>
+            </form>
+            <form method="POST" action="/admin/blog/site-context/push" style="margin:0;">
+              <input type="hidden" name="limit" value="10" />
+              <button type="submit">Post site drafts to WriteFreely</button>
+            </form>
+            <form method="POST" action="/admin/blog/site-context/generate-and-push" style="margin:0;">
+              <input type="hidden" name="limit" value="10" />
+              <button type="submit">Generate and post site content</button>
             </form>
             <a href="/admin/blog/manual">Create post manually</a>
             <a href="/api/public/blog-posts?limit=1" target="_blank" rel="noopener">Test public API</a>

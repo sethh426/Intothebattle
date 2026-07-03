@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset
   xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-  xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+  xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
   <url>
     <loc>https://intothebattle.com/</loc>
-    <lastmod>2026-06-27</lastmod>
+    <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -17,10 +18,19 @@
       <image:title>IntoTheBattle brand identity</image:title>
       <image:caption>Square IntoTheBattle brand image for search identity and logo discovery.</image:caption>
     </image:image>
+    <video:video>
+      <video:thumbnail_loc>https://intothebattle.com/media/remotion/homepage-real-overlay-poster.jpg</video:thumbnail_loc>
+      <video:title>IntoTheBattle TikTok LIVE battle overlay demo</video:title>
+      <video:description>A real overlay demo showing TikTok LIVE chat commands becoming attacks, stats, and stream-ready battle moments.</video:description>
+      <video:content_loc>https://intothebattle.com/media/remotion/homepage-real-overlay-source.mp4</video:content_loc>
+      <video:duration>36</video:duration>
+      <video:publication_date>2026-06-30T00:00:00-04:00</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>
   </url>
   <url>
     <loc>https://intothebattle.com/signup</loc>
-    <lastmod>2026-06-27</lastmod>
+    <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -30,7 +40,7 @@
   </url>
   <url>
     <loc>https://intothebattle.com/how-to-play</loc>
-    <lastmod>2026-06-27</lastmod>
+    <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
     <image:image>
@@ -40,7 +50,7 @@
   </url>
   <url>
     <loc>https://intothebattle.com/battlegrounds</loc>
-    <lastmod>2026-06-27</lastmod>
+    <lastmod>2026-07-02</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
     <image:image>
@@ -50,7 +60,7 @@
   </url>
   <url>
     <loc>https://intothebattle.com/sponsors</loc>
-    <lastmod>2026-06-27</lastmod>
+    <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
     <image:image>
@@ -60,7 +70,7 @@
   </url>
   <url>
     <loc>https://intothebattle.com/blog</loc>
-    <lastmod>2026-06-27</lastmod>
+    <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
     <image:image>
@@ -70,7 +80,7 @@
   </url>
   <url>
     <loc>https://intothebattle.com/paywall</loc>
-    <lastmod>2026-06-27</lastmod>
+    <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
     <image:image>
@@ -80,7 +90,7 @@
   </url>
   <url>
     <loc>https://intothebattle.com/site-map</loc>
-    <lastmod>2026-06-27</lastmod>
+    <lastmod>2026-07-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

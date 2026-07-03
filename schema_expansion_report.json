@@ -20,11 +20,26 @@
             {
               "@id": "https://intothebattle.com/battlegrounds#webpage",
               "@type": [
-                "https://schema.org/WebPage"
+                "https://schema.org/CollectionPage"
+              ],
+              "https://schema.org/about": [
+                {
+                  "@id": "https://intothebattle.com/#software"
+                }
+              ],
+              "https://schema.org/breadcrumb": [
+                {
+                  "@id": "https://intothebattle.com/battlegrounds#breadcrumb"
+                }
               ],
               "https://schema.org/description": [
                 {
                   "@value": "A public board for creators announcing upcoming IntoTheBattle live battles."
+                }
+              ],
+              "https://schema.org/inLanguage": [
+                {
+                  "@value": "en-US"
                 }
               ],
               "https://schema.org/isPartOf": [
@@ -32,14 +47,89 @@
                   "@id": "https://intothebattle.com/#website"
                 }
               ],
+              "https://schema.org/mainEntity": [
+                {
+                  "@id": "https://intothebattle.com/battlegrounds#battle-list"
+                }
+              ],
               "https://schema.org/name": [
                 {
                   "@value": "The Battlegrounds"
                 }
               ],
+              "https://schema.org/primaryImageOfPage": [
+                {
+                  "@type": [
+                    "https://schema.org/ImageObject"
+                  ],
+                  "https://schema.org/height": [
+                    {
+                      "@value": 630
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/og-intothebattle.png"
+                    }
+                  ],
+                  "https://schema.org/width": [
+                    {
+                      "@value": 1200
+                    }
+                  ]
+                }
+              ],
               "https://schema.org/url": [
                 {
                   "@value": "https://intothebattle.com/battlegrounds"
+                }
+              ]
+            },
+            {
+              "@id": "https://intothebattle.com/battlegrounds#breadcrumb",
+              "@type": [
+                "https://schema.org/BreadcrumbList"
+              ],
+              "https://schema.org/itemListElement": [
+                {
+                  "@type": [
+                    "https://schema.org/ListItem"
+                  ],
+                  "https://schema.org/item": [
+                    {
+                      "@id": "https://intothebattle.com/"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "Home"
+                    }
+                  ],
+                  "https://schema.org/position": [
+                    {
+                      "@value": 1
+                    }
+                  ]
+                },
+                {
+                  "@type": [
+                    "https://schema.org/ListItem"
+                  ],
+                  "https://schema.org/item": [
+                    {
+                      "@id": "https://intothebattle.com/battlegrounds"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "The Battlegrounds"
+                    }
+                  ],
+                  "https://schema.org/position": [
+                    {
+                      "@value": 2
+                    }
+                  ]
                 }
               ]
             }
@@ -69,6 +159,57 @@
               "@type": [
                 "https://schema.org/Organization"
               ],
+              "https://schema.org/alternateName": [
+                {
+                  "@value": "Into The Battle"
+                },
+                {
+                  "@value": "IntoTheBattle Battle Royale"
+                }
+              ],
+              "https://schema.org/brand": [
+                {
+                  "@id": "https://intothebattle.com/#brand",
+                  "@type": [
+                    "https://schema.org/Brand"
+                  ],
+                  "https://schema.org/logo": [
+                    {
+                      "@id": "https://intothebattle.com/#logo"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "IntoTheBattle"
+                    }
+                  ]
+                }
+              ],
+              "https://schema.org/contactPoint": [
+                {
+                  "@type": [
+                    "https://schema.org/ContactPoint"
+                  ],
+                  "https://schema.org/availableLanguage": [
+                    {
+                      "@value": "en"
+                    },
+                    {
+                      "@value": "en-US"
+                    }
+                  ],
+                  "https://schema.org/contactType": [
+                    {
+                      "@value": "customer support"
+                    }
+                  ],
+                  "https://schema.org/email": [
+                    {
+                      "@value": "support@intothebattle.com"
+                    }
+                  ]
+                }
+              ],
               "https://schema.org/description": [
                 {
                   "@value": "IntoTheBattle turns TikTok LIVE chat into a playable battle arena for creators."
@@ -79,11 +220,64 @@
                   "@value": "support@intothebattle.com"
                 }
               ],
+              "https://schema.org/image": [
+                {
+                  "@id": "https://intothebattle.com/#primary-image",
+                  "@type": [
+                    "https://schema.org/ImageObject"
+                  ],
+                  "https://schema.org/caption": [
+                    {
+                      "@value": "IntoTheBattle live streaming engagement game key art"
+                    }
+                  ],
+                  "https://schema.org/height": [
+                    {
+                      "@value": 630
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/og-intothebattle.png"
+                    }
+                  ],
+                  "https://schema.org/width": [
+                    {
+                      "@value": 1200
+                    }
+                  ]
+                }
+              ],
+              "https://schema.org/knowsAbout": [
+                {
+                  "@value": "TikTok LIVE overlays"
+                },
+                {
+                  "@value": "OBS browser sources"
+                },
+                {
+                  "@value": "TikTok Studio browser sources"
+                },
+                {
+                  "@value": "live stream engagement"
+                },
+                {
+                  "@value": "viewer chat commands"
+                },
+                {
+                  "@value": "creator sponsor moments"
+                }
+              ],
               "https://schema.org/logo": [
                 {
                   "@id": "https://intothebattle.com/#logo",
                   "@type": [
                     "https://schema.org/ImageObject"
+                  ],
+                  "https://schema.org/caption": [
+                    {
+                      "@value": "IntoTheBattle brand mark"
+                    }
                   ],
                   "https://schema.org/height": [
                     {
@@ -117,6 +311,24 @@
               "@id": "https://intothebattle.com/#website",
               "@type": [
                 "https://schema.org/WebSite"
+              ],
+              "https://schema.org/alternateName": [
+                {
+                  "@value": "Into The Battle"
+                },
+                {
+                  "@value": "TikTok LIVE Battle Overlay"
+                }
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "IntoTheBattle helps creators turn TikTok LIVE chat into an interactive battle overlay for OBS and TikTok Studio."
+                }
+              ],
+              "https://schema.org/inLanguage": [
+                {
+                  "@value": "en-US"
+                }
               ],
               "https://schema.org/name": [
                 {
@@ -157,9 +369,19 @@
                   "@id": "https://intothebattle.com/#software"
                 }
               ],
+              "https://schema.org/breadcrumb": [
+                {
+                  "@id": "https://intothebattle.com/how-to-play#breadcrumb"
+                }
+              ],
               "https://schema.org/description": [
                 {
                   "@value": "Learn how viewers play IntoTheBattle during TikTok LIVE with chat commands, emojis, attacks, shields, healing, likes, gifts, and future arena mechanics."
+                }
+              ],
+              "https://schema.org/inLanguage": [
+                {
+                  "@value": "en-US"
                 }
               ],
               "https://schema.org/isPartOf": [
@@ -320,6 +542,11 @@
                   "@value": "Interactive TikTok LIVE battle overlay with real-time combat effects and viewer engagement features."
                 }
               ],
+              "https://schema.org/inLanguage": [
+                {
+                  "@value": "en-US"
+                }
+              ],
               "https://schema.org/isPartOf": [
                 {
                   "@type": [
@@ -378,6 +605,11 @@
                   "@value": "Interactive TikTok LIVE battle overlay with real-time combat effects and viewer engagement features."
                 }
               ],
+              "https://schema.org/inLanguage": [
+                {
+                  "@value": "en-US"
+                }
+              ],
               "https://schema.org/isPartOf": [
                 {
                   "@type": [
@@ -429,9 +661,19 @@
                   "@id": "https://intothebattle.com/#software"
                 }
               ],
+              "https://schema.org/breadcrumb": [
+                {
+                  "@id": "https://intothebattle.com/paywall#breadcrumb"
+                }
+              ],
               "https://schema.org/description": [
                 {
                   "@value": "Upgrade IntoTheBattle to unlock custom brand control, video moments, and premium controls after your 7-day everything-unlocked trial."
+                }
+              ],
+              "https://schema.org/inLanguage": [
+                {
+                  "@value": "en-US"
                 }
               ],
               "https://schema.org/isPartOf": [
@@ -487,6 +729,28 @@
                   "@value": "A TikTok LIVE battle overlay platform with viewer commands, Command Center controls, sponsor video moments, and stream-ready OBS presentation."
                 }
               ],
+              "https://schema.org/image": [
+                {
+                  "@type": [
+                    "https://schema.org/ImageObject"
+                  ],
+                  "https://schema.org/height": [
+                    {
+                      "@value": 630
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/og-intothebattle.png"
+                    }
+                  ],
+                  "https://schema.org/width": [
+                    {
+                      "@value": 1200
+                    }
+                  ]
+                }
+              ],
               "https://schema.org/name": [
                 {
                   "@value": "IntoTheBattle"
@@ -510,6 +774,11 @@
                   "https://schema.org/priceCurrency": [
                     {
                       "@value": "USD"
+                    }
+                  ],
+                  "https://schema.org/url": [
+                    {
+                      "@value": "https://intothebattle.com/paywall"
                     }
                   ]
                 }
@@ -610,14 +879,29 @@
                   "@id": "https://intothebattle.com/#software"
                 }
               ],
+              "https://schema.org/breadcrumb": [
+                {
+                  "@id": "https://intothebattle.com/signup#breadcrumb"
+                }
+              ],
               "https://schema.org/description": [
                 {
                   "@value": "Create your IntoTheBattle account, choose Google or email, and launch a TikTok LIVE battle overlay for OBS or TikTok Studio in under 5 minutes."
                 }
               ],
+              "https://schema.org/inLanguage": [
+                {
+                  "@value": "en-US"
+                }
+              ],
               "https://schema.org/isPartOf": [
                 {
                   "@id": "https://intothebattle.com/#website"
+                }
+              ],
+              "https://schema.org/mainEntity": [
+                {
+                  "@id": "https://intothebattle.com/signup#setup-howto"
                 }
               ],
               "https://schema.org/name": [
@@ -719,9 +1003,19 @@
               "@type": [
                 "https://schema.org/WebPage"
               ],
+              "https://schema.org/breadcrumb": [
+                {
+                  "@id": "https://intothebattle.com/site-map#breadcrumb"
+                }
+              ],
               "https://schema.org/description": [
                 {
                   "@value": "Find IntoTheBattle creator, player, sponsor, account, and support pages from one site map."
+                }
+              ],
+              "https://schema.org/inLanguage": [
+                {
+                  "@value": "en-US"
                 }
               ],
               "https://schema.org/isPartOf": [
@@ -833,14 +1127,29 @@
                   "@id": "https://intothebattle.com/#software"
                 }
               ],
+              "https://schema.org/breadcrumb": [
+                {
+                  "@id": "https://intothebattle.com/sponsors#breadcrumb"
+                }
+              ],
               "https://schema.org/description": [
                 {
                   "@value": "Put your brand inside TikTok LIVE battle moments with sports-broadcast style video breaks that return viewers to the action."
                 }
               ],
+              "https://schema.org/inLanguage": [
+                {
+                  "@value": "en-US"
+                }
+              ],
               "https://schema.org/isPartOf": [
                 {
                   "@id": "https://intothebattle.com/#website"
+                }
+              ],
+              "https://schema.org/mainEntity": [
+                {
+                  "@id": "https://intothebattle.com/sponsors#sponsor-service"
                 }
               ],
               "https://schema.org/name": [
@@ -944,6 +1253,11 @@
               "https://schema.org/description": [
                 {
                   "@value": "Real-time battle leaderboards and live statistics from TikTok LIVE streams on IntoTheBattle."
+                }
+              ],
+              "https://schema.org/inLanguage": [
+                {
+                  "@value": "en-US"
                 }
               ],
               "https://schema.org/isPartOf": [

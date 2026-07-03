@@ -5,16 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TikTok LIVE Battle Overlay | IntoTheBattle</title>
   <meta name="description" content="Turn TikTok LIVE chat into an interactive battle overlay for OBS and TikTok Studio. Viewer commands trigger attacks, stats, sounds, boss waves, and video moments." />
-  <meta name="robots" content="index, follow" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <meta name="msvalidate.01" content="D93A25FD52146A9F37A13489C571A918" />
+  <meta name="application-name" content="IntoTheBattle" />
+  <meta name="apple-mobile-web-app-title" content="IntoTheBattle" />
   <link rel="canonical" href="https://intothebattle.com/" />
   <meta name="theme-color" content="#080c14" />
   <meta property="og:type" content="website" />
+  <meta property="og:locale" content="en_US" />
   <meta property="og:title" content="IntoTheBattle | TikTok LIVE Battle Overlay" />
   <meta property="og:description" content="Turn TikTok LIVE chat into an interactive battle overlay for OBS and TikTok Studio with viewer attacks, stats, sounds, boss waves, and video moments." />
   <meta property="og:url" content="https://intothebattle.com/" />
-  <meta property="og:image" content="https://intothebattle.com/og-intothebattle.png?v=20260627" />
-  <meta property="og:image:secure_url" content="https://intothebattle.com/og-intothebattle.png?v=20260627" />
+  <meta property="og:image" content="https://intothebattle.com/og-intothebattle.png?v=20260702" />
+  <meta property="og:image:secure_url" content="https://intothebattle.com/og-intothebattle.png?v=20260702" />
   <meta property="og:image:type" content="image/png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -23,11 +27,14 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="IntoTheBattle | TikTok LIVE Battle Overlay" />
   <meta name="twitter:description" content="Turn TikTok LIVE chat into an interactive battle overlay for OBS and TikTok Studio with viewer-powered combat moments." />
-  <meta name="twitter:image" content="https://intothebattle.com/og-intothebattle.png?v=20260627" />
+  <meta name="twitter:image" content="https://intothebattle.com/og-intothebattle.png?v=20260702" />
   <meta name="twitter:image:alt" content="IntoTheBattle live streaming engagement game key art." />
-  <link rel="image_src" href="https://intothebattle.com/og-intothebattle.png?v=20260627" />
-  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
-  <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
+  <link rel="image_src" href="https://intothebattle.com/og-intothebattle.png?v=20260702" />
+  <link rel="preload" as="image" href="/media/remotion/homepage-real-overlay-poster.jpg" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
   <script type="module" src="/js/clarity-loader.js"></script>
   <script type="module" src="/js/site-breadcrumbs.js"></script>
   <script type="application/ld+json">
@@ -38,16 +45,38 @@
         "@type": "Organization",
         "@id": "https://intothebattle.com/#organization",
         "name": "IntoTheBattle",
+        "alternateName": ["Into The Battle", "IntoTheBattle Battle Royale"],
         "url": "https://intothebattle.com/",
-        "logo": { "@type": "ImageObject", "@id": "https://intothebattle.com/#logo", "url": "https://intothebattle.com/brand-identity-square.png", "width": 1200, "height": 1200 },
+        "logo": { "@type": "ImageObject", "@id": "https://intothebattle.com/#logo", "url": "https://intothebattle.com/brand-identity-square.png", "width": 1200, "height": 1200, "caption": "IntoTheBattle brand mark" },
+        "image": { "@type": "ImageObject", "@id": "https://intothebattle.com/#primary-image", "url": "https://intothebattle.com/og-intothebattle.png", "width": 1200, "height": 630, "caption": "IntoTheBattle live streaming engagement game key art" },
         "description": "IntoTheBattle turns TikTok LIVE chat into a playable battle arena for creators.",
-        "email": "support@intothebattle.com"
+        "email": "support@intothebattle.com",
+        "contactPoint": [
+          {
+            "@type": "ContactPoint",
+            "email": "support@intothebattle.com",
+            "contactType": "customer support",
+            "availableLanguage": ["en", "en-US"]
+          }
+        ],
+        "knowsAbout": [
+          "TikTok LIVE overlays",
+          "OBS browser sources",
+          "TikTok Studio browser sources",
+          "live stream engagement",
+          "viewer chat commands",
+          "creator sponsor moments"
+        ],
+        "brand": { "@type": "Brand", "@id": "https://intothebattle.com/#brand", "name": "IntoTheBattle", "logo": { "@id": "https://intothebattle.com/#logo" } }
       },
       {
         "@type": "WebSite",
         "@id": "https://intothebattle.com/#website",
         "name": "IntoTheBattle",
+        "alternateName": ["Into The Battle", "TikTok LIVE Battle Overlay"],
         "url": "https://intothebattle.com/",
+        "description": "IntoTheBattle helps creators turn TikTok LIVE chat into an interactive battle overlay for OBS and TikTok Studio.",
+        "inLanguage": "en-US",
         "publisher": { "@id": "https://intothebattle.com/#organization" }
       },
       {
@@ -56,10 +85,24 @@
         "name": "IntoTheBattle",
         "url": "https://intothebattle.com/",
         "applicationCategory": "MultimediaApplication",
+        "applicationSubCategory": "TikTok LIVE interactive overlay",
         "operatingSystem": "Web, OBS Browser Source, TikTok Studio",
         "description": "A TikTok LIVE battle overlay platform with viewer commands, Command Center controls, sponsor video moments, and stream-ready OBS presentation.",
+        "image": { "@id": "https://intothebattle.com/#primary-image" },
+        "brand": { "@id": "https://intothebattle.com/#brand" },
+        "audience": { "@type": "Audience", "audienceType": "TikTok LIVE creators and streamers" },
+        "featureList": [
+          "TikTok LIVE chat commands",
+          "OBS and TikTok Studio browser-source overlay",
+          "Setup demo with signed overlay preview",
+          "Viewer attacks, healing, shields, stats, and boss waves",
+          "Creator video moments and sponsor-ready breaks"
+        ],
+        "screenshot": { "@type": "ImageObject", "url": "https://intothebattle.com/media/remotion/homepage-real-overlay-poster.jpg", "width": 1920, "height": 1080 },
+        "softwareHelp": "https://intothebattle.com/how-to-play",
         "publisher": { "@id": "https://intothebattle.com/#organization" },
-        "offers": { "@type": "Offer", "price": "12", "priceCurrency": "USD", "availability": "https://schema.org/InStock" }
+        "offers": { "@type": "Offer", "url": "https://intothebattle.com/paywall", "price": "12", "priceCurrency": "USD", "availability": "https://schema.org/InStock" },
+        "potentialAction": { "@type": "RegisterAction", "name": "Create a free IntoTheBattle account", "target": "https://intothebattle.com/signup" }
       },
       {
         "@type": "WebPage",
@@ -67,9 +110,47 @@
         "url": "https://intothebattle.com/",
         "name": "IntoTheBattle | TikTok LIVE Battle Overlay",
         "description": "IntoTheBattle turns TikTok LIVE chat into an interactive battle overlay for OBS and TikTok Studio.",
+        "inLanguage": "en-US",
         "isPartOf": { "@id": "https://intothebattle.com/#website" },
         "about": { "@id": "https://intothebattle.com/#software" },
-        "primaryImageOfPage": { "@type": "ImageObject", "url": "https://intothebattle.com/og-intothebattle.png", "width": 1200, "height": 630 }
+        "publisher": { "@id": "https://intothebattle.com/#organization" },
+        "breadcrumb": { "@id": "https://intothebattle.com/#breadcrumb" },
+        "primaryImageOfPage": { "@id": "https://intothebattle.com/#primary-image" },
+        "video": { "@id": "https://intothebattle.com/#demo-video" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://intothebattle.com/#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://intothebattle.com/" }
+        ]
+      },
+      {
+        "@type": "SiteNavigationElement",
+        "@id": "https://intothebattle.com/#site-navigation",
+        "name": ["Signup", "How To Play", "The Battlegrounds", "Sponsors", "Creator Pro", "Blog"],
+        "url": [
+          "https://intothebattle.com/signup",
+          "https://intothebattle.com/how-to-play",
+          "https://intothebattle.com/battlegrounds",
+          "https://intothebattle.com/sponsors",
+          "https://intothebattle.com/paywall",
+          "https://intothebattle.com/blog"
+        ]
+      },
+      {
+        "@type": "VideoObject",
+        "@id": "https://intothebattle.com/#demo-video",
+        "name": "IntoTheBattle TikTok LIVE battle overlay demo",
+        "description": "A real overlay demo showing TikTok LIVE chat commands becoming attacks, stats, and stream-ready battle moments.",
+        "thumbnailUrl": ["https://intothebattle.com/media/remotion/homepage-real-overlay-poster.jpg"],
+        "uploadDate": "2026-06-30T00:00:00-04:00",
+        "duration": "PT36S",
+        "contentUrl": "https://intothebattle.com/media/remotion/homepage-real-overlay-source.mp4",
+        "embedUrl": "https://intothebattle.com/",
+        "publisher": { "@id": "https://intothebattle.com/#organization" },
+        "isFamilyFriendly": true,
+        "inLanguage": "en-US"
       },
       {
         "@type": "FAQPage",

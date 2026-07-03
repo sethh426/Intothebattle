@@ -12,19 +12,28 @@
 <link rel="canonical" href="https://intothebattle.com/overlay" />
 
 <meta property="og:type" content="website" />
+<meta property="og:locale" content="en_US" />
 <meta property="og:title" content="IntoTheBattle Battle Royale Overlay" />
 <meta property="og:description" content="Interactive battle overlay for TikTok LIVE streams with real-time combat effects and viewer engagement." />
 <meta property="og:url" content="https://intothebattle.com/overlay" />
-<meta property="og:image" content="https://intothebattle.com/intothebattlelogo_logo_only.svg" />
+<meta property="og:image" content="https://intothebattle.com/og-intothebattle.png?v=20260702" />
+<meta property="og:image:secure_url" content="https://intothebattle.com/og-intothebattle.png?v=20260702" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="IntoTheBattle live streaming engagement game key art." />
 <meta property="og:site_name" content="IntoTheBattle" />
 
-<meta name="twitter:card" content="summary" />
+<meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="IntoTheBattle Battle Royale Overlay" />
 <meta name="twitter:description" content="Interactive battle overlay for TikTok LIVE streams with real-time combat effects and viewer engagement." />
-<meta name="twitter:image" content="https://intothebattle.com/intothebattlelogo_logo_only.svg" />
+<meta name="twitter:image" content="https://intothebattle.com/og-intothebattle.png?v=20260702" />
+<meta name="twitter:image:alt" content="IntoTheBattle live streaming engagement game key art." />
 
-<link rel="icon" href="/intothebattlelogo_logo_only.svg" />
-<link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/site.webmanifest" />
 
 <script type="application/ld+json">
 {
@@ -33,6 +42,7 @@
   "name": "IntoTheBattle Battle Royale Overlay",
   "url": "https://intothebattle.com/overlay",
   "description": "Interactive TikTok LIVE battle overlay with real-time combat effects and viewer engagement features.",
+  "inLanguage": "en-US",
   "isPartOf": {
     "@type": "WebSite",
     "name": "IntoTheBattle",
@@ -397,6 +407,33 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 }
 .banner.commands .banner-copy { justify-items:center; text-align:center; gap:3px; }
 .banner.commands .banner-title { font-size:19px; letter-spacing:.45px; }
+.banner-command-ticker {
+  position:relative; width:100%; max-width:100%; min-height:34px; overflow:hidden;
+  border:1px solid rgba(var(--banner-accent-rgb),0.28);
+  background:linear-gradient(90deg, rgba(0,0,0,0.28), rgba(var(--banner-accent-rgb),0.08), rgba(0,0,0,0.28));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.1),0 0 14px rgba(var(--banner-accent-rgb),0.08);
+}
+.banner-command-ticker::before,
+.banner-command-ticker::after {
+  content:""; position:absolute; top:0; bottom:0; z-index:2; width:52px; pointer-events:none;
+}
+.banner-command-ticker::before { left:0; background:linear-gradient(90deg,rgba(4,6,12,0.98),transparent); }
+.banner-command-ticker::after { right:0; background:linear-gradient(270deg,rgba(4,6,12,0.98),transparent); }
+.banner-command-marquee {
+  display:flex; width:max-content; min-width:100%; align-items:center;
+  animation:commandTickerScroll var(--command-ticker-duration,24s) linear infinite;
+}
+.banner-command-run {
+  display:flex; align-items:center; gap:14px; padding:7px 14px; white-space:nowrap;
+}
+.banner-command-run span {
+  display:inline-flex; align-items:center; gap:7px;
+  color:#eef8ff; font-size:13px; line-height:1; font-weight:900; letter-spacing:.15px; text-transform:none;
+}
+.banner-command-run span::after {
+  content:""; width:5px; height:5px; border-radius:50%;
+  background:var(--banner-accent); box-shadow:0 0 12px rgba(var(--banner-accent-rgb),0.72);
+}
 .banner-command-grid {
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(154px,1fr));
@@ -439,6 +476,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.is-compact .banner-meter { width:5px; height:28px; }
 .banner.commands.is-compact { min-height:58px; max-height:74px; padding:0 10px; }
 .banner.commands.is-compact .banner-title { font-size:14px; }
+.banner.commands.is-compact .banner-command-ticker { min-height:24px; }
+.banner.commands.is-compact .banner-command-run { padding:5px 11px; gap:10px; }
+.banner.commands.is-compact .banner-command-run span { font-size:10px; }
 .banner.commands.is-compact .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(84px,1fr)); max-height:24px; gap:3px; }
 .banner.commands.is-compact .banner-command-chip { min-height:20px; padding:2px 5px; font-size:8px; letter-spacing:.16px; }
 .banner.commands.is-compact .banner-command-chip strong { font-size:8px; }
@@ -455,6 +495,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.legendary.is-micro .banner-title { font-size:12px; letter-spacing:.28px; }
 .banner.is-micro .banner-meta { display:block; font-size:7px; letter-spacing:.38px; }
 .banner.is-micro .banner-meter { width:4px; height:24px; }
+.banner.commands.is-micro .banner-command-ticker { min-height:18px; }
+.banner.commands.is-micro .banner-command-run { padding:3px 8px; gap:8px; }
+.banner.commands.is-micro .banner-command-run span { font-size:8px; }
 .banner.commands.is-micro .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(64px,1fr)); max-height:16px; gap:2px; }
 .banner.commands.is-micro .banner-command-chip { min-height:14px; padding:1px 4px; font-size:7px; }
 .banner.commands.is-micro .banner-command-chip strong { font-size:7px; }
@@ -472,6 +515,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.is-nano .banner-title,
 .banner.legendary.is-nano .banner-title { font-size:10px; line-height:1; letter-spacing:.2px; }
 .banner.is-nano .banner-command-grid { display:none; }
+.banner.is-nano .banner-command-ticker { display:none; }
 .banner.is-nano .banner-meter { width:3px; height:20px; }
 @keyframes cyberBannerIn {
   0% { opacity:0; transform:translate(-50%,-14px) scaleX(.72); filter:blur(5px) brightness(1.45); }
@@ -517,6 +561,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 @keyframes cyberMeterDrain {
   to { transform:scaleY(.08); opacity:.62; }
 }
+@keyframes commandTickerScroll {
+  from { transform:translateX(0); }
+  to { transform:translateX(-50%); }
+}
 @media(max-width:720px) {
   .banner { min-height:42px; max-height:50px; padding:0 9px; gap:7px; grid-template-columns:34px minmax(0,1fr) 5px; }
   .banner-signal { width:34px; height:29px; }
@@ -528,6 +576,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .banner-meter { height:26px; }
   .banner.commands:not(.is-nano) { min-height:58px; max-height:74px; }
   .banner.commands .banner-title { font-size:12px; }
+  .banner.commands .banner-command-ticker { min-height:20px; }
+  .banner.commands .banner-command-run { padding:4px 9px; gap:8px; }
+  .banner.commands .banner-command-run span { font-size:8px; }
   .banner.commands .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(72px,1fr)); max-height:22px; gap:3px; }
   .banner.commands .banner-command-chip { min-height:18px; padding:1px 4px; font-size:7px; }
   .banner.commands .banner-command-chip strong { font-size:7px; }
@@ -4310,10 +4361,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         })
         .filter(Boolean)
       : [];
+    const tickerItems = objectContent && Array.isArray(objectContent.tickerItems)
+      ? objectContent.tickerItems
+        .slice(0, 32)
+        .map(item => String(item || '').trim().slice(0, 640))
+        .filter(Boolean)
+      : [];
     const duration = clampBannerNumber(
       durationMs || (objectContent && objectContent.durationMs) || (options && options.durationMs),
       1400,
-      5200,
+      cls === 'commands' ? 24000 : 5200,
       config.duration
     );
     const priority = clampBannerNumber(
@@ -4329,7 +4386,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       config.charge
     );
     const commandSignature = commands.map(entry => `${entry.command}:${entry.detail}`).join('|');
-    const signature = `${cls}|${stripBannerHtml(titleHtml)}|${stripBannerHtml(metaHtml)}|${commandSignature}`.toLowerCase();
+    const tickerSignature = tickerItems.join('|');
+    const signature = `${cls}|${stripBannerHtml(titleHtml)}|${stripBannerHtml(metaHtml)}|${commandSignature}|${tickerSignature}`.toLowerCase();
     const transition = ['transition-slam', 'transition-sweep', 'transition-signal', 'transition-surge'].includes(requestedTransition)
       ? requestedTransition
       : cls === 'legendary' ? 'transition-surge'
@@ -4345,6 +4403,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       titleHtml: titleHtml || escapeHtml(config.kicker),
       metaHtml,
       commands,
+      tickerItems,
       duration,
       priority,
       charge,
@@ -4395,6 +4454,19 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       `;
   }
 
+  function bannerCommandTickerHtml(items) {
+    if (!Array.isArray(items) || !items.length) return '';
+    const itemHtml = items.map(item => `<span>${escapeHtml(item)}</span>`).join('');
+    return `
+        <span class="banner-command-ticker" data-testid="command-banner-ticker">
+          <span class="banner-command-marquee">
+            <span class="banner-command-run">${itemHtml}</span>
+            <span class="banner-command-run" aria-hidden="true">${itemHtml}</span>
+          </span>
+        </span>
+      `;
+  }
+
   function renderBannerItem(item) {
     const el = document.createElement('div');
     item.el = el;
@@ -4402,6 +4474,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     el.className = `banner ${item.cls} ${item.transition || ''}`;
     el.style.setProperty('--banner-duration', `${item.duration}ms`);
     el.style.setProperty('--banner-charge', `${item.charge}%`);
+    if (item.tickerItems?.length) {
+      const tickerSeconds = Math.max(18, Math.min(42, item.tickerItems.join(' ').length / 18));
+      el.style.setProperty('--command-ticker-duration', `${tickerSeconds}s`);
+    }
     el.innerHTML = `
       <span class="banner-signal" aria-hidden="true">
         <span class="banner-pulse"></span>
@@ -4410,7 +4486,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       <span class="banner-copy">
         <span class="banner-kicker">${item.kickerHtml}</span>
         <span class="banner-title">${item.titleHtml}</span>
-        ${bannerCommandGridHtml(item.commands)}
+        ${item.tickerItems?.length ? bannerCommandTickerHtml(item.tickerItems) : bannerCommandGridHtml(item.commands)}
         ${item.metaHtml ? `<span class="banner-meta">${item.metaHtml}</span>` : ''}
       </span>
       <span class="banner-meter" aria-hidden="true"><span class="banner-meter-fill"></span></span>
@@ -4499,16 +4575,33 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const frame = canvasRectToOverlay(stage.frame);
     const bannerZone = canvasRectToOverlay(stage.zones.banner);
     const playersZone = canvasRectToOverlay(stage.zones.players);
+    const effectsZone = canvasRectToOverlay(stage.zones.effects);
     const isCommandBanner = el.classList.contains('commands');
     const gapX = stage.gap * scale.x;
     const gapY = stage.gap * scale.y;
     const topBandY = frame.y + gapY;
-    const topBandBottom = Math.max(topBandY + 1, playersZone.y - gapY);
+    let playerTopLimit = playersZone.y;
+    try {
+      const visiblePlayers = topPlayers();
+      if (visiblePlayers.length) {
+        const playerCardTop = Math.min(...visiblePlayers.map((player, index) => {
+          const pos = getPlayerPosition(index, visiblePlayers.length);
+          return getPlayerCardDrawMetrics(pos, visiblePlayers.length).top;
+        }));
+        playerTopLimit = Math.min(playerTopLimit, playerCardTop * scale.y);
+      }
+    } catch (_err) {}
+    const topBandBottom = Math.max(topBandY + 1, playerTopLimit - gapY);
     const topBand = makeRect(frame.x + gapX, topBandY, Math.max(1, frame.w - gapX * 2), Math.max(1, topBandBottom - topBandY));
-    const forceNano = stage.frame.h < 260 || stage.frame.w < 430 || topBand.h < 42;
-    const zone = forceNano ? topBand : bannerZone;
-    const verticalZone = bannerZone;
-    const placementZone = topBand;
+    const lowerBandY = Math.max(playersZone.bottom + gapY, effectsZone.y);
+    const lowerBandBottom = Math.min(frame.bottom - gapY, effectsZone.bottom);
+    const lowerCommandBand = makeRect(frame.x + gapX, lowerBandY, Math.max(1, frame.w - gapX * 2), Math.max(1, lowerBandBottom - lowerBandY));
+    const compactCommandStage = frame.h < 650 || frame.w < 1100;
+    const useLowerCommandBand = isCommandBanner && compactCommandStage && lowerCommandBand.h >= 24;
+    const placementZone = useLowerCommandBand ? lowerCommandBand : topBand;
+    const forceNano = stage.frame.h < 260 || stage.frame.w < 430 || placementZone.h < 42;
+    const zone = forceNano ? placementZone : bannerZone;
+    const verticalZone = useLowerCommandBand ? lowerCommandBand : bannerZone;
     const availableWidth = Math.max(1, placementZone.w);
     const frameMaxWidth = Math.min(availableWidth, Math.max(180, frame.w * (isCommandBanner ? 0.84 : 0.76)));
     const readableMinWidth = Math.min(frameMaxWidth, Math.max(240, frame.w * 0.42));
@@ -8447,24 +8540,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function handleCommandBannerShowcase(data) {
-    const banners = Array.isArray(data?.banners) ? data.banners.slice(0, 3) : [];
+    const banners = Array.isArray(data?.banners) ? data.banners.slice(0, 1) : [];
     if (!banners.length) return;
-    const transitions = ['transition-signal', 'transition-sweep', 'transition-surge'];
-    banners.forEach((banner, index) => {
-      const duration = Math.max(3200, Math.min(5200, Number(banner?.durationMs) || (index === 2 ? 5000 : 4300)));
-      setTimeout(() => {
-        showBanner('commands', {
-          code: banner?.code || `CMD${index + 1}`,
-          kicker: banner?.kicker || 'Chat commands',
-          title: banner?.title || 'Viewer commands',
-          meta: banner?.meta || 'Type commands in TikTok chat',
-          commands: Array.isArray(banner?.commands) ? banner.commands : [],
-          charge: banner?.charge || 78,
-          priority: 82 - index,
-          transition: transitions[index] || 'transition-signal',
-        }, duration);
-      }, index * 180);
-    });
+    const banner = banners[0];
+    const duration = Math.max(3200, Math.min(24000, Number(banner?.durationMs) || 18000));
+    showBanner('commands', {
+      code: banner?.code || 'CMD',
+      kicker: banner?.kicker || 'CHAT COMMANDS',
+      title: banner?.title || 'PLAY FROM CHAT',
+      meta: banner?.meta || 'Type these in TikTok chat',
+      commands: Array.isArray(banner?.commands) ? banner.commands : [],
+      tickerItems: Array.isArray(banner?.tickerItems) ? banner.tickerItems : [],
+      charge: banner?.charge || 86,
+      priority: banner?.priority || 88,
+      transition: 'transition-signal',
+    }, duration);
   }
 
   if (isPublicDemo || overlayParams.get('debug') === '1') {

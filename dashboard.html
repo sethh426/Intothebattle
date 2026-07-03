@@ -7,8 +7,10 @@
   <meta name="description" content="Manage your IntoTheBattle TikTok LIVE battle overlay, stream room, sponsor moments, audio, and visual effects." />
   <meta name="robots" content="noindex, follow" />
   <link rel="canonical" href="https://intothebattle.com/dashboard" />
-  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
-  <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=DM+Sans:wght@400;500;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
@@ -330,6 +332,19 @@
     .workflow details.tool { background:rgba(0,0,0,.16); }
     .subtool summary { align-items:center; text-transform:uppercase; letter-spacing:.08em; font-size:12px; }
     .subtool .tool-body { padding:0 16px 16px; }
+    body.rules-blocked { overflow:hidden; }
+    .dashboard-rules-blocker { position:fixed; inset:0; z-index:1000; display:grid; place-items:center; padding:22px; background:rgba(2,4,10,.82); backdrop-filter:blur(18px); }
+    .dashboard-rules-blocker[hidden] { display:none !important; }
+    .rules-card { width:min(720px,100%); max-height:min(820px,calc(100vh - 44px)); overflow:auto; padding:28px; border-radius:28px; border:1px solid rgba(255,214,102,.34); background:radial-gradient(circle at 12% 0%,rgba(0,229,255,.15),transparent 34%),linear-gradient(180deg,rgba(9,13,28,.96),rgba(5,7,17,.96)); box-shadow:0 34px 120px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.12); }
+    .rules-eyebrow { display:inline-flex; width:fit-content; margin-bottom:14px; padding:7px 11px; border-radius:999px; color:#071018; background:linear-gradient(135deg,#00e5ff,#f2fbff 48%,#ffd666); font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.1em; }
+    .rules-card h2 { color:#fff8e6; font-family:'Black Ops One','Rajdhani',sans-serif; font-size:clamp(28px,4vw,42px); line-height:1; text-transform:uppercase; }
+    .rules-card > p { margin-top:13px; color:#d8e2f4; font-size:15px; font-weight:800; line-height:1.58; }
+    .rules-list { display:grid; gap:10px; margin:20px 0; counter-reset:rules; }
+    .rules-list li { list-style:none; position:relative; min-height:58px; padding:14px 14px 14px 58px; border-radius:18px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.055); color:#f7fbff; font-size:14px; font-weight:850; line-height:1.45; }
+    .rules-list li::before { counter-increment:rules; content:counter(rules); position:absolute; left:14px; top:14px; width:30px; height:30px; display:grid; place-items:center; border-radius:999px; color:#071018; background:linear-gradient(135deg,#ffd666,#fff1bd); font-size:13px; font-weight:950; }
+    .rules-warning { margin:0 0 18px; padding:13px 14px; border-radius:16px; border:1px solid rgba(255,45,136,.3); background:rgba(255,45,136,.1); color:#ffd9e8; font-size:13px; font-weight:900; line-height:1.45; }
+    .rules-actions { display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end; }
+    .rules-error { min-height:18px; margin-top:10px; color:#ff9bc5; font-size:12px; font-weight:900; text-align:right; }
     #toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(30px); z-index:100; opacity:0; pointer-events:none; padding:14px 18px; border-radius:16px; background:rgba(5,7,11,.92); border:1px solid var(--line); color:#fff; font-weight:800; transition:.2s ease; }
     #toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
     .footer { display:flex; flex-wrap:wrap; gap:12px; margin:4px 0 28px; }
@@ -436,6 +451,23 @@
 </head>
 <body>
 <div id="toast"></div>
+<section class="dashboard-rules-blocker" id="dashboardRulesBlocker" role="dialog" aria-modal="true" aria-labelledby="dashboardRulesTitle" hidden>
+  <div class="rules-card">
+    <span class="rules-eyebrow">Creator responsibility</span>
+    <h2 id="dashboardRulesTitle">Before You Use IntoTheBattle</h2>
+    <p>IntoTheBattle is the future of engagement games on TikTok. Please use it responsibly while we continue building the app.</p>
+    <ol class="rules-list">
+      <li>Do not use copyrighted sounds. Sounds must be self-made, properly licensed, or royalty free.</li>
+      <li>Do not upload anyone else's video content. The video uploader is a major privilege and must only be used with content you own or have explicit rights to use.</li>
+      <li>Anyone found violating these rules may be permanently banned from the platform with no exceptions.</li>
+    </ol>
+    <p class="rules-warning">By continuing, you acknowledge these rules and understand that violations can permanently remove your access.</p>
+    <div class="rules-actions">
+      <button type="button" class="btn btn-primary" id="dashboardRulesAcceptButton" onclick="acknowledgeDashboardRules()">I understand and agree</button>
+    </div>
+    <div class="rules-error" id="dashboardRulesError" aria-live="polite"></div>
+  </div>
+</section>
 <div class="shell">
   <header class="topbar">
     <div class="brand">
@@ -848,6 +880,7 @@ let activeSponsorBreakId = '';
 let sponsorFileObjectUrl = '';
 let sponsorUploadProbe = null;
 let sessionStatusData = null;
+let dashboardRulesState = { required: false, acknowledgedAt: null };
 const dashboardParams = new URLSearchParams(window.location.search);
 const initialWelcomeMode = dashboardParams.get('welcome') === '1';
 const dashboardState = {
@@ -1090,6 +1123,48 @@ const SPONSOR_TIMING_PRESETS = {
 
 function text(id, value) { const el = document.getElementById(id); if (el) el.textContent = value; }
 function toast(msg, isError = false) { const el = document.getElementById('toast'); el.textContent = msg; el.style.borderColor = isError ? 'rgba(232,59,95,.5)' : 'rgba(246,201,91,.35)'; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3000); }
+function setDashboardRulesBlocker(required) {
+  const blocker = document.getElementById('dashboardRulesBlocker');
+  if (!blocker) return;
+  blocker.hidden = !required;
+  document.body.classList.toggle('rules-blocked', !!required);
+  if (required) setTimeout(() => document.getElementById('dashboardRulesAcceptButton')?.focus?.(), 50);
+}
+function applyDashboardRulesState(rules) {
+  dashboardRulesState = {
+    required: !!rules?.required,
+    acknowledgedAt: rules?.acknowledgedAt || null,
+  };
+  setDashboardRulesBlocker(dashboardRulesState.required);
+}
+async function acknowledgeDashboardRules() {
+  const button = document.getElementById('dashboardRulesAcceptButton');
+  const error = document.getElementById('dashboardRulesError');
+  if (error) error.textContent = '';
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Saving...';
+  }
+  try {
+    const res = await fetch('/api/dashboard/rules/acknowledge', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accepted: true }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to save acknowledgement.');
+    applyDashboardRulesState(data.dashboardRules || { required: false });
+    toast('Rules acknowledged');
+  } catch (err) {
+    if (error) error.textContent = err?.message || 'Unable to save acknowledgement. Please try again.';
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'I understand and agree';
+    }
+  }
+}
 function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => m === '&' ? '&amp;' : m === '<' ? '&lt;' : '&gt;'); }
 function normalizeSource(value) {
   const source = String(value || '').toLowerCase();
@@ -1836,6 +1911,7 @@ async function fetchStatus() {
     }
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Unable to load dashboard status');
+    applyDashboardRulesState(data.dashboardRules || { required: false });
     setRoomLabel(data.roomId || null);
     setOverlayUrl(data.overlayUrl || null, data.overlayV2Url || null, data.setupOverlayUrl || null, data.setupOverlayV2Url || null);
     setSetupRehearsalStatus(data.setupRehearsal || { active: false });

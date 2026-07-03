@@ -276,6 +276,88 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
   expect(errors).toEqual([]);
 });
 
+test('command banner shows one scrolling viewer command ticker', async ({ context, page }, testInfo) => {
+  await addAuthCookie(context);
+  const errors = await watchPage(page);
+  const params = new URLSearchParams({
+    room_id: roomId,
+    overlay_token: overlayToken,
+    mode: 'live',
+    controls: '0',
+    debug: '1',
+  });
+  await page.goto(`${baseUrl}/overlay?${params.toString()}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => Boolean(window.__overlayLegacyLayout?.frame), null, { timeout: 7000 });
+
+  await expect.poll(async () => {
+    const response = await context.request.get(`${baseUrl}/api/status`);
+    if (!response.ok()) return false;
+    const body = await response.json();
+    return Boolean(body.overlayConnected);
+  }, { timeout: 8000 }).toBe(true);
+
+  const testEvent = await context.request.post(`${baseUrl}/api/overlay/test/attack`);
+  const testEventBody = await parseJsonResponse(testEvent);
+  expect(testEventBody.success).toBe(true);
+  await page.waitForFunction(() => window.__overlayLegacyLayout?.players?.length >= 3, null, { timeout: 7000 });
+
+  const response = await context.request.post(`${baseUrl}/api/overlay/command-banners`);
+  const result = await parseJsonResponse(response);
+  expect(result.banners).toBe(1);
+  expect(result.overlayConnected).toBe(true);
+
+  await page.waitForFunction(() => {
+    const banners = Array.from(document.querySelectorAll('.banner.commands:not(.closing)'));
+    return banners.length === 1 && Boolean(banners[0].querySelector('[data-testid="command-banner-ticker"]'));
+  }, null, { timeout: 7000 });
+  await page.waitForTimeout(350);
+
+  const details = await page.evaluate(() => {
+    const banner = document.querySelector('.banner.commands:not(.closing)');
+    const frame = document.getElementById('overlay-container');
+    if (!banner || !frame) return null;
+    const bannerRect = banner.getBoundingClientRect();
+    const frameRect = frame.getBoundingClientRect();
+    const layout = window.__overlayLegacyLayout || {};
+    const bannerCollisions = (layout.collisions || [])
+      .filter(item => JSON.stringify(item).toLowerCase().includes('banner'));
+    return {
+      text: (banner.textContent || '').replace(/\s+/g, ' ').trim(),
+      bannerCount: document.querySelectorAll('.banner.commands:not(.closing)').length,
+      tickerCount: banner.querySelectorAll('[data-testid="command-banner-ticker"]').length,
+      left: bannerRect.left,
+      right: bannerRect.right,
+      top: bannerRect.top,
+      bottom: bannerRect.bottom,
+      frameLeft: frameRect.left,
+      frameRight: frameRect.right,
+      frameTop: frameRect.top,
+      frameBottom: frameRect.bottom,
+      className: banner.className,
+      layoutFrame: layout.frame || null,
+      layoutZones: layout.zones || null,
+      domObjects: layout.domObjects || [],
+      bannerCollisions,
+    };
+  });
+
+  expect(details).toBeTruthy();
+  expect(details.bannerCount).toBe(1);
+  expect(details.tickerCount).toBe(1);
+  for (const text of ['CHAT COMMANDS', 'PLAY FROM CHAT', '!join', '!emoji', '!laser @name', '!laser @boss', '!nuke @name', '!heal', '!shield', '!commands']) {
+    expect(details.text).toContain(text);
+  }
+  expect(details.left).toBeGreaterThanOrEqual(details.frameLeft - 1);
+  expect(details.right).toBeLessThanOrEqual(details.frameRight + 1);
+  expect(details.top).toBeGreaterThanOrEqual(details.frameTop - 1);
+  expect(details.bottom).toBeLessThanOrEqual(details.frameBottom + 1);
+  expect(details.bannerCollisions, JSON.stringify(details, null, 2)).toEqual([]);
+
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'qa-overlay-command-banner-ticker');
+  expect(errors).toEqual([]);
+});
+
 test('critical v1 pages pass automated accessibility checks', async ({ context, page }) => {
   await addAuthCookie(context);
 

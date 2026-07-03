@@ -13,7 +13,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\",\n    \"@id\": \"https://intothebattle.com/battlegrounds#webpage\",\n    \"url\": \"https://intothebattle.com/battlegrounds\",\n    \"name\": \"The Battlegrounds\",\n    \"description\": \"A public board for creators announcing upcoming IntoTheBattle live battles.\",\n    \"isPartOf\": { \"@id\": \"https://intothebattle.com/#website\" }\n  }",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"CollectionPage\",\n        \"@id\": \"https://intothebattle.com/battlegrounds#webpage\",\n        \"url\": \"https://intothebattle.com/battlegrounds\",\n        \"name\": \"The Battlegrounds\",\n        \"description\": \"A public board for creators announcing upcoming IntoTheBattle live battles.\",\n        \"inLanguage\": \"en-US\",\n        \"isPartOf\": { \"@id\": \"https://intothebattle.com/#website\" },\n        \"about\": { \"@id\": \"https://int",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -33,7 +33,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"Organization\",\n        \"@id\": \"https://intothebattle.com/#organization\",\n        \"name\": \"IntoTheBattle\",\n        \"url\": \"https://intothebattle.com/\",\n        \"logo\": { \"@type\": \"ImageObject\", \"@id\": \"https://intothebattle.com/#logo\", \"url\": \"https://intothebattle.com/brand-identity-square.png\", \"width\": 1200, \"height\": 1200 },\n        \"description\": \"IntoTheBattle turns TikTok LIVE chat into a playable battle aren",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"Organization\",\n        \"@id\": \"https://intothebattle.com/#organization\",\n        \"name\": \"IntoTheBattle\",\n        \"alternateName\": [\"Into The Battle\", \"IntoTheBattle Battle Royale\"],\n        \"url\": \"https://intothebattle.com/\",\n        \"logo\": { \"@type\": \"ImageObject\", \"@id\": \"https://intothebattle.com/#logo\", \"url\": \"https://intothebattle.com/brand-identity-square.png\", \"width\": 1200, \"height\": 1200, \"caption\": \"I",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -45,7 +45,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/how-to-play#webpage\",\n        \"url\": \"https://intothebattle.com/how-to-play\",\n        \"name\": \"How To Play IntoTheBattle | TikTok LIVE Viewer Commands\",\n        \"description\": \"Learn how viewers play IntoTheBattle during TikTok LIVE with chat commands, emojis, attacks, shields, healing, likes, gifts, and future arena mechanics.\",\n        \"isPartOf\": { \"@id\": \"http",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/how-to-play#webpage\",\n        \"url\": \"https://intothebattle.com/how-to-play\",\n        \"name\": \"How To Play IntoTheBattle | TikTok LIVE Viewer Commands\",\n        \"description\": \"Learn how viewers play IntoTheBattle during TikTok LIVE with chat commands, emojis, attacks, shields, healing, likes, gifts, and future arena mechanics.\",\n        \"inLanguage\": \"en-US\",\n   ",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -69,7 +69,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"WebPage\",\n  \"name\": \"IntoTheBattle Battle Royale Overlay\",\n  \"url\": \"https://intothebattle.com/overlay\",\n  \"description\": \"Interactive TikTok LIVE battle overlay with real-time combat effects and viewer engagement features.\",\n  \"isPartOf\": {\n    \"@type\": \"WebSite\",\n    \"name\": \"IntoTheBattle\",\n    \"url\": \"https://intothebattle.com/\"\n  }\n}",
+          "raw": "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"WebPage\",\n  \"name\": \"IntoTheBattle Battle Royale Overlay\",\n  \"url\": \"https://intothebattle.com/overlay\",\n  \"description\": \"Interactive TikTok LIVE battle overlay with real-time combat effects and viewer engagement features.\",\n  \"inLanguage\": \"en-US\",\n  \"isPartOf\": {\n    \"@type\": \"WebSite\",\n    \"name\": \"IntoTheBattle\",\n    \"url\": \"https://intothebattle.com/\"\n  }\n}",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -89,7 +89,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"WebPage\",\n  \"name\": \"IntoTheBattle Battle Royale Overlay\",\n  \"url\": \"https://intothebattle.com/overlay\",\n  \"description\": \"Interactive TikTok LIVE battle overlay with real-time combat effects and viewer engagement features.\",\n  \"isPartOf\": {\n    \"@type\": \"WebSite\",\n    \"name\": \"IntoTheBattle\",\n    \"url\": \"https://intothebattle.com/\"\n  }\n}",
+          "raw": "{\n  \"@context\": \"https://schema.org\",\n  \"@type\": \"WebPage\",\n  \"name\": \"IntoTheBattle Battle Royale Overlay\",\n  \"url\": \"https://intothebattle.com/overlay\",\n  \"description\": \"Interactive TikTok LIVE battle overlay with real-time combat effects and viewer engagement features.\",\n  \"inLanguage\": \"en-US\",\n  \"isPartOf\": {\n    \"@type\": \"WebSite\",\n    \"name\": \"IntoTheBattle\",\n    \"url\": \"https://intothebattle.com/\"\n  }\n}",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -101,7 +101,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/paywall#webpage\",\n        \"url\": \"https://intothebattle.com/paywall\",\n        \"name\": \"IntoTheBattle Creator Pro\",\n        \"description\": \"Upgrade IntoTheBattle to unlock custom brand control, video moments, and premium controls after your 7-day everything-unlocked trial.\",\n        \"isPartOf\": { \"@id\": \"https://intothebattle.com/#website\" },\n        \"about\": { \"@i",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/paywall#webpage\",\n        \"url\": \"https://intothebattle.com/paywall\",\n        \"name\": \"IntoTheBattle Creator Pro\",\n        \"description\": \"Upgrade IntoTheBattle to unlock custom brand control, video moments, and premium controls after your 7-day everything-unlocked trial.\",\n        \"inLanguage\": \"en-US\",\n        \"isPartOf\": { \"@id\": \"https://intothebattle.com/#web",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -137,7 +137,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/signup#webpage\",\n        \"name\": \"IntoTheBattle Free Account Signup\",\n        \"url\": \"https://intothebattle.com/signup\",\n        \"description\": \"Create your IntoTheBattle account, choose Google or email, and launch a TikTok LIVE battle overlay for OBS or TikTok Studio in under 5 minutes.\",\n        \"isPartOf\": {\n          \"@id\": \"https://intothebattle.com/#website\"",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/signup#webpage\",\n        \"name\": \"IntoTheBattle Free Account Signup\",\n        \"url\": \"https://intothebattle.com/signup\",\n        \"description\": \"Create your IntoTheBattle account, choose Google or email, and launch a TikTok LIVE battle overlay for OBS or TikTok Studio in under 5 minutes.\",\n        \"inLanguage\": \"en-US\",\n        \"isPartOf\": {\n          \"@id\": \"http",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -149,7 +149,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/site-map#webpage\",\n        \"url\": \"https://intothebattle.com/site-map\",\n        \"name\": \"IntoTheBattle Site Map\",\n        \"description\": \"Find IntoTheBattle creator, player, sponsor, account, and support pages from one site map.\",\n        \"isPartOf\": {\n          \"@id\": \"https://intothebattle.com/#website\"\n        },\n        \"primaryImageOfPage\": {\n          \"@type",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/site-map#webpage\",\n        \"url\": \"https://intothebattle.com/site-map\",\n        \"name\": \"IntoTheBattle Site Map\",\n        \"description\": \"Find IntoTheBattle creator, player, sponsor, account, and support pages from one site map.\",\n        \"inLanguage\": \"en-US\",\n        \"isPartOf\": {\n          \"@id\": \"https://intothebattle.com/#website\"\n        },\n        \"primaryI",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -161,7 +161,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/sponsors#webpage\",\n        \"url\": \"https://intothebattle.com/sponsors\",\n        \"name\": \"IntoTheBattle Sponsors | Live Stream Brand Takeovers\",\n        \"description\": \"Put your brand inside TikTok LIVE battle moments with sports-broadcast style video breaks that return viewers to the action.\",\n        \"isPartOf\": { \"@id\": \"https://intothebattle.com/#website\" },\n  ",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/sponsors#webpage\",\n        \"url\": \"https://intothebattle.com/sponsors\",\n        \"name\": \"IntoTheBattle Sponsors | Live Stream Brand Takeovers\",\n        \"description\": \"Put your brand inside TikTok LIVE battle moments with sports-broadcast style video breaks that return viewers to the action.\",\n        \"inLanguage\": \"en-US\",\n        \"isPartOf\": { \"@id\": \"https://in",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -173,7 +173,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n      \"@context\": \"https://schema.org\",\n      \"@type\": \"WebPage\",\n      \"name\": \"IntoTheBattle Battle Leaderboard\",\n      \"url\": \"https://intothebattle.com/stats\",\n      \"description\": \"Real-time battle leaderboards and live statistics from TikTok LIVE streams on IntoTheBattle.\",\n      \"isPartOf\": {\n        \"@type\": \"WebSite\",\n        \"name\": \"IntoTheBattle\",\n        \"url\": \"https://intothebattle.com/\"\n      }\n    }",
+          "raw": "{\n      \"@context\": \"https://schema.org\",\n      \"@type\": \"WebPage\",\n      \"name\": \"IntoTheBattle Battle Leaderboard\",\n      \"url\": \"https://intothebattle.com/stats\",\n      \"description\": \"Real-time battle leaderboards and live statistics from TikTok LIVE streams on IntoTheBattle.\",\n      \"inLanguage\": \"en-US\",\n      \"isPartOf\": {\n        \"@type\": \"WebSite\",\n        \"name\": \"IntoTheBattle\",\n        \"url\": \"https://intothebattle.com/\"\n      }\n    }",
           "ok": true,
           "errors": [],
           "warnings": []

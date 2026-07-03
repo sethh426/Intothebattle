@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS users (
   email_verification_expires TIMESTAMP,
   password_reset_token TEXT,
   password_reset_expires TIMESTAMP,
+  dashboard_rules_acknowledged_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   last_login TIMESTAMP

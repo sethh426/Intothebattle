@@ -27,31 +27,60 @@ Stop it from the repo root:
 .\scripts\stop_writefreely.ps1
 ```
 
-The main app exposes stable redirect routes:
+The main app exposes stable blog routes backed by the local `local_blog_posts` table:
 
 ```text
 GET /blog
 GET /updates
+GET /blog/:slug
+GET /api/public/blog-posts
 ```
 
-Set `WRITEFREELY_PUBLIC_URL` when the blog should redirect somewhere other than `http://localhost:8080/`.
+Set `WRITEFREELY_PUBLIC_URL` to the public WriteFreely origin when admin-posted articles should link back to WriteFreely.
 
 ## App Integration
 
-The main Express app redirects `/blog` and `/updates` to:
+The main Express app renders local published posts at `/blog` and can also push posts to WriteFreely from the admin blog screen:
 
 ```text
-WRITEFREELY_PUBLIC_URL
-WRITEFREELY_URL
-http://localhost:8080/
+GET  /admin/blog
+GET  /admin/blog/manual
+POST /admin/blog/manual
+POST /admin/blog/:id/push
+POST /admin/blog/site-context/push
+POST /admin/blog/site-context/generate-and-push
 ```
 
-The first configured value wins. Keep a trailing slash optional; the app normalizes it.
+Supported publishing configuration:
+
+```text
+WRITEFREELY_API_URL=http://localhost:8080
+WRITEFREELY_PUBLIC_URL=http://localhost:8080/
+WRITEFREELY_COLLECTION_ALIAS=owner
+WRITEFREELY_SINGLE_USER=true
+WRITEFREELY_API_TOKEN=
+WRITEFREELY_USERNAME=
+WRITEFREELY_PASSWORD=
+```
+
+Use `WRITEFREELY_API_TOKEN` when you already have a token. Otherwise set `WRITEFREELY_USERNAME` and `WRITEFREELY_PASSWORD`; the app logs in through `/api/auth/login` and uses the returned access token for that publish request.
+
+Legacy webhook publishing is still supported:
+
+```text
+WRITEFREELY_POST_WEBHOOK_URL=
+WRITEFREELY_POST_WEBHOOK_TOKEN=
+```
 
 Local example:
 
 ```powershell
+$env:WRITEFREELY_API_URL = 'http://localhost:8080'
 $env:WRITEFREELY_PUBLIC_URL = 'http://localhost:8080/'
+$env:WRITEFREELY_COLLECTION_ALIAS = 'owner'
+$env:WRITEFREELY_SINGLE_USER = 'true'
+$env:WRITEFREELY_USERNAME = 'owner'
+$env:WRITEFREELY_PASSWORD = '<local admin password>'
 npm start
 ```
 
@@ -59,12 +88,18 @@ Production examples:
 
 ```text
 WRITEFREELY_PUBLIC_URL=https://blog.intothebattle.com/
+WRITEFREELY_API_URL=https://blog.intothebattle.com/
+WRITEFREELY_COLLECTION_ALIAS=owner
+WRITEFREELY_SINGLE_USER=true
 ```
 
 or:
 
 ```text
 WRITEFREELY_PUBLIC_URL=https://intothebattle.com/blog/
+WRITEFREELY_API_URL=https://blog.intothebattle.com/
+WRITEFREELY_COLLECTION_ALIAS=owner
+WRITEFREELY_SINGLE_USER=false
 ```
 
 Use a subdomain unless a reverse proxy is explicitly configured to mount WriteFreely below `/blog/`.

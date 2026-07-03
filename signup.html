@@ -5,17 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Create Free Account | IntoTheBattle TikTok LIVE Overlay</title>
   <meta name="description" content="Create your IntoTheBattle account, choose Google or email, and launch a TikTok LIVE battle overlay for OBS or TikTok Studio in under 5 minutes." />
-  <meta name="robots" content="index, follow" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <meta name="author" content="IntoTheBattle" />
   <link rel="canonical" href="https://intothebattle.com/signup" />
   <meta name="theme-color" content="#050608" />
 
   <meta property="og:type" content="website" />
+  <meta property="og:locale" content="en_US" />
   <meta property="og:title" content="Create Your Free IntoTheBattle Account" />
   <meta property="og:description" content="Choose Google or email, create your room, and launch your TikTok LIVE battle overlay for OBS or TikTok Studio in under 5 minutes." />
   <meta property="og:url" content="https://intothebattle.com/signup" />
-  <meta property="og:image" content="https://intothebattle.com/og-intothebattle.png?v=20260627" />
-  <meta property="og:image:secure_url" content="https://intothebattle.com/og-intothebattle.png?v=20260627" />
+  <meta property="og:image" content="https://intothebattle.com/og-intothebattle.png?v=20260702" />
+  <meta property="og:image:secure_url" content="https://intothebattle.com/og-intothebattle.png?v=20260702" />
   <meta property="og:image:type" content="image/png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -25,11 +27,14 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Create Your Free IntoTheBattle Account" />
   <meta name="twitter:description" content="Create your room and launch your TikTok LIVE battle overlay in under 5 minutes." />
-  <meta name="twitter:image" content="https://intothebattle.com/og-intothebattle.png?v=20260627" />
+  <meta name="twitter:image" content="https://intothebattle.com/og-intothebattle.png?v=20260702" />
   <meta name="twitter:image:alt" content="IntoTheBattle live streaming engagement game key art with creators facing a red enemy horde." />
+  <link rel="image_src" href="https://intothebattle.com/og-intothebattle.png?v=20260702" />
 
-  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
-  <link rel="apple-touch-icon" href="/intothebattlelogo_logo_only.svg" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
@@ -46,11 +51,18 @@
         "name": "IntoTheBattle Free Account Signup",
         "url": "https://intothebattle.com/signup",
         "description": "Create your IntoTheBattle account, choose Google or email, and launch a TikTok LIVE battle overlay for OBS or TikTok Studio in under 5 minutes.",
+        "inLanguage": "en-US",
         "isPartOf": {
           "@id": "https://intothebattle.com/#website"
         },
         "about": {
           "@id": "https://intothebattle.com/#software"
+        },
+        "mainEntity": {
+          "@id": "https://intothebattle.com/signup#setup-howto"
+        },
+        "breadcrumb": {
+          "@id": "https://intothebattle.com/signup#breadcrumb"
         },
         "primaryImageOfPage": {
           "@type": "ImageObject",
@@ -74,6 +86,37 @@
             "position": 2,
             "name": "Signup",
             "item": "https://intothebattle.com/signup"
+          }
+        ]
+      },
+      {
+        "@type": "HowTo",
+        "@id": "https://intothebattle.com/signup#setup-howto",
+        "name": "How to launch a TikTok LIVE battle overlay with IntoTheBattle",
+        "description": "Create an account, open the Command Center setup flow, and test the signed overlay source before the real TikTok LIVE connects.",
+        "totalTime": "PT5M",
+        "tool": [
+          { "@type": "HowToTool", "name": "OBS or TikTok Studio" },
+          { "@type": "HowToTool", "name": "TikTok LIVE" }
+        ],
+        "step": [
+          {
+            "@type": "HowToStep",
+            "position": 1,
+            "name": "Create your account",
+            "text": "Choose Google or email and create the creator account."
+          },
+          {
+            "@type": "HowToStep",
+            "position": 2,
+            "name": "Open the Command Center setup flow",
+            "text": "Land in the signed Command Center setup flow for the room."
+          },
+          {
+            "@type": "HowToStep",
+            "position": 3,
+            "name": "Open setup preview, copy the source, and test the battle",
+            "text": "Open the setup preview, copy the signed browser-source URL into OBS or TikTok Studio, and send one test event before going live."
           }
         ]
       }

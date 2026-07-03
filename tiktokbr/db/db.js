@@ -310,6 +310,7 @@ async function initDb() {
         email_verification_expires TIMESTAMP,
         password_reset_token TEXT,
         password_reset_expires TIMESTAMP,
+        dashboard_rules_acknowledged_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         last_login TIMESTAMP
@@ -321,6 +322,7 @@ async function initDb() {
     await safeExec('ALTER TABLE users ADD COLUMN email_verification_expires TIMESTAMP');
     await safeExec('ALTER TABLE users ADD COLUMN password_reset_token TEXT');
     await safeExec('ALTER TABLE users ADD COLUMN password_reset_expires TIMESTAMP');
+    await safeExec('ALTER TABLE users ADD COLUMN dashboard_rules_acknowledged_at TIMESTAMP');
 
     await safeExec(`
       CREATE TABLE IF NOT EXISTS user_rooms (

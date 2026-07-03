@@ -370,6 +370,25 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function escapeXml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
+function jsonLdScript(data) {
+  return `<script type="application/ld+json">${JSON.stringify(data, null, 2).replace(/</g, '\\u003c')}</script>`;
+}
+
+function toIsoDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString();
+}
+
 function cleanPublicText(value, maxLength = 140) {
   return String(value || '')
     .replace(/[\r\n\t]+/g, ' ')
@@ -1252,76 +1271,56 @@ function topSessionPlayers(room, limit = 5) {
   }));
 }
 
-const VIEWER_COMMAND_GROUPS = Object.freeze([
-  {
-    code: 'JOIN',
-    kicker: 'Chat commands',
-    title: 'Join and customize',
-    meta: 'Type commands in TikTok chat',
-    durationMs: 4300,
-    charge: 74,
-    commands: [
-      { command: '!spawn', detail: 'enter arena' },
-      { command: '!emoji <symbol>', detail: 'set fighter icon' },
-      { command: '!team <name>', detail: 'join a team' },
-    ],
-  },
-  {
-    code: 'DEF',
-    kicker: 'Protect and support',
-    title: 'Shield, heal, and help',
-    meta: 'Support commands keep fighters alive',
-    durationMs: 4300,
-    charge: 68,
-    commands: [
-      { command: '!shield', detail: 'reduce damage' },
-      { command: '!heal @name', detail: 'restore HP' },
-      { command: '!commands', detail: 'show this list' },
-    ],
-  },
-  {
-    code: 'ATK',
-    kicker: 'Effect commands',
-    title: 'Choose your attack effect',
-    meta: 'Add @name or @boss after the command',
-    durationMs: 5000,
-    charge: 92,
-    commands: [
-      { command: '!nova', detail: 'pulse blast' },
-      { command: '!laser', detail: 'beam strike' },
-      { command: '!arc', detail: 'electric hit' },
-      { command: '!sphere', detail: 'orb impact' },
-      { command: '!railgun', detail: 'piercing shot' },
-      { command: '!comet', detail: 'meteor hit' },
-      { command: '!bullet', detail: 'fast shot' },
-      { command: '!fire', detail: 'flame burst' },
-      { command: '!nuke', detail: 'heavy blast' },
-      { command: '!neon', detail: 'light strike' },
-    ],
-  },
+const VIEWER_COMMAND_TICKER_ITEMS = Object.freeze([
+  '!join = enter the battle',
+  '!emoji ⚔️ = pick your icon',
+  'Attack anyone: !laser @name',
+  'Boss fight: !laser @boss',
+  'All attacks: !laser @name • !fire @name • !nova @name • !arc @name • !sphere @name • !railgun @name • !comet @name • !bullet @name • !nuke @name • !neon @name • !beam @name • !wave @name • !spiral @name • !shock @name • !orb @name • !shot @name • !shell @name • !meteor @name • !flame @name • !inferno @name • !boom @name • !explode @name • !explosion @name • !projectile @name • !gift @name • !hearts @name',
+  'Stay alive: !heal or !shield',
+  'Teams/help: !team red • !commands',
 ]);
 
+const VIEWER_COMMAND_SHOWCASE = Object.freeze({
+  code: 'CMD',
+  kicker: 'CHAT COMMANDS',
+  title: 'PLAY FROM CHAT',
+  meta: 'Type these in TikTok chat',
+  durationMs: 18000,
+  charge: 86,
+  priority: 88,
+  tickerItems: VIEWER_COMMAND_TICKER_ITEMS,
+  commands: [
+    { command: '!join', detail: 'enter the battle' },
+    { command: '!emoji ⚔️', detail: 'pick your icon' },
+    { command: '!laser @name', detail: 'attack anyone' },
+    { command: '!laser @boss', detail: 'attack boss' },
+    { command: '!heal', detail: 'recover HP' },
+    { command: '!shield', detail: 'block damage' },
+    { command: '!commands', detail: 'show help' },
+  ],
+});
+
 function viewerCommandText() {
-  return VIEWER_COMMAND_GROUPS
-    .map(group => [
-      `${group.title}:`,
-      ...group.commands.map(entry => `${entry.command} - ${entry.detail}`),
-    ].join('\n'))
-    .join('\n\n');
+  return [
+    `${VIEWER_COMMAND_SHOWCASE.title}:`,
+    ...VIEWER_COMMAND_TICKER_ITEMS,
+  ].join('\n');
 }
 
 function commandBannerShowcasePayload() {
   return {
-    banners: VIEWER_COMMAND_GROUPS.map(group => ({
-      code: group.code,
-      kicker: group.kicker,
-      title: group.title,
-      meta: group.meta,
-      commands: group.commands,
-      durationMs: group.durationMs,
-      priority: 80,
-      charge: group.charge,
-    })),
+    banners: [{
+      code: VIEWER_COMMAND_SHOWCASE.code,
+      kicker: VIEWER_COMMAND_SHOWCASE.kicker,
+      title: VIEWER_COMMAND_SHOWCASE.title,
+      meta: VIEWER_COMMAND_SHOWCASE.meta,
+      commands: VIEWER_COMMAND_SHOWCASE.commands,
+      tickerItems: VIEWER_COMMAND_SHOWCASE.tickerItems,
+      durationMs: VIEWER_COMMAND_SHOWCASE.durationMs,
+      priority: VIEWER_COMMAND_SHOWCASE.priority,
+      charge: VIEWER_COMMAND_SHOWCASE.charge,
+    }],
     createdAt: Date.now(),
   };
 }
@@ -1445,7 +1444,10 @@ function renderBattleRecapPage(recap) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Battle Recap - IntoTheBattle</title>
   <meta name="robots" content="noindex, follow" />
-  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{min-height:100vh;display:grid;place-items:center;padding:24px;font-family:Inter,system-ui,sans-serif;color:#fff8e6;background:radial-gradient(circle at 18% 0,rgba(246,201,91,.2),transparent 30%),radial-gradient(circle at 84% 20%,rgba(232,59,95,.16),transparent 30%),linear-gradient(180deg,#050608,#030406)}
@@ -1487,13 +1489,143 @@ function formatBlogDate(value) {
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
+function renderSitemapXml(req = null) {
+  const baseUrl = publicBaseUrl(req);
+  const absolute = pathname => new URL(pathname, `${baseUrl}/`).toString();
+  const staticPages = [
+    {
+      loc: absolute('/'),
+      lastmod: '2026-07-02',
+      changefreq: 'weekly',
+      priority: '1.0',
+      images: [
+        {
+          loc: absolute('/og-intothebattle.png'),
+          title: 'IntoTheBattle live streaming engagement game key art',
+          caption: 'IntoTheBattle turns TikTok LIVE chat into a playable battle arena.',
+        },
+        {
+          loc: absolute('/brand-identity-square.png'),
+          title: 'IntoTheBattle brand identity',
+          caption: 'Square IntoTheBattle brand image for search identity and logo discovery.',
+        },
+      ],
+      videos: [
+        {
+          thumbnailLoc: absolute('/media/remotion/homepage-real-overlay-poster.jpg'),
+          title: 'IntoTheBattle TikTok LIVE battle overlay demo',
+          description: 'A real overlay demo showing TikTok LIVE chat commands becoming attacks, stats, and stream-ready battle moments.',
+          contentLoc: absolute('/media/remotion/homepage-real-overlay-source.mp4'),
+          duration: 36,
+          publicationDate: '2026-06-30T00:00:00-04:00',
+        },
+      ],
+    },
+    { loc: absolute('/signup'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.9', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle signup game key art' }] },
+    { loc: absolute('/how-to-play'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.9', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle player command game key art' }] },
+    { loc: absolute('/battlegrounds'), lastmod: '2026-07-02', changefreq: 'daily', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'The Battlegrounds public live battle board' }] },
+    { loc: absolute('/sponsors'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle sponsor game key art' }] },
+    { loc: absolute('/blog'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle updates and release notes' }] },
+    { loc: absolute('/paywall'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle Creator Pro game key art' }] },
+    { loc: absolute('/site-map'), lastmod: '2026-07-02', changefreq: 'monthly', priority: '0.7' },
+  ];
+  const blogPages = listBlogPosts({ status: 'published', limit: 60 })
+    .filter(post => post.slug)
+    .map(post => ({
+      loc: absolute(`/blog/${encodeURIComponent(post.slug)}`),
+      lastmod: toIsoDate(post.updatedAt || post.publishedAt || post.createdAt).slice(0, 10) || '2026-07-02',
+      changefreq: 'monthly',
+      priority: '0.7',
+      images: [{ loc: absolute('/og-intothebattle.png'), title: post.seoTitle || post.title || 'IntoTheBattle blog post' }],
+    }));
+  const imageXml = image => `
+    <image:image>
+      <image:loc>${escapeXml(image.loc)}</image:loc>
+      ${image.title ? `<image:title>${escapeXml(image.title)}</image:title>` : ''}
+      ${image.caption ? `<image:caption>${escapeXml(image.caption)}</image:caption>` : ''}
+    </image:image>`;
+  const videoXml = video => `
+    <video:video>
+      <video:thumbnail_loc>${escapeXml(video.thumbnailLoc)}</video:thumbnail_loc>
+      <video:title>${escapeXml(video.title)}</video:title>
+      <video:description>${escapeXml(video.description)}</video:description>
+      <video:content_loc>${escapeXml(video.contentLoc)}</video:content_loc>
+      <video:duration>${escapeXml(String(video.duration))}</video:duration>
+      <video:publication_date>${escapeXml(video.publicationDate)}</video:publication_date>
+      <video:family_friendly>yes</video:family_friendly>
+    </video:video>`;
+  const urls = [...staticPages, ...blogPages].map(page => `  <url>
+    <loc>${escapeXml(page.loc)}</loc>
+    <lastmod>${escapeXml(page.lastmod)}</lastmod>
+    <changefreq>${escapeXml(page.changefreq)}</changefreq>
+    <priority>${escapeXml(page.priority)}</priority>
+    ${(page.images || []).map(imageXml).join('')}
+    ${(page.videos || []).map(videoXml).join('')}
+  </url>`).join('\n');
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset
+  xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+  xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+${urls}
+</urlset>`;
+}
+
 function renderBlogListPage(posts = []) {
+  const baseUrl = publicBaseUrl();
+  const blogUrl = new URL('/blog', `${baseUrl}/`).toString();
+  const imageUrl = new URL('/og-intothebattle.png', `${baseUrl}/`).toString();
+  const description = 'Creator-first updates, guides, and launch notes from IntoTheBattle.';
+  const blogSchema = jsonLdScript({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Blog',
+        '@id': `${blogUrl}#blog`,
+        url: blogUrl,
+        name: 'IntoTheBattle Blog',
+        description,
+        publisher: { '@id': `${baseUrl}/#organization` },
+        isPartOf: { '@id': `${baseUrl}/#website` },
+      },
+      {
+        '@type': 'WebPage',
+        '@id': `${blogUrl}#webpage`,
+        url: blogUrl,
+        name: 'IntoTheBattle Blog',
+        description,
+        isPartOf: { '@id': `${baseUrl}/#website` },
+        mainEntity: { '@id': `${blogUrl}#blog` },
+        primaryImageOfPage: { '@type': 'ImageObject', url: imageUrl, width: 1200, height: 630 },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${blogUrl}#breadcrumb`,
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: `${baseUrl}/` },
+          { '@type': 'ListItem', position: 2, name: 'Blog', item: blogUrl },
+        ],
+      },
+      {
+        '@type': 'ItemList',
+        '@id': `${blogUrl}#posts`,
+        name: 'IntoTheBattle published posts',
+        itemListElement: posts.slice(0, 12).filter(post => post.slug).map((post, index) => ({
+          '@type': 'ListItem',
+          position: index + 1,
+          url: new URL(`/blog/${encodeURIComponent(post.slug)}`, `${baseUrl}/`).toString(),
+          name: post.seoTitle || post.title,
+          description: post.seoDescription || post.summary || '',
+        })),
+      },
+    ],
+  });
   const cards = (posts.length ? posts : []).map(post => {
     const link = `/blog/${encodeURIComponent(post.slug)}`;
     const byLine = [post.status, post.source].filter(Boolean).join(' • ');
     const published = formatBlogDate(post.publishedAt);
     return `<article class="blog-card">
-      <p class="blog-meta">${escapeHtml(byLine)}${published ? ` <span>• ${escapeHtml(published)}</span>` : ''}</p>
+      <p class="blog-meta">${escapeHtml(byLine)}${published ? ` <span>- ${escapeHtml(published)}</span>` : ''}</p>
       <h2><a href="${link}">${escapeHtml(post.title)}</a></h2>
       <p>${escapeHtml(post.summary || '')}</p>
       <a href="${link}" class="blog-link">Read full post</a>
@@ -1506,8 +1638,33 @@ function renderBlogListPage(posts = []) {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Blog - IntoTheBattle</title>
-  <meta name="description" content="Creator-first updates, guides, and launch notes from IntoTheBattle." />
-  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
+  <meta name="description" content="${escapeHtml(description)}" />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <link rel="canonical" href="${escapeHtml(blogUrl)}" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:title" content="IntoTheBattle Blog" />
+  <meta property="og:description" content="${escapeHtml(description)}" />
+  <meta property="og:url" content="${escapeHtml(blogUrl)}" />
+  <meta property="og:image" content="${escapeHtml(imageUrl)}" />
+  <meta property="og:image:secure_url" content="${escapeHtml(imageUrl)}" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="IntoTheBattle live streaming engagement game key art." />
+  <meta property="og:site_name" content="IntoTheBattle" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="IntoTheBattle Blog" />
+  <meta name="twitter:description" content="${escapeHtml(description)}" />
+  <meta name="twitter:image" content="${escapeHtml(imageUrl)}" />
+  <meta name="twitter:image:alt" content="IntoTheBattle live streaming engagement game key art." />
+  <link rel="image_src" href="${escapeHtml(imageUrl)}" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  ${blogSchema}
   <style>
     * { box-sizing: border-box; }
     body {
@@ -1580,19 +1737,88 @@ function renderBlogPostPage(post) {
   if (!post) {
     return '<!doctype html><html><body><h1>Blog post not found</h1></body></html>';
   }
+  const baseUrl = publicBaseUrl();
+  const postUrl = new URL(`/blog/${encodeURIComponent(post.slug || '')}`, `${baseUrl}/`).toString();
+  const blogUrl = new URL('/blog', `${baseUrl}/`).toString();
+  const imageUrl = new URL('/og-intothebattle.png', `${baseUrl}/`).toString();
+  const rawTitle = post.seoTitle || post.title || 'Untitled';
+  const rawDescription = post.seoDescription || post.summary || 'Creator-first updates, guides, and launch notes from IntoTheBattle.';
   const title = escapeHtml(post.title || 'Untitled');
-  const published = post.publishedAt ? `<p>Published ${escapeHtml(formatBlogDate(post.publishedAt))}</p>` : '';
+  const datePublished = toIsoDate(post.publishedAt || post.createdAt) || undefined;
+  const dateModified = toIsoDate(post.updatedAt || post.publishedAt || post.createdAt) || datePublished;
+  const postSchema = jsonLdScript({
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebPage',
+        '@id': `${postUrl}#webpage`,
+        url: postUrl,
+        name: rawTitle,
+        description: rawDescription,
+        isPartOf: { '@id': `${baseUrl}/#website` },
+        breadcrumb: { '@id': `${postUrl}#breadcrumb` },
+        primaryImageOfPage: { '@type': 'ImageObject', url: imageUrl, width: 1200, height: 630 },
+        mainEntity: { '@id': `${postUrl}#article` },
+      },
+      {
+        '@type': 'BlogPosting',
+        '@id': `${postUrl}#article`,
+        headline: rawTitle,
+        description: rawDescription,
+        image: [imageUrl],
+        datePublished,
+        dateModified,
+        author: { '@id': `${baseUrl}/#organization`, '@type': 'Organization', name: 'IntoTheBattle', url: `${baseUrl}/` },
+        publisher: { '@id': `${baseUrl}/#organization`, '@type': 'Organization', name: 'IntoTheBattle', url: `${baseUrl}/` },
+        mainEntityOfPage: { '@id': `${postUrl}#webpage` },
+        articleSection: post.source || 'IntoTheBattle updates',
+        isAccessibleForFree: true,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${postUrl}#breadcrumb`,
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home', item: `${baseUrl}/` },
+          { '@type': 'ListItem', position: 2, name: 'Blog', item: blogUrl },
+          { '@type': 'ListItem', position: 3, name: post.title || 'Blog post', item: postUrl },
+        ],
+      },
+    ],
+  });
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>${title} | IntoTheBattle Blog</title>
-  <meta name="description" content="${escapeHtml(post.seoDescription || post.summary || '')}" />
-  ${post.seoKeywords ? `<meta name="keywords" content="${escapeHtml(post.seoKeywords)}" />` : ''}
-  <meta property="og:title" content="${escapeHtml(post.seoTitle || post.title)}" />
-  <meta property="og:description" content="${escapeHtml(post.seoDescription || post.summary || '')}" />
-  <link rel="icon" href="/intothebattlelogo_logo_only.svg" />
+  <meta name="description" content="${escapeHtml(rawDescription)}" />
+  <meta name="robots" content="${post.status === 'published' ? 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' : 'noindex, follow'}" />
+  <link rel="canonical" href="${escapeHtml(postUrl)}" />
+  <meta property="og:type" content="article" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:title" content="${escapeHtml(rawTitle)}" />
+  <meta property="og:description" content="${escapeHtml(rawDescription)}" />
+  <meta property="og:url" content="${escapeHtml(postUrl)}" />
+  <meta property="og:image" content="${escapeHtml(imageUrl)}" />
+  <meta property="og:image:secure_url" content="${escapeHtml(imageUrl)}" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="IntoTheBattle live streaming engagement game key art." />
+  <meta property="og:site_name" content="IntoTheBattle" />
+  ${datePublished ? `<meta property="article:published_time" content="${escapeHtml(datePublished)}" />` : ''}
+  ${dateModified ? `<meta property="article:modified_time" content="${escapeHtml(dateModified)}" />` : ''}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="${escapeHtml(rawTitle)}" />
+  <meta name="twitter:description" content="${escapeHtml(rawDescription)}" />
+  <meta name="twitter:image" content="${escapeHtml(imageUrl)}" />
+  <meta name="twitter:image:alt" content="IntoTheBattle live streaming engagement game key art." />
+  <link rel="image_src" href="${escapeHtml(imageUrl)}" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  ${postSchema}
   <style>
     * { box-sizing: border-box; }
     body {
@@ -1623,11 +1849,11 @@ function renderBlogPostPage(post) {
 <body>
   <div class="wrap">
     <div class="nav">
-      <a href="/blog">← All posts</a>
+      <a href="/blog">&lt; All posts</a>
       <a href="/">Homepage</a>
     </div>
     <article>
-      <div class="meta">${escapeHtml(formatBlogDate(post.publishedAt) || 'Draft')} • ${escapeHtml(post.source || 'manual')}</div>
+      <div class="meta">${escapeHtml(formatBlogDate(post.publishedAt) || 'Draft')} - ${escapeHtml(post.source || 'manual')}</div>
       <h1>${title}</h1>
       <p class="summary">${escapeHtml(post.summary || '')}</p>
       <div class="content">
@@ -5735,17 +5961,25 @@ app.use((req, res, next) => {
 });
 
 const publicAssetFiles = new Map([
+  ['/favicon.ico', 'favicon.ico'],
+  ['/favicon-48.png', 'favicon-48.png'],
+  ['/apple-touch-icon.png', 'apple-touch-icon.png'],
+  ['/site-icon-512.png', 'site-icon-512.png'],
+  ['/site.webmanifest', 'site.webmanifest'],
   ['/logo.svg', 'logo.svg'],
   ['/intothebattlelogo_logo_only.svg', 'intothebattlelogo_logo_only.svg'],
   ['/og-intothebattle.png', 'og-intothebattle.png'],
   ['/brand-identity-square.png', 'brand-identity-square.png'],
   ['/robots.txt', 'robots.txt'],
-  ['/sitemap.xml', 'sitemap.xml'],
 ]);
 
 app.get([...publicAssetFiles.keys()], (req, res) => {
   const file = publicAssetFiles.get(req.path);
   return res.sendFile(path.join(__dirname, file));
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  res.type('application/xml').send(renderSitemapXml(req));
 });
 
 app.use('/js', express.static(path.join(__dirname, 'js'), {
@@ -6435,6 +6669,7 @@ app.get('/api/status', requireRoom, (req, res) => {
   const stream = buildTikTokConnectionStatus(req.room);
   const streamMode = buildStreamModeStatus(req.room);
   const playerRoster = buildRoomPlayerRoster(req.room);
+  const dashboardRulesRequired = req.auth?.type === 'user' && !req.user?.dashboard_rules_acknowledged_at;
   res.json({
     roomId:           req.room.roomId,
     overlayUrl:       buildOverlayUrl(req, req.room.roomId),
@@ -6466,7 +6701,25 @@ app.get('/api/status', requireRoom, (req, res) => {
     devTestMode:      DEV_TEST_MODE,
     setupRehearsal:   req.room.setupRehearsal || { active: false },
     session:          buildSessionStatus(req.room),
+    dashboardRules:   {
+      required: Boolean(dashboardRulesRequired),
+      acknowledgedAt: req.user?.dashboard_rules_acknowledged_at || null,
+    },
   });
+});
+
+app.post('/api/dashboard/rules/acknowledge', requireRoom, (req, res) => {
+  if (req.auth?.type !== 'user' || !req.user?.id) {
+    return res.status(400).json({ success: false, error: 'Account acknowledgement is only available for user accounts.' });
+  }
+  try {
+    db.prepare('UPDATE users SET dashboard_rules_acknowledged_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(req.user.id);
+    const row = db.prepare('SELECT dashboard_rules_acknowledged_at FROM users WHERE id = ?').get(req.user.id);
+    return res.json({ success: true, dashboardRules: { required: false, acknowledgedAt: row?.dashboard_rules_acknowledged_at || null } });
+  } catch (err) {
+    logger.error({ err, userId: req.user.id }, 'Failed to acknowledge dashboard rules');
+    return res.status(500).json({ success: false, error: 'Unable to save acknowledgement. Please try again.' });
+  }
 });
 
 app.get('/api/session/status', requireRoom, (req, res) => {
@@ -7723,18 +7976,14 @@ function tick() {
 const GAME_TICK_MS = Math.max(100, Number(process.env.GAME_TICK_MS || 250));
 setInterval(tick, GAME_TICK_MS);
 
-// Quiet known noisy probes and missing favicon requests.
-app.get('/favicon.ico', (_req, res) => {
-  return res.status(204).end();
-});
-
+// Quiet known noisy probes.
 app.all('/wp-login.php', (_req, res) => {
   return res.status(404).end();
 });
 
 // Return explicit 404 responses and log missing routes/assets.
 app.use((req, res) => {
-  const quiet404Paths = new Set(['/favicon.ico', '/wp-login.php']);
+  const quiet404Paths = new Set(['/wp-login.php']);
   const logFn = quiet404Paths.has(req.path) ? logger.debug.bind(logger) : logger.warn.bind(logger);
 
   logFn({ method: req.method, path: req.path, query: req.query }, 'Route not found');
