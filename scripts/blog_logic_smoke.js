@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+
 process.env.SKIP_DB = process.env.SKIP_DB || 'true';
 process.env.APP_BASE_URL = process.env.APP_BASE_URL || 'https://www.intothebattle.com';
 
@@ -56,6 +58,16 @@ const payload = renderWritefreelyPayload(post);
 assert(payload.content === body, 'Webhook payload should include markdown-ready content');
 assert(payload.contentHtml.includes('<h2>What this page covers</h2>'), 'Webhook payload should retain sanitized HTML for bridges that use it');
 assert(payload.slug === post.slug, 'Webhook payload should include slug');
+
+const blogEngineSource = fs.readFileSync(new URL('../tiktokbr/services/blogEngine.js', import.meta.url), 'utf8');
+const insertMatch = blogEngineSource.match(/INSERT INTO local_blog_posts\s*\(([\s\S]*?)\)\s*VALUES\s*\(([\s\S]*?)\)/);
+assert(insertMatch, 'Blog engine must define a local_blog_posts insert');
+const insertColumns = insertMatch[1].split(',').map(value => value.trim()).filter(Boolean);
+const insertExpressions = insertMatch[2].split(',').map(value => value.trim()).filter(Boolean);
+assert(
+  insertColumns.length === insertExpressions.length,
+  `local_blog_posts insert has ${insertColumns.length} columns but ${insertExpressions.length} expressions`
+);
 
 console.log(JSON.stringify({
   ok: true,

@@ -310,7 +310,7 @@ export function createBlogPost(input = {}) {
     INSERT INTO local_blog_posts (
       slug, title, summary, content_html, status, source, source_key,
       seo_title, seo_description, seo_keywords, published_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `).run(
     slug,
     title,
