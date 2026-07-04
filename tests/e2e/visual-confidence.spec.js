@@ -82,6 +82,23 @@ function assertBossHudIntegrated(layout, label) {
   expect(Math.abs(boss.bottom - panel.bottom), `${label} boss bottom edge is split from panel`).toBeLessThanOrEqual(tolerance);
 }
 
+function assertHordeProminence(layout, label) {
+  const frame = layout?.frame;
+  const horde = layout?.horde;
+  const frameLeft = frame?.left ?? frame?.x;
+  const frameTop = frame?.top ?? frame?.y;
+  const frameRight = frame?.right ?? frame?.x + frame?.w;
+  const frameBottom = frame?.bottom ?? frame?.y + frame?.h;
+  expect(horde, `${label} missing horde layout`).toBeTruthy();
+  expect(frame, `${label} missing frame`).toBeTruthy();
+  expect(horde.left, `${label} horde left outside frame`).toBeGreaterThanOrEqual(frameLeft - 1.5);
+  expect(horde.right, `${label} horde right outside frame`).toBeLessThanOrEqual(frameRight + 1.5);
+  expect(horde.top, `${label} horde top outside frame`).toBeGreaterThanOrEqual(frameTop - 1.5);
+  expect(horde.bottom, `${label} horde bottom outside frame`).toBeLessThanOrEqual(frameBottom + 1.5);
+  expect(horde.width, `${label} horde width`).toBeGreaterThanOrEqual(frame.w * 0.9);
+  expect(horde.height, `${label} horde height`).toBeGreaterThanOrEqual(frame.h * 0.1);
+}
+
 async function assertConnectionStatus(page, testInfo, label, options = {}) {
   const status = await page.evaluate(() => window.overlayEventEngine?.status?.().connection || null);
   await attachJson(testInfo, `${label}-connection`, status);
@@ -385,6 +402,7 @@ test('@visual demo battle with five players and horde remains readable', async (
   const layout = await readLegacyLayout(page, testInfo, 'demo-battle-layout');
   expect(layout.players.length).toBeGreaterThanOrEqual(5);
   expect(layout.horde).toBeTruthy();
+  assertHordeProminence(layout, 'demo-battle');
   await assertConnectionStatus(page, testInfo, 'demo-battle', { mode: 'demo', state: 'demo', ready: true, demoMode: true, connected: false });
   await assertOverlayAudioStatus(page, testInfo, 'demo-battle');
   await assertVisualQueueHealth(page, testInfo, 'demo-battle', { maxQueued: 0 });
