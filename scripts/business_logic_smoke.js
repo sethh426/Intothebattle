@@ -12,6 +12,13 @@ import {
   normalizePayPalSubscriptionStatus,
 } from '../tiktokbr/services/billingPolicy.js';
 import { extractIconEmojiCommand } from '../tiktokbr/services/chatCommands.js';
+import {
+  DEPRECATED_ATTACK_COMMANDS,
+  PLAYER_ATTACK_COMMANDS,
+  commandBannerShowcasePayload,
+  parseAttackCommand,
+  viewerCommandText,
+} from '../tiktokbr/services/playerCommands.js';
 import { buildLaunchReadinessReport } from '../tiktokbr/services/launchReadiness.js';
 import { evaluateSponsorMediaQuality } from '../tiktokbr/sponsorMediaProcessor.js';
 
@@ -171,6 +178,30 @@ function testChatIconCommands() {
   assert.equal(extractIconEmojiCommand('!shield'), '');
 }
 
+function testPlayerCommandCatalog() {
+  assert.equal(parseAttackCommand('!attack @nova')?.effect, 'laser');
+  assert.equal(parseAttackCommand('!hit @nova')?.multiplier, 1.5);
+  assert.equal(parseAttackCommand('strike @nova')?.description, 'STRIKE');
+  assert.equal(parseAttackCommand('!fight @boss')?.effect, 'laser');
+  assert.equal(parseAttackCommand('!railgun @boss')?.effect, 'railgun');
+  assert.equal(parseAttackCommand('!nuke @horde')?.effect, 'explosion');
+
+  for (const command of DEPRECATED_ATTACK_COMMANDS) {
+    assert.equal(PLAYER_ATTACK_COMMANDS[command], undefined, `${command} must not be active`);
+    assert.equal(parseAttackCommand(`!${command} @name`), null, `${command} must not parse`);
+  }
+
+  const commandText = viewerCommandText();
+  for (const expected of ['!join', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands']) {
+    assert.ok(commandText.includes(expected), `viewer command text should include ${expected}`);
+  }
+
+  const payload = commandBannerShowcasePayload();
+  assert.equal(payload.banners.length, 1);
+  assert.equal(payload.banners[0].kicker, 'PLAYER COMMANDS');
+  assert.ok(payload.banners[0].tickerItems.some(item => item.includes('@horde')));
+}
+
 function testSponsorMediaQualityGate() {
   const tools = { ffmpegAvailable: false, ffprobeAvailable: true };
   const goodMp4 = evaluateSponsorMediaQuality({
@@ -236,6 +267,7 @@ function testLaunchReadinessSponsorMediaGate() {
 testEntitlements();
 testBillingPolicy();
 testChatIconCommands();
+testPlayerCommandCatalog();
 testSponsorMediaQualityGate();
 testLaunchReadinessSponsorMediaGate();
 console.log('Business logic smoke checks passed');

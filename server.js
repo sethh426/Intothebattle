@@ -38,6 +38,11 @@ import { marketingAutomationDiagnostics, publishApprovedMarketingPosts, recordMa
 import { getBlogPostBySlug, listBlogPosts } from './tiktokbr/services/blogEngine.js';
 import { extractIconEmojiCommand } from './tiktokbr/services/chatCommands.js';
 import {
+  commandBannerShowcasePayload,
+  parseAttackCommand,
+  viewerCommandText,
+} from './tiktokbr/services/playerCommands.js';
+import {
   getOrCreateRoom,
   getRoom,
   getAllRooms,
@@ -218,6 +223,7 @@ const BOSS_WAVE_HP = Number(process.env.BOSS_WAVE_HP || 1200);
 const BOSS_WAVE_DURATION_MS = Number(process.env.BOSS_WAVE_DURATION_MS || 90 * 1000);
 const BOSS_WAVE_ATTACK_INTERVAL_MS = Number(process.env.BOSS_WAVE_ATTACK_INTERVAL_MS || 11 * 1000);
 const BOSS_WAVE_ATTACK_DAMAGE = Number(process.env.BOSS_WAVE_ATTACK_DAMAGE || 18);
+const BOSS_WAVE_ATTACK_EFFECTS = Object.freeze(['railgun', 'comet', 'arc', 'bullet']);
 const configuredFreeTrialDays = Number(process.env.FREE_TRIAL_DAYS || 7);
 const FREE_TRIAL_DAYS = Number.isFinite(configuredFreeTrialDays) && configuredFreeTrialDays > 0
   ? Math.round(configuredFreeTrialDays)
@@ -1271,60 +1277,6 @@ function topSessionPlayers(room, limit = 5) {
   }));
 }
 
-const VIEWER_COMMAND_TICKER_ITEMS = Object.freeze([
-  '!join = enter the battle',
-  '!emoji ⚔️ = pick your icon',
-  'Attack anyone: !laser @name',
-  'Boss fight: !laser @boss',
-  'All attacks: !laser @name • !fire @name • !nova @name • !arc @name • !sphere @name • !railgun @name • !comet @name • !bullet @name • !nuke @name • !neon @name • !beam @name • !wave @name • !spiral @name • !shock @name • !orb @name • !shot @name • !shell @name • !meteor @name • !flame @name • !inferno @name • !boom @name • !explode @name • !explosion @name • !projectile @name • !gift @name • !hearts @name',
-  'Stay alive: !heal or !shield',
-  'Teams/help: !team red • !commands',
-]);
-
-const VIEWER_COMMAND_SHOWCASE = Object.freeze({
-  code: 'CMD',
-  kicker: 'CHAT COMMANDS',
-  title: 'PLAY FROM CHAT',
-  meta: 'Type these in TikTok chat',
-  durationMs: 18000,
-  charge: 86,
-  priority: 88,
-  tickerItems: VIEWER_COMMAND_TICKER_ITEMS,
-  commands: [
-    { command: '!join', detail: 'enter the battle' },
-    { command: '!emoji ⚔️', detail: 'pick your icon' },
-    { command: '!laser @name', detail: 'attack anyone' },
-    { command: '!laser @boss', detail: 'attack boss' },
-    { command: '!heal', detail: 'recover HP' },
-    { command: '!shield', detail: 'block damage' },
-    { command: '!commands', detail: 'show help' },
-  ],
-});
-
-function viewerCommandText() {
-  return [
-    `${VIEWER_COMMAND_SHOWCASE.title}:`,
-    ...VIEWER_COMMAND_TICKER_ITEMS,
-  ].join('\n');
-}
-
-function commandBannerShowcasePayload() {
-  return {
-    banners: [{
-      code: VIEWER_COMMAND_SHOWCASE.code,
-      kicker: VIEWER_COMMAND_SHOWCASE.kicker,
-      title: VIEWER_COMMAND_SHOWCASE.title,
-      meta: VIEWER_COMMAND_SHOWCASE.meta,
-      commands: VIEWER_COMMAND_SHOWCASE.commands,
-      tickerItems: VIEWER_COMMAND_SHOWCASE.tickerItems,
-      durationMs: VIEWER_COMMAND_SHOWCASE.durationMs,
-      priority: VIEWER_COMMAND_SHOWCASE.priority,
-      charge: VIEWER_COMMAND_SHOWCASE.charge,
-    }],
-    createdAt: Date.now(),
-  };
-}
-
 function buildSessionRecap(room, session, reason = 'manual_end') {
   const topPlayers = topSessionPlayers(room, 5);
   const startedAt = Number(session?.startedAt) || Date.now();
@@ -1522,7 +1474,7 @@ function renderSitemapXml(req = null) {
       ],
     },
     { loc: absolute('/signup'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.9', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle signup game key art' }] },
-    { loc: absolute('/how-to-play'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.9', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle player command game key art' }] },
+    { loc: absolute('/how-to-play'), lastmod: '2026-07-04', changefreq: 'weekly', priority: '0.9', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle player command game key art' }] },
     { loc: absolute('/battlegrounds'), lastmod: '2026-07-02', changefreq: 'daily', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'The Battlegrounds public live battle board' }] },
     { loc: absolute('/sponsors'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle sponsor game key art' }] },
     { loc: absolute('/blog'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle updates and release notes' }] },
@@ -2771,9 +2723,22 @@ function bossWaveTargets(room) {
   };
 }
 
+function currentBossWaveAttackEffect(boss) {
+  const index = Number.isInteger(boss?.attackEffectIndex) ? boss.attackEffectIndex : 0;
+  const normalizedIndex = ((index % BOSS_WAVE_ATTACK_EFFECTS.length) + BOSS_WAVE_ATTACK_EFFECTS.length) % BOSS_WAVE_ATTACK_EFFECTS.length;
+  return BOSS_WAVE_ATTACK_EFFECTS[normalizedIndex] || 'railgun';
+}
+
+function advanceBossWaveAttackEffect(boss) {
+  if (!boss) return;
+  const index = Number.isInteger(boss.attackEffectIndex) ? boss.attackEffectIndex : 0;
+  boss.attackEffectIndex = (index + 1) % BOSS_WAVE_ATTACK_EFFECTS.length;
+}
+
 function applyBossDamageToPlayer(room, target, damage, options = {}) {
   if (!room || !target?.uniqueId || !room.players[target.uniqueId]?.alive) return null;
   const targetScope = options.targetScope || 'top';
+  const attackEffect = options.effect || 'boss';
   const player = room.players[target.uniqueId];
   let dmg = Math.max(1, Math.round(Number(damage) || BOSS_WAVE_ATTACK_DAMAGE));
   let shieldAbsorbed = 0;
@@ -2796,7 +2761,7 @@ function applyBossDamageToPlayer(room, target, damage, options = {}) {
       victim: target.uniqueId,
       victimNick: player.nickname || target.nickname || target.uniqueId,
       damage: dmg,
-      effect: 'boss',
+      effect: 'explosion',
       attackerScope: 'boss',
       targetScope,
     });
@@ -2810,18 +2775,21 @@ function applyBossDamageToPlayer(room, target, damage, options = {}) {
     damage: dmg,
     killed,
     special: true,
-    effect: killed ? 'explosion' : 'boss',
+    effect: killed ? 'explosion' : attackEffect,
     intensity: killed ? 0.95 : 0.72,
     critical: dmg >= Math.max(12, (Number(player.maxHp) || CFG.BASE_HP) * 0.16),
     shielded: shieldAbsorbed > 0,
     shieldAbsorbed,
     attackerScope: 'boss',
     targetScope,
+    shotSpeed: room.overlaySettings?.shotSpeed || DEFAULT_OVERLAY_SETTINGS.shotSpeed,
+    shotType: attackEffect,
+    laserColor: room.overlaySettings?.laserColor || DEFAULT_OVERLAY_SETTINGS.laserColor,
     remainingHpPct: Math.max(0, Number(player.hp) || 0) / Math.max(1, Number(player.maxHp) || CFG.BASE_HP),
   };
 }
 
-function applyBossDamageToHorde(room, hordePlayers, damage) {
+function applyBossDamageToHorde(room, hordePlayers, damage, options = {}) {
   const candidates = Array.isArray(hordePlayers)
     ? hordePlayers.filter(player => player?.alive && player.uniqueId && room?.players?.[player.uniqueId]?.alive)
     : [];
@@ -2842,7 +2810,7 @@ function applyBossDamageToHorde(room, hordePlayers, damage) {
   let shieldAbsorbed = 0;
 
   affectedPlayers.forEach(player => {
-    const result = applyBossDamageToPlayer(room, player, perPlayerDamage, { targetScope: 'horde' });
+    const result = applyBossDamageToPlayer(room, player, perPlayerDamage, { targetScope: 'horde', effect: options.effect });
     if (!result) return;
     totalDamage += result.damage;
     killed = killed || result.killed;
@@ -2866,13 +2834,16 @@ function applyBossDamageToHorde(room, hordePlayers, damage) {
     damage: totalDamage,
     killed,
     special: true,
-    effect: killed ? 'explosion' : 'boss',
+    effect: killed ? 'explosion' : (options.effect || 'boss'),
     intensity: killed ? 0.92 : 0.76,
     critical: totalDamage >= Math.max(14, candidates.length * 4),
     shielded: shieldAbsorbed > 0,
     shieldAbsorbed,
     attackerScope: 'boss',
     targetScope: 'horde',
+    shotSpeed: room.overlaySettings?.shotSpeed || DEFAULT_OVERLAY_SETTINGS.shotSpeed,
+    shotType: options.effect || room.overlaySettings?.shotType || DEFAULT_OVERLAY_SETTINGS.shotType,
+    laserColor: room.overlaySettings?.laserColor || DEFAULT_OVERLAY_SETTINGS.laserColor,
     affectedCount: affected.length,
     hordeCount: aliveReserveCount,
     affected,
@@ -2889,6 +2860,9 @@ function runBossWaveAttack(room, reason = 'pulse') {
   const totalVisualTargets = topTargets.length + (hordeTargets.length ? 1 : 0);
   const attacks = [];
   const baseDamage = Math.max(4, Math.round(Number(boss.attackDamage) || BOSS_WAVE_ATTACK_DAMAGE));
+  const sweepEffect = currentBossWaveAttackEffect(boss);
+  const sweepIndex = Number.isInteger(boss.attackSweepIndex) ? boss.attackSweepIndex : 0;
+  const sweepId = `${boss.startedAt || Date.now()}:${sweepIndex}`;
   const remainingAfterStrike = boss.endsAt ? Math.max(0, boss.endsAt - Date.now()) : boss.attackIntervalMs;
   const projectedNextAttackAt = remainingAfterStrike > 1000
     ? Date.now() + Math.min(Math.max(900, boss.attackIntervalMs || BOSS_WAVE_ATTACK_INTERVAL_MS), remainingAfterStrike)
@@ -2898,25 +2872,29 @@ function runBossWaveAttack(room, reason = 'pulse') {
   topTargets.forEach((target, index) => {
     const variance = 0.82 + Math.random() * 0.42;
     const falloff = Math.max(0.72, 1 - index * 0.06);
-    const payload = applyBossDamageToPlayer(room, target, baseDamage * variance * falloff);
+    const payload = applyBossDamageToPlayer(room, target, baseDamage * variance * falloff, { effect: sweepEffect });
     if (!payload) return;
     payload.sequenceIndex = index;
     payload.totalTargets = totalVisualTargets;
     payload.impactDelayMs = 160 + index * 135;
     payload.bossSweep = true;
+    payload.bossSweepId = sweepId;
+    payload.bossSweepEffect = sweepEffect;
     attacks.push(payload);
     emitRoomEvent(room, 'attack', payload);
   });
 
   if (hordeTargets.length) {
     const hordeDamage = baseDamage * (0.92 + Math.random() * 0.18);
-    const payload = applyBossDamageToHorde(room, hordeTargets, hordeDamage);
+    const payload = applyBossDamageToHorde(room, hordeTargets, hordeDamage, { effect: sweepEffect });
     if (payload) {
       const index = attacks.length;
       payload.sequenceIndex = index;
       payload.totalTargets = totalVisualTargets;
       payload.impactDelayMs = 160 + index * 135;
       payload.bossSweep = true;
+      payload.bossSweepId = sweepId;
+      payload.bossSweepEffect = sweepEffect;
       attacks.push(payload);
       emitRoomEvent(room, 'attack', payload);
     }
@@ -2933,11 +2911,14 @@ function runBossWaveAttack(room, reason = 'pulse') {
       nickname: attack.targetNick,
       damage: attack.damage,
       killed: attack.killed,
+      effect: attack.effect,
       targetScope: attack.targetScope,
       affectedCount: attack.affectedCount,
       affected: attack.affected,
     })),
     reason,
+    sweepId,
+    sweepEffect,
     durationMs: boss.durationMs,
     endsAt: boss.endsAt,
     remainingMs: boss.endsAt ? Math.max(0, boss.endsAt - Date.now()) : null,
@@ -2952,6 +2933,10 @@ function runBossWaveAttack(room, reason = 'pulse') {
     });
     setTimeout(() => emitRoomEvent(room, 'gameState', room.players), 40);
     emitSessionStatus(room);
+  }
+  if (attacks.length) {
+    boss.attackSweepIndex = sweepIndex + 1;
+    advanceBossWaveAttackEffect(boss);
   }
   return attacks;
 }
@@ -3051,6 +3036,8 @@ function startBossWave(room, options = {}) {
     endsAt: startedAt + durationMs,
     attackIntervalMs,
     attackDamage: clampSessionNumber(options.attackDamage, BOSS_WAVE_ATTACK_DAMAGE, 4, 250),
+    attackEffectIndex: 0,
+    attackSweepIndex: 0,
     nextAttackAt: null,
     timer: null,
     attackTimer: null,
@@ -3867,66 +3854,7 @@ function emitSoundAndSync(roomOrEvent, eventOrOptions = {}, options = {}) {
 }
 
 // ────────────────────────────────
-// EFFECT COMMAND MAP (all overlay effects)
-// ────────────────────────────────
-const EFFECT_COMMANDS = {
-  // Fire family
-  fire:        { effect: 'fire',      multiplier: 2.0, description: '🔥 FIRE'        },
-  flame:       { effect: 'fire',      multiplier: 2.0, description: '🔥 FLAME'       },
-  inferno:     { effect: 'fire',      multiplier: 3.5, description: '🔥 INFERNO'     },
-  // Bubble/Water
-  bubble:      { effect: 'bubble',    multiplier: 1.2, description: '🫧 BUBBLE'      },
-  bubbles:     { effect: 'bubble',    multiplier: 1.2, description: '🫧 BUBBLES'     },
-  water:       { effect: 'bubble',    multiplier: 1.2, description: '💧 WATER'       },
-  // Neon
-  neon:        { effect: 'neon',      multiplier: 1.5, description: '🌈 NEON'        },
-  // Ripple / Wind / Spiral (new)
-  ripple:      { effect: 'ripple',    multiplier: 2.5, description: '🌊 RIPPLE'      },
-  wave:        { effect: 'ripple',    multiplier: 2.5, description: '🌊 WAVE'        },
-  spiral:      { effect: 'ripple',    multiplier: 7.0, description: '🌀 SPIRAL'      },  // renamed from tsunami
-  // Sphere / Orb
-  sphere:      { effect: 'sphere',    multiplier: 3.0, description: '🔮 SPHERE'      },
-  orb:         { effect: 'sphere',    multiplier: 3.0, description: '🔮 ORB'         },
-  // Laser / Beam
-  laser:       { effect: 'laser',     multiplier: 1.5, description: '⚡ LASER'       },
-  beam:        { effect: 'beam',      multiplier: 1.5, description: '⚡ BEAM'        },
-  // Projectile
-  projectile:  { effect: 'projectile',multiplier: 1.0, description: '🏹 PROJECTILE'  },
-  shot:        { effect: 'projectile',multiplier: 1.0, description: '🏹 SHOT'        },
-  bullet:      { effect: 'projectile',multiplier: 1.0, description: '🔫 BULLET'     },
-  // Explosion / Nuke / Meteor
-  explosion:   { effect: 'explosion', multiplier: 4.0, description: '💥 EXPLOSION'  },
-  boom:        { effect: 'explosion', multiplier: 4.0, description: '💥 BOOM'       },
-  explode:     { effect: 'explosion', multiplier: 4.0, description: '💥 EXPLODE'    },
-  nuke:        { effect: 'explosion', multiplier: 6.0, description: '☢️ NUKE'       },
-  nukes:       { effect: 'explosion', multiplier: 6.0, description: '☢️ NUKES'      },
-  meteor:      { effect: 'fire',      multiplier: 8.0, description: '☄️ METEOR'      },
-  // Gift / Hearts (low damage visual flair)
-  gift:        { effect: 'gift',      multiplier: 0.5, description: '🎁 GIFT'        },
-  hearts:      { effect: 'gift',      multiplier: 0.5, description: '💖 HEARTS'     },
-  heal:        { effect: 'gift',      multiplier: 0.5, description: '💚 HEAL'        },
-};
-
-// Pool of effects for random non‑command attacks (fire, water, wind, laser)
-for (const deprecatedEffectCommand of ['bubble', 'bubbles', 'water', 'ripple']) {
-  delete EFFECT_COMMANDS[deprecatedEffectCommand];
-}
-
-Object.assign(EFFECT_COMMANDS, {
-  nova:     { effect: 'pulse',     multiplier: 3.0, description: 'NOVA BLAST' },
-  wave:     { effect: 'arc',       multiplier: 2.5, description: 'SHOCK WAVE' },
-  spiral:   { effect: 'arc',       multiplier: 3.4, description: 'ARC SPIRAL' },
-  shock:    { effect: 'arc',       multiplier: 2.5, description: 'SHOCK ARC' },
-  arc:      { effect: 'arc',       multiplier: 2.5, description: 'ARC STRIKE' },
-  bullet:   { effect: 'bullet',    multiplier: 1.8, description: 'BULLET' },
-  shell:    { effect: 'bullet',    multiplier: 1.8, description: 'SHELL SHOT' },
-  shot:     { effect: 'bullet',    multiplier: 1.8, description: 'SHOT' },
-  rail:     { effect: 'railgun',   multiplier: 2.8, description: 'RAIL SHOT' },
-  railgun:  { effect: 'railgun',   multiplier: 2.8, description: 'RAILGUN' },
-  comet:    { effect: 'comet',     multiplier: 3.2, description: 'COMET' },
-  meteor:   { effect: 'comet',     multiplier: 4.2, description: 'METEOR' },
-});
-
+// Random non-command attacks use a small readable visual pool.
 const RANDOM_ATTACK_EFFECTS = ['laser', 'beam', 'fire', 'bullet', 'railgun', 'comet', 'arc'];
 const GIFT_ATTACK_EFFECTS = ['laser', 'arc', 'railgun', 'comet', 'sphere', 'pulse'];
 const GIFT_ATTACK_COLORS = Object.freeze({
@@ -4989,32 +4917,17 @@ function extractMentions(comment = '') {
 function textTargetsBossWave(text, mentions = []) {
   const bossTargets = new Set([
     'boss',
-    'horde',
-    'thehorde',
     'raidboss',
     'waveboss',
     normalizeName(SERVER_BOSS_ID),
-    normalizeName(SERVER_HORDE_ID),
   ]);
   if (mentions.some(mention => bossTargets.has(normalizeName(mention)))) return true;
   const value = String(text || '').trim();
   if (/(^|\s)!(?:boss|raidboss|waveboss)\b/i.test(value)) return true;
-  if (/(^|\s)!\S+\s+@?(?:boss|horde|thehorde|raidboss|waveboss)\b/i.test(value)) return true;
-  if (/(^|\s)(?:attack|hit|strike|damage|fight)\s+@?(?:boss|horde|thehorde|raidboss|waveboss)\b/i.test(value)) return true;
-  if (/\b(?:boss|horde|raidboss|waveboss)\b/i.test(value)) return true;
+  if (/(^|\s)!\S+\s+@?(?:boss|raidboss|waveboss)\b/i.test(value)) return true;
+  if (/(^|\s)(?:attack|hit|strike|damage|fight)\s+@?(?:boss|raidboss|waveboss)\b/i.test(value)) return true;
+  if (/\b(?:boss|raidboss|waveboss)\b/i.test(value)) return true;
   return false;
-}
-
-function parseAttackCommand(text = '') {
-  const value = String(text || '');
-  const explicit = value.match(/(?:^|\s)[!/](\S+)/i);
-  const rawCommand = explicit?.[1] || value.match(/\b([a-z][a-z0-9_-]{1,24})\b/i)?.[1] || '';
-  const normalized = String(rawCommand || '').toLowerCase();
-  if (EFFECT_COMMANDS[normalized]) return EFFECT_COMMANDS[normalized];
-
-  const words = value.toLowerCase().match(/[a-z][a-z0-9_-]*/g) || [];
-  const naturalEffect = words.find(word => EFFECT_COMMANDS[word]);
-  return naturalEffect ? EFFECT_COMMANDS[naturalEffect] : null;
 }
 
 // ────────────────────────────────
@@ -5216,6 +5129,16 @@ function emitGiftAttacksForGift(room, attackerId, options = {}) {
 
 function mentionTargetsHorde(value = '') {
   return ['horde', 'thehorde', normalizeName(SERVER_HORDE_ID)].includes(normalizeName(value));
+}
+
+function textTargetsHorde(text, mentions = []) {
+  if (mentions.some(mentionTargetsHorde)) return true;
+  const value = String(text || '').trim();
+  if (/(^|\s)!(?:horde|thehorde)\b/i.test(value)) return true;
+  if (/(^|\s)!\S+\s+@?(?:horde|thehorde)\b/i.test(value)) return true;
+  if (/(^|\s)(?:attack|hit|strike|damage|fight)\s+@?(?:horde|the\s+horde|thehorde)\b/i.test(value)) return true;
+  if (/\b(?:horde|the\s+horde)\b/i.test(value)) return true;
+  return false;
 }
 
 function normalizeTeamName(value = '') {
@@ -5499,7 +5422,7 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
   const text = String(comment || '');
   const mentions = extractMentions(text);
   const bossMentioned = Boolean(room?.bossWave?.active && textTargetsBossWave(text, mentions));
-  const hordeRequested = /\b(?:horde|the\s+horde)\b/i.test(text) || mentions.some(mentionTargetsHorde);
+  const hordeRequested = textTargetsHorde(text, mentions);
 
   const attackCommand = parseAttackCommand(text);
   let requestedEffect = null;
@@ -5597,15 +5520,15 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
   const attackerScope = battleScopeForPlayer(room, attackerId, baseSnapshot);
 
   if (!mentions.length) {
-    if (attackerScope === 'horde') {
-      const target = chooseTopBattleTarget(room, attackerId, baseSnapshot);
-      const result = emitResolvedAttack(target, null, baseSnapshot);
-      return result || { handled: false, reason: 'No top-five target available' };
-    }
     if (hordeRequested) {
       const target = chooseHordeDamageTarget(room, attackerId, baseSnapshot);
       const result = emitResolvedAttack(target, { id: SERVER_HORDE_ID, nickname: 'The Horde', scope: 'horde' }, baseSnapshot);
       return result || { handled: false, reason: 'No horde target available' };
+    }
+    if (attackerScope === 'horde') {
+      const target = chooseTopBattleTarget(room, attackerId, baseSnapshot);
+      const result = emitResolvedAttack(target, null, baseSnapshot);
+      return result || { handled: false, reason: 'No top-five target available' };
     }
     return { handled: false, reason: 'No @mention found' };
   }
@@ -5616,11 +5539,11 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
     let target = mentionTargetsHorde(mention) ? null : findTarget(room, mention);
     let visualTarget = null;
 
-    if (currentAttackerScope === 'horde') {
-      target = chooseTopBattleTarget(room, attackerId, snapshot);
-    } else if (mentionTargetsHorde(mention)) {
+    if (mentionTargetsHorde(mention)) {
       target = chooseHordeDamageTarget(room, attackerId, snapshot);
       visualTarget = { id: SERVER_HORDE_ID, nickname: 'The Horde', scope: 'horde' };
+    } else if (currentAttackerScope === 'horde') {
+      target = chooseTopBattleTarget(room, attackerId, snapshot);
     } else if (target && !snapshot.topIds.has(String(target.uniqueId))) {
       visualTarget = { id: SERVER_HORDE_ID, nickname: 'The Horde', scope: 'horde' };
     }

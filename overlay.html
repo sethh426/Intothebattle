@@ -308,8 +308,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   --banner-accent-soft:rgba(122,252,255,0.18);
   --banner-duration:3200ms;
   position:absolute; left:50%; top:50%; transform:translate(-50%,0); z-index:26; pointer-events:none;
-  min-height:58px; max-height:68px; padding:0 14px; box-sizing:border-box; overflow:hidden;
-  display:grid; grid-template-columns:48px minmax(0,1fr) 6px; align-items:center; gap:10px;
+  min-height:72px; max-height:86px; padding:0 18px; box-sizing:border-box; overflow:hidden;
+  display:grid; grid-template-columns:58px minmax(0,1fr) 7px; align-items:center; gap:12px;
   font-family:'Rajdhani','Segoe UI',sans-serif; color:#f8fbff;
   background:
     linear-gradient(90deg, rgba(2,7,14,0.98), rgba(5,16,31,0.94) 34%, rgba(3,9,18,0.96)),
@@ -318,8 +318,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   border-radius:7px;
   clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);
   box-shadow:
-    0 14px 34px rgba(0,0,0,0.54),
-    0 0 24px rgba(var(--banner-accent-rgb),0.16),
+    0 18px 42px rgba(0,0,0,0.62),
+    0 0 32px rgba(var(--banner-accent-rgb),0.2),
     inset 0 1px 0 rgba(255,255,255,0.13),
     inset 0 -1px 0 rgba(0,0,0,0.45);
   backdrop-filter:blur(12px) saturate(1.16);
@@ -344,38 +344,38 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.transition-signal { animation:cyberBannerSignalIn 280ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 820ms 160ms ease-out; }
 .banner.transition-surge { animation:cyberBannerSurgeIn 390ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 900ms 120ms ease-out; }
 .banner-signal {
-  position:relative; width:48px; height:40px; display:grid; place-items:center; flex:0 0 auto;
+  position:relative; width:58px; height:48px; display:grid; place-items:center; flex:0 0 auto;
   color:var(--banner-accent); border-right:1px solid rgba(255,255,255,0.1);
 }
 .banner-code {
-  position:relative; z-index:1; min-width:32px; padding:4px 5px; text-align:center;
+  position:relative; z-index:1; min-width:38px; padding:5px 6px; text-align:center;
   border:1px solid rgba(var(--banner-accent-rgb),0.34);
   background:rgba(0,0,0,0.24);
   box-shadow:inset 0 0 18px rgba(var(--banner-accent-rgb),0.14);
-  font-size:10px; font-weight:900; letter-spacing:.9px; text-transform:uppercase;
+  font-size:12px; font-weight:950; letter-spacing:.9px; text-transform:uppercase;
 }
 .banner-pulse {
-  position:absolute; width:31px; height:31px; border:1px solid rgba(var(--banner-accent-rgb),0.38);
+  position:absolute; width:36px; height:36px; border:1px solid rgba(var(--banner-accent-rgb),0.38);
   transform:rotate(45deg); opacity:.82; animation:cyberSignalPulse 920ms ease-in-out infinite;
 }
-.banner-copy { min-width:0; position:relative; z-index:1; display:grid; gap:1px; }
+.banner-copy { min-width:0; position:relative; z-index:1; display:grid; gap:2px; }
 .banner-kicker {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:var(--banner-accent); font-size:10px; line-height:1; font-weight:900; letter-spacing:1.35px; text-transform:uppercase;
+  color:var(--banner-accent); font-size:12px; line-height:1; font-weight:950; letter-spacing:1.35px; text-transform:uppercase;
   text-shadow:0 0 12px rgba(var(--banner-accent-rgb),0.48);
 }
 .banner-title {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#fff; font-size:20px; line-height:1.02; font-weight:900; letter-spacing:.55px; text-transform:uppercase;
-  text-shadow:0 0 18px rgba(255,255,255,0.28);
+  color:#fff; font-size:26px; line-height:1.08; font-weight:950; letter-spacing:.45px; text-transform:uppercase;
+  text-shadow:0 0 22px rgba(255,255,255,0.34),0 2px 7px rgba(0,0,0,0.88);
 }
 .banner-title strong { color:var(--banner-accent); font-weight:900; }
 .banner-meta {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#aeb8c9; font-size:10px; line-height:1.05; font-weight:800; letter-spacing:.58px; text-transform:uppercase;
+  color:#d5deec; font-size:12px; line-height:1; font-weight:900; letter-spacing:.52px; text-transform:uppercase;
 }
 .banner-meter {
-  position:relative; z-index:1; width:6px; height:40px; border:1px solid rgba(255,255,255,0.12);
+  position:relative; z-index:1; width:7px; height:48px; border:1px solid rgba(255,255,255,0.12);
   background:rgba(255,255,255,0.05); overflow:hidden; align-self:center;
 }
 .banner-meter-fill {
@@ -393,8 +393,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.heal { --banner-accent:#8fffd2; --banner-accent-rgb:143,255,210; --banner-accent-soft:rgba(143,255,210,0.16); }
 .banner.commands {
   --banner-accent:#55e7ff; --banner-accent-rgb:85,231,255; --banner-accent-soft:rgba(246,201,91,0.15);
-  min-height:88px; max-height:116px; padding:0 16px;
-  grid-template-columns:54px minmax(0,1fr) 6px;
+  min-height:70px; max-height:82px; padding:0 16px;
+  grid-template-columns:52px minmax(0,1fr) 7px;
   background:
     linear-gradient(90deg, rgba(4,6,12,0.98), rgba(9,22,33,0.96) 42%, rgba(18,7,12,0.96)),
     radial-gradient(circle at 18% 52%, rgba(85,231,255,0.18), transparent 36%),
@@ -405,17 +405,28 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     0 0 54px rgba(246,201,91,0.08),
     inset 0 1px 0 rgba(255,255,255,0.16);
 }
-.banner.commands .banner-copy { justify-items:center; text-align:center; gap:3px; }
-.banner.commands .banner-title { font-size:19px; letter-spacing:.45px; }
+.banner.commands .banner-signal { width:52px; height:46px; }
+.banner.commands .banner-copy { justify-items:stretch; text-align:left; gap:0; }
+.banner-command-strip {
+  display:flex; align-items:center; width:100%; min-width:0; height:46px; overflow:hidden;
+  border:1px solid rgba(var(--banner-accent-rgb),0.32);
+  background:linear-gradient(90deg, rgba(0,0,0,0.38), rgba(var(--banner-accent-rgb),0.08), rgba(0,0,0,0.3));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.13),0 0 18px rgba(var(--banner-accent-rgb),0.12);
+}
+.banner-command-label {
+  flex:0 0 auto; display:inline-flex; align-items:center; align-self:stretch;
+  padding:0 18px; color:#fff; font-size:22px; line-height:1; font-weight:950;
+  letter-spacing:.35px; white-space:nowrap; text-transform:uppercase;
+  text-shadow:0 0 18px rgba(255,255,255,0.34),0 2px 8px rgba(0,0,0,0.9);
+  border-right:1px solid rgba(var(--banner-accent-rgb),0.28);
+  background:linear-gradient(90deg, rgba(var(--banner-accent-rgb),0.16), rgba(255,255,255,0.035));
+}
 .banner-command-ticker {
-  position:relative; width:100%; max-width:100%; min-height:34px; overflow:hidden;
-  border:1px solid rgba(var(--banner-accent-rgb),0.28);
-  background:linear-gradient(90deg, rgba(0,0,0,0.28), rgba(var(--banner-accent-rgb),0.08), rgba(0,0,0,0.28));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,0.1),0 0 14px rgba(var(--banner-accent-rgb),0.08);
+  position:relative; flex:1 1 auto; min-width:0; max-width:100%; height:100%; overflow:hidden;
 }
 .banner-command-ticker::before,
 .banner-command-ticker::after {
-  content:""; position:absolute; top:0; bottom:0; z-index:2; width:52px; pointer-events:none;
+  content:""; position:absolute; top:0; bottom:0; z-index:2; width:46px; pointer-events:none;
 }
 .banner-command-ticker::before { left:0; background:linear-gradient(90deg,rgba(4,6,12,0.98),transparent); }
 .banner-command-ticker::after { right:0; background:linear-gradient(270deg,rgba(4,6,12,0.98),transparent); }
@@ -424,14 +435,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   animation:commandTickerScroll var(--command-ticker-duration,24s) linear infinite;
 }
 .banner-command-run {
-  display:flex; align-items:center; gap:14px; padding:7px 14px; white-space:nowrap;
+  display:flex; align-items:center; gap:18px; height:46px; padding:0 18px; white-space:nowrap;
 }
 .banner-command-run span {
   display:inline-flex; align-items:center; gap:7px;
-  color:#eef8ff; font-size:13px; line-height:1; font-weight:900; letter-spacing:.15px; text-transform:none;
+  color:#f5fbff; font-size:22px; line-height:1; font-weight:950; letter-spacing:.1px; text-transform:none;
+  text-shadow:0 0 14px rgba(85,231,255,0.22),0 2px 8px rgba(0,0,0,0.88);
 }
 .banner-command-run span::after {
-  content:""; width:5px; height:5px; border-radius:50%;
+  content:""; width:6px; height:6px; border-radius:50%;
   background:var(--banner-accent); box-shadow:0 0 12px rgba(var(--banner-accent-rgb),0.72);
 }
 .banner-command-grid {
@@ -461,50 +473,56 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     0 0 86px rgba(255,84,54,0.14),
     inset 0 1px 0 rgba(255,255,255,0.18);
 }
-.banner.legendary .banner-title { font-size:21px; text-shadow:0 0 24px rgba(255,227,111,0.42); }
+.banner.legendary .banner-title { font-size:28px; text-shadow:0 0 28px rgba(255,227,111,0.46),0 2px 8px rgba(0,0,0,0.9); }
 .banner.is-compact {
-  min-height:44px; max-height:52px; padding:0 10px; gap:8px;
-  grid-template-columns:36px minmax(0,1fr) 5px;
+  min-height:58px; max-height:68px; padding:0 12px; gap:9px;
+  grid-template-columns:42px minmax(0,1fr) 5px;
 }
-.banner.is-compact .banner-signal { width:36px; height:30px; }
-.banner.is-compact .banner-code { min-width:26px; padding:3px 4px; font-size:8px; letter-spacing:.72px; }
-.banner.is-compact .banner-pulse { width:23px; height:23px; }
-.banner.is-compact .banner-kicker { font-size:8px; letter-spacing:1px; }
+.banner.is-compact .banner-signal { width:42px; height:34px; }
+.banner.is-compact .banner-code { min-width:30px; padding:3px 4px; font-size:9px; letter-spacing:.72px; }
+.banner.is-compact .banner-pulse { width:26px; height:26px; }
+.banner.is-compact .banner-kicker { font-size:9px; letter-spacing:1px; }
 .banner.is-compact .banner-title,
-.banner.legendary.is-compact .banner-title { font-size:14px; letter-spacing:.36px; }
-.banner.is-compact .banner-meta { font-size:8px; letter-spacing:.45px; }
-.banner.is-compact .banner-meter { width:5px; height:28px; }
-.banner.commands.is-compact { min-height:58px; max-height:74px; padding:0 10px; }
-.banner.commands.is-compact .banner-title { font-size:14px; }
-.banner.commands.is-compact .banner-command-ticker { min-height:24px; }
-.banner.commands.is-compact .banner-command-run { padding:5px 11px; gap:10px; }
-.banner.commands.is-compact .banner-command-run span { font-size:10px; }
+.banner.legendary.is-compact .banner-title { font-size:19px; letter-spacing:.28px; }
+.banner.is-compact .banner-meta { font-size:9px; letter-spacing:.4px; }
+.banner.is-compact .banner-meter { width:5px; height:32px; }
+.banner.commands.is-compact { min-height:54px; max-height:62px; padding:0 10px; grid-template-columns:1fr; }
+.banner.commands.is-compact .banner-signal,
+.banner.commands.is-compact .banner-meter { display:none; }
+.banner.commands.is-compact .banner-command-strip { height:40px; }
+.banner.commands.is-compact .banner-command-label,
+.banner.commands.is-compact .banner-command-run span { font-size:18px; }
+.banner.commands.is-compact .banner-command-run { height:40px; padding:0 14px; gap:14px; }
 .banner.commands.is-compact .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(84px,1fr)); max-height:24px; gap:3px; }
 .banner.commands.is-compact .banner-command-chip { min-height:20px; padding:2px 5px; font-size:8px; letter-spacing:.16px; }
 .banner.commands.is-compact .banner-command-chip strong { font-size:8px; }
 .banner.commands.is-compact .banner-command-chip span { display:none; }
 .banner.is-micro {
-  min-height:38px; max-height:44px; padding:0 8px; gap:6px;
-  grid-template-columns:30px minmax(0,1fr) 4px;
+  min-height:48px; max-height:56px; padding:0 9px; gap:6px;
+  grid-template-columns:34px minmax(0,1fr) 4px;
 }
-.banner.is-micro .banner-signal { width:30px; height:26px; }
-.banner.is-micro .banner-code { min-width:22px; padding:2px 3px; font-size:7px; letter-spacing:.5px; }
-.banner.is-micro .banner-pulse { width:20px; height:20px; }
-.banner.is-micro .banner-kicker { font-size:7px; letter-spacing:.78px; }
+.banner.is-micro .banner-signal { width:34px; height:28px; }
+.banner.is-micro .banner-code { min-width:24px; padding:2px 3px; font-size:8px; letter-spacing:.5px; }
+.banner.is-micro .banner-pulse { width:22px; height:22px; }
+.banner.is-micro .banner-kicker { font-size:8px; letter-spacing:.78px; }
 .banner.is-micro .banner-title,
-.banner.legendary.is-micro .banner-title { font-size:12px; letter-spacing:.28px; }
-.banner.is-micro .banner-meta { display:block; font-size:7px; letter-spacing:.38px; }
-.banner.is-micro .banner-meter { width:4px; height:24px; }
-.banner.commands.is-micro .banner-command-ticker { min-height:18px; }
-.banner.commands.is-micro .banner-command-run { padding:3px 8px; gap:8px; }
-.banner.commands.is-micro .banner-command-run span { font-size:8px; }
+.banner.legendary.is-micro .banner-title { font-size:15px; letter-spacing:.18px; }
+.banner.is-micro .banner-meta { display:block; font-size:8px; letter-spacing:.32px; }
+.banner.is-micro .banner-meter { width:4px; height:26px; }
+.banner.commands.is-micro { min-height:44px; max-height:52px; grid-template-columns:1fr; }
+.banner.commands.is-micro .banner-signal,
+.banner.commands.is-micro .banner-meter { display:none; }
+.banner.commands.is-micro .banner-command-strip { height:34px; }
+.banner.commands.is-micro .banner-command-label,
+.banner.commands.is-micro .banner-command-run span { font-size:15px; }
+.banner.commands.is-micro .banner-command-label { padding:0 12px; }
+.banner.commands.is-micro .banner-command-run { height:34px; padding:0 12px; gap:12px; }
 .banner.commands.is-micro .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(64px,1fr)); max-height:16px; gap:2px; }
 .banner.commands.is-micro .banner-command-chip { min-height:14px; padding:1px 4px; font-size:7px; }
 .banner.commands.is-micro .banner-command-chip strong { font-size:7px; }
-.banner.commands.is-micro .banner-title { font-size:11px; }
-.banner.commands.is-nano { min-height:30px; max-height:34px; }
+.banner.commands.is-nano { min-height:34px; max-height:40px; grid-template-columns:1fr; }
 .banner.is-nano {
-  min-height:30px; max-height:34px; padding:0 6px; gap:5px;
+  min-height:34px; max-height:40px; padding:0 6px; gap:5px;
   grid-template-columns:minmax(0,1fr) 3px;
   clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
 }
@@ -513,9 +531,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.is-nano .banner-meta { display:none; }
 .banner.is-nano .banner-copy { gap:0; }
 .banner.is-nano .banner-title,
-.banner.legendary.is-nano .banner-title { font-size:10px; line-height:1; letter-spacing:.2px; }
+.banner.legendary.is-nano .banner-title { font-size:13px; line-height:1; letter-spacing:.1px; }
 .banner.is-nano .banner-command-grid { display:none; }
-.banner.is-nano .banner-command-ticker { display:none; }
+.banner.commands.is-nano .banner-command-strip { height:28px; }
+.banner.commands.is-nano .banner-command-label,
+.banner.commands.is-nano .banner-command-run span { font-size:12px; }
+.banner.commands.is-nano .banner-command-label { padding:0 9px; }
+.banner.commands.is-nano .banner-command-run { height:28px; padding:0 9px; gap:9px; }
 .banner.is-nano .banner-meter { width:3px; height:20px; }
 @keyframes cyberBannerIn {
   0% { opacity:0; transform:translate(-50%,-14px) scaleX(.72); filter:blur(5px) brightness(1.45); }
@@ -566,24 +588,27 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   to { transform:translateX(-50%); }
 }
 @media(max-width:720px) {
-  .banner { min-height:42px; max-height:50px; padding:0 9px; gap:7px; grid-template-columns:34px minmax(0,1fr) 5px; }
-  .banner-signal { width:34px; height:29px; }
-  .banner-code { min-width:24px; font-size:8px; letter-spacing:.65px; }
-  .banner-pulse { width:22px; height:22px; }
-  .banner-kicker { font-size:8px; letter-spacing:1px; }
-  .banner-title,.banner.legendary .banner-title { font-size:13px; letter-spacing:.35px; }
-  .banner-meta { font-size:7px; }
-  .banner-meter { height:26px; }
-  .banner.commands:not(.is-nano) { min-height:58px; max-height:74px; }
-  .banner.commands .banner-title { font-size:12px; }
-  .banner.commands .banner-command-ticker { min-height:20px; }
-  .banner.commands .banner-command-run { padding:4px 9px; gap:8px; }
-  .banner.commands .banner-command-run span { font-size:8px; }
+  .banner { min-height:58px; max-height:68px; padding:0 11px; gap:8px; grid-template-columns:40px minmax(0,1fr) 5px; }
+  .banner-signal { width:40px; height:32px; }
+  .banner-code { min-width:28px; font-size:9px; letter-spacing:.65px; }
+  .banner-pulse { width:25px; height:25px; }
+  .banner-kicker { font-size:9px; letter-spacing:1px; }
+  .banner-title,.banner.legendary .banner-title { font-size:18px; letter-spacing:.22px; }
+  .banner-meta { font-size:9px; }
+  .banner-meter { height:30px; }
+  .banner.commands:not(.is-nano) { min-height:50px; max-height:60px; grid-template-columns:1fr; }
+  .banner.commands:not(.is-nano) .banner-signal,
+  .banner.commands:not(.is-nano) .banner-meter { display:none; }
+  .banner.commands .banner-command-strip { height:38px; }
+  .banner.commands .banner-command-label,
+  .banner.commands .banner-command-run span { font-size:16px; }
+  .banner.commands .banner-command-label { padding:0 12px; }
+  .banner.commands .banner-command-run { height:38px; padding:0 12px; gap:12px; }
   .banner.commands .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(72px,1fr)); max-height:22px; gap:3px; }
   .banner.commands .banner-command-chip { min-height:18px; padding:1px 4px; font-size:7px; }
   .banner.commands .banner-command-chip strong { font-size:7px; }
   .banner.commands .banner-command-chip span { display:none; }
-  .banner.commands.is-nano { min-height:30px; max-height:34px; }
+  .banner.commands.is-nano { min-height:34px; max-height:40px; }
 }
 @keyframes battleReturnFrame {
   0%   { filter:brightness(1.35) saturate(1.25); box-shadow:0 0 0 2px rgba(255,255,255,0.55),0 0 80px rgba(246,201,91,0.35),0 0 150px rgba(85,231,255,0.22); }
@@ -874,7 +899,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   letter-spacing:0; text-transform:uppercase; opacity:0;
 }
 .sponsor-live-stats {
-  position:absolute; left:60px; right:60px; bottom:76px; z-index:5; width:auto;
+  position:absolute; left:50%; right:auto; top:50%; bottom:auto; z-index:5;
+  width:min(88%,1160px); max-width:calc(100% - 120px);
   padding:24px 26px 22px; border:1px solid rgba(122,252,255,.36); border-radius:8px;
   overflow:hidden; isolation:isolate;
   background:
@@ -883,15 +909,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     linear-gradient(110deg,rgba(5,12,24,.84),rgba(7,18,32,.68) 48%,rgba(7,9,18,.72));
   background-size:160% 160%;
   box-shadow:0 18px 48px rgba(0,0,0,.42),0 0 36px rgba(85,231,255,.08), inset 0 1px 0 rgba(255,255,255,.08);
-  backdrop-filter:blur(18px); opacity:0; transform:translateY(16px);
+  backdrop-filter:blur(18px); opacity:0; transform:translate(-50%,calc(-50% + 18px));
   transition:opacity 420ms ease,transform 560ms cubic-bezier(.16,1,.3,1);
   text-shadow:0 2px 14px rgba(0,0,0,.8);
   text-align:center;
 }
 .sponsor-scene.live.stats-endcap .sponsor-live-stats {
-  left:78px; right:78px; top:50%; bottom:auto;
+  left:50%; right:auto; top:50%; bottom:auto; width:min(90%,1180px); max-width:calc(100% - 156px);
   padding:30px 32px 28px;
-  transform:translateY(calc(-50% + 28px)) scale(.982);
+  transform:translate(-50%,calc(-50% + 28px)) scale(.982);
   box-shadow:0 26px 76px rgba(0,0,0,.6),0 0 54px rgba(85,231,255,.14),0 0 82px rgba(246,201,91,.08),inset 0 1px 0 rgba(255,255,255,.1);
 }
 .sponsor-live-stats::before {
@@ -913,11 +939,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 }
 .sponsor-live-stats > * { position:relative; z-index:1; }
 .sponsor-scene.live.stats-visible .sponsor-live-stats {
-  opacity:1; transform:translateY(0);
+  opacity:1; transform:translate(-50%,-50%);
   animation:sponsorStatsBg 7s 900ms ease-in-out infinite;
 }
 .sponsor-scene.live.stats-visible.stats-endcap .sponsor-live-stats {
-  transform:translateY(-50%) scale(1);
+  transform:translate(-50%,-50%) scale(1);
   animation:sponsorStatsEndcapIn 760ms cubic-bezier(.16,1,.3,1) both,sponsorStatsBg 7s 900ms ease-in-out infinite;
 }
 .sponsor-scene.live.stats-endcap .sponsor-leaderboard { display:none; }
@@ -938,10 +964,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   animation:sponsorLivePulse 1.2s ease-in-out infinite;
 }
 .sponsor-stats-grid {
-  display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px;
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px;
 }
 .sponsor-stat {
-  position:relative; min-width:0; min-height:136px; padding:24px 26px 22px;
+  position:relative; min-width:0; min-height:126px; padding:22px 18px 20px;
   display:flex; flex-direction:column; justify-content:center;
   border:1px solid rgba(255,255,255,.12); border-radius:8px;
   background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.038));
@@ -971,12 +997,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   font:900 56px 'Exo 2','Segoe UI',sans-serif; line-height:1.18; color:#fff8e6; letter-spacing:0;
   text-align:center;
 }
-.sponsor-stat-score .sponsor-stat-value {
+.sponsor-stat-kills .sponsor-stat-value {
   font-size:78px;
   line-height:1.22;
 }
 .sponsor-stat-fighter .sponsor-stat-value {
-  font-size:52px;
+  font-size:46px;
 }
 .sponsor-stat-sub {
   display:block; margin-top:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
@@ -1078,7 +1104,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .sponsor-leaderboard { grid-template-columns:1fr; }
   .sponsor-stat { min-height:110px; padding:18px 20px; }
   .sponsor-stat-value,
-  .sponsor-stat-score .sponsor-stat-value,
+  .sponsor-stat-kills .sponsor-stat-value,
   .sponsor-stat-fighter .sponsor-stat-value { font-size:42px; }
   .sponsor-stat-sub { font-size:22px; }
   .sponsor-leader-row { min-height:58px; }
@@ -1108,7 +1134,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .sponsor-stat { min-height:72px; padding:12px 14px; }
   .sponsor-stat-label { font-size:15px; margin-bottom:3px; }
   .sponsor-stat-value,
-  .sponsor-stat-score .sponsor-stat-value,
+  .sponsor-stat-kills .sponsor-stat-value,
   .sponsor-stat-fighter .sponsor-stat-value { font-size:28px; line-height:1.05; }
   .sponsor-stat-sub { margin-top:4px; font-size:16px; }
   .sponsor-horde-bar { height:9px; margin-top:8px; }
@@ -1157,7 +1183,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   margin-bottom:3px;
 }
 #overlay-container.stage-short .sponsor-stat-value,
-#overlay-container.stage-short .sponsor-stat-score .sponsor-stat-value,
+#overlay-container.stage-short .sponsor-stat-kills .sponsor-stat-value,
 #overlay-container.stage-short .sponsor-stat-fighter .sponsor-stat-value {
   font-size:28px;
   line-height:1.06;
@@ -1247,7 +1273,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   font-size:10px;
 }
 #overlay-container.stage-tiny .sponsor-stat-value,
-#overlay-container.stage-tiny .sponsor-stat-score .sponsor-stat-value,
+#overlay-container.stage-tiny .sponsor-stat-kills .sponsor-stat-value,
 #overlay-container.stage-tiny .sponsor-stat-fighter .sponsor-stat-value {
   font-size:18px;
 }
@@ -1279,7 +1305,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   display:none;
 }
 #overlay-container.stage-nano .sponsor-stat-value,
-#overlay-container.stage-nano .sponsor-stat-score .sponsor-stat-value,
+#overlay-container.stage-nano .sponsor-stat-kills .sponsor-stat-value,
 #overlay-container.stage-nano .sponsor-stat-fighter .sponsor-stat-value {
   font-size:15px;
 }
@@ -1551,23 +1577,28 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         <div class="sponsor-subtitle" id="sponsorSubtitle">Stay locked in. The next fight is loading.</div>
       </div>
       <div class="sponsor-live-stats" id="sponsorLiveStats" aria-label="Live battle stats">
-        <div class="sponsor-stats-head"><span>Live Battle</span><span id="sponsorStatPulse">Updating</span></div>
+        <div class="sponsor-stats-head"><span>Battle Snapshot</span><span id="sponsorStatPulse">Live stats</span></div>
         <div class="sponsor-stats-grid">
-          <div class="sponsor-stat sponsor-stat-score">
-            <span class="sponsor-stat-label">Alive Fighters</span>
-            <span class="sponsor-stat-value" id="sponsorStatAlive">0/0</span>
-            <span class="sponsor-stat-sub" id="sponsorStatKills">0 total kills</span>
+          <div class="sponsor-stat sponsor-stat-players">
+            <span class="sponsor-stat-label">Players</span>
+            <span class="sponsor-stat-value" id="sponsorStatAlive">0</span>
+            <span class="sponsor-stat-sub" id="sponsorStatPlayersSub">0 alive</span>
+          </div>
+          <div class="sponsor-stat sponsor-stat-kills">
+            <span class="sponsor-stat-label">KOs</span>
+            <span class="sponsor-stat-value" id="sponsorStatKills">0</span>
+            <span class="sponsor-stat-sub" id="sponsorStatKillsMeta">total KOs</span>
           </div>
           <div class="sponsor-stat sponsor-stat-horde">
-            <span class="sponsor-stat-label">Horde Pressure</span>
+            <span class="sponsor-stat-label">Pressure</span>
             <span class="sponsor-stat-value" id="sponsorStatHordeHp">0/0 HP</span>
-            <span class="sponsor-stat-sub" id="sponsorStatHordeReserve">0 in reserve</span>
+            <span class="sponsor-stat-sub" id="sponsorStatHordeReserve">horde reserve</span>
             <div class="sponsor-horde-bar"><span id="sponsorStatHordeBar"></span></div>
           </div>
           <div class="sponsor-stat sponsor-stat-fighter">
-            <span class="sponsor-stat-label">Top Fighter</span>
+            <span class="sponsor-stat-label">Leader</span>
             <span class="sponsor-stat-value" id="sponsorStatLeaderName">Awaiting players</span>
-            <span class="sponsor-stat-sub" id="sponsorStatLeaderMeta">0 kills</span>
+            <span class="sponsor-stat-sub" id="sponsorStatLeaderMeta">0 KOs</span>
           </div>
         </div>
         <div class="sponsor-leaderboard" id="sponsorLeaderboard"></div>
@@ -1860,6 +1891,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let gameStateScheduled = false;
   let lastVisualEventSeq = 0;
   let bossWaveState = null;
+  let bossCoreAnchorCache = null;
+  let bossAttackSweepAnchor = null;
+  const BOSS_ATTACK_ANCHOR_TTL_MS = 4200;
   let stateFetchInFlight = false;
   let registerAcked = false;
   let registerRetryTimer = null;
@@ -3144,6 +3178,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       enqueueVisualEvent('giftCelebration', { uniqueId: 'p3', nickname: 'GhostByte', giftName: 'Galaxy', tier: 'legendary', diamonds: 1200 }, handleGiftCelebration);
       enqueueVisualEvent('roundEvent', { type: 'round_started', label: 'Round started' }, handleRoundEvent, { mergeKey: () => 'round_started' });
     },
+    testBannerPlacement: (type = 'legendary', options = {}) => runBannerPlacementProbe(type, options),
     testEventStorm: (count = 132) => runVisualEventStorm(count),
     testEffectOwnership: () => runEffectOwnershipProbe(),
     testSponsorQueue: (count = 9) => runSponsorQueueStress(count),
@@ -3787,6 +3822,58 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return { x: layout.x, y: layout.y };
   }
 
+  function cloneCanvasPoint(point) {
+    return point ? { x: point.x, y: point.y } : null;
+  }
+
+  function cloneCanvasRect(rect) {
+    return rect ? makeRect(rect.x, rect.y, rect.w, rect.h) : null;
+  }
+
+  function snapshotBossCoreAnchor() {
+    const layout = getBossLayout();
+    bossCoreAnchorCache = {
+      point: { x: layout.x, y: layout.y },
+      bounds: makeRect(layout.cardX, layout.cardY, layout.cardW, layout.cardH),
+      ts: Date.now(),
+    };
+    return bossCoreAnchorCache;
+  }
+
+  function getBossCoreAnchor() {
+    if (bossWaveState?.active) return snapshotBossCoreAnchor();
+    if (bossCoreAnchorCache && Date.now() - bossCoreAnchorCache.ts <= BOSS_ATTACK_ANCHOR_TTL_MS) {
+      return bossCoreAnchorCache;
+    }
+    return null;
+  }
+
+  function bossAttackSweepKey(meta = {}) {
+    if (meta.bossSweepId != null) return String(meta.bossSweepId);
+    if (meta.bossSweep) return `boss-sweep:${Math.floor(Date.now() / BOSS_ATTACK_ANCHOR_TTL_MS)}`;
+    return '';
+  }
+
+  function getBossAttackOrigin(meta = {}) {
+    const now = Date.now();
+    const key = bossAttackSweepKey(meta);
+    if (key && bossAttackSweepAnchor?.key === key && now - bossAttackSweepAnchor.ts <= BOSS_ATTACK_ANCHOR_TTL_MS) {
+      return cloneCanvasPoint(bossAttackSweepAnchor.point);
+    }
+
+    const anchor = getBossCoreAnchor();
+    if (!anchor?.point) return null;
+    if (key || meta.bossSweep) {
+      bossAttackSweepAnchor = {
+        key: key || `boss-sweep:${now}`,
+        point: cloneCanvasPoint(anchor.point),
+        bounds: cloneCanvasRect(anchor.bounds),
+        ts: now,
+      };
+    }
+    return cloneCanvasPoint(anchor.point);
+  }
+
   function getBossEdgePosition(otherPos) {
     const layout = getBossLayout();
     if (!otherPos) return { x: layout.x, y: layout.y };
@@ -3931,16 +4018,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return buildEntity('horde', HORDE_ID, getHordePosition(), hordeEntityBounds(), reasonScope);
   }
 
-  function resolveBossEntity(reasonScope = 'boss') {
-    if (!bossWaveState?.active) return null;
-    return buildEntity('boss', BOSS_ID, getBossPosition(), bossEntityBounds(), reasonScope);
+  function resolveBossEntity(reasonScope = 'boss', role = 'entity') {
+    if (!bossWaveState?.active && role !== 'attacker') return null;
+    const anchor = getBossCoreAnchor();
+    if (!anchor?.point || !anchor?.bounds) return null;
+    return buildEntity('boss', BOSS_ID, anchor.point, anchor.bounds, reasonScope);
   }
 
   function resolveEffectEntity(id, preferredScope, role = 'entity') {
     const scope = String(preferredScope || '').trim().toLowerCase();
     const wanted = normalizeEntityToken(id);
     if (isBossEntityRequest(id, scope)) {
-      const boss = resolveBossEntity(scope || 'boss');
+      const boss = resolveBossEntity(scope || 'boss', role);
       return boss || { unresolved: true, reason: 'boss_inactive', role, id: id || BOSS_ID, scope };
     }
     if (isHordeEntityRequest(id, scope)) {
@@ -4467,30 +4556,52 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       `;
   }
 
+  function bannerCommandStripHtml(item) {
+    if (!item?.tickerItems?.length) return '';
+    return `
+        <span class="banner-command-strip" data-testid="command-banner-row">
+          <span class="banner-command-label" data-testid="command-banner-label">${item.titleHtml || 'PLAY FROM CHAT'}</span>
+          ${bannerCommandTickerHtml(item.tickerItems)}
+        </span>
+      `;
+  }
+
   function renderBannerItem(item) {
     const el = document.createElement('div');
     item.el = el;
     activeBanner = item;
-    el.className = `banner ${item.cls} ${item.transition || ''}`;
+    const commandStrip = item.cls === 'commands' && item.tickerItems?.length;
+    el.className = `banner ${item.cls} ${commandStrip ? 'command-strip' : ''} ${item.transition || ''}`;
     el.style.setProperty('--banner-duration', `${item.duration}ms`);
     el.style.setProperty('--banner-charge', `${item.charge}%`);
     if (item.tickerItems?.length) {
-      const tickerSeconds = Math.max(18, Math.min(42, item.tickerItems.join(' ').length / 18));
+      const tickerSeconds = Math.max(20, Math.min(46, item.tickerItems.join(' ').length / 20));
       el.style.setProperty('--command-ticker-duration', `${tickerSeconds}s`);
     }
-    el.innerHTML = `
-      <span class="banner-signal" aria-hidden="true">
-        <span class="banner-pulse"></span>
-        <span class="banner-code">${item.codeHtml}</span>
-      </span>
-      <span class="banner-copy">
-        <span class="banner-kicker">${item.kickerHtml}</span>
-        <span class="banner-title">${item.titleHtml}</span>
-        ${item.tickerItems?.length ? bannerCommandTickerHtml(item.tickerItems) : bannerCommandGridHtml(item.commands)}
-        ${item.metaHtml ? `<span class="banner-meta">${item.metaHtml}</span>` : ''}
-      </span>
-      <span class="banner-meter" aria-hidden="true"><span class="banner-meter-fill"></span></span>
-    `;
+    el.innerHTML = commandStrip
+      ? `
+        <span class="banner-signal" aria-hidden="true">
+          <span class="banner-pulse"></span>
+          <span class="banner-code">${item.codeHtml}</span>
+        </span>
+        <span class="banner-copy">
+          ${bannerCommandStripHtml(item)}
+        </span>
+        <span class="banner-meter" aria-hidden="true"><span class="banner-meter-fill"></span></span>
+      `
+      : `
+        <span class="banner-signal" aria-hidden="true">
+          <span class="banner-pulse"></span>
+          <span class="banner-code">${item.codeHtml}</span>
+        </span>
+        <span class="banner-copy">
+          <span class="banner-kicker">${item.kickerHtml}</span>
+          <span class="banner-title">${item.titleHtml}</span>
+          ${bannerCommandGridHtml(item.commands)}
+          ${item.metaHtml ? `<span class="banner-meta">${item.metaHtml}</span>` : ''}
+        </span>
+        <span class="banner-meter" aria-hidden="true"><span class="banner-meter-fill"></span></span>
+      `;
     el.style.visibility = 'hidden';
     container.appendChild(el);
     placeBannerAbovePlayers(el);
@@ -4527,14 +4638,75 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     enqueueBanner(normalizeBannerPayload(cls, content, dur, options));
   }
 
+  function bannerPlacementProbePayload(type, options = {}) {
+    const normalized = BANNER_CONFIG[type] ? type : 'legendary';
+    const base = {
+      code: options.code || (normalized === 'legendary' ? 'MAX' : BANNER_CONFIG[normalized].code),
+      kicker: options.kicker || 'Placement audit',
+      title: options.title || {
+        kill: 'NeonAce eliminated ShadowByte',
+        streak: 'PsyBlaze is on a 9 kill streak',
+        gift: 'GhostByte sent a Galaxy',
+        special: 'Viral Rally unlocked',
+        follow: 'Vortex joined the arena',
+        heal: 'Nova restored health',
+        legendary: 'Arena takeover unlocked',
+        commands: 'PLAY FROM CHAT',
+      }[normalized],
+      meta: options.meta || 'Readable on stream | centered | no overlap',
+      charge: Number(options.charge) || (normalized === 'legendary' ? 100 : 78),
+      priority: Number(options.priority) || 100,
+      transition: options.transition || 'transition-signal',
+    };
+    if (normalized === 'commands') {
+      base.tickerItems = Array.isArray(options.tickerItems) && options.tickerItems.length
+        ? options.tickerItems
+        : [
+          '!join = enter the battle',
+          '!emoji ⚔️ = pick your icon',
+          'Attack anyone: !laser @name',
+          'Boss fight: !laser @boss',
+          'All attacks: !laser @name • !fire @name • !nova @name • !nuke @name',
+          'Stay alive: !heal or !shield',
+          'Teams/help: !team red • !commands',
+        ];
+      base.meta = '';
+      base.kicker = '';
+    }
+    return base;
+  }
+
+  function runBannerPlacementProbe(type = 'legendary', options = {}) {
+    const normalized = BANNER_CONFIG[type] ? type : 'legendary';
+    if (activeBannerTimer) {
+      clearTimeout(activeBannerTimer);
+      activeBannerTimer = null;
+    }
+    activeBanner = null;
+    bannerQueue.length = 0;
+    container.querySelectorAll('.banner').forEach(el => el.remove());
+    showBanner(normalized, bannerPlacementProbePayload(normalized, options), Number(options.durationMs) || 12000);
+    return currentBannerStatus();
+  }
+
   function currentBannerStatus() {
     const now = Date.now();
     const nodes = Array.from(container.querySelectorAll('.banner'));
+    const activeRect = activeBanner?.el ? activeBanner.el.getBoundingClientRect() : null;
     return {
       active: activeBanner ? {
         type: activeBanner.cls,
         priority: activeBanner.priority,
         ageMs: Math.max(0, now - activeBanner.createdAt),
+        className: activeBanner.el?.className || '',
+        rect: activeRect ? {
+          left: activeRect.left,
+          right: activeRect.right,
+          top: activeRect.top,
+          bottom: activeRect.bottom,
+          width: activeRect.width,
+          height: activeRect.height,
+        } : null,
       } : null,
       queued: bannerQueue.length,
       oldestQueuedAgeMs: bannerQueue.length
@@ -4588,10 +4760,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           const pos = getPlayerPosition(index, visiblePlayers.length);
           return getPlayerCardDrawMetrics(pos, visiblePlayers.length).top;
         }));
-        playerTopLimit = Math.min(playerTopLimit, playerCardTop * scale.y);
+        const playerCardTopOverlay = canvasRectToOverlay(makeRect(0, playerCardTop, 1, 1)).y;
+        playerTopLimit = Math.min(playerTopLimit, playerCardTopOverlay);
       }
     } catch (_err) {}
-    const topBandBottom = Math.max(topBandY + 1, playerTopLimit - gapY);
+    const topBandBottom = Math.max(topBandY + 1, playerTopLimit - gapY * 1.35);
     const topBand = makeRect(frame.x + gapX, topBandY, Math.max(1, frame.w - gapX * 2), Math.max(1, topBandBottom - topBandY));
     const lowerBandY = Math.max(playersZone.bottom + gapY, effectsZone.y);
     const lowerBandBottom = Math.min(frame.bottom - gapY, effectsZone.bottom);
@@ -4601,18 +4774,20 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const placementZone = useLowerCommandBand ? lowerCommandBand : topBand;
     const forceNano = stage.frame.h < 260 || stage.frame.w < 430 || placementZone.h < 42;
     const zone = forceNano ? placementZone : bannerZone;
-    const verticalZone = useLowerCommandBand ? lowerCommandBand : bannerZone;
+    const verticalZone = placementZone;
     const availableWidth = Math.max(1, placementZone.w);
-    const frameMaxWidth = Math.min(availableWidth, Math.max(180, frame.w * (isCommandBanner ? 0.84 : 0.76)));
-    const readableMinWidth = Math.min(frameMaxWidth, Math.max(240, frame.w * 0.42));
+    const largeMomentBanner = el.classList.contains('legendary') || el.classList.contains('kill') || el.classList.contains('streak');
+    const frameWidthRatio = isCommandBanner ? 0.94 : largeMomentBanner ? 0.84 : 0.8;
+    const frameMaxWidth = Math.min(availableWidth, Math.max(220, frame.w * frameWidthRatio));
+    const readableMinWidth = Math.min(frameMaxWidth, Math.max(isCommandBanner ? 320 : 280, frame.w * (isCommandBanner ? 0.64 : 0.5)));
     const zoneWidthLimit = isCommandBanner ? frameMaxWidth : Math.min(frameMaxWidth, zone.w * 1.08);
     const maxWidth = Math.min(availableWidth, Math.max(readableMinWidth, zoneWidthLimit));
     const preferredWidth = isCommandBanner
       ? maxWidth
       : Math.min(maxWidth, Math.max(Math.min(readableMinWidth, maxWidth), zone.w * 0.96));
-    const compactHeightZone = isCommandBanner ? placementZone : zone;
-    const forceCompact = compactHeightZone.h <= (isCommandBanner ? 66 : 72) || preferredWidth < (isCommandBanner ? 560 : 720);
-    const forceMicro = compactHeightZone.h <= 48 || preferredWidth < (isCommandBanner ? 420 : 500);
+    const compactHeightZone = placementZone;
+    const forceCompact = compactHeightZone.h <= (isCommandBanner ? 58 : 86) || preferredWidth < (isCommandBanner ? 700 : 760);
+    const forceMicro = compactHeightZone.h <= (isCommandBanner ? 46 : 58) || preferredWidth < (isCommandBanner ? 500 : 560);
     el.classList.remove('is-compact', 'is-micro', 'is-nano');
     if (forceCompact) el.classList.add('is-compact');
     if (forceMicro) el.classList.add('is-micro');
@@ -5175,6 +5350,112 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       fitted = fitted.slice(0, -1);
     }
     return fitted.length > 1 ? `${fitted}…` : safeText.slice(0, 1);
+  }
+
+  let canvasGraphemeSegmenter = null;
+
+  function normalizeCanvasText(value) {
+    const text = String(value || '').trim();
+    try {
+      return text.normalize('NFC');
+    } catch (_) {
+      return text;
+    }
+  }
+
+  function isCanvasJoinerCodePoint(code) {
+    return (code >= 0x0300 && code <= 0x036f)
+      || (code >= 0x1ab0 && code <= 0x1aff)
+      || (code >= 0x1dc0 && code <= 0x1dff)
+      || (code >= 0x20d0 && code <= 0x20ff)
+      || (code >= 0xfe00 && code <= 0xfe0f)
+      || code === 0x200d;
+  }
+
+  function splitCanvasGraphemes(value) {
+    const text = normalizeCanvasText(value);
+    if (!text) return [];
+    if (typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function') {
+      try {
+        canvasGraphemeSegmenter = canvasGraphemeSegmenter || new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+        return Array.from(canvasGraphemeSegmenter.segment(text), segment => segment.segment);
+      } catch (_) {}
+    }
+    const chars = Array.from(text);
+    const out = [];
+    let previousWasJoiner = false;
+    chars.forEach(char => {
+      const code = char.codePointAt(0);
+      if (out.length && (previousWasJoiner || isCanvasJoinerCodePoint(code))) out[out.length - 1] += char;
+      else out.push(char);
+      previousWasJoiner = code === 0x200d;
+    });
+    return out;
+  }
+
+  function fitCanvasTextResult(c, text, maxWidth, fontFactory, maxSize, minSize) {
+    const safeText = normalizeCanvasText(text);
+    const safeMaxWidth = Math.max(1, Number(maxWidth) || 1);
+    let size = Math.max(minSize || 10, maxSize || 12);
+    const floor = Math.max(6, minSize || 10);
+    while (size > floor) {
+      c.font = fontFactory(size);
+      if (c.measureText(safeText).width <= safeMaxWidth) break;
+      size -= 1;
+    }
+    c.font = fontFactory(size);
+    if (c.measureText(safeText).width <= safeMaxWidth) {
+      return { text: safeText, size, truncated: false };
+    }
+
+    const ellipsis = '\u2026';
+    const graphemes = splitCanvasGraphemes(safeText);
+    let fitted = graphemes.join('');
+    while (graphemes.length > 1 && c.measureText(`${fitted}${ellipsis}`).width > safeMaxWidth) {
+      graphemes.pop();
+      fitted = graphemes.join('');
+    }
+    const textWithEllipsis = graphemes.length > 1 ? `${fitted}${ellipsis}` : (graphemes[0] || ellipsis);
+    if (c.measureText(textWithEllipsis).width <= safeMaxWidth) {
+      return { text: textWithEllipsis, size, truncated: true };
+    }
+    return { text: graphemes[0] || '', size, truncated: true };
+  }
+
+  function fitCanvasText(c, text, maxWidth, fontFactory, maxSize, minSize) {
+    return fitCanvasTextResult(c, text, maxWidth, fontFactory, maxSize, minSize).text;
+  }
+
+  function canvasTextInkMetrics(c, text, fallbackSize = 12) {
+    const metrics = c.measureText(String(text || ''));
+    const left = Number.isFinite(metrics.actualBoundingBoxLeft) ? metrics.actualBoundingBoxLeft : 0;
+    const right = Number.isFinite(metrics.actualBoundingBoxRight) ? metrics.actualBoundingBoxRight : metrics.width;
+    const ascent = Number.isFinite(metrics.actualBoundingBoxAscent) ? metrics.actualBoundingBoxAscent : fallbackSize * 0.62;
+    const descent = Number.isFinite(metrics.actualBoundingBoxDescent) ? metrics.actualBoundingBoxDescent : fallbackSize * 0.24;
+    return {
+      left,
+      right,
+      ascent,
+      descent,
+      width: Math.max(1, left + right),
+      height: Math.max(1, ascent + descent),
+    };
+  }
+
+  function drawCenteredCanvasText(c, text, centerX, centerY, options = {}) {
+    const fallbackSize = options.fontSize || 12;
+    const ink = canvasTextInkMetrics(c, text, fallbackSize);
+    const drawX = centerX - (ink.right - ink.left) / 2;
+    c.textAlign = 'left';
+    c.textBaseline = options.baseline || 'middle';
+    if (options.strokeStyle && options.lineWidth > 0) {
+      c.strokeStyle = options.strokeStyle;
+      c.lineWidth = options.lineWidth;
+      c.strokeText(text, drawX, centerY);
+    }
+    if (options.fillStyle) c.fillStyle = options.fillStyle;
+    c.fillText(text, drawX, centerY);
+    return makeRect(drawX - ink.left, centerY - ink.ascent, ink.width, ink.height);
   }
 
   function drawGlassPanel(x, y, w, h, r, options) {
@@ -6477,7 +6758,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const targetIsBoss = target.kind === 'boss';
     const attackerIsHorde = source.kind === 'horde';
     const targetIsHorde = target.kind === 'horde';
-    const rawFrom = entityAnchorPoint(source, target.point);
+    const rawFrom = attackerIsBoss
+      ? (getBossAttackOrigin(meta) || entityAnchorPoint(source, target.point))
+      : entityAnchorPoint(source, target.point);
     const rawTo = entityAnchorPoint(target, source.point);
     let from = rawFrom;
     let to = rawTo;
@@ -8395,6 +8678,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         giftBoosted: data.giftBoosted, remainingHpPct: data.remainingHpPct,
         killingBlow: data.killingBlow, laserColor: data.laserColor, shotSpeed: data.shotSpeed,
         attackerScope: data.attackerScope, targetScope: data.targetScope,
+        bossSweep: data.bossSweep, bossSweepId: data.bossSweepId, sequenceIndex: data.sequenceIndex, totalTargets: data.totalTargets,
         shielded: data.shielded,
       });
       if (fired) rememberAttack(data.attacker, data.target, data.effect);
@@ -8711,12 +8995,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
     if (type === 'started') {
       mergeBossState();
+      snapshotBossCoreAnchor();
       pulseBoss('spawn', THEME.gold, 1600);
       showBattlePrompt('Boss wave active: target @boss', 'horde', 2800);
       return;
     }
     if (type === 'attack') {
       mergeBossState();
+      snapshotBossCoreAnchor();
       pulseBoss('attack', THEME.ember, 1100);
       const count = Array.isArray(data.targets) ? data.targets.length : 0;
       if (count) {

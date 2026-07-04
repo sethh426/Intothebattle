@@ -84,6 +84,9 @@
       this.sponsorReporter = null;
       this.preparedSponsor = null;
       this.bossState = null;
+      this.bossCoreBounds = null;
+      this.bossCoreAnchorCache = null;
+      this.bossAttackSweepAnchor = null;
       this.bannerQueue = [];
       this.bannerActive = false;
       this.recentAttackKeys = new Map();
@@ -605,6 +608,9 @@
 
       this.hordeTitle.setText(bossActive ? 'BOSS' : 'HORDE');
       this.hordeTitle.setPosition(labelX + labelW / 2, y + h / 2 + 2 * u);
+      this.bossCoreBounds = bossActive
+        ? { x: labelX, y: y + pad * 1.45, width: labelW, height: h - pad * 2.9 }
+        : null;
 
       const bossRemainingMs = bossActive
         ? (Number.isFinite(Number(this.bossState?.endsAt)) ? Math.max(0, Number(this.bossState.endsAt) - Date.now()) : Number(this.bossState?.remainingMs))
@@ -745,9 +751,56 @@
       };
     }
 
+    bossAnchorTtlMs() {
+      return 4200;
+    }
+
+    getBossCorePosition() {
+      const now = Date.now();
+      if (this.bossState?.active && this.bossCoreBounds) {
+        const point = {
+          x: this.bossCoreBounds.x + this.bossCoreBounds.width / 2,
+          y: this.bossCoreBounds.y + this.bossCoreBounds.height / 2,
+        };
+        this.bossCoreAnchorCache = { point, ts: now };
+        return { ...point };
+      }
+      if (this.bossCoreAnchorCache && now - this.bossCoreAnchorCache.ts <= this.bossAnchorTtlMs()) {
+        return { ...this.bossCoreAnchorCache.point };
+      }
+      return null;
+    }
+
+    bossAttackSweepKey(data = {}) {
+      if (data.bossSweepId != null) return String(data.bossSweepId);
+      if (data.bossSweep) return `boss-sweep:${Math.floor(Date.now() / this.bossAnchorTtlMs())}`;
+      return '';
+    }
+
+    getBossAttackOrigin(data = {}) {
+      const now = Date.now();
+      const key = this.bossAttackSweepKey(data);
+      if (key && this.bossAttackSweepAnchor?.key === key && now - this.bossAttackSweepAnchor.ts <= this.bossAnchorTtlMs()) {
+        return { ...this.bossAttackSweepAnchor.point };
+      }
+      const point = this.getBossCorePosition() || this.getHordePosition();
+      if (key || data.bossSweep) {
+        this.bossAttackSweepAnchor = {
+          key: key || `boss-sweep:${now}`,
+          point: { ...point },
+          ts: now,
+        };
+      }
+      return { ...point };
+    }
+
     getEntityPosition(id, scope = '') {
       const normalized = String(id || '').toLowerCase();
-      if (scope === 'horde' || normalized === 'horde' || normalized === '@horde' || normalized === 'boss' || normalized === '@boss') {
+      const normalizedScope = String(scope || '').toLowerCase();
+      if (normalizedScope === 'boss' || normalized === 'boss' || normalized === '@boss' || normalized === '__boss__') {
+        return this.getBossCorePosition() || this.getHordePosition();
+      }
+      if (normalizedScope === 'horde' || normalized === 'horde' || normalized === '@horde' || normalized === '__horde__') {
         return this.getHordePosition();
       }
       const record = this.findPlayerRecord(id);
@@ -880,9 +933,9 @@
         const radius = Math.max(6, 8 * unit);
         const tailX = end.x - ux * body;
         const tailY = end.y - uy * body;
-        line(Math.max(4, width * 0.8), 0xf6c95b, 0.42, start.x, start.y, tailX, tailY);
+        line(Math.max(4, width * 0.8), color, 0.42, start.x, start.y, tailX, tailY);
         line(Math.max(1, 2 * unit), 0xffffff, 0.72, start.x + nx * 5 * unit, start.y + ny * 5 * unit, tailX + nx * 5 * unit, tailY + ny * 5 * unit);
-        beam.fillStyle(0xb87928, 0.98);
+        beam.fillStyle(color, 0.9);
         beam.fillTriangle(end.x, end.y, tailX + nx * radius, tailY + ny * radius, tailX - nx * radius, tailY - ny * radius);
         beam.fillStyle(0xfff0b9, 0.9);
         beam.fillTriangle(end.x - ux * body * 0.22, end.y - uy * body * 0.22, tailX + nx * radius * 0.5, tailY + ny * radius * 0.5, tailX + nx * radius * 0.05, tailY + ny * radius * 0.05);
@@ -890,7 +943,7 @@
         const shellCenterY = start.y + dy * 0.18 + ny * 24 * unit;
         const shellL = 18 * unit;
         const shellW = 5 * unit;
-        beam.fillStyle(0xc58428, 0.9);
+        beam.fillStyle(color, 0.72);
         beam.fillTriangle(
           shellCenterX - ux * shellL - nx * shellW,
           shellCenterY - uy * shellL - ny * shellW,
@@ -908,18 +961,18 @@
           shellCenterY - uy * shellL + ny * shellW
         );
       } else if (effect === 'railgun') {
-        line(Math.max(10, width * 1.8), 0x55e7ff, 0.38);
+        line(Math.max(10, width * 1.8), color, 0.38);
         line(Math.max(3, width * 0.48), 0xffffff, 0.95);
         [0.22, 0.42, 0.62, 0.82].forEach((ratio, index) => {
           const x = start.x + dx * ratio;
           const y = start.y + dy * ratio;
-          beam.lineStyle(Math.max(1, 2 * unit), index % 2 ? 0xf6c95b : 0x99ffda, 0.55);
+          beam.lineStyle(Math.max(1, 2 * unit), index % 2 ? 0xffffff : color, 0.55);
           beam.strokeCircle(x, y, (16 + index * 5) * unit);
         });
       } else if (effect === 'comet' || effect === 'fire') {
-        line(Math.max(12, width * 2), 0xff6a3d, 0.34, start.x, start.y, end.x - ux * 12 * unit, end.y - uy * 12 * unit);
-        line(Math.max(5, width * 0.88), 0xf6c95b, 0.72, start.x + nx * 2 * unit, start.y + ny * 2 * unit, end.x, end.y);
-        beam.fillStyle(0xff6a3d, 0.45);
+        line(Math.max(12, width * 2), color, 0.34, start.x, start.y, end.x - ux * 12 * unit, end.y - uy * 12 * unit);
+        line(Math.max(5, width * 0.88), color, 0.72, start.x + nx * 2 * unit, start.y + ny * 2 * unit, end.x, end.y);
+        beam.fillStyle(color, 0.45);
         beam.fillCircle(end.x, end.y, Math.max(18, 28 * unit));
         beam.fillStyle(0xfff0b9, 0.94);
         beam.fillCircle(end.x, end.y, Math.max(8, 12 * unit));
@@ -932,7 +985,7 @@
           const jitter = Math.sin((Date.now() * 0.018) + i * 2.17) * (16 + Number(options.special) * 5) * unit;
           const x = start.x + dx * ratio + nx * jitter;
           const y = start.y + dy * ratio + ny * jitter;
-          line(Math.max(4, width * 0.82), 0x99ffda, 0.66, lastX, lastY, x, y);
+          line(Math.max(4, width * 0.82), color, 0.66, lastX, lastY, x, y);
           line(Math.max(1, 2 * unit), 0xffffff, 0.86, lastX, lastY, x, y);
           lastX = x;
           lastY = y;
@@ -977,7 +1030,12 @@
     handleAttackEvent(data = {}) {
       if (this.shouldSuppressAttackEvent(data)) return;
       const type = data.killed || data.killingBlow ? 'kill' : data.critical ? 'critical' : 'normal';
-      const from = this.getEntityPosition(data.attacker || data.attackerId, data.attackerScope) || this.getHordePosition();
+      const attackerToken = String(data.attacker || data.attackerId || '').toLowerCase();
+      const attackerScope = String(data.attackerScope || '').toLowerCase();
+      const attackerIsBoss = attackerScope === 'boss' || attackerToken === 'boss' || attackerToken === '@boss' || attackerToken === '__boss__';
+      const from = attackerIsBoss
+        ? this.getBossAttackOrigin(data)
+        : (this.getEntityPosition(data.attacker || data.attackerId, data.attackerScope) || this.getHordePosition());
       const to = this.getEntityPosition(data.target || data.targetId, data.targetScope) || this.getHordePosition();
       const beamColor = data.laserColor ? hexToNumber(data.laserColor, this.laserColor) : undefined;
       this.fireBeam(from, to, data.damage || 'HIT', type, {
@@ -985,7 +1043,8 @@
         effect: data.effect || data.commandDescription || data.shotType,
         color: beamColor,
       });
-      if (data.attacker || data.attackerId) this.pulseCard(data.attacker || data.attackerId, type === 'kill' ? 0xf6c95b : this.laserColor);
+      if (attackerIsBoss) this.pulseHorde(type === 'kill' ? 0xf6c95b : this.laserColor);
+      else if (data.attacker || data.attackerId) this.pulseCard(data.attacker || data.attackerId, type === 'kill' ? 0xf6c95b : this.laserColor);
       if (data.target || data.targetId) this.pulseCard(data.target || data.targetId, type === 'kill' ? 0xff5566 : 0xff6a3d);
       if (String(data.target || '').toLowerCase().includes('boss') || String(data.targetScope || '').toLowerCase() === 'horde') this.pulseHorde(type === 'kill' ? 0xf6c95b : 0xff6a3d);
       if (data.shielded) this.showBanner(`Shield absorbed ${Math.round(Number(data.shieldAbsorbed) || 0)} damage`, 'heal');
@@ -1162,6 +1221,8 @@
           nextAttackAt: Number(data.nextAttackAt) || null,
           attackIntervalMs: Number(data.attackIntervalMs) || null,
         };
+        this.drawHorde();
+        this.getBossCorePosition();
         this.showBanner(type === 'attack' ? 'Boss wave strike' : 'Boss wave incoming', 'legendary');
         this.pulseHorde(0xf6c95b);
         return;
@@ -1176,6 +1237,8 @@
           nextAttackAt: Number(data.nextAttackAt) || this.bossState?.nextAttackAt || null,
           attackIntervalMs: Number(data.attackIntervalMs) || this.bossState?.attackIntervalMs || null,
         };
+        this.drawHorde();
+        this.getBossCorePosition();
         const hitter = data.lastHitBy?.nickname || data.lastHitBy?.uniqueId || 'Viewer';
         this.showBanner(type === 'attack' ? 'Boss wave strikes the arena' : `${hitter} hit the boss wave`, Number(data.hp || 0) <= Number(data.maxHp || 1) * 0.25 ? 'legendary' : 'kill');
         this.pulseHorde(0xff6a3d);

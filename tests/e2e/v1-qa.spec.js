@@ -98,6 +98,64 @@ function mediaUrl(filename) {
   return `${baseUrl}/sponsor/${encodeURIComponent(filename)}?${params.toString()}`;
 }
 
+async function readActiveBannerDetails(page, selector = '.banner:not(.closing)') {
+  return page.evaluate((wantedSelector) => {
+    const banner = document.querySelector(wantedSelector);
+    const frame = document.getElementById('overlay-container');
+    if (!banner || !frame) return null;
+    const bannerRect = banner.getBoundingClientRect();
+    const frameRect = frame.getBoundingClientRect();
+    const title = banner.querySelector('.banner-title');
+    const label = banner.querySelector('[data-testid="command-banner-label"]');
+    const commandText = banner.querySelector('.banner-command-run span');
+    const ticker = banner.querySelector('[data-testid="command-banner-ticker"]');
+    const row = banner.querySelector('[data-testid="command-banner-row"]');
+    const titleRect = title?.getBoundingClientRect();
+    const labelRect = label?.getBoundingClientRect();
+    const commandRect = commandText?.getBoundingClientRect();
+    const tickerRect = ticker?.getBoundingClientRect();
+    const rowRect = row?.getBoundingClientRect();
+    const layout = window.__overlayLegacyLayout || {};
+    const titleStyle = title ? getComputedStyle(title) : null;
+    const labelStyle = label ? getComputedStyle(label) : null;
+    const commandStyle = commandText ? getComputedStyle(commandText) : null;
+    return {
+      text: (banner.textContent || '').replace(/\s+/g, ' ').trim(),
+      bannerCount: document.querySelectorAll(wantedSelector).length,
+      tickerCount: banner.querySelectorAll('[data-testid="command-banner-ticker"]').length,
+      rowCount: banner.querySelectorAll('[data-testid="command-banner-row"]').length,
+      kickerCount: banner.querySelectorAll('.banner-kicker').length,
+      metaCount: banner.querySelectorAll('.banner-meta').length,
+      titleCount: banner.querySelectorAll('.banner-title').length,
+      left: bannerRect.left,
+      right: bannerRect.right,
+      top: bannerRect.top,
+      bottom: bannerRect.bottom,
+      width: bannerRect.width,
+      height: bannerRect.height,
+      frameLeft: frameRect.left,
+      frameRight: frameRect.right,
+      frameTop: frameRect.top,
+      frameBottom: frameRect.bottom,
+      frameWidth: frameRect.width,
+      centerDelta: Math.abs((bannerRect.left + bannerRect.width / 2) - (frameRect.left + frameRect.width / 2)),
+      className: banner.className,
+      titleHeight: titleRect?.height || 0,
+      titleFontSize: titleStyle ? Number.parseFloat(titleStyle.fontSize) : 0,
+      titleClipped: title ? title.scrollWidth > title.clientWidth + 1 || title.scrollHeight > title.clientHeight + 1 : false,
+      labelHeight: labelRect?.height || 0,
+      labelFontSize: labelStyle ? Number.parseFloat(labelStyle.fontSize) : 0,
+      labelFontWeight: labelStyle?.fontWeight || '',
+      commandHeight: commandRect?.height || 0,
+      commandFontSize: commandStyle ? Number.parseFloat(commandStyle.fontSize) : 0,
+      commandFontWeight: commandStyle?.fontWeight || '',
+      tickerHeight: tickerRect?.height || 0,
+      rowHeight: rowRect?.height || 0,
+      bannerCollisions: (layout.collisions || []).filter(item => JSON.stringify(item).toLowerCase().includes('banner')),
+    };
+  }, selector);
+}
+
 function makeSponsorFixture() {
   const ffmpegVersion = spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' });
   if (ffmpegVersion.status !== 0) {
@@ -252,7 +310,7 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
   expect(geometry.top).toBeGreaterThanOrEqual(0);
   expect(geometry.bottom).toBeLessThanOrEqual(geometry.viewport.height);
   expect(geometry.width).toBeGreaterThanOrEqual(Math.min(240, geometry.viewport.width * 0.6));
-  expect(geometry.width).toBeLessThanOrEqual(geometry.viewport.width * 0.86);
+  expect(geometry.width).toBeLessThanOrEqual(geometry.viewport.width * 0.92);
   const nanoBanner = geometry.className.includes('is-nano');
   const smallBanner = nanoBanner || geometry.height < 44;
   if (smallBanner) {
@@ -265,14 +323,69 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
       expect(geometry.metaHeight).toBeLessThanOrEqual(10);
     }
   } else {
-    expect(geometry.height).toBeGreaterThanOrEqual(44);
-    expect(geometry.metaHeight).toBeGreaterThan(6);
+    expect(geometry.height).toBeGreaterThanOrEqual(48);
+    expect(geometry.metaHeight).toBeGreaterThan(7);
   }
   expect(geometry.centerDelta).toBeLessThanOrEqual(Math.max(18, geometry.viewport.width * 0.035));
-  expect(geometry.titleHeight).toBeGreaterThan(8);
+  expect(geometry.titleHeight).toBeGreaterThan(12);
 
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'qa-overlay-v1-banner');
+  expect(errors).toEqual([]);
+});
+
+test('all rich banner types stay centered, readable, and collision-free', async ({ page }, testInfo) => {
+  const errors = await watchPage(page);
+  const params = new URLSearchParams({
+    room_id: roomId,
+    overlay_token: overlayToken,
+    demo: '1',
+    debug: '1',
+    controls: '0',
+    demo_autoplay: '0',
+  });
+  await page.goto(`${baseUrl}/overlay?${params.toString()}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__overlayLegacyLayout?.players?.length >= 5, null, { timeout: 7000 });
+  await page.waitForFunction(() => typeof window.overlayEventEngine?.testBannerPlacement === 'function', null, { timeout: 5000 });
+
+  for (const type of ['kill', 'streak', 'gift', 'special', 'follow', 'heal', 'legendary', 'commands']) {
+    await page.evaluate((bannerType) => window.overlayEventEngine.testBannerPlacement(bannerType, { durationMs: 12000 }), type);
+    await page.waitForFunction((bannerType) => {
+      const banner = document.querySelector(`.banner.${bannerType}:not(.closing)`);
+      return Boolean(banner && banner.getBoundingClientRect().width > 0 && getComputedStyle(banner).visibility !== 'hidden');
+    }, type, { timeout: 5000 });
+    await page.waitForTimeout(180);
+
+    const details = await readActiveBannerDetails(page, `.banner.${type}:not(.closing)`);
+    expect(details, `${type} banner details`).toBeTruthy();
+    expect(details.bannerCount, `${type} banner count`).toBe(1);
+    expect(details.left, `${type} left frame bound`).toBeGreaterThanOrEqual(details.frameLeft - 1);
+    expect(details.right, `${type} right frame bound`).toBeLessThanOrEqual(details.frameRight + 1);
+    expect(details.top, `${type} top frame bound`).toBeGreaterThanOrEqual(details.frameTop - 1);
+    expect(details.bottom, `${type} bottom frame bound`).toBeLessThanOrEqual(details.frameBottom + 1);
+    expect(details.centerDelta, `${type} center delta`).toBeLessThanOrEqual(Math.max(18, details.frameWidth * 0.045));
+    expect(details.bannerCollisions, `${type} collisions: ${JSON.stringify(details, null, 2)}`).toEqual([]);
+
+    if (type === 'commands') {
+      expect(details.rowCount, 'command row count').toBe(1);
+      expect(details.tickerCount, 'command ticker count').toBe(1);
+      expect(details.kickerCount, 'command kicker rows').toBe(0);
+      expect(details.metaCount, 'command meta rows').toBe(0);
+      expect(details.titleCount, 'command title rows').toBe(0);
+      expect(details.labelHeight, 'command label readable height').toBeGreaterThan(10);
+      expect(details.commandHeight, 'command text readable height').toBeGreaterThan(10);
+      expect(Math.abs(details.labelFontSize - details.commandFontSize), 'command text matches label size').toBeLessThanOrEqual(1);
+      expect(String(details.labelFontWeight), 'command label weight').toBe(String(details.commandFontWeight));
+    } else {
+      expect(details.titleCount, `${type} title row`).toBe(1);
+      expect(details.titleHeight, `${type} title readable height`).toBeGreaterThan(12);
+      expect(details.titleFontSize, `${type} title stream font`).toBeGreaterThanOrEqual(13);
+      expect(details.titleClipped, `${type} title clipping`).toBe(false);
+    }
+  }
+
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'qa-overlay-all-banner-types-readable');
   expect(errors).toEqual([]);
 });
 
@@ -312,45 +425,30 @@ test('command banner shows one scrolling viewer command ticker', async ({ contex
   }, null, { timeout: 7000 });
   await page.waitForTimeout(350);
 
-  const details = await page.evaluate(() => {
-    const banner = document.querySelector('.banner.commands:not(.closing)');
-    const frame = document.getElementById('overlay-container');
-    if (!banner || !frame) return null;
-    const bannerRect = banner.getBoundingClientRect();
-    const frameRect = frame.getBoundingClientRect();
-    const layout = window.__overlayLegacyLayout || {};
-    const bannerCollisions = (layout.collisions || [])
-      .filter(item => JSON.stringify(item).toLowerCase().includes('banner'));
-    return {
-      text: (banner.textContent || '').replace(/\s+/g, ' ').trim(),
-      bannerCount: document.querySelectorAll('.banner.commands:not(.closing)').length,
-      tickerCount: banner.querySelectorAll('[data-testid="command-banner-ticker"]').length,
-      left: bannerRect.left,
-      right: bannerRect.right,
-      top: bannerRect.top,
-      bottom: bannerRect.bottom,
-      frameLeft: frameRect.left,
-      frameRight: frameRect.right,
-      frameTop: frameRect.top,
-      frameBottom: frameRect.bottom,
-      className: banner.className,
-      layoutFrame: layout.frame || null,
-      layoutZones: layout.zones || null,
-      domObjects: layout.domObjects || [],
-      bannerCollisions,
-    };
-  });
+  const details = await readActiveBannerDetails(page, '.banner.commands:not(.closing)');
 
   expect(details).toBeTruthy();
   expect(details.bannerCount).toBe(1);
+  expect(details.rowCount).toBe(1);
   expect(details.tickerCount).toBe(1);
-  for (const text of ['CHAT COMMANDS', 'PLAY FROM CHAT', '!join', '!emoji', '!laser @name', '!laser @boss', '!nuke @name', '!heal', '!shield', '!commands']) {
+  expect(details.kickerCount).toBe(0);
+  expect(details.metaCount).toBe(0);
+  expect(details.titleCount).toBe(0);
+  for (const text of ['PLAY FROM CHAT', '!join', '!attack @name', '!attack @horde', '!attack @boss', '!heal @name', '!shield', '!commands']) {
     expect(details.text).toContain(text);
   }
+  expect(details.text).not.toContain('CHAT COMMANDS');
+  expect(details.text).not.toContain('Type these in TikTok chat');
   expect(details.left).toBeGreaterThanOrEqual(details.frameLeft - 1);
   expect(details.right).toBeLessThanOrEqual(details.frameRight + 1);
   expect(details.top).toBeGreaterThanOrEqual(details.frameTop - 1);
   expect(details.bottom).toBeLessThanOrEqual(details.frameBottom + 1);
+  expect(details.labelHeight).toBeGreaterThan(10);
+  expect(details.commandHeight).toBeGreaterThan(10);
+  expect(details.tickerHeight).toBeGreaterThan(20);
+  expect(details.rowHeight).toBeGreaterThan(24);
+  expect(Math.abs(details.labelFontSize - details.commandFontSize)).toBeLessThanOrEqual(1);
+  expect(String(details.labelFontWeight)).toBe(String(details.commandFontWeight));
   expect(details.bannerCollisions, JSON.stringify(details, null, 2)).toEqual([]);
 
   await expectNoHorizontalOverflow(page);
