@@ -19,6 +19,14 @@ import {
   parseAttackCommand,
   viewerCommandText,
 } from '../tiktokbr/services/playerCommands.js';
+import {
+  addArenaContribution,
+  arenaContributionPoints,
+  arenaPowerMultiplierForRank,
+  nextArenaPowerAttack,
+  parseArenaPowerCommand,
+  rankArenaContributors,
+} from '../tiktokbr/services/arenaPowerUp.js';
 import { buildLaunchReadinessReport } from '../tiktokbr/services/launchReadiness.js';
 import { evaluateSponsorMediaQuality } from '../tiktokbr/sponsorMediaProcessor.js';
 
@@ -202,6 +210,48 @@ function testPlayerCommandCatalog() {
   assert.ok(payload.banners[0].tickerItems.some(item => item.includes('@horde')));
 }
 
+function testArenaPowerUpRules() {
+  assert.equal(arenaContributionPoints('comment'), 1, 'comments should score one Power-Up point');
+  assert.equal(arenaContributionPoints('chat'), 1, 'chat aliases should score one Power-Up point');
+  assert.equal(arenaContributionPoints('like', 20), 5, 'like bursts should cap at five points per event');
+  assert.equal(arenaContributionPoints('follow'), 12, 'follows should score twelve points');
+  assert.equal(arenaContributionPoints('share'), 10, 'shares should score ten points');
+  assert.equal(arenaContributionPoints('repost'), 20, 'reposts should score twenty points');
+  assert.equal(arenaContributionPoints('gift', 900), 500, 'gift scoring should cap at five hundred points');
+
+  assert.equal(parseArenaPowerCommand('!nova @boss'), 'nova');
+  assert.equal(parseArenaPowerCommand('please !overdrive @horde'), 'overdrive');
+  assert.equal(parseArenaPowerCommand('!overdriveX'), null, 'partial Power-Up commands should not parse');
+  assert.equal(parseArenaPowerCommand('overdrive'), null, 'Power-Up commands should require a bang prefix');
+
+  assert.equal(arenaPowerMultiplierForRank(1), 4.25);
+  assert.equal(arenaPowerMultiplierForRank(2), 3.55);
+  assert.equal(arenaPowerMultiplierForRank(3), 3.0);
+  assert.equal(arenaPowerMultiplierForRank(4), 0);
+
+  assert.equal(nextArenaPowerAttack(0).label, 'NOVA');
+  assert.equal(nextArenaPowerAttack(1).effect, 'railgun');
+  assert.equal(nextArenaPowerAttack(4).label, 'NOVA', 'Power-Up attack rotation should wrap');
+
+  const players = {
+    alpha: { uniqueId: 'alpha', nickname: 'Alpha' },
+    beta: { uniqueId: 'beta', nickname: 'Beta' },
+    gamma: { uniqueId: 'gamma', nickname: 'Gamma' },
+    delta: { uniqueId: 'delta', nickname: 'Delta' },
+  };
+  const state = { active: true, contributors: {}, topContributors: [] };
+  addArenaContribution(state, players, { uniqueId: 'alpha', nickname: 'Alpha', type: 'gift', amount: 90, now: 10 });
+  addArenaContribution(state, players, { uniqueId: 'beta', nickname: 'Beta', type: 'repost', amount: 1, now: 20 });
+  addArenaContribution(state, players, { uniqueId: 'gamma', nickname: 'Gamma', type: 'follow', amount: 1, now: 30 });
+  addArenaContribution(state, players, { uniqueId: 'delta', nickname: 'Delta', type: 'comment', amount: 1, now: 40 });
+
+  const ranked = rankArenaContributors(state.contributors, players, 3);
+  assert.deepEqual(ranked.map(item => item.uniqueId), ['alpha', 'beta', 'gamma']);
+  assert.deepEqual(ranked.map(item => item.rank), [1, 2, 3]);
+  assert.deepEqual(ranked.map(item => item.multiplier), [4.25, 3.55, 3.0]);
+  assert.equal(state.topContributors[0].uniqueId, 'alpha', 'addArenaContribution should refresh top contributors');
+}
+
 function testSponsorMediaQualityGate() {
   const tools = { ffmpegAvailable: false, ffprobeAvailable: true };
   const goodMp4 = evaluateSponsorMediaQuality({
@@ -268,6 +318,7 @@ testEntitlements();
 testBillingPolicy();
 testChatIconCommands();
 testPlayerCommandCatalog();
+testArenaPowerUpRules();
 testSponsorMediaQualityGate();
 testLaunchReadinessSponsorMediaGate();
 console.log('Business logic smoke checks passed');

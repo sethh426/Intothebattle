@@ -1,9 +1,11 @@
 import { spawnSync } from 'node:child_process';
+import path from 'node:path';
 
-const command = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+const command = process.execPath;
+const playwrightCli = path.join(process.cwd(), 'node_modules', '@playwright', 'test', 'cli.js');
 const passthroughArgs = process.argv.slice(2);
 const result = spawnSync(command, [
-  'playwright',
+  playwrightCli,
   'test',
   'tests/e2e/visual-confidence.spec.js',
   '--project=chromium-source-1080p',

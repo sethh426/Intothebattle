@@ -87,6 +87,10 @@
       this.bossCoreBounds = null;
       this.bossCoreAnchorCache = null;
       this.bossAttackSweepAnchor = null;
+      this.powerState = null;
+      this.powerGlow = null;
+      this.powerChip = null;
+      this.powerCountdownTimer = null;
       this.bannerQueue = [];
       this.bannerActive = false;
       this.recentAttackKeys = new Map();
@@ -101,6 +105,7 @@
       this.backgroundLayer = this.add.container(0, 0).setDepth(0);
       this.frameLayer = this.add.container(0, 0).setDepth(10);
       this.worldLayer = this.add.container(0, 0).setDepth(20);
+      this.powerLayer = this.add.container(0, 0).setDepth(24);
       this.playerLayer = this.add.container(0, 0).setDepth(30);
       this.effectLayer = this.add.container(0, 0).setDepth(45);
       this.bannerLayer = this.add.container(0, 0).setDepth(60);
@@ -911,7 +916,7 @@
     fireBeam(from, to, damage, type = 'normal', options = {}) {
       const start = from || this.getHordePosition();
       const end = to || this.getHordePosition();
-      const color = options.color || (type === 'kill' ? 0xf6c95b : type === 'critical' ? 0xff315f : this.laserColor);
+      const color = options.powerColor || options.color || (type === 'kill' ? 0xf6c95b : type === 'critical' ? 0xff315f : this.laserColor);
       const beam = this.add.graphics();
       const effect = this.normalizeEffectName(options.effect || options.shotType || type);
       const dx = end.x - start.x;
@@ -922,7 +927,7 @@
       const nx = -uy;
       const ny = ux;
       const unit = this.scaleUnit || 1;
-      const width = options.special ? 11 * unit : 7 * unit;
+      const width = options.powered ? 15 * unit : options.special ? 11 * unit : 7 * unit;
       const line = (strokeWidth, strokeColor, alpha, sx = start.x, sy = start.y, ex = end.x, ey = end.y) => {
         beam.lineStyle(Math.max(1, strokeWidth), strokeColor, alpha);
         beam.lineBetween(sx, sy, ex, ey);
@@ -998,6 +1003,13 @@
         beam.fillStyle(color, 0.36);
         beam.fillCircle(end.x, end.y, Math.max(12, 18 * unit));
       }
+      if (options.powered) {
+        beam.lineStyle(Math.max(2, 3 * unit), 0xf6c95b, 0.78);
+        beam.strokeCircle(start.x, start.y, Math.max(20, 30 * unit));
+        beam.strokeCircle(end.x, end.y, Math.max(26, 38 * unit));
+        beam.lineStyle(Math.max(1, 2 * unit), 0xffffff, 0.52);
+        beam.strokeCircle(end.x, end.y, Math.max(36, 52 * unit));
+      }
       this.effectLayer.add(beam);
       this.tweens.add({
         targets: beam,
@@ -1007,10 +1019,13 @@
         onComplete: () => beam.destroy(),
       });
 
-      const text = this.add.text(end.x, end.y - 26 * this.scaleUnit, type === 'kill' ? 'KO' : String(damage || 'HIT'), {
+      const damageLabel = options.powerLabel
+        ? `${options.powerLabel} ${type === 'kill' ? 'KO' : String(damage || 'HIT')}`
+        : (type === 'kill' ? 'KO' : String(damage || 'HIT'));
+      const text = this.add.text(end.x, end.y - 26 * this.scaleUnit, damageLabel, {
         fontFamily: 'Arial Black, Impact, sans-serif',
-        fontSize: `${Math.round((type === 'kill' ? 62 : type === 'critical' ? 56 : 42) * this.scaleUnit)}px`,
-        color: type === 'kill' ? '#fff0b9' : type === 'critical' ? '#ff4268' : '#ffffff',
+        fontSize: `${Math.round((options.powered ? 46 : type === 'kill' ? 62 : type === 'critical' ? 56 : 42) * this.scaleUnit)}px`,
+        color: options.powered ? '#fff0b9' : type === 'kill' ? '#fff0b9' : type === 'critical' ? '#ff4268' : '#ffffff',
         stroke: '#02040a',
         strokeThickness: Math.max(5, 8 * this.scaleUnit),
       }).setOrigin(0.5);
@@ -1037,13 +1052,19 @@
         ? this.getBossAttackOrigin(data)
         : (this.getEntityPosition(data.attacker || data.attackerId, data.attackerScope) || this.getHordePosition());
       const to = this.getEntityPosition(data.target || data.targetId, data.targetScope) || this.getHordePosition();
-      const beamColor = data.laserColor ? hexToNumber(data.laserColor, this.laserColor) : undefined;
+      const beamColor = data.powerColor
+        ? hexToNumber(data.powerColor, this.laserColor)
+        : data.laserColor ? hexToNumber(data.laserColor, this.laserColor) : undefined;
       this.fireBeam(from, to, data.damage || 'HIT', type, {
         special: Boolean(data.special || data.giftBoosted),
+        powered: Boolean(data.poweredAttack),
         effect: data.effect || data.commandDescription || data.shotType,
         color: beamColor,
+        powerColor: data.powerColor ? hexToNumber(data.powerColor, this.laserColor) : undefined,
+        powerLabel: data.powerLabel,
       });
       if (attackerIsBoss) this.pulseHorde(type === 'kill' ? 0xf6c95b : this.laserColor);
+      if (data.poweredAttack && data.attacker) this.pulseCard(data.attacker, data.powerColor ? hexToNumber(data.powerColor, 0xf6c95b) : 0xf6c95b);
       else if (data.attacker || data.attackerId) this.pulseCard(data.attacker || data.attackerId, type === 'kill' ? 0xf6c95b : this.laserColor);
       if (data.target || data.targetId) this.pulseCard(data.target || data.targetId, type === 'kill' ? 0xff5566 : 0xff6a3d);
       if (String(data.target || '').toLowerCase().includes('boss') || String(data.targetScope || '').toLowerCase() === 'horde') this.pulseHorde(type === 'kill' ? 0xf6c95b : 0xff6a3d);
@@ -1124,6 +1145,247 @@
       this.pulseHorde(tier === 'takeover' ? 0xf6c95b : 0x7afcff);
       this.spawnHeartBurst(data.uniqueId || data.nickname || 'crowd', tier === 'takeover' ? 10 : 7, tier === 'takeover' ? 'repost' : 'share', data.color || (tier === 'takeover' ? '#f6c95b' : '#7afcff'));
       this.showDamage(this.W / 2, this.safe.y + this.safe.height * 0.58, label.toUpperCase(), tier === 'takeover' ? 'critical' : 'normal');
+    }
+
+    powerRankForPlayer(playerId) {
+      const id = String(playerId || '').toLowerCase();
+      if (!id || !Array.isArray(this.powerState?.topContributors)) return null;
+      return this.powerState.topContributors.find(item => String(item.uniqueId || '').toLowerCase() === id) || null;
+    }
+
+    syncPowerHighlights() {
+      this.playerGroups.forEach(record => this.redrawPlayer(record));
+      window.__arenaPowerUpActive = Boolean(this.powerState?.active);
+      window.__arenaPowerUpTop = this.powerState?.topContributors || [];
+      if (typeof this.arenaPowerAuditStatus === 'function') window.__overlayV2PowerAudit = this.arenaPowerAuditStatus();
+    }
+
+    clearArenaPowerVisuals() {
+      if (this.powerCountdownTimer) {
+        this.powerCountdownTimer.remove(false);
+        this.powerCountdownTimer = null;
+      }
+      if (this.powerGlow) {
+        this.powerGlow.destroy(true);
+        this.powerGlow = null;
+      }
+      if (this.powerChip) {
+        this.powerChip.destroy(true);
+        this.powerChip = null;
+      }
+      this.powerState = null;
+      this.syncPowerHighlights();
+    }
+
+    ensureArenaPowerGlow() {
+      if (this.powerGlow) return;
+      const u = this.scaleUnit;
+      const group = this.add.container(0, 0);
+      const glow = this.add.graphics();
+      const cx = this.W / 2;
+      const cy = this.safe.y + this.safe.height * 0.54;
+      glow.fillStyle(0x7afcff, 0.08);
+      glow.fillEllipse(cx, cy, this.safe.width * 0.96, this.safe.height * 0.62);
+      glow.fillStyle(0xf6c95b, 0.06);
+      glow.fillEllipse(cx, cy + 20 * u, this.safe.width * 0.58, this.safe.height * 0.34);
+      glow.lineStyle(Math.max(3, 5 * u), 0x7afcff, 0.64);
+      glow.strokeRoundedRect(this.safe.x - 18 * u, this.safe.y - 22 * u, this.safe.width + 36 * u, this.safe.height + 34 * u, 26 * u);
+      glow.lineStyle(Math.max(2, 3 * u), 0xf6c95b, 0.5);
+      glow.strokeRoundedRect(this.safe.x + 8 * u, this.safe.y + 6 * u, this.safe.width - 16 * u, this.safe.height - 12 * u, 22 * u);
+
+      const scan = this.add.rectangle(cx, this.safe.y + 12 * u, this.safe.width * 0.88, Math.max(3, 5 * u), 0x99ffda, 0.32);
+      const core = this.add.ellipse(cx, cy, this.safe.width * 0.22, this.safe.height * 0.13, 0xf6c95b, 0.1);
+      group.add([glow, core, scan]);
+      this.powerLayer.add(group);
+      this.powerGlow = group;
+
+      this.tweens.add({ targets: core, scaleX: 1.28, scaleY: 1.42, alpha: 0.22, yoyo: true, repeat: -1, duration: 920, ease: 'Sine.easeInOut' });
+      this.tweens.add({ targets: scan, y: this.safe.y + this.safe.height - 12 * u, alpha: 0.08, yoyo: true, repeat: -1, duration: 1500, ease: 'Sine.easeInOut' });
+      this.tweens.add({ targets: group, alpha: 0.72, yoyo: true, repeat: -1, duration: 1180, ease: 'Sine.easeInOut' });
+    }
+
+    updateArenaPowerChip() {
+      if (!this.powerState?.active) return;
+      if (!this.powerChip) {
+        const u = this.scaleUnit;
+        const w = Math.max(300, 364 * u);
+        const h = Math.max(82, 96 * u);
+        const x = this.safe.x + this.safe.width - w / 2;
+        const y = Math.max(116 * u, this.safe.y - 44 * u);
+        const group = this.add.container(x, y);
+        const bg = this.add.graphics();
+        bg.fillStyle(0x061019, 0.9);
+        bg.fillRoundedRect(-w / 2, -h / 2, w, h, 8 * u);
+        bg.fillStyle(0x7afcff, 0.12);
+        bg.fillRoundedRect(-w / 2 + 7 * u, -h / 2 + 7 * u, w - 14 * u, h - 14 * u, 6 * u);
+        bg.lineStyle(Math.max(2, 3 * u), 0xf6c95b, 0.76);
+        bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 8 * u);
+        const title = this.add.text(-w / 2 + 18 * u, -h / 2 + 14 * u, 'ARENA POWER-UP', {
+          fontFamily: 'Arial Black, Impact, sans-serif',
+          fontSize: `${Math.round(18 * u)}px`,
+          color: '#fff0b9',
+          stroke: '#02040a',
+          strokeThickness: Math.max(2, 3 * u),
+        });
+        const time = this.add.text(w / 2 - 18 * u, -h / 2 + 14 * u, '30s', {
+          fontFamily: 'Arial Black, Impact, sans-serif',
+          fontSize: `${Math.round(22 * u)}px`,
+          color: '#7afcff',
+          stroke: '#02040a',
+          strokeThickness: Math.max(2, 3 * u),
+        }).setOrigin(1, 0);
+        const top = this.add.text(-w / 2 + 18 * u, 8 * u, '', {
+          fontFamily: 'Arial, sans-serif',
+          fontSize: `${Math.round(17 * u)}px`,
+          color: '#e7eef5',
+          fixedWidth: Math.round(w - 36 * u),
+          align: 'left',
+        });
+        group.add([bg, title, time, top]);
+        group.powerTimeText = time;
+        group.powerTopText = top;
+        this.bannerLayer.add(group);
+        this.powerChip = group;
+      }
+
+      const remainingMs = this.powerState.endsAt ? Math.max(0, Number(this.powerState.endsAt) - Date.now()) : Number(this.powerState.remainingMs) || 0;
+      const seconds = Math.max(0, Math.ceil(remainingMs / 1000));
+      const names = (this.powerState.topContributors || [])
+        .map(item => `#${item.rank || '?'} ${item.nickname || item.uniqueId || 'Viewer'}`)
+        .join('   ');
+      this.powerChip.powerTimeText.setText(`${seconds}s`);
+      this.powerChip.powerTopText.setText(names || 'Top contributors charging...');
+    }
+
+    handleArenaPowerUp(data = {}) {
+      const type = String(data.type || '').toLowerCase();
+      if (type === 'ended' || data.active === false) {
+        this.showBanner('Arena Power-Up ended', 'event');
+        this.clearArenaPowerVisuals();
+        return;
+      }
+
+      if (data.active || ['started', 'leaderboard', 'barrage', 'poweredattack'].includes(type)) {
+        this.powerState = {
+          ...(this.powerState || {}),
+          active: true,
+          startedAt: Number(data.startedAt) || this.powerState?.startedAt || Date.now(),
+          endsAt: Number(data.endsAt) || this.powerState?.endsAt || null,
+          remainingMs: Number(data.remainingMs) || this.powerState?.remainingMs || null,
+          topContributors: Array.isArray(data.topContributors) ? data.topContributors : (this.powerState?.topContributors || []),
+        };
+        this.ensureArenaPowerGlow();
+        this.updateArenaPowerChip();
+        if (!this.powerCountdownTimer) {
+          this.powerCountdownTimer = this.time.addEvent({ delay: 500, loop: true, callback: () => this.updateArenaPowerChip() });
+        }
+        this.syncPowerHighlights();
+      }
+
+      if (type === 'started') {
+        this.flashScreen(260, '#7afcff');
+        this.showBanner('Arena Power-Up online', 'legendary');
+      } else if (type === 'barrage') {
+        this.showBanner('Power barrage charging', 'legendary');
+        this.pulseHorde(0xf6c95b);
+      } else if (type === 'poweredattack') {
+        const label = data.label || 'POWER ATTACK';
+        const name = data.attackerNick || data.attacker || 'Fighter';
+        this.showBanner(`${name} fired ${label}`, 'legendary');
+      }
+    }
+
+    arenaPowerAuditStatus() {
+      const chipBounds = this.powerChip?.getBounds ? this.powerChip.getBounds() : null;
+      const glowBounds = this.powerGlow?.getBounds ? this.powerGlow.getBounds() : null;
+      const topContributors = Array.isArray(this.powerState?.topContributors) ? this.powerState.topContributors : [];
+      return {
+        active: Boolean(this.powerState?.active),
+        hasGlow: Boolean(this.powerGlow?.active),
+        hasChip: Boolean(this.powerChip?.active),
+        topCount: topContributors.length,
+        topNames: topContributors.map(item => item.nickname || item.uniqueId || ''),
+        chipText: this.powerChip?.powerTopText?.text || '',
+        countdownText: this.powerChip?.powerTimeText?.text || '',
+        powerLayerChildren: this.powerLayer?.length || 0,
+        highlighted: this.playerGroups
+          .map(record => ({ id: record.playerId, rank: this.powerRankForPlayer(record.playerId)?.rank || 0 }))
+          .filter(item => item.rank > 0),
+        chipBounds: chipBounds ? {
+          left: chipBounds.left,
+          right: chipBounds.right,
+          top: chipBounds.top,
+          bottom: chipBounds.bottom,
+          width: chipBounds.width,
+          height: chipBounds.height,
+        } : null,
+        glowBounds: glowBounds ? {
+          left: glowBounds.left,
+          right: glowBounds.right,
+          top: glowBounds.top,
+          bottom: glowBounds.bottom,
+          width: glowBounds.width,
+          height: glowBounds.height,
+        } : null,
+        safe: { ...this.safe },
+        layout: window.__overlayV2Layout || [],
+      };
+    }
+
+    testArenaPowerUp() {
+      this.demoModeActive = false;
+      if (this.playerGroups.length < 5) {
+        [
+          { id: 'demo-1', name: 'NOVAX', health: 100, kills: 3, iconType: 'bolt' },
+          { id: 'demo-2', name: 'WEST', health: 86, kills: 2, iconType: 'swords' },
+          { id: 'demo-3', name: 'MIRA', health: 73, kills: 1, iconType: 'star' },
+          { id: 'demo-4', name: 'BLAZE', health: 44, kills: 4, teamColor: '#ff45a0', iconType: 'fire' },
+          { id: 'demo-5', name: 'ASHLEE', health: 94, kills: 2, iconType: 'core' },
+        ].forEach(player => this.addPlayerCard(player));
+      }
+      this.handleArenaPowerUp({
+        type: 'started',
+        active: true,
+        startedAt: Date.now(),
+        endsAt: Date.now() + 30000,
+        durationMs: 30000,
+        trigger: 'visual_audit',
+        topContributors: [
+          { uniqueId: 'demo-1', nickname: 'NOVAX', rank: 1, score: 120, multiplier: 4.25, color: '#ffd666' },
+          { uniqueId: 'demo-2', nickname: 'WEST', rank: 2, score: 88, multiplier: 3.55, color: '#7afcff' },
+          { uniqueId: 'demo-3', nickname: 'MIRA', rank: 3, score: 64, multiplier: 3, color: '#99ffda' },
+        ],
+      });
+      this.handleArenaPowerUp({
+        type: 'poweredAttack',
+        active: true,
+        attacker: 'demo-1',
+        attackerNick: 'NOVAX',
+        target: 'demo-4',
+        targetNick: 'BLAZE',
+        label: 'OVERDRIVE',
+        powerLabel: 'OVERDRIVE',
+        color: '#f6c95b',
+        powerColor: '#f6c95b',
+        multiplier: 4.25,
+        powerMultiplier: 4.25,
+      });
+      this.handleAttackEvent({
+        attacker: 'demo-1',
+        attackerNick: 'NOVAX',
+        target: 'demo-4',
+        targetNick: 'BLAZE',
+        damage: 118,
+        poweredAttack: true,
+        powerLabel: 'OVERDRIVE',
+        powerColor: '#f6c95b',
+        powerMultiplier: 4.25,
+        effect: 'railgun',
+        critical: true,
+      });
+      this.layoutPlayers(false);
+      window.__overlayV2PowerAudit = this.arenaPowerAuditStatus();
+      return window.__overlayV2PowerAudit;
     }
 
     spawnRespawnEffect(playerId) {
@@ -1478,6 +1740,9 @@
         height: record.cardH,
         left: record.targetX - record.cardW / 2,
         right: record.targetX + record.cardW / 2,
+        top: record.targetY - record.cardH / 2,
+        bottom: record.targetY + record.cardH / 2,
+        powerRank: this.powerRankForPlayer(record.playerId)?.rank || 0,
       }));
     }
 
@@ -1491,12 +1756,20 @@
       const healthColor = health > 66 ? 0x7afcff : health > 34 ? 0xf6c95b : 0xff5566;
       const teamColor = record.data.teamColor ? hexToNumber(record.data.teamColor, healthColor) : null;
       const accentColor = teamColor || healthColor;
+      const powerRank = this.powerRankForPlayer(record.playerId);
+      const powerColor = powerRank ? hexToNumber(powerRank.color || (powerRank.rank === 1 ? '#f6c95b' : powerRank.rank === 2 ? '#7afcff' : '#99ffda'), 0xf6c95b) : null;
       const accentHex = `#${accentColor.toString(16).padStart(6, '0')}`;
       const r = Math.max(8, 12 * u);
       const tabH = Math.max(30, 38 * u);
       const tabW = w * 0.5;
 
       record.gfx.clear();
+      if (powerRank) {
+        record.gfx.fillStyle(powerColor, 0.14);
+        record.gfx.fillRoundedRect(left - 12 * u, top - 18 * u, w + 24 * u, h + 30 * u, r * 1.25);
+        record.gfx.lineStyle(Math.max(4, 7 * u), powerColor, 0.68);
+        record.gfx.strokeRoundedRect(left - 10 * u, top - 16 * u, w + 20 * u, h + 26 * u, r * 1.1);
+      }
       record.gfx.fillStyle(0x000000, 0.42);
       record.gfx.fillRoundedRect(left + 10 * u, top + 12 * u, w, h, r);
 
@@ -1569,10 +1842,17 @@
 
       record.killsText.setText('');
       record.hpText.setText('');
-      record.rankText.setText('');
+      record.rankText.setText(powerRank ? `PWR #${powerRank.rank}` : '');
       record.killsText.setStyle({ color: '#fff0b9' });
       record.hpText.setStyle({ color: accentHex });
-      record.rankText.setStyle({ color: accentHex });
+      record.rankText.setStyle({
+        fontFamily: 'Arial Black, Impact, sans-serif',
+        fontSize: `${Math.round(18 * u)}px`,
+        color: powerRank ? `#${powerColor.toString(16).padStart(6, '0')}` : accentHex,
+        stroke: '#02040a',
+        strokeThickness: Math.max(2, 3 * u),
+      });
+      record.rankText.setPosition(0, top + h - 16 * u);
     }
 
     createChatDisplay() {

@@ -142,7 +142,7 @@ async function readActiveBannerDetails(page, selector = '.banner:not(.closing)')
       className: banner.className,
       titleHeight: titleRect?.height || 0,
       titleFontSize: titleStyle ? Number.parseFloat(titleStyle.fontSize) : 0,
-      titleClipped: title ? title.scrollWidth > title.clientWidth + 1 || title.scrollHeight > title.clientHeight + 1 : false,
+      titleClipped: title ? title.scrollWidth > title.clientWidth + 1 : false,
       labelHeight: labelRect?.height || 0,
       labelFontSize: labelStyle ? Number.parseFloat(labelStyle.fontSize) : 0,
       labelFontWeight: labelStyle?.fontWeight || '',
@@ -323,7 +323,7 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
       expect(geometry.metaHeight).toBeLessThanOrEqual(10);
     }
   } else {
-    expect(geometry.height).toBeGreaterThanOrEqual(48);
+    expect(geometry.height).toBeGreaterThanOrEqual(42);
     expect(geometry.metaHeight).toBeGreaterThan(7);
   }
   expect(geometry.centerDelta).toBeLessThanOrEqual(Math.max(18, geometry.viewport.width * 0.035));

@@ -297,6 +297,30 @@ try {
   await bossStoppedStatusPromise;
   await overlayBossStoppedPromise;
 
+  const powerStartedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.arenaPowerUp?.active === true, 10000);
+  const overlayPowerStartedPromise = waitForEvent(primaryOverlay, 'arenaPowerUp', payload => payload.type === 'started' && payload.active === true, 10000);
+  const powerStartRes = await request('/api/session/power-up/start', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(powerStartRes.status === 200, `Power-Up start should return 200, got ${powerStartRes.status}`);
+  const powerStart = await powerStartRes.json();
+  assert(powerStart.success === true && powerStart.session?.arenaPowerUp?.active === true, 'Power-Up start should activate arenaPowerUp session state');
+  const powerStartedStatus = await powerStartedStatusPromise;
+  const overlayPowerStarted = await overlayPowerStartedPromise;
+  assert(powerStartedStatus.arenaPowerUp?.remainingMs > 0, 'Power-Up session status should include remainingMs');
+  assert(overlayPowerStarted._sessionId === sessionStartedStatus.sessionId, 'Power-Up event should carry active session id');
+
+  const powerStoppedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.arenaPowerUp?.active === false && payload.arenaPowerUp?.status === 'stopped', 10000);
+  const overlayPowerStoppedPromise = waitForEvent(primaryOverlay, 'arenaPowerUp', payload => payload.type === 'ended' && payload.active === false, 10000);
+  const powerStopRes = await request('/api/session/power-up/stop', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(powerStopRes.status === 200, `Power-Up stop should return 200, got ${powerStopRes.status}`);
+  await powerStoppedStatusPromise;
+  await overlayPowerStoppedPromise;
+
   const roundEndedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.round === null, 10000);
   const overlayRoundEndedPromise = waitForEvent(primaryOverlay, 'roundEvent', payload => payload.type === 'round_ended', 10000);
   const roundEndRes = await request('/api/session/round/end', {
@@ -415,6 +439,47 @@ try {
   await livePlayersPromise;
   const dashboardTestRoster = await dashboardTestRosterPromise;
   assert(dashboardTestRoster.bySource?.test > 0, 'overlay test players should be tagged as test source');
+
+  const overlayTestPowerStartedPromise = waitForEvent(primaryOverlay, 'arenaPowerUp', payload => payload.type === 'started' && payload.active === true, 10000);
+  const overlayTestLeaderboardPromise = waitForEvent(
+    primaryOverlay,
+    'arenaPowerUp',
+    payload => payload.type === 'leaderboard' && Array.isArray(payload.topContributors) && payload.topContributors.length >= 3,
+    10000
+  );
+  const overlayTestPoweredAttackPromise = waitForEvent(
+    primaryOverlay,
+    'arenaPowerUp',
+    payload => payload.type === 'poweredAttack' && payload.poweredAttack === true && payload.powerLabel,
+    10000
+  );
+  const overlayTestAttackPromise = waitForEvent(
+    primaryOverlay,
+    'attack',
+    payload => payload?.poweredAttack === true && payload?.powerLabel && payload?.powerMultiplier >= 3,
+    10000
+  );
+  const powerOverlayTestRes = await request('/api/overlay/test/power-up', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(powerOverlayTestRes.status === 200, `overlay Power-Up test should return 200, got ${powerOverlayTestRes.status}`);
+  const powerOverlayTest = await powerOverlayTestRes.json();
+  assert(powerOverlayTest.success === true && powerOverlayTest.arenaPowerUp?.active === true, 'overlay Power-Up test should activate arenaPowerUp state');
+  const overlayTestPowerStarted = await overlayTestPowerStartedPromise;
+  const overlayTestLeaderboard = await overlayTestLeaderboardPromise;
+  const overlayTestPoweredAttack = await overlayTestPoweredAttackPromise;
+  const overlayTestAttack = await overlayTestAttackPromise;
+  assert(overlayTestPowerStarted.trigger === 'overlay_test', 'overlay Power-Up test should mark overlay_test trigger');
+  assert(overlayTestLeaderboard.topContributors[0]?.uniqueId === 'arena_orion', 'overlay Power-Up test should rank seeded gift contributor first');
+  assert(overlayTestPoweredAttack.powerLabel, 'Power-Up poweredAttack event should include effect label');
+  assert(overlayTestAttack.poweredAttack === true, 'Power-Up command should annotate attack payloads');
+
+  const powerOverlayStopRes = await request('/api/session/power-up/stop', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(powerOverlayStopRes.status === 200, `Power-Up cleanup stop should return 200, got ${powerOverlayStopRes.status}`);
 
   const bossHordeAttackPromise = waitForEvent(
     primaryOverlay,

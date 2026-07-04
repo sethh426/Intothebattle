@@ -304,6 +304,10 @@
     .boss-meter { display:grid; gap:8px; margin:12px 0 16px; }
     .boss-track { height:13px; border-radius:999px; background:rgba(255,255,255,.09); overflow:hidden; border:1px solid rgba(255,255,255,.09); }
     .boss-fill { height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg,var(--red),var(--ember),var(--gold)); box-shadow:0 0 18px rgba(232,59,95,.28); transition:width .24s ease; }
+    .power-meter { display:grid; gap:8px; margin:0 0 16px; }
+    .power-track { height:13px; border-radius:999px; background:rgba(255,255,255,.09); overflow:hidden; border:1px solid rgba(120,232,255,.18); }
+    .power-fill { height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg,#78e8ff,#ffd666,#99ffda); box-shadow:0 0 22px rgba(120,232,255,.26); transition:width .22s ease; }
+    .power-leaders { min-height:16px; color:#dbe9ff; font-size:12px; font-weight:850; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .weekly-event { margin-top:14px; padding:14px; border-radius:16px; border:1px solid rgba(246,201,91,.18); background:rgba(246,201,91,.055); }
     .weekly-event strong { display:block; margin-bottom:6px; color:#fff4d2; }
     .weekly-event p { margin:0 0 12px; color:var(--muted); font-size:13px; line-height:1.45; }
@@ -672,6 +676,11 @@
             <div class="stat-box"><span class="stat-label">Boss wave</span><span class="stat-value" id="bossWaveLabel">Inactive</span></div>
             <div class="boss-track" aria-label="Boss wave health"><div class="boss-fill" id="bossWaveFill"></div></div>
           </div>
+          <div class="power-meter">
+            <div class="stat-box"><span class="stat-label">Arena Power-Up</span><span class="stat-value" id="arenaPowerLabel">Ready</span></div>
+            <div class="power-track" aria-label="Arena Power-Up countdown"><div class="power-fill" id="arenaPowerFill"></div></div>
+            <div class="power-leaders" id="arenaPowerLeaders">Top 3 unlock boosted !nova and !overdrive attacks.</div>
+          </div>
           <div class="session-control-grid">
             <button class="btn btn-success" onclick="sessionAction('/api/session/start','Session started')">Start Session</button>
             <button class="btn btn-secondary" onclick="sessionAction('/api/session/end','Session ended')">End Session</button>
@@ -679,6 +688,8 @@
             <button class="btn btn-warning" onclick="sessionAction('/api/session/round/end','Round ended')">End Round</button>
             <button class="btn btn-danger" onclick="sessionAction('/api/session/boss/start','Boss wave started')">Boss Wave</button>
             <button class="btn btn-secondary" onclick="sessionAction('/api/session/boss/stop','Boss wave stopped')">Stop Boss</button>
+            <button class="btn btn-primary" onclick="sessionAction('/api/session/power-up/start','Arena Power-Up started')">Power Up</button>
+            <button class="btn btn-secondary" onclick="sessionAction('/api/session/power-up/stop','Arena Power-Up stopped')">Stop Power</button>
           </div>
           <div class="weekly-event">
             <strong>Weekly boss event</strong>
@@ -1643,6 +1654,30 @@ function renderSessionRecap(recap) {
     + top.map((player, index) => `<div class="recap-row"><span>#${index + 1} fighter</span><strong>${escapeHtml(player.nickname || player.uniqueId)} - ${Number(player.kills) || 0} K</strong></div>`).join('')
     + (recap.shareUrl ? `<button class="btn btn-secondary" style="margin-top:4px;width:100%;" onclick="copyRecapShareUrl('${escapeHtml(recap.shareUrl)}')">Copy public recap link</button>` : '');
 }
+function renderArenaPowerStatus(power = sessionStatusData?.arenaPowerUp) {
+  const data = power || {};
+  const active = !!data.active;
+  const remainingMs = active
+    ? Math.max(0, Number(data.endsAt) ? Number(data.endsAt) - Date.now() : Number(data.remainingMs) || 0)
+    : 0;
+  const durationMs = Math.max(1, Number(data.durationMs) || 30000);
+  const cooldownMs = !active && data.cooldownUntil ? Math.max(0, Number(data.cooldownUntil) - Date.now()) : Math.max(0, Number(data.cooldownMs) || 0);
+  const fill = document.getElementById('arenaPowerFill');
+  const percent = active ? Math.max(0, Math.min(100, (remainingMs / durationMs) * 100)) : 0;
+  if (fill) fill.style.width = `${percent}%`;
+  if (active) {
+    text('arenaPowerLabel', `${formatClock(remainingMs)} live`);
+  } else if (cooldownMs > 0) {
+    text('arenaPowerLabel', `Cooldown ${formatClock(cooldownMs)}`);
+  } else {
+    text('arenaPowerLabel', data.status === 'stopped' ? 'Stopped' : 'Ready');
+  }
+  const leaders = Array.isArray(data.topContributors) ? data.topContributors.slice(0, 3) : [];
+  const label = leaders.length
+    ? leaders.map(item => `#${item.rank || '?'} ${item.nickname || item.uniqueId || 'Viewer'} ${Math.round(Number(item.score) || 0)}pts`).join('  |  ')
+    : 'Top 3 unlock boosted !nova and !overdrive attacks.';
+  text('arenaPowerLeaders', label);
+}
 function renderSessionStatus(data = {}) {
   sessionStatusData = data || {};
   const active = !!sessionStatusData.active;
@@ -1667,6 +1702,7 @@ function renderSessionStatus(data = {}) {
   const fill = document.getElementById('bossWaveFill');
   if (fill) fill.style.width = `${bossActive ? Math.max(0, Math.min(100, (hp / maxHp) * 100)) : 0}%`;
   text('bossWaveLabel', bossActive ? `${Math.round(hp)} / ${Math.round(maxHp)} HP` : (boss?.status === 'defeated' ? 'Defeated' : 'Inactive'));
+  renderArenaPowerStatus(sessionStatusData.arenaPowerUp);
   const commandText = document.getElementById('viewerCommandText');
   if (commandText && sessionStatusData.commandText) commandText.value = sessionStatusData.commandText;
   renderSessionRecap(sessionStatusData.recap);
@@ -1683,6 +1719,7 @@ function tickSessionClock() {
     const remainingMs = Math.max(0, Number(round.endsAt) - Date.now());
     text('sessionRound', `R${round.number} - ${formatClock(remainingMs)}`);
   }
+  renderArenaPowerStatus();
 }
 async function sessionAction(endpoint, successMessage) {
   if (/\/session\/start$/.test(endpoint)) {
@@ -1765,6 +1802,13 @@ socket.on('bossWave', data => {
   }
   if (data?.type === 'started') toast('Boss wave started');
   if (data?.type === 'defeated') toast('Boss wave defeated');
+});
+socket.on('arenaPowerUp', data => {
+  if (sessionStatusData) {
+    renderSessionStatus({ ...sessionStatusData, arenaPowerUp: data });
+  }
+  if (data?.type === 'started') toast('Arena Power-Up started');
+  if (data?.type === 'ended') toast('Arena Power-Up ended');
 });
 socket.on('connect', () => { setSocketStatus('connected'); socket.emit('register', { type: 'dashboard' }); });
 socket.on('disconnect', () => setSocketStatus('connecting'));

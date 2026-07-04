@@ -236,6 +236,7 @@ function initSocketOverlay(game) {
     if (data.killed || data.killingBlow) return 100;
     if (type === 'sponsorScene') return data.action === 'hide' ? 118 : 112;
     if (type === 'sponsorPrepare') return 108;
+    if (type === 'arenaPowerUp') return data.type === 'started' ? 106 : data.type === 'poweredAttack' ? 96 : data.type === 'barrage' ? 94 : data.type === 'ended' ? 90 : 84;
     if (type === 'bossWave') return data.type === 'defeated' ? 98 : data.type === 'started' ? 92 : 84;
     if (type === 'killEvent' || type === 'streakEvent') return 95;
     if (type === 'engagementSurge') return data.tier === 'takeover' ? 99 : data.tier === 'viral' ? 92 : 84;
@@ -256,7 +257,7 @@ function initSocketOverlay(game) {
     if (type === 'sponsorPrepare' || type === 'sponsorScene') return 'exclusive';
     if (type === 'soundEvent') return 'sound';
     if (type === 'like' && data.milestone) return 'celebration';
-    if (type === 'engagementSurge' || type === 'killEvent' || type === 'streakEvent' || type === 'giftCelebration' || type === 'follow' || type === 'roundEvent' || type === 'bossWave') return 'celebration';
+    if (type === 'engagementSurge' || type === 'arenaPowerUp' || type === 'killEvent' || type === 'streakEvent' || type === 'giftCelebration' || type === 'follow' || type === 'roundEvent' || type === 'bossWave') return 'celebration';
     if (type === 'like' || type === 'heal' || type === 'socialBoost') return 'ambient';
     return 'gameplay';
   }
@@ -283,6 +284,7 @@ function initSocketOverlay(game) {
     if (type === 'soundEvent') return `sound:${queueTextPart(data.event || data.filename || 'sound')}`;
     if (type === 'like') return data.milestone ? `like:${data.milestone}` : `like:${queueTextPart(data.uniqueId || data.userId || data.nickname || 'crowd')}`;
     if (type === 'bossWave' && data.type !== 'attack') return `boss:${queueTextPart(data.type || 'status')}`;
+    if (type === 'arenaPowerUp' && data.type === 'leaderboard') return 'arena-power-up:leaderboard';
     if (type === 'playerCommand') return `cmd:${queueTextPart(data.type || 'command')}:${queueTextPart(data.uniqueId || data.nickname)}`;
     if (type === 'sponsorPrepare' || type === 'sponsorScene') return `${type}:${queueTextPart(data.breakId || data.filename || data.action || 'active')}`;
     return '';
@@ -616,6 +618,11 @@ function initSocketOverlay(game) {
   socket.on('bossWave', (data) => {
     enqueueSceneEvent('bossWave', data || {}, payload => {
       if (scene.handleBossWave) scene.handleBossWave(payload || {});
+    });
+  });
+  socket.on('arenaPowerUp', (data) => {
+    enqueueSceneEvent('arenaPowerUp', data || {}, payload => {
+      if (scene.handleArenaPowerUp) scene.handleArenaPowerUp(payload || {});
     });
   });
   socket.on('killEvent', (data) => {

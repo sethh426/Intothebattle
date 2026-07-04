@@ -36,6 +36,18 @@ import { buildUploadDecision, getStorageUsage, uploadLimitBytes } from './tiktok
 import { growthIntegrationDiagnostics, syncLeadToGrowthApis } from './tiktokbr/services/growthIntegrations.js';
 import { marketingAutomationDiagnostics, publishApprovedMarketingPosts, recordMarketingVisit } from './tiktokbr/services/marketingAutomation.js';
 import { getBlogPostBySlug, listBlogPosts } from './tiktokbr/services/blogEngine.js';
+import {
+  ARENA_POWER_UP_BARRAGE_INITIAL_DELAY_MS,
+  ARENA_POWER_UP_BARRAGE_INTERVAL_MS,
+  ARENA_POWER_UP_BARRAGE_STAGGER_MS,
+  ARENA_POWER_UP_COOLDOWN_MS,
+  ARENA_POWER_UP_DURATION_MS,
+  addArenaContribution,
+  arenaPowerMultiplierForRank,
+  nextArenaPowerAttack,
+  parseArenaPowerCommand,
+  rankArenaContributors,
+} from './tiktokbr/services/arenaPowerUp.js';
 import { extractIconEmojiCommand } from './tiktokbr/services/chatCommands.js';
 import {
   commandBannerShowcasePayload,
@@ -243,6 +255,7 @@ const BATTLE_ACTION_EVENTS = new Set([
   'follow',
   'socialBoost',
   'engagementSurge',
+  'arenaPowerUp',
   'bossWave',
 ]);
 const HIGH_INTENSITY_BATTLE_EVENTS = new Set([
@@ -252,6 +265,7 @@ const HIGH_INTENSITY_BATTLE_EVENTS = new Set([
   'streakEvent',
   'giftCelebration',
   'engagementSurge',
+  'arenaPowerUp',
   'bossWave',
 ]);
 const MATCH_PHASES = Object.freeze({
@@ -279,6 +293,7 @@ const ROOM_EVENT_QUEUE_TYPES = new Set([
   'follow',
   'socialBoost',
   'engagementSurge',
+  'arenaPowerUp',
   'bossWave',
   'respawn',
   'sponsorPrepare',
@@ -611,7 +626,7 @@ function roomEventLane(type, payload = {}) {
   if (type === 'sponsorPrepare' || type === 'sponsorScene') return 'exclusive';
   if (type === 'soundEvent') return 'sound';
   if (type === 'like' || type === 'giftEffect') return 'ambient';
-  if (type === 'killEvent' || type === 'streakEvent' || type === 'giftCelebration' || type === 'follow' || type === 'engagementSurge' || type === 'commandBannerShowcase') return 'celebration';
+  if (type === 'killEvent' || type === 'streakEvent' || type === 'giftCelebration' || type === 'follow' || type === 'engagementSurge' || type === 'arenaPowerUp' || type === 'commandBannerShowcase') return 'celebration';
   if (type === 'bossWave') return ['started', 'defeated', 'expired', 'ended'].includes(payload?.type) ? 'celebration' : 'gameplay';
   return 'gameplay';
 }
@@ -620,6 +635,7 @@ function roomEventPriority(type, payload = {}) {
   if (type === 'sponsorScene') return payload.action === 'hide' ? 125 : 120;
   if (type === 'sponsorPrepare') return 112;
   if (type === 'bossWave') return payload.type === 'defeated' ? 104 : payload.type === 'started' ? 98 : 86;
+  if (type === 'arenaPowerUp') return payload.type === 'started' ? 106 : payload.type === 'poweredAttack' ? 96 : payload.type === 'barrage' ? 94 : payload.type === 'ended' ? 90 : 84;
   if (type === 'killEvent' || type === 'streakEvent') return 94;
   if (type === 'giftCelebration' || type === 'engagementSurge') return 88;
   if (type === 'commandBannerShowcase') return 80;
@@ -635,6 +651,7 @@ function roomEventPriority(type, payload = {}) {
 function roomEventTtl(type) {
   if (type === 'sponsorPrepare' || type === 'sponsorScene') return 120000;
   if (type === 'bossWave') return 30000;
+  if (type === 'arenaPowerUp') return 35000;
   if (type === 'commandBannerShowcase') return 22000;
   if (type === 'attack' || type === 'commentDamage' || type === 'giftAttack') return 9000;
   if (type === 'like' || type === 'soundEvent') return 3500;
@@ -646,6 +663,7 @@ function roomEventMergeKey(type, payload = {}) {
   if (type === 'like' && payload.milestone) return `like:${payload.milestone}`;
   if (type === 'sponsorPrepare' || type === 'sponsorScene') return `${type}:${payload.breakId || payload.filename || payload.action || 'active'}`;
   if (type === 'bossWave' && payload.type !== 'attack') return `boss:${payload.type || 'status'}`;
+  if (type === 'arenaPowerUp' && payload.type === 'leaderboard') return 'arena-power-up:leaderboard';
   if (type === 'commandBannerShowcase') return 'command-banner-showcase';
   if (type === 'playerCommand') return `cmd:${payload.type || 'command'}:${payload.uniqueId || payload.nickname || ''}`;
   return '';
@@ -2562,6 +2580,388 @@ function currentBossStatus(room) {
   };
 }
 
+function isArenaPowerUpActive(room, now = Date.now()) {
+  const power = room?.arenaPowerUp;
+  return Boolean(power?.active && (!power.endsAt || Number(power.endsAt) > now));
+}
+
+function currentArenaPowerUpStatus(room) {
+  const power = room?.arenaPowerUp;
+  if (!power) return null;
+  const now = Date.now();
+  if (!power.active) return power.lastStatus || {
+    active: false,
+    status: power.status || 'idle',
+    cooldownUntil: power.cooldownUntil || null,
+    cooldownMs: power.cooldownUntil ? Math.max(0, power.cooldownUntil - now) : 0,
+    topContributors: power.topContributors || [],
+  };
+  const active = isArenaPowerUpActive(room, now);
+  return {
+    active,
+    status: active ? 'live' : 'expired',
+    startedAt: power.startedAt,
+    durationMs: power.durationMs,
+    endsAt: power.endsAt,
+    remainingMs: power.endsAt ? Math.max(0, power.endsAt - now) : null,
+    trigger: power.trigger || 'manual',
+    source: power.source || 'dashboard',
+    topContributors: power.topContributors || [],
+    cooldownUntil: power.cooldownUntil || null,
+    attackIndex: Number(power.attackIndex) || 0,
+  };
+}
+
+function clearArenaPowerUpTimers(room) {
+  const power = room?.arenaPowerUp;
+  if (!power) return;
+  ['timer', 'barrageTimer', 'leaderboardTimer'].forEach(key => {
+    if (power[key]) {
+      clearTimeout(power[key]);
+      power[key] = null;
+    }
+  });
+}
+
+function buildArenaPowerUpPayload(room, type, detail = {}) {
+  const status = currentArenaPowerUpStatus(room) || {};
+  return {
+    type,
+    title: 'Arena Power-Up',
+    ...status,
+    ...detail,
+  };
+}
+
+function emitArenaPowerUp(room, type, detail = {}, options = {}) {
+  emitRoomEvent(room, 'arenaPowerUp', buildArenaPowerUpPayload(room, type, detail), {
+    priority: options.priority,
+    lane: options.lane || 'celebration',
+    mergeKey: options.mergeKey,
+  });
+}
+
+function refreshArenaPowerLeaderboard(room) {
+  const power = room?.arenaPowerUp;
+  if (!power) return [];
+  power.topContributors = rankArenaContributors(power.contributors || {}, room.players || {}, 3);
+  return power.topContributors;
+}
+
+function emitArenaPowerLeaderboard(room, options = {}) {
+  const power = room?.arenaPowerUp;
+  if (!isArenaPowerUpActive(room)) return;
+  if (power.leaderboardTimer) {
+    clearTimeout(power.leaderboardTimer);
+    power.leaderboardTimer = null;
+  }
+  const topContributors = refreshArenaPowerLeaderboard(room);
+  power.lastLeaderboardAt = Date.now();
+  emitArenaPowerUp(room, 'leaderboard', { topContributors }, {
+    priority: 84,
+    mergeKey: 'arena-power-up:leaderboard',
+    ...options,
+  });
+}
+
+function queueArenaPowerLeaderboard(room) {
+  const power = room?.arenaPowerUp;
+  if (!isArenaPowerUpActive(room)) return;
+  const now = Date.now();
+  const waitMs = Math.max(0, 750 - (now - (Number(power.lastLeaderboardAt) || 0)));
+  if (waitMs <= 0) {
+    emitArenaPowerLeaderboard(room);
+    return;
+  }
+  if (power.leaderboardTimer) return;
+  power.leaderboardTimer = setTimeout(() => emitArenaPowerLeaderboard(room), waitMs);
+  if (typeof power.leaderboardTimer.unref === 'function') power.leaderboardTimer.unref();
+}
+
+function recordArenaPowerContribution(room, uniqueId, nickname, type, amount = 1, options = {}) {
+  if (!room?.arenaPowerUp?.active) return null;
+  if (!isArenaPowerUpActive(room)) {
+    completeArenaPowerUp(room, 'expired');
+    return null;
+  }
+  const result = addArenaContribution(room.arenaPowerUp, room.players || {}, {
+    uniqueId,
+    nickname,
+    type,
+    amount,
+    now: options.now || Date.now(),
+  });
+  if (result.points > 0 && !options.silent) queueArenaPowerLeaderboard(room);
+  return result.points > 0 ? result : null;
+}
+
+function arenaPowerContributorForPlayer(room, playerId) {
+  if (!isArenaPowerUpActive(room)) return null;
+  const topContributors = refreshArenaPowerLeaderboard(room);
+  return topContributors.find(item => String(item.uniqueId) === String(playerId)) || null;
+}
+
+function nextArenaPowerAttackForRoom(room) {
+  const power = room?.arenaPowerUp;
+  if (!power) return null;
+  const index = Math.max(0, Math.floor(Number(power.attackIndex) || 0));
+  const attack = nextArenaPowerAttack(index);
+  power.attackIndex = index + 1;
+  return { ...attack, index };
+}
+
+function buildArenaPowerAttackMeta(room, playerId, command = 'barrage') {
+  const contributor = arenaPowerContributorForPlayer(room, playerId);
+  if (!contributor) return null;
+  const attack = nextArenaPowerAttackForRoom(room);
+  if (!attack) return null;
+  return {
+    active: true,
+    command,
+    rank: contributor.rank,
+    contributor,
+    multiplier: arenaPowerMultiplierForRank(contributor.rank),
+    label: attack.label,
+    effect: attack.effect,
+    color: attack.color,
+    index: attack.index,
+  };
+}
+
+function applyArenaPowerAttackMeta(payload, powerAttack) {
+  if (!payload || !powerAttack) return payload;
+  payload.poweredAttack = true;
+  payload.powerRank = powerAttack.rank;
+  payload.powerLabel = powerAttack.label;
+  payload.powerColor = powerAttack.color;
+  payload.powerMultiplier = powerAttack.multiplier;
+  payload.powerCommand = powerAttack.command;
+  payload.powerAttackIndex = powerAttack.index;
+  payload.special = true;
+  payload.critical = true;
+  payload.effect = powerAttack.effect;
+  payload.commandDescription = powerAttack.label;
+  payload.laserColor = powerAttack.color;
+  payload.shotType = powerAttack.effect;
+  return payload;
+}
+
+function emitArenaPoweredAttack(room, payload, powerAttack, extra = {}) {
+  if (!powerAttack || !payload) return;
+  emitArenaPowerUp(room, 'poweredAttack', {
+    poweredAttack: true,
+    attacker: payload.attacker,
+    attackerNick: payload.attackerNick || powerAttack.contributor?.nickname,
+    target: payload.target,
+    targetNick: payload.targetNick,
+    damage: payload.damage,
+    killed: Boolean(payload.killed),
+    rank: powerAttack.rank,
+    label: powerAttack.label,
+    effect: powerAttack.effect,
+    color: powerAttack.color,
+    multiplier: powerAttack.multiplier,
+    powerRank: powerAttack.rank,
+    powerLabel: powerAttack.label,
+    powerColor: powerAttack.color,
+    powerMultiplier: powerAttack.multiplier,
+    command: powerAttack.command,
+    ...extra,
+  }, { priority: 96, mergeKey: '' });
+}
+
+function chooseArenaPowerBarrageTarget(room, attackerId) {
+  const snapshot = getBattleSideSnapshot(room);
+  const attackerScope = battleScopeForPlayer(room, attackerId, snapshot);
+  if (attackerScope === 'horde') {
+    const target = chooseTopBattleTarget(room, attackerId, snapshot);
+    return target ? { target, visualTarget: null, snapshot } : null;
+  }
+  const hordeTarget = chooseHordeDamageTarget(room, attackerId, snapshot);
+  if (hordeTarget) {
+    return {
+      target: hordeTarget,
+      visualTarget: { id: SERVER_HORDE_ID, nickname: 'The Horde', scope: 'horde' },
+      snapshot,
+    };
+  }
+  const fallback = snapshot.topPlayers.find(player => player?.alive && player.uniqueId !== attackerId);
+  return fallback ? { target: fallback, visualTarget: null, snapshot } : null;
+}
+
+function fireArenaPowerBarrageAttack(room, contributor) {
+  if (!isArenaPowerUpActive(room) || !contributor?.uniqueId) return null;
+  const attackerId = contributor.uniqueId;
+  const nickname = contributor.nickname || attackerId;
+  if (!room.players[attackerId]?.alive) spawnPlayer(room, attackerId, nickname);
+  const powerAttack = buildArenaPowerAttackMeta(room, attackerId, 'barrage');
+  if (!powerAttack) return null;
+
+  if (room.bossWave?.active) {
+    const result = damageBossWave(room, attackerId, nickname, powerAttack.multiplier, powerAttack.effect, 'arena power barrage', { powerAttack, autoBarrage: true });
+    return result?.result || null;
+  }
+
+  const selected = chooseArenaPowerBarrageTarget(room, attackerId);
+  if (!selected?.target) return null;
+  const { target, visualTarget, snapshot } = selected;
+  const result = dealDamage(room, attackerId, target.uniqueId, powerAttack.multiplier);
+  if (!result) return null;
+
+  const attackerScope = battleScopeForPlayer(room, attackerId, snapshot);
+  const targetScope = visualTarget?.scope || battleScopeForPlayer(room, target.uniqueId, snapshot);
+  result.attackerNick = nickname;
+  result.targetNick = visualTarget?.nickname || target.nickname || target.uniqueId;
+  result.attackerScope = attackerScope;
+  result.targetScope = targetScope;
+  if (visualTarget?.id) {
+    result.actualTarget = target.uniqueId;
+    result.actualTargetNick = target.nickname || target.uniqueId;
+    result.target = visualTarget.id;
+  }
+  applyArenaPowerAttackMeta(result, powerAttack);
+  result.autoBarrage = true;
+  emitAttackAndSync(room, result);
+  emitSoundAndSync(room, result.killed ? 'kill' : 'gift', { intensity: 0.9, tier: 'rare' });
+  emitArenaPoweredAttack(room, result, powerAttack, { autoBarrage: true });
+  return result;
+}
+
+function runArenaPowerBarrage(room) {
+  const power = room?.arenaPowerUp;
+  if (!isArenaPowerUpActive(room)) return [];
+  power.barrageTimer = null;
+  const topContributors = refreshArenaPowerLeaderboard(room);
+  emitArenaPowerUp(room, 'barrage', {
+    topContributors,
+    barrageSize: topContributors.length,
+  }, { priority: 94, mergeKey: '' });
+
+  const fired = [];
+  topContributors.forEach((contributor, index) => {
+    const timer = setTimeout(() => {
+      const result = fireArenaPowerBarrageAttack(room, contributor);
+      if (result) fired.push(result);
+      if (index === topContributors.length - 1) {
+        emitRoomEvent(room, 'gameState', room.players);
+      }
+    }, index * ARENA_POWER_UP_BARRAGE_STAGGER_MS);
+    if (typeof timer.unref === 'function') timer.unref();
+  });
+  scheduleArenaPowerBarrage(room, ARENA_POWER_UP_BARRAGE_INTERVAL_MS);
+  return fired;
+}
+
+function scheduleArenaPowerBarrage(room, delayMs = ARENA_POWER_UP_BARRAGE_INTERVAL_MS) {
+  const power = room?.arenaPowerUp;
+  if (!isArenaPowerUpActive(room) || power.barrageTimer) return;
+  const remaining = Math.max(0, Number(power.endsAt) - Date.now());
+  if (remaining <= 800) return;
+  const nextDelay = Math.max(500, Math.min(Math.round(delayMs), remaining - 250));
+  power.barrageTimer = setTimeout(() => runArenaPowerBarrage(room), nextDelay);
+  if (typeof power.barrageTimer.unref === 'function') power.barrageTimer.unref();
+}
+
+function completeArenaPowerUp(room, reason = 'ended', options = {}) {
+  const power = room?.arenaPowerUp;
+  if (!power?.active && !options.force) return { ok: false, reason: 'no_active_power_up', arenaPowerUp: currentArenaPowerUpStatus(room) };
+  clearArenaPowerUpTimers(room);
+  const now = Date.now();
+  const topContributors = refreshArenaPowerLeaderboard(room);
+  const cooldownUntil = options.skipCooldown ? (power?.cooldownUntil || null) : now + ARENA_POWER_UP_COOLDOWN_MS;
+  const lastStatus = {
+    active: false,
+    status: reason,
+    startedAt: power?.startedAt || null,
+    endedAt: now,
+    durationMs: power?.durationMs || ARENA_POWER_UP_DURATION_MS,
+    endsAt: power?.endsAt || now,
+    remainingMs: 0,
+    trigger: power?.trigger || 'manual',
+    source: power?.source || 'dashboard',
+    topContributors,
+    cooldownUntil,
+    cooldownMs: cooldownUntil ? Math.max(0, cooldownUntil - now) : 0,
+  };
+  room.arenaPowerUp = {
+    active: false,
+    status: reason,
+    cooldownUntil,
+    topContributors,
+    lastStatus,
+  };
+  if (!options.silent) {
+    emitArenaPowerUp(room, 'ended', { status: reason, topContributors }, { priority: 90, mergeKey: '' });
+    emitSessionStatus(room);
+  }
+  return { ok: true, arenaPowerUp: lastStatus };
+}
+
+function startArenaPowerUp(room, options = {}) {
+  if (!room?.roomId) return { ok: false, reason: 'missing_room' };
+  const now = Date.now();
+  const manual = options.source === 'dashboard' || options.source === 'overlay_test' || options.manual;
+  if (room.arenaPowerUp?.active) {
+    if (!manual) return { ok: false, reason: 'already_active', arenaPowerUp: currentArenaPowerUpStatus(room) };
+    completeArenaPowerUp(room, 'restarted', { skipCooldown: true, silent: true });
+  }
+  const cooldownUntil = Number(room.arenaPowerUp?.cooldownUntil) || 0;
+  if (!manual && cooldownUntil > now) {
+    return { ok: false, reason: 'cooldown', cooldownUntil, cooldownMs: cooldownUntil - now };
+  }
+
+  const durationMs = Math.max(10_000, Math.min(120_000, Math.round(Number(options.durationMs) || ARENA_POWER_UP_DURATION_MS)));
+  const session = ensureLiveSession(room, options.source || 'arena_power_up');
+  const startedAt = now;
+  room.arenaPowerUp = {
+    active: true,
+    status: 'live',
+    startedAt,
+    endsAt: startedAt + durationMs,
+    durationMs,
+    trigger: options.trigger || 'manual',
+    source: options.source || 'dashboard',
+    contributors: {},
+    topContributors: [],
+    attackIndex: 0,
+    timer: null,
+    barrageTimer: null,
+    leaderboardTimer: null,
+    lastLeaderboardAt: 0,
+    cooldownUntil: null,
+    sessionId: session?.sessionId || null,
+  };
+  if (options.initialContribution?.uniqueId) {
+    recordArenaPowerContribution(
+      room,
+      options.initialContribution.uniqueId,
+      options.initialContribution.nickname,
+      options.initialContribution.type,
+      options.initialContribution.amount,
+      { silent: true }
+    );
+  }
+  room.arenaPowerUp.timer = setTimeout(() => completeArenaPowerUp(room, 'ended'), durationMs);
+  if (typeof room.arenaPowerUp.timer.unref === 'function') room.arenaPowerUp.timer.unref();
+  scheduleArenaPowerBarrage(room, ARENA_POWER_UP_BARRAGE_INITIAL_DELAY_MS);
+  emitSoundAndSync(room, 'engagementSurge', { intensity: 1, tier: 'rare' });
+  emitArenaPowerUp(room, 'started', {
+    trigger: room.arenaPowerUp.trigger,
+    topContributors: room.arenaPowerUp.topContributors,
+  }, { priority: 106, mergeKey: '' });
+  emitArenaPowerLeaderboard(room, { priority: 88 });
+  emitSessionStatus(room);
+  return { ok: true, started: true, arenaPowerUp: currentArenaPowerUpStatus(room) };
+}
+
+function maybeAutoStartArenaPowerUp(room, trigger, initialContribution = null) {
+  return startArenaPowerUp(room, {
+    source: 'auto',
+    trigger,
+    initialContribution,
+  });
+}
+
 function buildSessionStatus(room) {
   const session = room?.liveSession || null;
   const active = session?.status === 'active';
@@ -2585,6 +2985,7 @@ function buildSessionStatus(room) {
     elapsedMs: active ? Math.max(0, now - Number(session.startedAt || now)) : 0,
     round: currentRoundStatus(room),
     bossWave: currentBossStatus(room),
+    arenaPowerUp: currentArenaPowerUpStatus(room),
     recap,
     commandText: viewerCommandText(),
     metrics: {
@@ -3069,7 +3470,7 @@ function startBossWave(room, options = {}) {
   return room.bossWave;
 }
 
-function damageBossWave(room, attackerId, attackerNick, multiplier = 1, effect = 'laser', comment = '') {
+function damageBossWave(room, attackerId, attackerNick, multiplier = 1, effect = 'laser', comment = '', options = {}) {
   const boss = room?.bossWave;
   const attacker = room?.players?.[attackerId];
   if (!boss?.active || !attacker?.alive) return { handled: false, reason: 'Boss wave is not active' };
@@ -3099,13 +3500,18 @@ function damageBossWave(room, attackerId, attackerNick, multiplier = 1, effect =
     targetScope: 'boss',
     remainingHpPct: boss.maxHp ? boss.hp / boss.maxHp : 0,
   };
+  if (options.powerAttack) {
+    applyArenaPowerAttackMeta(attackPayload, options.powerAttack);
+    attackPayload.autoBarrage = Boolean(options.autoBarrage);
+  }
   emitRoomEvent(room, 'attack', attackPayload);
   emitRoomEvent(room, 'commentDamage', {
     ...attackPayload,
     target: SERVER_BOSS_ID,
     targetScope: 'boss',
-    commandDescription: effect,
+    commandDescription: options.powerAttack?.label || effect,
   });
+  if (options.powerAttack) emitArenaPoweredAttack(room, attackPayload, options.powerAttack, { autoBarrage: Boolean(options.autoBarrage) });
   emitSoundAndSync(room, boss.hp <= 0 ? 'kill' : (multiplier > 1.5 ? 'gift' : 'attack'), { intensity: attackPayload.intensity, tier: multiplier >= 5 ? 'rare' : 'common' });
   emitRoomEvent(room, 'bossWave', {
     type: boss.hp <= 0 ? 'defeated' : 'damaged',
@@ -3142,6 +3548,7 @@ function endLiveSession(room, reason = 'manual_end') {
     session.roundsCompleted = (Number(session.roundsCompleted) || 0) + 1;
   }
   if (room.bossWave?.active) completeBossWave(room, null, 'ended');
+  if (room.arenaPowerUp?.active) completeArenaPowerUp(room, 'ended');
   session.status = 'ended';
   session.endedAt = Date.now();
   const recap = buildSessionRecap(room, session, reason);
@@ -3221,6 +3628,8 @@ function resetRoomLiveRuntime(room, options = {}) {
       clearBossWaveTimers(room);
       room.bossWave = null;
     }
+    if (room.arenaPowerUp?.active) completeArenaPowerUp(room, reason);
+    else clearArenaPowerUpTimers(room);
     emitSessionStatus(room);
   }
 
@@ -4714,6 +5123,14 @@ function emitEngagementSurge(room, sourcePayload = {}, momentum = {}) {
     totals: momentum.totals,
     color: sourcePayload.color || (tier === 'takeover' ? '#f6c95b' : '#7afcff'),
   });
+  if (tier === 'viral' || tier === 'takeover') {
+    maybeAutoStartArenaPowerUp(room, `engagement_${tier}`, {
+      uniqueId: sourcePayload.uniqueId || '',
+      nickname: sourcePayload.nickname || 'Crowd',
+      type: sourcePayload.type || 'share',
+      amount: 1,
+    });
+  }
 }
 
 function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share', rawEvent = {}) {
@@ -4722,6 +5139,7 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
   const player = room.players[uniqueId];
   if (!player) return null;
   const type = engagementType === 'follow' ? 'follow' : engagementType === 'repost' ? 'repost' : 'share';
+  recordArenaPowerContribution(room, uniqueId, nickname, type, 1);
   const momentum = updateEngagementMomentum(room, type);
   const comboBoost = Math.min(1.45, 1 + Math.max(0, Number(momentum.score) || 0) * 0.025);
   const baseColor = type === 'repost' ? '#f6c95b' : type === 'follow' ? '#7afcff' : '#99ffda';
@@ -5425,16 +5843,23 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
   const hordeRequested = textTargetsHorde(text, mentions);
 
   const attackCommand = parseAttackCommand(text);
+  const powerCommand = parseArenaPowerCommand(text);
   let requestedEffect = null;
   let commandMultiplier = 1;
   let commandDescription = null;
   let isSpecialCommand = false;
+  let powerAttack = null;
 
   if (attackCommand) {
     requestedEffect = attackCommand.effect;
     commandMultiplier = attackCommand.multiplier;
     commandDescription = attackCommand.description;
     isSpecialCommand = commandMultiplier > 1.5;
+  } else if (powerCommand === 'overdrive') {
+    requestedEffect = 'railgun';
+    commandMultiplier = 1;
+    commandDescription = 'OVERDRIVE';
+    isSpecialCommand = true;
   } else {
     requestedEffect = RANDOM_ATTACK_EFFECTS[Math.floor(Math.random() * RANDOM_ATTACK_EFFECTS.length)];
     commandMultiplier = CFG.MESSAGE_LASER_MULTIPLIER;
@@ -5454,8 +5879,22 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
   let multiplier = commandMultiplier;
   if (boostActive) multiplier *= CFG.GIFT_MESSAGE_BOOST_MULTIPLIER;
 
+  if (powerCommand) {
+    powerAttack = buildArenaPowerAttackMeta(room, attackerId, powerCommand);
+    if (!powerAttack && powerCommand === 'overdrive') {
+      return { handled: false, reason: 'Power-Up command unavailable' };
+    }
+    if (powerAttack) {
+      requestedEffect = powerAttack.effect;
+      commandMultiplier = powerAttack.multiplier;
+      commandDescription = powerAttack.label;
+      isSpecialCommand = true;
+      multiplier = powerAttack.multiplier;
+    }
+  }
+
   if (bossMentioned) {
-    return damageBossWave(room, attackerId, attackerNick, multiplier, requestedEffect || 'laser', text);
+    return damageBossWave(room, attackerId, attackerNick, multiplier, requestedEffect || 'laser', text, { powerAttack });
   }
 
   const emitResolvedAttack = (actualTarget, visualTarget = null, snapshot = null) => {
@@ -5474,7 +5913,7 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
     if (!result) return null;
 
     result.effect = requestedEffect;
-    result.special = isSpecialCommand;
+    result.special = isSpecialCommand || Boolean(powerAttack);
     result.commandDescription = commandDescription || requestedEffect;
     result.giftBoosted = boostActive;
     result.attackerNick = attackerNick;
@@ -5486,6 +5925,7 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
       result.actualTargetNick = actualTarget.nickname || actualTarget.uniqueId;
       result.target = visualId;
     }
+    if (powerAttack) applyArenaPowerAttackMeta(result, powerAttack);
 
     emitAttackAndSync(room, result);
     emitSoundAndSync(room, isSpecialCommand ? 'gift' : 'attack');
@@ -5499,7 +5939,7 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
       damage: result.damage,
       killed: result.killed,
       comment,
-      special: isSpecialCommand,
+      special: isSpecialCommand || Boolean(powerAttack),
       effect: requestedEffect,
       intensity: result.intensity,
       critical: result.critical,
@@ -5509,7 +5949,14 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
       shotSpeed: result.shotSpeed,
       attackerScope,
       targetScope,
+      poweredAttack: Boolean(powerAttack),
+      powerRank: powerAttack?.rank,
+      powerLabel: powerAttack?.label,
+      powerColor: powerAttack?.color,
+      powerMultiplier: powerAttack?.multiplier,
+      powerCommand: powerAttack?.command,
     });
+    if (powerAttack) emitArenaPoweredAttack(room, result, powerAttack);
 
     const cmdLabel = commandDescription || requestedEffect || 'MESSAGE';
     console.log(`Chat attack: ${attackerNick} ${cmdLabel} -> ${visualNick} for ${result.damage} hp${boostActive ? ' (gift boost)' : ''}`);
@@ -7013,6 +7460,8 @@ io.on('connection', (socket) => {
       socket.emit('streamModeChanged', buildStreamModeStatus(room));
       const bossStatus = currentBossStatus(room);
       if (bossStatus?.active) socket.emit('bossWave', { type: 'started', ...bossStatus });
+      const arenaPowerStatus = currentArenaPowerUpStatus(room);
+      if (arenaPowerStatus?.active) socket.emit('arenaPowerUp', { type: 'started', ...arenaPowerStatus });
       const background = buildBackgroundPayload(room, { v: Date.now() });
       if (background) socket.emit('backgroundChanged', background);
     } else if (clientType === 'dashboard' || clientType === 'stats') {
@@ -7250,6 +7699,31 @@ app.post('/api/session/boss/stop', requireRoom, (req, res) => {
   });
 });
 
+app.post('/api/session/power-up/start', requireRoom, (req, res) => {
+  const result = startArenaPowerUp(req.room, {
+    source: 'dashboard',
+    trigger: req.body?.trigger || 'manual',
+    durationMs: req.body?.durationMs,
+    manual: true,
+  });
+  res.status(result.ok ? 200 : 409).json({
+    success: result.ok,
+    error: result.ok ? undefined : (result.reason || 'Unable to start Arena Power-Up.'),
+    ...result,
+    session: buildSessionStatus(req.room),
+  });
+});
+
+app.post('/api/session/power-up/stop', requireRoom, (req, res) => {
+  const result = completeArenaPowerUp(req.room, 'stopped');
+  res.status(result.ok ? 200 : 409).json({
+    success: result.ok,
+    error: result.ok ? undefined : 'No active Arena Power-Up to stop.',
+    ...result,
+    session: buildSessionStatus(req.room),
+  });
+});
+
 app.get('/api/subscription/status', (req, res) => {
   try {
     const auth = getAuthRecord(req.cookies?.session_token);
@@ -7318,7 +7792,7 @@ function runRoomOverlayTest(room, action) {
 
 function runRoomOverlayTestAction(room, normalizedAction) {
   ensureRoomLiveTestPlayers(room, {
-    includeHordeReserve: normalizedAction === 'boss' || normalizedAction === 'burst',
+    includeHordeReserve: normalizedAction === 'boss' || normalizedAction === 'burst' || normalizedAction === 'power-up',
   });
   const attackerId = 'arena_orion';
   const targetId = 'arena_blaze';
@@ -7448,6 +7922,22 @@ function runRoomOverlayTestAction(room, normalizedAction) {
     };
   }
 
+  if (normalizedAction === 'power-up') {
+    const result = startArenaPowerUp(room, {
+      source: 'overlay_test',
+      trigger: 'overlay_test',
+      durationMs: ARENA_POWER_UP_DURATION_MS,
+      manual: true,
+    });
+    recordArenaPowerContribution(room, attackerId, 'Orion', 'gift', 120, { silent: true });
+    recordArenaPowerContribution(room, supportId, 'Nova', 'repost', 1, { silent: true });
+    recordArenaPowerContribution(room, targetId, 'Blaze', 'share', 1, { silent: true });
+    emitArenaPowerLeaderboard(room, { priority: 92 });
+    const attack = handleBattleAttack(room, attackerId, 'Orion', '!overdrive @arena_blaze');
+    emitRoomEvent(room, 'gameState', room.players);
+    return { success: true, action: normalizedAction, result, attack, arenaPowerUp: currentArenaPowerUpStatus(room) };
+  }
+
   if (normalizedAction === 'sponsor' || normalizedAction === 'break') {
     const record = startSponsorBreak(room, {
       source: 'creator',
@@ -7469,7 +7959,7 @@ function runRoomOverlayTestAction(room, normalizedAction) {
   }
 
   if (normalizedAction === 'burst' || normalizedAction === 'show') {
-    const sequence = ['attack', 'like', 'follow', 'share', 'repost', 'gift', 'boss', 'sponsor'];
+    const sequence = ['attack', 'like', 'follow', 'share', 'repost', 'gift', 'power-up', 'boss', 'sponsor'];
     sequence.forEach((eventName, index) => {
       const timer = setTimeout(() => runRoomOverlayTest(room, eventName), index * 950);
       if (typeof timer.unref === 'function') timer.unref();
@@ -7505,7 +7995,7 @@ app.post('/api/overlay/command-banners', requireRoom, (req, res) => {
 });
 
 app.post('/api/stream/setup/start', requireRoom, (req, res) => {
-  const allowedSetupActions = new Set(['attack', 'gift', 'like', 'heal', 'follow', 'share', 'repost', 'kill', 'streak', 'boss', 'sponsor', 'burst']);
+  const allowedSetupActions = new Set(['attack', 'gift', 'like', 'heal', 'follow', 'share', 'repost', 'kill', 'streak', 'boss', 'power-up', 'sponsor', 'burst']);
   const requestedAction = String(req.body?.action || 'burst').toLowerCase();
   const rehearsal = startRoomSetupRehearsal(req.room, {
     source: 'dashboard',
@@ -7603,6 +8093,7 @@ app.post('/api/overlay/reload', requireRoom, (req, res) => {
 });
 
 app.post('/api/players/clear', requireRoom, (req, res) => {
+  if (req.room.arenaPowerUp?.active) completeArenaPowerUp(req.room, 'players_cleared');
   req.room.players = {};
   markRoomPlayerPresenceOffline(req.room);
   emitRoomEvent(req.room, 'gameState', req.room.players);
@@ -8049,6 +8540,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
     if (!id) return;
 
     awardStats(room, id, nickname, 0, CFG.CHAT_STRENGTH_BOOST);
+    recordArenaPowerContribution(room, id, nickname, 'comment', 1);
 
     const utilityCommand = handlePlayerUtilityCommand(room, id, nickname, comment);
     if (utilityCommand.handled) console.log(`Player command from @${nickname}: ${utilityCommand.reason || comment}`);
@@ -8096,6 +8588,10 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
 
     // Gift attacks rotate effects across two player targets and the horde.
     const giftMeta = classifyGift(diamonds);
+    const powerStart = giftMeta.tier === 'legendary'
+      ? maybeAutoStartArenaPowerUp(room, 'legendary_gift', { uniqueId: id, nickname, type: 'gift', amount: diamonds })
+      : null;
+    if (!powerStart?.started) recordArenaPowerContribution(room, id, nickname, 'gift', diamonds);
     const giftIntensity = diamonds > 100 ? 1.0 : Math.min(diamonds / 100, 0.8);
     const giftAttacks = emitGiftAttacksForGift(room, id, {
       diamonds,
@@ -8176,6 +8672,10 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
     const likeIncrement = likeIncrementFromEvent(e);
     awardStats(room, id, nickname, CFG.LIKE_HP_BOOST * Math.min(5, likeIncrement), 0);
     const likeMilestone = updateRoomLikeMilestone(room, likeIncrement);
+    const powerStart = likeMilestone.tier === 'mega'
+      ? maybeAutoStartArenaPowerUp(room, 'mega_like_milestone', { uniqueId: id, nickname, type: 'like', amount: likeIncrement })
+      : null;
+    if (!powerStart?.started) recordArenaPowerContribution(room, id, nickname, 'like', likeIncrement);
 
     const likeKey = `${room.roomId}:${id}`;
     if (!likeRateTracker[likeKey]) {

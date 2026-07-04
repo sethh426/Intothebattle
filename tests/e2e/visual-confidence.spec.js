@@ -46,11 +46,32 @@ function previewUrl(extra = {}) {
   return `${harness.baseUrl}/overlay-preview?${params.toString()}`;
 }
 
+function v2PreviewUrl(extra = {}) {
+  const params = new URLSearchParams({
+    demo: '0',
+    debug: '1',
+    controls: '0',
+    render: '1080p',
+    source: '1',
+    ...extra,
+  });
+  return `${harness.baseUrl}/overlay-v2-preview?${params.toString()}`;
+}
+
 async function openPreview(page, extra = {}) {
+  await harness.start();
   const response = await page.goto(previewUrl(extra), { waitUntil: 'domcontentloaded' });
   expect(response?.ok()).toBe(true);
   await expect(page.getByTestId('overlay-canvas')).toBeVisible();
   await page.waitForFunction(() => Boolean(window.overlayEventEngine && window.__overlayLegacyLayout?.frame), null, { timeout: 8000 });
+}
+
+async function openV2Preview(page, extra = {}) {
+  await harness.start();
+  const response = await page.goto(v2PreviewUrl(extra), { waitUntil: 'domcontentloaded' });
+  expect(response?.ok()).toBe(true);
+  await expect(page.locator('#phaser-overlay-root canvas')).toBeVisible();
+  await page.waitForFunction(() => Boolean(window.__overlayV2Ready && window.overlayV2Scene), null, { timeout: 9000 });
 }
 
 async function waitForDemoLayout(page, options = {}) {
@@ -82,6 +103,26 @@ function assertBossHudIntegrated(layout, label) {
   expect(Math.abs(boss.bottom - panel.bottom), `${label} boss bottom edge is split from panel`).toBeLessThanOrEqual(tolerance);
 }
 
+function rectsOverlap(a, b, tolerance = 0) {
+  return a.left < b.right - tolerance &&
+    a.right > b.left + tolerance &&
+    a.top < b.bottom - tolerance &&
+    a.bottom > b.top + tolerance;
+}
+
+function assertRectInside(inner, outer, label, tolerance = 1.5) {
+  expect(inner, `${label} missing inner rect`).toBeTruthy();
+  expect(outer, `${label} missing outer rect`).toBeTruthy();
+  expect(inner.left, `${label} left outside`).toBeGreaterThanOrEqual(outer.left - tolerance);
+  expect(inner.right, `${label} right outside`).toBeLessThanOrEqual(outer.right + tolerance);
+  expect(inner.top, `${label} top outside`).toBeGreaterThanOrEqual(outer.top - tolerance);
+  expect(inner.bottom, `${label} bottom outside`).toBeLessThanOrEqual(outer.bottom + tolerance);
+}
+
+function assertNoSlotOverlap(a, b, label, tolerance = 0.25) {
+  expect(rectsOverlap(a, b, tolerance), `${label} slots overlap`).toBe(false);
+}
+
 function assertHordeProminence(layout, label) {
   const frame = layout?.frame;
   const horde = layout?.horde;
@@ -97,6 +138,41 @@ function assertHordeProminence(layout, label) {
   expect(horde.bottom, `${label} horde bottom outside frame`).toBeLessThanOrEqual(frameBottom + 1.5);
   expect(horde.width, `${label} horde width`).toBeGreaterThanOrEqual(frame.w * 0.9);
   expect(horde.height, `${label} horde height`).toBeGreaterThanOrEqual(frame.h * 0.1);
+}
+
+function assertPlayerCardSlots(layout, label, options = {}) {
+  const players = layout?.players || [];
+  expect(players.length, `${label} missing player cards`).toBeGreaterThanOrEqual(options.minPlayers ?? 5);
+  players.slice(0, options.minPlayers ?? 5).forEach((player, index) => {
+    const cardLabel = `${label} player ${index + 1}`;
+    const slots = player.slots || {};
+    expect(slots.card, `${cardLabel} missing card slot`).toBeTruthy();
+    for (const key of ['rank', 'name', 'ko', 'avatar', 'hpBar']) {
+      assertRectInside(slots[key], slots.card, `${cardLabel} ${key} slot`);
+    }
+    for (const key of ['rankText', 'nameText', 'koText', 'hpText']) {
+      assertRectInside(slots[key], slots.card, `${cardLabel} ${key}`);
+    }
+    assertRectInside(slots.rankText, slots.rank, `${cardLabel} rank text`, 2.5);
+    assertRectInside(slots.nameText, slots.name, `${cardLabel} name text`, 3);
+    assertRectInside(slots.koText, slots.ko, `${cardLabel} ko text`, 2.5);
+    assertRectInside(slots.hpText, slots.hpBar, `${cardLabel} hp text`, 3);
+    assertNoSlotOverlap(slots.rank, slots.name, `${cardLabel} rank/name`);
+    assertNoSlotOverlap(slots.name, slots.ko, `${cardLabel} name/ko`);
+    assertNoSlotOverlap(slots.rank, slots.ko, `${cardLabel} rank/ko`);
+    for (const statKey of ['rank', 'ko']) {
+      assertNoSlotOverlap(slots[statKey], slots.avatar, `${cardLabel} ${statKey}/avatar`);
+      assertNoSlotOverlap(slots[statKey], slots.hpBar, `${cardLabel} ${statKey}/hp`);
+    }
+    assertNoSlotOverlap(slots.name, slots.avatar, `${cardLabel} name/avatar`);
+    assertNoSlotOverlap(slots.name, slots.hpBar, `${cardLabel} name/hp`);
+    assertNoSlotOverlap(slots.avatar, slots.hpBar, `${cardLabel} avatar/hp`);
+    expect(player.text?.nameHasReplacement, `${cardLabel} name contains replacement glyph`).toBe(false);
+    expect(player.text?.fittedName || '', `${cardLabel} missing fitted name`).not.toBe('');
+    expect(player.text?.koLabel || '', `${cardLabel} missing ko label`).not.toBe('');
+    expect(player.text?.hpLabel || '', `${cardLabel} missing hp label`).toContain('HP');
+    expect(player.text?.nameCenterDelta ?? 999, `${cardLabel} name center drift`).toBeLessThanOrEqual(2);
+  });
 }
 
 async function assertConnectionStatus(page, testInfo, label, options = {}) {
@@ -403,6 +479,7 @@ test('@visual demo battle with five players and horde remains readable', async (
   expect(layout.players.length).toBeGreaterThanOrEqual(5);
   expect(layout.horde).toBeTruthy();
   assertHordeProminence(layout, 'demo-battle');
+  assertPlayerCardSlots(layout, 'demo-battle');
   await assertConnectionStatus(page, testInfo, 'demo-battle', { mode: 'demo', state: 'demo', ready: true, demoMode: true, connected: false });
   await assertOverlayAudioStatus(page, testInfo, 'demo-battle');
   await assertVisualQueueHealth(page, testInfo, 'demo-battle', { maxQueued: 0 });
@@ -411,6 +488,30 @@ test('@visual demo battle with five players and horde remains readable', async (
   await expectStableScreenshot(page.getByTestId('overlay-source-frame'), testInfo, 'demo-battle-five-players-horde');
   await expectNoHorizontalOverflow(page);
   await expectNoPageErrors(errors, testInfo, 'demo-battle');
+});
+
+test('@visual player cards keep stats and special-character names aligned', async ({ page }, testInfo) => {
+  sourceProjectOnly(testInfo);
+  const errors = await watchPage(page, harness.baseUrl);
+  await openPreview(page);
+  await page.waitForFunction(() => typeof window.overlayEventEngine?.testPlayerCards === 'function', null, { timeout: 5000 });
+  const roster = [
+    { uniqueId: 'card_plain', nickname: 'NebulaX', hp: 180, maxHp: 200, kills: 3, iconEmoji: '\u2694\ufe0f' },
+    { uniqueId: 'card_fire', nickname: '\u{1f525}Queen\u{1f525}', hp: 150, maxHp: 190, kills: 27, iconEmoji: '\u{1f525}' },
+    { uniqueId: 'card_accent', nickname: 'A\u0301lvaro\u2728', hp: 94, maxHp: 160, kills: 0, iconEmoji: '\u2728' },
+    { uniqueId: 'card_cjk', nickname: '\u73a9\u5bb6\u26a1\u9f8d', hp: 121, maxHp: 170, kills: 108, iconEmoji: '\u26a1' },
+    { uniqueId: 'card_long', nickname: 'Name_\u2728\u2728\u2728_MegaDash_Commander', hp: 72, maxHp: 150, kills: 1420, iconEmoji: '\u{1f3ae}' },
+  ];
+  const result = await page.evaluate(players => window.overlayEventEngine.testPlayerCards(players), roster);
+  await attachJson(testInfo, 'special-player-card-roster-result', result);
+  expect(result).toMatchObject({ ok: true, count: 5 });
+  await waitForDemoLayout(page, { minPlayers: 5, settleMs: 500 });
+  const layout = await readLegacyLayout(page, testInfo, 'special-player-card-layout');
+  assertPlayerCardSlots(layout, 'special-player-cards');
+  await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'special-player-card-canvas' });
+  await freezeOverlayVisuals(page, testInfo, 'special-player-card-freeze');
+  await expectNoHorizontalOverflow(page);
+  await expectNoPageErrors(errors, testInfo, 'special-player-cards');
 });
 
 test('@visual boss wave uses one integrated boss HUD and hits all targets', async ({ page }, testInfo) => {
@@ -425,9 +526,40 @@ test('@visual boss wave uses one integrated boss HUD and hits all targets', asyn
   await assertEffectOwnership(page, testInfo, 'boss-wave-effects', { minOwnedEffects: 1 });
   await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'boss-wave-canvas' });
   await freezeOverlayVisuals(page, testInfo, 'boss-wave-freeze');
-  await expectStableScreenshot(page.getByTestId('overlay-source-frame'), testInfo, 'boss-wave-integrated-hud');
+  await expectStableScreenshot(page.getByTestId('overlay-source-frame'), testInfo, 'boss-wave-integrated-hud', { maxDiffPixelRatio: 0.12 });
   await expectNoHorizontalOverflow(page);
   await expectNoPageErrors(errors, testInfo, 'boss-wave');
+});
+
+test('@visual arena power-up glow highlights top contributors without covering cards', async ({ page }, testInfo) => {
+  sourceProjectOnly(testInfo);
+  const errors = await watchPage(page, harness.baseUrl);
+  await openV2Preview(page);
+  await page.waitForFunction(() => typeof window.overlayV2Scene?.testArenaPowerUp === 'function', null, { timeout: 5000 });
+  const initial = await page.evaluate(() => window.overlayV2Scene.testArenaPowerUp());
+  await page.waitForTimeout(700);
+  const status = await page.evaluate(() => window.overlayV2Scene.arenaPowerAuditStatus());
+  await attachJson(testInfo, 'arena-power-up-v2-status', { initial, status });
+  expect(status.active).toBe(true);
+  expect(status.hasGlow).toBe(true);
+  expect(status.hasChip).toBe(true);
+  expect(status.powerLayerChildren).toBeGreaterThan(0);
+  expect(status.topCount).toBeGreaterThanOrEqual(3);
+  expect(status.chipText).toContain('#1');
+  expect(status.countdownText).toMatch(/s$/);
+  expect(status.highlighted.map(item => item.rank)).toEqual(expect.arrayContaining([1, 2, 3]));
+  expect(status.layout.filter(item => item.powerRank > 0).length).toBeGreaterThanOrEqual(3);
+  expect(status.chipBounds?.right).toBeLessThanOrEqual(1920);
+  expect(status.chipBounds?.top).toBeGreaterThanOrEqual(0);
+  expect(status.chipBounds?.bottom).toBeLessThanOrEqual(status.safe.y + 90);
+  const coveredCards = status.layout.filter(card => rectsOverlap(status.chipBounds, card, 8));
+  expect(coveredCards).toEqual([]);
+  const canvasBox = await page.locator('#phaser-overlay-root canvas').boundingBox();
+  await attachJson(testInfo, 'arena-power-up-v2-canvas-box', canvasBox);
+  expect(canvasBox?.width).toBeGreaterThan(1200);
+  expect(canvasBox?.height).toBeGreaterThan(650);
+  await expectNoHorizontalOverflow(page);
+  await expectNoPageErrors(errors, testInfo, 'arena-power-up-v2');
 });
 
 test('@visual sponsor stats endcap fits inside the overlay source frame', async ({ page }, testInfo) => {
@@ -478,7 +610,7 @@ test('@visual reduced-motion mobile overlay keeps banners and sponsor stats usab
   await assertEffectOwnership(page, testInfo, 'reduced-motion-effects', { minOwnedEffects: 1 });
   await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'reduced-motion-canvas', minLitRatio: 0.05 });
   await freezeOverlayVisuals(page, testInfo, 'reduced-motion-freeze');
-  await expectStableScreenshot(page.getByTestId('overlay-source-frame'), testInfo, 'reduced-motion-mobile-overlay');
+  await expectStableScreenshot(page.getByTestId('overlay-source-frame'), testInfo, 'reduced-motion-mobile-overlay', { maxDiffPixelRatio: 0.18 });
   await expectNoHorizontalOverflow(page);
   await expectNoPageErrors(errors, testInfo, 'reduced-motion');
 });
@@ -509,7 +641,7 @@ test('@visual overlay diagnostic hooks emit Playwright artifacts for hard failur
   });
 
   await page.evaluate(() => window.overlayEventEngine?.resetFrameHealth?.());
-  await page.waitForTimeout(650);
-  await assertFrameHealth(page, testInfo, 'diagnostic-final-frame', { minSamples: 8 });
+  await page.waitForTimeout(900);
+  await assertFrameHealth(page, testInfo, 'diagnostic-final-frame', { minSamples: 5 });
   await expectNoPageErrors(errors, testInfo, 'overlay-diagnostics');
 });

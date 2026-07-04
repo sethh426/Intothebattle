@@ -37,7 +37,8 @@ export function createServerHarness(options = {}) {
   }
 
   async function start() {
-    if (server) return;
+    if (server && server.exitCode === null && !server.killed) return;
+    server = null;
     server = spawn(process.execPath, ['server.js'], {
       cwd: process.cwd(),
       env: {
