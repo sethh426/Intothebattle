@@ -2090,10 +2090,14 @@
         }
         const alive = this.playerGroups.filter(player => Number(player.data.health || 0) > 0).length;
         const kills = this.playerGroups.reduce((sum, player) => sum + Number(player.data.kills || 0), 0);
+        const leader = this.playerGroups
+          .slice()
+          .sort((a, b) => (Number(b.data.kills || 0) - Number(a.data.kills || 0)) || (Number(b.data.health || 0) - Number(a.data.health || 0)))[0];
+        const leaderName = leader ? String(leader.data.name || leader.playerId || 'Leader').slice(0, 12).toUpperCase() : 'WAITING';
         const reserve = Math.max(0, this.playerGroups.length - 5);
         const cap = this.add.container(this.W / 2, this.H + 260 * this.scaleUnit);
-        const w = this.W * 0.74;
-        const h = this.H * 0.26;
+        const w = this.W * 0.78;
+        const h = this.H * 0.28;
         const gfx = this.add.graphics();
         gfx.fillStyle(0x02040a, 0.91);
         gfx.fillRoundedRect(-w / 2, -h / 2, w, h, 22 * this.scaleUnit);
@@ -2109,22 +2113,23 @@
           align: 'center',
         }).setOrigin(0.5);
         const statItems = [
-          ['ACTIVE', String(alive || 0)],
+          ['PLAYERS', String(this.playerGroups.length || alive || 0)],
           ['KOs', String(kills || 0)],
-          ['HORDE', reserve > 0 ? `${reserve} RESERVE` : `${alive || 0} READY`],
+          ['PRESSURE', reserve > 0 ? `${reserve} RSV` : 'CLEAR'],
+          ['LEADER', leaderName],
         ].map((item, index) => {
-          const group = this.add.container((index - 1) * w * 0.27, h * 0.02);
+          const group = this.add.container((index - 1.5) * w * 0.215, h * 0.02);
           const plate = this.add.graphics();
           plate.fillStyle(index === 1 ? 0x111b2a : 0x10131d, 0.78);
-          plate.fillRoundedRect(-w * 0.12, -h * 0.19, w * 0.24, h * 0.34, 14 * this.scaleUnit);
+          plate.fillRoundedRect(-w * 0.092, -h * 0.19, w * 0.184, h * 0.34, 14 * this.scaleUnit);
           plate.lineStyle(Math.max(1, 2 * this.scaleUnit), index === 1 ? 0xf6c95b : 0x7afcff, 0.36);
-          plate.strokeRoundedRect(-w * 0.12, -h * 0.19, w * 0.24, h * 0.34, 14 * this.scaleUnit);
+          plate.strokeRoundedRect(-w * 0.092, -h * 0.19, w * 0.184, h * 0.34, 14 * this.scaleUnit);
           const value = this.add.text(0, -h * 0.035, item[1], {
             fontFamily: 'Arial Black, Impact, sans-serif',
-            fontSize: `${Math.round((index === 2 ? 42 : 58) * this.scaleUnit)}px`,
+            fontSize: `${Math.round((index === 3 ? 34 : 54) * this.scaleUnit)}px`,
             color: '#fff8e6',
             align: 'center',
-            fixedWidth: Math.round(w * 0.21),
+            fixedWidth: Math.round(w * 0.165),
             stroke: '#02040a',
             strokeThickness: Math.max(4, 6 * this.scaleUnit),
           }).setOrigin(0.5);
@@ -2147,7 +2152,7 @@
         this.sponsorLayer.add(cap);
         this.tweens.add({
           targets: cap,
-          y: this.H * 0.68,
+          y: this.H * 0.5,
           duration: 620,
           ease: 'Back.easeOut',
         });
