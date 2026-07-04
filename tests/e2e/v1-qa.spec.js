@@ -107,22 +107,43 @@ async function readActiveBannerDetails(page, selector = '.banner:not(.closing)')
     const frameRect = frame.getBoundingClientRect();
     const title = banner.querySelector('.banner-title');
     const label = banner.querySelector('[data-testid="command-banner-label"]');
-    const commandText = banner.querySelector('.banner-command-run span');
+    const commandText = banner.querySelector('[data-testid="command-banner-chip"] strong') || banner.querySelector('.banner-command-run span');
     const ticker = banner.querySelector('[data-testid="command-banner-ticker"]');
+    const rail = banner.querySelector('[data-testid="command-banner-rail"]');
     const row = banner.querySelector('[data-testid="command-banner-row"]');
     const titleRect = title?.getBoundingClientRect();
     const labelRect = label?.getBoundingClientRect();
     const commandRect = commandText?.getBoundingClientRect();
     const tickerRect = ticker?.getBoundingClientRect();
+    const railRect = rail?.getBoundingClientRect();
     const rowRect = row?.getBoundingClientRect();
     const layout = window.__overlayLegacyLayout || {};
     const titleStyle = title ? getComputedStyle(title) : null;
     const labelStyle = label ? getComputedStyle(label) : null;
     const commandStyle = commandText ? getComputedStyle(commandText) : null;
+    const chips = Array.from(banner.querySelectorAll('[data-testid="command-banner-chip"]'));
+    const visibleChips = chips.filter(chip => {
+      const style = getComputedStyle(chip);
+      const rect = chip.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    });
     return {
       text: (banner.textContent || '').replace(/\s+/g, ' ').trim(),
       bannerCount: document.querySelectorAll(wantedSelector).length,
       tickerCount: banner.querySelectorAll('[data-testid="command-banner-ticker"]').length,
+      railCount: banner.querySelectorAll('[data-testid="command-banner-rail"]').length,
+      chipCount: chips.length,
+      chipTexts: chips.map(chip => (chip.querySelector('strong')?.textContent || '').trim()),
+      visibleChipCount: visibleChips.length,
+      visibleChipTexts: visibleChips.map(chip => (chip.querySelector('strong')?.textContent || '').trim()),
+      clippedChips: visibleChips
+        .map(chip => {
+          const strong = chip.querySelector('strong');
+          return strong && (strong.scrollWidth > strong.clientWidth + 1 || strong.scrollHeight > strong.clientHeight + 1)
+            ? (strong.textContent || '').trim()
+            : '';
+        })
+        .filter(Boolean),
       rowCount: banner.querySelectorAll('[data-testid="command-banner-row"]').length,
       kickerCount: banner.querySelectorAll('.banner-kicker').length,
       metaCount: banner.querySelectorAll('.banner-meta').length,
@@ -150,6 +171,7 @@ async function readActiveBannerDetails(page, selector = '.banner:not(.closing)')
       commandFontSize: commandStyle ? Number.parseFloat(commandStyle.fontSize) : 0,
       commandFontWeight: commandStyle?.fontWeight || '',
       tickerHeight: tickerRect?.height || 0,
+      railHeight: railRect?.height || 0,
       rowHeight: rowRect?.height || 0,
       bannerCollisions: (layout.collisions || []).filter(item => JSON.stringify(item).toLowerCase().includes('banner')),
     };
@@ -367,15 +389,21 @@ test('all rich banner types stay centered, readable, and collision-free', async 
     expect(details.bannerCollisions, `${type} collisions: ${JSON.stringify(details, null, 2)}`).toEqual([]);
 
     if (type === 'commands') {
+      const expectedVisibleCommands = details.className.includes('is-nano')
+        ? ['!join', '!attack @name', '!shield', '!commands']
+        : ['!join', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
       expect(details.rowCount, 'command row count').toBe(1);
-      expect(details.tickerCount, 'command ticker count').toBe(1);
+      expect(details.railCount, 'command rail count').toBe(1);
+      expect(details.tickerCount, 'command ticker count').toBe(0);
+      expect(details.chipCount, 'command chip count').toBeGreaterThanOrEqual(7);
+      expect(details.visibleChipTexts, 'visible command chips').toEqual(expectedVisibleCommands);
+      expect(details.clippedChips, 'command chip clipping').toEqual([]);
       expect(details.kickerCount, 'command kicker rows').toBe(0);
       expect(details.metaCount, 'command meta rows').toBe(0);
       expect(details.titleCount, 'command title rows').toBe(0);
       expect(details.labelHeight, 'command label readable height').toBeGreaterThan(10);
       expect(details.commandHeight, 'command text readable height').toBeGreaterThan(10);
-      expect(Math.abs(details.labelFontSize - details.commandFontSize), 'command text matches label size').toBeLessThanOrEqual(1);
-      expect(String(details.labelFontWeight), 'command label weight').toBe(String(details.commandFontWeight));
+      expect(details.commandFontSize, 'command chip font size').toBeGreaterThanOrEqual(8);
     } else {
       expect(details.titleCount, `${type} title row`).toBe(1);
       expect(details.titleHeight, `${type} title readable height`).toBeGreaterThan(12);
@@ -389,7 +417,7 @@ test('all rich banner types stay centered, readable, and collision-free', async 
   expect(errors).toEqual([]);
 });
 
-test('command banner shows one scrolling viewer command ticker', async ({ context, page }, testInfo) => {
+test('command banner shows one static viewer command rail', async ({ context, page }, testInfo) => {
   await addAuthCookie(context);
   const errors = await watchPage(page);
   const params = new URLSearchParams({
@@ -421,7 +449,7 @@ test('command banner shows one scrolling viewer command ticker', async ({ contex
 
   await page.waitForFunction(() => {
     const banners = Array.from(document.querySelectorAll('.banner.commands:not(.closing)'));
-    return banners.length === 1 && Boolean(banners[0].querySelector('[data-testid="command-banner-ticker"]'));
+    return banners.length === 1 && Boolean(banners[0].querySelector('[data-testid="command-banner-rail"]'));
   }, null, { timeout: 7000 });
   await page.waitForTimeout(350);
 
@@ -430,29 +458,39 @@ test('command banner shows one scrolling viewer command ticker', async ({ contex
   expect(details).toBeTruthy();
   expect(details.bannerCount).toBe(1);
   expect(details.rowCount).toBe(1);
-  expect(details.tickerCount).toBe(1);
+  expect(details.railCount).toBe(1);
+  expect(details.tickerCount).toBe(0);
+  expect(details.chipCount).toBe(7);
   expect(details.kickerCount).toBe(0);
   expect(details.metaCount).toBe(0);
   expect(details.titleCount).toBe(0);
-  for (const text of ['PLAY FROM CHAT', '!join', '!attack @name', '!attack @horde', '!attack @boss', '!heal @name', '!shield', '!commands']) {
+  const expectedCommands = ['!join', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
+  const expectedVisibleCommands = details.className.includes('is-nano')
+    ? ['!join', '!attack @name', '!shield', '!commands']
+    : expectedCommands;
+  for (const text of ['PLAY FROM CHAT', ...expectedCommands]) {
     expect(details.text).toContain(text);
   }
+  expect(details.chipTexts).toEqual(expectedCommands);
+  expect(details.visibleChipTexts).toEqual(expectedVisibleCommands);
+  expect(details.clippedChips).toEqual([]);
   expect(details.text).not.toContain('CHAT COMMANDS');
   expect(details.text).not.toContain('Type these in TikTok chat');
+  expect(details.text).not.toContain('Basic attacks:');
+  expect(details.text).not.toContain('Effects:');
   expect(details.left).toBeGreaterThanOrEqual(details.frameLeft - 1);
   expect(details.right).toBeLessThanOrEqual(details.frameRight + 1);
   expect(details.top).toBeGreaterThanOrEqual(details.frameTop - 1);
   expect(details.bottom).toBeLessThanOrEqual(details.frameBottom + 1);
   expect(details.labelHeight).toBeGreaterThan(10);
   expect(details.commandHeight).toBeGreaterThan(10);
-  expect(details.tickerHeight).toBeGreaterThan(20);
+  expect(details.railHeight).toBeGreaterThan(20);
   expect(details.rowHeight).toBeGreaterThan(24);
-  expect(Math.abs(details.labelFontSize - details.commandFontSize)).toBeLessThanOrEqual(1);
-  expect(String(details.labelFontWeight)).toBe(String(details.commandFontWeight));
+  expect(details.commandFontSize).toBeGreaterThanOrEqual(8);
   expect(details.bannerCollisions, JSON.stringify(details, null, 2)).toEqual([]);
 
   await expectNoHorizontalOverflow(page);
-  await capture(page, testInfo, 'qa-overlay-command-banner-ticker');
+  await capture(page, testInfo, 'qa-overlay-command-banner-rail');
   expect(errors).toEqual([]);
 });
 

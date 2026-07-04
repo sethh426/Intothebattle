@@ -57,7 +57,7 @@ export const VIEWER_COMMAND_SHOWCASE = Object.freeze({
   kicker: 'PLAYER COMMANDS',
   title: 'PLAY FROM CHAT',
   meta: 'Type these in TikTok chat',
-  durationMs: 18000,
+  durationMs: 13000,
   charge: 86,
   priority: 88,
   tickerItems: VIEWER_COMMAND_TICKER_ITEMS,

@@ -408,18 +408,22 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.commands .banner-signal { width:52px; height:46px; }
 .banner.commands .banner-copy { justify-items:stretch; text-align:left; gap:0; }
 .banner-command-strip {
-  display:flex; align-items:center; width:100%; min-width:0; height:46px; overflow:hidden;
+  display:grid; grid-template-columns:minmax(146px,0.18fr) minmax(0,1fr); align-items:stretch; width:100%; min-width:0; min-height:50px; overflow:hidden;
   border:1px solid rgba(var(--banner-accent-rgb),0.32);
   background:linear-gradient(90deg, rgba(0,0,0,0.38), rgba(var(--banner-accent-rgb),0.08), rgba(0,0,0,0.3));
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.13),0 0 18px rgba(var(--banner-accent-rgb),0.12);
 }
 .banner-command-label {
-  flex:0 0 auto; display:inline-flex; align-items:center; align-self:stretch;
+  display:inline-flex; align-items:center; align-self:stretch;
   padding:0 18px; color:#fff; font-size:22px; line-height:1; font-weight:950;
   letter-spacing:.35px; white-space:nowrap; text-transform:uppercase;
   text-shadow:0 0 18px rgba(255,255,255,0.34),0 2px 8px rgba(0,0,0,0.9);
   border-right:1px solid rgba(var(--banner-accent-rgb),0.28);
   background:linear-gradient(90deg, rgba(var(--banner-accent-rgb),0.16), rgba(255,255,255,0.035));
+}
+.banner-command-rail {
+  display:grid; grid-template-columns:repeat(7,minmax(86px,1fr)); align-items:stretch; gap:5px;
+  min-width:0; width:100%; padding:5px; overflow:hidden;
 }
 .banner-command-ticker {
   position:relative; flex:1 1 auto; min-width:0; max-width:100%; height:100%; overflow:hidden;
@@ -462,9 +466,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   white-space:nowrap; overflow:hidden;
 }
 .banner-command-chip strong,
-.banner-command-chip span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.banner-command-chip span { display:block; min-width:0; overflow:hidden; text-align:center; text-overflow:ellipsis; white-space:nowrap; }
 .banner-command-chip strong { width:100%; color:var(--banner-accent); font-size:12.5px; font-weight:950; }
 .banner-command-chip span { width:100%; color:#c6cedd; font-size:8px; font-weight:800; }
+.banner-command-rail .banner-command-chip { min-height:40px; padding:5px 6px; }
+.banner-command-rail .banner-command-chip strong { font-size:13px; letter-spacing:0; text-transform:none; }
+.banner-command-rail .banner-command-chip span { font-size:8.5px; text-transform:uppercase; letter-spacing:0; }
 .banner.legendary {
   --banner-accent:#ffe36f; --banner-accent-rgb:255,227,111; --banner-accent-soft:rgba(255,174,41,0.24);
   box-shadow:
@@ -489,13 +496,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.commands.is-compact { min-height:54px; max-height:62px; padding:0 10px; grid-template-columns:1fr; }
 .banner.commands.is-compact .banner-signal,
 .banner.commands.is-compact .banner-meter { display:none; }
-.banner.commands.is-compact .banner-command-strip { height:40px; }
+.banner.commands.is-compact .banner-command-strip { min-height:40px; grid-template-columns:minmax(112px,0.22fr) minmax(0,1fr); }
 .banner.commands.is-compact .banner-command-label,
-.banner.commands.is-compact .banner-command-run span { font-size:18px; }
+.banner.commands.is-compact .banner-command-run span { font-size:16px; }
+.banner.commands.is-compact .banner-command-label { padding:0 12px; }
 .banner.commands.is-compact .banner-command-run { height:40px; padding:0 14px; gap:14px; }
 .banner.commands.is-compact .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(84px,1fr)); max-height:24px; gap:3px; }
-.banner.commands.is-compact .banner-command-chip { min-height:20px; padding:2px 5px; font-size:8px; letter-spacing:.16px; }
-.banner.commands.is-compact .banner-command-chip strong { font-size:8px; }
+.banner.commands.is-compact .banner-command-rail { grid-template-columns:repeat(7,minmax(58px,1fr)); gap:3px; padding:4px; }
+.banner.commands.is-compact .banner-command-chip { min-height:30px; padding:2px 5px; font-size:8px; letter-spacing:0; }
+.banner.commands.is-compact .banner-command-chip strong { font-size:10px; line-height:1.02; white-space:normal; overflow:visible; text-overflow:clip; }
 .banner.commands.is-compact .banner-command-chip span { display:none; }
 .banner.is-micro {
   min-height:48px; max-height:56px; padding:0 9px; gap:6px;
@@ -512,15 +521,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.commands.is-micro { min-height:44px; max-height:52px; grid-template-columns:1fr; }
 .banner.commands.is-micro .banner-signal,
 .banner.commands.is-micro .banner-meter { display:none; }
-.banner.commands.is-micro .banner-command-strip { height:34px; }
+.banner.commands.is-micro .banner-command-strip { min-height:34px; grid-template-columns:minmax(88px,0.22fr) minmax(0,1fr); }
 .banner.commands.is-micro .banner-command-label,
-.banner.commands.is-micro .banner-command-run span { font-size:15px; }
-.banner.commands.is-micro .banner-command-label { padding:0 12px; }
+.banner.commands.is-micro .banner-command-run span { font-size:13px; }
+.banner.commands.is-micro .banner-command-label { padding:0 8px; }
 .banner.commands.is-micro .banner-command-run { height:34px; padding:0 12px; gap:12px; }
 .banner.commands.is-micro .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(64px,1fr)); max-height:16px; gap:2px; }
-.banner.commands.is-micro .banner-command-chip { min-height:14px; padding:1px 4px; font-size:7px; }
-.banner.commands.is-micro .banner-command-chip strong { font-size:7px; }
-.banner.commands.is-nano { min-height:34px; max-height:40px; grid-template-columns:1fr; }
+.banner.commands.is-micro .banner-command-rail { grid-template-columns:repeat(7,minmax(44px,1fr)); gap:2px; padding:3px; }
+.banner.commands.is-micro .banner-command-chip { min-height:26px; padding:1px 3px; font-size:7px; }
+.banner.commands.is-micro .banner-command-chip strong { font-size:8px; line-height:1.02; white-space:normal; overflow:visible; text-overflow:clip; }
+.banner.commands.is-micro .banner-command-chip span { display:none; }
+.banner.commands.is-nano { min-height:24px; max-height:26px; grid-template-columns:1fr; }
 .banner.is-nano {
   min-height:34px; max-height:40px; padding:0 6px; gap:5px;
   grid-template-columns:minmax(0,1fr) 3px;
@@ -533,11 +544,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.is-nano .banner-title,
 .banner.legendary.is-nano .banner-title { font-size:13px; line-height:1; letter-spacing:.1px; }
 .banner.is-nano .banner-command-grid { display:none; }
-.banner.commands.is-nano .banner-command-strip { height:28px; }
+.banner.commands.is-nano .banner-command-strip { min-height:23px; grid-template-columns:minmax(46px,0.15fr) minmax(0,1fr); }
 .banner.commands.is-nano .banner-command-label,
-.banner.commands.is-nano .banner-command-run span { font-size:12px; }
-.banner.commands.is-nano .banner-command-label { padding:0 9px; }
-.banner.commands.is-nano .banner-command-run { height:28px; padding:0 9px; gap:9px; }
+.banner.commands.is-nano .banner-command-run span { font-size:8px; }
+.banner.commands.is-nano .banner-command-label { justify-content:center; padding:0 4px; white-space:normal; text-align:center; line-height:1; }
+.banner.commands.is-nano .banner-command-run { height:23px; padding:0 8px; gap:8px; }
+.banner.commands.is-nano .banner-command-rail { grid-template-columns:.66fr 1.5fr .82fr 1.28fr; gap:2px; padding:1px; }
+.banner.commands.is-nano .banner-command-chip:not(.banner-command-primary) { display:none; }
+.banner.commands.is-nano .banner-command-chip { min-height:18px; padding:0 3px; border-color:rgba(var(--banner-accent-rgb),0.22); background:rgba(var(--banner-accent-rgb),0.08); }
+.banner.commands.is-nano .banner-command-chip strong { font-size:10.5px; line-height:1; letter-spacing:0; white-space:nowrap; overflow:visible; text-overflow:clip; }
+.banner.commands.is-nano .banner-command-chip span { display:none; }
 .banner.is-nano .banner-meter { width:3px; height:20px; }
 @keyframes cyberBannerIn {
   0% { opacity:0; transform:translate(-50%,-14px) scaleX(.72); filter:blur(5px) brightness(1.45); }
@@ -599,16 +615,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .banner.commands:not(.is-nano) { min-height:50px; max-height:60px; grid-template-columns:1fr; }
   .banner.commands:not(.is-nano) .banner-signal,
   .banner.commands:not(.is-nano) .banner-meter { display:none; }
-  .banner.commands .banner-command-strip { height:38px; }
+  .banner.commands .banner-command-strip { min-height:38px; grid-template-columns:minmax(104px,0.24fr) minmax(0,1fr); }
   .banner.commands .banner-command-label,
-  .banner.commands .banner-command-run span { font-size:16px; }
+  .banner.commands .banner-command-run span { font-size:13px; }
   .banner.commands .banner-command-label { padding:0 12px; }
   .banner.commands .banner-command-run { height:38px; padding:0 12px; gap:12px; }
   .banner.commands .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(72px,1fr)); max-height:22px; gap:3px; }
-  .banner.commands .banner-command-chip { min-height:18px; padding:1px 4px; font-size:7px; }
-  .banner.commands .banner-command-chip strong { font-size:7px; }
+  .banner.commands .banner-command-rail { grid-template-columns:repeat(7,minmax(44px,1fr)); gap:2px; padding:3px; }
+  .banner.commands .banner-command-chip { min-height:26px; padding:1px 3px; font-size:7px; }
+  .banner.commands .banner-command-chip strong { font-size:8px; }
   .banner.commands .banner-command-chip span { display:none; }
-  .banner.commands.is-nano { min-height:34px; max-height:40px; }
+  .banner.commands.is-nano { min-height:24px; max-height:26px; }
 }
 @keyframes battleReturnFrame {
   0%   { filter:brightness(1.35) saturate(1.25); box-shadow:0 0 0 2px rgba(255,255,255,0.55),0 0 80px rgba(246,201,91,0.35),0 0 150px rgba(85,231,255,0.22); }
@@ -4653,6 +4670,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       `;
   }
 
+  function bannerCommandRailHtml(commands) {
+    if (!Array.isArray(commands) || !commands.length) return '';
+    const nanoPrimaryCommands = new Set(['!join', '!attack @name', '!shield', '!commands']);
+    return `
+        <span class="banner-command-rail" data-testid="command-banner-rail">
+          ${commands.map(entry => {
+            const commandText = String(entry.command || '');
+            const primaryClass = nanoPrimaryCommands.has(commandText.toLowerCase()) ? ' banner-command-primary' : '';
+            return `
+            <span class="banner-command-chip${primaryClass}" data-testid="command-banner-chip">
+              <strong>${escapeHtml(entry.command)}</strong>
+              ${entry.detail ? `<span>${escapeHtml(entry.detail)}</span>` : ''}
+            </span>
+          `;
+          }).join('')}
+        </span>
+      `;
+  }
+
   function bannerCommandTickerHtml(items) {
     if (!Array.isArray(items) || !items.length) return '';
     const itemHtml = items.map(item => `<span>${escapeHtml(item)}</span>`).join('');
@@ -4667,11 +4703,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function bannerCommandStripHtml(item) {
-    if (!item?.tickerItems?.length) return '';
+    if (!item?.commands?.length && !item?.tickerItems?.length) return '';
     return `
         <span class="banner-command-strip" data-testid="command-banner-row">
           <span class="banner-command-label" data-testid="command-banner-label">${item.titleHtml || 'PLAY FROM CHAT'}</span>
-          ${bannerCommandTickerHtml(item.tickerItems)}
+          ${bannerCommandRailHtml(item.commands) || bannerCommandTickerHtml(item.tickerItems)}
         </span>
       `;
   }
@@ -4680,7 +4716,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const el = document.createElement('div');
     item.el = el;
     activeBanner = item;
-    const commandStrip = item.cls === 'commands' && item.tickerItems?.length;
+    const commandStrip = item.cls === 'commands' && (item.commands?.length || item.tickerItems?.length);
     el.className = `banner ${item.cls} ${commandStrip ? 'command-strip' : ''} ${item.transition || ''}`;
     el.style.setProperty('--banner-duration', `${item.duration}ms`);
     el.style.setProperty('--banner-charge', `${item.charge}%`);
@@ -4769,6 +4805,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       transition: options.transition || 'transition-signal',
     };
     if (normalized === 'commands') {
+      base.commands = Array.isArray(options.commands) && options.commands.length
+        ? options.commands
+        : [
+          { command: '!join', detail: 'enter arena' },
+          { command: '!attack @name', detail: 'hit a player' },
+          { command: '!attack @horde', detail: 'hit The Horde' },
+          { command: '!attack @boss', detail: 'hit the boss' },
+          { command: '!shield', detail: 'block damage' },
+          { command: '!heal @name', detail: 'heal ally' },
+          { command: '!commands', detail: 'show help' },
+        ];
       base.tickerItems = Array.isArray(options.tickerItems) && options.tickerItems.length
         ? options.tickerItems
         : [
@@ -4855,11 +4902,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const frame = canvasRectToOverlay(stage.frame);
     const bannerZone = canvasRectToOverlay(stage.zones.banner);
     const playersZone = canvasRectToOverlay(stage.zones.players);
-    const effectsZone = canvasRectToOverlay(stage.zones.effects);
     const isCommandBanner = el.classList.contains('commands');
     const gapX = stage.gap * scale.x;
     const gapY = stage.gap * scale.y;
-    const topBandY = frame.y + (stage.frame.h < 420 || frame.h < 360 ? gapY * 0.42 : gapY);
+    const topBandY = isCommandBanner
+      ? 0
+      : frame.y + (stage.frame.h < 420 || frame.h < 360 ? gapY * 0.42 : gapY);
     let playerTopLimit = playersZone.y;
     try {
       const visiblePlayers = topPlayers();
@@ -4874,19 +4922,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     } catch (_err) {}
     const topBandBottom = Math.max(topBandY + 1, playerTopLimit - gapY * 1.35);
     const topBand = makeRect(frame.x + gapX, topBandY, Math.max(1, frame.w - gapX * 2), Math.max(1, topBandBottom - topBandY));
-    const lowerBandY = Math.max(playersZone.bottom + gapY, effectsZone.y);
-    let lowerBandBottom = Math.min(frame.bottom - gapY, effectsZone.bottom);
-    try {
-      if (hordePlayer()) {
-        const hordeLayout = getHordeLayout();
-        const hordeTop = canvasRectToOverlay(makeRect(0, hordeLayout.barY, 1, 1)).y;
-        lowerBandBottom = Math.min(lowerBandBottom, hordeTop - gapY * 1.2);
-      }
-    } catch (_err) {}
-    const lowerCommandBand = makeRect(frame.x + gapX, lowerBandY, Math.max(1, frame.w - gapX * 2), Math.max(1, lowerBandBottom - lowerBandY));
-    const compactCommandStage = frame.h < 650 || frame.w < 1100;
-    const useLowerCommandBand = isCommandBanner && compactCommandStage && lowerCommandBand.h >= 24;
-    const placementZone = useLowerCommandBand ? lowerCommandBand : topBand;
+    const placementZone = topBand;
     const forceNano = stage.frame.h < 260 || stage.frame.w < 430 || placementZone.h < 42;
     const zone = forceNano ? placementZone : bannerZone;
     const verticalZone = placementZone;
@@ -4926,8 +4962,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const halfWidth = rect.width / 2;
     const centerX = clampNumber(frame.x + frame.w / 2, placementZone.x + halfWidth, placementZone.right - halfWidth);
     const maxTop = Math.max(placementZone.y, placementZone.bottom - rect.height);
-    const dropY = Math.max(0, frame.h * 0.05);
-    const top = clampNumber(verticalZone.y + dropY + (verticalZone.h - rect.height) / 2, placementZone.y, maxTop);
+    const dropY = isCommandBanner ? 0 : Math.max(0, frame.h * 0.05);
+    const top = isCommandBanner
+      ? placementZone.y
+      : clampNumber(verticalZone.y + dropY + (verticalZone.h - rect.height) / 2, placementZone.y, maxTop);
     el.style.left = `${centerX}px`;
     el.style.top = `${top}px`;
   }
