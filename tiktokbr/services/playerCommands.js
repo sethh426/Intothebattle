@@ -41,8 +41,10 @@ export const DEPRECATED_ATTACK_COMMANDS = Object.freeze([
 ]);
 
 export const VIEWER_COMMAND_TICKER_ITEMS = Object.freeze([
-  'Quick start: !join | !attack @name | !shield | !heal @name',
-  'Targets: !attack @name | !attack @horde | !attack @boss',
+  'Quick start: !join | @name to attack | !shield | !heal @name',
+  'Targets: @name | @horde | @boss',
+  'Regular chat: sends a random 5-damage attack',
+  'Explicit attacks: !attack @name | !attack @horde | !attack @boss',
   'Join: !join / !spawn / !play',
   'Icon: !emoji <emoji> or !<emoji>',
   'Basic attacks: !attack @name / !hit @name / !strike @name / !fight @name',
@@ -63,7 +65,9 @@ export const VIEWER_COMMAND_SHOWCASE = Object.freeze({
   tickerItems: VIEWER_COMMAND_TICKER_ITEMS,
   commands: Object.freeze([
     { command: '!join', detail: 'enter arena' },
-    { command: '!attack @name', detail: 'hit a player' },
+    { command: '@name', detail: 'hit a player' },
+    { command: 'chat', detail: 'weak random attack' },
+    { command: '!attack @name', detail: 'stronger player hit' },
     { command: '!attack @horde', detail: 'hit The Horde' },
     { command: '!attack @boss', detail: 'hit the boss' },
     { command: '!shield', detail: 'block damage' },
@@ -72,14 +76,16 @@ export const VIEWER_COMMAND_SHOWCASE = Object.freeze({
   ]),
 });
 
-export function parseAttackCommand(text = '') {
+export function parseAttackCommand(text = '', options = {}) {
   const value = String(text || '');
   const explicit = value.match(/(?:^|\s)[!/](\S+)/i);
-  const rawCommand = explicit?.[1] || value.match(/\b([a-z][a-z0-9_-]{1,24})\b/i)?.[1] || '';
+  const mentionlessValue = value.replace(/@([^\s@]+)/g, ' ');
+  const rawCommand = explicit?.[1] || (options.explicitOnly ? '' : mentionlessValue.match(/\b([a-z][a-z0-9_-]{1,24})\b/i)?.[1]) || '';
   const normalized = String(rawCommand || '').toLowerCase().replace(/[^\w-].*$/, '');
   if (PLAYER_ATTACK_COMMANDS[normalized]) return PLAYER_ATTACK_COMMANDS[normalized];
+  if (options.explicitOnly) return null;
 
-  const words = value.toLowerCase().match(/[a-z][a-z0-9_-]*/g) || [];
+  const words = mentionlessValue.toLowerCase().match(/[a-z][a-z0-9_-]*/g) || [];
   const naturalEffect = words.find(word => PLAYER_ATTACK_COMMANDS[word]);
   return naturalEffect ? PLAYER_ATTACK_COMMANDS[naturalEffect] : null;
 }

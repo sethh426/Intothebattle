@@ -579,6 +579,7 @@ const CFG = {
   GIFT_MESSAGE_BOOST_MULTIPLIER:    3,
   GIFT_MESSAGE_BOOST_DURATION_MS: 45000,
   MESSAGE_LASER_MULTIPLIER:       1.5,
+  PASSIVE_COMMENT_DAMAGE:            5,
   ATTACK_VARIANCE:                0.4,
   RESPAWN_DELAY_MS:             60000,
   IDLE_TIMEOUT_MS:             600000,
@@ -5268,16 +5269,21 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
 // ────────────────────────────────
 // DEAL DAMAGE (enriched)
 // ────────────────────────────────
-function dealDamage(room, attackerId, targetId, multiplier = 1) {
+function dealDamage(room, attackerId, targetId, multiplier = 1, options = {}) {
   const attacker = room.players[attackerId];
   const target   = room.players[targetId];
 
   if (!attacker?.alive || !target?.alive || attackerId === targetId) return null;
 
-  let dmg = Math.floor(
-    attacker.strength * multiplier *
-    (1 - CFG.ATTACK_VARIANCE / 2 + Math.random() * CFG.ATTACK_VARIANCE)
-  );
+  const fixedDamage = Number.isFinite(Number(options.fixedDamage))
+    ? Math.max(1, Math.round(Number(options.fixedDamage)))
+    : null;
+  let dmg = fixedDamage != null
+    ? fixedDamage
+    : Math.floor(
+      attacker.strength * multiplier *
+      (1 - CFG.ATTACK_VARIANCE / 2 + Math.random() * CFG.ATTACK_VARIANCE)
+    );
   let shieldAbsorbed = 0;
   if (target.shieldUntil && target.shieldUntil > Date.now()) {
     shieldAbsorbed = Math.min(Math.max(1, Math.ceil(dmg * 0.55)), Math.max(0, dmg - 1));
@@ -5347,14 +5353,16 @@ function dealDamage(room, attackerId, targetId, multiplier = 1) {
     }, CFG.RESPAWN_DELAY_MS);
   }
 
-  console.log(`⚡ @${attackerId} → @${targetId} for ${dmg} dmg${killed ? ' (KILL!)' : ''}${multiplier > 1 ? ' (SPECIAL!)' : ''}`);
+  const special = options.special != null ? Boolean(options.special) : fixedDamage == null && multiplier > 1;
+  console.log(`⚡ @${attackerId} → @${targetId} for ${dmg} dmg${killed ? ' (KILL!)' : ''}${special ? ' (SPECIAL!)' : ''}`);
 
   const baseResult = {
     attacker: attackerId,
     target: targetId,
     damage: dmg,
     killed,
-    special: multiplier > 1,
+    special,
+    passiveCommentAttack: Boolean(options.passiveCommentAttack),
     shielded: shieldAbsorbed > 0,
     shieldAbsorbed,
   };
@@ -5898,9 +5906,11 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
   const mentions = extractMentions(text);
   const bossMentioned = Boolean(room?.bossWave?.active && textTargetsBossWave(text, mentions));
   const hordeRequested = textTargetsHorde(text, mentions);
+  const targetRequested = Boolean(mentions.length || bossMentioned || hordeRequested);
 
-  const attackCommand = parseAttackCommand(text);
+  const attackCommand = parseAttackCommand(text, { explicitOnly: !targetRequested });
   const powerCommand = parseArenaPowerCommand(text);
+  const passiveCommentAttack = !targetRequested && !attackCommand && !powerCommand;
   let requestedEffect = null;
   let commandMultiplier = 1;
   let commandDescription = null;
@@ -5954,7 +5964,7 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
     return damageBossWave(room, attackerId, attackerNick, multiplier, requestedEffect || 'laser', text, { powerAttack });
   }
 
-  const emitResolvedAttack = (actualTarget, visualTarget = null, snapshot = null) => {
+  const emitResolvedAttack = (actualTarget, visualTarget = null, snapshot = null, attackOptions = {}) => {
     if (!actualTarget?.uniqueId || actualTarget.uniqueId === attackerId) return null;
     if (!room.players[actualTarget.uniqueId]?.alive) {
       spawnPlayer(room, actualTarget.uniqueId, actualTarget.nickname);
@@ -5966,17 +5976,19 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
     const visualId = visualTarget?.id || actualTarget.uniqueId;
     const visualNick = visualTarget?.nickname || actualTarget.nickname || actualTarget.uniqueId;
     const targetScope = visualTarget?.scope || actualTargetScope;
-    const result = dealDamage(room, attackerId, actualTarget.uniqueId, multiplier);
+    const result = dealDamage(room, attackerId, actualTarget.uniqueId, multiplier, attackOptions);
     if (!result) return null;
+    const eventDescription = attackOptions.commandDescription || commandDescription || requestedEffect;
 
     result.effect = requestedEffect;
     result.special = isSpecialCommand || Boolean(powerAttack);
-    result.commandDescription = commandDescription || requestedEffect;
+    result.commandDescription = eventDescription;
     result.giftBoosted = boostActive;
     result.attackerNick = attackerNick;
     result.targetNick = visualNick;
     result.attackerScope = attackerScope;
     result.targetScope = targetScope;
+    result.passiveCommentAttack = Boolean(attackOptions.passiveCommentAttack);
     if (visualId !== actualTarget.uniqueId) {
       result.actualTarget = actualTarget.uniqueId;
       result.actualTargetNick = actualTarget.nickname || actualTarget.uniqueId;
@@ -6001,11 +6013,12 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
       intensity: result.intensity,
       critical: result.critical,
       giftBoosted: boostActive,
-      commandDescription: commandDescription || requestedEffect,
+      commandDescription: eventDescription,
       laserColor: result.laserColor,
       shotSpeed: result.shotSpeed,
       attackerScope,
       targetScope,
+      passiveCommentAttack: Boolean(attackOptions.passiveCommentAttack),
       poweredAttack: Boolean(powerAttack),
       powerRank: powerAttack?.rank,
       powerLabel: powerAttack?.label,
@@ -6015,13 +6028,21 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
     });
     if (powerAttack) emitArenaPoweredAttack(room, result, powerAttack);
 
-    const cmdLabel = commandDescription || requestedEffect || 'MESSAGE';
+    const cmdLabel = eventDescription || 'MESSAGE';
     console.log(`Chat attack: ${attackerNick} ${cmdLabel} -> ${visualNick} for ${result.damage} hp${boostActive ? ' (gift boost)' : ''}`);
     return { handled: true, result, target: visualId, actualTarget: actualTarget.uniqueId };
   };
 
   const baseSnapshot = getBattleSideSnapshot(room);
   const attackerScope = battleScopeForPlayer(room, attackerId, baseSnapshot);
+  const passiveOptions = passiveCommentAttack
+    ? {
+      fixedDamage: CFG.PASSIVE_COMMENT_DAMAGE,
+      passiveCommentAttack: true,
+      special: false,
+      commandDescription: 'CHAT POKE',
+    }
+    : {};
 
   if (!mentions.length) {
     if (hordeRequested) {
@@ -6031,10 +6052,17 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
     }
     if (attackerScope === 'horde') {
       const target = chooseTopBattleTarget(room, attackerId, baseSnapshot);
-      const result = emitResolvedAttack(target, null, baseSnapshot);
+      const result = emitResolvedAttack(target, null, baseSnapshot, passiveOptions);
       return result || { handled: false, reason: 'No top-five target available' };
     }
-    return { handled: false, reason: 'No @mention found' };
+    const hordeTarget = chooseHordeDamageTarget(room, attackerId, baseSnapshot);
+    if (hordeTarget) {
+      const result = emitResolvedAttack(hordeTarget, { id: SERVER_HORDE_ID, nickname: 'The Horde', scope: 'horde' }, baseSnapshot, passiveOptions);
+      return result || { handled: false, reason: 'No horde target available' };
+    }
+    const target = chooseTopBattleTarget(room, attackerId, baseSnapshot);
+    const result = emitResolvedAttack(target, null, baseSnapshot, passiveOptions);
+    return result || { handled: false, reason: 'No random target available' };
   }
 
   for (const mention of mentions) {
@@ -7886,7 +7914,7 @@ function runRoomOverlayTest(room, action) {
 
 function runRoomOverlayTestAction(room, normalizedAction) {
   ensureRoomLiveTestPlayers(room, {
-    includeHordeReserve: normalizedAction === 'boss' || normalizedAction === 'burst' || normalizedAction === 'power-up',
+    includeHordeReserve: normalizedAction === 'boss' || normalizedAction === 'burst' || normalizedAction === 'power-up' || normalizedAction === 'comment',
   });
   const attackerId = 'arena_orion';
   const targetId = 'arena_blaze';
@@ -7894,6 +7922,12 @@ function runRoomOverlayTestAction(room, normalizedAction) {
 
   if (normalizedAction === 'attack') {
     const result = handleBattleAttack(room, attackerId, 'Orion', '!laser @arena_blaze');
+    emitRoomEvent(room, 'gameState', room.players);
+    return { success: true, action: normalizedAction, result };
+  }
+
+  if (normalizedAction === 'comment') {
+    const result = handleBattleAttack(room, attackerId, 'Orion', 'hello arena');
     emitRoomEvent(room, 'gameState', room.players);
     return { success: true, action: normalizedAction, result };
   }

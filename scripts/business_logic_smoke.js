@@ -250,6 +250,10 @@ function testPlayerCommandCatalog() {
   assert.equal(parseAttackCommand('!fight @boss')?.effect, 'laser');
   assert.equal(parseAttackCommand('!railgun @boss')?.effect, 'railgun');
   assert.equal(parseAttackCommand('!nuke @horde')?.effect, 'explosion');
+  assert.equal(parseAttackCommand('@nova'), null, 'bare mention should not parse as a NOVA command');
+  assert.equal(parseAttackCommand('hello @nova'), null, 'mention target text should not be scanned as command text');
+  assert.equal(parseAttackCommand('this is fire', { explicitOnly: true }), null, 'plain comments should not become full-power commands');
+  assert.equal(parseAttackCommand('!fire', { explicitOnly: true })?.effect, 'fire');
 
   for (const command of DEPRECATED_ATTACK_COMMANDS) {
     assert.equal(PLAYER_ATTACK_COMMANDS[command], undefined, `${command} must not be active`);
@@ -258,6 +262,9 @@ function testPlayerCommandCatalog() {
 
   const commandText = viewerCommandText();
   for (const expected of ['!join', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands']) {
+    assert.ok(commandText.includes(expected), `viewer command text should include ${expected}`);
+  }
+  for (const expected of ['@name to attack', 'random 5-damage attack']) {
     assert.ok(commandText.includes(expected), `viewer command text should include ${expected}`);
   }
 

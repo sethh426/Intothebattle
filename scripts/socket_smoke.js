@@ -505,6 +505,30 @@ try {
   const dashboardTestRoster = await dashboardTestRosterPromise;
   assert(dashboardTestRoster.bySource?.test > 0, 'overlay test players should be tagged as test source');
 
+  const passiveCommentAttackPromise = waitForEvent(
+    primaryOverlay,
+    'attack',
+    payload => payload?.passiveCommentAttack === true && payload?.damage === 5 && payload?.targetScope === 'horde',
+    10000
+  );
+  const passiveCommentDamagePromise = waitForEvent(
+    primaryOverlay,
+    'commentDamage',
+    payload => payload?.passiveCommentAttack === true && payload?.damage === 5 && payload?.commandDescription === 'CHAT POKE',
+    10000
+  );
+  const commentOverlayTestRes = await request('/api/overlay/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(commentOverlayTestRes.status === 200, `overlay comment test should return 200, got ${commentOverlayTestRes.status}`);
+  const commentOverlayTest = await commentOverlayTestRes.json();
+  const passiveCommentResult = commentOverlayTest.result?.result || commentOverlayTest.result;
+  assert(passiveCommentResult?.passiveCommentAttack === true, 'plain comment overlay test should mark passiveCommentAttack');
+  assert(passiveCommentResult?.damage === 5, `plain comment overlay test should deal 5 damage, got ${passiveCommentResult?.damage}`);
+  await passiveCommentAttackPromise;
+  await passiveCommentDamagePromise;
+
   const overlayTestPowerStartedPromise = waitForEvent(primaryOverlay, 'arenaPowerUp', payload => payload.type === 'started' && payload.active === true, 10000);
   const overlayTestLeaderboardPromise = waitForEvent(
     primaryOverlay,

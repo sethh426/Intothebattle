@@ -4809,7 +4809,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         ? options.commands
         : [
           { command: '!join', detail: 'enter arena' },
-          { command: '!attack @name', detail: 'hit a player' },
+          { command: '@name', detail: 'hit a player' },
+          { command: 'chat', detail: 'weak random attack' },
+          { command: '!attack @name', detail: 'stronger player hit' },
           { command: '!attack @horde', detail: 'hit The Horde' },
           { command: '!attack @boss', detail: 'hit the boss' },
           { command: '!shield', detail: 'block damage' },
@@ -4819,8 +4821,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       base.tickerItems = Array.isArray(options.tickerItems) && options.tickerItems.length
         ? options.tickerItems
         : [
-          'Quick start: !join | !attack @name | !shield | !heal @name',
-          'Targets: !attack @name | !attack @horde | !attack @boss',
+          'Quick start: !join | @name to attack | !shield | !heal @name',
+          'Targets: @name | @horde | @boss',
+          'Regular chat: sends a random 5-damage attack',
+          'Explicit attacks: !attack @name | !attack @horde | !attack @boss',
           'Icon: !emoji <emoji> or !<emoji>',
           'Effects: !laser @name | !fire @name | !nova @name | !nuke @name',
           'Teams/help: !team red / !commands',

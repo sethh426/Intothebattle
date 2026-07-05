@@ -1754,7 +1754,7 @@ async function sessionAction(endpoint, successMessage) {
   updateSetupChecklist();
 }
 function copyViewerCommands() {
-  const value = document.getElementById('viewerCommandText')?.value || 'PLAY FROM CHAT:\nQuick start: !join | !attack @name | !shield | !heal @name\nTargets: !attack @name | !attack @horde | !attack @boss\nIcon: !emoji <emoji> or !<emoji>\nTeams/help: !team red / !team leave / !commands';
+  const value = document.getElementById('viewerCommandText')?.value || 'PLAY FROM CHAT:\nQuick start: !join | @name to attack | !shield | !heal @name\nTargets: @name | @horde | @boss\nRegular chat: sends a random 5-damage attack\nExplicit attacks: !attack @name | !attack @horde | !attack @boss\nIcon: !emoji <emoji> or !<emoji>\nTeams/help: !team red / !team leave / !commands';
   navigator.clipboard?.writeText(value).then(() => toast('Viewer commands copied')).catch(() => toast('Copy failed', true));
 }
 async function showCommandBanners() {

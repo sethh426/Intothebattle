@@ -64,7 +64,7 @@
         "name": "IntoTheBattle player commands",
         "itemListElement": [
           { "@type": "ListItem", "position": 1, "name": "!join", "description": "Enter or rally your fighter in the arena." },
-          { "@type": "ListItem", "position": 2, "name": "!attack @name", "description": "Attack a visible player by name." },
+          { "@type": "ListItem", "position": 2, "name": "@name", "description": "Attack a visible player by name. No exclamation point required." },
           { "@type": "ListItem", "position": 3, "name": "!attack @horde", "description": "Send damage into The Horde." },
           { "@type": "ListItem", "position": 4, "name": "!attack @boss", "description": "Damage the active boss wave." },
           { "@type": "ListItem", "position": 5, "name": "!shield", "description": "Reduce incoming damage for a short defensive window." },
@@ -80,7 +80,7 @@
           {
             "@type": "Question",
             "name": "Do viewers need to install anything to play IntoTheBattle?",
-            "acceptedAnswer": { "@type": "Answer", "text": "No. Viewers play from TikTok LIVE chat by typing supported commands such as !join, !attack @name, !shield, and !heal @name." }
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Viewers play from TikTok LIVE chat by typing supported commands such as !join, @name, !shield, and !heal @name. Regular comments also send weak random attacks." }
           },
           {
             "@type": "Question",
@@ -487,7 +487,7 @@
           <p>Spawns your fighter or rallies you back into the live battle.</p>
         </article>
         <article class="quick-card">
-          <code>!attack @name</code>
+          <code>@name</code>
           <h3>Hit a player</h3>
           <p>Attacks a named fighter. You can also type <code>!hit</code>, <code>!strike</code>, or <code>!fight</code>.</p>
         </article>
@@ -512,7 +512,7 @@
       <div class="target-grid">
         <article class="target-card player">
           <h3>Player</h3>
-          <p>Use <code>!attack @name</code> or an effect like <code>!laser @name</code> to hit a specific player.</p>
+          <p>Use <code>@name</code>, <code>!attack @name</code>, or an effect like <code>!laser @name</code> to hit a specific player. Regular comments without a target send a weak random attack.</p>
         </article>
         <article class="target-card horde">
           <h3>The Horde</h3>
@@ -574,7 +574,7 @@
             <header><h3 id="attack-targets-title">Attack targets</h3><span>Simple commands for player, horde, and boss damage.</span></header>
             <div class="command-list">
               <article class="command-card">
-                <code>!attack @name</code>
+                <code>@name</code>
                 <h3>Basic player hit</h3>
                 <p>The recommended beginner attack. Aliases: <code>!hit</code>, <code>!strike</code>, and <code>!fight</code>.</p>
               </article>
@@ -700,8 +700,8 @@
       </div>
       <div class="prompt-box">
         <div>
-          <p id="pinPromptText">Join the battle: type !join. Attack a player with !attack @name. Hit The Horde with !attack @horde. Fight the boss with !attack @boss. Defend with !shield. Heal with !heal @name. Type !commands for help.</p>
-          <code>!join | !attack @name | !attack @horde | !attack @boss | !shield | !heal @name | !commands</code>
+          <p id="pinPromptText">Join the battle: type !join. Attack a player with @name. Regular comments send weak random attacks. Hit The Horde with @horde. Fight the boss with @boss. Defend with !shield. Heal with !heal @name. Type !commands for help.</p>
+          <code>!join | @name | @horde | @boss | regular chat = 5 damage | !shield | !heal @name | !commands</code>
         </div>
         <div>
           <button class="btn btn-primary" type="button" id="copyPromptButton">Copy prompt</button>
