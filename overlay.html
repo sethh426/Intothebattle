@@ -3204,12 +3204,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const uniqueId = String(item?.uniqueId || item?.id || `card-test-${index + 1}`);
       const maxHp = Math.max(1, Number(item?.maxHp ?? item?.hp ?? 100) || 100);
       const hp = clampNumber(Number(item?.hp ?? maxHp), 0, maxHp);
+      const alive = item?.alive !== false;
       nextPlayers[uniqueId] = {
         uniqueId,
         nickname: normalizeCanvasText(item?.nickname || item?.name || uniqueId) || uniqueId,
         hp,
         maxHp,
-        alive: item?.alive !== false,
+        alive,
         iconEmoji: item?.iconEmoji || '',
         kills: Math.max(0, Math.round(Number(item?.kills) || 0)),
         teamColor: item?.teamColor || '',
@@ -3222,6 +3223,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     players = nextPlayers;
     isDemoMode = true;
     stopDemoLoop();
+    cardAccents.clear();
+    items.forEach((item, index) => {
+      const uniqueId = String(item?.uniqueId || item?.id || `card-test-${index + 1}`);
+      const type = item?.cardAccentType || item?.accentType || item?.recentCommand || '';
+      if (!type) return;
+      const label = item?.cardAccentLabel || item?.commandLabel || '';
+      const color = item?.cardAccentColor || item?.accentColor || nextPlayers[uniqueId]?.teamColor || THEME.cyan;
+      const duration = Math.max(900, Number(item?.cardAccentDurationMs || item?.accentDurationMs || 6500) || 6500);
+      setCardAccent(uniqueId, type, color, duration, { label });
+    });
     requestAnimationFrame(draw);
     return { ok: true, count: Object.keys(players).length, ids: Object.keys(players) };
   }
@@ -3750,14 +3761,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const frame = stage.frame;
     const playerZone = stage.zones.players;
     const requestedCardH = Math.min(
-      frame.h * (isPublicDemo ? 0.285 : 0.27),
-      playerZone.h * (isPublicDemo ? 1.1 : 1.02)
+      frame.h * (isPublicDemo ? 0.145 : 0.138),
+      playerZone.h * (isPublicDemo ? 0.58 : 0.54)
     ) * layoutZoom;
-    const requestedCardW = requestedCardH * 0.78;
-    const baseGap = requestedCardW * (total >= 5 ? 0.035 : total === 4 ? 0.05 : total === 3 ? 0.08 : 0.11);
-    const minGap = stage.gap * 2.1;
-    const maxGap = requestedCardW * (total >= 5 ? 0.16 : total === 4 ? 0.2 : total === 3 ? 0.28 : 0.36);
-    const gapScale = total >= 5 ? 0.18 : total === 4 ? 0.24 : 0.32;
+    const requestedCardW = requestedCardH * (total >= 5 ? 2.88 : total === 4 ? 2.76 : 2.62);
+    const baseGap = requestedCardW * (total >= 5 ? 0.028 : total === 4 ? 0.04 : total === 3 ? 0.065 : 0.1);
+    const minGap = stage.gap * 1.42;
+    const maxGap = requestedCardW * (total >= 5 ? 0.085 : total === 4 ? 0.12 : total === 3 ? 0.2 : 0.32);
+    const gapScale = total >= 5 ? 0.13 : total === 4 ? 0.18 : 0.28;
     const visualGap = Math.min(Math.max(minGap, maxGap), Math.max(minGap, baseGap + Math.max(0, layoutGap) * gapScale));
     const availableW = Math.max(240, playerZone.w - stage.gap * 2);
     const naturalWidth = total > 1 ? requestedCardW * total + visualGap * (total - 1) : requestedCardW;
@@ -3774,40 +3785,56 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const compactDemoCard = isPublicDemo;
     const ui = canvasUiScale();
     const { cardH, cardW } = getPlayerCardMetrics(total);
-    const plateH = compactDemoCard ? Math.max(96 * ui, cardH * 0.62) : Math.max(122 * ui, cardH * 0.62);
+    const plateH = Math.max(compactDemoCard ? 86 * ui : 92 * ui, cardH);
     const plateX = pos.x - cardW / 2;
-    const plateY = pos.y - plateH * 0.56;
-    const radius = Math.max(12 * ui, plateH * 0.08);
-    const padX = clampNumber(cardW * 0.064, 4.5 * ui, 12 * ui);
-    const padY = clampNumber(plateH * 0.075, 4.5 * ui, 12 * ui);
-    const slotGap = Math.max(3 * ui, cardW * 0.024);
-    const topH = Math.max(15 * ui, Math.min(26 * ui, plateH * 0.165));
-    const rankW = Math.max(22 * ui, Math.min(36 * ui, cardW * 0.19));
-    const koW = Math.max(30 * ui, Math.min(52 * ui, cardW * 0.3));
+    const plateY = pos.y - plateH / 2;
+    const radius = Math.max(16 * ui, plateH * 0.19);
+    const padX = clampNumber(cardW * 0.046, 8 * ui, 16 * ui);
+    const padY = clampNumber(plateH * 0.115, 7 * ui, 13 * ui);
+    const slotGap = Math.max(5 * ui, cardW * 0.018);
+    const avatarR = Math.max(24 * ui, Math.min(plateH * 0.34, cardW * 0.105));
+    const avatarX = plateX + padX + avatarR;
+    const avatarY = plateY + plateH * 0.5;
+    const contentX = avatarX + avatarR + slotGap;
+    const contentRight = plateX + cardW - padX;
+    const badgeH = Math.max(18 * ui, Math.min(26 * ui, plateH * 0.2));
+    const rankW = Math.max(30 * ui, Math.min(44 * ui, cardW * 0.14));
+    const koW = Math.max(42 * ui, Math.min(64 * ui, cardW * 0.19));
+    const commandW = Math.max(46 * ui, Math.min(76 * ui, cardW * 0.22));
+    const nameH = Math.max(23 * ui, Math.min(36 * ui, plateH * 0.29));
+    const handleH = Math.max(12 * ui, Math.min(19 * ui, plateH * 0.145));
+    const barH = Math.max(15 * ui, Math.min(24 * ui, plateH * 0.19));
+    const statusH = Math.max(14 * ui, Math.min(22 * ui, plateH * 0.16));
     const topY = plateY + padY;
-    const rankX = plateX + padX;
-    const koX = plateX + cardW - padX - koW;
-    const nameX = rankX + rankW + slotGap;
-    const nameW = Math.max(1, koX - slotGap - nameX);
-    const barH = Math.max(10 * ui, Math.min(18 * ui, plateH * 0.105));
-    const barW = Math.max(1, cardW - padX * 2);
-    const barX = plateX + padX;
+    const rankX = avatarX - rankW / 2;
+    const koX = contentRight - koW;
+    const commandX = koX - slotGap - commandW;
+    const nameX = contentX;
+    const nameW = Math.max(1, contentRight - nameX);
+    const handleX = nameX;
+    const handleY = topY + nameH + Math.max(1, slotGap * 0.24);
+    const barX = contentX;
     const barY = plateY + plateH - padY - barH;
-    const avatarTop = topY + topH + slotGap;
-    const avatarBottom = Math.max(avatarTop + 1, barY - slotGap);
-    const avatarBandH = avatarBottom - avatarTop;
-    const avatarR = Math.max(16 * ui, Math.min(cardW * 0.215, avatarBandH * 0.43, plateH * 0.2));
-    const avatarY = avatarTop + avatarBandH * 0.48;
+    const barW = Math.max(1, contentRight - contentX);
+    const statusW = Math.max(46 * ui, Math.min(56 * ui, cardW * 0.23));
+    const statusX = avatarX - statusW / 2;
+    const statusY = avatarY + avatarR * 0.08;
+    const handleW = Math.max(1, commandX - slotGap - handleX);
     const hpTextY = barY + barH / 2;
-    const glowPad = Math.max(3 * ui, avatarR * 0.18);
+    const glowPad = 0;
     const slots = {
       card: makeRect(plateX, plateY, cardW, plateH),
-      rank: makeRect(rankX, topY, rankW, topH),
-      name: makeRect(nameX, topY, nameW, topH),
-      ko: makeRect(koX, topY, koW, topH),
-      avatar: makeRect(pos.x - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2),
+      rankBadge: makeRect(rankX, topY, rankW, badgeH),
+      name: makeRect(nameX, topY, nameW, nameH),
+      handle: makeRect(handleX, handleY, handleW, handleH),
+      koBadge: makeRect(koX, handleY, koW, badgeH),
+      commandBadge: makeRect(commandX, handleY, commandW, badgeH),
+      avatar: makeRect(avatarX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2),
       hpBar: makeRect(barX, barY, barW, barH),
+      statusBadges: makeRect(statusX, statusY, statusW, statusH),
     };
+    slots.rank = slots.rankBadge;
+    slots.ko = slots.koBadge;
     return {
       compactDemoCard,
       ui,
@@ -3820,10 +3847,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       padX,
       padY,
       slotGap,
-      topH,
+      topH: nameH,
       rankW,
       koW,
       avatarR,
+      avatarX,
       avatarY,
       barW,
       barH,
@@ -4031,11 +4059,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     lastKnownPositions.set(String(id).toLowerCase(), { x: pos.x, y: pos.y, scope, ts: Date.now() });
   }
 
-  function setCardAccent(id, type = 'attack', color = THEME.cyan, duration = 900) {
+  function setCardAccent(id, type = 'attack', color = THEME.cyan, duration = 900, options = {}) {
     if (!id || id === HORDE_ID || id === BOSS_ID) return;
     cardAccents.set(String(id).toLowerCase(), {
       type,
       color,
+      label: options.label || '',
+      direction: options.direction || '',
       startedAt: Date.now(),
       until: Date.now() + Math.max(300, duration),
     });
@@ -6972,7 +7002,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       pulseHorde(killed ? 'kill' : 'attack', killed ? THEME.gold : THEME.red, killed ? 1150 : 850);
       showBattlePrompt(killed ? 'Horde claimed a fighter' : 'Horde strikes', 'horde', 1900);
     } else {
-      setCardAccent(source.id, special ? 'gift' : 'attack', special ? THEME.gold : THEME.cyan, 650);
+      const commandLabel = special ? 'GIFT' : String(effect || type || 'ATK').replace(/^!+/, '').toUpperCase().slice(0, 6);
+      setCardAccent(source.id, special ? 'gift' : 'attack', special ? THEME.gold : THEME.cyan, 650, { label: commandLabel || 'ATK' });
     }
     if (targetIsBoss) {
       pulseBoss(killed ? 'kill' : 'hit', killed ? THEME.gold : THEME.cyan, killed ? 1400 : 900);
@@ -6981,7 +7012,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       pulseHorde(killed ? 'kill' : 'hit', killed ? THEME.gold : THEME.ember, killed ? 1200 : 820);
       showBattlePrompt(killed ? 'Horde pressure broken' : 'Horde under fire', 'horde', 1900);
     } else {
-      setCardAccent(target.id, killed ? 'kill' : 'hit', killed ? THEME.gold : (meta.critical ? THEME.ember : THEME.red), killed ? 1400 : 850);
+      setCardAccent(target.id, killed ? 'kill' : meta.shielded ? 'shield' : meta.critical ? 'critical' : 'hit', killed ? THEME.gold : meta.shielded ? THEME.cyan : (meta.critical ? THEME.ember : THEME.red), killed ? 1400 : 850, {
+        label: killed ? 'KO' : meta.shielded ? 'DEF' : meta.critical ? 'CRIT' : 'HIT',
+      });
     }
     showDamage(impactPoint.x, impactPoint.y, damage || 0, !!killed, !!meta.critical, target);
     playSound(killed ? 'kill' : 'attack');
@@ -7056,7 +7089,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           ? 'heal'
           : 'like';
       const color = meta.color || (type === 'heal' ? THEME.green : type === 'follow' ? THEME.cyan : '#ff7ab6');
-      setCardAccent(owner.id, type, color, meta.kind === 'repost' ? 2200 : type === 'follow' ? 1400 : 820);
+      setCardAccent(owner.id, type, color, meta.kind === 'repost' ? 2200 : type === 'follow' ? 1400 : 820, {
+        label: type === 'heal' ? 'HEAL' : type === 'follow' ? (meta.kind === 'follow' ? 'JOIN' : 'PWR') : 'LIKE',
+      });
     }
 
     rememberCheer(playerId);
@@ -7113,7 +7148,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       kind: 'like',
       color: isMega ? THEME.gold : '#ff78b2',
     });
-    if (owner.kind === 'player') setCardAccent(owner.id, isMega ? 'gift' : 'like', isMega ? THEME.gold : '#ff78b2', isMega ? 1800 : 1200);
+    if (owner.kind === 'player') setCardAccent(owner.id, isMega ? 'gift' : 'like', isMega ? THEME.gold : '#ff78b2', isMega ? 1800 : 1200, { label: isMega ? 'GIFT' : 'LIKE' });
     showBanner(isMega ? 'legendary' : 'special', {
       code: isMega ? '1K' : '+100',
       kicker: isMega ? 'Crowd eruption' : 'Crowd surge',
@@ -7174,7 +7209,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       color,
       scope: source.kind === 'horde' ? 'horde' : source.scope,
     });
-    if (source.kind === 'player') setCardAccent(source.id, 'boost', color, isRepost ? 2100 : 1450);
+    if (source.kind === 'player') setCardAccent(source.id, 'boost', color, isRepost ? 2100 : 1450, { label: 'PWR' });
     showBattlePrompt(isRepost ? 'Broadcast surge shielded the squad' : 'Share rally boosted the squad', 'return', isRepost ? 2500 : 2100);
   }
 
@@ -7229,7 +7264,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       atk.particles.push(new Particle(pos.x, pos.y, { speed: 3 + Math.random() * 6, color: '#ffaa00', radius: 2 + Math.random() * 3, decay: 0.022, rise: 1.5 }));
     }
     pushAttackEffect(atk, { type: 'respawn', owner });
-    if (owner.kind === 'player') setCardAccent(owner.id, 'respawn', THEME.gold, 1400);
+    if (owner.kind === 'player') setCardAccent(owner.id, 'respawn', THEME.gold, 1400, { label: 'JOIN' });
     if (owner.kind === 'horde') pulseHorde('respawn', THEME.gold, 900);
     showBattlePrompt('Fighter returned', 'return', 1800);
     playSound('respawn');
@@ -7542,7 +7577,78 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function playerCardName(player) {
     const raw = normalizeCanvasText(player?.nickname || player?.name || player?.uniqueId || player?.id || 'Player') || 'Player';
-    return splitCanvasGraphemes(raw).slice(0, 24).join('') || 'Player';
+    return splitCanvasGraphemes(raw).slice(0, 32).join('') || 'Player';
+  }
+
+  function centerTruncateGraphemes(value, max = 18) {
+    const chars = splitCanvasGraphemes(normalizeCanvasText(value) || '');
+    if (chars.length <= max) return chars.join('');
+    const keepStart = Math.max(4, Math.ceil((max - 1) * 0.56));
+    const keepEnd = Math.max(3, max - keepStart - 1);
+    return `${chars.slice(0, keepStart).join('')}…${chars.slice(chars.length - keepEnd).join('')}`;
+  }
+
+  function playerCardIdentity(player) {
+    const rawName = playerCardName(player);
+    const unique = normalizeCanvasText(player?.uniqueId || player?.id || '', 32);
+    const strippedName = rawName.replace(/^@+/, '') || 'Player';
+    const handleBase = unique && unique.toLowerCase() !== strippedName.toLowerCase()
+      ? unique.replace(/^@+/, '')
+      : '';
+    return {
+      rawName,
+      displayName: centerTruncateGraphemes(strippedName, 19),
+      handle: handleBase ? `@${centerTruncateGraphemes(handleBase, 17)}` : '',
+    };
+  }
+
+  function stablePlayerAccent(player, fallback = THEME.cyan) {
+    if (player?.teamColor) return player.teamColor;
+    const source = String(player?.uniqueId || player?.id || player?.nickname || player?.name || '').toLowerCase();
+    if (!source) return fallback;
+    const palette = [THEME.cyan, THEME.gold, '#99ffda', '#ff78b2', '#9ca7ff', '#ff8a5e', '#6df7ff'];
+    let hash = 0;
+    for (let i = 0; i < source.length; i += 1) hash = (hash * 31 + source.charCodeAt(i)) >>> 0;
+    return palette[hash % palette.length] || fallback;
+  }
+
+  function cardCommandLabel(type = '', label = '') {
+    const explicit = normalizeCanvasText(label, 10).toUpperCase();
+    if (explicit) return explicit;
+    const normalized = String(type || '').toLowerCase();
+    if (normalized === 'attack') return 'ATK';
+    if (normalized === 'hit' || normalized === 'critical') return 'HIT';
+    if (normalized === 'kill') return 'KO';
+    if (normalized === 'heal') return 'HEAL';
+    if (normalized === 'shield' || normalized === 'follow') return 'DEF';
+    if (normalized === 'like') return 'LIKE';
+    if (normalized === 'gift') return 'GIFT';
+    if (normalized === 'boost') return 'PWR';
+    if (normalized === 'respawn' || normalized === 'join') return 'JOIN';
+    if (normalized === 'emoji') return 'ICON';
+    return '';
+  }
+
+  function playerCardVisualState(player, rank, hpPct, cardAccent) {
+    const accent = cardAccent?.color || stablePlayerAccent(player, rank === 1 ? THEME.gold : THEME.cyan);
+    const healthState = hpPct <= 0 ? 'ko' : hpPct < 0.2 ? 'critical' : hpPct < 0.46 ? 'damaged' : 'healthy';
+    const accentType = String(cardAccent?.type || '').toLowerCase();
+    const progress = cardAccent ? clamp01(cardAccent.progress) : 1;
+    return {
+      accent,
+      healthState,
+      isLeader: rank === 1,
+      isKO: hpPct <= 0 || player?.alive === false || accentType === 'kill',
+      isCritical: healthState === 'critical',
+      hasShield: accentType === 'shield' || accentType === 'follow',
+      hasHeal: accentType === 'heal' || accentType === 'boost' || accentType === 'respawn',
+      wasHit: accentType === 'hit' || accentType === 'critical' || accentType === 'kill',
+      isJoining: accentType === 'join' || accentType === 'respawn',
+      commandLabel: cardCommandLabel(accentType, cardAccent?.label),
+      accentType,
+      progress,
+      pulse: 0.5 + Math.sin(Date.now() / 240 + rank) * 0.5,
+    };
   }
 
   function compactPlayerCardNumber(value) {
@@ -7579,7 +7685,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const hp = Number(player.hp) || 0;
     const maxHp = Math.max(1, Number(player.maxHp) || 100);
     const hpPct = clamp01(hp / maxHp);
-    const nearDeath = hpPct < 0.2;
     const metrics = getPlayerCardDrawMetrics(pos, total);
     const {
       compactDemoCard,
@@ -7590,6 +7695,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       plateY,
       radius,
       avatarR,
+      avatarX,
       avatarY,
       barX,
       barY,
@@ -7598,35 +7704,70 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       hpTextY,
       slots,
     } = metrics;
-    const teamAccent = player.teamColor || '';
-    const accent = teamAccent || (rank === 1 ? THEME.gold : THEME.cyan);
-    const pulse = 0.55 + Math.sin(Date.now() / 310 + rank) * 0.45;
     const cardAccent = getCardAccent(player);
-    const rawName = playerCardName(player);
+    const state = playerCardVisualState(player, rank, hpPct, cardAccent);
+    const accent = state.accent;
+    const identity = playerCardIdentity(player);
     const nameFit = fitCanvasTextResult(
       ctx,
-      rawName,
-      Math.max(1, slots.name.w - Math.max(6 * ui, slots.name.h * 0.45)),
+      identity.displayName,
+      Math.max(1, slots.name.w - Math.max(7 * ui, slots.name.h * 0.36)),
       size => `900 ${size}px ${PLAYER_CARD_NAME_FONT}`,
-      Math.max(9 * ui, Math.min(slots.name.h * 0.72, cardW * 0.085)),
+      Math.max(15 * ui, Math.min(slots.name.h * 0.92, cardW * 0.065)),
+      Math.max(8, 10 * ui)
+    );
+    const handleFit = fitCanvasTextResult(
+      ctx,
+      identity.handle || 'LIVE PLAYER',
+      Math.max(1, slots.handle.w - Math.max(4 * ui, slots.handle.h * 0.32)),
+      size => `800 ${size}px ${PLAYER_CARD_STAT_FONT}`,
+      Math.max(8 * ui, Math.min(slots.handle.h * 0.82, 12 * ui)),
       Math.max(6, 7 * ui)
     );
     const killCount = Math.max(0, Math.round(Number(player.kills) || 0));
     const koLabel = compactPlayerCardNumber(killCount);
     const koFit = fitCanvasTextResult(
       ctx,
-      koLabel,
-      Math.max(1, slots.ko.w - Math.max(5 * ui, slots.ko.h * 0.35)),
+      `KO ${koLabel}`,
+      Math.max(1, slots.koBadge.w - Math.max(5 * ui, slots.koBadge.h * 0.32)),
       size => `950 ${size}px ${PLAYER_CARD_STAT_FONT}`,
-      Math.max(8 * ui, Math.min(slots.ko.h * 0.7, 14 * ui)),
+      Math.max(8 * ui, Math.min(slots.koBadge.h * 0.68, 13 * ui)),
       Math.max(6, 7 * ui)
     );
     const rankFit = fitCanvasTextResult(
       ctx,
       `#${rank}`,
-      Math.max(1, slots.rank.w - Math.max(4 * ui, slots.rank.h * 0.28)),
+      Math.max(1, slots.rankBadge.w - Math.max(4 * ui, slots.rankBadge.h * 0.28)),
       size => `950 ${size}px ${PLAYER_CARD_STAT_FONT}`,
-      Math.max(8 * ui, Math.min(slots.rank.h * 0.68, 13 * ui)),
+      Math.max(8 * ui, Math.min(slots.rankBadge.h * 0.68, 13 * ui)),
+      Math.max(6, 7 * ui)
+    );
+    const commandLabel = state.commandLabel || (state.isLeader ? 'LEAD' : '');
+    const commandFit = fitCanvasTextResult(
+      ctx,
+      commandLabel,
+      Math.max(1, slots.commandBadge.w - Math.max(5 * ui, slots.commandBadge.h * 0.3)),
+      size => `950 ${size}px ${PLAYER_CARD_STAT_FONT}`,
+      Math.max(8 * ui, Math.min(slots.commandBadge.h * 0.68, 13 * ui)),
+      Math.max(6, 7 * ui)
+    );
+    const statusLabel = state.isKO
+      ? 'KO'
+      : state.hasShield
+        ? 'SHIELD'
+        : state.hasHeal
+          ? '+HP'
+          : state.isCritical
+            ? 'CRIT'
+            : state.isLeader
+              ? 'LEADER'
+              : 'READY';
+    const statusFit = fitCanvasTextResult(
+      ctx,
+      statusLabel,
+      Math.max(1, slots.statusBadges.w - Math.max(5 * ui, slots.statusBadges.h * 0.3)),
+      size => `900 ${size}px ${PLAYER_CARD_STAT_FONT}`,
+      Math.max(7 * ui, Math.min(slots.statusBadges.h * 0.66, 11 * ui)),
       Math.max(6, 7 * ui)
     );
     const hpFit = fitCanvasTextResult(
@@ -7634,69 +7775,92 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       `${Math.round(hp)} HP`,
       Math.max(1, barW - Math.max(10 * ui, barH * 0.7)),
       size => `900 ${size}px ${PLAYER_CARD_STAT_FONT}`,
-      Math.max(8 * ui, Math.min(barH * 0.72, 12 * ui)),
+      Math.max(8 * ui, Math.min(barH * 0.76, 13 * ui)),
       Math.max(6, 7 * ui)
     );
 
-    if (nearDeath) {
-      const redGlow = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, avatarR * 3.2);
-      redGlow.addColorStop(0, `rgba(255,30,30,${0.2 + pulse * 0.12})`);
+    if (state.isCritical) {
+      const redGlow = ctx.createRadialGradient(avatarX, avatarY, 0, avatarX, avatarY, avatarR * 3.3);
+      redGlow.addColorStop(0, `rgba(255,30,30,${0.2 + state.pulse * 0.16})`);
       redGlow.addColorStop(1, 'rgba(255,30,30,0)');
-      ctx.fillStyle = redGlow; ctx.beginPath(); ctx.arc(pos.x, pos.y, avatarR * 3.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = redGlow; ctx.beginPath(); ctx.arc(avatarX, avatarY, avatarR * 3.15, 0, Math.PI * 2); ctx.fill();
     }
 
     if (cardAccent) {
-      const accentAlpha = Math.sin((1 - cardAccent.progress) * Math.PI) * (cardAccent.type === 'kill' ? 0.48 : 0.34);
-      const accentRadius = avatarR * (2.9 + cardAccent.progress * 1.1);
-      const accentGlow = ctx.createRadialGradient(pos.x, avatarY, 0, pos.x, avatarY, accentRadius);
+      const accentAlpha = Math.sin((1 - state.progress) * Math.PI) * (state.accentType === 'kill' ? 0.5 : 0.34);
+      const accentRadius = avatarR * (2.8 + state.progress * 1.25);
+      const accentGlow = ctx.createRadialGradient(avatarX, avatarY, 0, avatarX, avatarY, accentRadius);
       accentGlow.addColorStop(0, colorWithAlpha(cardAccent.color, accentAlpha));
       accentGlow.addColorStop(1, colorWithAlpha(cardAccent.color, 0));
       ctx.fillStyle = accentGlow;
       ctx.beginPath();
-      ctx.arc(pos.x, avatarY, accentRadius, 0, Math.PI * 2);
+      ctx.arc(avatarX, avatarY, accentRadius, 0, Math.PI * 2);
       ctx.fill();
     }
 
     ctx.save();
-    const glow = ctx.createRadialGradient(pos.x, avatarY, 0, pos.x, avatarY, avatarR * 3.35);
-    glow.addColorStop(0, colorWithAlpha(accent, teamAccent ? 0.24 : rank === 1 ? 0.22 : 0.17));
+    const glow = ctx.createRadialGradient(avatarX, avatarY, 0, avatarX, avatarY, avatarR * 3.6);
+    glow.addColorStop(0, colorWithAlpha(accent, player.teamColor ? 0.28 : state.isLeader ? 0.24 : 0.19));
     glow.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(pos.x, avatarY, avatarR * 2.75, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(avatarX, avatarY, avatarR * 3.1, 0, Math.PI * 2); ctx.fill();
 
-    ctx.shadowColor = cardAccent ? cardAccent.color : colorWithAlpha(accent, teamAccent ? 0.3 : rank === 1 ? 0.25 : 0.18);
-    ctx.shadowBlur = cardAccent ? (cardAccent.type === 'kill' ? 38 : 28) : 22;
+    ctx.shadowColor = cardAccent ? cardAccent.color : colorWithAlpha(accent, player.teamColor ? 0.34 : state.isLeader ? 0.3 : 0.2);
+    ctx.shadowBlur = cardAccent ? (state.accentType === 'kill' ? 40 : 30) : 24;
     drawGlassPanel(plateX, plateY, cardW, plateH, radius, {
-      start: 'rgba(5,10,21,0.95)',
-      mid: 'rgba(15,23,38,0.78)',
-      end: 'rgba(3,6,13,0.96)',
-      stroke: colorWithAlpha(accent, teamAccent ? 0.64 : rank === 1 ? 0.54 : 0.36),
-      lineWidth: 1.3,
+      start: state.isKO ? 'rgba(8,9,13,0.96)' : 'rgba(5,10,21,0.97)',
+      mid: state.isKO ? 'rgba(18,18,24,0.82)' : 'rgba(17,25,40,0.84)',
+      end: state.isKO ? 'rgba(3,4,8,0.98)' : 'rgba(3,6,13,0.98)',
+      stroke: state.isCritical ? colorWithAlpha(THEME.red, 0.72 + state.pulse * 0.16) : colorWithAlpha(accent, player.teamColor ? 0.68 : state.isLeader ? 0.62 : 0.42),
+      lineWidth: state.isCritical ? 2 : 1.45,
     });
     ctx.shadowBlur = 0;
 
-    ctx.fillStyle = colorWithAlpha(accent, teamAccent ? 0.94 : rank === 1 ? 0.92 : 0.84);
-    roundedRectPath(ctx, plateX + cardW * 0.08, plateY + plateH * 0.075, cardW * 0.84, Math.max(3, plateH * 0.024), 4);
+    ctx.fillStyle = colorWithAlpha(accent, player.teamColor ? 0.94 : state.isLeader ? 0.92 : 0.84);
+    roundedRectPath(ctx, plateX + cardW * 0.035, plateY + plateH * 0.075, cardW * 0.93, Math.max(3, plateH * 0.03), 5);
     ctx.fill();
 
-    const railX = plateX + Math.max(5 * ui, cardW * 0.04);
-    const railH = Math.max(1, plateH - metrics.padY * 2 - metrics.topH - metrics.slotGap);
-    ctx.fillStyle = nearDeath ? `rgba(232,59,95,${0.52 + pulse * 0.25})` : colorWithAlpha(accent, teamAccent ? 0.48 : rank === 1 ? 0.46 : 0.3);
-    roundedRectPath(ctx, railX, slots.avatar.top - avatarR * 0.16, Math.max(3 * ui, cardW * 0.024), railH * 0.58, 3);
+    const railW = Math.max(5 * ui, cardW * 0.018);
+    ctx.fillStyle = state.isCritical ? `rgba(232,59,95,${0.58 + state.pulse * 0.24})` : colorWithAlpha(accent, player.teamColor ? 0.52 : state.isLeader ? 0.5 : 0.34);
+    roundedRectPath(ctx, plateX + Math.max(6 * ui, cardW * 0.018), plateY + plateH * 0.19, railW, plateH * 0.62, railW / 2);
     ctx.fill();
 
-    drawPlayerSlot(slots.rank, slots.rank.h / 2, rank === 1 ? 'rgba(246,201,91,0.2)' : 'rgba(85,231,255,0.13)', rank === 1 ? 'rgba(246,201,91,0.54)' : 'rgba(85,231,255,0.42)');
-    drawPlayerSlot(slots.name, slots.name.h / 2, 'rgba(2,5,12,0.68)', rank === 1 ? 'rgba(246,201,91,0.3)' : 'rgba(85,231,255,0.24)', Math.max(0.8, 1 * ui));
-    drawPlayerSlot(slots.ko, slots.ko.h / 2, killCount > 0 ? 'rgba(232,59,95,0.78)' : 'rgba(12,18,32,0.72)', killCount > 0 ? 'rgba(255,255,255,0.32)' : 'rgba(255,255,255,0.16)');
+    if (state.wasHit) {
+      const edgeAlpha = Math.sin((1 - state.progress) * Math.PI) * 0.58;
+      const edgeGrad = ctx.createLinearGradient(plateX + cardW, 0, plateX + cardW - cardW * 0.42, 0);
+      edgeGrad.addColorStop(0, colorWithAlpha(state.accentType === 'kill' ? THEME.gold : THEME.red, edgeAlpha));
+      edgeGrad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = edgeGrad;
+      roundedRectPath(ctx, plateX, plateY, cardW, plateH, radius);
+      ctx.fill();
+    }
+    if (state.hasHeal || state.isJoining) {
+      const sweepAlpha = Math.sin((1 - state.progress) * Math.PI) * 0.36;
+      const sweepX = plateX + cardW * clamp01(state.progress);
+      const sweepGrad = ctx.createLinearGradient(sweepX - cardW * 0.26, 0, sweepX + cardW * 0.08, 0);
+      sweepGrad.addColorStop(0, 'rgba(255,255,255,0)');
+      sweepGrad.addColorStop(0.52, colorWithAlpha(state.hasHeal ? THEME.green : THEME.gold, sweepAlpha));
+      sweepGrad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = sweepGrad;
+      roundedRectPath(ctx, plateX, plateY, cardW, plateH, radius);
+      ctx.fill();
+    }
 
-    ctx.font = `900 ${rankFit.size}px ${PLAYER_CARD_STAT_FONT}`;
-    const rankCenter = rectCenter(slots.rank);
+    drawPlayerSlot(slots.rankBadge, slots.rankBadge.h / 2, state.isLeader ? 'rgba(246,201,91,0.24)' : 'rgba(85,231,255,0.14)', state.isLeader ? 'rgba(246,201,91,0.62)' : 'rgba(85,231,255,0.42)');
+    drawPlayerSlot(slots.name, Math.max(7 * ui, slots.name.h * 0.22), 'rgba(2,5,12,0.7)', state.isLeader ? 'rgba(246,201,91,0.3)' : 'rgba(85,231,255,0.24)', Math.max(0.8, 1 * ui));
+    drawPlayerSlot(slots.koBadge, slots.koBadge.h / 2, killCount > 0 ? 'rgba(232,59,95,0.82)' : 'rgba(12,18,32,0.72)', killCount > 0 ? 'rgba(255,255,255,0.34)' : 'rgba(255,255,255,0.16)');
+    if (commandLabel) drawPlayerSlot(slots.commandBadge, slots.commandBadge.h / 2, colorWithAlpha(accent, 0.22), colorWithAlpha(accent, 0.52));
+
+    const rankCenter = rectCenter(slots.rankBadge);
+    ctx.font = `950 ${rankFit.size}px ${PLAYER_CARD_STAT_FONT}`;
     const rankTextRect = drawCenteredCanvasText(ctx, rankFit.text, rankCenter.x, rankCenter.y + Math.max(0.3, 0.7 * ui), {
       fontSize: rankFit.size,
       fillStyle: '#fff8df',
+      strokeStyle: 'rgba(0,0,0,0.64)',
+      lineWidth: Math.max(1.2, 1.5 * ui),
     });
 
+    const koCenter = rectCenter(slots.koBadge);
     ctx.font = `950 ${koFit.size}px ${PLAYER_CARD_STAT_FONT}`;
-    const koCenter = rectCenter(slots.ko);
     const koTextRect = drawCenteredCanvasText(ctx, koFit.text, koCenter.x, koCenter.y + Math.max(0.3, 0.7 * ui), {
       fontSize: koFit.size,
       fillStyle: killCount > 0 ? '#fff7f8' : '#c8d5ea',
@@ -7704,64 +7868,133 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       lineWidth: Math.max(1.4, 1.7 * ui),
     });
 
-    ctx.font = `900 ${nameFit.size}px ${PLAYER_CARD_NAME_FONT}`;
     const nameCenter = rectCenter(slots.name);
-    const nameTextRect = drawCenteredCanvasText(ctx, nameFit.text, nameCenter.x, nameCenter.y + Math.max(0.4, 0.8 * ui), {
+    ctx.font = `900 ${nameFit.size}px ${PLAYER_CARD_NAME_FONT}`;
+    const nameTextRect = drawCenteredCanvasText(ctx, nameFit.text.toUpperCase(), nameCenter.x, nameCenter.y + Math.max(0.4, 0.8 * ui), {
       fontSize: nameFit.size,
-      fillStyle: '#ffffff',
-      strokeStyle: 'rgba(0,0,0,0.82)',
-      lineWidth: compactDemoCard ? Math.max(1.6, 2.1 * ui) : Math.max(2, 2.6 * ui),
+      fillStyle: state.isKO ? '#d7dde9' : '#ffffff',
+      strokeStyle: 'rgba(0,0,0,0.9)',
+      lineWidth: compactDemoCard ? Math.max(2.2, 2.7 * ui) : Math.max(2.4, 3 * ui),
     });
 
-    ctx.strokeStyle = rank === 1 ? 'rgba(246,201,91,0.84)' : 'rgba(85,231,255,0.58)';
-    ctx.lineWidth = Math.max(2, avatarR * 0.07);
+    const handleCenter = rectCenter(slots.handle);
+    ctx.font = `800 ${handleFit.size}px ${PLAYER_CARD_STAT_FONT}`;
+    const handleTextRect = drawCenteredCanvasText(ctx, handleFit.text, handleCenter.x, handleCenter.y + Math.max(0.1, 0.45 * ui), {
+      fontSize: handleFit.size,
+      fillStyle: state.isKO ? '#7f8797' : colorWithAlpha('#d9e7ff', 0.82),
+      strokeStyle: 'rgba(0,0,0,0.68)',
+      lineWidth: Math.max(0.8, 1.15 * ui),
+    });
+
+    if (commandLabel) {
+      const commandCenter = rectCenter(slots.commandBadge);
+      ctx.font = `950 ${commandFit.size}px ${PLAYER_CARD_STAT_FONT}`;
+      var commandTextRect = drawCenteredCanvasText(ctx, commandFit.text, commandCenter.x, commandCenter.y + Math.max(0.2, 0.6 * ui), {
+        fontSize: commandFit.size,
+        fillStyle: '#ffffff',
+        strokeStyle: 'rgba(0,0,0,0.76)',
+        lineWidth: Math.max(1.1, 1.5 * ui),
+      });
+    }
+
+    let statusTextRect = null;
+
+    ctx.strokeStyle = state.isLeader ? 'rgba(246,201,91,0.9)' : colorWithAlpha(accent, 0.68);
+    ctx.lineWidth = Math.max(2.4, avatarR * 0.08);
     ctx.shadowColor = accent;
-    ctx.shadowBlur = 12;
-    ctx.beginPath(); ctx.arc(pos.x, avatarY, avatarR, 0, Math.PI * 2); ctx.stroke();
+    ctx.shadowBlur = state.hasShield ? 18 : 12;
+    ctx.beginPath(); ctx.arc(avatarX, avatarY, avatarR, 0, Math.PI * 2); ctx.stroke();
+    if (state.hasShield) {
+      ctx.strokeStyle = colorWithAlpha(THEME.cyan, 0.46 + state.pulse * 0.16);
+      ctx.lineWidth = Math.max(1.8, avatarR * 0.055);
+      ctx.beginPath(); ctx.arc(avatarX, avatarY, avatarR + Math.max(4 * ui, avatarR * 0.12), 0, Math.PI * 2); ctx.stroke();
+    }
     ctx.shadowBlur = 0;
-    const avatarFill = ctx.createRadialGradient(pos.x - avatarR * 0.32, avatarY - avatarR * 0.35, 1, pos.x, avatarY, avatarR);
+    const avatarFill = ctx.createRadialGradient(avatarX - avatarR * 0.32, avatarY - avatarR * 0.35, 1, avatarX, avatarY, avatarR);
     avatarFill.addColorStop(0, 'rgba(255,255,255,0.16)');
-    avatarFill.addColorStop(0.55, 'rgba(10,18,32,0.96)');
-    avatarFill.addColorStop(1, 'rgba(2,4,10,0.98)');
+    avatarFill.addColorStop(0.55, state.isKO ? 'rgba(22,23,28,0.96)' : 'rgba(10,18,32,0.96)');
+    avatarFill.addColorStop(1, state.isKO ? 'rgba(4,4,8,0.98)' : 'rgba(2,4,10,0.98)');
     ctx.fillStyle = avatarFill;
-    ctx.beginPath(); ctx.arc(pos.x, avatarY, Math.max(1, avatarR - 2), 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(avatarX, avatarY, Math.max(1, avatarR - 2), 0, Math.PI * 2); ctx.fill();
 
     const defaultSwordIcon = '\u2694\uFE0F';
     const defaultGemIcon = '\u{1F48E}';
     const customIcon = player.iconEmoji;
     if (customIcon && customIcon !== defaultSwordIcon && customIcon !== defaultGemIcon) {
       ctx.font = `${avatarR * 1.12}px 'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',Arial,sans-serif`;
-      drawCenteredCanvasText(ctx, normalizeCanvasText(customIcon), pos.x, avatarY + Math.max(0.5, 1 * ui), {
+      drawCenteredCanvasText(ctx, normalizeCanvasText(customIcon), avatarX, avatarY + Math.max(0.5, 1 * ui), {
         fontSize: avatarR * 1.12,
-        fillStyle: '#ffffff',
+        fillStyle: state.isKO ? '#a8afbd' : '#ffffff',
       });
     } else {
-      drawBattleInsignia(pos.x, avatarY, avatarR * 0.9, accent);
+      drawBattleInsignia(avatarX, avatarY, avatarR * 0.9, accent);
     }
 
-    ctx.fillStyle = 'rgba(0,0,0,0.62)';
+    drawPlayerSlot(slots.statusBadges, slots.statusBadges.h / 2, state.isCritical ? 'rgba(232,59,95,0.88)' : state.hasShield ? 'rgba(7,62,78,0.9)' : state.isKO ? 'rgba(38,13,20,0.9)' : 'rgba(8,15,28,0.88)', state.isCritical ? 'rgba(255,213,189,0.78)' : state.hasShield ? 'rgba(151,252,255,0.72)' : colorWithAlpha(accent, 0.62), Math.max(1, 1.1 * ui));
+    const statusCenter = rectCenter(slots.statusBadges);
+    ctx.font = `900 ${statusFit.size}px ${PLAYER_CARD_STAT_FONT}`;
+    statusTextRect = drawCenteredCanvasText(ctx, statusFit.text, statusCenter.x, statusCenter.y + Math.max(0.1, 0.4 * ui), {
+      fontSize: statusFit.size,
+      fillStyle: state.isCritical ? '#ffe1dc' : state.hasShield ? '#dffcff' : state.isKO ? '#fff5dd' : '#dce8ff',
+      strokeStyle: 'rgba(0,0,0,0.76)',
+      lineWidth: Math.max(0.9, 1.25 * ui),
+    });
+
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
     roundedRectPath(ctx, barX, barY, barW, barH, barH / 2);
     ctx.fill();
     const barGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
-    const hpStart = hpPct > 0.5 ? THEME.green : hpPct > 0.25 ? THEME.gold : THEME.red;
+    const hpStart = hpPct > 0.52 ? THEME.green : hpPct > 0.24 ? THEME.gold : THEME.red;
     barGrad.addColorStop(0, hpStart);
-    barGrad.addColorStop(0.72, hpPct > 0.25 ? THEME.goldBright : '#ff8b7e');
+    barGrad.addColorStop(0.62, hpPct > 0.24 ? THEME.goldBright : '#ff8b7e');
     barGrad.addColorStop(1, 'rgba(255,255,255,0.78)');
     ctx.fillStyle = barGrad;
-    roundedRectPath(ctx, barX + 2, barY + 2, Math.max(0, (barW - 4) * hpPct), Math.max(1, barH - 4), Math.max(1, (barH - 4) / 2));
-    ctx.fill();
-    ctx.strokeStyle = rank === 1 ? 'rgba(246,201,91,0.4)' : 'rgba(85,231,255,0.3)';
-    ctx.lineWidth = 1;
+    const hpFillW = Math.max(hpPct > 0 ? barH : 0, (barW - 4) * hpPct);
+    if (hpFillW > 0) {
+      roundedRectPath(ctx, barX + 2, barY + 2, hpFillW, Math.max(1, barH - 4), Math.max(1, (barH - 4) / 2));
+      ctx.fill();
+    }
+    if (state.hasHeal) {
+      const healW = Math.max(barH, barW * (0.16 + 0.16 * Math.sin((1 - state.progress) * Math.PI)));
+      const healX = Math.min(barX + barW - healW, barX + barW * state.progress);
+      ctx.fillStyle = colorWithAlpha(THEME.green, Math.sin((1 - state.progress) * Math.PI) * 0.5);
+      roundedRectPath(ctx, healX, barY + 2, healW, Math.max(1, barH - 4), Math.max(1, (barH - 4) / 2));
+      ctx.fill();
+    }
+    ctx.strokeStyle = state.isLeader ? 'rgba(246,201,91,0.5)' : colorWithAlpha(accent, 0.34);
+    ctx.lineWidth = Math.max(1, 1.1 * ui);
     roundedRectPath(ctx, barX, barY, barW, barH, barH / 2);
     ctx.stroke();
 
     ctx.font = `900 ${hpFit.size}px ${PLAYER_CARD_STAT_FONT}`;
-    const hpTextRect = drawCenteredCanvasText(ctx, hpFit.text, pos.x, hpTextY + Math.max(0.2, 0.5 * ui), {
+    const hpTextRect = drawCenteredCanvasText(ctx, hpFit.text, barX + barW / 2, hpTextY + Math.max(0.2, 0.5 * ui), {
       fontSize: hpFit.size,
-      fillStyle: nearDeath ? '#ffe2dc' : '#f2f8ff',
+      fillStyle: state.isCritical ? '#ffe2dc' : '#f2f8ff',
       strokeStyle: 'rgba(0,0,0,0.86)',
       lineWidth: Math.max(1.2, 1.7 * ui),
     });
+
+    if (state.isKO) {
+      ctx.save();
+      ctx.globalAlpha = 0.28;
+      ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+      ctx.lineWidth = Math.max(1.5, 2 * ui);
+      ctx.beginPath();
+      ctx.moveTo(plateX + cardW * 0.32, plateY + plateH * 0.18);
+      ctx.lineTo(plateX + cardW * 0.53, plateY + plateH * 0.82);
+      ctx.moveTo(plateX + cardW * 0.6, plateY + plateH * 0.15);
+      ctx.lineTo(plateX + cardW * 0.82, plateY + plateH * 0.76);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.font = `950 ${Math.max(22 * ui, plateH * 0.36)}px ${PLAYER_CARD_STAT_FONT}`;
+      drawCenteredCanvasText(ctx, 'KO', plateX + cardW * 0.5, plateY + plateH * 0.54, {
+        fontSize: Math.max(22 * ui, plateH * 0.36),
+        fillStyle: '#fff5dd',
+        strokeStyle: 'rgba(0,0,0,0.9)',
+        lineWidth: Math.max(3, 4 * ui),
+      });
+      ctx.restore();
+    }
 
     ctx.restore();
 
@@ -7779,24 +8012,38 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       top: metrics.top,
       bottom: metrics.bottom,
       text: {
-        rawName,
+        rawName: identity.rawName,
         fittedName: nameFit.text,
+        handle: handleFit.text,
         nameTruncated: nameFit.truncated,
         nameHasReplacement: nameFit.text.includes('\uFFFD'),
         nameCenterDelta: Math.abs(nameTextCenter - nameSlotCenter),
         koLabel: koFit.text,
         hpLabel: hpFit.text,
+        commandLabel: commandFit.text,
+        statusLabel: statusFit.text,
+        healthState: state.healthState,
+        accentType: state.accentType,
+        cardDesign: 'battle-id-plate',
       },
       slots: {
         card: cloneTelemetryRect(slots.card),
-        rank: cloneTelemetryRect(slots.rank),
+        rank: cloneTelemetryRect(slots.rankBadge),
+        rankBadge: cloneTelemetryRect(slots.rankBadge),
         name: cloneTelemetryRect(slots.name),
-        ko: cloneTelemetryRect(slots.ko),
+        handle: cloneTelemetryRect(slots.handle),
+        ko: cloneTelemetryRect(slots.koBadge),
+        koBadge: cloneTelemetryRect(slots.koBadge),
+        commandBadge: cloneTelemetryRect(slots.commandBadge),
         avatar: cloneTelemetryRect(slots.avatar),
         hpBar: cloneTelemetryRect(slots.hpBar),
+        statusBadges: cloneTelemetryRect(slots.statusBadges),
         rankText: cloneTelemetryRect(rankTextRect),
         nameText: cloneTelemetryRect(nameTextRect),
+        handleText: cloneTelemetryRect(handleTextRect),
         koText: cloneTelemetryRect(koTextRect),
+        commandText: cloneTelemetryRect(commandTextRect || null),
+        statusText: cloneTelemetryRect(statusTextRect),
         hpText: cloneTelemetryRect(hpTextRect),
       },
     };
@@ -9128,6 +9375,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       if (hasRecentCheer(data.uniqueId)) return;
       const hearts = Math.max(1, Math.min(3, Math.round((Number(data.amount) || 5) / 10)));
       fireHeartEffect(data.uniqueId, hearts, 0.35, { ...data, kind: 'heal', color: data.color || '#8fffd2' });
+      setCardAccent(data.uniqueId, 'heal', data.color || THEME.green, 1400, { label: 'HEAL' });
       playSound('heal');
     }, 140);
   }
@@ -9152,8 +9400,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       intensity: 0.95, critical: true, streak: data.killerStreak || 0, remainingHpPct: 0,
       attackerScope: data.attackerScope, targetScope: data.targetScope,
     });
-    setCardAccent(data.killer, 'kill', THEME.gold, 1500);
-    setCardAccent(data.victim, 'hit', THEME.red, 1200);
+    setCardAccent(data.killer, 'boost', THEME.gold, 1500, { label: 'KO' });
+    setCardAccent(data.victim, 'hit', THEME.red, 1200, { label: 'HIT' });
     const killerName = data.killerNick || data.killer || 'Fighter';
     const victimName = data.victimNick || data.victim || 'Opponent';
     const kills = Number(data.killerKills) || 0;
@@ -9206,7 +9454,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }, isLegend ? 4600 : 3200);
     const id = data.uniqueId || data.userId || data.nickname;
     if (id) {
-      setCardAccent(id, 'gift', isLegend ? THEME.gold : '#ff8bc2', isLegend ? 1800 : 1200);
+      setCardAccent(id, 'gift', isLegend ? THEME.gold : '#ff8bc2', isLegend ? 1800 : 1200, { label: 'GIFT' });
       fireHeartEffect(id, isLegend ? 4 : 2, isLegend ? 0.8 : 0.45, { kind: 'gift', color: isLegend ? THEME.gold : '#ff8bc2' });
     }
     showBattlePrompt(isLegend ? 'Legendary boost' : 'Power boost', isLegend ? 'return' : '', isLegend ? 2400 : 1800);
@@ -9230,6 +9478,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       priority: data.surgeTier ? 72 : 58,
     }, 3100);
     fireHeartEffect(data.uniqueId, 4, 0.68, { ...data, kind: 'follow', color: data.color || THEME.cyan });
+    if (data.uniqueId || data.userId || data.nickname) {
+      setCardAccent(data.uniqueId || data.userId || data.nickname, shieldSeconds ? 'shield' : 'join', data.color || THEME.cyan, 1600, { label: shieldSeconds ? 'DEF' : 'JOIN' });
+    }
     showBattlePrompt('Recruit shield activated', 'return', 2200);
   }
 
@@ -9267,7 +9518,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         charge: 42,
         priority: 36,
       }, 2400);
-      setCardAccent(data.uniqueId, 'follow', THEME.cyan, 1100);
+      setCardAccent(data.uniqueId || data.userId || data.nickname, 'emoji', THEME.cyan, 1300, { label: 'ICON' });
       showBattlePrompt('Fighter icon updated', 'return', 1700);
       return;
     }
@@ -9281,6 +9532,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         charge: 54,
         priority: 44,
       }, 2400);
+      setCardAccent(data.uniqueId || data.userId || data.sourceId || data.nickname, 'heal', THEME.green, 1400, { label: 'HEAL' });
       showBattlePrompt('Support command activated', 'return', 1800);
       return;
     }
@@ -9293,7 +9545,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         charge: 62,
         priority: 46,
       }, 2600);
-      setCardAccent(data.uniqueId, 'follow', THEME.cyan, 1400);
+      setCardAccent(data.uniqueId || data.userId || data.nickname, 'shield', THEME.cyan, 1600, { label: 'DEF' });
       showBattlePrompt('Shield active for 12 seconds', 'return', 1900);
       return;
     }
@@ -9302,6 +9554,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       return;
     }
     if (data.type === 'join') {
+      setCardAccent(data.uniqueId || data.userId || data.nickname, 'join', data.color || THEME.gold, 1600, { label: 'JOIN' });
       showBattlePrompt(`${name} entered the arena`, 'return', 1900);
     }
   }

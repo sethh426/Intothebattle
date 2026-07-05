@@ -147,30 +147,43 @@ function assertPlayerCardSlots(layout, label, options = {}) {
     const cardLabel = `${label} player ${index + 1}`;
     const slots = player.slots || {};
     expect(slots.card, `${cardLabel} missing card slot`).toBeTruthy();
-    for (const key of ['rank', 'name', 'ko', 'avatar', 'hpBar']) {
+    for (const key of ['rank', 'rankBadge', 'name', 'handle', 'ko', 'koBadge', 'commandBadge', 'avatar', 'hpBar', 'statusBadges']) {
       assertRectInside(slots[key], slots.card, `${cardLabel} ${key} slot`);
     }
-    for (const key of ['rankText', 'nameText', 'koText', 'hpText']) {
+    for (const key of ['rankText', 'nameText', 'handleText', 'koText', 'hpText', 'statusText']) {
       assertRectInside(slots[key], slots.card, `${cardLabel} ${key}`);
     }
+    if (slots.commandText) assertRectInside(slots.commandText, slots.card, `${cardLabel} command text`);
     assertRectInside(slots.rankText, slots.rank, `${cardLabel} rank text`, 2.5);
     assertRectInside(slots.nameText, slots.name, `${cardLabel} name text`, 3);
+    assertRectInside(slots.handleText, slots.handle, `${cardLabel} handle text`, 3);
     assertRectInside(slots.koText, slots.ko, `${cardLabel} ko text`, 2.5);
     assertRectInside(slots.hpText, slots.hpBar, `${cardLabel} hp text`, 3);
+    assertRectInside(slots.statusText, slots.statusBadges, `${cardLabel} status text`, 2.5);
+    if (slots.commandText) assertRectInside(slots.commandText, slots.commandBadge, `${cardLabel} command text`, 2.5);
     assertNoSlotOverlap(slots.rank, slots.name, `${cardLabel} rank/name`);
-    assertNoSlotOverlap(slots.name, slots.ko, `${cardLabel} name/ko`);
+    assertNoSlotOverlap(slots.name, slots.commandBadge, `${cardLabel} name/command`);
+    assertNoSlotOverlap(slots.commandBadge, slots.ko, `${cardLabel} command/ko`);
     assertNoSlotOverlap(slots.rank, slots.ko, `${cardLabel} rank/ko`);
-    for (const statKey of ['rank', 'ko']) {
+    assertNoSlotOverlap(slots.handle, slots.statusBadges, `${cardLabel} handle/status`);
+    for (const statKey of ['ko', 'commandBadge']) {
       assertNoSlotOverlap(slots[statKey], slots.avatar, `${cardLabel} ${statKey}/avatar`);
       assertNoSlotOverlap(slots[statKey], slots.hpBar, `${cardLabel} ${statKey}/hp`);
     }
+    assertNoSlotOverlap(slots.rank, slots.hpBar, `${cardLabel} rank/hp`);
     assertNoSlotOverlap(slots.name, slots.avatar, `${cardLabel} name/avatar`);
     assertNoSlotOverlap(slots.name, slots.hpBar, `${cardLabel} name/hp`);
+    assertNoSlotOverlap(slots.handle, slots.hpBar, `${cardLabel} handle/hp`);
+    assertNoSlotOverlap(slots.statusBadges, slots.hpBar, `${cardLabel} status/hp`);
     assertNoSlotOverlap(slots.avatar, slots.hpBar, `${cardLabel} avatar/hp`);
+    expect(player.text?.cardDesign, `${cardLabel} card design marker`).toBe('battle-id-plate');
     expect(player.text?.nameHasReplacement, `${cardLabel} name contains replacement glyph`).toBe(false);
     expect(player.text?.fittedName || '', `${cardLabel} missing fitted name`).not.toBe('');
+    expect(player.text?.handle || '', `${cardLabel} missing handle`).not.toBe('');
     expect(player.text?.koLabel || '', `${cardLabel} missing ko label`).not.toBe('');
     expect(player.text?.hpLabel || '', `${cardLabel} missing hp label`).toContain('HP');
+    expect(player.text?.statusLabel || '', `${cardLabel} missing status label`).not.toBe('');
+    expect(['healthy', 'damaged', 'critical', 'ko'], `${cardLabel} unknown health state`).toContain(player.text?.healthState);
     expect(player.text?.nameCenterDelta ?? 999, `${cardLabel} name center drift`).toBeLessThanOrEqual(2);
   });
 }
@@ -496,11 +509,11 @@ test('@visual player cards keep stats and special-character names aligned', asyn
   await openPreview(page);
   await page.waitForFunction(() => typeof window.overlayEventEngine?.testPlayerCards === 'function', null, { timeout: 5000 });
   const roster = [
-    { uniqueId: 'card_plain', nickname: 'NebulaX', hp: 180, maxHp: 200, kills: 3, iconEmoji: '\u2694\ufe0f' },
-    { uniqueId: 'card_fire', nickname: '\u{1f525}Queen\u{1f525}', hp: 150, maxHp: 190, kills: 27, iconEmoji: '\u{1f525}' },
-    { uniqueId: 'card_accent', nickname: 'A\u0301lvaro\u2728', hp: 94, maxHp: 160, kills: 0, iconEmoji: '\u2728' },
-    { uniqueId: 'card_cjk', nickname: '\u73a9\u5bb6\u26a1\u9f8d', hp: 121, maxHp: 170, kills: 108, iconEmoji: '\u26a1' },
-    { uniqueId: 'card_long', nickname: 'Name_\u2728\u2728\u2728_MegaDash_Commander', hp: 72, maxHp: 150, kills: 1420, iconEmoji: '\u{1f3ae}' },
+    { uniqueId: 'card_plain', nickname: 'NebulaX', hp: 180, maxHp: 200, kills: 3, iconEmoji: '\u2694\ufe0f', cardAccentType: 'attack', cardAccentLabel: 'LASER', teamColor: '#55e7ff' },
+    { uniqueId: 'card_fire', nickname: '\u{1f525}Queen\u{1f525}', hp: 150, maxHp: 190, kills: 27, iconEmoji: '\u{1f525}', cardAccentType: 'shield', cardAccentLabel: 'DEF', teamColor: '#f6c95b' },
+    { uniqueId: 'card_accent', nickname: 'A\u0301lvaro\u2728', hp: 66, maxHp: 160, kills: 0, iconEmoji: '\u2728', cardAccentType: 'heal', cardAccentLabel: 'HEAL', teamColor: '#8fffd2' },
+    { uniqueId: 'card_cjk', nickname: '\u73a9\u5bb6\u26a1\u9f8d', hp: 24, maxHp: 170, kills: 108, iconEmoji: '\u26a1', cardAccentType: 'critical', cardAccentLabel: 'CRIT', teamColor: '#ff6a3d' },
+    { uniqueId: 'card_long', nickname: 'Name_\u2728\u2728\u2728_MegaDash_Commander', hp: 0, maxHp: 150, kills: 1420, iconEmoji: '\u{1f3ae}', cardAccentType: 'kill', cardAccentLabel: 'KO', teamColor: '#ff78b2' },
   ];
   const result = await page.evaluate(players => window.overlayEventEngine.testPlayerCards(players), roster);
   await attachJson(testInfo, 'special-player-card-roster-result', result);
@@ -508,6 +521,12 @@ test('@visual player cards keep stats and special-character names aligned', asyn
   await waitForDemoLayout(page, { minPlayers: 5, settleMs: 500 });
   const layout = await readLegacyLayout(page, testInfo, 'special-player-card-layout');
   assertPlayerCardSlots(layout, 'special-player-cards');
+  const cardsById = Object.fromEntries(layout.players.map(player => [player.id, player]));
+  expect(cardsById.card_plain?.text).toMatchObject({ healthState: 'healthy', commandLabel: 'LASER' });
+  expect(cardsById.card_fire?.text).toMatchObject({ healthState: 'healthy', commandLabel: 'DEF' });
+  expect(cardsById.card_accent?.text).toMatchObject({ healthState: 'damaged', commandLabel: 'HEAL' });
+  expect(cardsById.card_cjk?.text).toMatchObject({ healthState: 'critical', commandLabel: 'CRIT' });
+  expect(cardsById.card_long?.text).toMatchObject({ healthState: 'ko', commandLabel: 'KO' });
   await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'special-player-card-canvas' });
   await freezeOverlayVisuals(page, testInfo, 'special-player-card-freeze');
   await expectNoHorizontalOverflow(page);
