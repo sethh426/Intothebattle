@@ -17,6 +17,15 @@ import {
   isFullAccessTrialSubscription,
   isPaidAccessCode,
 } from '../services/entitlements.js';
+import { cancelPayPalSubscription } from '../services/paypalSubscriptions.js';
+import {
+  ADMIN_GRANTED_SUBSCRIPTION_ORDER_SQL,
+  findUserForCreatorProGrant,
+  grantPermanentCreatorPro,
+  isActiveAdminGrantedSubscription,
+  latestSubscriptionByUser,
+  removePermanentCreatorPro,
+} from '../services/userSubscriptions.js';
 import {
   ensureMarketingPostsForDate,
   listRecentMarketingVisits,
@@ -360,18 +369,6 @@ function isActiveAccessCode(row, now = new Date()) {
   return !expiresAt || expiresAt >= now;
 }
 
-function latestSubscriptionByUser(subscriptions = []) {
-  const latest = new Map();
-  subscriptions.forEach(subscription => {
-    if (!subscription?.user_id) return;
-    const current = latest.get(subscription.user_id);
-    const currentDate = parseAdminDate(current?.updated_at || current?.created_at)?.getTime() || 0;
-    const nextDate = parseAdminDate(subscription.updated_at || subscription.created_at)?.getTime() || 0;
-    if (!current || nextDate >= currentDate) latest.set(subscription.user_id, subscription);
-  });
-  return latest;
-}
-
 function classifySubscriptionTier(subscription, now = new Date()) {
   if (isBetaSubscription(subscription)) return 'beta';
   if (isActiveSubscription(subscription)) return 'paid';
@@ -493,9 +490,11 @@ function listRecentAdminUsers(limit = 80) {
         u.is_active,
         u.created_at,
         u.last_login,
+        s.paypal_subscription_id,
         s.plan_type,
         s.status AS subscription_status,
         s.expires_at,
+        s.admin_granted,
         ac.code AS access_code,
         ac.code_type AS access_code_type,
         ac.subscription_status AS access_subscription_status,
@@ -507,7 +506,7 @@ function listRecentAdminUsers(limit = 80) {
         SELECT id
         FROM subscriptions
         WHERE user_id = u.id
-        ORDER BY updated_at DESC, id DESC
+        ORDER BY ${ADMIN_GRANTED_SUBSCRIPTION_ORDER_SQL}
         LIMIT 1
       )
       LEFT JOIN access_codes ac ON ac.id = (
@@ -552,14 +551,15 @@ function buildAdminLiveActivity() {
         u.name,
         u.tiktok_username,
         s.plan_type,
-        s.status AS subscription_status
+        s.status AS subscription_status,
+        s.admin_granted
       FROM user_rooms ur
       JOIN users u ON u.id = ur.user_id
       LEFT JOIN subscriptions s ON s.id = (
         SELECT id
         FROM subscriptions
         WHERE user_id = u.id
-        ORDER BY updated_at DESC, id DESC
+        ORDER BY ${ADMIN_GRANTED_SUBSCRIPTION_ORDER_SQL}
         LIMIT 1
       )
     `).all().forEach(row => {
@@ -705,9 +705,22 @@ function renderUserRows(users = [], emptyMessage = 'No users found yet.') {
   return users.map((user) => {
     const verified = Number(user.email_verified) === 1 ? 'Verified' : 'Unverified';
     const active = Number(user.is_active) === 0 ? 'Disabled' : 'Active';
+    const adminGrantActive = isActiveAdminGrantedSubscription({
+      admin_granted: user.admin_granted,
+      status: user.subscription_status,
+    });
     const plan = user.plan_type || user.subscription_status || user.access_code_type || 'Free / pending';
     const tiktokUsername = accountTikTokUsername(user);
     const beta = isAdminBetaUser(user);
+    const grantAction = active === 'Disabled'
+      ? '<span class="muted">Disabled account</span>'
+      : adminGrantActive
+        ? `<form method="POST" action="/admin/users/${escapeAttr(user.id)}/free-pro/remove" onsubmit="return confirm('Remove this Creator Pro grant?')">
+            <button type="submit" class="secondary-button">Remove Pro Grant</button>
+          </form>`
+        : `<form method="POST" action="/admin/users/${escapeAttr(user.id)}/free-pro/grant" onsubmit="return confirm('Grant permanent Creator Pro to this account?')">
+            <button type="submit">Grant Creator Pro</button>
+          </form>`;
     return `<tr>
       <td data-label="ID">${escapeHtml(String(user.id))}<br><span class="muted">${beta ? 'Beta tester' : 'Standard'}</span></td>
       <td data-label="Email / Name"><strong>${escapeHtml(user.email || '')}</strong><br><span class="muted">${escapeHtml(user.name || '')}</span></td>
@@ -716,8 +729,9 @@ function renderUserRows(users = [], emptyMessage = 'No users found yet.') {
       <td data-label="Status">${escapeHtml(`${active} / ${verified}`)}</td>
       <td data-label="Created">${escapeHtml(formatSponsorDate(user.created_at))}</td>
       <td data-label="Last Login">${escapeHtml(formatSponsorDate(user.last_login))}</td>
+      <td data-label="Actions">${grantAction}</td>
     </tr>`;
-  }).join('') || `<tr><td colspan="7">${escapeHtml(emptyMessage)}</td></tr>`;
+  }).join('') || `<tr><td colspan="8">${escapeHtml(emptyMessage)}</td></tr>`;
 }
 
 function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [], roomRequirementEnabled = true, userMetrics = buildAdminUserMetrics(), users = [], comments = [], liveActivity = buildAdminLiveActivity() } = {}) {
@@ -905,6 +919,19 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         </form>
           </div>
           <div class="control-panel">
+        <h2>Creator Pro grant</h2>
+        <form method="POST" action="/admin/users/free-pro/grant">
+          <label>Email or user ID</label>
+          <input name="account" type="text" placeholder="creator@example.com or 42" required />
+          <button type="submit">Grant Creator Pro</button>
+        </form>
+        <form method="POST" action="/admin/users/free-pro/remove" style="margin-top: 14px;" onsubmit="return confirm('Remove this Creator Pro grant?')">
+          <label>Email or user ID</label>
+          <input name="account" type="text" placeholder="creator@example.com or 42" required />
+          <button type="submit" class="secondary-button">Remove Pro Grant</button>
+        </form>
+          </div>
+          <div class="control-panel">
         <h2>Room ID requirement</h2>
         <p>Current behavior: <strong>${roomRequirementEnabled ? 'Room ID required' : 'Room ID not required'}</strong></p>
         <form method="POST" action="/admin/toggle-room-requirement">
@@ -960,7 +987,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         <summary><span>Creator accounts</span><small>Newest non-beta accounts with email, TikTok handle, plan, and login status.</small></summary>
         <div class="section-body table-shell">
           <table>
-            <thead><tr><th>ID</th><th>Email / Name</th><th>TikTok</th><th>Plan</th><th>Status</th><th>Created</th><th>Last Login</th></tr></thead>
+            <thead><tr><th>ID</th><th>Email / Name</th><th>TikTok</th><th>Plan</th><th>Status</th><th>Created</th><th>Last Login</th><th>Actions</th></tr></thead>
             <tbody>${userRows}</tbody>
           </table>
         </div>
@@ -969,7 +996,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         <summary><span>Beta tester accounts</span><small>Registered users linked to beta tester codes or beta status.</small></summary>
         <div class="section-body table-shell">
           <table>
-            <thead><tr><th>ID</th><th>Email / Name</th><th>TikTok</th><th>Plan</th><th>Status</th><th>Created</th><th>Last Login</th></tr></thead>
+            <thead><tr><th>ID</th><th>Email / Name</th><th>TikTok</th><th>Plan</th><th>Status</th><th>Created</th><th>Last Login</th><th>Actions</th></tr></thead>
             <tbody>${betaUserRows}</tbody>
           </table>
         </div>
@@ -1150,6 +1177,68 @@ router.get('/', requireAdminAuth, (req, res) => {
     comments,
   }));
 });
+
+function redirectAdmin(res, type, message) {
+  const key = type === 'error' ? 'error' : 'message';
+  return res.redirect(`/admin?${key}=${encodeURIComponent(message)}`);
+}
+
+function findGrantUserFromRequest(req) {
+  const id = Number(req.params?.id);
+  if (Number.isFinite(id) && id > 0) {
+    return db.prepare('SELECT * FROM users WHERE id = ?').get(Math.floor(id)) || null;
+  }
+  return findUserForCreatorProGrant(db, req.body?.account);
+}
+
+function creatorLabel(user) {
+  return user?.email || user?.name || `user ${user?.id || ''}`;
+}
+
+async function grantCreatorProFromRequest(req, res) {
+  const user = findGrantUserFromRequest(req);
+  if (!user) return redirectAdmin(res, 'error', 'Account not found');
+
+  try {
+    const result = await grantPermanentCreatorPro(db, user, {
+      cancelPayPalSubscription,
+      reason: 'Creator Pro granted by admin',
+    });
+    const cancelledCount = result.cancelledPayPalSubscriptions.length;
+    const billingNote = cancelledCount
+      ? ` Cancelled ${cancelledCount} PayPal subscription${cancelledCount === 1 ? '' : 's'} first.`
+      : '';
+    return redirectAdmin(res, 'message', `Granted Creator Pro to ${creatorLabel(user)}.${billingNote}`);
+  } catch (err) {
+    return redirectAdmin(res, 'error', err?.message || 'Failed to grant Creator Pro');
+  }
+}
+
+function removeCreatorProFromRequest(req, res) {
+  const user = findGrantUserFromRequest(req);
+  if (!user) return redirectAdmin(res, 'error', 'Account not found');
+
+  try {
+    removePermanentCreatorPro(db, user);
+    return redirectAdmin(res, 'message', `Removed Creator Pro grant from ${creatorLabel(user)}`);
+  } catch (err) {
+    return redirectAdmin(res, 'error', err?.message || 'Failed to remove Creator Pro grant');
+  }
+}
+
+function denyAccountDelete(_req, res) {
+  return res.status(405).send('User accounts cannot be deleted from admin.');
+}
+
+router.post('/users/free-pro/grant', requireAdminAuth, grantCreatorProFromRequest);
+router.post('/users/free-pro/remove', requireAdminAuth, removeCreatorProFromRequest);
+router.post('/users/:id/free-pro/grant', requireAdminAuth, grantCreatorProFromRequest);
+router.post('/users/:id/free-pro/remove', requireAdminAuth, removeCreatorProFromRequest);
+router.post('/users/:id/delete', requireAdminAuth, denyAccountDelete);
+router.delete('/users/:id', requireAdminAuth, denyAccountDelete);
+router.post('/accounts/:id/delete', requireAdminAuth, denyAccountDelete);
+router.delete('/accounts/:id', requireAdminAuth, denyAccountDelete);
+router.post('/user/:id/delete', requireAdminAuth, denyAccountDelete);
 
 router.post('/toggle-room-requirement', requireAdminAuth, (req, res) => {
   const setting = db.prepare('SELECT value FROM app_settings WHERE key = ?').get('require_room_id');
@@ -2667,7 +2756,7 @@ function renderGrowthQueueBoard(posts = []) {
           <p>${escapeHtml(bodyPreview || 'No post body saved yet.')}</p>
           <div class="queue-card-meta">
             <span>${numberValue(body.length)}/${numberValue(characterLimit)} chars</span>
-            <span>${escapeHtml(post.topic_key || 'growth')}</span>
+            <span>${escapeHtml(post.audience_stage || post.topic_key || 'growth')}</span>
           </div>
           ${post.error_message ? `<div class="warning-note failed">${escapeHtml(post.error_message)}</div>` : ''}
           ${renderQueueCardActions(post)}
@@ -3045,7 +3134,7 @@ function renderMarketingAdminPage({
     return `<tr>
       <td data-label="Platform">
         <strong>${escapeHtml(String(post.platform || '').toUpperCase())}</strong><br />
-        <small>${escapeHtml(post.campaign_date || '')} - ${escapeHtml(post.topic_key || '')}</small>
+        <small>${escapeHtml(post.campaign_date || '')} - ${escapeHtml(post.audience_stage || post.topic_key || '')}</small>
       </td>
       <td data-label="Status">
         <span class="status-pill ${escapeAttr(status)}">${escapeHtml(status)}</span><br />

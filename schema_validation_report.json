@@ -45,7 +45,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/how-to-play#webpage\",\n        \"url\": \"https://intothebattle.com/how-to-play\",\n        \"name\": \"How To Play IntoTheBattle | TikTok LIVE Viewer Commands\",\n        \"description\": \"Learn how viewers play IntoTheBattle during TikTok LIVE with chat commands, emojis, attacks, shields, healing, likes, gifts, and future arena mechanics.\",\n        \"inLanguage\": \"en-US\",\n   ",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/how-to-play#webpage\",\n        \"url\": \"https://intothebattle.com/how-to-play\",\n        \"name\": \"IntoTheBattle Player Commands | How To Play\",\n        \"description\": \"A viewer-first command manual for IntoTheBattle player commands, targets, defenses, support actions, teams, and engagement triggers.\",\n        \"inLanguage\": \"en-US\",\n        \"isPartOf\": { \"@id\": \"https",
           "ok": true,
           "errors": [],
           "warnings": []

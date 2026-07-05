@@ -1,5 +1,11 @@
-import { getAsync, runAsync } from '../db/db.js';
+import db, { getAsync, runAsync } from '../db/db.js';
 import { getE2EAuthRecord } from '../auth/e2eAuth.js';
+import { buildUserAccessStatus, trialDaysFromValue } from '../services/entitlements.js';
+import { getEffectiveUserSubscription } from '../services/userSubscriptions.js';
+
+function paywallUrl(reason) {
+  return `/paywall?reason=${encodeURIComponent(reason || 'subscription_required')}`;
+}
 
 async function getAuthRecord(token) {
   if (!token) return null;
@@ -57,16 +63,25 @@ export default async function requireDashboardAccess(req, res, next) {
       req.accessCode = row;
     } else {
       const user = auth.record;
-      if (!user.is_active) return res.redirect('/paywall?reason=revoked');
+      if (!user.is_active) return res.redirect(paywallUrl('revoked'));
 
-      const subscription = await getAsync(
-        'SELECT * FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1',
-        user.id
-      );
+      const subscription = auth.subscription || getEffectiveUserSubscription(db, user.id);
+      const accessStatus = buildUserAccessStatus(user, subscription, {
+        trialDays: trialDaysFromValue(process.env.FREE_TRIAL_DAYS, 7),
+      });
+      if (!accessStatus.accessAllowed) {
+        console.info('Dashboard access -> redirecting to paywall (user access blocked)', {
+          userId: user.id,
+          reason: accessStatus.reason,
+          status: accessStatus.status,
+        });
+        return res.redirect(paywallUrl(accessStatus.reason));
+      }
 
       await runAsync('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', user.id);
       req.user = user;
       req.subscription = subscription;
+      req.subscriptionStatus = accessStatus;
     }
 
     next();

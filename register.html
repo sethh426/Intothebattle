@@ -37,6 +37,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
   <script type="module" src="/js/clarity-loader.js"></script>
+  <script type="module" src="/js/growth-tracker.js"></script>
   <script type="module" src="/js/site-breadcrumbs.js"></script>
 
   <script type="application/ld+json">
@@ -876,6 +877,7 @@
 
     let signupIntentTimer = null;
     let lastSignupIntentEmail = '';
+    let signupIntentGrowthEventId = '';
 
     function signupIntentPayload() {
       return {
@@ -884,6 +886,7 @@
         tiktokUsername: tiktokInput.value.trim().replace(/^@+/, ''),
         source: 'email-register',
         lastPath: window.location.pathname + window.location.search,
+        growthEventId: signupIntentGrowthEventId || '',
       };
     }
 
@@ -891,6 +894,8 @@
       const payload = signupIntentPayload();
       if (!payload.email || !payload.email.includes('@') || payload.email === lastSignupIntentEmail) return;
       lastSignupIntentEmail = payload.email;
+      signupIntentGrowthEventId = payload.growthEventId || `signup_intent_captured:${(window.crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 48)}`;
+      payload.growthEventId = signupIntentGrowthEventId;
       if (useBeacon && navigator.sendBeacon) {
         navigator.sendBeacon('/api/signup-intent', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
         return;

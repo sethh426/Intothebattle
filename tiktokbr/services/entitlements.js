@@ -27,6 +27,19 @@ export const BETA_ACCESS_CODE_TYPES = new Set([
 
 export const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active']);
 export const TRIAL_SUBSCRIPTION_STATUSES = new Set(['trial', 'trialing', 'free-trial', 'full-access-trial']);
+export const DEFAULT_FREE_TRIAL_DAYS = 7;
+
+const BLOCKING_SUBSCRIPTION_STATUSES = new Set([
+  'cancelled',
+  'canceled',
+  'suspended',
+  'revoked',
+]);
+const PENDING_SUBSCRIPTION_STATUSES = new Set([
+  'pending',
+  'approval-pending',
+  'pending-approval',
+]);
 
 function normalizeValue(value, fallback = '') {
   const normalized = String(value ?? '').trim().toLowerCase();
@@ -89,10 +102,42 @@ export function isActiveSubscription(subscription) {
   return ACTIVE_SUBSCRIPTION_STATUSES.has(normalizeSubscriptionStatus(subscription?.status));
 }
 
-function parseDate(value) {
+export function parseDate(value) {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function trialDaysFromValue(value, fallback = DEFAULT_FREE_TRIAL_DAYS) {
+  const parsed = Number(value);
+  if (Number.isFinite(parsed) && parsed > 0) return Math.round(parsed);
+  const parsedFallback = Number(fallback);
+  return Number.isFinite(parsedFallback) && parsedFallback > 0
+    ? Math.round(parsedFallback)
+    : DEFAULT_FREE_TRIAL_DAYS;
+}
+
+export function accountTrialStartedAt(user) {
+  return parseDate(user?.created_at || user?.createdAt);
+}
+
+export function accountTrialExpiresAt(user, options = {}) {
+  const startedAt = accountTrialStartedAt(user);
+  if (!startedAt) return null;
+  const trialDays = trialDaysFromValue(
+    options.trialDays ?? options.freeTrialDays,
+    DEFAULT_FREE_TRIAL_DAYS
+  );
+  return new Date(startedAt.getTime() + trialDays * 24 * 60 * 60 * 1000);
+}
+
+export function effectiveUserTrialExpiresAt(user, subscription = null, options = {}) {
+  const accountExpiresAt = accountTrialExpiresAt(user, options);
+  const subscriptionExpiresAt = parseDate(subscription?.expires_at || subscription?.expiresAt);
+  if (accountExpiresAt && subscriptionExpiresAt) {
+    return accountExpiresAt < subscriptionExpiresAt ? accountExpiresAt : subscriptionExpiresAt;
+  }
+  return accountExpiresAt || subscriptionExpiresAt;
 }
 
 export function isFullAccessTrialSubscription(subscription, now = new Date()) {
@@ -100,7 +145,124 @@ export function isFullAccessTrialSubscription(subscription, now = new Date()) {
   const status = normalizeSubscriptionStatus(subscription.status);
   if (!TRIAL_SUBSCRIPTION_STATUSES.has(status)) return false;
   const expiresAt = parseDate(subscription.expires_at || subscription.expiresAt);
-  return !expiresAt || expiresAt >= now;
+  return !expiresAt || expiresAt > now;
+}
+
+function isUserActive(user) {
+  if (!user) return false;
+  if (user.is_active == null) return true;
+  return flagEnabled(user.is_active);
+}
+
+function normalizeBlockingReason(status) {
+  if (status === 'canceled') return 'cancelled';
+  return status || 'subscription_required';
+}
+
+function isTrialLikeSubscription(subscription) {
+  const status = normalizeSubscriptionStatus(subscription?.status);
+  const planType = normalizeValue(subscription?.plan_type || subscription?.planType);
+  return TRIAL_SUBSCRIPTION_STATUSES.has(status) || planType.includes('trial') || planType.includes('full-access');
+}
+
+function baseUserAccessPayload(patch) {
+  return {
+    type: 'user',
+    status: patch.status || 'free',
+    tier: patch.tier || 'free',
+    planName: patch.planName || 'Free',
+    canUseCreatorSponsors: Boolean(patch.canUseCreatorSponsors),
+    platformSponsorManaged: !patch.canUseCreatorSponsors,
+    betaTester: false,
+    reason: patch.reason || null,
+    accessAllowed: Boolean(patch.accessAllowed),
+    actionRequired: !patch.accessAllowed,
+    trialStartedAt: patch.trialStartedAt || null,
+    effectiveTrialExpiresAt: patch.effectiveTrialExpiresAt || null,
+    subscriptionStatus: patch.subscriptionStatus || null,
+  };
+}
+
+export function buildUserAccessStatus(user, subscription = null, options = {}) {
+  const now = parseDate(options.now) || new Date();
+  const trialOptions = {
+    trialDays: trialDaysFromValue(
+      options.trialDays ?? options.freeTrialDays,
+      DEFAULT_FREE_TRIAL_DAYS
+    ),
+  };
+
+  const blocked = (reason, status = reason) => baseUserAccessPayload({
+    status,
+    reason,
+    accessAllowed: false,
+    subscriptionStatus: subscription ? normalizeSubscriptionStatus(subscription.status) : null,
+  });
+
+  if (!user) return blocked('unauthorized', 'unauthorized');
+  if (!isUserActive(user)) return blocked('revoked', 'revoked');
+
+  const rawStatus = subscription
+    ? normalizeSubscriptionStatus(subscription.status)
+    : null;
+
+  if (isActiveSubscription(subscription)) {
+    return baseUserAccessPayload({
+      status: 'active',
+      tier: 'paid',
+      planName: subscription?.plan_type || subscription?.planType || 'Creator Pro',
+      canUseCreatorSponsors: true,
+      accessAllowed: true,
+      subscriptionStatus: rawStatus,
+    });
+  }
+
+  if (subscription && BLOCKING_SUBSCRIPTION_STATUSES.has(rawStatus)) {
+    const reason = normalizeBlockingReason(rawStatus);
+    return blocked(reason, reason);
+  }
+
+  if (subscription && rawStatus === 'expired') {
+    return blocked(isTrialLikeSubscription(subscription) ? 'trial_expired' : 'expired', 'expired');
+  }
+
+  if (subscription && PENDING_SUBSCRIPTION_STATUSES.has(rawStatus)) {
+    return blocked('subscription_pending', rawStatus);
+  }
+
+  const trialStartedAt = accountTrialStartedAt(user) || parseDate(subscription?.started_at || subscription?.startedAt);
+  const effectiveTrialExpiresAt = effectiveUserTrialExpiresAt(user, subscription, trialOptions);
+  const trialActive = effectiveTrialExpiresAt && effectiveTrialExpiresAt > now;
+  const trialish = !subscription || TRIAL_SUBSCRIPTION_STATUSES.has(rawStatus) || rawStatus === 'free' || rawStatus === 'unknown';
+
+  if (trialish && trialActive) {
+    return baseUserAccessPayload({
+      status: 'trialing',
+      tier: 'trial',
+      planName: subscription?.plan_type || subscription?.planType || '7-Day Full Access',
+      canUseCreatorSponsors: true,
+      accessAllowed: true,
+      trialStartedAt,
+      effectiveTrialExpiresAt,
+      subscriptionStatus: rawStatus || 'trialing',
+    });
+  }
+
+  if (trialish) {
+    return baseUserAccessPayload({
+      status: 'expired',
+      tier: 'free',
+      planName: 'Free',
+      canUseCreatorSponsors: false,
+      accessAllowed: false,
+      reason: 'trial_expired',
+      trialStartedAt,
+      effectiveTrialExpiresAt,
+      subscriptionStatus: rawStatus || 'trialing',
+    });
+  }
+
+  return blocked('subscription_required', rawStatus || 'subscription_required');
 }
 
 export function isPaidAuthRecord(auth, options = {}) {
@@ -108,19 +270,22 @@ export function isPaidAuthRecord(auth, options = {}) {
   if (auth.type === 'code') return isPaidAccessCode(auth.record);
 
   const getLatestUserSubscription = options.getLatestUserSubscription;
-  const subscription = typeof getLatestUserSubscription === 'function'
+  const subscription = auth.subscription || (typeof getLatestUserSubscription === 'function'
     ? getLatestUserSubscription(auth.record?.id)
-    : auth.subscription;
-  return isActiveSubscription(subscription) || isFullAccessTrialSubscription(subscription);
+    : null);
+  return buildUserAccessStatus(auth.record, subscription, options).canUseCreatorSponsors;
 }
 
 export function buildPlanEntitlements(auth, options = {}) {
   const getLatestUserSubscription = options.getLatestUserSubscription;
   const subscription = auth?.type === 'user'
-    ? (typeof getLatestUserSubscription === 'function' ? getLatestUserSubscription(auth.record?.id) : auth.subscription)
+    ? (auth.subscription || (typeof getLatestUserSubscription === 'function' ? getLatestUserSubscription(auth.record?.id) : null))
     : null;
-  const trial = isFullAccessTrialSubscription(subscription);
-  const paid = auth?.type === 'code' ? isPaidAccessCode(auth.record) : isActiveSubscription(subscription);
+  const userAccess = auth?.type === 'user'
+    ? buildUserAccessStatus(auth.record, subscription, options)
+    : null;
+  const trial = userAccess?.tier === 'trial';
+  const paid = auth?.type === 'code' ? isPaidAccessCode(auth.record) : userAccess?.tier === 'paid';
   const beta = auth?.type === 'code' ? isBetaTesterAccessCode(auth.record) : false;
   const creatorSponsors = paid || trial || beta;
   return {

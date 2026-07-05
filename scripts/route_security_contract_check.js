@@ -20,6 +20,12 @@ assert.match(admin, /sameSite:\s*'strict'/, 'admin session cookie must remain Sa
 assert.match(admin, /requireAdminMutationOrigin/, 'admin router must enforce explicit admin mutation origin checks');
 assert.match(paypal, /verifyPayPalWebhook/, 'PayPal webhook must verify provider signatures');
 assert.match(server, /function blockInProduction/, 'dev and test routes must have a production block helper');
+assert.doesNotMatch(admin, /DELETE\s+FROM\s+users/i, 'admin routes must not delete user accounts');
+assert.doesNotMatch(admin, /action=["']\/admin\/users\/[^"']*delete/i, 'admin UI must not render user account delete forms');
+assert.match(admin, /function denyAccountDelete/, 'admin routes must explicitly deny user account deletion attempts');
+assert.match(admin, /\/comments\/:id\/delete/, 'admin comment delete route should remain available');
+assert.match(admin, /\/blog\/:id\/delete/, 'admin blog delete route should remain available');
+assert.match(admin, /\/sponsors\/:id\/delete/, 'admin sponsor creative delete route should remain available');
 
 const endpoints = contract.endpoints || [];
 assert.ok(endpoints.length >= 20, 'route contract should cover critical production routes');

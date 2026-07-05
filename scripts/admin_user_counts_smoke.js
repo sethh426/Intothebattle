@@ -25,6 +25,7 @@ const counts = getActiveUserCounts({
 assert.deepEqual(counts, { free: 7, paid: 3, available: true });
 assert.equal(capturedSql, ACTIVE_USER_COUNTS_SQL);
 assert.match(capturedSql, /LEFT JOIN LATERAL/);
+assert.match(capturedSql, /COALESCE\(admin_granted, 0\) <> 0/);
 assert.match(capturedSql, /latest_subscription\.status IS DISTINCT FROM 'active'/);
 assert.match(capturedSql, /COALESCE\(u\.is_active, 1\) <> 0/);
 

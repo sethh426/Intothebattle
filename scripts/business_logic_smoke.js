@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {
+  buildUserAccessStatus,
   buildPlanEntitlements,
   isBetaTesterAccessCode,
   isPaidAccessCode,
@@ -155,6 +156,62 @@ function testEntitlements() {
     platformSponsorManaged: false,
     betaTester: false,
   });
+
+  const now = new Date('2026-07-04T12:00:00.000Z');
+  const hours = value => value * 60 * 60 * 1000;
+  const accountCreatedAgo = agoMs => new Date(now.getTime() - agoMs).toISOString();
+
+  const activeTrialAccess = buildUserAccessStatus(
+    { id: 101, is_active: 1, created_at: accountCreatedAgo(hours((6 * 24) + 23)) },
+    null,
+    { now, trialDays: 7 }
+  );
+  assert.equal(activeTrialAccess.accessAllowed, true, 'account created 6 days 23 hours ago should remain allowed');
+  assert.equal(activeTrialAccess.tier, 'trial', 'active account-age fallback should be a trial');
+
+  const boundaryTrialAccess = buildUserAccessStatus(
+    { id: 102, is_active: 1, created_at: accountCreatedAgo(hours(7 * 24)) },
+    null,
+    { now, trialDays: 7 }
+  );
+  assert.equal(boundaryTrialAccess.accessAllowed, false, 'account should be blocked exactly 168 hours after creation');
+  assert.equal(boundaryTrialAccess.reason, 'trial_expired', 'exact account-age boundary should use trial_expired');
+
+  const oldPaidAccess = buildUserAccessStatus(
+    { id: 103, is_active: 1, created_at: accountCreatedAgo(hours(14 * 24)) },
+    { status: 'active', plan_type: 'Creator Pro' },
+    { now, trialDays: 7 }
+  );
+  assert.equal(oldPaidAccess.accessAllowed, true, 'old accounts with active paid subscriptions should be allowed');
+  assert.equal(oldPaidAccess.tier, 'paid', 'active paid subscriptions should remain paid after trial age');
+
+  const cappedFutureTrialAccess = buildUserAccessStatus(
+    { id: 104, is_active: 1, created_at: accountCreatedAgo(hours(14 * 24)) },
+    {
+      status: 'trialing',
+      plan_type: '7-Day Full Access',
+      started_at: accountCreatedAgo(hours(1 * 24)),
+      expires_at: new Date(now.getTime() + hours(6 * 24)).toISOString(),
+    },
+    { now, trialDays: 7 }
+  );
+  assert.equal(cappedFutureTrialAccess.accessAllowed, false, 'future trial rows must not extend beyond account creation plus 7 days');
+  assert.equal(cappedFutureTrialAccess.reason, 'trial_expired', 'account-age capped trial should ask for the trial paywall');
+
+  const legacyNoRowActive = buildUserAccessStatus(
+    { id: 105, is_active: 1, created_at: accountCreatedAgo(hours(2 * 24)) },
+    null,
+    { now, trialDays: 7 }
+  );
+  assert.equal(legacyNoRowActive.accessAllowed, true, 'legacy accounts without subscription rows should be allowed within seven days');
+
+  const legacyNoRowExpired = buildUserAccessStatus(
+    { id: 106, is_active: 1, created_at: accountCreatedAgo(hours(8 * 24)) },
+    null,
+    { now, trialDays: 7 }
+  );
+  assert.equal(legacyNoRowExpired.accessAllowed, false, 'legacy accounts without subscription rows should be blocked after seven days');
+  assert.equal(legacyNoRowExpired.reason, 'trial_expired');
 }
 
 function testBillingPolicy() {

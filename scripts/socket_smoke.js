@@ -11,9 +11,16 @@ const baseUrl = `http://${host}:${port}`;
 const roomId = 'socket-smoke-room';
 const jwtSecret = 'socket-smoke-secret';
 const e2eSessionToken = 'socket-smoke-session';
+const activeTrialToken = 'socket-active-trial-user';
+const expiredTrialToken = 'socket-expired-trial-user';
+const paidUserToken = 'socket-paid-user';
+const activeTrialRoomId = 'socket-active-trial-room';
+const expiredTrialRoomId = 'socket-expired-trial-room';
+const paidUserRoomId = 'socket-paid-user-room';
 const overlayClientCount = Number(process.env.SOCKET_SMOKE_OVERLAY_COUNT || 10);
 const diskPath = fs.mkdtempSync(path.join(os.tmpdir(), 'intothebattle-socket-smoke-'));
 const overlayToken = jwt.sign({ purpose: 'overlay', roomId }, jwtSecret, { expiresIn: '1h' });
+const expiredTrialOverlayToken = jwt.sign({ purpose: 'overlay', roomId: expiredTrialRoomId }, jwtSecret, { expiresIn: '1h' });
 
 const server = spawn(process.execPath, ['server.js'], {
   cwd: process.cwd(),
@@ -32,6 +39,12 @@ const server = spawn(process.execPath, ['server.js'], {
     APP_BASE_URL: baseUrl,
     E2E_SESSION_TOKEN: e2eSessionToken,
     E2E_ROOM_ID: roomId,
+    E2E_ACTIVE_TRIAL_SESSION_TOKEN: activeTrialToken,
+    E2E_ACTIVE_TRIAL_ROOM_ID: activeTrialRoomId,
+    E2E_EXPIRED_TRIAL_SESSION_TOKEN: expiredTrialToken,
+    E2E_EXPIRED_TRIAL_ROOM_ID: expiredTrialRoomId,
+    E2E_PAID_USER_SESSION_TOKEN: paidUserToken,
+    E2E_PAID_USER_ROOM_ID: paidUserRoomId,
     LOG_LEVEL: 'error',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
@@ -147,6 +160,23 @@ async function expectRejectedOverlaySocket() {
   socket.disconnect();
 }
 
+async function expectSocketRejected(options, label, pattern = /unauthorized/i) {
+  const socket = connectSocket(options);
+  const error = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} unexpectedly did not fail`)), 5000);
+    socket.once('connect', () => {
+      clearTimeout(timer);
+      reject(new Error(`${label} unexpectedly connected`));
+    });
+    socket.once('connect_error', err => {
+      clearTimeout(timer);
+      resolve(err);
+    });
+  });
+  assert(pattern.test(error.message), `${label} should fail authorization, got: ${error.message}`);
+  socket.disconnect();
+}
+
 try {
   await waitForHealth();
   const unauthSubscriptionStatus = await request('/api/subscription/status');
@@ -155,8 +185,12 @@ try {
   const subscriptionStatusRes = await request('/api/subscription/status', {
     headers: { Cookie: `session_token=${e2eSessionToken}` },
   });
-  assert(subscriptionStatusRes.status === 200, 'authenticated subscription status should return 200');
-  const subscriptionStatus = await subscriptionStatusRes.json();
+  const subscriptionStatusText = await subscriptionStatusRes.text();
+  assert(
+    subscriptionStatusRes.status === 200,
+    `authenticated subscription status should return 200, got ${subscriptionStatusRes.status}: ${subscriptionStatusText}`
+  );
+  const subscriptionStatus = JSON.parse(subscriptionStatusText);
   assert(subscriptionStatus.success === true, 'subscription status should report success');
   assert(subscriptionStatus.type === 'code', 'E2E subscription status should use code auth');
   assert(subscriptionStatus.status === 'active', 'E2E subscription status should be active');
@@ -164,6 +198,37 @@ try {
   assert(subscriptionStatus.actionRequired === false, 'E2E subscription status should not require action');
 
   await expectRejectedOverlaySocket();
+  await expectSocketRejected(
+    { extraHeaders: { Cookie: `session_token=${expiredTrialToken}` } },
+    'expired trial dashboard socket',
+    /subscription required/i
+  );
+  await expectSocketRejected(
+    {
+      auth: { roomId: expiredTrialRoomId, overlayToken: expiredTrialOverlayToken },
+      query: { room_id: expiredTrialRoomId, overlay_token: expiredTrialOverlayToken },
+    },
+    'expired trial signed overlay socket',
+    /subscription required/i
+  );
+
+  const activeTrialDashboard = connectSocket({
+    extraHeaders: { Cookie: `session_token=${activeTrialToken}` },
+  });
+  const activeTrialReadyPromise = waitForEvent(activeTrialDashboard, 'serverReady', payload => payload.roomId === activeTrialRoomId);
+  await waitForEvent(activeTrialDashboard, 'connect');
+  const activeTrialReady = await activeTrialReadyPromise;
+  assert(activeTrialReady.roomId === activeTrialRoomId, 'active trial dashboard socket should use the active trial room');
+  activeTrialDashboard.disconnect();
+
+  const paidUserDashboard = connectSocket({
+    extraHeaders: { Cookie: `session_token=${paidUserToken}` },
+  });
+  const paidUserReadyPromise = waitForEvent(paidUserDashboard, 'serverReady', payload => payload.roomId === paidUserRoomId);
+  await waitForEvent(paidUserDashboard, 'connect');
+  const paidUserReady = await paidUserReadyPromise;
+  assert(paidUserReady.roomId === paidUserRoomId, 'paid user dashboard socket should use the paid user room');
+  paidUserDashboard.disconnect();
 
   const dashboard = connectSocket({
     extraHeaders: { Cookie: `session_token=${e2eSessionToken}` },

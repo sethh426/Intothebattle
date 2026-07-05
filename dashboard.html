@@ -15,6 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=DM+Sans:wght@400;500;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
   <script type="module" src="/js/clarity-loader.js"></script>
+  <script type="module" src="/js/growth-tracker.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -921,9 +922,22 @@ const dashboardState = {
   welcomeMode: initialWelcomeMode,
   eventStarted: false,
   backgroundFit: 'contain',
+  growth: {
+    overlayUrlCopiedTracked: false,
+    tiktokConnectedTracked: false,
+    firstRealPlayerTracked: false,
+  },
 };
 const WORKFLOW_STORAGE_KEY = 'intothebattle.dashboard.workflows';
 const OVERLAY_V2_BETA_KEY = 'intothebattle.beta.overlayV2';
+function trackGrowthEvent(eventName, properties = {}, seed = '') {
+  if (typeof window.intothebattleGrowth?.track !== 'function') return;
+  window.intothebattleGrowth.track(eventName, {
+    room_id: currentRoomId || undefined,
+    stream_mode: dashboardState.streamMode?.mode || undefined,
+    ...properties,
+  }, { seed: seed || eventName });
+}
 function workflowDetails() {
   return Array.from(document.querySelectorAll('details.workflow[data-workflow-key]'));
 }
@@ -1224,6 +1238,13 @@ function updatePlayerSourceCounts(counts = {}) {
   dashboardState.realPlayerCount = Number(counts.real) || 0;
   dashboardState.demoPlayerCount = Number(counts.demo) || 0;
   dashboardState.testPlayerCount = Number(counts.test) || 0;
+  if (dashboardState.realPlayerCount > 0 && !dashboardState.growth.firstRealPlayerTracked) {
+    dashboardState.growth.firstRealPlayerTracked = true;
+    trackGrowthEvent('first_real_player_seen', {
+      real_player_count: dashboardState.realPlayerCount,
+      connected_username: dashboardState.connectedUsername || undefined,
+    }, `first_real_player_seen:${currentRoomId || 'room'}`);
+  }
   const wrap = document.getElementById('playerSourceCounts');
   if (wrap) {
     wrap.innerHTML = [
@@ -1822,6 +1843,12 @@ function setTikTokStatus(state, username) {
   dashboardState.tiktokConnected = state === 'connected';
   dashboardState.tiktokStatus = state || 'disconnected';
   dashboardState.connectedUsername = displayUsername.replace(/^@/, '');
+  if (dashboardState.tiktokConnected && !dashboardState.growth.tiktokConnectedTracked) {
+    dashboardState.growth.tiktokConnectedTracked = true;
+    trackGrowthEvent('tiktok_connected', {
+      username: dashboardState.connectedUsername || undefined,
+    }, `tiktok_connected:${dashboardState.connectedUsername || currentRoomId || 'room'}`);
+  }
   if (state === 'connected') {
     chip.className = 'status-chip online';
     label.textContent = `Connected to ${displayUsername}`;
@@ -2039,6 +2066,10 @@ function copyOverlayUrl() {
   const url = currentOverlayUrl;
   navigator.clipboard?.writeText(url).then(() => {
     dashboardState.overlayUrlCopied = true;
+    if (!dashboardState.growth.overlayUrlCopiedTracked) {
+      dashboardState.growth.overlayUrlCopiedTracked = true;
+      trackGrowthEvent('overlay_url_copied', { source: 'live_overlay' }, 'overlay_url_copied:live');
+    }
     updateSetupChecklist();
     toast('Live OBS URL copied. Paste it into TikTok Studio or OBS.');
   }).catch(() => toast('Copy failed', true));
@@ -2078,6 +2109,10 @@ function copySetupOverlayUrl() {
   if (!url) return toast('Setup demo URL is still loading', true);
   navigator.clipboard?.writeText(url).then(() => {
     dashboardState.overlayUrlCopied = true;
+    if (!dashboardState.growth.overlayUrlCopiedTracked) {
+      dashboardState.growth.overlayUrlCopiedTracked = true;
+      trackGrowthEvent('overlay_url_copied', { source: 'setup_overlay' }, 'overlay_url_copied:setup');
+    }
     updateSetupChecklist();
     toast('Setup demo URL copied');
   }).catch(() => toast('Copy failed', true));
@@ -2100,6 +2135,10 @@ function copyOverlayV2SourceUrl(render = '1080p') {
   if (!url) return toast('Phaser V2 overlay URL is still loading', true);
   navigator.clipboard?.writeText(url).then(() => {
     dashboardState.overlayUrlCopied = true;
+    if (!dashboardState.growth.overlayUrlCopiedTracked) {
+      dashboardState.growth.overlayUrlCopiedTracked = true;
+      trackGrowthEvent('overlay_url_copied', { source: 'overlay_v2', render }, `overlay_url_copied:v2:${render}`);
+    }
     updateSetupChecklist();
     toast(`Phaser V2 ${render === '1440p' ? '1440p' : '1080p'} source URL copied`);
   }).catch(() => toast('Copy failed', true));

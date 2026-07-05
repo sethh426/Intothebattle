@@ -1,3 +1,5 @@
+import { ADMIN_GRANTED_SUBSCRIPTION_ORDER_SQL } from './userSubscriptions.js';
+
 export const ACTIVE_USER_COUNTS_SQL = `
   SELECT
     COUNT(*) FILTER (WHERE latest_subscription.status IS DISTINCT FROM 'active') AS free_users,
@@ -7,7 +9,7 @@ export const ACTIVE_USER_COUNTS_SQL = `
     SELECT LOWER(TRIM(status)) AS status
     FROM subscriptions
     WHERE subscriptions.user_id = u.id
-    ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC
+    ORDER BY ${ADMIN_GRANTED_SUBSCRIPTION_ORDER_SQL}
     LIMIT 1
   ) latest_subscription ON TRUE
   WHERE COALESCE(u.is_active, 1) <> 0

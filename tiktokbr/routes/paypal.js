@@ -6,6 +6,16 @@ import {
   localStatusForPayPalWebhookEvent,
   normalizePayPalSubscriptionStatus,
 } from '../services/billingPolicy.js';
+import { recordServerGrowthEvent } from '../services/growthEvents.js';
+import {
+  getPayPalAccessToken,
+  getPayPalSubscription,
+  normalizePayPalSubscriptionId,
+  paypalClientId,
+  paypalMode,
+  paypalPlanId,
+  paypalSdkBaseUrl,
+} from '../services/paypalSubscriptions.js';
 
 const router = express.Router();
 
@@ -42,8 +52,8 @@ function formatDateForSql(dateString) {
 function createOrUpdateSubscription(userId, paypalId, planType, status, startedAt, nextBillingDate, expiresAt = null) {
   const insert = db.prepare(`
     INSERT INTO subscriptions (
-      user_id, paypal_subscription_id, plan_type, status, started_at, next_billing_date, expires_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      user_id, paypal_subscription_id, plan_type, status, started_at, next_billing_date, expires_at, admin_granted, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT(paypal_subscription_id) DO UPDATE SET
       user_id = excluded.user_id,
       plan_type = excluded.plan_type,
@@ -51,42 +61,13 @@ function createOrUpdateSubscription(userId, paypalId, planType, status, startedA
       started_at = COALESCE(subscriptions.started_at, excluded.started_at),
       next_billing_date = excluded.next_billing_date,
       expires_at = excluded.expires_at,
+      admin_granted = 0,
       updated_at = CURRENT_TIMESTAMP
   `);
   insert.run(userId, paypalId, planType, status, startedAt, nextBillingDate, expiresAt);
 }
 
 // (Previously had email-sending helpers here; removed — codes will be shown on a claim page)
-
-function paypalMode() {
-  const mode = String(process.env.PAYPAL_MODE || process.env.PAYPAL_ENV || '').toLowerCase();
-  return mode === 'sandbox' ? 'sandbox' : 'live';
-}
-
-function paypalApiBaseUrl() {
-  return paypalMode() === 'sandbox'
-    ? 'https://api-m.sandbox.paypal.com'
-    : 'https://api-m.paypal.com';
-}
-
-function paypalSdkBaseUrl() {
-  return paypalMode() === 'sandbox'
-    ? 'https://www.sandbox.paypal.com/sdk/js'
-    : 'https://www.paypal.com/sdk/js';
-}
-
-function paypalPlanId() {
-  return process.env.PAYPAL_PLAN_ID || process.env.PAYPAL_SUBSCRIPTION_PLAN_ID || '';
-}
-
-function paypalClientId() {
-  return process.env.PAYPAL_CLIENT_ID || '';
-}
-
-function normalizePayPalSubscriptionId(value) {
-  const id = String(value || '').trim();
-  return /^[A-Za-z0-9_-]{6,80}$/.test(id) ? id : '';
-}
 
 function getSessionUser(req) {
   const token = req.cookies?.session_token;
@@ -114,50 +95,6 @@ function ensureUserRoom(user) {
 
 function mapPayPalStatus(status) {
   return normalizePayPalSubscriptionStatus(status);
-}
-
-async function getPayPalAccessToken() {
-  const clientId     = process.env.PAYPAL_CLIENT_ID;
-  const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    throw new Error('PayPal client credentials are not configured');
-  }
-  const credentials  = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-
-  const response = await fetch(`${paypalApiBaseUrl()}/v1/oauth2/token`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${credentials}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: 'grant_type=client_credentials',
-  });
-
-  const data = await response.json();
-  if (!response.ok || !data.access_token) {
-    throw new Error(`PayPal token request failed (${response.status})`);
-  }
-  return data.access_token;
-}
-
-async function getPayPalSubscription(subscriptionId) {
-  const id = normalizePayPalSubscriptionId(subscriptionId);
-  if (!id) throw new Error('Invalid PayPal subscription id');
-
-  const accessToken = await getPayPalAccessToken();
-  const response = await fetch(`${paypalApiBaseUrl()}/v1/billing/subscriptions/${encodeURIComponent(id)}`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-  });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const message = data?.message || data?.details?.[0]?.description || `PayPal subscription lookup failed (${response.status})`;
-    throw new Error(message);
-  }
-  return data;
 }
 
 function subscriptionDates(subscription) {
@@ -201,6 +138,23 @@ function activateUserSubscription(user, subscription) {
     paypalStatus: String(subscription.status || '').toUpperCase(),
     nextBillingDate: dates.nextBilling,
   };
+}
+
+function trackSubscriptionStarted(req, user, activation) {
+  if (!user || activation?.status !== 'active') return;
+  recordServerGrowthEvent(req, 'subscription_started', {
+    stableKey: `subscription_started:${user.id}:${activation.subscriptionId}`,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name || '',
+    },
+    properties: {
+      plan: 'Creator Pro',
+      subscriptionId: activation.subscriptionId,
+      paypalStatus: activation.paypalStatus,
+    },
+  }).catch(err => console.warn('Growth subscription_started event failed:', err?.message || err));
 }
 
 async function verifyPayPalWebhook(req) {
@@ -379,6 +333,7 @@ router.post('/api/paypal/subscription/activate', express.json(), async (req, res
   try {
     const subscription = await getPayPalSubscription(subscriptionId);
     const activation = activateUserSubscription(user, subscription);
+    trackSubscriptionStarted(req, user, activation);
     const isActive = activation.status === 'active';
     return res.json({
       success: true,
@@ -405,6 +360,7 @@ router.get('/api/paypal/subscription/status', async (req, res) => {
   try {
     const subscription = await getPayPalSubscription(subscriptionId);
     const activation = activateUserSubscription(user, subscription);
+    trackSubscriptionStarted(req, user, activation);
     return res.json({
       success: true,
       ...activation,
@@ -625,6 +581,7 @@ router.get('/paypal-return', async (req, res) => {
     try {
       const subscription = await getPayPalSubscription(sub);
       const activation = activateUserSubscription(user, subscription);
+      trackSubscriptionStarted(req, user, activation);
       const pending = activation.status !== 'active';
       return res.redirect(302, `/billing/success?subscription_id=${encodeURIComponent(sub)}${pending ? '&pending=1' : ''}`);
     } catch (err) {

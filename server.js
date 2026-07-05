@@ -1,6 +1,7 @@
 import './loadEnv.js';
 import { TikTokLive } from '@tiktool/live';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -21,19 +22,22 @@ import adminRoutes from './tiktokbr/routes/admin.js';
 import paypalRoutes from './tiktokbr/routes/paypal.js';
 import requireAccess from './tiktokbr/middleware/auth.js';
 import requireDashboardAccess from './tiktokbr/middleware/requireDashboardAccess.js';
-import { getE2EAuthRecord } from './tiktokbr/auth/e2eAuth.js';
+import { getE2EAuthRecord, getE2ERoomOwnerAuthRecord } from './tiktokbr/auth/e2eAuth.js';
 import { getEmailDiagnostics, sendTransactionalEmail } from './tiktokbr/email/postmarkMailer.js';
 import { setPlatformSponsorTestHandler } from './tiktokbr/platformSponsorTestBus.js';
 import { getSponsorMediaToolStatus, processSponsorUpload } from './tiktokbr/sponsorMediaProcessor.js';
 import {
   buildPlanEntitlements as buildSharedPlanEntitlements,
+  buildUserAccessStatus,
   isBetaTesterAccessCode,
   isPaidAccessCode as isSharedPaidAccessCode,
   isPaidAuthRecord,
 } from './tiktokbr/services/entitlements.js';
+import { getEffectiveUserSubscription } from './tiktokbr/services/userSubscriptions.js';
 import { buildLaunchReadinessReport } from './tiktokbr/services/launchReadiness.js';
 import { buildUploadDecision, getStorageUsage, uploadLimitBytes } from './tiktokbr/services/storagePolicy.js';
 import { growthIntegrationDiagnostics, syncLeadToGrowthApis } from './tiktokbr/services/growthIntegrations.js';
+import { growthEventDiagnostics, publicGrowthConfig, recordGrowthEvent, recordServerGrowthEvent } from './tiktokbr/services/growthEvents.js';
 import { marketingAutomationDiagnostics, publishApprovedMarketingPosts, recordMarketingVisit } from './tiktokbr/services/marketingAutomation.js';
 import { getBlogPostBySlug, listBlogPosts } from './tiktokbr/services/blogEngine.js';
 import {
@@ -113,11 +117,16 @@ function getUserRoomId(userId) {
 
 function getLatestUserSubscription(userId) {
   try {
-    return db.prepare('SELECT * FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1').get(userId);
+    return getEffectiveUserSubscription(db, userId);
   } catch (err) {
     logger.error({ err, userId }, 'Failed to read user subscription');
     return null;
   }
+}
+
+function getAuthUserSubscription(auth) {
+  if (auth?.type !== 'user') return null;
+  return auth.subscription || getLatestUserSubscription(auth.record?.id);
 }
 
 function createRoomId() {
@@ -147,6 +156,7 @@ function createPrivateRoomForUser(user) {
 
 function ensureUserRoomId(user) {
   if (!user?.id) return null;
+  if (user.room_id) return user.room_id;
   const existing = getUserRoomId(user.id);
   if (existing) return existing;
   try {
@@ -162,11 +172,58 @@ function isPaidAccessCode(row) {
 }
 
 function isPaidAuth(auth) {
-  return isPaidAuthRecord(auth, { getLatestUserSubscription });
+  return isPaidAuthRecord(auth, { getLatestUserSubscription, trialDays: FREE_TRIAL_DAYS });
 }
 
 function buildPlanEntitlements(auth) {
-  return buildSharedPlanEntitlements(auth, { getLatestUserSubscription });
+  return buildSharedPlanEntitlements(auth, { getLatestUserSubscription, trialDays: FREE_TRIAL_DAYS });
+}
+
+function buildUserAccountAccessStatus(user, subscription = null, now = new Date()) {
+  const status = buildUserAccessStatus(user, subscription, { now, trialDays: FREE_TRIAL_DAYS });
+  return {
+    ...status,
+    paywallUrl: status.accessAllowed ? null : paywallUrl(status.reason),
+  };
+}
+
+function getUserAuthRedirect(auth, fallbackPath = '/dashboard') {
+  if (auth?.type !== 'user') return fallbackPath;
+  const status = buildUserAccountAccessStatus(auth.record, getAuthUserSubscription(auth));
+  return status.accessAllowed ? fallbackPath : status.paywallUrl;
+}
+
+function getRoomOwnerAuthRecord(roomId) {
+  const e2eOwner = getE2ERoomOwnerAuthRecord(roomId);
+  if (e2eOwner) return e2eOwner;
+
+  try {
+    const user = db.prepare(`
+      SELECT u.*
+      FROM user_rooms ur
+      JOIN users u ON u.id = ur.user_id
+      WHERE ur.room_id = ?
+      LIMIT 1
+    `).get(roomId);
+    return user ? { type: 'user', record: user } : null;
+  } catch (err) {
+    logger.error({ err, roomId }, 'Failed to read room owner');
+    return null;
+  }
+}
+
+function buildRoomOwnerAccessStatus(roomId) {
+  const ownerAuth = getRoomOwnerAuthRecord(roomId);
+  if (!ownerAuth || ownerAuth.type !== 'user') {
+    return { accessAllowed: true, paywallUrl: null, reason: null };
+  }
+  const subscription = getAuthUserSubscription(ownerAuth);
+  return buildUserAccountAccessStatus(ownerAuth.record, subscription);
+}
+
+function signedRoomAccessDenial(roomId) {
+  const status = buildRoomOwnerAccessStatus(roomId);
+  return status.accessAllowed ? null : status;
 }
 
 function logAuthInfo(req, extras = {}) {
@@ -6009,6 +6066,12 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
 const app        = express();
 const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 1);
 app.set('trust proxy', trustProxyHops);
+const growthEventLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 90,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 app.get('/healthz', (_req, res) => {
   res.status(200).send('ok');
@@ -6158,12 +6221,15 @@ app.use((req, _res, next) => {
   if (req.method !== 'GET') return next();
   if (/^\/(?:api|admin|audio|background|dashboard|debug|growth-assets|metrics|overlay|overlay-v2|platform-sponsor|socket.io|sponsor|state|stats|vendor)(?:\/|$)/.test(req.path)) return next();
   const query = req.query || {};
-  if (!(query.utm_source || query.utm_medium || query.utm_campaign || query.utm_content)) return next();
+  if (!(query.utm_source || query.utm_medium || query.utm_campaign || query.utm_content || query.ttclid)) return next();
   recordMarketingVisit({
     utmSource: query.utm_source,
     utmMedium: query.utm_medium,
     utmCampaign: query.utm_campaign,
     utmContent: query.utm_content,
+    ttclid: query.ttclid,
+    anonymousId: req.cookies?.itb_growth_anon || '',
+    consentState: req.cookies?.itb_growth_consent || 'unknown',
     path: req.originalUrl || req.url || req.path,
     referrer: req.get('referer') || '',
     userAgent: req.get('user-agent') || '',
@@ -6216,7 +6282,7 @@ app.get('/', (req, res) => {
       if (auth?.type === 'user') {
         const user = auth.record;
         if (user && user.is_active) {
-          return res.redirect('/dashboard');
+          return res.redirect(getUserAuthRedirect(auth));
         }
       }
     } catch (err) {
@@ -6251,7 +6317,7 @@ app.get('/register', (req, res) => {
   if (auth?.type === 'user') {
     const user = auth.record;
     if (user && user.is_active) {
-      return res.redirect('/dashboard');
+      return res.redirect(getUserAuthRedirect(auth));
     }
   }
   res.sendFile(path.join(__dirname, 'register.html'));
@@ -6268,7 +6334,7 @@ app.get('/login', (req, res) => {
   if (auth?.type === 'user') {
     const user = auth.record;
     if (user && user.is_active) {
-      return res.redirect('/dashboard');
+      return res.redirect(getUserAuthRedirect(auth));
     }
   }
   res.sendFile(path.join(__dirname, 'login.html'));
@@ -6384,19 +6450,36 @@ app.post('/api/signup-intent', async (req, res) => {
     lastPath: req.body?.lastPath || req.path,
   });
   if (result.ok) {
-    syncLeadToGrowthApis({
-      email: req.body?.email,
-      name: req.body?.name,
-      tiktokUsername: req.body?.tiktokUsername,
-      source: req.body?.source || 'signup',
-      lastPath: req.body?.lastPath || req.path,
-      eventName: 'Signup Intent Captured',
+    recordServerGrowthEvent(req, 'signup_intent_captured', {
+      eventId: req.body?.growthEventId,
+      stableKey: `signup_intent_captured:${String(req.body?.email || '').trim().toLowerCase()}`,
+      user: {
+        email: req.body?.email,
+        name: req.body?.name || '',
+      },
       properties: {
+        source: req.body?.source || 'signup',
+        has_tiktok_username: Boolean(req.body?.tiktokUsername),
         endpoint: '/api/signup-intent',
       },
     }).catch(err => {
-      logger.warn({ err: err?.message || err }, 'Growth API signup-intent sync failed');
+      logger.warn({ err: err?.message || err }, 'Growth signup-intent event failed');
     });
+    if (req.cookies?.itb_growth_consent === 'granted') {
+      syncLeadToGrowthApis({
+        email: req.body?.email,
+        name: req.body?.name,
+        tiktokUsername: req.body?.tiktokUsername,
+        source: req.body?.source || 'signup',
+        lastPath: req.body?.lastPath || req.path,
+        eventName: 'Signup Intent Captured',
+        properties: {
+          endpoint: '/api/signup-intent',
+        },
+      }).catch(err => {
+        logger.warn({ err: err?.message || err }, 'Growth API signup-intent sync failed');
+      });
+    }
   }
   res.status(result.ok ? 200 : 400).json({ success: result.ok, error: result.error || undefined });
 });
@@ -6474,6 +6557,8 @@ app.get(['/overlay.html', '/overlay'], (req, res) => {
     const overlayToken = getOverlayTokenFromRequest(req);
     if (!roomId) return res.status(400).send('Invalid room id');
     if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).send('Unauthorized overlay URL');
+    const denial = signedRoomAccessDenial(roomId);
+    if (denial) return res.redirect(302, denial.paywallUrl);
     return res.sendFile(path.join(__dirname, 'overlay.html'));
   }
   if (enableRoomScoped) {
@@ -6492,6 +6577,8 @@ app.get(['/overlay-v2.html', '/overlay-v2'], (req, res) => {
     const overlayToken = getOverlayTokenFromRequest(req);
     if (!roomId) return res.status(400).send('Invalid room id');
     if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).send('Unauthorized overlay URL');
+    const denial = signedRoomAccessDenial(roomId);
+    if (denial) return res.redirect(302, denial.paywallUrl);
     return res.sendFile(path.join(__dirname, 'overlay-v2.html'));
   }
   if (enableRoomScoped) {
@@ -6523,6 +6610,18 @@ function assignPrivateRoomIfMissing(row) {
 function socketAuth(socket, next) {
   const e2eAuth = getE2EAuthRecord(parseCookies(socket.request).session_token);
   if (e2eAuth) {
+    if (e2eAuth.type === 'user') {
+      const subscription = getAuthUserSubscription(e2eAuth);
+      const accessStatus = buildUserAccountAccessStatus(e2eAuth.record, subscription);
+      if (!accessStatus.accessAllowed) {
+        logger.warn({ userId: e2eAuth.record?.id, reason: accessStatus.reason }, 'Socket auth failed: user subscription required');
+        return next(new Error('Unauthorized: subscription required'));
+      }
+      socket.roomId = enableRoomScoped ? ensureUserRoomId(e2eAuth.record) : DEFAULT_ROOM_ID;
+      socket.user = e2eAuth.record;
+      socket.subscription = subscription;
+      return next();
+    }
     socket.roomId = enableRoomScoped ? assignPrivateRoomIfMissing(e2eAuth.record) : DEFAULT_ROOM_ID;
     socket.accessCode = e2eAuth.record;
     return next();
@@ -6534,6 +6633,11 @@ function socketAuth(socket, next) {
     const roomId = normalizeRoomId(authRoom);
     const overlayToken = getOverlayTokenFromSocket(socket);
     if (roomId && verifyOverlayToken(roomId, overlayToken)) {
+      const denial = signedRoomAccessDenial(roomId);
+      if (denial) {
+        logger.warn({ roomId, reason: denial.reason }, 'Socket auth failed: signed overlay room owner subscription required');
+        return next(new Error('Unauthorized: subscription required'));
+      }
       socket.roomId = roomId;
       socket.data.overlayAuth = true;
       return next();
@@ -6579,12 +6683,19 @@ function socketAuth(socket, next) {
     logger.warn({ userId: user?.id, isActive: user?.is_active }, 'Socket auth failed: invalid user session');
     return next(new Error('Unauthorized: invalid session'));
   }
+  const subscription = getLatestUserSubscription(user.id);
+  const accessStatus = buildUserAccountAccessStatus(user, subscription);
+  if (!accessStatus.accessAllowed) {
+    logger.warn({ userId: user.id, reason: accessStatus.reason }, 'Socket auth failed: user subscription required');
+    return next(new Error('Unauthorized: subscription required'));
+  }
   socket.roomId = enableRoomScoped ? ensureUserRoomId(user) : DEFAULT_ROOM_ID;
   if (!socket.roomId) {
     logger.error({ userId: user.id }, 'Socket auth failed: user has no room and room creation failed');
     return next(new Error('Unauthorized: room unavailable'));
   }
   socket.user = user;
+  socket.subscription = subscription;
   next();
 }
 
@@ -6616,6 +6727,18 @@ function requireRoom(req, res, next) {
       logger.warn({ path: req.path, method: req.method, userId: user.id }, 'API auth failed: user disabled');
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
+    const subscription = getAuthUserSubscription(auth);
+    const accessStatus = buildUserAccountAccessStatus(user, subscription);
+    if (!accessStatus.accessAllowed) {
+      logger.warn({ path: req.path, method: req.method, userId: user.id, reason: accessStatus.reason }, 'API auth failed: user subscription required');
+      return res.status(402).json({
+        success: false,
+        error: 'Subscription required',
+        reason: accessStatus.reason,
+        paywallUrl: accessStatus.paywallUrl,
+      });
+    }
+    auth.subscription = subscription;
     const roomId = enableRoomScoped ? ensureUserRoomId(user) : DEFAULT_ROOM_ID;
     if (!roomId) {
       logger.error({ path: req.path, method: req.method, userId: user.id }, 'API auth failed: user room unavailable');
@@ -6623,6 +6746,8 @@ function requireRoom(req, res, next) {
     }
     req.roomId = roomId;
     req.user = user;
+    req.subscription = subscription;
+    req.subscriptionStatus = accessStatus;
     logger.info({ path: req.path, method: req.method, userId: user.id, roomId, requiresRoomId: requiresRoomId() }, '/api/connect auth success');
   }
 
@@ -6667,6 +6792,10 @@ function getSessionRoom(req) {
   } else {
     const user = auth.record;
     if (!user.is_active) return null;
+    const subscription = getAuthUserSubscription(auth);
+    const accessStatus = buildUserAccountAccessStatus(user, subscription);
+    if (!accessStatus.accessAllowed) return null;
+    auth.subscription = subscription;
     roomId = enableRoomScoped ? ensureUserRoomId(user) : DEFAULT_ROOM_ID;
     if (!roomId) return null;
   }
@@ -6686,21 +6815,6 @@ function parseDate(value) {
 
 function toIsoStringOrNull(date) {
   return date ? date.toISOString() : null;
-}
-
-function trialExpiresAtForUser(user) {
-  const createdAt = parseDate(user?.created_at);
-  if (!createdAt) return null;
-  return new Date(createdAt.getTime() + FREE_TRIAL_DAYS * 24 * 60 * 60 * 1000);
-}
-
-function isTrialStatus(value) {
-  return ['trial', 'trialing', 'free-trial', 'full-access-trial'].includes(String(value || '').toLowerCase());
-}
-
-function daysRemainingUntil(date, now = new Date()) {
-  if (!date) return null;
-  return Math.max(0, Math.ceil((date.getTime() - now.getTime()) / (24 * 60 * 60 * 1000)));
 }
 
 function paywallUrl(reason) {
@@ -6753,99 +6867,37 @@ function buildAccessCodeSubscriptionStatus(row, now = new Date()) {
   };
 }
 
-function buildUserSubscriptionStatus(user, now = new Date()) {
-  if (!user.is_active) {
-    return {
-      type: 'user',
-      status: 'revoked',
-      reason: 'revoked',
-      accessAllowed: false,
-      actionRequired: true,
-      paywallUrl: paywallUrl('revoked'),
-      subscription: null,
-    };
-  }
-
-  const subscription = db.prepare(
-    'SELECT * FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1'
-  ).get(user.id);
-
-  if (!subscription) {
-    const fallbackTrialExpiresAt = trialExpiresAtForUser(user);
-    const fallbackTrialActive = fallbackTrialExpiresAt && fallbackTrialExpiresAt >= now;
-    if (fallbackTrialActive) {
-      return {
-        type: 'user',
-        status: 'trialing',
-        tier: 'trial',
-        planName: '7-Day Full Access',
-        canUseCreatorSponsors: true,
-        platformSponsorManaged: false,
-        reason: null,
-        accessAllowed: true,
-        actionRequired: false,
-        paywallUrl: null,
-        subscription: {
-          status: 'trialing',
-          planType: '7-Day Full Access',
-          paypalSubscriptionId: null,
-          startedAt: toIsoStringOrNull(parseDate(user.created_at)),
-          nextBillingDate: null,
-          expiresAt: toIsoStringOrNull(fallbackTrialExpiresAt),
-        },
-      };
-    }
-    return {
-      type: 'user',
-      status: 'free',
-      tier: 'free',
-      planName: 'Free',
-      canUseCreatorSponsors: false,
-      platformSponsorManaged: true,
-      reason: null,
-      accessAllowed: true,
-      actionRequired: false,
-      paywallUrl: null,
-      subscription: {
-        status: 'free',
-        planType: 'Free',
-        paypalSubscriptionId: null,
-        startedAt: null,
-        nextBillingDate: null,
-        expiresAt: null,
-      },
-    };
-  }
-
-  const rawStatus = String(subscription.status || 'unknown').toLowerCase();
-  const startedAt = parseDate(subscription.started_at);
-  const expiresAt = parseDate(subscription.expires_at);
-  const nextBillingDate = parseDate(subscription.next_billing_date);
-  let status = rawStatus;
-  let reason = null;
-  let accessAllowed = true;
-  const paid = rawStatus === 'active';
-  const trial = isTrialStatus(rawStatus) && (!expiresAt || expiresAt >= now);
-
-  if (!paid && !trial) {
-    status = 'free';
-  }
+function buildUserSubscriptionStatus(user, now = new Date(), subscriptionOverride = null) {
+  const subscription = subscriptionOverride || getLatestUserSubscription(user?.id);
+  const access = buildUserAccountAccessStatus(user, subscription, now);
+  const rawStatus = subscription
+    ? String(subscription.status || 'unknown').toLowerCase()
+    : (access.subscriptionStatus || access.status || 'trialing');
+  const startedAt = parseDate(subscription?.started_at)
+    || parseDate(subscription?.startedAt)
+    || access.trialStartedAt
+    || (access.tier === 'trial' || access.reason === 'trial_expired' ? parseDate(user?.created_at) : null);
+  const nextBillingDate = parseDate(subscription?.next_billing_date || subscription?.nextBillingDate);
+  const expiresAt = access.effectiveTrialExpiresAt
+    || parseDate(subscription?.expires_at)
+    || parseDate(subscription?.expiresAt);
 
   return {
     type: 'user',
-    status,
-    tier: paid ? 'paid' : trial ? 'trial' : 'free',
-    planName: paid ? 'Creator Pro' : trial ? '7-Day Full Access' : 'Free',
-    canUseCreatorSponsors: paid || trial,
-    platformSponsorManaged: !(paid || trial),
-    reason,
-    accessAllowed,
-    actionRequired: !accessAllowed,
-    paywallUrl: accessAllowed ? null : paywallUrl(reason),
+    status: access.status,
+    tier: access.tier,
+    planName: access.planName,
+    canUseCreatorSponsors: access.canUseCreatorSponsors,
+    platformSponsorManaged: access.platformSponsorManaged,
+    betaTester: false,
+    reason: access.reason,
+    accessAllowed: access.accessAllowed,
+    actionRequired: access.actionRequired,
+    paywallUrl: access.paywallUrl,
     subscription: {
       status: rawStatus,
-      planType: paid ? (subscription.plan_type || 'Creator Pro') : trial ? (subscription.plan_type || '7-Day Full Access') : 'Free',
-      paypalSubscriptionId: subscription.paypal_subscription_id || null,
+      planType: subscription?.plan_type || subscription?.planType || access.planName,
+      paypalSubscriptionId: subscription?.paypal_subscription_id || subscription?.paypalSubscriptionId || null,
       startedAt: toIsoStringOrNull(startedAt),
       nextBillingDate: toIsoStringOrNull(nextBillingDate),
       expiresAt: toIsoStringOrNull(expiresAt),
@@ -6856,7 +6908,7 @@ function buildUserSubscriptionStatus(user, now = new Date()) {
 function buildSubscriptionStatus(auth) {
   if (!auth) return null;
   if (auth.type === 'code') return buildAccessCodeSubscriptionStatus(auth.record);
-  return buildUserSubscriptionStatus(auth.record);
+  return buildUserSubscriptionStatus(auth.record, new Date(), auth.subscription || null);
 }
 
 io.use(socketAuth);
@@ -6947,6 +6999,32 @@ app.get('/api/public-config', (_req, res) => {
       enabled: Boolean(clarityProjectId && process.env.NODE_ENV === 'production'),
       projectId: clarityProjectId || null,
     },
+    growth: publicGrowthConfig(),
+  });
+});
+
+app.post('/api/growth/events', growthEventLimiter, async (req, res) => {
+  const auth = getAuthRecord(req.cookies?.session_token);
+  const user = auth?.type === 'user' ? auth.record : null;
+  const roomId = user ? getUserRoomId(user.id) : (auth?.record?.room_id || '');
+  const result = await recordGrowthEvent({
+    ...req.body,
+    user: user ? {
+      id: user.id,
+      email: user.email,
+      name: user.name || '',
+    } : {},
+    roomId: roomId || req.body?.roomId || '',
+  }, req);
+
+  if (!result.ok) {
+    return res.status(400).json({ success: false, error: result.error || 'Invalid growth event' });
+  }
+  return res.json({
+    success: true,
+    stored: Boolean(result.stored),
+    forwarded: Boolean(result.forwarded),
+    eventId: result.eventId,
   });
 });
 
@@ -7018,6 +7096,7 @@ app.get('/api/runtime/diagnostics', requireDiagnosticsAccess, (req, res) => {
     },
     email: getEmailDiagnostics(),
     growth: growthIntegrationDiagnostics(),
+    growthEvents: growthEventDiagnostics(),
     marketing: marketingAutomationDiagnostics(),
     storage,
     database: dbHealth,
@@ -7133,6 +7212,8 @@ app.get('/audio/:filename', (req, res) => {
     const overlayToken = getOverlayTokenFromRequest(req);
     if (!roomId) return res.status(400).send('Invalid room id');
     if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).send('Unauthorized');
+    const denial = signedRoomAccessDenial(roomId);
+    if (denial) return res.status(402).send('Subscription required');
     room = getOrCreateRoom(roomId);
   }
   if (!room) room = getSessionRoom(req);
@@ -7153,6 +7234,8 @@ app.get('/sponsor/:filename', (req, res) => {
     const overlayToken = getOverlayTokenFromRequest(req);
     if (!roomId) return res.status(400).send('Invalid room id');
     if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).send('Unauthorized');
+    const denial = signedRoomAccessDenial(roomId);
+    if (denial) return res.status(402).send('Subscription required');
     room = getOrCreateRoom(roomId);
   }
   if (!room) room = getSessionRoom(req);
@@ -7183,6 +7266,8 @@ app.get('/platform-sponsor/:filename', (req, res) => {
     const overlayToken = getOverlayTokenFromRequest(req);
     if (!roomId) return res.status(400).send('Invalid room id');
     if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).send('Unauthorized');
+    const denial = signedRoomAccessDenial(roomId);
+    if (denial) return res.status(402).send('Subscription required');
   } else if (!hasAdminSession(req)) {
     return res.status(401).send('Unauthorized');
   }
@@ -7413,7 +7498,7 @@ io.on('connection', (socket) => {
     return;
   }
   const socketAuthRecord = socket.user
-    ? { type: 'user', record: socket.user }
+    ? { type: 'user', record: socket.user, subscription: socket.subscription || null }
     : socket.accessCode
       ? { type: 'code', record: socket.accessCode }
       : null;
@@ -7556,7 +7641,7 @@ app.get('/debug/session-info', (req, res) => {
       return res.json({ success: true, type: 'code', row });
     }
     const user = auth.record;
-    const subscription = db.prepare('SELECT * FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1').get(user.id);
+    const subscription = getEffectiveUserSubscription(db, user.id);
     return res.json({ success: true, type: 'user', user, subscription });
   } catch (err) {
     console.error('debug/session-info error:', err);
@@ -7572,6 +7657,15 @@ app.get('/state', (req, res) => {
     const overlayToken = getOverlayTokenFromRequest(req);
     if (!roomId) return res.status(400).json({ success: false, error: 'Invalid room id' });
     if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).json({ success: false, error: 'Unauthorized' });
+    const denial = signedRoomAccessDenial(roomId);
+    if (denial) {
+      return res.status(402).json({
+        success: false,
+        error: 'Subscription required',
+        reason: denial.reason,
+        paywallUrl: denial.paywallUrl,
+      });
+    }
     const room = getOrCreateRoom(roomId);
     loadRoomPlayerStats(room);
     loadRoomBackground(room);
@@ -8001,6 +8095,19 @@ app.post('/api/stream/setup/start', requireRoom, (req, res) => {
     source: 'dashboard',
     action: allowedSetupActions.has(requestedAction) ? requestedAction : 'burst',
   });
+  const growthUser = req.user ? { id: req.user.id, email: req.user.email, name: req.user.name || '' } : {};
+  recordServerGrowthEvent(req, 'setup_started', {
+    stableKey: `setup_started:${req.roomId}:${req.user?.id || req.auth?.record?.id || 'code'}`,
+    user: growthUser,
+    roomId: req.roomId,
+    properties: { action: allowedSetupActions.has(requestedAction) ? requestedAction : 'burst' },
+  }).catch(err => logger.warn({ err: err?.message || err }, 'Growth setup_started event failed'));
+  recordServerGrowthEvent(req, 'rehearsal_started', {
+    stableKey: `rehearsal_started:${req.roomId}:${Date.now()}`,
+    user: growthUser,
+    roomId: req.roomId,
+    properties: { action: allowedSetupActions.has(requestedAction) ? requestedAction : 'burst' },
+  }).catch(err => logger.warn({ err: err?.message || err }, 'Growth rehearsal_started event failed'));
   res.json({
     success: true,
     setupRehearsal: rehearsal,
@@ -8145,6 +8252,8 @@ app.get('/background/:filename', (req, res) => {
       const overlayToken = getOverlayTokenFromRequest(req);
       if (!roomId) return res.status(400).send('Invalid room id');
       if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).send('Unauthorized');
+      const denial = signedRoomAccessDenial(roomId);
+      if (denial) return res.status(402).send('Subscription required');
       room = getOrCreateRoom(roomId);
     } else {
       room = getSessionRoom(req);

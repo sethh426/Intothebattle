@@ -376,7 +376,7 @@
               ],
               "https://schema.org/description": [
                 {
-                  "@value": "Learn how viewers play IntoTheBattle during TikTok LIVE with chat commands, emojis, attacks, shields, healing, likes, gifts, and future arena mechanics."
+                  "@value": "A viewer-first command manual for IntoTheBattle player commands, targets, defenses, support actions, teams, and engagement triggers."
                 }
               ],
               "https://schema.org/inLanguage": [
@@ -391,7 +391,7 @@
               ],
               "https://schema.org/name": [
                 {
-                  "@value": "How To Play IntoTheBattle | TikTok LIVE Viewer Commands"
+                  "@value": "IntoTheBattle Player Commands | How To Play"
                 }
               ],
               "https://schema.org/primaryImageOfPage": [

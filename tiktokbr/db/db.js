@@ -346,11 +346,14 @@ async function initDb() {
         started_at TIMESTAMP,
         next_billing_date TIMESTAMP,
         expires_at TIMESTAMP,
+        admin_granted INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id)
       )
     `);
+
+    await safeExec('ALTER TABLE subscriptions ADD COLUMN admin_granted INTEGER DEFAULT 0');
 
     await safeExec(`
       CREATE TABLE IF NOT EXISTS platform_sponsor_creatives (
@@ -514,6 +517,7 @@ async function initDb() {
       )
     `);
     await safeExec('ALTER TABLE marketing_posts ADD COLUMN audience TEXT');
+    await safeExec("ALTER TABLE marketing_posts ADD COLUMN audience_stage TEXT DEFAULT 'cold_visitor'");
     await safeExec("ALTER TABLE marketing_posts ADD COLUMN goal TEXT DEFAULT 'sales'");
     await safeExec('ALTER TABLE marketing_posts ADD COLUMN hook TEXT');
     await safeExec('ALTER TABLE marketing_posts ADD COLUMN cta TEXT');
@@ -569,11 +573,55 @@ async function initDb() {
     await safeExec('ALTER TABLE growth_utm_events ADD COLUMN utm_medium TEXT');
     await safeExec('ALTER TABLE growth_utm_events ADD COLUMN utm_campaign TEXT');
     await safeExec('ALTER TABLE growth_utm_events ADD COLUMN utm_content TEXT');
+    await safeExec('ALTER TABLE growth_utm_events ADD COLUMN ttclid TEXT');
+    await safeExec('ALTER TABLE growth_utm_events ADD COLUMN anonymous_id TEXT');
+    await safeExec("ALTER TABLE growth_utm_events ADD COLUMN consent_state TEXT DEFAULT 'unknown'");
     await safeExec('ALTER TABLE growth_utm_events ADD COLUMN path TEXT');
     await safeExec('ALTER TABLE growth_utm_events ADD COLUMN referrer TEXT');
     await safeExec('ALTER TABLE growth_utm_events ADD COLUMN user_agent TEXT');
     await safeExec('CREATE INDEX IF NOT EXISTS growth_utm_events_created_at_idx ON growth_utm_events(created_at)');
     await safeExec('CREATE INDEX IF NOT EXISTS growth_utm_events_campaign_idx ON growth_utm_events(utm_campaign, utm_source)');
+
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS growth_events (
+        id SERIAL PRIMARY KEY,
+        event_name TEXT NOT NULL,
+        event_id TEXT UNIQUE NOT NULL,
+        anonymous_id TEXT,
+        user_id TEXT,
+        user_email TEXT,
+        room_id TEXT,
+        consent_state TEXT DEFAULT 'unknown',
+        eligible_for_segment INTEGER DEFAULT 0,
+        segment_status TEXT DEFAULT 'skipped',
+        segment_detail TEXT,
+        properties_json TEXT,
+        attribution_json TEXT,
+        path TEXT,
+        referrer TEXT,
+        user_agent TEXT,
+        ip_hash TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await safeExec('ALTER TABLE growth_events ADD COLUMN anonymous_id TEXT');
+    await safeExec('ALTER TABLE growth_events ADD COLUMN user_id TEXT');
+    await safeExec('ALTER TABLE growth_events ADD COLUMN user_email TEXT');
+    await safeExec('ALTER TABLE growth_events ADD COLUMN room_id TEXT');
+    await safeExec("ALTER TABLE growth_events ADD COLUMN consent_state TEXT DEFAULT 'unknown'");
+    await safeExec('ALTER TABLE growth_events ADD COLUMN eligible_for_segment INTEGER DEFAULT 0');
+    await safeExec("ALTER TABLE growth_events ADD COLUMN segment_status TEXT DEFAULT 'skipped'");
+    await safeExec('ALTER TABLE growth_events ADD COLUMN segment_detail TEXT');
+    await safeExec('ALTER TABLE growth_events ADD COLUMN properties_json TEXT');
+    await safeExec('ALTER TABLE growth_events ADD COLUMN attribution_json TEXT');
+    await safeExec('ALTER TABLE growth_events ADD COLUMN path TEXT');
+    await safeExec('ALTER TABLE growth_events ADD COLUMN referrer TEXT');
+    await safeExec('ALTER TABLE growth_events ADD COLUMN user_agent TEXT');
+    await safeExec('ALTER TABLE growth_events ADD COLUMN ip_hash TEXT');
+    await safeExec('CREATE UNIQUE INDEX IF NOT EXISTS growth_events_event_id_unique ON growth_events(event_id)');
+    await safeExec('CREATE INDEX IF NOT EXISTS growth_events_created_at_idx ON growth_events(created_at)');
+    await safeExec('CREATE INDEX IF NOT EXISTS growth_events_event_name_idx ON growth_events(event_name, created_at)');
+    await safeExec('CREATE INDEX IF NOT EXISTS growth_events_segment_status_idx ON growth_events(segment_status, created_at)');
 
     await safeExec(`
       CREATE TABLE IF NOT EXISTS growth_creative_assets (

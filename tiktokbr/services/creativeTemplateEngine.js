@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import db from '../db/db.js';
 
-const DEFAULT_PLATFORMS = ['tiktok', 'instagram', 'youtube_shorts', 'linkedin', 'facebook', 'x'];
+const DEFAULT_PLATFORMS = ['tiktok'];
 const PLATFORM_RULES = {
   tiktok: { label: 'TikTok', format: '9:16 vertical', width: 1080, height: 1920, copyLimit: 280, safeZone: { top: 14, bottom: 22, left: 8, right: 8 } },
   instagram: { label: 'Instagram Reels', format: '9:16 vertical', width: 1080, height: 1920, copyLimit: 1200, safeZone: { top: 14, bottom: 22, left: 8, right: 8 } },
@@ -866,6 +866,7 @@ function buildBlocks({ template, platform, variantIndex, asset }) {
     hashtags: hashtagsForCreative(template.key, platform),
     seoKeywords: seoKeywordsForCreative(template.key),
     audience: audienceForTemplate(template),
+    audienceStage: 'cold_visitor',
     goal: template.goal,
     frameScript,
   };
@@ -1311,14 +1312,16 @@ export function queueCreativeVariantAsMarketingPost(id) {
   const hashtags = blocks.hashtags || hashtagsForCreative(variant.template_key, variant.platform);
   const seoKeywords = blocks.seoKeywords || seoKeywordsForCreative(variant.template_key);
   const audience = blocks.audience || audienceForTemplate(template);
+  const audienceStage = blocks.audienceStage || 'cold_visitor';
   const goal = blocks.goal || template.goal || 'sales';
   db.prepare(`
     INSERT INTO marketing_posts (
-      campaign_date, platform, topic_key, audience, goal, hook, body, cta,
+      campaign_date, platform, topic_key, audience, audience_stage, goal, hook, body, cta,
       url, utm_url, hashtags, seo_keywords, scheduled_for, status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT(campaign_date, platform, topic_key) DO UPDATE SET
       audience = excluded.audience,
+      audience_stage = excluded.audience_stage,
       goal = excluded.goal,
       hook = excluded.hook,
       body = excluded.body,
@@ -1334,6 +1337,7 @@ export function queueCreativeVariantAsMarketingPost(id) {
     variant.platform,
     topicKey,
     audience,
+    audienceStage,
     goal,
     variant.hook,
     variant.body,

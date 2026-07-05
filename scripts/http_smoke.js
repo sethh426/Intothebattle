@@ -46,6 +46,10 @@ const server = spawn(process.execPath, ['server.js'], {
     GOOGLE_CLIENT_SECRET: 'google-smoke-secret',
     GOOGLE_OAUTH_REDIRECT_URI: 'https://intothebattle.test/auth/google/callback',
     WRITEFREELY_PUBLIC_URL: 'https://updates.intothebattle.test',
+    GROWTH_TRACKING_ENABLED: 'false',
+    GROWTH_API_SYNC_ENABLED: 'false',
+    SEGMENT_WRITE_KEY: '',
+    SEGMENT_BROWSER_WRITE_KEY: 'segment-browser-smoke-key',
     LOG_LEVEL: 'error',
   },
   stdio: ['ignore', 'pipe', 'pipe'],
@@ -103,9 +107,15 @@ try {
   assert(blogText.includes('application/ld+json'), '/blog should include JSON-LD structured data');
   const updates = await expectStatus('/updates', 200);
   assert((await updates.text()).includes('IntoTheBattle'), '/updates should render the local blog index');
-  for (const pathname of ['/favicon.ico', '/favicon-48.png', '/apple-touch-icon.png', '/site-icon-512.png', '/site.webmanifest', '/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/overlay-scene.js', '/js/overlay-v2.js', '/js/overlay/stage-config.js', '/js/overlay/overlay-normalizers.js', '/js/overlay/overlay-diagnostics.js', '/js/overlay/overlay-audio.js', '/js/overlay/video-agent.js', '/vendor/phaser/phaser.min.js']) {
+  for (const pathname of ['/favicon.ico', '/favicon-48.png', '/apple-touch-icon.png', '/site-icon-512.png', '/site.webmanifest', '/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/clarity-loader.js', '/js/growth-tracker.js', '/js/overlay-scene.js', '/js/overlay-v2.js', '/js/overlay/stage-config.js', '/js/overlay/overlay-normalizers.js', '/js/overlay/overlay-diagnostics.js', '/js/overlay/overlay-audio.js', '/js/overlay/video-agent.js', '/vendor/phaser/phaser.min.js']) {
     await expectStatus(pathname, 200);
   }
+  const publicConfig = await expectStatus('/api/public-config', 200);
+  const publicConfigBody = await publicConfig.json();
+  assert(publicConfigBody.growth?.enabled === false, 'public growth config should default disabled in smoke');
+  assert(publicConfigBody.growth?.paidChannel === 'tiktok', 'public growth config should declare TikTok as the paid channel');
+  assert(publicConfigBody.growth?.consentRequired === true, 'public growth config should require consent');
+  assert(publicConfigBody.growth?.segmentBrowserWriteKey === null, 'disabled growth config should not expose Segment browser keys');
   const sitemapXml = await expectStatus('/sitemap.xml', 200);
   const sitemapText = await sitemapXml.text();
   assert(sitemapXml.headers.get('content-type')?.includes('application/xml'), '/sitemap.xml should be served as XML');
@@ -132,6 +142,17 @@ try {
     headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: 'https://evil.example' },
     body: 'email=evil@example.com',
   });
+  await expectStatus('/admin/users/free-pro/grant', 403, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: 'https://evil.example' },
+    body: 'account=creator%40example.com',
+  });
+  const unauthGrant = await expectStatus('/admin/users/free-pro/grant', 302, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: baseUrl },
+    body: 'account=creator%40example.com',
+  });
+  assert((unauthGrant.headers.get('location') || '').startsWith('/admin/login'), 'admin Creator Pro grant should require admin login');
 
   await expectStatus('/server.js', 404);
   await expectStatus('/package.json', 404);
@@ -154,6 +175,33 @@ try {
   });
   const sameOriginSignupBody = await sameOriginSignup.json();
   assert(sameOriginSignupBody.success === true, 'same-origin signup intent should remain allowed');
+  await expectStatus('/api/growth/events', 403, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', Origin: 'https://evil.example' },
+    body: JSON.stringify({
+      eventName: 'signup_cta_clicked',
+      eventId: 'signup_cta_clicked:cross-origin-smoke',
+      anonymousId: 'anon-cross-origin-smoke',
+      consent: { analytics: true, ads: true, state: 'granted' },
+    }),
+  });
+  const noConsentGrowthEvent = await expectStatus('/api/growth/events', 200, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', Origin: baseUrl, Cookie: 'itb_growth_consent=denied; itb_growth_anon=anon-http-smoke' },
+    body: JSON.stringify({
+      eventName: 'signup_cta_clicked',
+      eventId: 'signup_cta_clicked:http-smoke',
+      anonymousId: 'anon-http-smoke',
+      consent: { analytics: false, ads: false, state: 'denied' },
+      properties: { cta: 'signup' },
+      attribution: { utm_source: 'tiktok', ttclid: 'ttclid-http-smoke' },
+    }),
+  });
+  const noConsentGrowthBody = await noConsentGrowthEvent.json();
+  assert(noConsentGrowthBody.success === true, 'same-origin no-consent growth event should be accepted for audit');
+  assert(noConsentGrowthBody.forwarded === false, 'no-consent growth event must not be forwarded');
+  assert(noConsentGrowthBody.eventId === 'signup_cta_clicked:http-smoke', 'growth event response should keep dedup event id');
+  assert(!JSON.stringify(noConsentGrowthBody).includes('segment-browser-smoke-key'), 'growth event response must not leak Segment keys');
   const battlegrounds = await expectStatus('/api/public/battlegrounds', 200);
   const battlegroundsBody = await battlegrounds.json();
   assert(Array.isArray(battlegroundsBody.posts), 'battlegrounds list should return posts array');
@@ -183,6 +231,9 @@ try {
   assert(diagnosticsBody.storage?.ok === true, 'diagnostics storage check should report ok');
   assert(diagnosticsBody.database?.mode === 'stub', 'diagnostics should report stub database in smoke mode');
   assert(diagnosticsBody.growth?.enabled === false, 'growth API sync should be disabled by default');
+  assert(diagnosticsBody.growthEvents?.enabled === false, 'growth event forwarding should be disabled by default');
+  assert(diagnosticsBody.growthEvents?.paidChannel === 'tiktok', 'growth event diagnostics should keep TikTok as the paid channel');
+  assert(diagnosticsBody.growthEvents?.canonicalEvents?.includes('subscription_started'), 'growth event diagnostics should expose the canonical event spine');
   await expectStatus('/api/runtime/launch-readiness', 401);
   const readiness = await expectStatus('/api/runtime/launch-readiness', 503, { headers: { Authorization: `Bearer ${metricsToken}` } });
   const readinessBody = await readiness.json();

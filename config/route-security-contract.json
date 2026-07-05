@@ -144,6 +144,22 @@
     },
     {
       "method": "POST",
+      "path": "/admin/users/free-pro/grant",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users/free-pro/remove",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
       "path": "/admin/sponsors/upload",
       "category": "admin-mutation",
       "access": "admin-session-and-same-origin-mutation",
@@ -188,6 +204,14 @@
       "category": "admin-mutation",
       "access": "admin-session-and-same-origin-mutation",
       "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/api/growth/events",
+      "category": "public-growth",
+      "access": "same-origin-consent-gated-rate-limited",
+      "unauthenticated": 200,
       "production": "enabled"
     },
     {

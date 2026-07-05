@@ -39,6 +39,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
   <script type="module" src="/js/clarity-loader.js"></script>
+  <script type="module" src="/js/growth-tracker.js"></script>
 
   <script type="application/ld+json">
   {
@@ -1290,7 +1291,7 @@
     <section class="signup-main" aria-labelledby="signup-title">
       <section class="signup-copy" aria-label="Signup overview">
         <div class="signup-kicker">7-day full access. No card.</div>
-        <h1 class="signup-title" id="signup-title">Start your TikTok <span>battle room.</span></h1>
+        <h1 class="signup-title" id="signup-title">Launch your first <span>battle overlay.</span></h1>
         <p class="signup-lede">Create a creator account, open the Command Center, and test your signed OBS or TikTok Studio overlay before viewers arrive.</p>
         <div class="signup-benefits" aria-label="What you get">
           <div class="signup-benefit"><b>Room</b><span>Your private creator room is ready after signup.</span></div>
@@ -1302,7 +1303,7 @@
       <section class="signup-panel" id="signup-options" aria-label="Create creator account">
         <div class="signup-panel-header">
           <div class="signup-status">Trial ready</div>
-          <h2 class="signup-panel-title">Create account</h2>
+          <h2 class="signup-panel-title">Create your room</h2>
           <p class="signup-panel-copy">Google is fastest. Email signup is there if you want a separate login.</p>
         </div>
 
@@ -1332,8 +1333,8 @@
       <aside class="signup-next" aria-label="What happens after signup">
         <h2>Your first run</h2>
         <ol>
-          <li>Open the Command Center setup flow.</li>
-          <li>Copy the browser source into OBS or TikTok Studio.</li>
+          <li>Open setup preview, copy the source, and test the battle.</li>
+          <li>Free means you can create and test the battle overlay.</li>
           <li>Trigger one test battle moment before the real LIVE.</li>
         </ol>
       </aside>
@@ -1360,6 +1361,13 @@
           tags: { signup_page: 'room_proof_v2', ...tags },
           upgrade,
         });
+      }
+      if (typeof window.intothebattleGrowth?.track === 'function' && /_click$/.test(name)) {
+        window.intothebattleGrowth.track('signup_cta_clicked', {
+          signup_page: 'room_proof_v2',
+          source_event: name,
+          ...tags,
+        }, { seed: `${name}:${tags.signup_choice || 'unknown'}` });
       }
     }
 

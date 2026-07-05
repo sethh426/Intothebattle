@@ -33,6 +33,7 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="manifest" href="/site.webmanifest" />
   <script type="module" src="/js/clarity-loader.js"></script>
+  <script type="module" src="/js/growth-tracker.js"></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -261,6 +262,27 @@
       padding-bottom: 20px;
       border-bottom: 1px solid var(--border, rgba(255,255,255,0.09));
     }
+    .reason-notice {
+      display: grid;
+      gap: 4px;
+      border: 1px solid rgba(245,200,66,0.26);
+      background: rgba(245,200,66,0.09);
+      color: var(--txt, #edf0fa);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: -6px 0 20px;
+      line-height: 1.45;
+    }
+    .reason-notice strong {
+      color: var(--gold-l, #ffe99a);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .reason-notice span {
+      color: var(--muted, #8896ae);
+      font-size: 14px;
+    }
 
     /* Feature checklist */
     .check-list {
@@ -414,6 +436,11 @@
       </div>
       <div class="billing-note">Billed through PayPal. Cancel anytime - no long-term contract.</div>
 
+      <div id="trialExpiredNotice" class="reason-notice hidden" role="status">
+        <strong>Trial ended</strong>
+        <span>Your 7-day trial has ended. Creator Pro is required to continue using your battle room.</span>
+      </div>
+
       <ul class="check-list">
         <li>Battle rooms and Command Center setup</li>
         <li>Custom audio and visual controls</li>
@@ -445,7 +472,12 @@
     const paymentStatus = document.getElementById('paymentStatus');
     const paypalButtonsEl = document.getElementById('paypalButtons');
     const fallbackPayPal = document.getElementById('fallbackPayPal');
+    const trialExpiredNotice = document.getElementById('trialExpiredNotice');
     let fallbackPayPalUrl = '/paywall-link?fallback=1';
+
+    if (new URLSearchParams(window.location.search).get('reason') === 'trial_expired') {
+      trialExpiredNotice.classList.remove('hidden');
+    }
 
     function setPaymentStatus(message, type = '') {
       paymentStatus.textContent = message;

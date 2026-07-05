@@ -1,5 +1,9 @@
 process.env.SKIP_DB = process.env.SKIP_DB || 'true';
 process.env.APP_BASE_URL = process.env.APP_BASE_URL || 'https://www.intothebattle.com';
+process.env.GROWTH_API_SYNC_ENABLED = 'false';
+process.env.GROWTH_TRACKING_ENABLED = 'false';
+process.env.SEGMENT_WRITE_KEY = '';
+process.env.SEGMENT_BROWSER_WRITE_KEY = 'segment-browser-logic-smoke';
 
 const {
   buildMarketingPostDrafts,
@@ -13,6 +17,11 @@ const {
   growthIntegrationDiagnostics,
   syncLeadToGrowthApis,
 } = await import('../tiktokbr/services/growthIntegrations.js');
+const {
+  growthEventDiagnostics,
+  publicGrowthConfig,
+  recordGrowthEvent,
+} = await import('../tiktokbr/services/growthEvents.js');
 const {
   buildBlankDesignBrief,
   buildCreativeVariantDrafts,
@@ -47,6 +56,7 @@ const drafts = buildMarketingPostDrafts({
 
 assert(drafts.length === 3, 'Expected one draft per configured platform');
 assert(drafts.every(draft => draft.body.includes('utm_source=')), 'Drafts must include UTM-tagged links');
+assert(drafts.every(draft => draft.audienceStage === 'cold_visitor'), 'Marketing drafts must include a retargeting audience stage');
 assert(
   drafts.every(draft => draft.body.includes('TikTok LIVE') && /battle|arena|fight/i.test(draft.body)),
   'Drafts must sell the product outcome'
@@ -66,9 +76,19 @@ const trackedVisit = recordMarketingVisit({
   utmMedium: 'social',
   utmCampaign: 'smoke',
   utmContent: 'demo',
+  ttclid: 'ttclid-smoke',
+  anonymousId: 'anon-smoke',
+  consentState: 'granted',
   path: '/signup?utm_source=tiktok',
 });
 assert(trackedVisit.recorded === true, 'UTM tracking should accept valid campaign visits');
+const tiktokClickVisit = recordMarketingVisit({
+  ttclid: 'ttclid-only-smoke',
+  anonymousId: 'anon-ttclid-smoke',
+  consentState: 'unknown',
+  path: '/signup?ttclid=ttclid-only-smoke',
+});
+assert(tiktokClickVisit.recorded === true, 'UTM tracking should accept TikTok click ids even without UTM fields');
 const ignoredVisit = recordMarketingVisit({ path: '/signup' });
 assert(ignoredVisit.recorded === false, 'UTM tracking should ignore visits without UTM fields');
 const performance = marketingPerformanceSummary({ days: 14 });
@@ -78,6 +98,46 @@ assert(Array.isArray(listRecentMarketingVisits({ limit: 5 })), 'Recent marketing
 
 const growthDiagnostics = growthIntegrationDiagnostics();
 assert(growthDiagnostics.enabled === false, 'Growth API sync should be disabled by default');
+const growthEventConfig = publicGrowthConfig();
+assert(growthEventConfig.enabled === false, 'Growth event forwarding should be disabled by default');
+assert(growthEventConfig.paidChannel === 'tiktok', 'Public growth config must keep TikTok as the paid channel');
+assert(growthEventConfig.consentRequired === true, 'Public growth config must declare consent is required');
+assert(growthEventConfig.segmentBrowserWriteKey === null, 'Disabled growth tracking must not expose a browser Segment key');
+const growthEventDiag = growthEventDiagnostics();
+assert(growthEventDiag.paidChannel === 'tiktok', 'Growth event diagnostics must report TikTok as the paid channel');
+for (const eventName of [
+  'page_viewed',
+  'signup_cta_clicked',
+  'signup_intent_captured',
+  'account_created',
+  'trial_started',
+  'dashboard_opened',
+  'setup_started',
+  'overlay_url_copied',
+  'rehearsal_started',
+  'tiktok_connected',
+  'first_real_player_seen',
+  'paywall_viewed',
+  'subscription_started',
+]) {
+  assert(growthEventDiag.canonicalEvents.includes(eventName), `Growth event spine must include ${eventName}`);
+}
+const noConsentEvent = await recordGrowthEvent({
+  eventName: 'signup_cta_clicked',
+  eventId: 'signup_cta_clicked:logic-smoke',
+  anonymousId: 'anon-logic-smoke',
+  consent: { analytics: false, ads: false, state: 'denied' },
+  properties: { cta: 'signup' },
+  attribution: { utm_source: 'tiktok', ttclid: 'ttclid-logic-smoke' },
+});
+assert(noConsentEvent.ok === true && noConsentEvent.forwarded === false, 'No-consent growth events must store/skip instead of forwarding');
+assert(String(noConsentEvent.reason || '').includes('consent:denied'), 'No-consent growth events must explain the consent skip');
+const unsupportedEvent = await recordGrowthEvent({
+  eventName: 'not_a_real_growth_event',
+  eventId: 'not_a_real_growth_event:logic-smoke',
+  consent: { analytics: true, ads: true, state: 'granted' },
+});
+assert(unsupportedEvent.ok === false, 'Growth event spine must reject unsupported event names');
 const growthDryRun = await syncLeadToGrowthApis({
   email: 'growth-smoke@example.com',
   name: 'Growth Smoke',
@@ -98,6 +158,7 @@ assert(
 const creativeOptions = creativeTemplateOptions();
 assert(creativeOptions.assetTypes.some(type => type.key === 'real_overlay_clip'), 'Creative options must include real overlay clips');
 assert(creativeOptions.assetTypes.some(type => type.key === 'generated_background'), 'Creative options must include generated backgrounds for non-proof use');
+assert(creativeOptions.platforms.some(platform => platform.key === 'tiktok'), 'TikTok must be available as the first paid creative platform');
 
 const battleDemoAssets = listBattleDemoContentAssets();
 assert(battleDemoAssets.length >= 8, 'Battle demo content folder must expose each slide and clip as individual assets');
@@ -153,6 +214,10 @@ const creativeDrafts = buildCreativeVariantDrafts({
 assert(creativeDrafts.length === 2, 'Expected requested creative variant count');
 assert(creativeDrafts.every(draft => draft.qualityStatus !== 'blocked'), 'Approved proof assets should create usable variants');
 assert(creativeDrafts.every(draft => draft.body.includes('utm_source=tiktok')), 'Creative variants must include UTM links');
+assert(
+  creativeDrafts.every(draft => JSON.parse(draft.blockJson).audienceStage === 'cold_visitor'),
+  'Creative variants must carry a retargeting audience stage'
+);
 assert(
   creativeDrafts.every(draft => JSON.parse(draft.blockJson).visualDirection?.imagePrompt),
   'Creative variants must include visual direction for image/video automation'
@@ -222,6 +287,7 @@ console.log(JSON.stringify({
   drafts: drafts.length,
   diagnostics,
   growth: growthDiagnostics,
+  growthEvents: growthEventDiag,
   creativeTemplates: creativeTemplates.length,
   contentPacks: contentPacks.length,
   blankDesigns: blankDesigns.length,

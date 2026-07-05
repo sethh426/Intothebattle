@@ -6,7 +6,8 @@ import db from '../db/db.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = path.resolve(__dirname, '..', '..');
 
-const DEFAULT_PLATFORMS = ['x', 'linkedin', 'facebook', 'instagram', 'tiktok', 'youtube_shorts'];
+const DEFAULT_PLATFORMS = ['tiktok'];
+const DEFAULT_AUDIENCE_STAGE = 'cold_visitor';
 const PLATFORM_LIMITS = {
   x: 260,
   linkedin: 1100,
@@ -124,18 +125,21 @@ export function recordMarketingVisit(input = {}) {
   const utmMedium = cleanText(input.utmMedium || input.utm_medium || '', 80).toLowerCase();
   const utmCampaign = cleanText(input.utmCampaign || input.utm_campaign || '', 160);
   const utmContent = cleanText(input.utmContent || input.utm_content || '', 160);
-  if (!utmSource && !utmMedium && !utmCampaign && !utmContent) return { recorded: false, reason: 'missing_utm' };
+  const ttclid = cleanText(input.ttclid || '', 240);
+  if (!utmSource && !utmMedium && !utmCampaign && !utmContent && !ttclid) return { recorded: false, reason: 'missing_utm' };
 
   const pathValue = cleanText(input.path || '/', 260) || '/';
   const referrer = cleanText(input.referrer || '', 500);
   const userAgent = cleanText(input.userAgent || '', 260);
+  const anonymousId = cleanText(input.anonymousId || input.anonymous_id || '', 120);
+  const consentState = cleanText(input.consentState || input.consent_state || 'unknown', 40).toLowerCase() || 'unknown';
   try {
     db.prepare(`
       INSERT INTO growth_utm_events (
-        utm_source, utm_medium, utm_campaign, utm_content,
+        utm_source, utm_medium, utm_campaign, utm_content, ttclid, anonymous_id, consent_state,
         path, referrer, user_agent, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `).run(utmSource, utmMedium, utmCampaign, utmContent, pathValue, referrer, userAgent);
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `).run(utmSource, utmMedium, utmCampaign, utmContent, ttclid, anonymousId, consentState, pathValue, referrer, userAgent);
     return { recorded: true };
   } catch (_err) {
     return { recorded: false, reason: 'db_error' };
@@ -342,6 +346,7 @@ export function buildMarketingPostDrafts({ date = new Date(), platforms = config
       platformLabel: PLATFORM_LABELS[platform] || platform,
       topicKey: topic.key,
       audience: platform === 'linkedin' ? 'creator economy operators and sponsors' : 'TikTok LIVE creators',
+      audienceStage: DEFAULT_AUDIENCE_STAGE,
       goal: 'sales',
       hook,
       body: content,
@@ -360,11 +365,12 @@ export function ensureMarketingPostsForDate({ date = new Date(), platforms = con
   const rows = [];
   const insert = db.prepare(`
     INSERT INTO marketing_posts (
-      campaign_date, platform, topic_key, audience, goal, hook, body, cta,
+      campaign_date, platform, topic_key, audience, audience_stage, goal, hook, body, cta,
       url, utm_url, hashtags, seo_keywords, scheduled_for, status, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT(campaign_date, platform, topic_key) DO UPDATE SET
       audience = CASE WHEN ? THEN excluded.audience ELSE marketing_posts.audience END,
+      audience_stage = CASE WHEN ? THEN excluded.audience_stage ELSE marketing_posts.audience_stage END,
       goal = CASE WHEN ? THEN excluded.goal ELSE marketing_posts.goal END,
       hook = CASE WHEN ? THEN excluded.hook ELSE marketing_posts.hook END,
       body = CASE WHEN ? THEN excluded.body ELSE marketing_posts.body END,
@@ -382,6 +388,7 @@ export function ensureMarketingPostsForDate({ date = new Date(), platforms = con
       draft.platform,
       draft.topicKey,
       draft.audience,
+      draft.audienceStage,
       draft.goal,
       draft.hook,
       draft.body,
@@ -391,6 +398,7 @@ export function ensureMarketingPostsForDate({ date = new Date(), platforms = con
       draft.hashtags,
       draft.seoKeywords,
       draft.scheduledFor,
+      force,
       force,
       force,
       force,

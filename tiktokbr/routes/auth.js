@@ -10,6 +10,17 @@ import {
   sendPasswordResetEmail,
   sendVerificationEmail,
 } from '../email/postmarkMailer.js';
+import {
+  accountTrialExpiresAt,
+  buildUserAccessStatus,
+  parseDate,
+  trialDaysFromValue,
+} from '../services/entitlements.js';
+import {
+  getEffectiveUserSubscription,
+  publicSubscriptionView,
+} from '../services/userSubscriptions.js';
+import { recordServerGrowthEvent } from '../services/growthEvents.js';
 
 function getGoogleClientId() {
   return process.env.GOOGLE_CLIENT_ID;
@@ -73,33 +84,56 @@ function normalizeGoogleUsername(email) {
 }
 
 function fullAccessTrialDays() {
-  const value = Number(process.env.FREE_TRIAL_DAYS || 7);
-  return Number.isFinite(value) && value > 0 ? Math.round(value) : 7;
+  return trialDaysFromValue(process.env.FREE_TRIAL_DAYS, 7);
 }
 
-function trialExpiresAtFromNow() {
-  return new Date(Date.now() + fullAccessTrialDays() * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 19)
-    .replace('T', ' ');
+function formatDateForSql(date) {
+  const parsed = parseDate(date);
+  if (!parsed) return null;
+  return parsed.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function trialWindowForUser(user) {
+  const startedAt = parseDate(user?.created_at) || new Date();
+  const expiresAt = accountTrialExpiresAt(
+    { ...user, created_at: startedAt },
+    { trialDays: fullAccessTrialDays() }
+  );
+  if (!expiresAt) return null;
+  return { startedAt, expiresAt };
+}
+
+function paywallUrl(reason) {
+  return `/paywall?reason=${encodeURIComponent(reason || 'subscription_required')}`;
+}
+
+function userAccessRedirect(user, subscription, fallbackPath = DEFAULT_ONBOARDING_REDIRECT) {
+  const status = buildUserAccessStatus(user, subscription, { trialDays: fullAccessTrialDays() });
+  return status.accessAllowed ? fallbackPath : paywallUrl(status.reason);
 }
 
 function createFullAccessTrial(userId) {
   if (!userId) return;
   const existing = db.prepare('SELECT id FROM subscriptions WHERE user_id = ? ORDER BY created_at ASC LIMIT 1').get(userId);
   if (existing) return;
+  const user = db.prepare('SELECT id, created_at FROM users WHERE id = ?').get(userId);
+  const trialWindow = trialWindowForUser(user);
+  if (!trialWindow) return;
   db.prepare(
-    "INSERT INTO subscriptions (user_id, plan_type, status, started_at, expires_at, created_at, updated_at) VALUES (?, '7-Day Full Access', 'trialing', CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
-  ).run(userId, trialExpiresAtFromNow());
+    "INSERT INTO subscriptions (user_id, plan_type, status, started_at, expires_at, created_at, updated_at) VALUES (?, '7-Day Full Access', 'trialing', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+  ).run(userId, formatDateForSql(trialWindow.startedAt), formatDateForSql(trialWindow.expiresAt));
 }
 
 async function createFullAccessTrialAsync(userId) {
   if (!userId) return;
   const existing = await getAsync('SELECT id FROM subscriptions WHERE user_id = ? ORDER BY created_at ASC LIMIT 1', userId);
   if (existing) return;
+  const user = await getAsync('SELECT id, created_at FROM users WHERE id = ?', userId);
+  const trialWindow = trialWindowForUser(user);
+  if (!trialWindow) return;
   await runAsync(
-    "INSERT INTO subscriptions (user_id, plan_type, status, started_at, expires_at, created_at, updated_at) VALUES (?, '7-Day Full Access', 'trialing', CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
-    [userId, trialExpiresAtFromNow()]
+    "INSERT INTO subscriptions (user_id, plan_type, status, started_at, expires_at, created_at, updated_at) VALUES (?, '7-Day Full Access', 'trialing', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+    [userId, formatDateForSql(trialWindow.startedAt), formatDateForSql(trialWindow.expiresAt)]
   );
 }
 
@@ -109,6 +143,20 @@ function markSignupIntentConverted(email) {
   try {
     db.prepare('UPDATE signup_intents SET converted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE email = ?').run(normalizedEmail);
   } catch (_err) {}
+}
+
+function trackAuthGrowthEvent(req, eventName, user, options = {}) {
+  if (!user?.id && !user?.email) return;
+  recordServerGrowthEvent(req, eventName, {
+    stableKey: options.stableKey || `${eventName}:${user.id || user.email}`,
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name || '',
+    },
+    roomId: options.roomId || '',
+    properties: options.properties || {},
+  }).catch(err => console.warn(`Growth ${eventName} event failed:`, err?.message || err));
 }
 
 async function markSignupIntentConvertedAsync(email) {
@@ -910,7 +958,17 @@ router.post('/auth/user/register', registrationLimiter, express.json(), async (r
     setSessionCookie(res, sessionToken);
     const room = ensureUserRoom(existing.id, name);
     createFullAccessTrial(existing.id);
+    const subscription = getEffectiveUserSubscription(db, existing.id);
+    const finalRedirectUrl = userAccessRedirect(
+      { ...existing, name, tiktok_username: tiktokUsername, is_active: 1 },
+      subscription,
+      redirectUrl
+    );
     markSignupIntentConverted(email);
+    trackAuthGrowthEvent(req, 'trial_started', { id: existing.id, email, name }, {
+      roomId: room.room_id || room.roomId || '',
+      properties: { recoveredExisting: true, method: 'email' },
+    });
 
     let delivery;
     try {
@@ -929,7 +987,7 @@ router.post('/auth/user/register', registrationLimiter, express.json(), async (r
       roomId: room.room_id || room.roomId,
       accountId: `ACC-${String(existing.id).padStart(6, '0')}`,
       emailSent,
-      redirectUrl,
+      redirectUrl: finalRedirectUrl,
     };
     if (!emailSent && process.env.NODE_ENV !== 'production') {
       response.devVerificationLink = buildEmailUrl('/verify-email', { token: verificationToken, email });
@@ -959,7 +1017,21 @@ router.post('/auth/user/register', registrationLimiter, express.json(), async (r
   );
   db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
   createFullAccessTrial(userId);
+  const subscription = getEffectiveUserSubscription(db, userId);
+  const finalRedirectUrl = userAccessRedirect(
+    { id: userId, email, name, tiktok_username: tiktokUsername, is_active: 1, created_at: new Date() },
+    subscription,
+    redirectUrl
+  );
   markSignupIntentConverted(email);
+  trackAuthGrowthEvent(req, 'account_created', { id: userId, email, name }, {
+    roomId,
+    properties: { method: 'email' },
+  });
+  trackAuthGrowthEvent(req, 'trial_started', { id: userId, email, name }, {
+    roomId,
+    properties: { method: 'email' },
+  });
 
   let delivery;
   try {
@@ -978,7 +1050,7 @@ router.post('/auth/user/register', registrationLimiter, express.json(), async (r
     roomId,
     accountId,
     emailSent,
-    redirectUrl,
+    redirectUrl: finalRedirectUrl,
   };
   if (!emailSent && process.env.NODE_ENV !== 'production') {
     response.devVerificationLink = buildEmailUrl('/verify-email', { token: verificationToken, email });
@@ -1071,6 +1143,14 @@ router.get('/auth/google/callback', async (req, res) => {
       await createFullAccessTrialAsync(userId);
       await markSignupIntentConvertedAsync(email);
       user = await getAsync('SELECT * FROM users WHERE id = ?', userId);
+      trackAuthGrowthEvent(req, 'account_created', { id: userId, email, name }, {
+        roomId,
+        properties: { method: 'google' },
+      });
+      trackAuthGrowthEvent(req, 'trial_started', { id: userId, email, name }, {
+        roomId,
+        properties: { method: 'google' },
+      });
     } else {
       if (!user.is_active) {
         return res.status(403).send('Your account is disabled.');
@@ -1081,13 +1161,17 @@ router.get('/auth/google/callback', async (req, res) => {
       await ensureUserRoomAsync(user.id, user.name);
       await createFullAccessTrialAsync(user.id);
       await markSignupIntentConvertedAsync(email);
+      trackAuthGrowthEvent(req, 'trial_started', user, {
+        properties: { method: 'google', existingUser: true },
+      });
     }
 
     const sessionToken = createSessionToken({ userId: user.id, email });
     await runAsync('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?', [sessionToken, user.id]);
     setSessionCookie(res, sessionToken);
     res.clearCookie('google_oauth_state', { ...COOKIE_OPTIONS, httpOnly: true, sameSite: 'lax' });
-    return res.redirect(redirectUrl);
+    const subscription = getEffectiveUserSubscription(db, user.id);
+    return res.redirect(userAccessRedirect(user, subscription, redirectUrl));
   } catch (err) {
     console.error('Google OAuth callback error:', err);
     return res.status(500).send('Google login failed.');
@@ -1121,12 +1205,13 @@ router.post('/auth/user/login', loginLimiter, express.json(), async (req, res) =
   db.prepare('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?').run(sessionToken, user.id);
   ensureUserRoom(user.id, user.name);
   setSessionCookie(res, sessionToken);
+  const subscription = getEffectiveUserSubscription(db, user.id);
 
   return res.json({
     success: true,
     message: user.email_verified ? 'Logged in successfully.' : 'Logged in. Please verify your email from your profile when you can.',
     emailVerified: Boolean(user.email_verified),
-    redirectUrl,
+    redirectUrl: userAccessRedirect(user, subscription, redirectUrl),
   });
 });
 
@@ -1152,7 +1237,7 @@ router.get('/auth/user/me', (req, res) => {
 
   ensureUserRoom(user.id, user.name);
   const rooms = db.prepare('SELECT room_id, room_name, created_at FROM user_rooms WHERE user_id = ? ORDER BY created_at DESC').all(user.id);
-  const subscription = db.prepare('SELECT paypal_subscription_id, plan_type, status, started_at, next_billing_date, expires_at FROM subscriptions WHERE user_id = ? ORDER BY updated_at DESC LIMIT 1').get(user.id);
+  const subscription = publicSubscriptionView(getEffectiveUserSubscription(db, user.id));
   return res.json({ success: true, user: {
     id: user.id,
     email: user.email,
@@ -1177,7 +1262,7 @@ router.get('/legacy-login', (req, res) => {
     }
     const user = db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
     if (user && user.is_active) {
-      return res.redirect('/dashboard');
+      return res.redirect(userAccessRedirect(user, getEffectiveUserSubscription(db, user.id), '/dashboard'));
     }
   }
   res.send(renderLoginPage());

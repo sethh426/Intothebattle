@@ -1,6 +1,12 @@
 import db from '../db/db.js';
 import jwt from 'jsonwebtoken';
 import { getE2EAuthRecord } from '../auth/e2eAuth.js';
+import { buildUserAccessStatus, trialDaysFromValue } from '../services/entitlements.js';
+import { getEffectiveUserSubscription } from '../services/userSubscriptions.js';
+
+function paywallUrl(reason) {
+  return `/paywall?reason=${encodeURIComponent(reason || 'subscription_required')}`;
+}
 
 function getAuthRecord(token) {
   if (!token) return null;
@@ -20,7 +26,17 @@ export default function requireAccess(req, res, next) {
 
   const e2eAuth = getE2EAuthRecord(token);
   if (e2eAuth) {
-    req.accessCode = e2eAuth.record;
+    if (e2eAuth.type === 'user') {
+      const accessStatus = buildUserAccessStatus(e2eAuth.record, e2eAuth.subscription || null, {
+        trialDays: trialDaysFromValue(process.env.FREE_TRIAL_DAYS, 7),
+      });
+      if (!accessStatus.accessAllowed) return res.redirect(paywallUrl(accessStatus.reason));
+      req.user = e2eAuth.record;
+      req.subscription = e2eAuth.subscription || null;
+      req.subscriptionStatus = accessStatus;
+    } else {
+      req.accessCode = e2eAuth.record;
+    }
     return next();
   }
 
@@ -48,9 +64,16 @@ export default function requireAccess(req, res, next) {
   } else {
     const user = auth.record;
     if (!user.is_active) return res.redirect('/login?reason=revoked');
+    const subscription = auth.subscription || getEffectiveUserSubscription(db, user.id);
+    const accessStatus = buildUserAccessStatus(user, subscription, {
+      trialDays: trialDaysFromValue(process.env.FREE_TRIAL_DAYS, 7),
+    });
+    if (!accessStatus.accessAllowed) return res.redirect(paywallUrl(accessStatus.reason));
 
     db.prepare('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?').run(user.id);
     req.user = user;
+    req.subscription = subscription;
+    req.subscriptionStatus = accessStatus;
   }
 
   next();

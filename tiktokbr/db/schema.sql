@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   started_at TIMESTAMP,
   next_billing_date TIMESTAMP,
   expires_at TIMESTAMP,
+  admin_granted INTEGER DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(user_id) REFERENCES users(id)
@@ -138,6 +139,7 @@ CREATE TABLE IF NOT EXISTS marketing_posts (
   platform TEXT NOT NULL,
   topic_key TEXT NOT NULL,
   audience TEXT,
+  audience_stage TEXT DEFAULT 'cold_visitor',
   goal TEXT DEFAULT 'sales',
   hook TEXT,
   body TEXT NOT NULL,
@@ -180,6 +182,9 @@ CREATE TABLE IF NOT EXISTS growth_utm_events (
   utm_medium TEXT,
   utm_campaign TEXT,
   utm_content TEXT,
+  ttclid TEXT,
+  anonymous_id TEXT,
+  consent_state TEXT DEFAULT 'unknown',
   path TEXT,
   referrer TEXT,
   user_agent TEXT,
@@ -188,6 +193,31 @@ CREATE TABLE IF NOT EXISTS growth_utm_events (
 
 CREATE INDEX IF NOT EXISTS growth_utm_events_created_at_idx ON growth_utm_events(created_at);
 CREATE INDEX IF NOT EXISTS growth_utm_events_campaign_idx ON growth_utm_events(utm_campaign, utm_source);
+
+CREATE TABLE IF NOT EXISTS growth_events (
+  id SERIAL PRIMARY KEY,
+  event_name TEXT NOT NULL,
+  event_id TEXT UNIQUE NOT NULL,
+  anonymous_id TEXT,
+  user_id TEXT,
+  user_email TEXT,
+  room_id TEXT,
+  consent_state TEXT DEFAULT 'unknown',
+  eligible_for_segment INTEGER DEFAULT 0,
+  segment_status TEXT DEFAULT 'skipped',
+  segment_detail TEXT,
+  properties_json TEXT,
+  attribution_json TEXT,
+  path TEXT,
+  referrer TEXT,
+  user_agent TEXT,
+  ip_hash TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS growth_events_created_at_idx ON growth_events(created_at);
+CREATE INDEX IF NOT EXISTS growth_events_event_name_idx ON growth_events(event_name, created_at);
+CREATE INDEX IF NOT EXISTS growth_events_segment_status_idx ON growth_events(segment_status, created_at);
 
 CREATE TABLE IF NOT EXISTS growth_creative_assets (
   id SERIAL PRIMARY KEY,

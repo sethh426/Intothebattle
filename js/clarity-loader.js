@@ -38,6 +38,17 @@ function trackingBlockedByBrowser() {
   return dnt === '1' || dnt === 'yes';
 }
 
+function consentGranted() {
+  try {
+    const stored = window.localStorage?.getItem('itb_growth_consent');
+    const cookie = document.cookie.split(';').map(part => part.trim()).find(part => part.startsWith('itb_growth_consent='));
+    const cookieValue = cookie ? decodeURIComponent(cookie.slice('itb_growth_consent='.length)) : '';
+    return (stored || cookieValue) === 'granted';
+  } catch (_err) {
+    return false;
+  }
+}
+
 async function loadPublicConfig() {
   const response = await fetch('/api/public-config', {
     credentials: 'same-origin',
@@ -48,7 +59,7 @@ async function loadPublicConfig() {
 }
 
 async function initClarity() {
-  if (clarityInitialized || trackingBlockedByBrowser()) return;
+  if (clarityInitialized || trackingBlockedByBrowser() || !consentGranted()) return;
 
   try {
     const config = await loadPublicConfig();
@@ -77,4 +88,5 @@ async function initClarity() {
   }
 }
 
+window.addEventListener('itb:growth-consent-changed', () => initClarity());
 initClarity();
