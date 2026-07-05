@@ -40,6 +40,21 @@ export const DEPRECATED_ATTACK_COMMANDS = Object.freeze([
   'ripple',
 ]);
 
+export const PLAYER_UTILITY_COMMAND_ALIASES = Object.freeze({
+  join: Object.freeze(['join', 'spawn', 'play', 'start', 'enter', 'ready']),
+  help: Object.freeze(['help', 'commands', 'command', 'cmd', 'howto']),
+  team: Object.freeze(['team', 'squad']),
+  heal: Object.freeze(['heal', 'hp', 'health']),
+  shield: Object.freeze(['shield', 'guard', 'block', 'defend', 'protect']),
+});
+
+const PLAYER_UTILITY_COMMAND_LOOKUP = Object.freeze(
+  Object.entries(PLAYER_UTILITY_COMMAND_ALIASES).reduce((lookup, [canonical, aliases]) => {
+    aliases.forEach(alias => { lookup[alias] = canonical; });
+    return lookup;
+  }, {})
+);
+
 export const VIEWER_COMMAND_TICKER_ITEMS = Object.freeze([
   'Quick start: !join | @name to attack | !shield | !heal @name',
   'Targets: @name | @horde | @boss',
@@ -78,8 +93,8 @@ export const VIEWER_COMMAND_SHOWCASE = Object.freeze({
 
 export function parseAttackCommand(text = '', options = {}) {
   const value = String(text || '');
-  const explicit = value.match(/(?:^|\s)[!/](\S+)/i);
-  const mentionlessValue = value.replace(/@([^\s@]+)/g, ' ');
+  const explicit = value.match(/(?:^|\s)[!/]\s*([a-z][a-z0-9_-]{1,24})/i);
+  const mentionlessValue = value.replace(/@\s*([^\s@]+)/g, ' ');
   const rawCommand = explicit?.[1] || (options.explicitOnly ? '' : mentionlessValue.match(/\b([a-z][a-z0-9_-]{1,24})\b/i)?.[1]) || '';
   const normalized = String(rawCommand || '').toLowerCase().replace(/[^\w-].*$/, '');
   if (PLAYER_ATTACK_COMMANDS[normalized]) return PLAYER_ATTACK_COMMANDS[normalized];
@@ -88,6 +103,24 @@ export function parseAttackCommand(text = '', options = {}) {
   const words = mentionlessValue.toLowerCase().match(/[a-z][a-z0-9_-]*/g) || [];
   const naturalEffect = words.find(word => PLAYER_ATTACK_COMMANDS[word]);
   return naturalEffect ? PLAYER_ATTACK_COMMANDS[naturalEffect] : null;
+}
+
+export function parseUtilityCommand(text = '') {
+  const raw = String(text || '').trim();
+  if (!raw) return null;
+  const prefixed = /^[!/]/.test(raw);
+  const commandLine = raw.replace(/^[!/]\s*/, '').trimStart();
+  const match = commandLine.match(/^([a-z][a-z0-9_-]*)([\s\S]*)$/i);
+  if (!match) return null;
+  const token = String(match[1] || '').toLowerCase();
+  const canonical = PLAYER_UTILITY_COMMAND_LOOKUP[token];
+  if (!canonical) return null;
+  return {
+    canonical,
+    command: token,
+    rest: String(match[2] || '').trim(),
+    prefixed,
+  };
 }
 
 export function viewerCommandText() {

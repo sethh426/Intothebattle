@@ -56,6 +56,7 @@ import { extractIconEmojiCommand } from './tiktokbr/services/chatCommands.js';
 import {
   commandBannerShowcasePayload,
   parseAttackCommand,
+  parseUtilityCommand,
   viewerCommandText,
 } from './tiktokbr/services/playerCommands.js';
 import {
@@ -4959,18 +4960,41 @@ function isPersistablePlayerId(id) {
 
 function normalizeTikTokId(user) {
   if (!user || typeof user !== 'object') return null;
-  return String(user.uniqueId || user.unique_id || user.userId || user.id || '').trim().toLowerCase() || null;
+  return String(
+    user.uniqueId ||
+    user.unique_id ||
+    user.userId ||
+    user.user_id ||
+    user.userID ||
+    user.id ||
+    user.username ||
+    user.userName ||
+    user.displayId ||
+    user.handle ||
+    ''
+  ).trim().replace(/^@+/, '').toLowerCase() || null;
 }
 
 function normalizeTikTokNick(user) {
   if (!user || typeof user !== 'object') return null;
-  return String(user.nickname || user.nick || user.displayName || user.name || '').trim() || null;
+  return String(
+    user.nickname ||
+    user.nick ||
+    user.displayName ||
+    user.display_name ||
+    user.name ||
+    user.uniqueId ||
+    user.username ||
+    user.userName ||
+    user.displayId ||
+    ''
+  ).trim() || null;
 }
 
 function resolveTikTokUser(eventPayload) {
   const user = eventPayload?.user || eventPayload?.sender || eventPayload?.author || {};
-  const id = normalizeTikTokId(user);
-  const nickname = normalizeTikTokNick(user) || id;
+  const id = normalizeTikTokId(user) || normalizeTikTokId(eventPayload);
+  const nickname = normalizeTikTokNick(user) || normalizeTikTokNick(eventPayload) || id;
   return { id, nickname };
 }
 
@@ -5392,7 +5416,7 @@ function cleanMention(rawMention = '') {
 }
 
 function extractMentions(comment = '') {
-  return [...String(comment).matchAll(/@([^\s@]+)/g)]
+  return [...String(comment).matchAll(/@\s*([^\s@]+)/g)]
     .map(match => cleanMention(match[1]))
     .filter(Boolean);
 }
@@ -5688,11 +5712,11 @@ function handlePlayerUtilityCommand(room, playerId, nickname, comment) {
     return { handled: true, stop: true, reason: `emoji ${iconEmoji}` };
   }
 
-  const commandMatch = text.match(/^\s*(?:!|\/)?(join|spawn|play|help|commands|team|heal|shield|guard|block)\b(?:\s+(.+))?/i);
-  if (!commandMatch) return { handled: false, stop: false };
+  const utilityCommand = parseUtilityCommand(text);
+  if (!utilityCommand) return { handled: false, stop: false };
 
-  const command = commandMatch[1].toLowerCase();
-  const rest = commandMatch[2] || '';
+  const command = utilityCommand.canonical;
+  const rest = utilityCommand.rest || '';
 
   if (command === 'team') {
     const normalizedRest = rest.replace(/^\s*(?:join|set|create)\s+/i, '').trim();
@@ -8671,10 +8695,22 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
   onTikTok('member', (e) => {
     const { id, nickname: nick } = resolveTikTokUser(e);
     if (!id) return;
+    const wasAlive = Boolean(room.players[id]?.alive);
     spawnPlayer(room, id, nick);
-    if (room.players[id]) room.players[id].alive = true;
+    if (room.players[id]) {
+      room.players[id].alive = true;
+      room.players[id].forceSpawn = true;
+      room.players[id].lastActive = Date.now();
+    }
     emitRoomEvent(room, 'gameState', room.players);
-    emitRoomEvent(room, 'spawn', { uniqueId: id });
+    emitRoomEvent(room, 'spawn', { uniqueId: id, nickname: nick, autoJoin: true });
+    emitRoomEvent(room, 'playerCommand', {
+      type: 'join',
+      uniqueId: id,
+      nickname: nick,
+      autoJoin: true,
+      message: wasAlive ? `${nick || id} returned to the arena` : `${nick || id} entered the arena`,
+    });
   });
 
   onTikTok('chat', (e) => {

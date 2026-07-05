@@ -18,6 +18,7 @@ import {
   PLAYER_ATTACK_COMMANDS,
   commandBannerShowcasePayload,
   parseAttackCommand,
+  parseUtilityCommand,
   viewerCommandText,
 } from '../tiktokbr/services/playerCommands.js';
 import {
@@ -232,7 +233,9 @@ function testChatIconCommands() {
   assert.equal(extractIconEmojiCommand('!🌟'), '🌟');
   assert.equal(extractIconEmojiCommand('!emoji🔱'), '🔱');
   assert.equal(extractIconEmojiCommand('!emoji 🔱'), '🔱');
+  assert.equal(extractIconEmojiCommand('! emoji 🔱'), '🔱');
   assert.equal(extractIconEmojiCommand('/emoji 🔱'), '🔱');
+  assert.equal(extractIconEmojiCommand('/ emoji 🔱'), '🔱');
   assert.equal(extractIconEmojiCommand('  !emoji   🔱  extra text'), '🔱');
 
   assert.equal(extractIconEmojiCommand('🌟'), '');
@@ -250,10 +253,30 @@ function testPlayerCommandCatalog() {
   assert.equal(parseAttackCommand('!fight @boss')?.effect, 'laser');
   assert.equal(parseAttackCommand('!railgun @boss')?.effect, 'railgun');
   assert.equal(parseAttackCommand('!nuke @horde')?.effect, 'explosion');
+  assert.equal(parseAttackCommand('! laser @nova')?.effect, 'laser');
+  assert.equal(parseAttackCommand('/ fire @nova')?.effect, 'fire');
+  assert.equal(parseAttackCommand('!laser@nova')?.effect, 'laser');
+  assert.equal(parseAttackCommand('@nova ! railgun')?.effect, 'railgun');
   assert.equal(parseAttackCommand('@nova'), null, 'bare mention should not parse as a NOVA command');
   assert.equal(parseAttackCommand('hello @nova'), null, 'mention target text should not be scanned as command text');
   assert.equal(parseAttackCommand('this is fire', { explicitOnly: true }), null, 'plain comments should not become full-power commands');
   assert.equal(parseAttackCommand('!fire', { explicitOnly: true })?.effect, 'fire');
+  assert.equal(parseAttackCommand('! fire', { explicitOnly: true })?.effect, 'fire');
+
+  assert.deepEqual(parseUtilityCommand('!join'), { canonical: 'join', command: 'join', rest: '', prefixed: true });
+  assert.deepEqual(parseUtilityCommand('! join'), { canonical: 'join', command: 'join', rest: '', prefixed: true });
+  assert.deepEqual(parseUtilityCommand('/join'), { canonical: 'join', command: 'join', rest: '', prefixed: true });
+  assert.deepEqual(parseUtilityCommand('/ join'), { canonical: 'join', command: 'join', rest: '', prefixed: true });
+  assert.equal(parseUtilityCommand('start')?.canonical, 'join');
+  assert.equal(parseUtilityCommand('enter')?.canonical, 'join');
+  assert.equal(parseUtilityCommand('!commands')?.canonical, 'help');
+  assert.equal(parseUtilityCommand('! command')?.canonical, 'help');
+  assert.deepEqual(parseUtilityCommand('!heal@nova'), { canonical: 'heal', command: 'heal', rest: '@nova', prefixed: true });
+  assert.equal(parseUtilityCommand('! hp @nova')?.canonical, 'heal');
+  assert.equal(parseUtilityCommand('!shield')?.canonical, 'shield');
+  assert.equal(parseUtilityCommand('! guard')?.canonical, 'shield');
+  assert.equal(parseUtilityCommand('!protect')?.canonical, 'shield');
+  assert.equal(parseUtilityCommand('!laser@nova'), null, 'attack commands should not parse as utility commands');
 
   for (const command of DEPRECATED_ATTACK_COMMANDS) {
     assert.equal(PLAYER_ATTACK_COMMANDS[command], undefined, `${command} must not be active`);
