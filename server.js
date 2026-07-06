@@ -6991,6 +6991,7 @@ const publicAssetFiles = new Map([
   ['/intothebattlelogo_logo_only.svg', 'intothebattlelogo_logo_only.svg'],
   ['/og-intothebattle.png', 'og-intothebattle.png'],
   ['/brand-identity-square.png', 'brand-identity-square.png'],
+  ['/waiting-for-players-bg.jpg', path.join('public', 'waiting-for-players-bg.jpg')],
   ['/robots.txt', 'robots.txt'],
 ]);
 

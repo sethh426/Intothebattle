@@ -1847,7 +1847,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let layoutZoom      = 1;
   const hordeThreshold = 5;      // now fixed
   const HORDE_SIZE_SCALE = 1.44;
+  const WAITING_FOR_PLAYERS_BACKGROUND_URL = '/waiting-for-players-bg.jpg';
   let backgroundImg   = null;
+  let waitingForPlayersBackgroundImg = null;
   let backgroundLoadToken = 0;
   const backgroundAssetStatus = {
     state: 'idle',
@@ -1864,6 +1866,32 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     lastError: '',
     usingPrevious: false,
   };
+  const waitingBackgroundAssetStatus = {
+    state: 'loading',
+    source: WAITING_FOR_PLAYERS_BACKGROUND_URL,
+    loadedAt: 0,
+    errorAt: 0,
+    naturalWidth: 0,
+    naturalHeight: 0,
+    lastError: '',
+  };
+  {
+    const img = new Image();
+    img.onload = () => {
+      waitingForPlayersBackgroundImg = img;
+      waitingBackgroundAssetStatus.state = 'ready';
+      waitingBackgroundAssetStatus.loadedAt = Date.now();
+      waitingBackgroundAssetStatus.naturalWidth = img.naturalWidth || img.width || 0;
+      waitingBackgroundAssetStatus.naturalHeight = img.naturalHeight || img.height || 0;
+      waitingBackgroundAssetStatus.lastError = '';
+    };
+    img.onerror = () => {
+      waitingBackgroundAssetStatus.state = 'error';
+      waitingBackgroundAssetStatus.errorAt = Date.now();
+      waitingBackgroundAssetStatus.lastError = `failed to load ${WAITING_FOR_PLAYERS_BACKGROUND_URL}`;
+    };
+    img.src = WAITING_FOR_PLAYERS_BACKGROUND_URL;
+  }
   let socket          = null;
   const DEFAULT_OVERLAY_AUDIO_CONFIG = overlayAudio.defaultAudioConfig;
   let audioConfig     = { ...DEFAULT_OVERLAY_AUDIO_CONFIG };
@@ -2172,6 +2200,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return {
       ...backgroundAssetStatus,
       hasImage: Boolean(backgroundImg),
+      waiting: {
+        ...waitingBackgroundAssetStatus,
+        hasImage: Boolean(waitingForPlayersBackgroundImg),
+        loadedAgeMs: waitingBackgroundAssetStatus.loadedAt ? Date.now() - waitingBackgroundAssetStatus.loadedAt : null,
+        errorAgeMs: waitingBackgroundAssetStatus.errorAt ? Date.now() - waitingBackgroundAssetStatus.errorAt : null,
+      },
       requestAgeMs: backgroundAssetStatus.requestedAt ? Date.now() - backgroundAssetStatus.requestedAt : null,
       loadedAgeMs: backgroundAssetStatus.loadedAt ? Date.now() - backgroundAssetStatus.loadedAt : null,
       errorAgeMs: backgroundAssetStatus.errorAt ? Date.now() - backgroundAssetStatus.errorAt : null,
@@ -2320,6 +2354,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (sponsorState !== 'battle') return;
     const clean = String(message || '').trim().slice(0, 72);
     if (!clean) return;
+    if (isLiveWaitingForPlayers() && /^waiting for (?:players|fighters)$/i.test(clean)) return;
     const now = Date.now();
     if (!force && now - richBannerLastShown < 180) return;
     if (!force && now - battlePromptLastShown < 3600) return;
@@ -5010,6 +5045,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const scale = overlayScale();
     const frame = canvasRectToOverlay(stage.frame);
     statusDiv.style.visibility = '';
+    if (isLiveWaitingForPlayers()) {
+      statusDiv.style.visibility = 'hidden';
+      return;
+    }
     if (stage.frame.h < 260 || stage.frame.w < 430) {
       statusDiv.style.visibility = 'hidden';
       return;
@@ -5506,9 +5545,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
   }
 
-  function drawContainedBackgroundImage(img, frame) {
+  function drawContainedBackgroundImage(img, frame, fitOverride = '') {
     if (!img?.width || !img?.height) return;
-    const fit = overlaySettings.backgroundFit === 'cover' ? 'cover' : 'contain';
+    const fit = fitOverride || (overlaySettings.backgroundFit === 'cover' ? 'cover' : 'contain');
     const scale = fit === 'cover'
       ? Math.max(frame.w / img.width, frame.h / img.height)
       : Math.min(frame.w / img.width, frame.h / img.height);
@@ -7279,6 +7318,22 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const frame = arenaFrame();
     ctx.save();
     clipArenaFrame(frame);
+    if (isLiveWaitingForPlayers() && waitingForPlayersBackgroundImg) {
+      drawContainedBackgroundImage(waitingForPlayersBackgroundImg, frame, 'cover');
+      const shade = ctx.createLinearGradient(frame.x, frame.y, frame.x, frame.y + frame.h);
+      shade.addColorStop(0, 'rgba(0,0,0,0.28)');
+      shade.addColorStop(0.46, 'rgba(0,0,0,0.08)');
+      shade.addColorStop(1, 'rgba(0,0,0,0.5)');
+      ctx.fillStyle = shade;
+      ctx.fillRect(frame.x, frame.y, frame.w, frame.h);
+      const focus = ctx.createRadialGradient(frame.x + frame.w * 0.5, frame.y + frame.h * 0.44, frame.h * 0.18, frame.x + frame.w * 0.5, frame.y + frame.h * 0.5, frame.h * 0.86);
+      focus.addColorStop(0, 'rgba(0,0,0,0)');
+      focus.addColorStop(1, 'rgba(0,0,0,0.38)');
+      ctx.fillStyle = focus;
+      ctx.fillRect(frame.x, frame.y, frame.w, frame.h);
+      ctx.restore();
+      return;
+    }
     if (backgroundImg) {
       drawContainedBackgroundImage(backgroundImg, frame);
       const vignette = ctx.createRadialGradient(frame.x + frame.w * 0.5, frame.y + frame.h * 0.45, frame.h * 0.2, frame.x + frame.w * 0.5, frame.y + frame.h * 0.5, frame.h * 0.86);
@@ -8814,29 +8869,41 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (!isLiveWaitingForPlayers() || sponsorState !== 'battle') return;
     const frame = stage?.safe || stage?.frame || { x: 0, y: 0, w: cw(), h: ch() };
     const ui = canvasUiScale();
-    const boxW = Math.min(frame.w * 0.78, 720 * ui);
-    const boxH = Math.max(118 * ui, Math.min(168 * ui, frame.h * 0.26));
+    const boxW = Math.min(frame.w * 0.66, 680 * ui);
+    const boxH = Math.max(86 * ui, Math.min(120 * ui, frame.h * 0.17));
     const x = frame.x + (frame.w - boxW) / 2;
-    const y = frame.y + frame.h * 0.36 - boxH / 2;
+    const y = frame.y + frame.h * 0.74 - boxH / 2;
     ctx.save();
-    ctx.globalAlpha = 0.94;
+    ctx.globalAlpha = 0.96;
     const grad = ctx.createLinearGradient(x, y, x, y + boxH);
-    grad.addColorStop(0, 'rgba(5,12,28,0.88)');
-    grad.addColorStop(1, 'rgba(10,22,48,0.72)');
-    roundedRectPath(ctx, x, y, boxW, boxH, 20 * ui);
+    grad.addColorStop(0, 'rgba(3,6,14,0.82)');
+    grad.addColorStop(1, 'rgba(12,20,38,0.72)');
+    roundedRectPath(ctx, x, y, boxW, boxH, 16 * ui);
     ctx.fillStyle = grad;
     ctx.fill();
-    ctx.lineWidth = Math.max(1, 2 * ui);
-    ctx.strokeStyle = 'rgba(122,252,255,0.34)';
+    ctx.lineWidth = Math.max(1, 1.5 * ui);
+    ctx.strokeStyle = 'rgba(246,201,91,0.62)';
     ctx.stroke();
+    ctx.fillStyle = 'rgba(232,59,95,0.78)';
+    roundedRectPath(ctx, x + boxW * 0.08, y + boxH * 0.11, boxW * 0.84, Math.max(3, boxH * 0.035), 4 * ui);
+    ctx.fill();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillStyle = '#ffffff';
-    ctx.font = `900 ${Math.max(20, 32 * ui)}px Rajdhani, sans-serif`;
-    ctx.fillText('Waiting for players', x + boxW / 2, y + boxH * 0.42);
-    ctx.fillStyle = '#b8c8ee';
-    ctx.font = `800 ${Math.max(12, 16 * ui)}px DM Sans, sans-serif`;
-    ctx.fillText('Ask viewers to type !join or use a battle command.', x + boxW / 2, y + boxH * 0.68);
+    const titleSize = Math.max(20, Math.min(34 * ui, boxH * 0.32));
+    ctx.font = `950 ${titleSize}px Rajdhani, sans-serif`;
+    const title = fitCanvasText(ctx, 'WAITING FOR PLAYERS', boxW * 0.84, size => `950 ${size}px Rajdhani, sans-serif`, titleSize, Math.max(14, 18 * ui));
+    ctx.fillText(title, x + boxW / 2, y + boxH * 0.43);
+    ctx.fillStyle = '#d9e7ff';
+    const subSize = Math.max(11, Math.min(16 * ui, boxH * 0.16));
+    ctx.font = `800 ${subSize}px DM Sans, sans-serif`;
+    const subtitle = fitCanvasText(ctx, 'Viewers auto-join when they enter live.', boxW * 0.82, size => `800 ${size}px DM Sans, sans-serif`, subSize, Math.max(9, 10 * ui));
+    ctx.fillText(subtitle, x + boxW / 2, y + boxH * 0.67);
+    ctx.fillStyle = 'rgba(255,255,255,0.76)';
+    const helpSize = Math.max(9, Math.min(13 * ui, boxH * 0.13));
+    ctx.font = `800 ${helpSize}px DM Sans, sans-serif`;
+    const help = fitCanvasText(ctx, 'Commands still work: !emoji, !shield, !laser @name', boxW * 0.82, size => `800 ${size}px DM Sans, sans-serif`, helpSize, Math.max(8, 9 * ui));
+    ctx.fillText(help, x + boxW / 2, y + boxH * 0.84);
     ctx.restore();
   }
 

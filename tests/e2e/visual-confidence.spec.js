@@ -473,8 +473,23 @@ test('@visual signed live waiting state stays nonblank and secret-free', async (
   expect(response?.ok()).toBe(true);
   await expect(page.getByTestId('overlay-canvas')).toBeVisible();
   await page.waitForFunction(() => window.__overlayLegacyLayout?.frame && Array.isArray(window.__overlayLegacyLayout.players), null, { timeout: 8000 });
+  await page.waitForFunction(() => window.overlayEventEngine?.status?.().background?.waiting?.state === 'ready', null, { timeout: 8000 });
   const layout = await readLegacyLayout(page, testInfo, 'signed-live-waiting-layout');
   expect(layout.players).toEqual([]);
+  const waitingUi = await page.evaluate(() => {
+    const status = document.querySelector('#status-badge');
+    return {
+      background: window.overlayEventEngine?.status?.().background?.waiting || null,
+      activeBannerCount: document.querySelectorAll('.banner:not(.closing)').length,
+      statusText: status?.textContent || '',
+      statusVisibility: status ? getComputedStyle(status).visibility : '',
+    };
+  });
+  await attachJson(testInfo, 'signed-live-waiting-ui', waitingUi);
+  expect(waitingUi.background).toMatchObject({ state: 'ready', hasImage: true });
+  expect(waitingUi.activeBannerCount, 'waiting state should not show a duplicate rich banner').toBe(0);
+  expect(waitingUi.statusText).toContain('WAITING FOR PLAYERS');
+  expect(waitingUi.statusVisibility, 'waiting state should hide the duplicate status badge').toBe('hidden');
   await assertConnectionStatus(page, testInfo, 'signed-live-waiting', { mode: 'signed' });
   await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'signed-live-waiting-canvas', minLitRatio: 0.04, minEdgeRatio: 0.0015 });
   await freezeOverlayVisuals(page, testInfo, 'signed-live-waiting-freeze');
