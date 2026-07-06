@@ -302,6 +302,8 @@ try {
   const dashboardStatus = await dashboardStatusRes.json();
   assert(dashboardStatus.setupOverlayUrl?.includes('setup=1'), 'status should expose signed setup overlay URL');
   assert(dashboardStatus.setupOverlayV2Url?.includes('setup=1'), 'status should expose signed setup V2 overlay URL');
+  assert(dashboardStatus.mobileOverlayUrl?.includes('/overlay/mobile'), 'status should expose signed mobile overlay URL');
+  assert(dashboardStatus.setupMobileOverlayUrl?.includes('setup=1'), 'status should expose signed mobile setup overlay URL');
   assert(dashboardStatus.overlayUrl?.includes('mode=live'), 'live overlay URL should carry mode=live');
   assert(dashboardStatus.setupOverlayUrl?.includes('mode=setup'), 'setup overlay URL should carry mode=setup');
   assert(dashboardStatus.streamMode && typeof dashboardStatus.streamMode.mode === 'string', 'status should expose stream mode');
@@ -635,6 +637,7 @@ try {
   const setupStart = await setupStartRes.json();
   assert(setupStart.success === true && setupStart.setupRehearsal?.active === true, 'setup rehearsal should activate');
   assert(setupStart.overlayUrl?.includes('setup=1'), 'setup start response should include setup overlay URL');
+  assert(setupStart.mobileOverlayUrl?.includes('/overlay/mobile'), 'setup start response should include mobile setup overlay URL');
   await setupActiveDashboardPromise;
   await setupActiveOverlayPromise;
   await setupPlayersPromise;

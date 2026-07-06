@@ -158,6 +158,11 @@
     .overlay-v2-panel p { margin:0; color:var(--muted); font-size:12px; line-height:1.45; font-weight:800; }
     .overlay-v2-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
     .overlay-v2-grid .btn { min-height:40px; padding:0 10px; font-size:12px; }
+    .mobile-overlay-panel { margin-top:14px; padding:14px; border-radius:18px; border:1px solid rgba(246,201,91,.26); background:linear-gradient(145deg,rgba(246,201,91,.095),rgba(85,231,255,.06) 56%,rgba(0,0,0,.18)); display:grid; gap:12px; }
+    .mobile-overlay-panel strong { color:#fff8e6; font-size:13px; text-transform:uppercase; letter-spacing:.08em; }
+    .mobile-overlay-panel p { margin:0; color:var(--muted); font-size:12px; line-height:1.45; font-weight:800; }
+    .mobile-overlay-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .mobile-overlay-grid .btn { min-height:40px; padding:0 10px; font-size:12px; }
     .setup-rehearsal-panel { margin-top:14px; padding:14px; border-radius:18px; border:1px solid rgba(119,240,161,.2); background:linear-gradient(180deg,rgba(119,240,161,.075),rgba(0,0,0,.16)); display:grid; gap:12px; }
     .setup-rehearsal-panel strong { color:#fff8e6; font-size:13px; text-transform:uppercase; letter-spacing:.08em; }
     .setup-rehearsal-panel p { margin:0; color:var(--muted); font-size:12px; line-height:1.45; font-weight:800; }
@@ -509,6 +514,8 @@
       <div class="launch-row secondary-launch-actions">
         <button class="btn btn-secondary" onclick="copySetupOverlayUrl()">Copy Setup Source</button>
         <button class="btn btn-secondary" onclick="openSetupOverlay()">Open Setup Preview</button>
+        <button class="btn btn-secondary" onclick="copyMobileOverlayUrl()">Copy Mobile PiP</button>
+        <button class="btn btn-secondary" onclick="openMobileOverlay()">Open Mobile PiP</button>
         <button class="btn btn-secondary" onclick="window.open('/stats','_blank')">View Stats</button>
       </div>
       <div class="ops-strip">
@@ -611,6 +618,16 @@
           <button class="btn btn-secondary" onclick="openSetupOverlay()">Open Setup</button>
           <button class="btn btn-secondary" onclick="copySetupOverlayUrl()">Copy Setup URL</button>
           <button class="btn btn-danger" onclick="resetSetupRehearsal()">Reset Demo</button>
+        </div>
+      </div>
+      <div class="mobile-overlay-panel" id="mobileOverlayPanel" data-testid="mobile-overlay-panel">
+        <div><strong>Mobile PiP battle feed</strong><p>Use a phone-safe event feed that coexists with TikTok chat PiP instead of shrinking the full game.</p></div>
+        <div class="form-group"><label class="input-label" for="mobileOverlayLayoutInput">Mobile layout</label><select id="mobileOverlayLayoutInput" aria-label="Mobile overlay layout" onchange="saveMobileOverlayLayout()"><option value="pip-corner">PiP corner</option><option value="chat-replacement">Chat replacement</option><option value="status-only">Status only</option></select></div>
+        <div class="mobile-overlay-grid">
+          <button class="btn btn-primary" onclick="openSetupMobileOverlay()">Open Mobile Setup</button>
+          <button class="btn btn-secondary" onclick="copySetupMobileOverlayUrl()">Copy Mobile Setup</button>
+          <button class="btn btn-secondary" onclick="openMobileOverlay()">Open Mobile Live</button>
+          <button class="btn btn-secondary" onclick="copyMobileOverlayUrl()">Copy Mobile Live</button>
         </div>
       </div>
       <div class="overlay-v2-panel" data-beta-feature="overlay-v2" hidden>
@@ -880,8 +897,10 @@ let overlayCount = 0;
 let currentRoomId = null;
 let currentOverlayUrl = null;
 let currentOverlayV2Url = null;
+let currentMobileOverlayUrl = null;
 let currentSetupOverlayUrl = null;
 let currentSetupOverlayV2Url = null;
+let currentSetupMobileOverlayUrl = null;
 let subscriptionStatusData = null;
 let audioLibraryData = [];
 let audioConfigData = {};
@@ -930,6 +949,7 @@ const dashboardState = {
 };
 const WORKFLOW_STORAGE_KEY = 'intothebattle.dashboard.workflows';
 const OVERLAY_V2_BETA_KEY = 'intothebattle.beta.overlayV2';
+const MOBILE_OVERLAY_LAYOUT_KEY = 'intothebattle.mobileOverlay.layout';
 function trackGrowthEvent(eventName, properties = {}, seed = '') {
   if (typeof window.intothebattleGrowth?.track !== 'function') return;
   window.intothebattleGrowth.track(eventName, {
@@ -963,6 +983,21 @@ function initBetaFeatureVisibility() {
   document.querySelectorAll('[data-beta-feature="overlay-v2"]').forEach(el => {
     el.hidden = !enabled;
   });
+}
+function mobileOverlayLayout() {
+  const input = document.getElementById('mobileOverlayLayoutInput');
+  const value = input?.value || localStorage.getItem(MOBILE_OVERLAY_LAYOUT_KEY) || 'pip-corner';
+  return ['pip-corner', 'chat-replacement', 'status-only'].includes(value) ? value : 'pip-corner';
+}
+function initMobileOverlayControls() {
+  const input = document.getElementById('mobileOverlayLayoutInput');
+  if (!input) return;
+  input.value = mobileOverlayLayout();
+}
+function saveMobileOverlayLayout() {
+  const value = mobileOverlayLayout();
+  try { localStorage.setItem(MOBILE_OVERLAY_LAYOUT_KEY, value); } catch (_err) {}
+  toast(`Mobile overlay layout set to ${value.replace('-', ' ')}`);
 }
 function syncWelcomeSetupPanel() {
   const panel = document.getElementById('welcomeSetupPanel');
@@ -1481,11 +1516,29 @@ function setupOverlayV2Url(render = '1080p') {
   url.searchParams.set('show_status', '1');
   return url.toString();
 }
-function setOverlayUrl(url, v2Url = null, setupUrl = null, setupV2Url = null) {
+function mobileOverlayUrl(setup = false) {
+  const base = setup
+    ? (currentSetupMobileOverlayUrl || currentMobileOverlayUrl || currentSetupOverlayUrl || currentOverlayUrl)
+    : (currentMobileOverlayUrl || currentOverlayUrl);
+  if (!base) return '';
+  const url = new URL(base, window.location.origin);
+  url.pathname = '/overlay/mobile';
+  url.searchParams.set('layout', mobileOverlayLayout());
+  url.searchParams.set('source', '1');
+  url.searchParams.set('transparent', '1');
+  if (setup) {
+    url.searchParams.set('setup', '1');
+    url.searchParams.set('mode', 'setup');
+  }
+  return url.toString();
+}
+function setOverlayUrl(url, v2Url = null, setupUrl = null, setupV2Url = null, mobileUrl = null, setupMobileUrl = null) {
   currentOverlayUrl = url || currentOverlayUrl || null;
   currentOverlayV2Url = v2Url || currentOverlayV2Url || null;
+  currentMobileOverlayUrl = mobileUrl || currentMobileOverlayUrl || null;
   currentSetupOverlayUrl = setupUrl || currentSetupOverlayUrl || null;
   currentSetupOverlayV2Url = setupV2Url || currentSetupOverlayV2Url || null;
+  currentSetupMobileOverlayUrl = setupMobileUrl || currentSetupMobileOverlayUrl || null;
   const field = document.getElementById('overlayUrlField');
   const label = document.getElementById('overlay-url-state');
   const display = currentOverlayUrl ? 'Signed URL ready' : 'URL unavailable';
@@ -1984,7 +2037,14 @@ async function fetchStatus() {
     if (!res.ok) throw new Error(data.error || 'Unable to load dashboard status');
     applyDashboardRulesState(data.dashboardRules || { required: false });
     setRoomLabel(data.roomId || null);
-    setOverlayUrl(data.overlayUrl || null, data.overlayV2Url || null, data.setupOverlayUrl || null, data.setupOverlayV2Url || null);
+    setOverlayUrl(
+      data.overlayUrl || null,
+      data.overlayV2Url || null,
+      data.setupOverlayUrl || null,
+      data.setupOverlayV2Url || null,
+      data.mobileOverlayUrl || null,
+      data.setupMobileOverlayUrl || null
+    );
     setSetupRehearsalStatus(data.setupRehearsal || { active: false });
     applyStreamModeStatus(data.streamMode || {
       mode: data.mode || 'loading',
@@ -2089,6 +2149,7 @@ async function startSetupRehearsal() {
   if (result.overlayUrl || result.overlayV2Url) {
     currentSetupOverlayUrl = result.overlayUrl || currentSetupOverlayUrl;
     currentSetupOverlayV2Url = result.overlayV2Url || currentSetupOverlayV2Url;
+    currentSetupMobileOverlayUrl = result.mobileOverlayUrl || currentSetupMobileOverlayUrl;
   }
   setSetupRehearsalStatus(result.setupRehearsal || { active: true });
   dashboardState.setupPreviewOpened = false;
@@ -2115,6 +2176,40 @@ function copySetupOverlayUrl() {
     }
     updateSetupChecklist();
     toast('Setup demo URL copied');
+  }).catch(() => toast('Copy failed', true));
+}
+function openMobileOverlay() {
+  const url = mobileOverlayUrl(false);
+  if (!url) return toast('Mobile overlay URL is still loading', true);
+  window.open(url, '_blank');
+  toast('Opened mobile PiP battle feed');
+}
+function copyMobileOverlayUrl() {
+  const url = mobileOverlayUrl(false);
+  if (!url) return toast('Mobile overlay URL is still loading', true);
+  navigator.clipboard?.writeText(url).then(() => {
+    dashboardState.overlayUrlCopied = true;
+    trackGrowthEvent('overlay_url_copied', { source: 'mobile_overlay', layout: mobileOverlayLayout() }, `overlay_url_copied:mobile:${mobileOverlayLayout()}`);
+    updateSetupChecklist();
+    toast('Mobile PiP URL copied');
+  }).catch(() => toast('Copy failed', true));
+}
+function openSetupMobileOverlay() {
+  const url = mobileOverlayUrl(true);
+  if (!url) return toast('Mobile setup URL is still loading', true);
+  window.open(url, '_blank');
+  dashboardState.setupPreviewOpened = true;
+  updateSetupChecklist();
+  toast('Opened mobile setup feed');
+}
+function copySetupMobileOverlayUrl() {
+  const url = mobileOverlayUrl(true);
+  if (!url) return toast('Mobile setup URL is still loading', true);
+  navigator.clipboard?.writeText(url).then(() => {
+    dashboardState.overlayUrlCopied = true;
+    trackGrowthEvent('overlay_url_copied', { source: 'mobile_setup_overlay', layout: mobileOverlayLayout() }, `overlay_url_copied:mobile-setup:${mobileOverlayLayout()}`);
+    updateSetupChecklist();
+    toast('Mobile setup URL copied');
   }).catch(() => toast('Copy failed', true));
 }
 async function resetSetupRehearsal() {
@@ -2670,6 +2765,7 @@ dropZone.addEventListener('drop', e=>{ e.preventDefault(); dropZone.classList.re
 fetch('/api/audio').then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData=d.library || []; audioConfigData=d.config || {}; renderAudioLibrary(); renderAssignTable(); }}).catch(()=>{});
 initDashboardWorkflows();
 initBetaFeatureVisibility();
+initMobileOverlayControls();
 syncWelcomeSetupPanel();
 fetchStatus(); fetchSubscriptionStatus(); setInterval(fetchStatus,10000); setInterval(fetchSubscriptionStatus,60000); setInterval(tickSessionClock,1000);
 </script>

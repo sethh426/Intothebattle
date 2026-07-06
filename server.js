@@ -6405,6 +6405,7 @@ app.get('/verify-email', (_req, res) => res.sendFile(path.join(__dirname, 'verif
 app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));
 app.get(['/battle-clip', '/battle-clip.html'], (_req, res) => res.sendFile(path.join(__dirname, 'battle-clip.html')));
 app.get(['/overlay-preview', '/overlay-preview.html', '/overlay-demo', '/overlay-demo.html'], (_req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
+app.get(['/overlay/mobile-preview', '/overlay-mobile-preview', '/overlay-mobile-demo'], (_req, res) => res.sendFile(path.join(__dirname, 'overlay-mobile.html')));
 app.get(['/overlay-v2-preview', '/overlay-v2-preview.html', '/overlay-v2-demo', '/overlay-v2-demo.html'], (_req, res) => res.sendFile(path.join(__dirname, 'overlay-v2.html')));
 app.get(['/overlay-phaser', '/overlay-phaser.html'], (_req, res) => res.sendFile(path.join(__dirname, 'overlay-phaser.html')));
 app.get('/register', (req, res) => {
@@ -6665,6 +6666,26 @@ app.get(['/overlay.html', '/overlay'], (req, res) => {
     }
   }
   return requireAccess(req, res, () => res.sendFile(path.join(__dirname, 'overlay.html')));
+});
+
+app.get(['/overlay/mobile', '/overlay-mobile.html'], (req, res) => {
+  if (enableRoomScoped && req.query.room_id) {
+    const roomId = normalizeRoomId(req.query.room_id);
+    const overlayToken = getOverlayTokenFromRequest(req);
+    if (!roomId) return res.status(400).send('Invalid room id');
+    if (!verifyOverlayToken(roomId, overlayToken)) return res.status(401).send('Unauthorized overlay URL');
+    const denial = signedRoomAccessDenial(roomId);
+    if (denial) return res.redirect(302, denial.paywallUrl);
+    return res.sendFile(path.join(__dirname, 'overlay-mobile.html'));
+  }
+  if (enableRoomScoped) {
+    const room = getSessionRoom(req);
+    if (room) {
+      const overlayUrl = buildOverlayUrl(req, room.roomId, '/overlay/mobile', { source: '1', transparent: '1', layout: 'pip-corner' });
+      if (overlayUrl) return res.redirect(302, overlayUrl);
+    }
+  }
+  return requireAccess(req, res, () => res.sendFile(path.join(__dirname, 'overlay-mobile.html')));
 });
 
 app.get(['/overlay-v2.html', '/overlay-v2'], (req, res) => {
@@ -7784,8 +7805,10 @@ app.get('/api/status', requireRoom, (req, res) => {
     roomId:           req.room.roomId,
     overlayUrl:       buildOverlayUrl(req, req.room.roomId),
     overlayV2Url:     buildOverlayUrl(req, req.room.roomId, '/overlay-v2'),
+    mobileOverlayUrl: buildOverlayUrl(req, req.room.roomId, '/overlay/mobile', { source: '1', transparent: '1', layout: 'pip-corner' }),
     setupOverlayUrl:  buildOverlayUrl(req, req.room.roomId, '/overlay', { setup: '1', controls: '1', debug: '1' }),
     setupOverlayV2Url: buildOverlayUrl(req, req.room.roomId, '/overlay-v2', { setup: '1', render: '1080p', source: '1', show_status: '1' }),
+    setupMobileOverlayUrl: buildOverlayUrl(req, req.room.roomId, '/overlay/mobile', { setup: '1', source: '1', transparent: '1', layout: 'pip-corner' }),
     plan:             buildPlanEntitlements(req.auth),
     username:         req.room.streamerUsername || '',
     connected:        stream.connected,
@@ -8217,6 +8240,7 @@ app.post('/api/stream/setup/start', requireRoom, (req, res) => {
     session: buildSessionStatus(req.room),
     overlayUrl: buildOverlayUrl(req, req.room.roomId, '/overlay', { setup: '1', controls: '1', debug: '1' }),
     overlayV2Url: buildOverlayUrl(req, req.room.roomId, '/overlay-v2', { setup: '1', render: '1080p', source: '1', show_status: '1' }),
+    mobileOverlayUrl: buildOverlayUrl(req, req.room.roomId, '/overlay/mobile', { setup: '1', source: '1', transparent: '1', layout: 'pip-corner' }),
   });
 });
 

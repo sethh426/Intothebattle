@@ -56,6 +56,14 @@
     },
     {
       "method": "GET",
+      "path": "/overlay/mobile",
+      "category": "overlay",
+      "access": "signed-room-overlay-token",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "GET",
       "path": "/overlay-v2",
       "category": "overlay-experimental",
       "access": "signed-room-overlay-token",

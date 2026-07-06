@@ -97,7 +97,7 @@ try {
   await waitForHealth();
 
   await expectStatus('/healthz', 200);
-  for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/how-to-play', '/battlegrounds', '/site-map', '/overlay-preview', '/overlay-v2-preview', '/overlay-phaser.html']) {
+  for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/how-to-play', '/battlegrounds', '/site-map', '/overlay-preview', '/overlay/mobile-preview', '/overlay-v2-preview', '/overlay-phaser.html']) {
     await expectStatus(pathname, 200);
   }
   const blog = await expectStatus('/blog', 200);
@@ -267,6 +267,10 @@ try {
   await expectStatus(`/overlay?room_id=${roomId}&overlay_token=bad`, 401);
   await expectStatus(`/overlay?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 200);
   await expectStatus(`/overlay?setup=1&controls=1&debug=1&room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 200);
+  await expectStatus(`/overlay/mobile?room_id=${roomId}`, 401);
+  await expectStatus(`/overlay/mobile?room_id=${roomId}&overlay_token=bad`, 401);
+  await expectStatus(`/overlay/mobile?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}&source=1&transparent=1&layout=pip-corner`, 200);
+  await expectStatus(`/overlay/mobile?setup=1&room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}&source=1&layout=chat-replacement`, 200);
   await expectStatus(`/overlay-v2?room_id=${roomId}`, 401);
   await expectStatus(`/overlay-v2?room_id=${roomId}&overlay_token=bad`, 401);
   await expectStatus(`/overlay-v2?room_id=${roomId}&overlay_token=${encodeURIComponent(overlayToken)}`, 200);

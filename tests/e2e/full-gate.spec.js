@@ -113,7 +113,10 @@ test('@cross-browser authenticated dashboard exposes real creator controls', asy
   await expect(page.locator('#streamModePill')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Start Setup Demo' }).first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Open Live Overlay' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open Mobile PiP' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Test Live Overlay' })).toBeVisible();
+  await expect(page.getByTestId('mobile-overlay-panel')).toBeVisible();
+  await expect(page.locator('#mobileOverlayLayoutInput')).toHaveValue('pip-corner');
   await page.locator('#liveWorkflow').evaluate(el => { el.open = true; });
   await expect(page.getByRole('button', { name: 'Boss Wave' })).toBeVisible();
   await expect(page.locator('[data-beta-feature="overlay-v2"]')).toBeHidden();
@@ -145,6 +148,8 @@ test('@dashboard setup rehearsal changes demo state and then resets toward real 
     });
     const body = await parseJsonResponse(start);
     expect(body.setupRehearsal?.active).toBe(true);
+    expect(body.mobileOverlayUrl).toContain('/overlay/mobile');
+    expect(body.mobileOverlayUrl).toContain('setup=1');
   });
 
   await test.step('dashboard shows setup demo and demo players', async () => {

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
   attachJson,
+  attachScreenshot,
   createServerHarness,
   expectCanvasQuality,
   expectNoHorizontalOverflow,
@@ -56,6 +57,18 @@ function v2PreviewUrl(extra = {}) {
     ...extra,
   });
   return `${harness.baseUrl}/overlay-v2-preview?${params.toString()}`;
+}
+
+function mobileOverlayUrl(extra = {}) {
+  const params = new URLSearchParams({
+    room_id: harness.roomId,
+    overlay_token: harness.overlayToken,
+    source: '1',
+    transparent: '1',
+    layout: 'pip-corner',
+    ...extra,
+  });
+  return `${harness.baseUrl}/overlay/mobile?${params.toString()}`;
 }
 
 async function openPreview(page, extra = {}) {
@@ -620,6 +633,49 @@ test('@visual sponsor stats endcap fits inside the overlay source frame', async 
   await expectStableScreenshot(page.getByTestId('sponsor-scene'), testInfo, 'sponsor-stats-endcap');
   await expectNoHorizontalOverflow(page);
   await expectNoPageErrors(errors, testInfo, 'sponsor-stats');
+});
+
+test('@visual mobile PiP battle HUD compresses game events without replacing full chat', async ({ page }, testInfo) => {
+  mobileProjectOnly(testInfo);
+  const errors = await watchPage(page, harness.baseUrl);
+  const response = await page.goto(mobileOverlayUrl({ layout: 'pip-corner', setup: '1' }), { waitUntil: 'domcontentloaded' });
+  expect(response?.ok()).toBe(true);
+  await expect(page.getByTestId('mobile-overlay-shell')).toBeVisible();
+  await page.waitForFunction(() => Boolean(window.mobileOverlayEngine?.testEventBurst), null, { timeout: 8000 });
+  const status = await page.evaluate(() => window.mobileOverlayEngine.testEventBurst());
+  await page.waitForTimeout(250);
+  const telemetry = await page.evaluate(() => window.mobileOverlayEngine.telemetry());
+  await attachJson(testInfo, 'mobile-pip-status', status);
+  await attachJson(testInfo, 'mobile-pip-telemetry', telemetry);
+  await attachScreenshot(page, testInfo, 'mobile-pip-battle-hud');
+
+  expect(telemetry.layout).toBe('pip-corner');
+  expect(telemetry.sourceMode).toBe(true);
+  expect(telemetry.transparent).toBe(true);
+  expect(telemetry.horizontalOverflow).toBeLessThanOrEqual(2);
+  expect(telemetry.verticalOverflow).toBeLessThanOrEqual(2);
+  expect(telemetry.eventCount).toBeGreaterThanOrEqual(5);
+  expect(telemetry.playerCount).toBeGreaterThanOrEqual(3);
+
+  for (const rect of telemetry.rects) {
+    expect(rect.left, `${rect.testid} left edge`).toBeGreaterThanOrEqual(-1);
+    expect(rect.right, `${rect.testid} right edge`).toBeLessThanOrEqual(telemetry.viewport.width + 1);
+    expect(rect.top, `${rect.testid} top edge`).toBeGreaterThanOrEqual(-1);
+    expect(rect.bottom, `${rect.testid} bottom edge`).toBeLessThanOrEqual(telemetry.viewport.height + 1);
+    expect(rect.text, `${rect.testid} should not contain replacement characters`).not.toContain('\uFFFD');
+  }
+  for (let i = 0; i < telemetry.rects.length; i += 1) {
+    for (let j = i + 1; j < telemetry.rects.length; j += 1) {
+      expect(rectsOverlap(telemetry.rects[i], telemetry.rects[j], 1), `${telemetry.rects[i].testid} overlaps ${telemetry.rects[j].testid}`).toBe(false);
+    }
+  }
+
+  const feedCards = await page.locator('[data-testid="mobile-feed-card"]').count();
+  expect(feedCards).toBeGreaterThanOrEqual(3);
+  await expect(page.getByTestId('mobile-latest-event')).toContainText(/Boss wave|FireQueen|ShadowByte/);
+  await expect(page.locator('#sourceNote')).toContainText(/Setup demo players|TikTok chat/);
+  await expectNoHorizontalOverflow(page);
+  await expectNoPageErrors(errors, testInfo, 'mobile-pip-overlay');
 });
 
 test('@visual reduced-motion mobile overlay keeps banners and sponsor stats usable', async ({ page }, testInfo) => {

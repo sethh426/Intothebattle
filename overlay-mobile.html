@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>IntoTheBattle Mobile Overlay</title>
+<meta name="robots" content="noindex, nofollow" />
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Exo+2:wght@500;700;900&display=swap');
+
+:root {
+  --bg: rgba(3, 6, 14, .92);
+  --panel: rgba(9, 16, 30, .9);
+  --panel-strong: rgba(11, 21, 42, .98);
+  --line: rgba(174, 224, 255, .24);
+  --line-strong: rgba(246, 201, 91, .56);
+  --text: #f4f8ff;
+  --muted: #bfd0eb;
+  --dim: #8ea2c2;
+  --cyan: #67e8ff;
+  --gold: #f6c95b;
+  --green: #80f7b2;
+  --red: #ff6b7a;
+  --violet: #cfa7ff;
+  --shadow: 0 18px 54px rgba(0, 0, 0, .46);
+}
+
+* { box-sizing: border-box; }
+html, body { width: 100%; min-height: 100%; margin: 0; overflow: hidden; }
+body {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(103, 232, 255, .18), transparent 34%),
+    radial-gradient(circle at 88% 20%, rgba(246, 201, 91, .15), transparent 28%),
+    linear-gradient(145deg, #030710, #071421 48%, #120813);
+  color: var(--text);
+  font-family: "Exo 2", "Segoe UI", sans-serif;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: max(12px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+}
+body.transparent { background: transparent; }
+body.source-mode { pointer-events: none; }
+
+.mobile-shell {
+  width: min(100%, 360px);
+  max-height: calc(100vh - 20px);
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 8px;
+  filter: drop-shadow(var(--shadow));
+}
+
+body.layout-chat-replacement {
+  justify-content: center;
+}
+body.layout-chat-replacement .mobile-shell {
+  width: min(100%, 430px);
+  max-height: calc(100vh - 12px);
+}
+body.layout-status-only .mobile-shell {
+  width: min(100%, 292px);
+  grid-template-rows: auto auto;
+}
+
+.status-strip,
+.latest-card,
+.feed-card,
+.leader-card {
+  border: 1px solid var(--line);
+  background: linear-gradient(145deg, rgba(12, 22, 43, .94), rgba(4, 10, 21, .88));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 8px 24px rgba(0, 0, 0, .28);
+  backdrop-filter: blur(16px);
+}
+
+.status-strip {
+  min-height: 54px;
+  border-radius: 15px;
+  padding: 9px 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.brand-kicker,
+.event-kicker,
+.mini-label {
+  font-family: "Rajdhani", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-weight: 700;
+}
+
+.brand-kicker {
+  color: var(--cyan);
+  font-size: 11px;
+}
+
+.room-line {
+  margin-top: 1px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mode-pill {
+  min-width: 72px;
+  min-height: 30px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border: 1px solid rgba(103, 232, 255, .38);
+  background: rgba(103, 232, 255, .11);
+  color: #eaffff;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.mode-pill.live { border-color: rgba(128, 247, 178, .45); background: rgba(128, 247, 178, .14); }
+.mode-pill.demo { border-color: rgba(246, 201, 91, .58); background: rgba(246, 201, 91, .15); color: #fff5d0; }
+.mode-pill.error { border-color: rgba(255, 107, 122, .5); background: rgba(255, 107, 122, .16); }
+
+.latest-card {
+  min-height: 118px;
+  border-radius: 18px;
+  border-color: var(--line-strong);
+  padding: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.latest-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(246, 201, 91, .14), transparent 42%),
+    radial-gradient(circle at 96% 8%, rgba(103, 232, 255, .18), transparent 34%);
+}
+.latest-copy { min-width: 0; position: relative; z-index: 1; }
+.event-kicker {
+  color: var(--gold);
+  font-size: 11px;
+}
+.latest-title {
+  margin-top: 5px;
+  color: var(--text);
+  font-size: clamp(22px, 7vw, 32px);
+  line-height: .95;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+.latest-detail {
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.25;
+  font-weight: 800;
+}
+.priority-badge {
+  position: relative;
+  z-index: 1;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .18);
+  background: rgba(255, 255, 255, .08);
+  color: var(--cyan);
+  font-family: "Rajdhani", sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+}
+.latest-card.priority-high .priority-badge { color: var(--gold); background: rgba(246, 201, 91, .15); }
+.latest-card.priority-critical .priority-badge { color: #fff; background: linear-gradient(145deg, rgba(255, 107, 122, .65), rgba(246, 201, 91, .28)); }
+
+.leader-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.leader-card {
+  min-height: 68px;
+  border-radius: 14px;
+  padding: 10px;
+  min-width: 0;
+}
+.mini-label {
+  color: var(--dim);
+  font-size: 10px;
+}
+.mini-value {
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mini-detail {
+  margin-top: 4px;
+  color: var(--muted);
+  font-family: "Rajdhani", sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+}
+.boss-meter {
+  height: 7px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .12);
+  overflow: hidden;
+}
+.boss-fill {
+  width: 0%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--red), var(--gold));
+  transition: width .25s ease;
+}
+
+.event-feed {
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+}
+.feed-card {
+  min-height: 58px;
+  border-radius: 14px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+.feed-rank {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: var(--cyan);
+  background: rgba(103, 232, 255, .1);
+  border: 1px solid rgba(103, 232, 255, .22);
+  font-family: "Rajdhani", sans-serif;
+  font-weight: 900;
+  font-size: 12px;
+}
+.feed-title {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.05;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.feed-detail {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.15;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.feed-card.source-demo .feed-rank { color: var(--gold); border-color: rgba(246, 201, 91, .34); background: rgba(246, 201, 91, .12); }
+.feed-card.source-test .feed-rank { color: var(--violet); border-color: rgba(207, 167, 255, .34); background: rgba(207, 167, 255, .12); }
+
+.footer-note {
+  color: rgba(244, 248, 255, .82);
+  text-align: right;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .8);
+}
+
+body.layout-status-only .latest-card,
+body.layout-status-only .event-feed,
+body.layout-status-only .footer-note { display: none; }
+body.layout-status-only .leader-row { grid-template-columns: 1fr; }
+body.layout-status-only .leader-card:nth-child(2) { display: none; }
+
+body.layout-chat-replacement .event-feed { overflow: visible; }
+body.layout-chat-replacement .feed-card { min-height: 64px; }
+body.layout-chat-replacement .latest-card { min-height: 142px; }
+
+body[data-attention="quiet"].layout-pip-corner .event-feed .feed-card:nth-child(n+4) { display: none; }
+body[data-attention="quiet"].layout-pip-corner .latest-card { min-height: 96px; }
+body[data-attention="quiet"].layout-pip-corner .latest-title { font-size: clamp(18px, 6vw, 24px); }
+body[data-attention="burst"] .latest-card {
+  animation: attentionPulse 650ms ease both;
+}
+
+@keyframes attentionPulse {
+  from { transform: translateY(-3px) scale(1.015); border-color: rgba(255, 255, 255, .78); }
+  to { transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (max-width: 330px) {
+  .mobile-shell { width: 100%; gap: 6px; }
+  .latest-card { min-height: 106px; padding: 10px; }
+  .leader-row { gap: 6px; }
+  .feed-card { grid-template-columns: 36px minmax(0, 1fr); min-height: 54px; padding: 8px; }
+  .feed-rank { width: 34px; height: 34px; }
+}
+</style>
+</head>
+<body>
+<main class="mobile-shell" data-testid="mobile-overlay-shell" aria-label="IntoTheBattle mobile overlay">
+  <section class="status-strip" data-testid="mobile-status">
+    <div>
+      <div class="brand-kicker">IntoTheBattle Mobile</div>
+      <div class="room-line" id="roomLine">Waiting for room</div>
+    </div>
+    <div class="mode-pill" id="modePill">Idle</div>
+  </section>
+
+  <section class="latest-card priority-normal" id="latestCard" data-testid="mobile-latest-event">
+    <div class="latest-copy">
+      <div class="event-kicker" id="latestKicker">Battle feed</div>
+      <div class="latest-title" id="latestTitle">Ready for game events</div>
+      <div class="latest-detail" id="latestDetail">Game-relevant chat, gifts, KOs, and boss moments will show here.</div>
+    </div>
+    <div class="priority-badge" id="priorityBadge">ITB</div>
+  </section>
+
+  <section class="leader-row" data-testid="mobile-leaders">
+    <article class="leader-card">
+      <div class="mini-label">Top player</div>
+      <div class="mini-value" id="topPlayer">No players yet</div>
+      <div class="mini-detail" id="topPlayerDetail">Waiting for activity</div>
+    </article>
+    <article class="leader-card">
+      <div class="mini-label" id="bossLabel">Boss / session</div>
+      <div class="mini-value" id="bossValue">Idle</div>
+      <div class="mini-detail" id="bossDetail">Setup first</div>
+      <div class="boss-meter" aria-hidden="true"><div class="boss-fill" id="bossFill"></div></div>
+    </article>
+  </section>
+
+  <section class="event-feed" id="eventFeed" data-testid="mobile-event-feed" aria-label="Recent game-relevant events"></section>
+  <div class="footer-note" id="sourceNote">Game events only. TikTok chat stays in TikTok.</div>
+</main>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  const overlayRoomId = params.get('room_id') || '';
+  const overlayToken = params.get('overlay_token') || params.get('overlayToken') || '';
+  const isSignedOverlay = Boolean(overlayRoomId && overlayToken);
+  const isSetupMode = params.get('setup') === '1' || params.get('mode') === 'setup';
+  const isDemoMode = params.get('demo') === '1' || /mobile-(?:preview|demo)/i.test(window.location.pathname);
+  const layoutParam = String(params.get('layout') || 'pip-corner').toLowerCase();
+  const layout = ['pip-corner', 'chat-replacement', 'status-only'].includes(layoutParam) ? layoutParam : 'pip-corner';
+  const maxFeedItems = layout === 'chat-replacement' ? 7 : layout === 'status-only' ? 0 : 5;
+  const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let socket = null;
+  let quietTimer = null;
+  let localDemoHoldUntil = 0;
+
+  const state = {
+    connected: false,
+    stream: { status: isDemoMode ? 'demo' : 'idle', username: '' },
+    streamMode: { mode: isSetupMode ? 'setup-demo' : isDemoMode ? 'demo' : 'waiting', label: isSetupMode ? 'Setup' : isDemoMode ? 'Demo' : 'Idle' },
+    setupActive: isSetupMode || isDemoMode,
+    players: [],
+    events: [],
+    session: { active: false, bossWave: null },
+    boss: null,
+    attention: 'quiet',
+  };
+
+  document.body.classList.add(`layout-${layout}`);
+  if (params.get('transparent') === '1') document.body.classList.add('transparent');
+  if (params.get('source') === '1' || params.get('controls') === '0') document.body.classList.add('source-mode');
+  document.body.dataset.attention = 'quiet';
+
+  function text(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function graphemes(value) {
+    const input = String(value || '');
+    if (window.Intl && typeof Intl.Segmenter === 'function') {
+      return Array.from(new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(input), part => part.segment);
+    }
+    return Array.from(input);
+  }
+
+  function clipText(value, max = 34) {
+    const parts = graphemes(value);
+    if (parts.length <= max) return parts.join('');
+    return `${parts.slice(0, Math.max(1, max - 1)).join('')}...`;
+  }
+
+  function makeSocketOptions() {
+    const options = {
+      transports: ['websocket', 'polling'],
+      timeout: 8000,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 500,
+      reconnectionDelayMax: 4000,
+      randomizationFactor: 0.4,
+    };
+    if (isSignedOverlay) {
+      options.auth = { roomId: overlayRoomId, overlayToken };
+      options.query = { room_id: overlayRoomId, overlay_token: overlayToken };
+    }
+    return options;
+  }
+
+  function withOverlayAuth(path) {
+    const url = new URL(path, window.location.origin);
+    if (isSignedOverlay) {
+      url.searchParams.set('room_id', overlayRoomId);
+      url.searchParams.set('overlay_token', overlayToken);
+    }
+    return url.toString();
+  }
+
+  function playerName(player = {}) {
+    return clipText(player.nickname || player.uniqueId || player.id || 'Viewer', 24);
+  }
+
+  function normalizePlayer(player = {}) {
+    const hp = Number(player.hp ?? player.health ?? 0) || 0;
+    const maxHp = Math.max(1, Number(player.maxHp ?? player.maxHealth ?? 100) || 100);
+    return {
+      id: String(player.uniqueId || player.id || player.nickname || Math.random()).slice(0, 90),
+      nickname: playerName(player),
+      kills: Number(player.kills) || 0,
+      hp,
+      maxHp,
+      hpPct: Math.max(0, Math.min(100, Math.round((hp / maxHp) * 100))),
+      alive: player.alive !== false,
+      source: String(player.source || 'test').toLowerCase(),
+      lastActive: Number(player.lastActive) || 0,
+    };
+  }
+
+  function playersFromState(payload = {}) {
+    return Object.values(payload || {})
+      .map(normalizePlayer)
+      .filter(player => player.alive)
+      .sort((a, b) => (b.kills - a.kills) || (b.lastActive - a.lastActive))
+      .slice(0, 12);
+  }
+
+  function eventPriority(type, detail = '') {
+    const textValue = `${type} ${detail}`.toLowerCase();
+    if (/boss|defeated|winner|kill|ko|gift|power|sponsor/.test(textValue)) return 'critical';
+    if (/attack|follow|share|like|joined|comment|chat|session|round/.test(textValue)) return 'high';
+    return 'normal';
+  }
+
+  function eventBadge(priority, type) {
+    if (priority === 'critical') return /boss/i.test(type) ? 'BOSS' : 'KO';
+    if (/gift/i.test(type)) return 'GIFT';
+    if (/follow/i.test(type)) return 'FOL';
+    if (/like/i.test(type)) return 'LIKE';
+    if (/share|repost/i.test(type)) return 'SHR';
+    if (/attack|chat|comment/i.test(type)) return 'CMD';
+    return 'LIVE';
+  }
+
+  function normalizeEvent(type, payload = {}) {
+    const source = String(payload.source || payload.playerSource || (state.setupActive ? 'demo' : 'test')).toLowerCase();
+    const actor = clipText(payload.actor || payload.nickname || payload.attackerNick || payload.killerNick || payload.uniqueId || payload.userId || payload.title || 'Battle', 26);
+    const detail = clipText(payload.detail || payload.message || payload.comment || payload.commandDescription || payload.giftName || payload.rewardLabel || payload.title || type, 72);
+    const priority = eventPriority(type, detail);
+    return {
+      id: payload.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      type: String(type || payload.type || 'event'),
+      source,
+      actor,
+      detail,
+      priority,
+      badge: eventBadge(priority, type),
+      createdAt: Number(payload.createdAt) || Date.now(),
+    };
+  }
+
+  function pushEvent(type, payload = {}) {
+    const event = normalizeEvent(type, payload);
+    state.events = [event, ...state.events.filter(item => item.id !== event.id)].slice(0, 24);
+    if (event.priority !== 'normal') setAttention('burst');
+    render();
+    return event;
+  }
+
+  function setAttention(value) {
+    state.attention = value;
+    document.body.dataset.attention = value;
+    if (quietTimer) clearTimeout(quietTimer);
+    quietTimer = setTimeout(() => {
+      state.attention = 'quiet';
+      document.body.dataset.attention = 'quiet';
+    }, reducedMotion ? 3000 : 6200);
+  }
+
+  function modeLabel() {
+    if (state.setupActive) return 'Demo';
+    if (state.stream?.status === 'connected' || state.stream?.connected) return 'Live';
+    if (state.connected) return 'Ready';
+    if (state.stream?.status === 'error') return 'Error';
+    return 'Idle';
+  }
+
+  function renderMode() {
+    const pill = document.getElementById('modePill');
+    const label = modeLabel();
+    if (pill) {
+      pill.textContent = label;
+      pill.className = `mode-pill ${label === 'Live' ? 'live' : label === 'Demo' ? 'demo' : label === 'Error' ? 'error' : ''}`.trim();
+    }
+    const room = overlayRoomId ? `Room ${overlayRoomId}` : 'Preview room';
+    const username = state.stream?.username ? ` @${String(state.stream.username).replace(/^@/, '')}` : '';
+    text('roomLine', `${room}${username}`);
+    text('sourceNote', state.setupActive ? 'Setup demo players. Not real TikTok viewers.' : 'Game events only. TikTok chat stays in TikTok.');
+  }
+
+  function renderLatest() {
+    const latest = state.events[0] || null;
+    const card = document.getElementById('latestCard');
+    const priority = latest?.priority || 'normal';
+    if (card) card.className = `latest-card priority-${priority}`;
+    text('latestKicker', latest ? `${latest.source.toUpperCase()} ${latest.type}` : 'Battle feed');
+    text('latestTitle', latest ? latest.actor : 'Ready for game events');
+    text('latestDetail', latest ? latest.detail : 'Game-relevant chat, gifts, KOs, and boss moments will show here.');
+    text('priorityBadge', latest ? latest.badge : 'ITB');
+  }
+
+  function renderLeaders() {
+    const top = state.players[0] || null;
+    text('topPlayer', top ? top.nickname : 'No players yet');
+    text('topPlayerDetail', top ? `${top.kills} KO${top.kills === 1 ? '' : 's'} | ${top.hpPct}% HP` : 'Waiting for activity');
+
+    const boss = state.boss || state.session?.bossWave || null;
+    const bossActive = Boolean(boss?.active);
+    const bossHp = Number(boss?.hp ?? boss?.currentHp ?? 0) || 0;
+    const bossMax = Math.max(1, Number(boss?.maxHp ?? boss?.max ?? 100) || 100);
+    const bossPct = bossActive ? Math.max(0, Math.min(100, Math.round((bossHp / bossMax) * 100))) : 0;
+    text('bossLabel', bossActive ? 'Boss wave' : 'Session');
+    text('bossValue', bossActive ? `${bossPct}% HP` : (state.session?.active ? 'Live battle' : 'Idle'));
+    text('bossDetail', bossActive ? 'Focus fire now' : (state.session?.active ? 'Round controls active' : 'Setup first'));
+    const fill = document.getElementById('bossFill');
+    if (fill) fill.style.width = `${bossPct}%`;
+  }
+
+  function renderFeed() {
+    const feed = document.getElementById('eventFeed');
+    if (!feed) return;
+    const events = state.events.slice(0, maxFeedItems);
+    if (!events.length) {
+      feed.innerHTML = '<article class="feed-card source-test"><div class="feed-rank">WAIT</div><div><div class="feed-title">No battle events yet</div><div class="feed-detail">Start setup demo or connect TikTok LIVE.</div></div></article>';
+      return;
+    }
+    feed.innerHTML = events.map((event, index) => `
+      <article class="feed-card source-${escapeHtml(event.source)}" data-testid="mobile-feed-card">
+        <div class="feed-rank">${escapeHtml(index === 0 ? event.badge : `#${index + 1}`)}</div>
+        <div>
+          <div class="feed-title">${escapeHtml(event.actor)}</div>
+          <div class="feed-detail">${escapeHtml(event.detail)}</div>
+        </div>
+      </article>
+    `).join('');
+  }
+
+  function render() {
+    renderMode();
+    renderLatest();
+    renderLeaders();
+    renderFeed();
+  }
+
+  function applyRoster(payload = {}) {
+    const players = Array.isArray(payload.players) ? payload.players : [];
+    const roster = players.map(normalizePlayer).filter(player => player.alive).sort((a, b) => (b.kills - a.kills) || (b.lastActive - a.lastActive)).slice(0, 12);
+    if (roster.length || (!state.setupActive && Date.now() > localDemoHoldUntil)) state.players = roster;
+    render();
+  }
+
+  function applySession(payload = {}) {
+    state.session = payload || {};
+    if (payload?.bossWave) state.boss = payload.bossWave;
+    render();
+  }
+
+  async function loadInitialState() {
+    if (!isSignedOverlay) return;
+    try {
+      const response = await fetch(withOverlayAuth('/state'));
+      if (!response.ok) return;
+      const payload = await response.json();
+      state.players = playersFromState(payload);
+      render();
+    } catch (_err) {}
+  }
+
+  function seedDemo() {
+    localDemoHoldUntil = Date.now() + 8000;
+    state.players = [
+      { id: 'ember', nickname: 'EmberQueen', kills: 7, hp: 84, maxHp: 100, hpPct: 84, alive: true, source: 'demo', lastActive: Date.now() },
+      { id: 'void', nickname: 'VoidRunner', kills: 4, hp: 61, maxHp: 100, hpPct: 61, alive: true, source: 'demo', lastActive: Date.now() - 900 },
+      { id: 'nova', nickname: 'NovaPulse', kills: 2, hp: 44, maxHp: 100, hpPct: 44, alive: true, source: 'demo', lastActive: Date.now() - 1800 },
+    ];
+    state.events = [
+      normalizeEvent('gift', { actor: 'EmberQueen', detail: 'sent a gift and charged the boss wave', source: 'demo' }),
+      normalizeEvent('attack', { actor: 'VoidRunner', detail: '!attack landed for 18 damage', source: 'demo' }),
+      normalizeEvent('follow', { actor: 'NovaPulse', detail: 'joined the arena from stream activity', source: 'demo' }),
+    ];
+    state.boss = { active: true, hp: 64, maxHp: 100 };
+    setAttention('burst');
+    render();
+  }
+
+  function initSocket() {
+    if (typeof io === 'undefined') {
+      if (isDemoMode) seedDemo();
+      return;
+    }
+    socket = io(makeSocketOptions());
+    socket.on('connect', () => {
+      state.connected = true;
+      socket.emit('register', { type: 'overlay' });
+      render();
+      loadInitialState();
+    });
+    socket.on('disconnect', () => {
+      state.connected = false;
+      render();
+    });
+    socket.on('connect_error', () => {
+      state.stream = { status: 'error' };
+      if (isDemoMode) seedDemo();
+      render();
+    });
+    socket.on('gameState', payload => {
+      const players = playersFromState(payload || {});
+      if (players.length || (!state.setupActive && Date.now() > localDemoHoldUntil)) {
+        state.players = players;
+      } else if (!state.players.length && state.setupActive) {
+        seedDemo();
+        return;
+      }
+      render();
+    });
+    socket.on('playerRoster', payload => applyRoster(payload || {}));
+    socket.on('streamModeChanged', payload => {
+      state.streamMode = payload || {};
+      render();
+    });
+    socket.on('setupMode', payload => {
+      state.setupActive = Boolean(payload?.active || isSetupMode);
+      if (state.setupActive && !state.events.length) seedDemo();
+      render();
+    });
+    socket.on('sessionStatus', payload => applySession(payload || {}));
+    socket.on('tiktokConnection', payload => {
+      state.stream = payload || {};
+      render();
+    });
+    socket.on('streamEvent', event => pushEvent(event?.type || 'stream', event || {}));
+    socket.on('roundEvent', payload => pushEvent(payload?.type || 'round', {
+      actor: payload?.title || 'Battle update',
+      detail: payload?.message || payload?.detail || payload?.type || 'Round event',
+      source: payload?.source,
+    }));
+    socket.on('bossWave', payload => {
+      state.boss = payload || {};
+      pushEvent('boss', {
+        actor: payload?.type === 'defeated' ? 'Boss defeated' : 'Boss wave',
+        detail: payload?.active ? 'Boss is live. Viewer attacks matter now.' : (payload?.status || payload?.type || 'Boss update'),
+        source: payload?.source,
+      });
+      render();
+    });
+    socket.on('arenaPowerUp', payload => pushEvent('power-up', {
+      actor: payload?.label || 'Arena Power-Up',
+      detail: payload?.type === 'ended' ? 'Power window ended' : 'Power window started',
+      source: payload?.source,
+    }));
+  }
+
+  function telemetry() {
+    const shell = document.querySelector('[data-testid="mobile-overlay-shell"]');
+    const cards = Array.from(document.querySelectorAll('.status-strip,.latest-card,.leader-card,.feed-card'));
+    const viewport = { width: window.innerWidth, height: window.innerHeight };
+    const rects = cards.map((node, index) => {
+      const rect = node.getBoundingClientRect();
+      return {
+        index,
+        testid: node.getAttribute('data-testid') || node.className,
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+        text: node.textContent.trim().replace(/\s+/g, ' ').slice(0, 120),
+      };
+    });
+    return {
+      layout,
+      attention: state.attention,
+      sourceMode: document.body.classList.contains('source-mode'),
+      transparent: document.body.classList.contains('transparent'),
+      viewport,
+      shell: shell ? shell.getBoundingClientRect().toJSON() : null,
+      rects,
+      horizontalOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      verticalOverflow: Math.max(0, document.documentElement.scrollHeight - document.documentElement.clientHeight),
+      eventCount: state.events.length,
+      playerCount: state.players.length,
+    };
+  }
+
+  window.mobileOverlayEngine = {
+    status: () => ({ layout, state: { ...state, events: state.events.slice(0, 8), players: state.players.slice(0, 8) }, telemetry: telemetry() }),
+    testEventBurst() {
+      state.setupActive = true;
+      state.players = [
+        normalizePlayer({ uniqueId: 'plain', nickname: 'ShadowByte', kills: 3, hp: 72, maxHp: 100, source: 'demo', alive: true, lastActive: Date.now() }),
+        normalizePlayer({ uniqueId: 'emoji', nickname: 'FireQueen', kills: 8, hp: 91, maxHp: 100, source: 'demo', alive: true, lastActive: Date.now() + 1 }),
+        normalizePlayer({ uniqueId: 'long', nickname: 'MobileBossBreakerUltra', kills: 5, hp: 64, maxHp: 100, source: 'demo', alive: true, lastActive: Date.now() - 1 }),
+      ];
+      state.events = [
+        normalizeEvent('boss', { actor: 'Boss wave', detail: 'Critical phase. Viewer commands are boosted.', source: 'demo' }),
+        normalizeEvent('gift', { actor: 'FireQueen', detail: 'gift triggered a squad-wide damage boost', source: 'demo' }),
+        normalizeEvent('attack', { actor: 'ShadowByte', detail: '!attack hit the boss for 22 damage', source: 'demo' }),
+        normalizeEvent('kill', { actor: 'MobileBossBreakerUltra', detail: 'secured a KO during the event burst', source: 'demo' }),
+        normalizeEvent('follow', { actor: 'NewChallenger', detail: 'joined through stream activity', source: 'demo' }),
+        normalizeEvent('chat', { actor: 'CommandCaller', detail: '!heal stabilized the top player', source: 'demo' }),
+      ];
+      state.boss = { active: true, hp: 38, maxHp: 100 };
+      setAttention('burst');
+      render();
+      return this.status();
+    },
+    telemetry,
+  };
+
+  if (isDemoMode) seedDemo();
+  render();
+  initSocket();
+})();
+</script>
+</body>
+</html>
