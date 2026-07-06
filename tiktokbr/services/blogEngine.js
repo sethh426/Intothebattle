@@ -1,5 +1,11 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import db from '../db/db.js';
 import { readSiteMarketingFacts } from './marketingAutomation.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(__dirname, '..', '..');
 
 const ALLOWED_STATUSES = new Set(['draft', 'queued', 'published', 'archived']);
 const ALLOWED_SOURCES = new Set(['manual', 'site-context']);
@@ -14,6 +20,64 @@ function clampNumber(value, fallback, min, max) {
 
 function safeString(value = '') {
   return String(value || '').replace(/\r\n/g, '\n').trim();
+}
+
+function isLocalWritefreelyUrl(value = '') {
+  try {
+    const parsed = new URL(value);
+    return ['localhost', '127.0.0.1', '[::1]', '::1'].includes(parsed.hostname)
+      || parsed.hostname.endsWith('.localhost');
+  } catch (_err) {
+    return false;
+  }
+}
+
+function parseWritefreelyCredentialsText(value = '') {
+  const text = String(value || '');
+  const usernameMatch = text.match(/^\s*(?:username|user|alias)\s*[:=]\s*(\S+)\s*$/im);
+  const passwordMatch = text.match(/^\s*(?:password|pass)\s*[:=]\s*(.+?)\s*$/im);
+  let username = safeString(usernameMatch?.[1] || '');
+  let password = safeString(passwordMatch?.[1] || '');
+
+  if (!username || !password) {
+    const pairLine = text
+      .split(/\r?\n/)
+      .map(line => line.match(/^\s*([^:\s]+)\s*:\s*(.+?)\s*$/))
+      .find((match) => {
+        const key = String(match?.[1] || '').toLowerCase();
+        return match && !['url', 'login', 'username', 'user', 'alias', 'password', 'pass'].includes(key);
+      });
+    if (pairLine) {
+      username = username || safeString(pairLine[1]);
+      password = password || safeString(pairLine[2]);
+    }
+  }
+
+  return { username, password };
+}
+
+function readLocalWritefreelyCredentials(apiUrl = '') {
+  const disabledByEnv = ['1', 'true', 'yes'].includes(safeString(process.env.WRITEFREELY_DISABLE_LOCAL_CREDENTIALS).toLowerCase());
+  if (disabledByEnv) {
+    return { username: '', password: '', source: 'disabled-by-env', path: '' };
+  }
+  if (!isLocalWritefreelyUrl(apiUrl)) {
+    return { username: '', password: '', source: 'none', path: '' };
+  }
+
+  const credentialsPath = process.env.WRITEFREELY_LOCAL_CREDENTIALS_PATH
+    ? path.resolve(process.env.WRITEFREELY_LOCAL_CREDENTIALS_PATH)
+    : path.join(REPO_ROOT, 'writefreely', 'ADMIN_CREDENTIALS.txt');
+
+  try {
+    const credentials = parseWritefreelyCredentialsText(fs.readFileSync(credentialsPath, 'utf8'));
+    if (!credentials.username || !credentials.password) {
+      return { username: '', password: '', source: 'unreadable-local-admin-file', path: credentialsPath };
+    }
+    return { ...credentials, source: 'local-admin-file', path: credentialsPath };
+  } catch (_err) {
+    return { username: '', password: '', source: 'missing-local-admin-file', path: credentialsPath };
+  }
 }
 
 function htmlEscape(value = '') {
@@ -476,9 +540,22 @@ export function writefreelyPublishConfig() {
       || 'owner',
     'owner'
   );
-  const username = safeString(process.env.WRITEFREELY_USERNAME);
-  const password = safeString(process.env.WRITEFREELY_PASSWORD);
+  const configuredUsername = safeString(process.env.WRITEFREELY_USERNAME);
+  const configuredPassword = safeString(process.env.WRITEFREELY_PASSWORD);
   const apiToken = safeString(process.env.WRITEFREELY_API_TOKEN);
+  const hasConfiguredCredentials = Boolean(configuredUsername && configuredPassword);
+  const localCredentials = !hasConfiguredCredentials
+    ? readLocalWritefreelyCredentials(apiUrl)
+    : { username: '', password: '', source: 'not-needed', path: '' };
+  const username = hasConfiguredCredentials ? configuredUsername : localCredentials.username;
+  const password = hasConfiguredCredentials ? configuredPassword : localCredentials.password;
+  const credentialSource = apiToken
+    ? 'api-token'
+    : hasConfiguredCredentials
+      ? 'env-username-password'
+      : (username && password)
+        ? localCredentials.source
+        : 'none';
   const webhookToken = safeString(process.env.WRITEFREELY_POST_WEBHOOK_TOKEN || process.env.WRITEFREELY_API_TOKEN);
   const directEnabled = Boolean(apiUrl && (apiToken || (username && password)));
   const webhookEnabled = Boolean(webhookUrl);
@@ -500,6 +577,9 @@ export function writefreelyPublishConfig() {
     singleUser,
     hasApiToken: Boolean(apiToken),
     hasCredentials: Boolean(username && password),
+    credentialSource,
+    localCredentialSource: localCredentials.source,
+    localCredentialPath: localCredentials.path,
     publishMethod: directEnabled ? 'direct-api' : (webhookEnabled ? 'webhook' : 'disabled'),
     enabled: directEnabled || webhookEnabled,
   };

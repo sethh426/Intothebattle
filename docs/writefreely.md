@@ -61,9 +61,13 @@ WRITEFREELY_SINGLE_USER=true
 WRITEFREELY_API_TOKEN=
 WRITEFREELY_USERNAME=
 WRITEFREELY_PASSWORD=
+WRITEFREELY_LOCAL_CREDENTIALS_PATH=
+WRITEFREELY_DISABLE_LOCAL_CREDENTIALS=false
 ```
 
 Use `WRITEFREELY_API_TOKEN` when you already have a token. Otherwise set `WRITEFREELY_USERNAME` and `WRITEFREELY_PASSWORD`; the app logs in through `/api/auth/login` and uses the returned access token for that publish request.
+
+For a localhost WriteFreely bridge, if no API token or username/password env vars are set, the app automatically reads `writefreely/ADMIN_CREDENTIALS.txt`. Set `WRITEFREELY_LOCAL_CREDENTIALS_PATH` only if that ignored local credentials file lives somewhere else. Set `WRITEFREELY_DISABLE_LOCAL_CREDENTIALS=true` to force explicit env credentials only.
 
 Legacy webhook publishing is still supported:
 

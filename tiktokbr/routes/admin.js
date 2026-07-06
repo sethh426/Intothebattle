@@ -1471,7 +1471,7 @@ router.post('/blog/manual', requireAdminAuth, async (req, res) => {
 router.post('/blog/site-context/push', requireAdminAuth, async (req, res) => {
   const cfg = writefreelyPublishConfig();
   if (!cfg.enabled) {
-    return res.redirect(`/admin/blog?error=${encodeURIComponent('WriteFreely is not configured. Set WRITEFREELY_API_TOKEN or WRITEFREELY_USERNAME/WRITEFREELY_PASSWORD.')}`);
+    return res.redirect(`/admin/blog?error=${encodeURIComponent('WriteFreely is not configured. Set WRITEFREELY_API_TOKEN or WRITEFREELY_USERNAME/WRITEFREELY_PASSWORD, configure WRITEFREELY_POST_WEBHOOK_URL, or run the local blog starter.')}`);
   }
   try {
     const summary = await pushSiteContextBlogDrafts({ limit: req.body.limit });
@@ -1486,7 +1486,7 @@ router.post('/blog/site-context/push', requireAdminAuth, async (req, res) => {
 router.post('/blog/site-context/generate-and-push', requireAdminAuth, async (req, res) => {
   const cfg = writefreelyPublishConfig();
   if (!cfg.enabled) {
-    return res.redirect(`/admin/blog?error=${encodeURIComponent('WriteFreely is not configured. Set WRITEFREELY_API_TOKEN or WRITEFREELY_USERNAME/WRITEFREELY_PASSWORD.')}`);
+    return res.redirect(`/admin/blog?error=${encodeURIComponent('WriteFreely is not configured. Set WRITEFREELY_API_TOKEN or WRITEFREELY_USERNAME/WRITEFREELY_PASSWORD, configure WRITEFREELY_POST_WEBHOOK_URL, or run the local blog starter.')}`);
   }
   try {
     const generation = generateBlogDraftsFromSiteContext({ force: String(req.body.force || '0') === '1' });
@@ -1747,6 +1747,18 @@ function renderBlogPostForm(post = null) {
   `;
 }
 
+function writefreelyCredentialLabel(cfg = {}) {
+  if (cfg.hasApiToken) return 'API token configured';
+  if (cfg.hasCredentials) {
+    return cfg.credentialSource === 'local-admin-file'
+      ? 'Local admin credentials file'
+      : 'Username/password configured';
+  }
+  if (cfg.localCredentialSource === 'missing-local-admin-file') return 'Missing local admin credentials file';
+  if (cfg.localCredentialSource === 'unreadable-local-admin-file') return 'Local admin credentials file could not be read';
+  return 'Missing API token or username/password';
+}
+
 function renderWritefreelyPosterPage({
   message = '',
   error = '',
@@ -1814,6 +1826,7 @@ function renderWritefreelyPosterPage({
         <span>${escapeHtml(methodLabel)}</span>
       </p>
       <p class="field-note">API: ${escapeHtml(writefreelyCfg.apiUrl || 'Missing API URL')}</p>
+      <p class="field-note">Credentials: ${escapeHtml(writefreelyCredentialLabel(writefreelyCfg))}</p>
       ${dashboardLink ? `<p class="field-note">Dashboard: <a class="text-link" href="${escapeAttr(dashboardLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(dashboardLink)}</a></p>` : ''}
       <p class="field-note">Webhook fallback: ${escapeHtml(writefreelyCfg.webhookUrl || 'Not configured')}</p>
       ${renderBlogPostForm(post || null)}
@@ -1920,6 +1933,7 @@ function renderBlogAdminPage({ message = '', error = '', posts = [] } = {}) {
           <h2>Blog engine controls</h2>
           <p class="muted">Generate SEO-ready draft posts from your public pages, then review status and push selected posts to WriteFreely.</p>
           <p class="muted">WriteFreely: ${escapeHtml(methodLabel)}</p>
+          <p class="muted">Credentials: ${escapeHtml(writefreelyCredentialLabel(writefreelyCfg))}</p>
           <div class="toolbar">
             <form method="POST" action="/admin/blog/generate" style="margin:0;">
               <button type="submit" title="Regenerate daily drafts from current site pages">Generate from site context</button>

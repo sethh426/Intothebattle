@@ -1,4 +1,6 @@
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 process.env.SKIP_DB = process.env.SKIP_DB || 'true';
 process.env.APP_BASE_URL = process.env.APP_BASE_URL || 'https://www.intothebattle.com';
@@ -28,6 +30,38 @@ assert(cfg.publishMethod === 'direct-api', 'WriteFreely config should prefer dir
 assert(cfg.apiUrl === 'http://localhost:8080', 'WriteFreely API URL should be normalized without trailing slash');
 assert(cfg.collectionAlias === 'owner', 'WriteFreely collection alias should be normalized');
 assert(cfg.singleUser === true, 'WriteFreely single-user mode should default from env');
+assert(cfg.credentialSource === 'env-username-password', 'Explicit username/password env should be reported as the credential source');
+
+const previousEnv = {
+  nodeEnv: process.env.NODE_ENV,
+  username: process.env.WRITEFREELY_USERNAME,
+  password: process.env.WRITEFREELY_PASSWORD,
+  token: process.env.WRITEFREELY_API_TOKEN,
+  webhook: process.env.WRITEFREELY_POST_WEBHOOK_URL,
+  localPath: process.env.WRITEFREELY_LOCAL_CREDENTIALS_PATH,
+};
+const tempCredentialsDir = fs.mkdtempSync(path.join(os.tmpdir(), 'itb-writefreely-'));
+const tempCredentialsPath = path.join(tempCredentialsDir, 'ADMIN_CREDENTIALS.txt');
+fs.writeFileSync(tempCredentialsPath, 'Username: owner\nPassword: local-file-password\n', 'utf8');
+process.env.NODE_ENV = 'development';
+process.env.WRITEFREELY_API_URL = 'http://localhost:8080/';
+process.env.WRITEFREELY_PUBLIC_URL = 'http://localhost:8080/';
+delete process.env.WRITEFREELY_USERNAME;
+delete process.env.WRITEFREELY_PASSWORD;
+delete process.env.WRITEFREELY_API_TOKEN;
+delete process.env.WRITEFREELY_POST_WEBHOOK_URL;
+process.env.WRITEFREELY_LOCAL_CREDENTIALS_PATH = tempCredentialsPath;
+const localCfg = writefreelyPublishConfig();
+assert(localCfg.enabled === true, 'Local WriteFreely config should enable direct API publishing from the local credentials file');
+assert(localCfg.credentialSource === 'local-admin-file', 'Local credentials file should be reported as the credential source');
+assert(localCfg.hasCredentials === true, 'Local credentials file should provide username/password without requiring env secrets');
+fs.rmSync(tempCredentialsDir, { recursive: true, force: true });
+if (previousEnv.nodeEnv == null) delete process.env.NODE_ENV; else process.env.NODE_ENV = previousEnv.nodeEnv;
+if (previousEnv.username == null) delete process.env.WRITEFREELY_USERNAME; else process.env.WRITEFREELY_USERNAME = previousEnv.username;
+if (previousEnv.password == null) delete process.env.WRITEFREELY_PASSWORD; else process.env.WRITEFREELY_PASSWORD = previousEnv.password;
+if (previousEnv.token == null) delete process.env.WRITEFREELY_API_TOKEN; else process.env.WRITEFREELY_API_TOKEN = previousEnv.token;
+if (previousEnv.webhook == null) delete process.env.WRITEFREELY_POST_WEBHOOK_URL; else process.env.WRITEFREELY_POST_WEBHOOK_URL = previousEnv.webhook;
+if (previousEnv.localPath == null) delete process.env.WRITEFREELY_LOCAL_CREDENTIALS_PATH; else process.env.WRITEFREELY_LOCAL_CREDENTIALS_PATH = previousEnv.localPath;
 
 const post = {
   title: 'Site context update',
