@@ -302,6 +302,67 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   100% { opacity:0; transform:translate(-50%,-190%) scale(0.6);  }
 }
 
+.support-unit {
+  --support-like:#ff78b2;
+  --support-heal:#8fffd2;
+  --support-shield:#55e7ff;
+  position:absolute; left:50%; top:50%; transform:translate(-50%,0); z-index:27; pointer-events:none;
+  min-height:38px; max-height:46px; padding:0 12px; box-sizing:border-box; overflow:hidden;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+  font-family:'Rajdhani','Segoe UI',sans-serif; color:#f8fbff;
+  background:
+    linear-gradient(90deg, rgba(3,6,14,0.96), rgba(16,12,26,0.92) 46%, rgba(4,20,18,0.94)),
+    radial-gradient(circle at 18% 50%, rgba(255,120,178,0.18), transparent 38%),
+    radial-gradient(circle at 82% 50%, rgba(143,255,210,0.16), transparent 38%);
+  border:1px solid rgba(255,255,255,0.17);
+  border-radius:7px;
+  clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
+  box-shadow:0 14px 34px rgba(0,0,0,0.52),0 0 22px rgba(143,255,210,0.12),inset 0 1px 0 rgba(255,255,255,0.14);
+  backdrop-filter:blur(10px) saturate(1.12);
+  animation:supportUnitIn 180ms cubic-bezier(.16,1,.3,1) both;
+}
+.support-unit::before {
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:.42;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.13), transparent);
+  transform:translateX(-115%);
+  animation:supportUnitSweep 720ms 70ms ease-out both;
+}
+.support-unit__label,
+.support-unit__pill,
+.support-unit__actor {
+  position:relative; z-index:1; display:inline-flex; align-items:center; min-width:0; white-space:nowrap;
+  font-weight:950; line-height:1; text-transform:uppercase; text-shadow:0 2px 8px rgba(0,0,0,0.88);
+}
+.support-unit__label {
+  color:#ffffff; font-size:17px; letter-spacing:.52px;
+}
+.support-unit__pill {
+  min-height:24px; padding:0 8px; border-radius:999px; font-size:16px; letter-spacing:.18px;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.13);
+}
+.support-unit__pill.like { color:#ffe3f0; border-color:rgba(255,120,178,0.38); box-shadow:inset 0 0 14px rgba(255,120,178,0.12); }
+.support-unit__pill.heal { color:#d8ffe9; border-color:rgba(143,255,210,0.38); box-shadow:inset 0 0 14px rgba(143,255,210,0.12); }
+.support-unit__pill.shield { color:#dffaff; border-color:rgba(85,231,255,0.36); box-shadow:inset 0 0 14px rgba(85,231,255,0.11); }
+.support-unit__actor {
+  max-width:120px; overflow:hidden; text-overflow:ellipsis; color:#bac8df; font-size:12px; letter-spacing:.35px;
+}
+.support-unit.is-compact { min-height:32px; max-height:38px; padding:0 9px; gap:5px; }
+.support-unit.is-compact .support-unit__label { font-size:13px; }
+.support-unit.is-compact .support-unit__pill { min-height:20px; padding:0 6px; font-size:12px; }
+.support-unit.is-compact .support-unit__actor { display:none; }
+.support-unit.is-micro { min-height:27px; max-height:31px; padding:0 7px; gap:4px; }
+.support-unit.is-micro .support-unit__label { font-size:11px; letter-spacing:.28px; }
+.support-unit.is-micro .support-unit__pill { min-height:18px; padding:0 5px; font-size:10px; }
+.support-unit.is-micro .support-unit__actor { display:none; }
+@keyframes supportUnitIn {
+  0% { opacity:0; transform:translate(-50%,-6px) scaleX(.86); filter:blur(4px); }
+  100% { opacity:1; transform:translate(-50%,0) scaleX(1); filter:none; }
+}
+@keyframes supportUnitSweep {
+  0% { transform:translateX(-115%); }
+  100% { transform:translateX(118%); }
+}
+
 .banner {
   --banner-accent:#7afcff;
   --banner-accent-rgb:122,252,255;
@@ -1482,6 +1543,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .banner.transition-signal,
   .banner.transition-surge,
   .banner-pulse,
+  .support-unit,
+  .support-unit::before,
   .sponsor-scene,
   .sponsor-scene::before,
   .sponsor-scene::after,
@@ -1510,6 +1573,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   .banner,
+  .support-unit,
   .banner.closing,
   .banner.transition-slam,
   .banner.transition-sweep,
@@ -1521,6 +1585,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   .banner::before,
+  .support-unit::before,
   .banner-pulse,
   .sponsor-spark-field,
   .sponsor-sweep,
@@ -1794,6 +1859,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const ctx       = canvas.getContext('2d', { alpha: true });
   const container = document.getElementById('overlay-container');
   const statusDiv = document.getElementById('status-badge');
+  const supportUnitEl = document.createElement('div');
+  supportUnitEl.className = 'support-unit';
+  supportUnitEl.dataset.testid = 'support-unit';
+  supportUnitEl.setAttribute('aria-hidden', 'true');
+  supportUnitEl.style.visibility = 'hidden';
+  container.appendChild(supportUnitEl);
   const sponsorScene = document.getElementById('sponsorScene');
   const sponsorVideo = document.getElementById('sponsorVideo');
   const sponsorPoster = document.getElementById('sponsorPoster');
@@ -1994,6 +2065,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   };
   let battlePromptLastShown = 0;
   let richBannerLastShown = 0;
+  const supportUnitState = {
+    likes: 0,
+    heal: 0,
+    shields: 0,
+    lastName: '',
+    updatedAt: 0,
+    visibleUntil: 0,
+  };
   let arenaShakeUntil = 0;
   let arenaShakeStartedAt = 0;
   let arenaShakeMagnitude = 0;
@@ -3282,6 +3361,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       }, {}),
       activeBanner: activeBanner ? { type: activeBanner.cls, priority: activeBanner.priority } : null,
       banner: currentBannerStatus(),
+      support: currentSupportUnitStatus(),
       visualQueue: currentVisualQueueStatus(),
       sponsor: currentSponsorSceneStatus(),
       sponsorMedia: currentSponsorMediaStatus(),
@@ -3312,6 +3392,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       enqueueVisualEvent('roundEvent', { type: 'round_started', label: 'Round started' }, handleRoundEvent, { mergeKey: () => 'round_started' });
     },
     testBannerPlacement: (type = 'legendary', options = {}) => runBannerPlacementProbe(type, options),
+    testSupportUnit: () => runSupportUnitProbe(),
     testPlayerCards: roster => applyTestPlayerCards(roster),
     testEventStorm: (count = 132) => runVisualEventStorm(count),
     testEffectOwnership: () => runEffectOwnershipProbe(),
@@ -4849,6 +4930,146 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     enqueueBanner(normalizeBannerPayload(cls, content, dur, options));
   }
 
+  function supportUnitName(data = {}) {
+    return normalizeCanvasText(data.name || data.nickname || data.sourceNick || data.uniqueId || '').slice(0, 28);
+  }
+
+  function resetSupportUnitState() {
+    supportUnitState.likes = 0;
+    supportUnitState.heal = 0;
+    supportUnitState.shields = 0;
+    supportUnitState.lastName = '';
+    supportUnitState.updatedAt = 0;
+    supportUnitState.visibleUntil = 0;
+    supportUnitEl.style.visibility = 'hidden';
+  }
+
+  function renderSupportUnit() {
+    const likeHtml = supportUnitState.likes
+      ? `<span class="support-unit__pill like">+${supportUnitState.likes} ${supportUnitState.likes === 1 ? 'LIKE' : 'LIKES'}</span>`
+      : '';
+    const healHtml = supportUnitState.heal
+      ? `<span class="support-unit__pill heal">+${supportUnitState.heal} HEAL</span>`
+      : '';
+    const shieldHtml = supportUnitState.shields
+      ? `<span class="support-unit__pill shield">${supportUnitState.shields > 1 ? `${supportUnitState.shields}X ` : ''}SHIELD</span>`
+      : '';
+    const actorHtml = supportUnitState.lastName
+      ? `<span class="support-unit__actor">${escapeHtml(supportUnitState.lastName)}</span>`
+      : '';
+    supportUnitEl.innerHTML = `
+      <span class="support-unit__label">SUPPORT</span>
+      ${likeHtml}
+      ${healHtml}
+      ${shieldHtml}
+      ${actorHtml}
+    `;
+  }
+
+  function showSupportUnit(data = {}) {
+    if (sponsorState !== 'battle') return currentSupportUnitStatus();
+    const now = Date.now();
+    if (now - supportUnitState.updatedAt > 1700 || now > supportUnitState.visibleUntil) {
+      supportUnitState.likes = 0;
+      supportUnitState.heal = 0;
+      supportUnitState.shields = 0;
+      supportUnitState.lastName = '';
+    }
+    const type = String(data.type || '').toLowerCase();
+    if (type === 'like') supportUnitState.likes += Math.max(1, Math.round(Number(data.hearts) || 1));
+    if (type === 'heal') supportUnitState.heal += Math.max(1, Math.round(Number(data.amount) || Number(data.heal) || 0));
+    if (type === 'shield') supportUnitState.shields += 1;
+    supportUnitState.likes = Math.min(99, supportUnitState.likes);
+    supportUnitState.heal = Math.min(999, supportUnitState.heal);
+    supportUnitState.shields = Math.min(9, supportUnitState.shields);
+    supportUnitState.lastName = supportUnitName(data) || supportUnitState.lastName;
+    supportUnitState.updatedAt = now;
+    supportUnitState.visibleUntil = now + (prefersReducedMotion() ? 2600 : 3200);
+    renderSupportUnit();
+    supportUnitEl.style.visibility = '';
+    requestAnimationFrame(placeSupportUnit);
+    return currentSupportUnitStatus();
+  }
+
+  function currentSupportUnitStatus() {
+    const now = Date.now();
+    const rect = supportUnitEl.getBoundingClientRect();
+    const visible = supportUnitEl.style.visibility !== 'hidden' && now < supportUnitState.visibleUntil && rect.width > 0 && rect.height > 0;
+    return {
+      visible,
+      likes: supportUnitState.likes,
+      heal: supportUnitState.heal,
+      shields: supportUnitState.shields,
+      lastName: supportUnitState.lastName,
+      visibleForMs: visible ? Math.max(0, supportUnitState.visibleUntil - now) : 0,
+      text: (supportUnitEl.textContent || '').replace(/\s+/g, ' ').trim(),
+      domCount: container.querySelectorAll('.support-unit').length,
+      rect: visible ? {
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+      } : null,
+    };
+  }
+
+  function placeSupportUnit() {
+    const now = Date.now();
+    if (sponsorState !== 'battle' || now >= supportUnitState.visibleUntil) {
+      supportUnitEl.style.visibility = 'hidden';
+      return;
+    }
+    const stage = computeOverlayLayout();
+    const scale = overlayScale();
+    const frame = canvasRectToOverlay(stage.frame);
+    const bannerZone = canvasRectToOverlay(stage.zones.banner);
+    const playersZone = canvasRectToOverlay(stage.zones.players);
+    const gapX = stage.gap * scale.x;
+    const gapY = stage.gap * scale.y;
+    let playerTopLimit = playersZone.y;
+    try {
+      const visiblePlayers = topPlayers();
+      if (visiblePlayers.length) {
+        const playerCardTop = Math.min(...visiblePlayers.map((player, index) => {
+          const pos = getPlayerPosition(index, visiblePlayers.length);
+          return getPlayerCardDrawMetrics(pos, visiblePlayers.length).top;
+        }));
+        playerTopLimit = Math.min(playerTopLimit, canvasRectToOverlay(makeRect(0, playerCardTop, 1, 1)).y);
+      }
+    } catch (_err) {}
+
+    const activeBannerRect = activeBanner?.el ? activeBanner.el.getBoundingClientRect() : null;
+    const activeBannerBottom = activeBannerRect && activeBannerRect.height ? activeBannerRect.bottom - container.getBoundingClientRect().top : bannerZone.bottom;
+    const laneTop = Math.max(bannerZone.bottom + gapY * 0.35, activeBannerBottom + gapY * 0.35);
+    const laneBottom = Math.max(laneTop + 1, playerTopLimit - gapY * 0.45);
+    const maxWidth = Math.min(frame.w - gapX * 2, Math.max(190, frame.w * 0.52), 520 * scale.x);
+    const minWidth = Math.min(maxWidth, Math.max(190, frame.w * 0.25));
+    const preferredWidth = Math.max(minWidth, Math.min(maxWidth, frame.w * 0.42));
+
+    supportUnitEl.classList.remove('is-compact', 'is-micro');
+    supportUnitEl.style.width = `${preferredWidth}px`;
+    supportUnitEl.style.maxWidth = `${maxWidth}px`;
+    let rect = supportUnitEl.getBoundingClientRect();
+    if (rect.height > laneBottom - laneTop || preferredWidth < 300) {
+      supportUnitEl.classList.add('is-compact');
+      rect = supportUnitEl.getBoundingClientRect();
+    }
+    if (rect.height > laneBottom - laneTop || preferredWidth < 240) {
+      supportUnitEl.classList.add('is-micro');
+      rect = supportUnitEl.getBoundingClientRect();
+    }
+
+    const halfWidth = rect.width / 2;
+    const centerX = clampNumber(frame.x + frame.w / 2, frame.x + gapX + halfWidth, frame.right - gapX - halfWidth);
+    const laneHeight = Math.max(1, laneBottom - laneTop);
+    const top = clampNumber(laneTop + (laneHeight - rect.height) / 2, frame.y + gapY, Math.max(frame.y + gapY, playerTopLimit - gapY * 0.25 - rect.height));
+    supportUnitEl.style.left = `${centerX}px`;
+    supportUnitEl.style.top = `${top}px`;
+    supportUnitEl.style.visibility = '';
+  }
+
   function bannerPlacementProbePayload(type, options = {}) {
     const normalized = BANNER_CONFIG[type] ? type : 'legendary';
     const base = {
@@ -4913,6 +5134,19 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return currentBannerStatus();
   }
 
+  function runSupportUnitProbe() {
+    resetSupportUnitState();
+    container.querySelectorAll('.banner.heal').forEach(el => el.remove());
+    const target = topPlayers()[0] || { uniqueId: 'p1', nickname: 'Nova' };
+    const uniqueId = target.uniqueId || target.id || 'p1';
+    const nickname = target.nickname || target.name || 'Nova';
+    showSupportUnit({ type: 'like', hearts: 3, name: nickname });
+    handlePlayerCommand({ type: 'heal', uniqueId, sourceNick: nickname, amount: 25 });
+    handlePlayerCommand({ type: 'shield', uniqueId, nickname });
+    placeSupportUnit();
+    return currentSupportUnitStatus();
+  }
+
   function currentBannerStatus() {
     const now = Date.now();
     const nodes = Array.from(container.querySelectorAll('.banner'));
@@ -4943,9 +5177,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   window.addEventListener('resize', () => {
-    if (!activeBanner?.el) return;
     requestAnimationFrame(() => {
       if (activeBanner?.el) placeBannerAbovePlayers(activeBanner.el);
+      if (supportUnitEl?.style.visibility !== 'hidden') placeSupportUnit();
     });
   });
 
@@ -5765,7 +5999,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const lift = easeOutCubic(p);
 
       if (this.kind === 'like' || this.kind === 'heal') {
-        this.drawCompactMarker(p, x, y, lift);
         return;
       }
 
@@ -7116,11 +7349,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     hearts = hearts || 1; intensity = intensity || 0;
     const owner = resolveEffectEntity(playerId, meta.scope || meta.targetScope, 'owner');
     if (owner?.unresolved) return dropUnresolvedEntity(owner, 'missing_owner', { type: meta.kind || 'heart' });
-    const pos = owner.kind === 'player' && meta.kind === 'like'
-      ? (getLikeEffectPosition(playerId) || owner.point)
-      : owner.point;
-    const bloom = pushAttackEffect(new HeartBloom(pos, hearts, intensity, meta), { type: meta.kind || 'heart', owner });
-    if (!bloom) return false;
+    const useSupportUnitOnly = meta.kind === 'like' || meta.kind === 'heal';
+    if (!useSupportUnitOnly) {
+      const pos = owner.kind === 'player' && meta.kind === 'like'
+        ? (getLikeEffectPosition(playerId) || owner.point)
+        : owner.point;
+      const bloom = pushAttackEffect(new HeartBloom(pos, hearts, intensity, meta), { type: meta.kind || 'heart', owner });
+      if (!bloom) return false;
+    }
     if (owner.kind === 'player') {
       const type = meta.kind === 'follow' || meta.kind === 'share' || meta.kind === 'repost'
         ? 'follow'
@@ -8971,17 +9207,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
     const stage = computeOverlayLayout();
     placeStatusBadge();
+    placeSupportUnit();
     const frame = stage.frame;
     const safeFrame = stage.safe;
-    const domObjects = Array.from(container.querySelectorAll('.banner,.damage,#status-badge'))
+    const domObjects = Array.from(container.querySelectorAll('.banner,.damage,#status-badge,.support-unit'))
       .map((el, index) => {
-        const type = el.id === 'status-badge' ? 'status' : el.classList.contains('banner') ? 'banner' : 'damage';
+        const type = el.id === 'status-badge' ? 'status' : el.classList.contains('banner') ? 'banner' : el.classList.contains('support-unit') ? 'support' : 'damage';
         return domElementToCanvasRect(el, `${type}-${index}`, type);
       })
       .filter(Boolean);
     const domLayerLeaks = overlayDiagnostics.domLayerLeakLabels(domObjects);
     const damageObjects = domObjects.filter(item => item.type === 'damage');
-    const collisionDomObjects = domObjects.filter(item => item.type === 'status');
+    const collisionDomObjects = domObjects.filter(item => item.type === 'status' || item.type === 'support');
     const containedObjects = legacyLayoutPlayers
       .concat(legacyLayoutHorde ? [legacyLayoutHorde] : [])
       .concat(legacyLayoutBoss ? [legacyLayoutBoss] : [])
@@ -9427,6 +9664,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function handleLikeEvent(data) {
     if (!data) return;
     const hearts = Math.max(1, Math.min(2, Number(data.hearts) || 1));
+    showSupportUnit({
+      type: 'like',
+      hearts,
+      name: data.nickname || data.uniqueId,
+    });
     fireHeartEffect(data.uniqueId, hearts, Math.min(0.28, Number(data.intensity) || 0.12), {
       ...data,
       kind: 'like',
@@ -9441,6 +9683,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     setTimeout(() => {
       if (hasRecentCheer(data.uniqueId)) return;
       const hearts = Math.max(1, Math.min(3, Math.round((Number(data.amount) || 5) / 10)));
+      showSupportUnit({
+        type: 'heal',
+        amount: Number(data.amount) || hearts * 10,
+        name: data.nickname || data.sourceNick || data.uniqueId,
+      });
       fireHeartEffect(data.uniqueId, hearts, 0.35, { ...data, kind: 'heal', color: data.color || '#8fffd2' });
       setCardAccent(data.uniqueId, 'heal', data.color || THEME.green, 1400, { label: 'HEAL' });
       playSound('heal');
@@ -9591,29 +9838,20 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
     if (data.type === 'heal') {
       const healer = data.sourceNick || name;
-      showBanner('heal', {
-        code: 'HP',
-        kicker: 'Support command',
-        title: `${healer} restored health`,
-        meta: `${Math.round(Number(data.amount) || 0)} HP recovered`,
-        charge: 54,
-        priority: 44,
-      }, 2400);
+      showSupportUnit({
+        type: 'heal',
+        amount: Math.round(Number(data.amount) || 0),
+        name: healer,
+      });
       setCardAccent(data.uniqueId || data.userId || data.sourceId || data.nickname, 'heal', THEME.green, 1400, { label: 'HEAL' });
-      showBattlePrompt('Support command activated', 'return', 1800);
       return;
     }
     if (data.type === 'shield') {
-      showBanner('heal', {
-        code: 'DEF',
-        kicker: 'Guard command',
-        title: `${name} raised a shield`,
-        meta: 'Incoming damage reduced',
-        charge: 62,
-        priority: 46,
-      }, 2600);
+      showSupportUnit({
+        type: 'shield',
+        name,
+      });
       setCardAccent(data.uniqueId || data.userId || data.nickname, 'shield', THEME.cyan, 1600, { label: 'DEF' });
-      showBattlePrompt('Shield active for 12 seconds', 'return', 1900);
       return;
     }
     if (data.type === 'help') {

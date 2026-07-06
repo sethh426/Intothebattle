@@ -178,6 +178,39 @@ async function readActiveBannerDetails(page, selector = '.banner:not(.closing)')
   }, selector);
 }
 
+async function readSupportUnitDetails(page) {
+  return page.evaluate(() => {
+    const unit = document.querySelector('[data-testid="support-unit"]');
+    const frame = document.getElementById('overlay-container');
+    if (!unit || !frame) return null;
+    const rect = unit.getBoundingClientRect();
+    const frameRect = frame.getBoundingClientRect();
+    const style = getComputedStyle(unit);
+    const layout = window.__overlayLegacyLayout || {};
+    return {
+      text: (unit.textContent || '').replace(/\s+/g, ' ').trim(),
+      unitCount: document.querySelectorAll('[data-testid="support-unit"]').length,
+      visible: style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0,
+      healBannerCount: document.querySelectorAll('.banner.heal:not(.closing)').length,
+      activeBannerCount: document.querySelectorAll('.banner:not(.closing)').length,
+      left: rect.left,
+      right: rect.right,
+      top: rect.top,
+      bottom: rect.bottom,
+      width: rect.width,
+      height: rect.height,
+      frameLeft: frameRect.left,
+      frameRight: frameRect.right,
+      frameTop: frameRect.top,
+      frameBottom: frameRect.bottom,
+      frameWidth: frameRect.width,
+      centerDelta: Math.abs((rect.left + rect.width / 2) - (frameRect.left + frameRect.width / 2)),
+      supportCollisions: (layout.collisions || []).filter(item => JSON.stringify(item).toLowerCase().includes('support')),
+      supportLeaks: (layout.leaks || []).filter(item => JSON.stringify(item).toLowerCase().includes('support')),
+    };
+  });
+}
+
 function makeSponsorFixture() {
   const ffmpegVersion = spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' });
   if (ffmpegVersion.status !== 0) {
@@ -491,6 +524,50 @@ test('command banner shows one static viewer command rail', async ({ context, pa
 
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'qa-overlay-command-banner-rail');
+  expect(errors).toEqual([]);
+});
+
+test('like heal support feedback uses one compact unit', async ({ page }, testInfo) => {
+  const errors = await watchPage(page);
+  const params = new URLSearchParams({
+    room_id: roomId,
+    overlay_token: overlayToken,
+    demo: '1',
+    debug: '1',
+    controls: '0',
+    demo_autoplay: '0',
+  });
+  await page.goto(`${baseUrl}/overlay?${params.toString()}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => window.__overlayLegacyLayout?.players?.length >= 5, null, { timeout: 7000 });
+  await page.waitForFunction(() => typeof window.overlayEventEngine?.testSupportUnit === 'function', null, { timeout: 5000 });
+
+  const probe = await page.evaluate(() => window.overlayEventEngine.testSupportUnit());
+  expect(probe.visible).toBe(true);
+  await page.waitForFunction(() => {
+    const unit = document.querySelector('[data-testid="support-unit"]');
+    return Boolean(unit && getComputedStyle(unit).visibility !== 'hidden' && unit.getBoundingClientRect().width > 0);
+  }, null, { timeout: 5000 });
+  await page.waitForTimeout(250);
+
+  const details = await readSupportUnitDetails(page);
+  expect(details).toBeTruthy();
+  expect(details.unitCount).toBe(1);
+  expect(details.visible).toBe(true);
+  expect(details.text).toContain('SUPPORT');
+  expect(details.text).toContain('+3 LIKES');
+  expect(details.text).toContain('+25 HEAL');
+  expect(details.text).toContain('SHIELD');
+  expect(details.healBannerCount).toBe(0);
+  expect(details.left).toBeGreaterThanOrEqual(details.frameLeft - 1);
+  expect(details.right).toBeLessThanOrEqual(details.frameRight + 1);
+  expect(details.top).toBeGreaterThanOrEqual(details.frameTop - 1);
+  expect(details.bottom).toBeLessThanOrEqual(details.frameBottom + 1);
+  expect(details.centerDelta).toBeLessThanOrEqual(Math.max(18, details.frameWidth * 0.045));
+  expect(details.supportCollisions, JSON.stringify(details, null, 2)).toEqual([]);
+  expect(details.supportLeaks, JSON.stringify(details, null, 2)).toEqual([]);
+
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'qa-overlay-support-unit');
   expect(errors).toEqual([]);
 });
 
