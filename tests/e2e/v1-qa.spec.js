@@ -390,12 +390,12 @@ test('all rich banner types stay centered, readable, and collision-free', async 
 
     if (type === 'commands') {
       const expectedVisibleCommands = details.className.includes('is-nano')
-        ? ['!join', '!attack @name', '!shield', '!commands']
-        : ['!join', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
+        ? ['engage', '@name', '!shield', '!commands']
+        : ['engage', '@name', 'chat', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
       expect(details.rowCount, 'command row count').toBe(1);
       expect(details.railCount, 'command rail count').toBe(1);
       expect(details.tickerCount, 'command ticker count').toBe(0);
-      expect(details.chipCount, 'command chip count').toBeGreaterThanOrEqual(7);
+      expect(details.chipCount, 'command chip count').toBeGreaterThanOrEqual(9);
       expect(details.visibleChipTexts, 'visible command chips').toEqual(expectedVisibleCommands);
       expect(details.clippedChips, 'command chip clipping').toEqual([]);
       expect(details.kickerCount, 'command kicker rows').toBe(0);
@@ -460,15 +460,15 @@ test('command banner shows one static viewer command rail', async ({ context, pa
   expect(details.rowCount).toBe(1);
   expect(details.railCount).toBe(1);
   expect(details.tickerCount).toBe(0);
-  expect(details.chipCount).toBe(7);
+  expect(details.chipCount).toBe(9);
   expect(details.kickerCount).toBe(0);
   expect(details.metaCount).toBe(0);
   expect(details.titleCount).toBe(0);
-  const expectedCommands = ['!join', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
+  const expectedCommands = ['engage', '@name', 'chat', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
   const expectedVisibleCommands = details.className.includes('is-nano')
-    ? ['!join', '!attack @name', '!shield', '!commands']
+    ? ['engage', '@name', '!shield', '!commands']
     : expectedCommands;
-  for (const text of ['PLAY FROM CHAT', ...expectedCommands]) {
+  for (const text of ['PLAY BY ENGAGING', ...expectedCommands]) {
     expect(details.text).toContain(text);
   }
   expect(details.chipTexts).toEqual(expectedCommands);

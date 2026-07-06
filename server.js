@@ -1286,7 +1286,7 @@ function buildStreamModeStatus(room) {
       label = realPlayers > 0 ? 'Real Stream Live' : 'Real Stream Waiting';
       detail = realPlayers > 0
         ? `${realPlayers} real player${realPlayers === 1 ? '' : 's'} from @${stream.username || 'TikTok'}.`
-        : 'Connected to TikTok. Waiting for viewers to join or send commands.';
+        : 'Connected to TikTok. Waiting for the first comment, like, follow, share, gift, or command.';
     } else {
       mode = 'real-waiting';
       label = 'Real Stream Waiting';
@@ -5069,6 +5069,50 @@ function spawnPlayer(room, uniqueId, nickname, options = {}) {
   console.log(`⚔️  Spawned: @${uniqueId} (HP: ${room.players[uniqueId].hp}, STR: ${room.players[uniqueId].strength}, Kills: ${room.players[uniqueId].kills})`);
 }
 
+function ensurePlayerEnteredBattle(room, uniqueId, nickname, engagementType = 'engagement', options = {}) {
+  if (!room || !uniqueId) return { entered: false, wasAlive: false, player: null };
+  const wasAlive = Boolean(room.players[uniqueId]?.alive);
+  spawnPlayer(room, uniqueId, nickname, options);
+  const player = room.players[uniqueId];
+  if (!player) return { entered: false, wasAlive, player: null };
+
+  player.alive = true;
+  player.forceSpawn = true;
+  player.lastActive = Date.now();
+  if (nickname) player.nickname = nickname;
+
+  const entered = !wasAlive;
+  const shouldAnnounce = options.announce !== false && (entered || options.announceExisting === true);
+  if (shouldAnnounce) {
+    const type = String(engagementType || 'engagement').toLowerCase();
+    const displayName = nickname || uniqueId;
+    const sourceLabel = {
+      chat: 'a comment',
+      comment: 'a comment',
+      like: 'a like',
+      gift: 'a gift',
+      follow: 'a follow',
+      share: 'a share',
+      repost: 'a repost',
+      social: 'engagement',
+      member: 'the LIVE entry',
+    }[type] || 'engagement';
+    emitRoomEvent(room, 'spawn', { uniqueId, nickname, autoJoin: true, engagementType: type });
+    emitRoomEvent(room, 'playerCommand', {
+      type: 'join',
+      uniqueId,
+      nickname,
+      autoJoin: true,
+      engagementType: type,
+      message: entered
+        ? `${displayName} entered the arena from ${sourceLabel}`
+        : `${displayName} rallied their fighter from ${sourceLabel}`,
+    });
+  }
+
+  return { entered, wasAlive, player };
+}
+
 function awardStats(room, uniqueId, nickname, hpBoost = 0, strBoost = 0) {
   if (!room || !uniqueId) return;
   if (!room.players[uniqueId]?.alive) spawnPlayer(room, uniqueId, nickname);
@@ -5217,7 +5261,7 @@ function emitEngagementSurge(room, sourcePayload = {}, momentum = {}) {
 
 function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share', rawEvent = {}) {
   if (!room || !uniqueId) return null;
-  if (!room.players[uniqueId]?.alive) spawnPlayer(room, uniqueId, nickname);
+  ensurePlayerEnteredBattle(room, uniqueId, nickname, engagementType);
   const player = room.players[uniqueId];
   if (!player) return null;
   const type = engagementType === 'follow' ? 'follow' : engagementType === 'repost' ? 'repost' : 'share';
@@ -8696,22 +8740,8 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
   onTikTok('member', (e) => {
     const { id, nickname: nick } = resolveTikTokUser(e);
     if (!id) return;
-    const wasAlive = Boolean(room.players[id]?.alive);
-    spawnPlayer(room, id, nick);
-    if (room.players[id]) {
-      room.players[id].alive = true;
-      room.players[id].forceSpawn = true;
-      room.players[id].lastActive = Date.now();
-    }
+    ensurePlayerEnteredBattle(room, id, nick, 'member', { announceExisting: true });
     emitRoomEvent(room, 'gameState', room.players);
-    emitRoomEvent(room, 'spawn', { uniqueId: id, nickname: nick, autoJoin: true });
-    emitRoomEvent(room, 'playerCommand', {
-      type: 'join',
-      uniqueId: id,
-      nickname: nick,
-      autoJoin: true,
-      message: wasAlive ? `${nick || id} returned to the arena` : `${nick || id} entered the arena`,
-    });
   });
 
   onTikTok('chat', (e) => {
@@ -8750,16 +8780,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
     const diamonds = (e.diamondCount || e.amount || 1) * (e.repeatCount || 1);
     if (!id) return;
 
-    const alivePlayers  = Object.values(room.players).filter(p => p.alive);
-    const boardHasSpace = alivePlayers.length < 20;
-
-    if (!room.players[id]) spawnPlayer(room, id, nickname);
-    else if (!room.players[id].alive && boardHasSpace) spawnPlayer(room, id, nickname);
-
-    if (room.players[id]) {
-      room.players[id].forceSpawn = true;
-      room.players[id].lastActive = Date.now();
-    }
+    ensurePlayerEnteredBattle(room, id, nickname, 'gift');
 
     awardStats(room, id, nickname, diamonds * CFG.GIFT_HP_PER_DIAMOND, diamonds * CFG.GIFT_STR_PER_DIAMOND);
     if (room.players[id]) room.players[id].messageBoostExpires = Date.now() + CFG.GIFT_MESSAGE_BOOST_DURATION_MS;
@@ -8848,7 +8869,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
   onTikTok('like', (e) => {
     const { id, nickname } = resolveTikTokUser(e);
     if (!id) return;
-    if (!room.players[id]) spawnPlayer(room, id, nickname);
+    ensurePlayerEnteredBattle(room, id, nickname, 'like');
     const likeIncrement = likeIncrementFromEvent(e);
     awardStats(room, id, nickname, CFG.LIKE_HP_BOOST * Math.min(5, likeIncrement), 0);
     const likeMilestone = updateRoomLikeMilestone(room, likeIncrement);

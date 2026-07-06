@@ -56,11 +56,10 @@ const PLAYER_UTILITY_COMMAND_LOOKUP = Object.freeze(
 );
 
 export const VIEWER_COMMAND_TICKER_ITEMS = Object.freeze([
-  'Quick start: !join | @name to attack | !shield | !heal @name',
+  'Any comment, like, follow, share, or gift enters you',
   'Targets: @name | @horde | @boss',
-  'Regular chat: sends a random 5-damage attack',
-  'Explicit attacks: !attack @name | !attack @horde | !attack @boss',
-  'Join: !join / !spawn / !play',
+  'Regular chat: enters you and sends a random 5-damage attack',
+  'Attacks: @name | @horde | @boss | !laser @name | !fire @name',
   'Icon: !emoji <emoji> or !<emoji>',
   'Basic attacks: !attack @name / !hit @name / !strike @name / !fight @name',
   'Effects: !laser @name | !fire @name | !nova @name | !railgun @name | !nuke @name',
@@ -72,14 +71,14 @@ export const VIEWER_COMMAND_TICKER_ITEMS = Object.freeze([
 export const VIEWER_COMMAND_SHOWCASE = Object.freeze({
   code: 'CMD',
   kicker: 'PLAYER COMMANDS',
-  title: 'PLAY FROM CHAT',
-  meta: 'Type these in TikTok chat',
+  title: 'PLAY BY ENGAGING',
+  meta: 'Comment, like, follow, share, or gift',
   durationMs: 13000,
   charge: 86,
   priority: 88,
   tickerItems: VIEWER_COMMAND_TICKER_ITEMS,
   commands: Object.freeze([
-    { command: '!join', detail: 'enter arena' },
+    { command: 'engage', detail: 'enter arena' },
     { command: '@name', detail: 'hit a player' },
     { command: 'chat', detail: 'weak random attack' },
     { command: '!attack @name', detail: 'stronger player hit' },

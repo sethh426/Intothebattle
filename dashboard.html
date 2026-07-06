@@ -718,7 +718,7 @@
                 </div>
               </div>
               <div class="player-roster" id="playerRoster">
-                <div class="empty-live-state">No players yet. Connect TikTok and ask viewers to type !join.</div>
+                <div class="empty-live-state">No players yet. Connect TikTok; viewers enter when they comment, like, follow, share, or gift.</div>
               </div>
             </div>
             <div class="live-panel">
@@ -1112,7 +1112,7 @@ function renderNextAction() {
     actions = [{ label: 'Connect TikTok', className: 'btn btn-primary', onClick: focusTikTokUsername }];
   } else if (dashboardState.realPlayerCount <= 0) {
     titleText = 'Real stream connected. Waiting for players.';
-    copyText = 'Ask viewers to type !join or use a battle command. Real players will appear in the roster below.';
+    copyText = 'Any viewer engagement enters the battle. Comments, likes, follows, shares, and gifts will appear in the roster below.';
     actions = [
       { label: 'Copy Viewer Commands', className: 'btn btn-primary', onClick: copyViewerCommands },
       { label: 'Send Test Event', className: 'btn btn-secondary', onClick: testOverlayBurst },
@@ -1270,8 +1270,8 @@ function renderPlayerRoster(data = {}) {
   if (!list) return;
   if (!players.length) {
     const waitingCopy = dashboardState.tiktokConnected
-      ? 'Connected to TikTok. Waiting for viewers to type !join or send battle commands.'
-      : 'No players yet. Connect TikTok and ask viewers to type !join.';
+      ? 'Connected to TikTok. Waiting for the first comment, like, follow, share, gift, or battle command.'
+      : 'No players yet. Connect TikTok; viewer engagement will enter players automatically.';
     list.innerHTML = `<div class="empty-live-state">${escapeHtml(waitingCopy)}</div>`;
     return;
   }
@@ -1613,7 +1613,7 @@ function updateReadinessChecklist() {
       ready: dashboardState.realPlayerCount > 0,
       detail: dashboardState.realPlayerCount > 0
         ? `${dashboardState.realPlayerCount} from the stream`
-        : (dashboardState.tiktokConnected ? 'Waiting for !join or commands' : 'Connect TikTok first'),
+        : (dashboardState.tiktokConnected ? 'Waiting for viewer engagement' : 'Connect TikTok first'),
       status: dashboardState.realPlayerCount > 0 ? 'ready' : (dashboardState.tiktokConnected || mode === 'real-waiting' ? 'warn' : 'blocked'),
       label: dashboardState.realPlayerCount > 0 ? 'Ready' : (dashboardState.tiktokConnected ? 'Waiting' : 'Needed'),
     },
@@ -1754,7 +1754,7 @@ async function sessionAction(endpoint, successMessage) {
   updateSetupChecklist();
 }
 function copyViewerCommands() {
-  const value = document.getElementById('viewerCommandText')?.value || 'PLAY FROM CHAT:\nQuick start: !join | @name to attack | !shield | !heal @name\nTargets: @name | @horde | @boss\nRegular chat: sends a random 5-damage attack\nExplicit attacks: !attack @name | !attack @horde | !attack @boss\nIcon: !emoji <emoji> or !<emoji>\nTeams/help: !team red / !team leave / !commands';
+  const value = document.getElementById('viewerCommandText')?.value || 'PLAY BY ENGAGING:\nAny comment, like, follow, share, or gift enters you\nTargets: @name | @horde | @boss\nRegular chat: enters you and sends a random 5-damage attack\nAttacks: @name | @horde | @boss | !laser @name | !fire @name\nIcon: !emoji <emoji> or !<emoji>\nTeams/help: !team red / !team leave / !commands';
   navigator.clipboard?.writeText(value).then(() => toast('Viewer commands copied')).catch(() => toast('Copy failed', true));
 }
 async function showCommandBanners() {
@@ -2197,7 +2197,7 @@ async function startWeeklyBossEvent() {
   await sessionAction('/api/session/boss/start','Weekly boss wave started');
 }
 function copyWeeklyBossPromo() {
-  const text = 'Tonight: IntoTheBattle boss wave. Join the LIVE, type !join, use !emoji to pick your icon, then attack with !laser @boss or !fire @boss.';
+  const text = 'Tonight: IntoTheBattle boss wave. Join the LIVE, comment or tap like to enter, use !emoji to pick your icon, then attack with @boss, !laser @boss, or !fire @boss.';
   navigator.clipboard?.writeText(text).then(() => toast('Weekly boss promo copied')).catch(() => toast('Copy failed', true));
 }
 

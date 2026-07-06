@@ -544,14 +544,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.is-nano .banner-title,
 .banner.legendary.is-nano .banner-title { font-size:13px; line-height:1; letter-spacing:.1px; }
 .banner.is-nano .banner-command-grid { display:none; }
-.banner.commands.is-nano .banner-command-strip { min-height:23px; grid-template-columns:minmax(46px,0.15fr) minmax(0,1fr); }
+.banner.commands.is-nano .banner-command-strip { min-height:25px; grid-template-columns:minmax(46px,0.15fr) minmax(0,1fr); }
 .banner.commands.is-nano .banner-command-label,
 .banner.commands.is-nano .banner-command-run span { font-size:8px; }
 .banner.commands.is-nano .banner-command-label { justify-content:center; padding:0 4px; white-space:normal; text-align:center; line-height:1; }
-.banner.commands.is-nano .banner-command-run { height:23px; padding:0 8px; gap:8px; }
-.banner.commands.is-nano .banner-command-rail { grid-template-columns:.66fr 1.5fr .82fr 1.28fr; gap:2px; padding:1px; }
+.banner.commands.is-nano .banner-command-run { height:25px; padding:0 8px; gap:8px; }
+.banner.commands.is-nano .banner-command-rail { grid-template-columns:.9fr 1.35fr .82fr 1.25fr; gap:2px; padding:1px; }
 .banner.commands.is-nano .banner-command-chip:not(.banner-command-primary) { display:none; }
-.banner.commands.is-nano .banner-command-chip { min-height:18px; padding:0 3px; border-color:rgba(var(--banner-accent-rgb),0.22); background:rgba(var(--banner-accent-rgb),0.08); }
+.banner.commands.is-nano .banner-command-chip { min-height:20px; padding:0 3px; border-color:rgba(var(--banner-accent-rgb),0.22); background:rgba(var(--banner-accent-rgb),0.08); }
 .banner.commands.is-nano .banner-command-chip strong { font-size:10.5px; line-height:1; letter-spacing:0; white-space:nowrap; overflow:visible; text-overflow:clip; }
 .banner.commands.is-nano .banner-command-chip span { display:none; }
 .banner.is-nano .banner-meter { width:3px; height:20px; }
@@ -4737,7 +4737,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function bannerCommandRailHtml(commands) {
     if (!Array.isArray(commands) || !commands.length) return '';
-    const nanoPrimaryCommands = new Set(['!join', '!attack @name', '!shield', '!commands']);
+    const nanoPrimaryCommands = new Set(['engage', '@name', '!shield', '!commands']);
     return `
         <span class="banner-command-rail" data-testid="command-banner-rail">
           ${commands.map(entry => {
@@ -4862,7 +4862,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         follow: 'Vortex joined the arena',
         heal: 'Nova restored health',
         legendary: 'Arena takeover unlocked',
-        commands: 'PLAY FROM CHAT',
+        commands: 'PLAY BY ENGAGING',
       }[normalized],
       meta: options.meta || 'Readable on stream | centered | no overlap',
       charge: Number(options.charge) || (normalized === 'legendary' ? 100 : 78),
@@ -4873,7 +4873,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       base.commands = Array.isArray(options.commands) && options.commands.length
         ? options.commands
         : [
-          { command: '!join', detail: 'enter arena' },
+          { command: 'engage', detail: 'enter arena' },
           { command: '@name', detail: 'hit a player' },
           { command: 'chat', detail: 'weak random attack' },
           { command: '!attack @name', detail: 'stronger player hit' },
@@ -4886,10 +4886,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       base.tickerItems = Array.isArray(options.tickerItems) && options.tickerItems.length
         ? options.tickerItems
         : [
-          'Quick start: !join | @name to attack | !shield | !heal @name',
+          'Any comment, like, follow, share, or gift enters you',
           'Targets: @name | @horde | @boss',
-          'Regular chat: sends a random 5-damage attack',
-          'Explicit attacks: !attack @name | !attack @horde | !attack @boss',
+          'Regular chat: enters you and sends a random 5-damage attack',
+          'Attacks: @name | @horde | @boss | !laser @name | !fire @name',
           'Icon: !emoji <emoji> or !<emoji>',
           'Effects: !laser @name | !fire @name | !nova @name | !nuke @name',
           'Teams/help: !team red / !commands',
@@ -9559,8 +9559,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     showBanner('commands', {
       code: banner?.code || 'CMD',
       kicker: banner?.kicker || 'CHAT COMMANDS',
-      title: banner?.title || 'PLAY FROM CHAT',
-      meta: banner?.meta || 'Type these in TikTok chat',
+      title: banner?.title || 'PLAY BY ENGAGING',
+      meta: banner?.meta || 'Comment, like, follow, share, or gift',
       commands: Array.isArray(banner?.commands) ? banner.commands : [],
       tickerItems: Array.isArray(banner?.tickerItems) ? banner.tickerItems : [],
       charge: banner?.charge || 86,
@@ -9617,7 +9617,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       return;
     }
     if (data.type === 'help') {
-      showBattlePrompt('Try !join, !emoji, !shield, !laser @name, !fire @name', 'return', 3600);
+      showBattlePrompt('Comment or tap like to enter. Try @name, !emoji, !shield, !laser @name', 'return', 3600);
       return;
     }
     if (data.type === 'join') {

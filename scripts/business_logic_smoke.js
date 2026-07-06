@@ -284,10 +284,11 @@ function testPlayerCommandCatalog() {
   }
 
   const commandText = viewerCommandText();
-  for (const expected of ['!join', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands']) {
+  for (const expected of ['Any comment, like, follow, share, or gift enters you', '!attack @name', '@horde', '@boss', '!shield', '!heal @name', '!commands']) {
     assert.ok(commandText.includes(expected), `viewer command text should include ${expected}`);
   }
-  for (const expected of ['@name to attack', 'random 5-damage attack']) {
+  assert.equal(commandText.includes('!join'), false, 'viewer command text should not tell viewers to type !join to enter');
+  for (const expected of ['@name', 'enters you and sends a random 5-damage attack']) {
     assert.ok(commandText.includes(expected), `viewer command text should include ${expected}`);
   }
 
