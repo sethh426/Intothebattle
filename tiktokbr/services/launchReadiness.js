@@ -119,7 +119,7 @@ export function buildLaunchReadinessReport({
 
   addCheck(checks, 'oauth', 'google-client-id', 'Google client ID is configured', envPresent(env, 'GOOGLE_CLIENT_ID'), 'Required for Google login.', 'Set GOOGLE_CLIENT_ID.');
   addCheck(checks, 'oauth', 'google-client-secret', 'Google client secret is configured', envPresent(env, 'GOOGLE_CLIENT_SECRET'), 'Required for Google login.', 'Set GOOGLE_CLIENT_SECRET.');
-  addCheck(checks, 'oauth', 'google-redirect', 'Google redirect URI is HTTPS', httpsUrl(env.GOOGLE_OAUTH_REDIRECT_URI), env.GOOGLE_OAUTH_REDIRECT_URI || 'unset', 'Set GOOGLE_OAUTH_REDIRECT_URI=https://www.intothebattle.com/auth/google/callback.');
+  addCheck(checks, 'oauth', 'google-redirect', 'Google redirect URI is HTTPS', httpsUrl(env.GOOGLE_OAUTH_REDIRECT_URI), env.GOOGLE_OAUTH_REDIRECT_URI || 'unset', 'Set GOOGLE_OAUTH_REDIRECT_URI=https://intothebattle.com/auth/google/callback.');
 
   addCheck(
     checks,

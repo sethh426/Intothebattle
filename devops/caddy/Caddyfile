@@ -2,7 +2,11 @@
 	email {$ACME_EMAIL}
 }
 
-{$APP_DOMAIN} {
+www.intothebattle.com {
+	redir https://intothebattle.com{uri} permanent
+}
+
+intothebattle.com {
 	encode zstd gzip
 
 	reverse_proxy app:3000 {

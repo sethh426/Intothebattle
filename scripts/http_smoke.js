@@ -147,6 +147,18 @@ try {
   const dashboardWelcome = await expectStatus('/dashboard/welcome', 302);
   assert((dashboardWelcome.headers.get('location') || '').startsWith('/login'), '/dashboard/welcome should redirect to /login when signed out');
 
+  const googleAuth = await expectStatus('/auth/google?next=%2Fdashboard', 302);
+  const googleLocation = googleAuth.headers.get('location') || '';
+  assert(googleLocation.startsWith('https://accounts.google.com/o/oauth2/v2/auth?'), '/auth/google should redirect to Google OAuth');
+  const googleAuthUrl = new URL(googleLocation);
+  assert(googleAuthUrl.searchParams.get('client_id') === 'google-smoke-client', '/auth/google should use the configured Google client ID');
+  assert(
+    googleAuthUrl.searchParams.get('redirect_uri') === 'https://intothebattle.test/auth/google/callback',
+    '/auth/google should send the exact configured Google redirect URI'
+  );
+  assert(googleAuthUrl.searchParams.get('scope') === 'openid email profile', '/auth/google should request the expected profile scopes');
+  assert(googleAuthUrl.searchParams.get('state'), '/auth/google should include an OAuth state token');
+
   const profile = await expectStatus('/profile', 302);
   assert((profile.headers.get('location') || '').startsWith('/login'), '/profile should redirect to /login');
 
