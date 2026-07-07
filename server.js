@@ -1573,6 +1573,8 @@ function renderSitemapXml(req = null) {
     { loc: absolute('/sponsors'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle sponsor game key art' }] },
     { loc: absolute('/blog'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle updates and release notes' }] },
     { loc: absolute('/paywall'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle Creator Pro game key art' }] },
+    { loc: absolute('/privacy'), lastmod: '2026-07-07', changefreq: 'monthly', priority: '0.6' },
+    { loc: absolute('/terms'), lastmod: '2026-07-07', changefreq: 'monthly', priority: '0.6' },
     { loc: absolute('/site-map'), lastmod: '2026-07-02', changefreq: 'monthly', priority: '0.7' },
   ];
   const blogPages = listBlogPosts({ status: 'published', limit: 60 })
@@ -2050,6 +2052,23 @@ function renderBlogListPage(posts = []) {
       text-align: center;
       grid-column: 1 / -1;
     }
+    .blog-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 38px;
+      padding-top: 22px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .blog-footer a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .blog-footer a:hover { color: var(--gold); }
     @media (max-width: 820px) {
       .hero,
       .featured-story { grid-template-columns: 1fr; }
@@ -2115,6 +2134,10 @@ function renderBlogListPage(posts = []) {
         </div>
       </section>
     </main>
+    <footer class="blog-footer">
+      <span>&copy; 2026 IntoTheBattle</span>
+      <span><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/site-map">Site map</a></span>
+    </footer>
   </div>
 </body>
 </html>`;
@@ -2399,6 +2422,23 @@ function renderBlogPostPage(post) {
       font-size: 12px;
       font-weight: 800;
     }
+    .blog-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 38px;
+      padding-top: 22px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .blog-footer a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+    .blog-footer a:hover { color: var(--gold); }
     @media (max-width: 900px) {
       .article-layout { grid-template-columns: 1fr; }
       .article-aside { position: static; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
@@ -2453,6 +2493,10 @@ function renderBlogPostPage(post) {
         </section>
       </aside>
     </main>
+    <footer class="blog-footer">
+      <span>&copy; 2026 IntoTheBattle</span>
+      <span><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/site-map">Site map</a></span>
+    </footer>
   </div>
 </body>
 </html>`;
@@ -6422,6 +6466,8 @@ app.get(['/sponsors', '/sponsors.html'], (_req, res) => res.sendFile(path.join(_
 app.get(['/how-to-play', '/how-to-play.html', '/players', '/game-guide'], (_req, res) => res.sendFile(path.join(__dirname, 'how-to-play.html')));
 app.get(['/battlegrounds', '/battlegrounds.html', '/the-battlegrounds'], (_req, res) => res.sendFile(path.join(__dirname, 'battlegrounds.html')));
 app.get(['/site-map', '/site-map.html', '/sitemap'], (_req, res) => res.sendFile(path.join(__dirname, 'sitemap.html')));
+app.get(['/privacy', '/privacy.html', '/privacy-policy'], (_req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
+app.get(['/terms', '/terms.html', '/terms-of-service'], (_req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
 app.get('/verify-email', (_req, res) => res.sendFile(path.join(__dirname, 'verify-email.html')));
 app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));
 app.get(['/battle-clip', '/battle-clip.html'], (_req, res) => res.sendFile(path.join(__dirname, 'battle-clip.html')));

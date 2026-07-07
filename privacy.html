@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy | IntoTheBattle</title>
+  <meta name="description" content="Read the IntoTheBattle Privacy Policy for account data, TikTok LIVE overlay events, analytics, sponsor media, payments, and privacy choices." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <link rel="canonical" href="https://intothebattle.com/privacy" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:title" content="IntoTheBattle Privacy Policy" />
+  <meta property="og:description" content="How IntoTheBattle collects, uses, shares, and protects information for creator accounts, overlays, analytics, and payments." />
+  <meta property="og:url" content="https://intothebattle.com/privacy" />
+  <meta property="og:image" content="https://intothebattle.com/og-intothebattle.png" />
+  <meta property="og:site_name" content="IntoTheBattle" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="IntoTheBattle Privacy Policy" />
+  <meta name="twitter:description" content="How IntoTheBattle collects, uses, shares, and protects information for creator accounts, overlays, analytics, and payments." />
+  <meta name="twitter:image" content="https://intothebattle.com/og-intothebattle.png" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <script type="module" src="/js/site-breadcrumbs.js"></script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://intothebattle.com/privacy#webpage",
+        "name": "IntoTheBattle Privacy Policy",
+        "url": "https://intothebattle.com/privacy",
+        "description": "How IntoTheBattle collects, uses, shares, and protects information for creator accounts, overlays, analytics, and payments.",
+        "inLanguage": "en-US",
+        "isPartOf": { "@id": "https://intothebattle.com/#website" },
+        "breadcrumb": { "@id": "https://intothebattle.com/privacy#breadcrumb" }
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": "https://intothebattle.com/privacy#breadcrumb",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://intothebattle.com/" },
+          { "@type": "ListItem", "position": 2, "name": "Privacy Policy", "item": "https://intothebattle.com/privacy" }
+        ]
+      }
+    ]
+  }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    * { margin: 0; padding: 0; }
+    :root {
+      --bg: #080c14;
+      --panel: rgba(14, 20, 34, .82);
+      --panel-strong: rgba(10, 14, 24, .96);
+      --gold: #f5c842;
+      --gold-l: #ffe99a;
+      --ember: #ff7a3a;
+      --red: #ff2a4a;
+      --blue: #00c8ff;
+      --green: #39d875;
+      --txt: #edf0fa;
+      --muted: #aebbd0;
+      --dim: #738199;
+      --border: rgba(255, 255, 255, .1);
+      --b-gold: rgba(245, 200, 66, .28);
+      --max: 1120px;
+    }
+    html { scroll-behavior: smooth; }
+    body {
+      min-height: 100vh;
+      color: var(--txt);
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(245, 200, 66, .14), transparent 30%),
+        radial-gradient(circle at 92% 12%, rgba(0, 200, 255, .1), transparent 34%),
+        linear-gradient(180deg, #0d1322 0%, #080c14 48%, #050911 100%);
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse at top, black, transparent 72%);
+      z-index: -1;
+    }
+    a { color: inherit; text-decoration: none; }
+    .nav-wrap, main, footer {
+      width: min(var(--max), calc(100% - 32px));
+      margin: 0 auto;
+    }
+    .nav-wrap { padding: 22px 0 0; }
+    .main-nav {
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 12px 14px;
+      border: 1px solid var(--b-gold);
+      border-radius: 18px;
+      background: rgba(8, 12, 20, .9);
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .36);
+    }
+    .brand, .nav-links { display: flex; align-items: center; gap: 12px; }
+    .brand img {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      border: 1px solid rgba(245, 200, 66, .38);
+      background: rgba(245, 200, 66, .08);
+    }
+    .brand strong {
+      display: block;
+      font-size: 13px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .brand span span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .nav-links { flex-wrap: wrap; justify-content: flex-end; }
+    .nav-links a {
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0 12px;
+      border-radius: 8px;
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 13px;
+    }
+    .nav-links a:hover, .nav-links a[aria-current="page"] { color: var(--gold-l); background: rgba(245, 200, 66, .08); }
+    main { padding: clamp(42px, 7vw, 78px) 0 72px; }
+    .legal-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+      gap: clamp(22px, 4vw, 44px);
+      align-items: end;
+      margin-bottom: 28px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      min-height: 30px;
+      align-items: center;
+      padding: 0 11px;
+      border: 1px solid var(--b-gold);
+      border-radius: 999px;
+      color: var(--gold-l);
+      background: rgba(245, 200, 66, .08);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 16px 0 16px;
+      max-width: 820px;
+      font-family: "Black Ops One", "Rajdhani", Impact, sans-serif;
+      font-size: clamp(46px, 8vw, 86px);
+      line-height: .95;
+    }
+    h1 span {
+      background: linear-gradient(115deg, #fff5d6 0%, var(--gold) 42%, var(--ember) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .lede {
+      max-width: 760px;
+      color: var(--muted);
+      font-size: clamp(17px, 2vw, 21px);
+      line-height: 1.6;
+      font-weight: 650;
+    }
+    .summary-panel {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.025));
+    }
+    .summary-panel p {
+      color: var(--muted);
+      line-height: 1.55;
+      font-weight: 700;
+    }
+    .summary-panel strong { color: var(--txt); }
+    .legal-layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 24px;
+      align-items: start;
+    }
+    .toc {
+      position: sticky;
+      top: 18px;
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(7, 12, 20, .72);
+    }
+    .toc strong {
+      color: var(--gold-l);
+      font-size: 12px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .toc a {
+      min-height: 34px;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .toc a:hover { color: var(--txt); background: rgba(255,255,255,.06); }
+    .legal-doc {
+      display: grid;
+      gap: 14px;
+    }
+    section.policy-section {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: clamp(20px, 4vw, 34px);
+      background: var(--panel);
+      box-shadow: 0 18px 60px rgba(0, 0, 0, .24);
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: clamp(24px, 3vw, 34px);
+      line-height: 1.1;
+      color: var(--gold-l);
+    }
+    h3 {
+      margin: 18px 0 8px;
+      font-size: 18px;
+      color: var(--txt);
+    }
+    p, li {
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+    }
+    p + p { margin-top: 12px; }
+    ul {
+      display: grid;
+      gap: 9px;
+      margin-top: 10px;
+      padding-left: 20px;
+    }
+    .callout {
+      margin-top: 14px;
+      border: 1px solid rgba(0, 200, 255, .24);
+      border-radius: 8px;
+      padding: 14px;
+      background: rgba(0, 200, 255, .07);
+    }
+    .doc-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .doc-links a {
+      min-height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 14px;
+      border: 1px solid var(--b-gold);
+      border-radius: 8px;
+      color: #140f02;
+      background: linear-gradient(135deg, var(--gold), #fff0b9 52%, var(--ember));
+      font-weight: 900;
+    }
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+      padding: 24px 0 42px;
+      color: var(--dim);
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .footer-links { display: flex; gap: 16px; flex-wrap: wrap; }
+    .footer-links a { color: var(--muted); }
+    .footer-links a:hover { color: var(--gold-l); }
+    @media (max-width: 880px) {
+      .legal-hero, .legal-layout { grid-template-columns: 1fr; }
+      .toc { position: static; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+      .toc strong { grid-column: 1 / -1; }
+    }
+    @media (max-width: 620px) {
+      .nav-links a:not([aria-current="page"]) { display: none; }
+      .brand span span { display: none; }
+      .main-nav { align-items: flex-start; }
+    }
+  </style>
+  <link rel="stylesheet" href="/css/site-refresh.css" />
+</head>
+<body>
+  <div class="nav-wrap">
+    <nav class="main-nav" aria-label="Main navigation">
+      <a class="brand" href="/" aria-label="IntoTheBattle home">
+        <img src="/intothebattlelogo_logo_only.svg" alt="" />
+        <span><strong>IntoTheBattle</strong><span>Privacy policy</span></span>
+      </a>
+      <div class="nav-links">
+        <a href="/">Home</a>
+        <a href="/how-to-play">How to play</a>
+        <a href="/sponsors">Sponsors</a>
+        <a href="/blog">Blog</a>
+        <a href="/terms">Terms</a>
+        <a aria-current="page" href="/privacy">Privacy</a>
+      </div>
+    </nav>
+  </div>
+
+  <main>
+    <section class="legal-hero" aria-labelledby="privacy-title">
+      <div>
+        <p class="eyebrow">Privacy</p>
+        <h1 id="privacy-title">Privacy <span>Policy.</span></h1>
+        <p class="lede">This Policy explains what IntoTheBattle collects, how we use it, when it is shared, and the choices available for creator accounts, live overlays, analytics, payments, and sponsor media.</p>
+      </div>
+      <aside class="summary-panel" aria-label="Privacy summary">
+        <p><strong>Last updated:</strong> July 7, 2026</p>
+        <p>We use personal information to run the product, secure accounts, connect live events, process subscriptions, support creators, and improve the service with consent-based analytics where required.</p>
+      </aside>
+    </section>
+
+    <div class="legal-layout">
+      <nav class="toc" aria-label="Privacy sections">
+        <strong>Sections</strong>
+        <a href="#scope">Scope</a>
+        <a href="#collect">Information we collect</a>
+        <a href="#use">How we use information</a>
+        <a href="#sharing">How we share information</a>
+        <a href="#cookies">Cookies and analytics</a>
+        <a href="#retention">Retention</a>
+        <a href="#choices">Your choices</a>
+        <a href="#security">Security</a>
+        <a href="#children">Children</a>
+        <a href="#contact">Contact</a>
+      </nav>
+
+      <article class="legal-doc">
+        <section class="policy-section" id="scope">
+          <h2>1. Scope</h2>
+          <p>This Privacy Policy applies to IntoTheBattle websites, creator accounts, the Command Center, overlay previews, live room tools, sponsor and media features, blog and marketing tools, support communications, and related services that link to this Policy.</p>
+          <p>This Policy does not control TikTok, PayPal, OBS, TikTok Studio, WriteFreely, Microsoft Clarity, Segment, Google, Postmark, hosting providers, or other third-party services. Those services may collect and process information under their own policies.</p>
+        </section>
+
+        <section class="policy-section" id="collect">
+          <h2>2. Information We Collect</h2>
+          <h3>Account and creator setup information</h3>
+          <p>We collect information you provide when creating or managing an account, such as name, email address, password or authentication method, room identifiers, setup status, profile details, dashboard preferences, support messages, and similar account records.</p>
+          <h3>TikTok and live event information</h3>
+          <p>When you connect or configure TikTok LIVE features, we may process TikTok usernames, linked account identifiers, OAuth state and token records, live connection status, chat commands, viewer display names, comments, likes, follows, shares, gifts, battle actions, player stats, KOs, teams, effects, and other event metadata needed to run the overlay.</p>
+          <h3>Uploaded content and public submissions</h3>
+          <p>We may collect media, filenames, metadata, thumbnails, sponsor videos, backgrounds, audio files, blog drafts, battleground posts, creator comments, sponsor campaign notes, and other content you submit or upload.</p>
+          <h3>Payments and subscriptions</h3>
+          <p>If you start a paid plan, we may store plan status, PayPal subscription identifiers, billing dates, checkout status, cancellation status, and related entitlement records. Payment providers process payment details according to their own policies.</p>
+          <h3>Device, usage, and diagnostics data</h3>
+          <p>We collect technical information such as IP address, user agent, browser and device details, log events, pages visited, referring URLs, UTM parameters, overlay connection status, error reports, performance metrics, consent state, and security diagnostics.</p>
+        </section>
+
+        <section class="policy-section" id="use">
+          <h2>3. How We Use Information</h2>
+          <p>We use information to:</p>
+          <ul>
+            <li>Create, authenticate, secure, and support creator accounts.</li>
+            <li>Provide the Command Center, signed overlay URLs, rooms, live battle mechanics, commands, stats, effects, sponsor scenes, and media playback.</li>
+            <li>Connect and monitor TikTok LIVE events where configured.</li>
+            <li>Process subscriptions, trials, plan access, billing status, and entitlement checks.</li>
+            <li>Moderate, debug, protect, and improve the service.</li>
+            <li>Send transactional email, support replies, account notices, billing notices, and product updates where permitted.</li>
+            <li>Measure product performance, signup flows, marketing campaigns, and site usage when analytics are enabled and consent requirements are satisfied.</li>
+            <li>Comply with legal obligations, enforce our Terms, prevent fraud, and respond to valid requests.</li>
+          </ul>
+        </section>
+
+        <section class="policy-section" id="sharing">
+          <h2>4. How We Share Information</h2>
+          <p>We do not sell personal information for money. We may share information in these situations:</p>
+          <ul>
+            <li><strong>Service providers:</strong> with vendors that help us host the site, store data, send email, process media, run analytics, publish blog content, process payments, provide customer support, or secure the service.</li>
+            <li><strong>Live streams and overlays:</strong> viewer display names, comments, commands, gifts, stats, and battle events may appear in the creator's overlay, stream, screenshots, clips, or recaps.</li>
+            <li><strong>Payment providers:</strong> with PayPal or other providers as needed for checkout, subscription verification, cancellation, webhook handling, billing support, and fraud prevention.</li>
+            <li><strong>Connected platforms:</strong> with TikTok or other connected services when you authorize or configure integrations.</li>
+            <li><strong>Sponsors and campaign reporting:</strong> with sponsors or partners in aggregate, de-identified, or campaign-specific form where needed to report sponsor moment delivery, playback, and performance. We do not intentionally provide sponsors with sensitive account credentials.</li>
+            <li><strong>Legal and safety:</strong> when needed to comply with law, respond to valid legal process, protect rights and safety, investigate abuse, enforce our Terms, or prevent fraud.</li>
+            <li><strong>Business changes:</strong> if IntoTheBattle is involved in a merger, acquisition, financing, reorganization, or sale of assets, information may be transferred as part of that transaction subject to appropriate safeguards.</li>
+          </ul>
+        </section>
+
+        <section class="policy-section" id="cookies">
+          <h2>5. Cookies, Local Storage, and Analytics</h2>
+          <p>We use cookies and local storage for essential functions, including account sessions, dashboard access, TikTok OAuth state, signed overlay access, consent state, and anonymous growth measurement identifiers.</p>
+          <p>Analytics and marketing measurement may use cookies, local storage, event logs, Microsoft Clarity, Segment, TikTok ad measurement, or similar tools when enabled. The consent banner lets visitors allow or deny analytics and TikTok ad measurement. You can also limit cookies through browser settings, but some account and overlay features may stop working.</p>
+          <div class="callout">
+            <p>Current product cookies and storage may include names such as <strong>session_token</strong>, <strong>tiktok_oauth_state</strong>, <strong>itb_growth_consent</strong>, and <strong>itb_growth_anon</strong>.</p>
+          </div>
+        </section>
+
+        <section class="policy-section" id="retention">
+          <h2>6. Data Retention</h2>
+          <p>We keep information for as long as needed to provide the service, maintain accounts, support paid plans, resolve disputes, satisfy legal and accounting requirements, preserve security logs, improve the product, and enforce our Terms.</p>
+          <p>Retention periods vary by data type. For example, account and subscription records may be kept while an account is active and for a reasonable period afterward; uploaded media may remain until deleted or replaced; logs and analytics may be retained for shorter operational periods or aggregated. We may delete or de-identify information when it is no longer needed.</p>
+        </section>
+
+        <section class="policy-section" id="choices">
+          <h2>7. Your Choices and Rights</h2>
+          <p>You can use account tools to update certain profile and room settings. You can deny analytics through the consent banner or browser controls. You can disconnect connected accounts where the dashboard provides that option, and you can contact us for account, privacy, or deletion requests.</p>
+          <p>Depending on where you live, you may have rights to request access, correction, deletion, portability, restriction, objection, or information about how personal information is used and shared. To make a request, email <a href="mailto:support@intothebattle.com">support@intothebattle.com</a> with "Privacy request" in the subject. We may need to verify your identity before acting on a request.</p>
+          <p>We do not knowingly sell personal information. If future features involve activity that legally counts as "sharing" for cross-context behavioral advertising, we will provide the required notice and choice mechanism.</p>
+        </section>
+
+        <section class="policy-section" id="security">
+          <h2>8. Security</h2>
+          <p>We use administrative, technical, and organizational safeguards designed to protect information, including access controls, token-based room access, secure cookies where available, upload restrictions, logging, rate limits, and operational monitoring. No internet service can guarantee perfect security, and you should protect your own account credentials, dashboard access, and overlay URLs.</p>
+        </section>
+
+        <section class="policy-section" id="children">
+          <h2>9. Children and Viewer Safety</h2>
+          <p>IntoTheBattle is designed for creators who can lawfully operate streaming accounts, connect third-party services, and manage live audiences. The service is not directed to children under 13, and we do not knowingly collect personal information from children under 13. If you believe a child provided personal information to us, contact us so we can review and remove it where appropriate.</p>
+          <p>Creators are responsible for using platform moderation controls and avoiding prompts that encourage viewers to share sensitive personal information in chat.</p>
+        </section>
+
+        <section class="policy-section" id="international">
+          <h2>10. International Use</h2>
+          <p>IntoTheBattle may process information in the United States and other locations where our providers operate. If you access the service from outside the United States, your information may be transferred to and processed in countries with different data protection laws than your location.</p>
+        </section>
+
+        <section class="policy-section" id="updates">
+          <h2>11. Updates to This Policy</h2>
+          <p>We may update this Policy as the product, providers, integrations, or legal requirements change. The updated version will be posted at this URL with a new "Last updated" date.</p>
+        </section>
+
+        <section class="policy-section" id="contact">
+          <h2>12. Contact</h2>
+          <p>For privacy questions or requests, contact <a href="mailto:support@intothebattle.com">support@intothebattle.com</a>.</p>
+          <div class="doc-links">
+            <a href="/terms">Read the Terms</a>
+            <a href="/signup">Create account</a>
+          </div>
+        </section>
+      </article>
+    </div>
+  </main>
+
+  <footer>
+    <span>&copy; 2026 IntoTheBattle</span>
+    <div class="footer-links">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/site-map">Site map</a>
+      <a href="/login">Login</a>
+      <a href="/signup">Create account</a>
+    </div>
+  </footer>
+</body>
+</html>
