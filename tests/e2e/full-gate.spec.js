@@ -16,6 +16,10 @@ const harness = createServerHarness({
   port: Number(process.env.FULL_GATE_E2E_PORT || 3547),
   roomId: 'full-gate-room',
   diskPrefix: 'intothebattle-full-gate-',
+  env: {
+    E2E_ACTIVE_TRIAL_SESSION_TOKEN: 'full-gate-linked-tiktok-user',
+    E2E_ACTIVE_TRIAL_ROOM_ID: 'full-gate-linked-tiktok-room',
+  },
 });
 
 test.describe.configure({ mode: 'serial' });
@@ -113,7 +117,7 @@ test('@cross-browser authenticated dashboard exposes real creator controls', asy
   await expect(page.locator('#streamModePill')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Start Setup Demo' }).first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Open Live Overlay' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Open Mobile PiP' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open Streamer Rail' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Test Live Overlay' })).toBeVisible();
   await expect(page.getByTestId('mobile-overlay-panel')).toBeVisible();
   await expect(page.locator('#mobileOverlayLayoutInput')).toHaveValue('pip-corner');
@@ -217,6 +221,16 @@ test('@dashboard setup rehearsal changes demo state and then resets toward real 
   await expectNoHorizontalOverflow(page);
   await attachScreenshot(page, testInfo, 'dashboard-setup-reset');
   await expectNoPageErrors(errors, testInfo, 'dashboard-setup');
+});
+
+test('@dashboard connect uses linked TikTok handle when username is omitted', async ({ context }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop', 'LIVE connect fallback only needs one browser pass');
+  await context.addCookies([{ name: 'session_token', value: 'full-gate-linked-tiktok-user', url: harness.baseUrl }]);
+  const connect = await context.request.post(`${harness.baseUrl}/api/connect`, { data: {} });
+  const body = await parseJsonResponse(connect);
+  expect(body.username).toBe('e2e_creator');
+  expect(body.stream?.username).toBe('e2e_creator');
+  await parseJsonResponse(await context.request.post(`${harness.baseUrl}/api/reset`));
 });
 
 test('@dashboard signed overlay state does not leak secrets in debug status', async ({ context, page }, testInfo) => {

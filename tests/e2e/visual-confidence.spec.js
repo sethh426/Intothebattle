@@ -635,7 +635,7 @@ test('@visual sponsor stats endcap fits inside the overlay source frame', async 
   await expectNoPageErrors(errors, testInfo, 'sponsor-stats');
 });
 
-test('@visual mobile PiP battle HUD compresses game events without replacing full chat', async ({ page }, testInfo) => {
+test('@visual mobile streamer event rail stays minimal and high-signal', async ({ page }, testInfo) => {
   mobileProjectOnly(testInfo);
   const errors = await watchPage(page, harness.baseUrl);
   const response = await page.goto(mobileOverlayUrl({ layout: 'pip-corner', setup: '1' }), { waitUntil: 'domcontentloaded' });
@@ -647,7 +647,7 @@ test('@visual mobile PiP battle HUD compresses game events without replacing ful
   const telemetry = await page.evaluate(() => window.mobileOverlayEngine.telemetry());
   await attachJson(testInfo, 'mobile-pip-status', status);
   await attachJson(testInfo, 'mobile-pip-telemetry', telemetry);
-  await attachScreenshot(page, testInfo, 'mobile-pip-battle-hud');
+  await attachScreenshot(page, testInfo, 'mobile-streamer-event-rail');
 
   expect(telemetry.layout).toBe('pip-corner');
   expect(telemetry.sourceMode).toBe(true);
@@ -655,7 +655,9 @@ test('@visual mobile PiP battle HUD compresses game events without replacing ful
   expect(telemetry.horizontalOverflow).toBeLessThanOrEqual(2);
   expect(telemetry.verticalOverflow).toBeLessThanOrEqual(2);
   expect(telemetry.eventCount).toBeGreaterThanOrEqual(5);
+  expect(telemetry.commentCount).toBeGreaterThanOrEqual(4);
   expect(telemetry.playerCount).toBeGreaterThanOrEqual(3);
+  expect(telemetry.rects.length).toBeLessThanOrEqual(5);
 
   for (const rect of telemetry.rects) {
     expect(rect.left, `${rect.testid} left edge`).toBeGreaterThanOrEqual(-1);
@@ -671,11 +673,12 @@ test('@visual mobile PiP battle HUD compresses game events without replacing ful
   }
 
   const feedCards = await page.locator('[data-testid="mobile-feed-card"]').count();
-  expect(feedCards).toBeGreaterThanOrEqual(3);
-  await expect(page.getByTestId('mobile-latest-event')).toContainText(/Boss wave|FireQueen|ShadowByte/);
-  await expect(page.locator('#sourceNote')).toContainText(/Setup demo players|TikTok chat/);
+  expect(feedCards).toBe(0);
+  await expect(page.getByTestId('mobile-latest-event')).toContainText(/Boss wave|Gift|Arena Power|KO|Like/i);
+  await expect(page.getByTestId('mobile-comment-crawl')).toContainText(/FireQueen|ShadowByte|LikeCrew|MobileBossBreakerUltra/);
+  await expect(page.locator('#sourceNote')).toContainText(/signal rail|TikTok chat/);
   await expectNoHorizontalOverflow(page);
-  await expectNoPageErrors(errors, testInfo, 'mobile-pip-overlay');
+  await expectNoPageErrors(errors, testInfo, 'mobile-event-rail');
 });
 
 test('@visual reduced-motion mobile overlay keeps banners and sponsor stats usable', async ({ page }, testInfo) => {

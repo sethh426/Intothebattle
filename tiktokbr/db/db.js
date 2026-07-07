@@ -337,6 +337,50 @@ async function initDb() {
     `);
 
     await safeExec(`
+      CREATE TABLE IF NOT EXISTS tiktok_accounts (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL UNIQUE,
+        tiktok_open_id TEXT UNIQUE NOT NULL,
+        union_id TEXT,
+        tiktok_username TEXT,
+        profile_deep_link TEXT,
+        display_name TEXT,
+        avatar_url TEXT,
+        avatar_large_url TEXT,
+        scopes TEXT,
+        access_token_ciphertext TEXT,
+        refresh_token_ciphertext TEXT,
+        access_token_expires_at TIMESTAMP,
+        refresh_token_expires_at TIMESTAMP,
+        status TEXT DEFAULT 'connected',
+        disconnect_reason TEXT,
+        connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        disconnected_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN union_id TEXT');
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN tiktok_username TEXT');
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN profile_deep_link TEXT');
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN display_name TEXT');
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN avatar_url TEXT');
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN avatar_large_url TEXT');
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN scopes TEXT');
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN access_token_ciphertext TEXT');
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN refresh_token_ciphertext TEXT');
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN access_token_expires_at TIMESTAMP');
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN refresh_token_expires_at TIMESTAMP');
+    await safeExec("ALTER TABLE tiktok_accounts ADD COLUMN status TEXT DEFAULT 'connected'");
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN disconnect_reason TEXT');
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN disconnected_at TIMESTAMP');
+    await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+    await safeExec('CREATE UNIQUE INDEX IF NOT EXISTS tiktok_accounts_user_id_unique ON tiktok_accounts(user_id)');
+    await safeExec('CREATE UNIQUE INDEX IF NOT EXISTS tiktok_accounts_open_id_unique ON tiktok_accounts(tiktok_open_id)');
+
+    await safeExec(`
       CREATE TABLE IF NOT EXISTS subscriptions (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,

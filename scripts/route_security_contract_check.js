@@ -16,6 +16,8 @@ function routeLiteral(pathname) {
 assert.equal(contract.csrfEquivalent?.sameOriginMutationGuard, true, 'route contract must require same-origin mutation guard');
 assert.equal(contract.csrfEquivalent?.adminSameSiteCookie, 'strict', 'admin cookies must stay SameSite=strict');
 assert.match(server, /Blocked cross-origin state-changing request/, 'server must enforce same-origin state-changing browser requests');
+assert.match(server, /function verifyTikTokWebhookSignature/, 'TikTok webhooks must verify TikTok-Signature HMAC');
+assert.match(server, /crypto\.timingSafeEqual/, 'TikTok webhook signature comparison must be timing safe');
 assert.match(admin, /sameSite:\s*'strict'/, 'admin session cookie must remain SameSite=strict');
 assert.match(admin, /requireAdminMutationOrigin/, 'admin router must enforce explicit admin mutation origin checks');
 assert.match(paypal, /verifyPayPalWebhook/, 'PayPal webhook must verify provider signatures');

@@ -80,6 +80,30 @@ CREATE TABLE IF NOT EXISTS user_rooms (
   FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS tiktok_accounts (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL UNIQUE,
+  tiktok_open_id TEXT UNIQUE NOT NULL,
+  union_id TEXT,
+  tiktok_username TEXT,
+  profile_deep_link TEXT,
+  display_name TEXT,
+  avatar_url TEXT,
+  avatar_large_url TEXT,
+  scopes TEXT,
+  access_token_ciphertext TEXT,
+  refresh_token_ciphertext TEXT,
+  access_token_expires_at TIMESTAMP,
+  refresh_token_expires_at TIMESTAMP,
+  status TEXT DEFAULT 'connected',
+  disconnect_reason TEXT,
+  connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  disconnected_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
 CREATE TABLE IF NOT EXISTS subscriptions (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL,

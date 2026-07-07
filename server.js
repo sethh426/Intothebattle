@@ -41,6 +41,23 @@ import { growthEventDiagnostics, publicGrowthConfig, recordGrowthEvent, recordSe
 import { marketingAutomationDiagnostics, publishApprovedMarketingPosts, recordMarketingVisit } from './tiktokbr/services/marketingAutomation.js';
 import { getBlogPostBySlug, listBlogPosts } from './tiktokbr/services/blogEngine.js';
 import {
+  accessTokenForAccount,
+  buildTikTokAuthorizationUrl,
+  createTikTokOAuthState,
+  exchangeTikTokCode,
+  fetchTikTokUserInfo,
+  getLinkedTikTokAccount,
+  markTikTokAccountDisconnected,
+  markTikTokOpenIdDisconnected,
+  publicTikTokAccount,
+  revokeTikTokToken,
+  shouldRequireTikTokAccountForLive,
+  tiktokLiveEventProvider,
+  tiktokOfficialConfig,
+  upsertLinkedTikTokAccount,
+  verifyTikTokOAuthState,
+} from './tiktokbr/services/tiktokOfficialAuth.js';
+import {
   ARENA_POWER_UP_BARRAGE_INITIAL_DELAY_MS,
   ARENA_POWER_UP_BARRAGE_INTERVAL_MS,
   ARENA_POWER_UP_BARRAGE_STAGGER_MS,
@@ -6285,7 +6302,11 @@ if (process.env.REDIS_URL && enableRedisAdapter) {
 
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
+app.use(express.json({
+  verify(req, _res, buf) {
+    if (req.path === '/api/tiktok/webhook') req.rawBody = buf.toString('utf8');
+  },
+}));
 
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -7746,6 +7767,166 @@ app.get('/dashboard/welcome', requireDashboardAccess, (_req, res) => {
   res.redirect(302, '/dashboard?welcome=1');
 });
 
+function safeTikTokRedirectPath(value, fallback = '/dashboard') {
+  const text = String(value || '').trim();
+  if (!text || !text.startsWith('/') || text.startsWith('//') || text.includes('\\')) return fallback;
+  return text.slice(0, 300);
+}
+
+function tiktokOAuthCookieOptions() {
+  return {
+    path: '/',
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 10 * 60 * 1000,
+  };
+}
+
+function publicTikTokOfficialStatus(userId = null) {
+  const cfg = tiktokOfficialConfig();
+  let account = null;
+  try {
+    account = userId ? publicTikTokAccount(getLinkedTikTokAccount(db, userId)) : null;
+  } catch (_err) {
+    account = null;
+  }
+  return {
+    configured: cfg.configured,
+    appIdPresent: Boolean(cfg.appId),
+    scopes: cfg.scopes,
+    provider: cfg.provider,
+    requireAccountForLive: cfg.requireAccountForLive,
+    linked: Boolean(account),
+    account,
+    liveEventAdapter: cfg.provider === 'legacy'
+      ? 'legacy-live-adapter'
+      : cfg.provider === 'official'
+        ? 'official-live-adapter-unavailable'
+        : 'disabled',
+  };
+}
+
+function verifyTikTokWebhookSignature(req) {
+  const cfg = tiktokOfficialConfig();
+  const header = String(req.get('tiktok-signature') || req.get('TikTok-Signature') || '').trim();
+  const rawBody = typeof req.rawBody === 'string' ? req.rawBody : JSON.stringify(req.body || {});
+  if (!cfg.configured || !header || !rawBody) return false;
+  const parts = Object.fromEntries(header.split(',').map(part => {
+    const [key, ...rest] = part.trim().split('=');
+    return [key, rest.join('=')];
+  }).filter(([key, value]) => key && value));
+  const timestamp = Number(parts.t);
+  const signature = String(parts.s || '').toLowerCase();
+  if (!Number.isFinite(timestamp) || !signature) return false;
+  const maxAgeSeconds = Math.max(60, Number(process.env.TIKTOK_WEBHOOK_MAX_AGE_SECONDS || 300) || 300);
+  if (Math.abs(Math.floor(Date.now() / 1000) - timestamp) > maxAgeSeconds) return false;
+  const signedPayload = `${parts.t}.${rawBody}`;
+  const expected = crypto.createHmac('sha256', cfg.clientSecret).update(signedPayload).digest('hex');
+  const signatureBuffer = Buffer.from(signature, 'hex');
+  const expectedBuffer = Buffer.from(expected, 'hex');
+  return signatureBuffer.length === expectedBuffer.length && crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
+}
+
+app.get('/auth/tiktok', requireDashboardAccess, (req, res) => {
+  if (!req.user?.id) return res.status(403).send('TikTok account linking requires a user account.');
+  const cfg = tiktokOfficialConfig();
+  if (!cfg.configured) return res.status(501).send('TikTok OAuth is not configured.');
+  const next = safeTikTokRedirectPath(req.query.next, '/dashboard');
+  const state = createTikTokOAuthState({ userId: req.user.id, next });
+  res.cookie('tiktok_oauth_state', state, tiktokOAuthCookieOptions());
+  return res.redirect(302, buildTikTokAuthorizationUrl(state));
+});
+
+app.get('/auth/tiktok/callback', async (req, res) => {
+  try {
+    const code = String(req.query.code || '').trim();
+    const state = String(req.query.state || '').trim();
+    const cookieState = String(req.cookies?.tiktok_oauth_state || '').trim();
+    const statePayload = verifyTikTokOAuthState(state);
+    if (!code || !state || !cookieState || state !== cookieState || !statePayload?.userId) {
+      return res.status(400).send('Invalid TikTok OAuth state.');
+    }
+    const auth = getAuthRecord(req.cookies?.session_token);
+    if (!auth || auth.type !== 'user' || Number(auth.record?.id) !== Number(statePayload.userId)) {
+      return res.status(401).send('TikTok OAuth session expired. Sign in and try again.');
+    }
+    const token = await exchangeTikTokCode(code);
+    let profile;
+    try {
+      profile = await fetchTikTokUserInfo(token.access_token);
+    } catch (err) {
+      logger.warn({ err: err?.message || err, userId: auth.record.id }, 'TikTok profile fetch failed; storing token identity only');
+      profile = { open_id: token.open_id };
+    }
+    const account = upsertLinkedTikTokAccount(db, auth.record.id, token, profile);
+    res.clearCookie('tiktok_oauth_state', { ...tiktokOAuthCookieOptions(), maxAge: undefined });
+    recordServerGrowthEvent(req, 'tiktok_account_linked', {
+      stableKey: `tiktok_account_linked:${auth.record.id}:${account?.tiktok_open_id || token.open_id}`,
+      user: { id: auth.record.id, email: auth.record.email, name: auth.record.name || '' },
+      roomId: ensureUserRoomId(auth.record) || '',
+      properties: {
+        scopes: token.scope || '',
+        provider: tiktokLiveEventProvider(),
+      },
+    }).catch(err => logger.warn({ err: err?.message || err }, 'Growth tiktok_account_linked event failed'));
+    const redirectPath = safeTikTokRedirectPath(statePayload.next, '/dashboard');
+    return res.redirect(`${redirectPath}${redirectPath.includes('?') ? '&' : '?'}tiktok=connected`);
+  } catch (err) {
+    logger.error({ err: err?.message || err }, 'TikTok OAuth callback failed');
+    return res.status(400).send('TikTok authentication failed.');
+  }
+});
+
+app.get('/api/tiktok/account', requireRoom, (req, res) => {
+  if (req.auth?.type !== 'user' || !req.user?.id) {
+    return res.json({
+      success: true,
+      supported: false,
+      reason: 'user_account_required',
+      tiktokOfficial: publicTikTokOfficialStatus(null),
+    });
+  }
+  return res.json({
+    success: true,
+    supported: true,
+    tiktokOfficial: publicTikTokOfficialStatus(req.user.id),
+  });
+});
+
+app.post('/auth/tiktok/disconnect', requireRoom, async (req, res) => {
+  if (req.auth?.type !== 'user' || !req.user?.id) {
+    return res.status(400).json({ success: false, error: 'TikTok account disconnect requires a user account.' });
+  }
+  const account = getLinkedTikTokAccount(db, req.user.id);
+  if (!account) {
+    return res.json({ success: true, disconnected: false, tiktokOfficial: publicTikTokOfficialStatus(req.user.id) });
+  }
+  try {
+    const accessToken = accessTokenForAccount(account);
+    await revokeTikTokToken(accessToken);
+  } catch (err) {
+    logger.warn({ err: err?.message || err, userId: req.user.id }, 'TikTok revoke failed');
+    return res.status(502).json({ success: false, error: 'TikTok revoke failed. Try again before removing the local account link.' });
+  }
+  markTikTokAccountDisconnected(db, req.user.id, 'user_disconnect');
+  return res.json({ success: true, disconnected: true, tiktokOfficial: publicTikTokOfficialStatus(req.user.id) });
+});
+
+app.post('/api/tiktok/webhook', (req, res) => {
+  const clientKey = String(req.body?.client_key || '').trim();
+  const eventName = String(req.body?.event || '').trim();
+  const openId = String(req.body?.user_openid || '').trim();
+  const cfg = tiktokOfficialConfig();
+  if (!cfg.configured || clientKey !== cfg.clientKey || !verifyTikTokWebhookSignature(req)) {
+    return res.status(401).json({ success: false, error: 'Unauthorized webhook' });
+  }
+  if (eventName === 'authorization.removed' && openId) {
+    markTikTokOpenIdDisconnected(db, openId, 'authorization_removed');
+  }
+  return res.json({ success: true });
+});
+
 // Debug endpoint: return session-backed auth record for troubleshooting (non-production only)
 app.get('/debug/session-info', (req, res) => {
   if (process.env.NODE_ENV === 'production') return res.status(404).send('Not found');
@@ -7813,6 +7994,7 @@ app.get('/api/status', requireRoom, (req, res) => {
     username:         req.room.streamerUsername || '',
     connected:        stream.connected,
     stream,
+    tiktokOfficial:   publicTikTokOfficialStatus(req.user?.id || null),
     mode:             streamMode.mode,
     streamMode,
     playerSource:     streamMode.playerSource,
@@ -8309,9 +8491,37 @@ app.post('/api/dev/overlay-settings', requireRoom, (req, res) => {
 });
 
 app.post('/api/connect', requireRoom, (req, res) => {
-  const { username } = req.body;
-  if (!username) return res.json({ success: false, error: 'Username required' });
-  if (!API_KEY)  return res.status(500).json({ success: false, error: 'Missing TikTok API_KEY in .env' });
+  const officialCfg = tiktokOfficialConfig();
+  let linkedTikTokAccount = null;
+  if (req.user?.id) {
+    try {
+      linkedTikTokAccount = getLinkedTikTokAccount(db, req.user.id);
+    } catch (err) {
+      logger.warn({ err: err?.message || err, userId: req.user.id }, 'Linked TikTok account lookup failed during LIVE connect');
+    }
+  }
+  if (officialCfg.provider === 'disabled') {
+    return res.status(409).json({ success: false, error: 'TikTok LIVE event provider is disabled for this deployment.' });
+  }
+  if (officialCfg.provider === 'official') {
+    return res.status(409).json({ success: false, error: 'Official TikTok LIVE event provider is not available in this build yet. Use legacy mode until TikTok grants a real-time LIVE event API.' });
+  }
+  if (shouldRequireTikTokAccountForLive() && req.auth?.type !== 'user') {
+    return res.status(403).json({ success: false, error: 'A linked TikTok account is required before connecting a LIVE session.' });
+  }
+  if (shouldRequireTikTokAccountForLive() && req.user?.id && !linkedTikTokAccount) {
+    return res.status(403).json({ success: false, error: 'Connect your TikTok account before attaching a LIVE session.' });
+  }
+  const requestedUsername = normalizeTikTokUsername(req.body?.username);
+  const linkedUsername = normalizeTikTokUsername(linkedTikTokAccount?.tiktok_username || req.user?.tiktok_username || '');
+  const username = requestedUsername || linkedUsername;
+  if (!username) {
+    return res.status(400).json({
+      success: false,
+      error: 'TikTok username unavailable. Connect TikTok with profile access or enter the LIVE username once.',
+    });
+  }
+  if (!API_KEY)  return res.status(500).json({ success: false, error: 'Missing TikTok API_KEY in .env for the legacy LIVE event adapter' });
   try {
     const stream = connectToStreamer(username, req.room);
     res.json({ success: true, username: stream.username, status: stream.status, stream });

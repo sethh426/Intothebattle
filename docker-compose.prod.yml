@@ -1,0 +1,60 @@
+name: intothebattle
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?Set APP_DOMAIN in .env.production}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./devops/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+  app:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3000
+      DATABASE_URL: postgres://intothebattle:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}@postgres:5432/intothebattle
+      DISK_PATH: /usr/src/app/data
+      ENABLE_REDIS_ADAPTER: "false"
+      REDIS_URL: ""
+      TRUST_PROXY_HOPS: "1"
+      PRODUCTION_INSTANCE_COUNT: "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - app-data:/usr/src/app/data
+
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: intothebattle
+      POSTGRES_USER: intothebattle
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.production}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U intothebattle -d intothebattle"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  app-data:
+  pgdata:
+  caddy-data:
+  caddy-config:

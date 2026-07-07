@@ -1,4 +1,7 @@
 .env
+.env.*
+!.env.example
+!.env.production.example
 node_modules/
 backgrounds/
 players.json

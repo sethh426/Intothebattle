@@ -31,6 +31,30 @@
       "production": "enabled"
     },
     {
+      "method": "GET",
+      "path": "/api/tiktok/account",
+      "category": "creator",
+      "access": "room-session",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/auth/tiktok/disconnect",
+      "category": "creator-control",
+      "access": "room-session-and-same-origin-mutation",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tiktok/webhook",
+      "category": "webhook",
+      "access": "tiktok-signature-hmac",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
       "method": "POST",
       "path": "/api/stream/setup/start",
       "category": "creator-control",

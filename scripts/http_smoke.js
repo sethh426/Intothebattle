@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -21,6 +22,13 @@ const server = spawn(process.execPath, ['server.js'], {
     HOST: host,
     NODE_ENV: 'production',
     API_KEY: 'test',
+    TIKTOK_CLIENT_KEY: 'tiktok-smoke-client-key',
+    TIKTOK_CLIENT_SECRET: 'tiktok-smoke-client-secret',
+    TIKTOK_APP_ID: 'tiktok-smoke-app',
+    TIKTOK_REDIRECT_URI: 'https://intothebattle.test/auth/tiktok/callback',
+    TIKTOK_SCOPES: 'user.info.basic,user.info.profile',
+    TIKTOK_LIVE_EVENT_PROVIDER: 'legacy',
+    TIKTOK_TOKEN_ENCRYPTION_SECRET: 'tiktok-smoke-token-secret',
     JWT_SECRET: jwtSecret,
     OVERLAY_TOKEN_SECRET: jwtSecret,
     SKIP_DB: 'true',
@@ -93,6 +101,16 @@ async function expectStatus(pathname, expectedStatus, options = {}) {
   return res;
 }
 
+function signedTikTokWebhookBody(payload) {
+  const body = JSON.stringify(payload);
+  const timestamp = Math.floor(Date.now() / 1000);
+  const signature = crypto.createHmac('sha256', 'tiktok-smoke-client-secret').update(`${timestamp}.${body}`).digest('hex');
+  return {
+    body,
+    signature: `t=${timestamp},s=${signature}`,
+  };
+}
+
 try {
   await waitForHealth();
 
@@ -160,9 +178,29 @@ try {
   await expectStatus('/overlay-legacy.html', 404);
 
   await expectStatus('/api/status', 401);
+  await expectStatus('/api/tiktok/account', 401);
   await expectStatus('/api/subscription/status', 401);
   await expectStatus('/api/stream/setup/start', 401, { method: 'POST' });
   await expectStatus('/api/stream/setup/reset', 401, { method: 'POST' });
+  await expectStatus('/auth/tiktok/disconnect', 401, { method: 'POST' });
+  await expectStatus('/api/tiktok/webhook', 401, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ client_key: 'wrong', event: 'authorization.removed', user_openid: 'open-id' }),
+  });
+  const unsignedTikTokWebhook = { client_key: 'tiktok-smoke-client-key', event: 'authorization.removed', user_openid: 'open-id' };
+  await expectStatus('/api/tiktok/webhook', 401, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(unsignedTikTokWebhook),
+  });
+  const signedTikTokWebhook = signedTikTokWebhookBody(unsignedTikTokWebhook);
+  const tiktokWebhook = await expectStatus('/api/tiktok/webhook', 200, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'TikTok-Signature': signedTikTokWebhook.signature },
+    body: signedTikTokWebhook.body,
+  });
+  assert((await tiktokWebhook.json()).success === true, 'TikTok webhook should accept matching client_key');
   await expectStatus('/api/signup-intent', 403, {
     method: 'POST',
     headers: { 'content-type': 'application/json', Origin: 'https://evil.example' },

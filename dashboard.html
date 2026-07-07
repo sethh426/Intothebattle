@@ -163,6 +163,12 @@
     .mobile-overlay-panel p { margin:0; color:var(--muted); font-size:12px; line-height:1.45; font-weight:800; }
     .mobile-overlay-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
     .mobile-overlay-grid .btn { min-height:40px; padding:0 10px; font-size:12px; }
+    .official-tiktok-panel { margin:12px 0; padding:12px; border-radius:16px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.055); display:grid; gap:10px; }
+    .official-tiktok-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; }
+    .official-tiktok-row strong { display:block; color:#fff; font-size:14px; }
+    .official-tiktok-row span { display:block; margin-top:3px; color:var(--muted); font-size:12px; font-weight:800; line-height:1.35; }
+    .official-tiktok-actions { display:flex; flex-wrap:wrap; gap:8px; }
+    .official-tiktok-actions .btn { min-height:36px; padding:0 11px; font-size:12px; }
     .setup-rehearsal-panel { margin-top:14px; padding:14px; border-radius:18px; border:1px solid rgba(119,240,161,.2); background:linear-gradient(180deg,rgba(119,240,161,.075),rgba(0,0,0,.16)); display:grid; gap:12px; }
     .setup-rehearsal-panel strong { color:#fff8e6; font-size:13px; text-transform:uppercase; letter-spacing:.08em; }
     .setup-rehearsal-panel p { margin:0; color:var(--muted); font-size:12px; line-height:1.45; font-weight:800; }
@@ -514,8 +520,8 @@
       <div class="launch-row secondary-launch-actions">
         <button class="btn btn-secondary" onclick="copySetupOverlayUrl()">Copy Setup Source</button>
         <button class="btn btn-secondary" onclick="openSetupOverlay()">Open Setup Preview</button>
-        <button class="btn btn-secondary" onclick="copyMobileOverlayUrl()">Copy Mobile PiP</button>
-        <button class="btn btn-secondary" onclick="openMobileOverlay()">Open Mobile PiP</button>
+        <button class="btn btn-secondary" onclick="copyMobileOverlayUrl()">Copy Streamer Rail</button>
+        <button class="btn btn-secondary" onclick="openMobileOverlay()">Open Streamer Rail</button>
         <button class="btn btn-secondary" onclick="window.open('/stats','_blank')">View Stats</button>
       </div>
       <div class="ops-strip">
@@ -592,13 +598,24 @@
         <button type="button" class="launch-action locked" data-launch-action="copy" onclick="copySetupOverlayUrl()"><b>2</b><strong>Copy setup source</strong><span>Paste the signed setup browser source into TikTok Studio.</span></button>
         <button type="button" class="launch-action locked" data-launch-action="source" onclick="openSetupOverlay()"><b>3</b><strong>Open source</strong><span>Confirm the source is visible and connected.</span></button>
         <button type="button" class="launch-action locked" data-launch-action="test" onclick="testOverlayBurst()"><b>4</b><strong>Send test event</strong><span>Preview chat, likes, gifts, and battle effects.</span></button>
-        <button type="button" class="launch-action locked" data-launch-action="connect" onclick="focusTikTokUsername()"><b>5</b><strong>Connect TikTok</strong><span>Attach the real live feed after setup passes.</span></button>
+        <button type="button" class="launch-action locked" data-launch-action="connect" onclick="connectTikTokShortcut()"><b>5</b><strong>Connect TikTok</strong><span>Attach the real live feed after setup passes.</span></button>
         <button type="button" class="launch-action locked" data-launch-action="live" onclick="sessionAction('/api/session/start','Session started')"><b>6</b><strong>Start live battle</strong><span>Begin the first live battle round.</span></button>
       </div>
     </article>
 
     <article class="card col-4" id="connectCard">
       <div class="card-head"><div><div class="card-title">Step 5</div><h3>Connect TikTok LIVE</h3><p class="muted">Connect after the setup demo is visible in TikTok Studio or OBS.</p></div><span class="card-badge">Stream input</span></div>
+      <div class="official-tiktok-panel" id="officialTikTokPanel" data-testid="official-tiktok-panel">
+        <div class="official-tiktok-row">
+          <div><strong id="officialTikTokTitle">TikTok account not linked</strong><span id="officialTikTokDetail">Official Login Kit status is loading.</span></div>
+          <span class="readiness-pill warn" id="officialTikTokPill">Wait</span>
+        </div>
+        <div class="official-tiktok-actions">
+          <button type="button" class="btn btn-primary" id="connectTikTokAccountButton" onclick="connectTikTokAccount()">Connect TikTok Account</button>
+          <button type="button" class="btn btn-secondary" id="refreshTikTokAccountButton" onclick="fetchTikTokAccountStatus()">Refresh</button>
+          <button type="button" class="btn btn-danger" id="disconnectTikTokAccountButton" onclick="disconnectTikTokAccount()" hidden>Disconnect Account</button>
+        </div>
+      </div>
       <div class="status-chip offline" id="tiktok-chip"><span class="pulse-dot"></span><span id="tiktok-label">Disconnected</span></div>
       <div class="form-group"><label class="input-label">TikTok username</label><input type="text" id="username" placeholder="@yourusername" autocapitalize="none" autocorrect="off" spellcheck="false"></div>
       <div class="btn-row"><button class="btn btn-success" style="flex:1" onclick="connect()">Connect</button><button class="btn btn-danger" onclick="resetTikTok()">Disconnect</button></div>
@@ -621,13 +638,13 @@
         </div>
       </div>
       <div class="mobile-overlay-panel" id="mobileOverlayPanel" data-testid="mobile-overlay-panel">
-        <div><strong>Mobile PiP battle feed</strong><p>Use a phone-safe event feed that coexists with TikTok chat PiP instead of shrinking the full game.</p></div>
-        <div class="form-group"><label class="input-label" for="mobileOverlayLayoutInput">Mobile layout</label><select id="mobileOverlayLayoutInput" aria-label="Mobile overlay layout" onchange="saveMobileOverlayLayout()"><option value="pip-corner">PiP corner</option><option value="chat-replacement">Chat replacement</option><option value="status-only">Status only</option></select></div>
+        <div><strong>Streamer event rail</strong><p>Use a small streamer-only signal bar for KOs, gifts, likes, Arena Power, boss moments, and a scrolling comment crawl.</p></div>
+        <div class="form-group"><label class="input-label" for="mobileOverlayLayoutInput">Rail layout</label><select id="mobileOverlayLayoutInput" aria-label="Mobile rail layout" onchange="saveMobileOverlayLayout()"><option value="pip-corner">Corner rail</option><option value="chat-replacement">Wide event rail</option><option value="status-only">Status only</option></select></div>
         <div class="mobile-overlay-grid">
-          <button class="btn btn-primary" onclick="openSetupMobileOverlay()">Open Mobile Setup</button>
-          <button class="btn btn-secondary" onclick="copySetupMobileOverlayUrl()">Copy Mobile Setup</button>
-          <button class="btn btn-secondary" onclick="openMobileOverlay()">Open Mobile Live</button>
-          <button class="btn btn-secondary" onclick="copyMobileOverlayUrl()">Copy Mobile Live</button>
+          <button class="btn btn-primary" onclick="openSetupMobileOverlay()">Open Setup Rail</button>
+          <button class="btn btn-secondary" onclick="copySetupMobileOverlayUrl()">Copy Setup Rail</button>
+          <button class="btn btn-secondary" onclick="openMobileOverlay()">Open Live Rail</button>
+          <button class="btn btn-secondary" onclick="copyMobileOverlayUrl()">Copy Live Rail</button>
         </div>
       </div>
       <div class="overlay-v2-panel" data-beta-feature="overlay-v2" hidden>
@@ -887,7 +904,7 @@
     </details>
   </section>
 
-  <div class="footer" aria-label="Quick creator actions"><button class="footer-btn primary" id="footerOpenOverlayButton" onclick="openOverlayWhenSponsorReady()" disabled>Open Overlay</button><button class="footer-btn" id="footerStartVideoButton" onclick="startSponsorVideoWhenReady()" disabled>Start Video</button><button class="footer-btn" onclick="focusTikTokUsername()">Connect TikTok</button><button class="footer-btn" onclick="focusAudioWorkflow()">Sounds</button><a class="footer-btn" href="/blog">Blog</a></div>
+  <div class="footer" aria-label="Quick creator actions"><button class="footer-btn primary" id="footerOpenOverlayButton" onclick="openOverlayWhenSponsorReady()" disabled>Open Overlay</button><button class="footer-btn" id="footerStartVideoButton" onclick="startSponsorVideoWhenReady()" disabled>Start Video</button><button class="footer-btn" onclick="connectTikTokShortcut()">Connect TikTok</button><button class="footer-btn" onclick="focusAudioWorkflow()">Sounds</button><a class="footer-btn" href="/blog">Blog</a></div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -934,6 +951,7 @@ const dashboardState = {
   lastStreamEventAt: null,
   tiktokStatus: 'disconnected',
   connectedUsername: '',
+  tiktokOfficial: null,
   planLabel: 'Checking',
   overlayUrlCopied: false,
   overlayTested: false,
@@ -997,7 +1015,7 @@ function initMobileOverlayControls() {
 function saveMobileOverlayLayout() {
   const value = mobileOverlayLayout();
   try { localStorage.setItem(MOBILE_OVERLAY_LAYOUT_KEY, value); } catch (_err) {}
-  toast(`Mobile overlay layout set to ${value.replace('-', ' ')}`);
+  toast(`Streamer rail layout set to ${value.replace('-', ' ')}`);
 }
 function syncWelcomeSetupPanel() {
   const panel = document.getElementById('welcomeSetupPanel');
@@ -1005,6 +1023,58 @@ function syncWelcomeSetupPanel() {
   const setupIncomplete = !dashboardState.tiktokConnected && !dashboardState.overlayConnected && !dashboardState.overlayTested && !dashboardState.eventStarted;
   panel.hidden = !(dashboardState.welcomeMode || setupIncomplete);
   document.body.classList.toggle('dashboard-welcome-mode', !panel.hidden);
+}
+function normalizeDashboardTikTokUsername(value = '') {
+  return String(value || '').trim().replace(/^@+/, '').toLowerCase();
+}
+function officialTikTokUsername() {
+  return normalizeDashboardTikTokUsername(dashboardState.tiktokOfficial?.account?.username || '');
+}
+function renderOfficialTikTokStatus(status = dashboardState.tiktokOfficial) {
+  dashboardState.tiktokOfficial = status || dashboardState.tiktokOfficial || { configured: false, linked: false, provider: 'legacy' };
+  const official = dashboardState.tiktokOfficial || {};
+  const account = official.account || {};
+  const handle = normalizeDashboardTikTokUsername(account.username || '');
+  const handleText = handle ? `@${handle}` : '';
+  const title = document.getElementById('officialTikTokTitle');
+  const detail = document.getElementById('officialTikTokDetail');
+  const pill = document.getElementById('officialTikTokPill');
+  const connectButton = document.getElementById('connectTikTokAccountButton');
+  const disconnectButton = document.getElementById('disconnectTikTokAccountButton');
+  const linked = Boolean(official.linked && official.account);
+  const configured = Boolean(official.configured);
+  const provider = official.provider || 'legacy';
+  if (title) title.textContent = linked ? (handleText || account.displayName || 'TikTok account linked') : (configured ? 'Link official TikTok account' : 'TikTok Login Kit not configured');
+  if (detail) {
+    if (linked) {
+      const identity = [account.displayName || 'Authorized account', handleText].filter(Boolean).join(' ');
+      detail.textContent = handle
+        ? `${identity} is linked for official TikTok identity. LIVE connect will use this account handle.`
+        : `${identity} is linked, but TikTok did not return a username. Add user.info.profile approval or enter the LIVE username once.`;
+    } else if (configured) {
+      detail.textContent = official.requireAccountForLive
+        ? 'Production LIVE connect requires this account link before the legacy live adapter can attach.'
+        : `Official account linking is ready. LIVE provider: ${provider}.`;
+    } else {
+      detail.textContent = 'Add TikTok client key, client secret, app ID, and redirect URI on the server.';
+    }
+  }
+  if (pill) {
+    pill.textContent = linked ? 'Linked' : (configured ? 'Ready' : 'Config');
+    pill.className = `readiness-pill ${linked ? 'ready' : configured ? 'warn' : 'blocked'}`;
+  }
+  if (connectButton) {
+    connectButton.hidden = linked;
+    connectButton.disabled = !configured;
+  }
+  if (disconnectButton) disconnectButton.hidden = !linked;
+  const usernameInput = document.getElementById('username');
+  if (usernameInput && handle) {
+    usernameInput.placeholder = handleText;
+    const current = normalizeDashboardTikTokUsername(usernameInput.value);
+    if (!current && document.activeElement !== usernameInput) usernameInput.value = handle;
+  }
+  renderNextAction();
 }
 function setWorkflowStatus(id, label, state = 'warn') {
   const el = document.getElementById(id);
@@ -1142,9 +1212,12 @@ function renderNextAction() {
     copyText = 'A test burst confirms comments, attacks, audio, and browser-source rendering are flowing.';
     actions = [{ label: 'Test My Overlay', className: 'btn btn-primary', onClick: testOverlayBurst }];
   } else if (!dashboardState.tiktokConnected) {
-    titleText = 'Connect TikTok when ready';
-    copyText = 'Now that the overlay has been tested, enter the TikTok username and connect the live stream.';
-    actions = [{ label: 'Connect TikTok', className: 'btn btn-primary', onClick: focusTikTokUsername }];
+    const handle = officialTikTokUsername();
+    titleText = handle ? 'Connect linked TikTok LIVE' : 'Connect TikTok when ready';
+    copyText = handle
+      ? `Now that the overlay has been tested, connect @${handle} from the linked TikTok account.`
+      : 'Now that the overlay has been tested, link TikTok with profile access or enter the LIVE username once.';
+    actions = [{ label: handle ? 'Connect Linked TikTok' : 'Connect TikTok', className: 'btn btn-primary', onClick: handle ? connect : focusTikTokUsername }];
   } else if (dashboardState.realPlayerCount <= 0) {
     titleText = 'Real stream connected. Waiting for players.';
     copyText = 'Any viewer engagement enters the battle. Comments, likes, follows, shares, and gifts will appear in the roster below.';
@@ -2037,6 +2110,7 @@ async function fetchStatus() {
     if (!res.ok) throw new Error(data.error || 'Unable to load dashboard status');
     applyDashboardRulesState(data.dashboardRules || { required: false });
     setRoomLabel(data.roomId || null);
+    renderOfficialTikTokStatus(data.tiktokOfficial || null);
     setOverlayUrl(
       data.overlayUrl || null,
       data.overlayV2Url || null,
@@ -2143,6 +2217,32 @@ function focusTikTokUsername() {
     input.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, 80);
 }
+function connectTikTokShortcut() {
+  const typedUsername = normalizeDashboardTikTokUsername(document.getElementById('username')?.value || '');
+  if (typedUsername || officialTikTokUsername()) return connect();
+  return focusTikTokUsername();
+}
+function connectTikTokAccount() {
+  window.location.href = '/auth/tiktok?next=%2Fdashboard';
+}
+async function fetchTikTokAccountStatus() {
+  try {
+    const res = await fetch('/api/tiktok/account', { credentials: 'same-origin' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load TikTok account status');
+    renderOfficialTikTokStatus(data.tiktokOfficial || null);
+    toast('TikTok account status refreshed');
+  } catch (err) {
+    toast(err.message || 'TikTok account status unavailable', true);
+  }
+}
+async function disconnectTikTokAccount() {
+  if (!confirm('Disconnect the official TikTok account link? This does not delete your IntoTheBattle account.')) return;
+  const result = await apiCall('/auth/tiktok/disconnect', 'POST');
+  if (!result.success) return;
+  renderOfficialTikTokStatus(result.tiktokOfficial || { configured: true, linked: false });
+  toast('TikTok account disconnected');
+}
 async function startSetupRehearsal() {
   const result = await apiCall('/api/stream/setup/start', 'POST', { action: 'burst' });
   if (!result.success) return;
@@ -2180,36 +2280,36 @@ function copySetupOverlayUrl() {
 }
 function openMobileOverlay() {
   const url = mobileOverlayUrl(false);
-  if (!url) return toast('Mobile overlay URL is still loading', true);
+  if (!url) return toast('Streamer rail URL is still loading', true);
   window.open(url, '_blank');
-  toast('Opened mobile PiP battle feed');
+  toast('Opened streamer event rail');
 }
 function copyMobileOverlayUrl() {
   const url = mobileOverlayUrl(false);
-  if (!url) return toast('Mobile overlay URL is still loading', true);
+  if (!url) return toast('Streamer rail URL is still loading', true);
   navigator.clipboard?.writeText(url).then(() => {
     dashboardState.overlayUrlCopied = true;
     trackGrowthEvent('overlay_url_copied', { source: 'mobile_overlay', layout: mobileOverlayLayout() }, `overlay_url_copied:mobile:${mobileOverlayLayout()}`);
     updateSetupChecklist();
-    toast('Mobile PiP URL copied');
+    toast('Streamer rail URL copied');
   }).catch(() => toast('Copy failed', true));
 }
 function openSetupMobileOverlay() {
   const url = mobileOverlayUrl(true);
-  if (!url) return toast('Mobile setup URL is still loading', true);
+  if (!url) return toast('Setup rail URL is still loading', true);
   window.open(url, '_blank');
   dashboardState.setupPreviewOpened = true;
   updateSetupChecklist();
-  toast('Opened mobile setup feed');
+  toast('Opened setup event rail');
 }
 function copySetupMobileOverlayUrl() {
   const url = mobileOverlayUrl(true);
-  if (!url) return toast('Mobile setup URL is still loading', true);
+  if (!url) return toast('Setup rail URL is still loading', true);
   navigator.clipboard?.writeText(url).then(() => {
     dashboardState.overlayUrlCopied = true;
     trackGrowthEvent('overlay_url_copied', { source: 'mobile_setup_overlay', layout: mobileOverlayLayout() }, `overlay_url_copied:mobile-setup:${mobileOverlayLayout()}`);
     updateSetupChecklist();
-    toast('Mobile setup URL copied');
+    toast('Setup rail URL copied');
   }).catch(() => toast('Copy failed', true));
 }
 async function resetSetupRehearsal() {
@@ -2252,7 +2352,7 @@ function openOverlayV2Source(render = '1080p') {
 
 const usernameInput = document.getElementById('username');
 if (usernameInput) usernameInput.addEventListener('input', event => { const input = event.target; const start = input.selectionStart; const end = input.selectionEnd; const normalized = input.value.toLowerCase(); if (normalized !== input.value) { input.value = normalized; if (typeof start === 'number' && typeof end === 'number') input.setSelectionRange(start, end); } });
-function connect() { let username = document.getElementById('username').value.trim().replace(/^@/, '').toLowerCase(); if (!username) return toast('Enter a username', true); setTikTokStatus('connecting', username); applyStreamModeStatus({ mode:'real-connecting', label:'Connecting TikTok', detail:`Trying to connect @${username}.`, playerSource:'real', realPlayerCount:0, demoPlayerCount:0, testPlayerCount:0, blockingReasons:[{ code:'NO_REAL_EVENTS', message:'Waiting for TikTok to send the first real event.' }] }); fetch('/api/connect', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body:JSON.stringify({ username }) }).then(r=>r.json()).then(d=>{ if(d.success){ setTikTokStatus(d.status || 'connecting', d.username || username); toast(`Connecting to @${d.username || username}`); fetchStatus(); } else { setTikTokStatus('error'); toast(d.error || 'Connection failed', true); }}).catch(()=>{ setTikTokStatus('error'); toast('Connection failed', true); }); }
+function connect() { const input = document.getElementById('username'); const typedUsername = normalizeDashboardTikTokUsername(input?.value || ''); const linkedUsername = officialTikTokUsername(); const username = typedUsername || linkedUsername; if (!username) return toast('TikTok username unavailable. Connect TikTok with profile access or enter the LIVE username once.', true); if (input && !typedUsername && linkedUsername) input.value = linkedUsername; setTikTokStatus('connecting', username); applyStreamModeStatus({ mode:'real-connecting', label:'Connecting TikTok', detail:`Trying to connect @${username}.`, playerSource:'real', realPlayerCount:0, demoPlayerCount:0, testPlayerCount:0, blockingReasons:[{ code:'NO_REAL_EVENTS', message:'Waiting for TikTok to send the first real event.' }] }); fetch('/api/connect', { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body:JSON.stringify(typedUsername ? { username: typedUsername } : {}) }).then(r=>r.json()).then(d=>{ if(d.success){ setTikTokStatus(d.status || 'connecting', d.username || username); toast(`Connecting to @${d.username || username}`); fetchStatus(); } else { setTikTokStatus('error'); toast(d.error || 'Connection failed', true); }}).catch(()=>{ setTikTokStatus('error'); toast('Connection failed', true); }); }
 function resetTikTok(){ if(dashboardState.tiktokConnected && !confirm('Disconnect TikTok LIVE for this room? The overlay stays signed, but the live feed will stop.')) return; apiCall('/api/reset').then(()=>{ setTikTokStatus('disconnected'); renderPlayerRoster({ players: [], count: 0, bySource: { real: 0, demo: 0, test: 0 } }); renderStreamEvents([]); fetchStatus(); toast('TikTok disconnected'); }); }
 function reloadOverlay(){ if(overlayCount <= 0) return toast('No overlay source is connected to reload', true); apiCall('/api/overlay/reload'); toast('Overlay reload signal sent'); }
 function clearPlayers(){ if(confirm('Clear all players from this room now? This affects the live overlay immediately.')) apiCall('/api/players/clear').then(()=>toast('Players cleared from this room')); }
