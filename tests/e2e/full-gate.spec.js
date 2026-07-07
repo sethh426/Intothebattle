@@ -119,11 +119,18 @@ test('@cross-browser authenticated dashboard exposes real creator controls', asy
   await expect(page.getByRole('button', { name: 'Open Live Overlay' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Open Streamer Rail' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Test Live Overlay' })).toBeVisible();
+  await expect(page.locator('#footerOpenOverlayButton')).toBeEnabled();
+  await expect(page.locator('#footerStartVideoButton')).toBeDisabled();
   await expect(page.getByTestId('mobile-overlay-panel')).toBeVisible();
   await expect(page.locator('#mobileOverlayLayoutInput')).toHaveValue('pip-corner');
   await page.locator('#liveWorkflow').evaluate(el => { el.open = true; });
   await expect(page.getByRole('button', { name: 'Boss Wave' })).toBeVisible();
+  await page.locator('#toolsWorkflow').evaluate(el => { el.open = true; });
+  await expect(page.locator('.danger-zone')).toBeVisible();
+  await expect(page.locator('.danger-zone')).toContainText('Maintenance safety');
+  await expect(page.locator('#toggleDevModeButton')).toHaveText(/Enable Dev Mode|Disable Dev Mode/);
   await expect(page.locator('[data-beta-feature="overlay-v2"]')).toBeHidden();
+  await expect(page.locator('.card').first()).toHaveCSS('border-radius', '8px');
   await expect(page.locator('#launchActionGrid')).toMatchAriaSnapshot(`
     - button /Start setup demo/
     - button /Copy setup source/
@@ -139,6 +146,20 @@ test('@cross-browser authenticated dashboard exposes real creator controls', asy
     - button /Open source/
   `);
   await expectNoPageErrors(errors, testInfo, 'dashboard');
+});
+
+test('@dashboard footer overlay action is not gated by sponsor readiness', async ({ context, page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop', 'footer action policy only needs one authenticated browser pass');
+  await context.addCookies([{ name: 'session_token', value: 'full-gate-linked-tiktok-user', url: harness.baseUrl }]);
+  const errors = await gotoWatched(page, '/dashboard', testInfo, page => page.getByRole('heading', { name: 'IntoTheBattle Command Center' }), 'dashboard-footer-free-room');
+
+  await expect(page.locator('#subscription-chip')).toContainText(/Free|Plan|Trial|7-Day Full Access|unavailable|attention/i);
+  await expect(page.locator('#footerOpenOverlayButton')).toBeEnabled();
+  await expect(page.locator('#footerOpenOverlayButton')).toHaveAttribute('title', /Open the signed live overlay/);
+  await expect(page.locator('#footerStartVideoButton')).toBeDisabled();
+  await expect(page.locator('#footerStartVideoButton')).toHaveAttribute('title', /Creator Pro|Upload and select/);
+
+  await expectNoPageErrors(errors, testInfo, 'dashboard-footer-free-room');
 });
 
 test('@dashboard setup rehearsal changes demo state and then resets toward real setup', async ({ context, page }, testInfo) => {

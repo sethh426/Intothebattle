@@ -77,6 +77,10 @@
       ]
     },
     {
+      "path": "overlay-mobile.html",
+      "blocks": []
+    },
+    {
       "path": "overlay-phaser.html",
       "blocks": []
     },
@@ -190,7 +194,7 @@
     }
   ],
   "summary": {
-    "total_files": 23,
+    "total_files": 24,
     "files_with_jsonld": 12,
     "total_blocks": 12,
     "errors": 0,
