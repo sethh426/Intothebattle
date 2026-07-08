@@ -13,6 +13,7 @@ import {
   normalizePayPalSubscriptionStatus,
 } from '../tiktokbr/services/billingPolicy.js';
 import { extractIconEmojiCommand } from '../tiktokbr/services/chatCommands.js';
+import { extractLiveCommentText } from '../tiktokbr/services/liveEventText.js';
 import {
   DEPRECATED_ATTACK_COMMANDS,
   PLAYER_ATTACK_COMMANDS,
@@ -246,6 +247,17 @@ function testChatIconCommands() {
   assert.equal(extractIconEmojiCommand('!shield'), '');
 }
 
+function testLiveCommentTextExtraction() {
+  assert.equal(extractLiveCommentText({ comment: ' hello arena ' }), 'hello arena');
+  assert.equal(extractLiveCommentText({ comment: { text: ' @nova ' } }), '@nova');
+  assert.equal(extractLiveCommentText({ message: { content: 'regular chat' } }), 'regular chat');
+  assert.equal(extractLiveCommentText({ comment: { text: { value: 'nested chat' } } }), 'nested chat');
+  assert.equal(extractLiveCommentText({ comment: { gift: 'rose' } }), '');
+  assert.equal(extractLiveCommentText({ comment: {} }), '');
+  assert.equal(extractLiveCommentText({ comment: '[object Object]' }), '');
+  assert.equal(extractLiveCommentText({ comment: [{ value: '' }, { text: 'array chat' }] }), 'array chat');
+}
+
 function testPlayerCommandCatalog() {
   assert.equal(parseAttackCommand('!attack @nova')?.effect, 'laser');
   assert.equal(parseAttackCommand('!hit @nova')?.multiplier, 1.5);
@@ -405,6 +417,7 @@ function testLaunchReadinessSponsorMediaGate() {
 testEntitlements();
 testBillingPolicy();
 testChatIconCommands();
+testLiveCommentTextExtraction();
 testPlayerCommandCatalog();
 testArenaPowerUpRules();
 testSponsorMediaQualityGate();

@@ -70,6 +70,7 @@ import {
   rankArenaContributors,
 } from './tiktokbr/services/arenaPowerUp.js';
 import { extractIconEmojiCommand } from './tiktokbr/services/chatCommands.js';
+import { extractLiveCommentText } from './tiktokbr/services/liveEventText.js';
 import {
   commandBannerShowcasePayload,
   parseAttackCommand,
@@ -9026,11 +9027,17 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
 
   onTikTok('chat', (e) => {
     const { id, nickname } = resolveTikTokUser(e);
-    const comment = String(e.comment || e.message || '').trim();
+    const comment = extractLiveCommentText(e);
     if (!id) return;
 
+    ensurePlayerEnteredBattle(room, id, nickname, 'comment');
     awardStats(room, id, nickname, 0, CFG.CHAT_STRENGTH_BOOST);
     recordArenaPowerContribution(room, id, nickname, 'comment', 1);
+
+    if (!comment) {
+      emitRoomEvent(room, 'gameState', room.players);
+      return;
+    }
 
     const utilityCommand = handlePlayerUtilityCommand(room, id, nickname, comment);
     if (utilityCommand.handled) console.log(`Player command from @${nickname}: ${utilityCommand.reason || comment}`);
