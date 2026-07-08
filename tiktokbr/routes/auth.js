@@ -30,15 +30,33 @@ function getGoogleClientSecret() {
   return process.env.GOOGLE_CLIENT_SECRET;
 }
 
-function getGoogleRedirectUri() {
-  if (process.env.GOOGLE_OAUTH_REDIRECT_URI) return process.env.GOOGLE_OAUTH_REDIRECT_URI;
-  const base = process.env.APP_BASE_URL || 'http://localhost:3000';
-  return `${base.replace(/\/$/, '')}/auth/google/callback`;
+function requestOrigin(req) {
+  const getHeader = typeof req?.get === 'function'
+    ? name => req.get(name)
+    : name => req?.headers?.[String(name).toLowerCase()];
+  const host = String(getHeader?.('x-forwarded-host') || getHeader?.('host') || '').split(',')[0].trim();
+  if (!host) return '';
+  const proto = String(getHeader?.('x-forwarded-proto') || req?.protocol || 'http').split(',')[0].trim() || 'http';
+  return `${proto}://${host}`;
+}
+
+export function getGoogleRedirectUri(req = null, env = process.env) {
+  if (env.GOOGLE_OAUTH_REDIRECT_URI) return String(env.GOOGLE_OAUTH_REDIRECT_URI).trim();
+  const base = env.APP_BASE_URL || requestOrigin(req) || 'http://localhost:3000';
+  return `${base.replace(/\/+$/, '')}/auth/google/callback`;
+}
+
+export function getGoogleTokenUrl(env = process.env) {
+  return String(env.GOOGLE_OAUTH_TOKEN_URL || 'https://oauth2.googleapis.com/token').trim();
+}
+
+export function getGoogleUserInfoUrl(env = process.env) {
+  return String(env.GOOGLE_OAUTH_USERINFO_URL || 'https://openidconnect.googleapis.com/v1/userinfo').trim();
 }
 
 const DEFAULT_ONBOARDING_REDIRECT = '/dashboard?welcome=1';
 
-function createOAuthState(nextPath = DEFAULT_ONBOARDING_REDIRECT) {
+export function createOAuthState(nextPath = DEFAULT_ONBOARDING_REDIRECT) {
   return jwt.sign(
     {
       purpose: 'google_oauth',
@@ -50,7 +68,7 @@ function createOAuthState(nextPath = DEFAULT_ONBOARDING_REDIRECT) {
   );
 }
 
-function getOAuthStatePayload(state) {
+export function getOAuthStatePayload(state) {
   if (!state) return null;
   try {
     const payload = jwt.verify(state, process.env.JWT_SECRET);
@@ -66,8 +84,9 @@ function getVerifiedStateFromCookie(req) {
   return state;
 }
 
-async function fetchGoogleProfile(accessToken) {
-  const profileResponse = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+export async function fetchGoogleProfile(accessToken, options = {}) {
+  const fetchImpl = options.fetchImpl || fetch;
+  const profileResponse = await fetchImpl(options.userInfoUrl || getGoogleUserInfoUrl(options.env), {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -220,12 +239,47 @@ const promoLimiter = rateLimit({
 });
 
 const PAYPAL_LINK = process.env.PAYPAL_PAYMENT_LINK || 'https://www.paypal.com';
-const COOKIE_OPTIONS = {
-  httpOnly: true,
-  sameSite: 'lax',
-  secure: process.env.NODE_ENV === 'production',
-};
 const MAX_BCRYPT_ROUNDS = Number(process.env.MAX_BCRYPT_ROUNDS || 14);
+const PRODUCT_COOKIE_DOMAIN = 'intothebattle.com';
+
+function normalizeCookieDomain(value) {
+  const domain = String(value || '').trim().replace(/^\./, '').toLowerCase();
+  if (!domain || domain === 'localhost' || !domain.includes('.') || domain.includes(':')) return '';
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(domain)) return '';
+  return domain;
+}
+
+function hostnameFromUrl(value) {
+  try {
+    return new URL(String(value || '')).hostname.toLowerCase();
+  } catch (_err) {
+    return '';
+  }
+}
+
+export function getSharedCookieDomain(env = process.env) {
+  const explicit = normalizeCookieDomain(env.COOKIE_DOMAIN || env.SESSION_COOKIE_DOMAIN || env.AUTH_COOKIE_DOMAIN);
+  if (explicit) return explicit;
+
+  const hosts = [env.APP_BASE_URL, env.GOOGLE_OAUTH_REDIRECT_URI]
+    .map(hostnameFromUrl)
+    .filter(Boolean);
+  return hosts.some(host => host === PRODUCT_COOKIE_DOMAIN || host.endsWith(`.${PRODUCT_COOKIE_DOMAIN}`))
+    ? PRODUCT_COOKIE_DOMAIN
+    : '';
+}
+
+export function getCookieOptions(httpOnly = true, env = process.env) {
+  const options = {
+    path: '/',
+    httpOnly,
+    sameSite: 'lax',
+    secure: env.NODE_ENV === 'production',
+  };
+  const domain = getSharedCookieDomain(env);
+  if (domain) options.domain = domain;
+  return options;
+}
 
 function getBcryptRounds(hash) {
   const match = String(hash || '').match(/^\$2[aby]\$(\d{2})\$/);
@@ -643,10 +697,6 @@ function verifyRegistrationChallenge(token, answer) {
   } catch (_err) {
     return false;
   }
-}
-
-function getCookieOptions(httpOnly = true) {
-  return { ...COOKIE_OPTIONS, httpOnly };
 }
 
 function createSessionToken(payload) {
@@ -1068,11 +1118,11 @@ router.get('/auth/google', (req, res) => {
   }
 
   const state = createOAuthState(req.query.next);
-  res.cookie('google_oauth_state', state, { ...COOKIE_OPTIONS, httpOnly: true, sameSite: 'lax', maxAge: 10 * 60 * 1000 });
+  res.cookie('google_oauth_state', state, { ...getCookieOptions(true), maxAge: 10 * 60 * 1000 });
 
   const params = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: getGoogleRedirectUri(),
+    redirect_uri: getGoogleRedirectUri(req),
     response_type: 'code',
     scope: 'openid email profile',
     access_type: 'offline',
@@ -1099,21 +1149,25 @@ router.get('/auth/google/callback', async (req, res) => {
       return res.status(501).send('Google OAuth is not configured.');
     }
 
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    const tokenResponse = await fetch(getGoogleTokenUrl(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code: String(code),
         client_id: clientId,
         client_secret: clientSecret,
-        redirect_uri: getGoogleRedirectUri(),
+        redirect_uri: getGoogleRedirectUri(req),
         grant_type: 'authorization_code',
       }),
     });
 
     const tokenJson = await tokenResponse.json();
     if (!tokenResponse.ok || !tokenJson.access_token) {
-      console.error('Google token exchange failed', tokenJson);
+      console.error('Google token exchange failed', {
+        status: tokenResponse.status,
+        error: tokenJson?.error,
+        error_description: tokenJson?.error_description,
+      });
       return res.status(400).send('Google authentication failed.');
     }
 
@@ -1121,8 +1175,11 @@ router.get('/auth/google/callback', async (req, res) => {
     if (!profile || !profile.email) {
       return res.status(400).send('Google profile did not return an email.');
     }
+    if (profile.email_verified === false || profile.verified_email === false) {
+      return res.status(400).send('Google profile email is not verified.');
+    }
 
-    const email = String(profile.email).toLowerCase();
+    const email = String(profile.email).trim().toLowerCase();
     let user = await getAsync('SELECT * FROM users WHERE email = ?', email);
 
     if (!user) {
@@ -1169,7 +1226,7 @@ router.get('/auth/google/callback', async (req, res) => {
     const sessionToken = createSessionToken({ userId: user.id, email });
     await runAsync('UPDATE users SET session_token = ?, last_login = CURRENT_TIMESTAMP WHERE id = ?', [sessionToken, user.id]);
     setSessionCookie(res, sessionToken);
-    res.clearCookie('google_oauth_state', { ...COOKIE_OPTIONS, httpOnly: true, sameSite: 'lax' });
+    res.clearCookie('google_oauth_state', getCookieOptions(true));
     const subscription = getEffectiveUserSubscription(db, user.id);
     return res.redirect(userAccessRedirect(user, subscription, redirectUrl));
   } catch (err) {
