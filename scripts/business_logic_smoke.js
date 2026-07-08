@@ -282,8 +282,11 @@ function testPlayerCommandCatalog() {
   assert.equal(parseUtilityCommand('start')?.canonical, 'join');
   assert.equal(parseUtilityCommand('enter')?.canonical, 'join');
   assert.equal(parseUtilityCommand('!commands')?.canonical, 'help');
+  assert.equal(parseUtilityCommand('!comments')?.canonical, 'help');
   assert.equal(parseUtilityCommand('! command')?.canonical, 'help');
+  assert.deepEqual(parseUtilityCommand('@nova !comments'), { canonical: 'help', command: 'comments', rest: '@nova', prefixed: true });
   assert.deepEqual(parseUtilityCommand('!heal@nova'), { canonical: 'heal', command: 'heal', rest: '@nova', prefixed: true });
+  assert.deepEqual(parseUtilityCommand('@nova !heal'), { canonical: 'heal', command: 'heal', rest: '@nova', prefixed: true });
   assert.equal(parseUtilityCommand('! hp @nova')?.canonical, 'heal');
   assert.equal(parseUtilityCommand('!shield')?.canonical, 'shield');
   assert.equal(parseUtilityCommand('! guard')?.canonical, 'shield');
@@ -296,7 +299,7 @@ function testPlayerCommandCatalog() {
   }
 
   const commandText = viewerCommandText();
-  for (const expected of ['Any comment, like, follow, share, or gift enters you', '!attack @name', '@horde', '@boss', '!shield', '!heal @name', '!commands']) {
+  for (const expected of ['Any comment, like, follow, share, or gift enters you', '!attack @name', '@horde', '@boss', '!shield', '!heal @name', '!commands', '!comments']) {
     assert.ok(commandText.includes(expected), `viewer command text should include ${expected}`);
   }
   assert.equal(commandText.includes('!join'), false, 'viewer command text should not tell viewers to type !join to enter');
