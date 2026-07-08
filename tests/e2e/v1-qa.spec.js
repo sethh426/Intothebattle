@@ -205,6 +205,9 @@ async function readSupportUnitDetails(page) {
       frameBottom: frameRect.bottom,
       frameWidth: frameRect.width,
       centerDelta: Math.abs((rect.left + rect.width / 2) - (frameRect.left + frameRect.width / 2)),
+      edge: unit.dataset.edge || '',
+      edgeGap: Math.min(rect.left - frameRect.left, frameRect.right - rect.right),
+      telemetryChip: layout.supportChip || null,
       supportCollisions: (layout.collisions || []).filter(item => JSON.stringify(item).toLowerCase().includes('support')),
       supportLeaks: (layout.leaks || []).filter(item => JSON.stringify(item).toLowerCase().includes('support')),
     };
@@ -553,16 +556,20 @@ test('like heal support feedback uses one compact unit', async ({ page }, testIn
   expect(details).toBeTruthy();
   expect(details.unitCount).toBe(1);
   expect(details.visible).toBe(true);
-  expect(details.text).toContain('SUPPORT');
-  expect(details.text).toContain('+3 LIKES');
-  expect(details.text).toContain('+25 HEAL');
-  expect(details.text).toContain('SHIELD');
+  expect(details.text).not.toContain('SUPPORT');
+  expect(details.text).toMatch(/\+3 Likes/i);
+  expect(details.text).toMatch(/\+25 HP/i);
+  expect(details.text).toMatch(/Shield/i);
   expect(details.healBannerCount).toBe(0);
   expect(details.left).toBeGreaterThanOrEqual(details.frameLeft - 1);
   expect(details.right).toBeLessThanOrEqual(details.frameRight + 1);
   expect(details.top).toBeGreaterThanOrEqual(details.frameTop - 1);
   expect(details.bottom).toBeLessThanOrEqual(details.frameBottom + 1);
-  expect(details.centerDelta).toBeLessThanOrEqual(Math.max(18, details.frameWidth * 0.045));
+  expect(details.width).toBeLessThanOrEqual(Math.max(150, details.frameWidth * 0.3));
+  expect(details.centerDelta).toBeGreaterThanOrEqual(details.frameWidth * 0.2);
+  expect(details.edge).toMatch(/^top-(left|right)$/);
+  expect(details.edgeGap).toBeLessThanOrEqual(Math.max(26, details.frameWidth * 0.045));
+  expect(details.telemetryChip, JSON.stringify(details, null, 2)).toBeTruthy();
   expect(details.supportCollisions, JSON.stringify(details, null, 2)).toEqual([]);
   expect(details.supportLeaks, JSON.stringify(details, null, 2)).toEqual([]);
 

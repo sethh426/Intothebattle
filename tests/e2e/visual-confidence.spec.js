@@ -160,36 +160,38 @@ function assertPlayerCardSlots(layout, label, options = {}) {
     const cardLabel = `${label} player ${index + 1}`;
     const slots = player.slots || {};
     expect(slots.card, `${cardLabel} missing card slot`).toBeTruthy();
-    for (const key of ['rank', 'rankBadge', 'name', 'handle', 'ko', 'koBadge', 'commandBadge', 'avatar', 'hpBar', 'statusBadges']) {
+    for (const key of ['name', 'handle', 'ko', 'koBadge', 'avatar', 'hpBar', 'statusBadges']) {
       assertRectInside(slots[key], slots.card, `${cardLabel} ${key} slot`);
     }
-    for (const key of ['rankText', 'nameText', 'handleText', 'koText', 'hpText', 'statusText']) {
+    if (slots.commandBadge) assertRectInside(slots.commandBadge, slots.card, `${cardLabel} commandBadge slot`);
+    for (const key of ['nameText', 'handleText', 'koText', 'hpText', 'statusText']) {
       assertRectInside(slots[key], slots.card, `${cardLabel} ${key}`);
     }
     if (slots.commandText) assertRectInside(slots.commandText, slots.card, `${cardLabel} command text`);
-    assertRectInside(slots.rankText, slots.rank, `${cardLabel} rank text`, 2.5);
+    expect(slots.rank, `${cardLabel} rank slot should not render`).toBeNull();
+    expect(slots.rankBadge, `${cardLabel} rank badge should not render`).toBeNull();
+    expect(slots.rankText, `${cardLabel} rank text should not render`).toBeNull();
     assertRectInside(slots.nameText, slots.name, `${cardLabel} name text`, 3);
     assertRectInside(slots.handleText, slots.handle, `${cardLabel} handle text`, 3);
     assertRectInside(slots.koText, slots.ko, `${cardLabel} ko text`, 2.5);
     assertRectInside(slots.hpText, slots.hpBar, `${cardLabel} hp text`, 3);
     assertRectInside(slots.statusText, slots.statusBadges, `${cardLabel} status text`, 2.5);
     if (slots.commandText) assertRectInside(slots.commandText, slots.commandBadge, `${cardLabel} command text`, 2.5);
-    assertNoSlotOverlap(slots.rank, slots.name, `${cardLabel} rank/name`);
-    assertNoSlotOverlap(slots.name, slots.commandBadge, `${cardLabel} name/command`);
-    assertNoSlotOverlap(slots.commandBadge, slots.ko, `${cardLabel} command/ko`);
-    assertNoSlotOverlap(slots.rank, slots.ko, `${cardLabel} rank/ko`);
-    assertNoSlotOverlap(slots.handle, slots.statusBadges, `${cardLabel} handle/status`);
-    for (const statKey of ['ko', 'commandBadge']) {
-      assertNoSlotOverlap(slots[statKey], slots.avatar, `${cardLabel} ${statKey}/avatar`);
-      assertNoSlotOverlap(slots[statKey], slots.hpBar, `${cardLabel} ${statKey}/hp`);
+    if (slots.commandBadge) {
+      assertNoSlotOverlap(slots.name, slots.commandBadge, `${cardLabel} name/command`);
+      assertNoSlotOverlap(slots.commandBadge, slots.ko, `${cardLabel} command/ko`);
+      assertNoSlotOverlap(slots.commandBadge, slots.avatar, `${cardLabel} command/avatar`);
+      assertNoSlotOverlap(slots.commandBadge, slots.hpBar, `${cardLabel} command/hp`);
     }
-    assertNoSlotOverlap(slots.rank, slots.hpBar, `${cardLabel} rank/hp`);
+    assertNoSlotOverlap(slots.handle, slots.statusBadges, `${cardLabel} handle/status`);
+    assertNoSlotOverlap(slots.ko, slots.avatar, `${cardLabel} ko/avatar`);
+    assertNoSlotOverlap(slots.ko, slots.hpBar, `${cardLabel} ko/hp`);
     assertNoSlotOverlap(slots.name, slots.avatar, `${cardLabel} name/avatar`);
     assertNoSlotOverlap(slots.name, slots.hpBar, `${cardLabel} name/hp`);
     assertNoSlotOverlap(slots.handle, slots.hpBar, `${cardLabel} handle/hp`);
     assertNoSlotOverlap(slots.statusBadges, slots.hpBar, `${cardLabel} status/hp`);
     assertNoSlotOverlap(slots.avatar, slots.hpBar, `${cardLabel} avatar/hp`);
-    expect(player.text?.cardDesign, `${cardLabel} card design marker`).toBe('battle-id-plate');
+    expect(player.text?.cardDesign, `${cardLabel} card design marker`).toBe('broadcast-identity-card');
     expect(player.text?.nameHasReplacement, `${cardLabel} name contains replacement glyph`).toBe(false);
     expect(player.text?.fittedName || '', `${cardLabel} missing fitted name`).not.toBe('');
     expect(player.text?.handle || '', `${cardLabel} missing handle`).not.toBe('');
