@@ -160,14 +160,16 @@ function assertPlayerCardSlots(layout, label, options = {}) {
     const cardLabel = `${label} player ${index + 1}`;
     const slots = player.slots || {};
     expect(slots.card, `${cardLabel} missing card slot`).toBeTruthy();
-    for (const key of ['name', 'handle', 'avatar', 'hpBar', 'statusBadges']) {
+    for (const key of ['name', 'avatar', 'hpBar', 'statusBadges']) {
       assertRectInside(slots[key], slots.card, `${cardLabel} ${key} slot`);
     }
-    if (slots.commandBadge) assertRectInside(slots.commandBadge, slots.card, `${cardLabel} commandBadge slot`);
-    for (const key of ['nameText', 'handleText', 'hpText', 'statusText']) {
+    for (const key of ['nameText', 'hpText', 'statusText']) {
       assertRectInside(slots[key], slots.card, `${cardLabel} ${key}`);
     }
-    if (slots.commandText) assertRectInside(slots.commandText, slots.card, `${cardLabel} command text`);
+    expect(slots.handle, `${cardLabel} handle slot should not render`).toBeNull();
+    expect(slots.handleText, `${cardLabel} handle text should not render`).toBeNull();
+    expect(slots.commandBadge, `${cardLabel} command badge should not render separately`).toBeNull();
+    expect(slots.commandText, `${cardLabel} command text should not render separately`).toBeNull();
     expect(slots.rank, `${cardLabel} rank slot should not render`).toBeNull();
     expect(slots.rankBadge, `${cardLabel} rank badge should not render`).toBeNull();
     expect(slots.rankText, `${cardLabel} rank text should not render`).toBeNull();
@@ -175,27 +177,18 @@ function assertPlayerCardSlots(layout, label, options = {}) {
     expect(slots.koBadge, `${cardLabel} ko badge should not render`).toBeNull();
     expect(slots.koText, `${cardLabel} ko text should not render`).toBeNull();
     assertRectInside(slots.nameText, slots.name, `${cardLabel} name text`, 3);
-    assertRectInside(slots.handleText, slots.handle, `${cardLabel} handle text`, 3);
     assertRectInside(slots.hpText, slots.hpBar, `${cardLabel} hp text`, 3);
     assertRectInside(slots.statusText, slots.statusBadges, `${cardLabel} status text`, 2.5);
-    if (slots.commandText) assertRectInside(slots.commandText, slots.commandBadge, `${cardLabel} command text`, 2.5);
-    if (slots.commandBadge) {
-      assertNoSlotOverlap(slots.name, slots.commandBadge, `${cardLabel} name/command`);
-      assertNoSlotOverlap(slots.commandBadge, slots.avatar, `${cardLabel} command/avatar`);
-      assertNoSlotOverlap(slots.commandBadge, slots.hpBar, `${cardLabel} command/hp`);
-    }
-    assertNoSlotOverlap(slots.handle, slots.statusBadges, `${cardLabel} handle/status`);
     assertNoSlotOverlap(slots.name, slots.avatar, `${cardLabel} name/avatar`);
     assertNoSlotOverlap(slots.name, slots.hpBar, `${cardLabel} name/hp`);
-    assertNoSlotOverlap(slots.handle, slots.hpBar, `${cardLabel} handle/hp`);
     assertNoSlotOverlap(slots.statusBadges, slots.hpBar, `${cardLabel} status/hp`);
     assertNoSlotOverlap(slots.avatar, slots.hpBar, `${cardLabel} avatar/hp`);
     expect(player.text?.cardDesign, `${cardLabel} card design marker`).toBe('broadcast-identity-card');
     expect(player.text?.nameHasReplacement, `${cardLabel} name contains replacement glyph`).toBe(false);
     expect(player.text?.fittedName || '', `${cardLabel} missing fitted name`).not.toBe('');
-    expect(player.text?.handle || '', `${cardLabel} missing handle`).not.toBe('');
+    expect(player.text?.handle || '', `${cardLabel} handle should be hidden by default`).toBe('');
     expect(player.text?.koLabel || '', `${cardLabel} ko label should not render`).toBe('');
-    expect(player.text?.hpLabel || '', `${cardLabel} missing hp label`).toContain('HP');
+    expect(player.text?.hpLabel || '', `${cardLabel} missing hp label`).toMatch(/^\d+\s+HP$/);
     expect(player.text?.statusLabel || '', `${cardLabel} missing status label`).not.toBe('');
     expect(['healthy', 'damaged', 'critical', 'ko'], `${cardLabel} unknown health state`).toContain(player.text?.healthState);
     expect(player.text?.nameCenterDelta ?? 999, `${cardLabel} name center drift`).toBeLessThanOrEqual(2);

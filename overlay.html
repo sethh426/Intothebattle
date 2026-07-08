@@ -369,8 +369,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   --banner-accent-soft:rgba(122,252,255,0.18);
   --banner-duration:3200ms;
   position:absolute; left:50%; top:50%; transform:translate(-50%,0); z-index:26; pointer-events:none;
-  min-height:72px; max-height:86px; padding:0 18px; box-sizing:border-box; overflow:hidden;
-  display:grid; grid-template-columns:58px minmax(0,1fr) 7px; align-items:center; gap:12px;
+  min-height:62px; max-height:70px; padding:0 15px; box-sizing:border-box; overflow:hidden;
+  display:grid; grid-template-columns:48px minmax(0,1fr) 6px; align-items:center; gap:10px;
   font-family:'Rajdhani','Segoe UI',sans-serif; color:#f8fbff;
   background:
     linear-gradient(90deg, rgba(2,7,14,0.98), rgba(5,16,31,0.94) 34%, rgba(3,9,18,0.96)),
@@ -379,33 +379,33 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   border-radius:7px;
   clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);
   box-shadow:
-    0 18px 42px rgba(0,0,0,0.62),
-    0 0 32px rgba(var(--banner-accent-rgb),0.2),
+    0 14px 34px rgba(0,0,0,0.58),
+    0 0 24px rgba(var(--banner-accent-rgb),0.16),
     inset 0 1px 0 rgba(255,255,255,0.13),
     inset 0 -1px 0 rgba(0,0,0,0.45);
-  backdrop-filter:blur(12px) saturate(1.16);
-  animation:cyberBannerIn 260ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 820ms 160ms ease-out;
+  backdrop-filter:blur(10px) saturate(1.12);
+  animation:cyberBannerIn 150ms cubic-bezier(.16,1,.3,1) both;
 }
 .banner::before {
-  content:""; position:absolute; inset:0; pointer-events:none; opacity:.54;
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:.28;
   background:
     linear-gradient(90deg, transparent 0 8%, rgba(var(--banner-accent-rgb),0.42) 12%, transparent 18%),
     repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 1px, transparent 1px 5px);
   transform:translateX(-115%);
-  animation:cyberBannerSweep 900ms 90ms cubic-bezier(.16,1,.3,1) both;
+  animation:cyberBannerSweep 760ms 90ms cubic-bezier(.16,1,.3,1) both;
 }
 .banner::after {
   content:""; position:absolute; inset:5px; pointer-events:none;
   border:1px solid rgba(255,255,255,0.08);
   clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
 }
-.banner.closing { animation:cyberBannerOut 220ms ease-in forwards; }
-.banner.transition-slam { animation:cyberBannerSlamIn 340ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 820ms 120ms ease-out; }
-.banner.transition-sweep { animation:cyberBannerSweepIn 320ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 820ms 140ms ease-out; }
-.banner.transition-signal { animation:cyberBannerSignalIn 280ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 820ms 160ms ease-out; }
-.banner.transition-surge { animation:cyberBannerSurgeIn 390ms cubic-bezier(.16,1,.3,1) both, cyberBannerPulse 900ms 120ms ease-out; }
+.banner.closing { animation:cyberBannerOut 180ms ease-in forwards; }
+.banner.transition-slam,
+.banner.transition-sweep,
+.banner.transition-signal,
+.banner.transition-surge { animation:cyberBannerIn 150ms cubic-bezier(.16,1,.3,1) both; }
 .banner-signal {
-  position:relative; width:58px; height:48px; display:grid; place-items:center; flex:0 0 auto;
+  position:relative; width:48px; height:40px; display:grid; place-items:center; flex:0 0 auto;
   color:var(--banner-accent); border-right:1px solid rgba(255,255,255,0.1);
 }
 .banner-code {
@@ -416,8 +416,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   font-size:12px; font-weight:950; letter-spacing:.9px; text-transform:uppercase;
 }
 .banner-pulse {
-  position:absolute; width:36px; height:36px; border:1px solid rgba(var(--banner-accent-rgb),0.38);
-  transform:rotate(45deg); opacity:.82; animation:cyberSignalPulse 920ms ease-in-out infinite;
+  position:absolute; width:30px; height:30px; border:1px solid rgba(var(--banner-accent-rgb),0.34);
+  transform:rotate(45deg); opacity:.68; animation:cyberSignalPulse 1200ms ease-in-out infinite;
 }
 .banner-copy { min-width:0; position:relative; z-index:1; display:grid; gap:2px; }
 .banner-kicker {
@@ -427,7 +427,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 }
 .banner-title {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#fff; font-size:26px; line-height:1.08; font-weight:950; letter-spacing:.45px; text-transform:uppercase;
+  color:#fff; font-size:22px; line-height:1.08; font-weight:950; letter-spacing:.2px; text-transform:uppercase;
   text-shadow:0 0 22px rgba(255,255,255,0.34),0 2px 7px rgba(0,0,0,0.88);
 }
 .banner-title strong { color:var(--banner-accent); font-weight:900; }
@@ -436,7 +436,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   color:#d5deec; font-size:12px; line-height:1; font-weight:900; letter-spacing:.52px; text-transform:uppercase;
 }
 .banner-meter {
-  position:relative; z-index:1; width:7px; height:48px; border:1px solid rgba(255,255,255,0.12);
+  position:relative; z-index:1; width:6px; height:40px; border:1px solid rgba(255,255,255,0.12);
   background:rgba(255,255,255,0.05); overflow:hidden; align-self:center;
 }
 .banner-meter-fill {
@@ -483,7 +483,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   background:linear-gradient(90deg, rgba(var(--banner-accent-rgb),0.16), rgba(255,255,255,0.035));
 }
 .banner-command-rail {
-  display:grid; grid-template-columns:repeat(7,minmax(86px,1fr)); align-items:stretch; gap:5px;
+  display:grid; grid-template-columns:repeat(9,minmax(54px,1fr)); align-items:stretch; gap:4px;
   min-width:0; width:100%; padding:5px; overflow:hidden;
 }
 .banner-command-ticker {
@@ -541,7 +541,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     0 0 86px rgba(255,84,54,0.14),
     inset 0 1px 0 rgba(255,255,255,0.18);
 }
-.banner.legendary .banner-title { font-size:28px; text-shadow:0 0 28px rgba(255,227,111,0.46),0 2px 8px rgba(0,0,0,0.9); }
+.banner.legendary .banner-title { font-size:24px; text-shadow:0 0 22px rgba(255,227,111,0.38),0 2px 8px rgba(0,0,0,0.9); }
 .banner.is-compact {
   min-height:58px; max-height:68px; padding:0 12px; gap:9px;
   grid-template-columns:42px minmax(0,1fr) 5px;
@@ -557,15 +557,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.commands.is-compact { min-height:54px; max-height:62px; padding:0 10px; grid-template-columns:1fr; }
 .banner.commands.is-compact .banner-signal,
 .banner.commands.is-compact .banner-meter { display:none; }
-.banner.commands.is-compact .banner-command-strip { min-height:40px; grid-template-columns:minmax(112px,0.22fr) minmax(0,1fr); }
+.banner.commands.is-compact .banner-command-strip { min-height:44px; grid-template-columns:minmax(132px,0.17fr) minmax(0,1fr); }
 .banner.commands.is-compact .banner-command-label,
 .banner.commands.is-compact .banner-command-run span { font-size:16px; }
 .banner.commands.is-compact .banner-command-label { padding:0 12px; }
 .banner.commands.is-compact .banner-command-run { height:40px; padding:0 14px; gap:14px; }
 .banner.commands.is-compact .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(84px,1fr)); max-height:24px; gap:3px; }
-.banner.commands.is-compact .banner-command-rail { grid-template-columns:repeat(7,minmax(58px,1fr)); gap:3px; padding:4px; }
-.banner.commands.is-compact .banner-command-chip { min-height:30px; padding:2px 5px; font-size:8px; letter-spacing:0; }
-.banner.commands.is-compact .banner-command-chip strong { font-size:10px; line-height:1.02; white-space:normal; overflow:visible; text-overflow:clip; }
+.banner.commands.is-compact .banner-command-rail { grid-template-columns:repeat(8,minmax(86px,1fr)); gap:5px; padding:5px; }
+.banner.commands.is-compact .banner-command-chip.banner-command-secondary { display:none; }
+.banner.commands.is-compact .banner-command-chip { min-height:34px; padding:3px 7px; font-size:10px; letter-spacing:0; }
+.banner.commands.is-compact .banner-command-chip strong { display:flex; align-items:center; justify-content:center; min-height:24px; font-size:12.2px; line-height:1; white-space:normal; overflow:visible; overflow-wrap:anywhere; text-overflow:clip; }
 .banner.commands.is-compact .banner-command-chip span { display:none; }
 .banner.is-micro {
   min-height:48px; max-height:56px; padding:0 9px; gap:6px;
@@ -588,9 +589,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.commands.is-micro .banner-command-label { padding:0 8px; }
 .banner.commands.is-micro .banner-command-run { height:34px; padding:0 12px; gap:12px; }
 .banner.commands.is-micro .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(64px,1fr)); max-height:16px; gap:2px; }
-.banner.commands.is-micro .banner-command-rail { grid-template-columns:repeat(7,minmax(44px,1fr)); gap:2px; padding:3px; }
-.banner.commands.is-micro .banner-command-chip { min-height:26px; padding:1px 3px; font-size:7px; }
-.banner.commands.is-micro .banner-command-chip strong { font-size:8px; line-height:1.02; white-space:normal; overflow:visible; text-overflow:clip; }
+.banner.commands.is-micro .banner-command-rail { grid-template-columns:repeat(6,minmax(48px,1fr)); gap:2px; padding:3px; }
+.banner.commands.is-micro .banner-command-chip.banner-command-micro-hidden { display:none; }
+.banner.commands.is-micro .banner-command-chip { min-height:26px; padding:1px 4px; font-size:7px; }
+.banner.commands.is-micro .banner-command-chip strong { font-size:8.5px; line-height:1.02; white-space:normal; overflow:visible; text-overflow:clip; }
 .banner.commands.is-micro .banner-command-chip span { display:none; }
 .banner.commands.is-nano { min-height:24px; max-height:26px; grid-template-columns:1fr; }
 .banner.is-nano {
@@ -617,12 +619,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.commands.is-nano .banner-command-chip span { display:none; }
 .banner.is-nano .banner-meter { width:3px; height:20px; }
 @keyframes cyberBannerIn {
-  0% { opacity:0; transform:translate(-50%,-14px) scaleX(.72); filter:blur(5px) brightness(1.45); }
-  62% { opacity:1; transform:translate(-50%,2px) scaleX(1.025); filter:blur(0) brightness(1.1); }
-  100% { opacity:1; transform:translate(-50%,0) scaleX(1); filter:none; }
+  0% { opacity:0; transform:translate(-50%,0) scale(1); filter:blur(2px) brightness(1.12); }
+  100% { opacity:1; transform:translate(-50%,0) scale(1); filter:none; }
 }
 @keyframes cyberBannerOut {
-  to { opacity:0; transform:translate(-50%,-12px) scaleX(.82); filter:blur(4px); }
+  to { opacity:0; transform:translate(-50%,0) scale(1); filter:blur(2px); }
 }
 @keyframes cyberBannerSlamIn {
   0% { opacity:0; transform:translate(-50%,-30px) scale(.88,1.18); filter:blur(8px) brightness(1.8); }
@@ -676,15 +677,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .banner.commands:not(.is-nano) { min-height:50px; max-height:60px; grid-template-columns:1fr; }
   .banner.commands:not(.is-nano) .banner-signal,
   .banner.commands:not(.is-nano) .banner-meter { display:none; }
-  .banner.commands .banner-command-strip { min-height:38px; grid-template-columns:minmax(104px,0.24fr) minmax(0,1fr); }
+  .banner.commands .banner-command-strip { min-height:38px; grid-template-columns:minmax(104px,0.22fr) minmax(0,1fr); }
   .banner.commands .banner-command-label,
   .banner.commands .banner-command-run span { font-size:13px; }
   .banner.commands .banner-command-label { padding:0 12px; }
   .banner.commands .banner-command-run { height:38px; padding:0 12px; gap:12px; }
   .banner.commands .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(72px,1fr)); max-height:22px; gap:3px; }
-  .banner.commands .banner-command-rail { grid-template-columns:repeat(7,minmax(44px,1fr)); gap:2px; padding:3px; }
-  .banner.commands .banner-command-chip { min-height:26px; padding:1px 3px; font-size:7px; }
-  .banner.commands .banner-command-chip strong { font-size:8px; }
+  .banner.commands .banner-command-rail { grid-template-columns:repeat(6,minmax(44px,1fr)); gap:2px; padding:3px; }
+  .banner.commands .banner-command-chip.banner-command-secondary,
+  .banner.commands .banner-command-chip.banner-command-micro-hidden { display:none; }
+  .banner.commands .banner-command-chip { min-height:26px; padding:1px 4px; font-size:7px; }
+  .banner.commands .banner-command-chip strong { font-size:8.5px; }
   .banner.commands .banner-command-chip span { display:none; }
   .banner.commands.is-nano { min-height:24px; max-height:26px; }
 }
@@ -3877,14 +3880,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const frame = stage.frame;
     const playerZone = stage.zones.players;
     const requestedCardH = Math.min(
-      frame.h * (isPublicDemo ? 0.152 : 0.148),
-      playerZone.h * (isPublicDemo ? 0.66 : 0.62)
+      frame.h * (isPublicDemo ? 0.158 : 0.152),
+      playerZone.h * (isPublicDemo ? 0.68 : 0.64)
     ) * layoutZoom;
-    const requestedCardW = requestedCardH * (total >= 5 ? 3.06 : total === 4 ? 2.95 : 2.78);
-    const baseGap = requestedCardW * (total >= 5 ? 0.018 : total === 4 ? 0.03 : total === 3 ? 0.052 : 0.085);
-    const minGap = stage.gap * 1.42;
-    const maxGap = requestedCardW * (total >= 5 ? 0.062 : total === 4 ? 0.09 : total === 3 ? 0.17 : 0.28);
-    const gapScale = total >= 5 ? 0.1 : total === 4 ? 0.15 : 0.24;
+    const requestedCardW = requestedCardH * (total >= 5 ? 3.36 : total === 4 ? 3.18 : 2.98);
+    const baseGap = requestedCardW * (total >= 5 ? 0.012 : total === 4 ? 0.024 : total === 3 ? 0.044 : 0.078);
+    const minGap = stage.gap * 1.6;
+    const maxGap = requestedCardW * (total >= 5 ? 0.042 : total === 4 ? 0.072 : total === 3 ? 0.15 : 0.25);
+    const gapScale = total >= 5 ? 0.075 : total === 4 ? 0.12 : 0.22;
     const visualGap = Math.min(Math.max(minGap, maxGap), Math.max(minGap, baseGap + Math.max(0, layoutGap) * gapScale));
     const availableW = Math.max(240, playerZone.w - stage.gap * 2);
     const naturalWidth = total > 1 ? requestedCardW * total + visualGap * (total - 1) : requestedCardW;
@@ -3901,51 +3904,44 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const compactDemoCard = isPublicDemo;
     const ui = canvasUiScale();
     const { cardH, cardW } = getPlayerCardMetrics(total);
-    const plateH = Math.max(compactDemoCard ? 112 * ui : 124 * ui, cardH * 1.18);
+    const plateH = Math.max(compactDemoCard ? 118 * ui : 128 * ui, cardH * 1.24);
     const plateX = pos.x - cardW / 2;
     const plateY = pos.y - plateH / 2;
     const radius = Math.max(13 * ui, plateH * 0.16);
     const padX = clampNumber(cardW * 0.045, 7 * ui, 14 * ui);
-    const padY = clampNumber(plateH * 0.092, 7 * ui, 13 * ui);
+    const padY = clampNumber(plateH * 0.086, 7 * ui, 12 * ui);
     const slotGap = Math.max(4 * ui, cardW * 0.016);
     const contentRight = plateX + cardW - padX;
-    const nameH = Math.max(42 * ui, Math.min(58 * ui, plateH * 0.45));
-    const handleH = Math.max(9 * ui, Math.min(14 * ui, plateH * 0.12));
-    const barH = Math.max(15 * ui, Math.min(22 * ui, plateH * 0.18));
-    const badgeH = Math.max(18 * ui, Math.min(24 * ui, plateH * 0.2));
+    const nameH = Math.max(48 * ui, Math.min(60 * ui, plateH * 0.48));
+    const barH = Math.max(16 * ui, Math.min(20 * ui, plateH * 0.165));
+    const badgeH = Math.max(16 * ui, Math.min(19 * ui, plateH * 0.155));
     const nameX = plateX + padX;
     const nameY = plateY + padY;
     const nameW = Math.max(1, cardW - padX * 2);
-    const handleX = nameX;
-    const handleY = nameY + nameH - handleH - Math.max(1, 1.5 * ui);
-    const handleW = nameW;
     const barX = plateX + padX;
-    const bottomPad = Math.max(4 * ui, padY * 0.55);
+    const bottomPad = Math.max(6 * ui, padY * 0.68);
     const barY = plateY + plateH - bottomPad - barH;
     const barW = Math.max(1, cardW - padX * 2);
     const midTop = clampNumber(
-      nameY + nameH + slotGap * 0.7,
-      nameY + nameH + slotGap * 0.35,
-      Math.max(nameY + nameH * 0.92, barY - slotGap - badgeH)
+      nameY + nameH + slotGap * 0.55,
+      nameY + nameH + slotGap * 0.25,
+      Math.max(nameY + nameH * 0.92, barY - slotGap * 1.15 - badgeH)
     );
-    const avatarR = Math.max(10 * ui, Math.min(18 * ui, badgeH * 0.5, cardW * 0.065));
-    const avatarX = plateX + padX + avatarR;
+    const avatarR = Math.max(4.5 * ui, Math.min(7 * ui, badgeH * 0.34, cardW * 0.032));
+    const avatarX = plateX + padX + avatarR + Math.max(2 * ui, badgeH * 0.12);
     const avatarY = midTop + badgeH / 2;
-    const statX = avatarX + avatarR + slotGap;
+    const statX = avatarX + avatarR + Math.max(5 * ui, slotGap);
     const statAreaW = Math.max(1, contentRight - statX);
-    const splitCommand = statAreaW >= 120 * ui;
-    const statusW = splitCommand ? Math.max(56 * ui, statAreaW * 0.58) : statAreaW;
-    const commandW = splitCommand ? Math.max(1, statAreaW - statusW - slotGap) : 0;
+    const statusW = Math.min(statAreaW, Math.max(62 * ui, cardW * 0.38));
     const statusX = statX;
-    const commandX = statusX + statusW + slotGap;
     const hpTextY = barY + barH / 2;
     const glowPad = 0;
     const slots = {
       card: makeRect(plateX, plateY, cardW, plateH),
       name: makeRect(nameX, nameY, nameW, nameH),
-      handle: makeRect(handleX, handleY, handleW, handleH),
+      handle: null,
       koBadge: null,
-      commandBadge: splitCommand ? makeRect(commandX, midTop, commandW, badgeH) : null,
+      commandBadge: null,
       avatar: makeRect(avatarX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2),
       hpBar: makeRect(barX, barY, barW, barH),
       statusBadges: makeRect(statusX, midTop, statusW, badgeH),
@@ -4820,13 +4816,19 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function bannerCommandRailHtml(commands) {
     if (!Array.isArray(commands) || !commands.length) return '';
     const nanoPrimaryCommands = new Set(['engage', '@name', '!shield', '!commands']);
+    const compactHiddenCommands = new Set(['chat']);
+    const microHiddenCommands = new Set(['chat', '!attack @name', '!heal @name']);
     return `
         <span class="banner-command-rail" data-testid="command-banner-rail">
           ${commands.map(entry => {
             const commandText = String(entry.command || '');
-            const primaryClass = nanoPrimaryCommands.has(commandText.toLowerCase()) ? ' banner-command-primary' : '';
+            const normalizedCommand = commandText.toLowerCase();
+            const chipClasses = ['banner-command-chip'];
+            if (nanoPrimaryCommands.has(normalizedCommand)) chipClasses.push('banner-command-primary');
+            if (compactHiddenCommands.has(normalizedCommand)) chipClasses.push('banner-command-secondary');
+            if (microHiddenCommands.has(normalizedCommand)) chipClasses.push('banner-command-micro-hidden');
             return `
-            <span class="banner-command-chip${primaryClass}" data-testid="command-banner-chip">
+            <span class="${chipClasses.join(' ')}" data-testid="command-banner-chip">
               <strong>${escapeHtml(entry.command)}</strong>
               ${entry.detail ? `<span>${escapeHtml(entry.detail)}</span>` : ''}
             </span>
@@ -5163,10 +5165,38 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return currentSupportUnitStatus();
   }
 
+  function bannerPlacementZone(stage, isCommandBanner = false) {
+    const scale = overlayScale();
+    const frame = canvasRectToOverlay(stage.frame);
+    const bannerZone = canvasRectToOverlay(stage.zones.banner);
+    const gapX = stage.gap * scale.x;
+    const innerLeft = frame.x + gapX;
+    const innerRight = frame.right - gapX;
+    const maxLaneW = Math.max(1, innerRight - innerLeft);
+    const targetRatio = isCommandBanner ? 0.78 : 0.62;
+    const laneW = Math.min(maxLaneW, Math.max(bannerZone.w, frame.w * targetRatio));
+    const centeredX = frame.x + frame.w / 2 - laneW / 2;
+    const laneX = clampNumber(centeredX, innerLeft, innerRight - laneW);
+    return makeRect(laneX, bannerZone.y, laneW, bannerZone.h);
+  }
+
   function currentBannerStatus() {
     const now = Date.now();
     const nodes = Array.from(container.querySelectorAll('.banner'));
     const activeRect = activeBanner?.el ? activeBanner.el.getBoundingClientRect() : null;
+    let laneRect = null;
+    try {
+      const stage = computeOverlayLayout();
+      const isCommandBanner = activeBanner?.el?.classList.contains('commands') || activeBanner?.cls === 'commands';
+      const localLane = bannerPlacementZone(stage, isCommandBanner);
+      const parentRect = container.getBoundingClientRect();
+      laneRect = makeRect(
+        parentRect.left + localLane.x,
+        parentRect.top + localLane.y,
+        localLane.w,
+        localLane.h
+      );
+    } catch (_err) {}
     return {
       active: activeBanner ? {
         type: activeBanner.cls,
@@ -5181,6 +5211,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           width: activeRect.width,
           height: activeRect.height,
         } : null,
+      } : null,
+      lane: laneRect ? {
+        left: laneRect.left,
+        right: laneRect.right,
+        top: laneRect.top,
+        bottom: laneRect.bottom,
+        width: laneRect.w,
+        height: laneRect.h,
       } : null,
       queued: bannerQueue.length,
       oldestQueuedAgeMs: bannerQueue.length
@@ -5219,45 +5257,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const stage = computeOverlayLayout();
     const scale = overlayScale();
     const frame = canvasRectToOverlay(stage.frame);
-    const bannerZone = canvasRectToOverlay(stage.zones.banner);
-    const playersZone = canvasRectToOverlay(stage.zones.players);
     const isCommandBanner = el.classList.contains('commands');
-    const gapX = stage.gap * scale.x;
     const gapY = stage.gap * scale.y;
-    const topBandY = isCommandBanner
-      ? 0
-      : frame.y + (stage.frame.h < 420 || frame.h < 360 ? gapY * 0.42 : gapY);
-    let playerTopLimit = playersZone.y;
-    try {
-      const visiblePlayers = topPlayers();
-      if (visiblePlayers.length) {
-        const playerCardTop = Math.min(...visiblePlayers.map((player, index) => {
-          const pos = getPlayerPosition(index, visiblePlayers.length);
-          return getPlayerCardDrawMetrics(pos, visiblePlayers.length).top;
-        }));
-        const playerCardTopOverlay = canvasRectToOverlay(makeRect(0, playerCardTop, 1, 1)).y;
-        playerTopLimit = Math.min(playerTopLimit, playerCardTopOverlay);
-      }
-    } catch (_err) {}
-    const topBandBottom = Math.max(topBandY + 1, playerTopLimit - gapY * 1.35);
-    const topBand = makeRect(frame.x + gapX, topBandY, Math.max(1, frame.w - gapX * 2), Math.max(1, topBandBottom - topBandY));
-    const placementZone = topBand;
-    const forceNano = stage.frame.h < 260 || stage.frame.w < 430 || placementZone.h < 42;
-    const zone = forceNano ? placementZone : bannerZone;
-    const verticalZone = placementZone;
+    const placementZone = bannerPlacementZone(stage, isCommandBanner);
+    const forceNano = stage.frame.h < 260 || stage.frame.w < 430 || placementZone.h < 36;
     const availableWidth = Math.max(1, placementZone.w);
     const largeMomentBanner = el.classList.contains('legendary') || el.classList.contains('kill') || el.classList.contains('streak');
-    const frameWidthRatio = isCommandBanner ? 0.94 : largeMomentBanner ? 0.84 : 0.8;
+    const frameWidthRatio = isCommandBanner ? 0.88 : largeMomentBanner ? 0.74 : 0.68;
     const frameMaxWidth = Math.min(availableWidth, Math.max(220, frame.w * frameWidthRatio));
-    const readableMinWidth = Math.min(frameMaxWidth, Math.max(isCommandBanner ? 320 : 280, frame.w * (isCommandBanner ? 0.64 : 0.5)));
-    const zoneWidthLimit = isCommandBanner ? frameMaxWidth : Math.min(frameMaxWidth, zone.w * 1.08);
-    const maxWidth = Math.min(availableWidth, Math.max(readableMinWidth, zoneWidthLimit));
+    const readableMinWidth = Math.min(frameMaxWidth, Math.max(isCommandBanner ? 440 : 300, frame.w * (isCommandBanner ? 0.58 : 0.42)));
+    const maxWidth = Math.min(availableWidth, Math.max(readableMinWidth, frameMaxWidth));
     const preferredWidth = isCommandBanner
       ? maxWidth
-      : Math.min(maxWidth, Math.max(Math.min(readableMinWidth, maxWidth), zone.w * 0.96));
-    const compactHeightZone = placementZone;
-    const forceCompact = compactHeightZone.h <= (isCommandBanner ? 58 : 86) || preferredWidth < (isCommandBanner ? 700 : 760);
-    const forceMicro = compactHeightZone.h <= (isCommandBanner ? 46 : 58) || preferredWidth < (isCommandBanner ? 500 : 560);
+      : Math.min(maxWidth, Math.max(Math.min(readableMinWidth, maxWidth), availableWidth * 0.94));
+    const forceCompact = placementZone.h <= (isCommandBanner ? 58 : 72) || preferredWidth < (isCommandBanner ? 640 : 620);
+    const forceMicro = placementZone.h <= (isCommandBanner ? 46 : 50) || preferredWidth < (isCommandBanner ? 500 : 460);
     el.classList.remove('is-compact', 'is-micro', 'is-nano');
     if (forceCompact) el.classList.add('is-compact');
     if (forceMicro) el.classList.add('is-micro');
@@ -5281,10 +5295,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const halfWidth = rect.width / 2;
     const centerX = clampNumber(frame.x + frame.w / 2, placementZone.x + halfWidth, placementZone.right - halfWidth);
     const maxTop = Math.max(placementZone.y, placementZone.bottom - rect.height);
-    const dropY = isCommandBanner ? 0 : Math.max(0, frame.h * 0.05);
-    const top = isCommandBanner
-      ? placementZone.y
-      : clampNumber(verticalZone.y + dropY + (verticalZone.h - rect.height) / 2, placementZone.y, maxTop);
+    const top = clampNumber(placementZone.y + (placementZone.h - rect.height) / 2, frame.y + gapY * 0.35, maxTop);
+    el.dataset.placement = 'banner-lane';
     el.style.left = `${centerX}px`;
     el.style.top = `${top}px`;
   }
@@ -8112,23 +8124,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const nameFit = fitCanvasTextLinesResult(
       ctx,
       displayName,
-      Math.max(1, slots.name.w - Math.max(7 * ui, slots.name.h * 0.2)),
+      Math.max(1, slots.name.w - Math.max(8 * ui, slots.name.h * 0.18)),
       2,
       nameFontFactory,
-      Math.max(20 * ui, Math.min(slots.name.h * 0.43, cardW * 0.082)),
-      Math.max(7, 8.5 * ui)
-    );
-    const handleLabel = identity.handle || (state.isLeader ? 'TOP CONTRIBUTOR' : 'BATTLE READY');
-    const handleFit = fitCanvasTextResult(
-      ctx,
-      handleLabel,
-      Math.max(1, slots.handle.w - Math.max(6 * ui, slots.handle.h * 0.3)),
-      size => `800 ${size}px ${PLAYER_CARD_STAT_FONT}`,
-      Math.max(7 * ui, Math.min(slots.handle.h * 0.8, 10 * ui)),
-      Math.max(6, 7 * ui)
+      Math.max(22 * ui, Math.min(slots.name.h * 0.5, cardW * 0.096)),
+      Math.max(8, 9.5 * ui)
     );
     const commandLabel = state.commandLabel || '';
-    const commandSlot = commandLabel && slots.commandBadge ? slots.commandBadge : null;
+    const commandSlot = null;
     const statusLabel = state.isKO
       ? 'KO'
       : state.hasShield
@@ -8140,7 +8143,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
             : state.isLeader
               ? 'LEADER'
               : 'READY';
-    const statusDisplayLabel = commandLabel && !commandSlot ? commandLabel : statusLabel;
+    const statusDisplayLabel = commandLabel || statusLabel;
     const statusFit = fitCanvasTextResult(
       ctx,
       statusDisplayLabel,
@@ -8149,22 +8152,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       Math.max(7 * ui, Math.min(slots.statusBadges.h * 0.64, 11 * ui)),
       Math.max(6, 7 * ui)
     );
-    const commandFit = commandSlot
-      ? fitCanvasTextResult(
-          ctx,
-          commandLabel,
-          Math.max(1, commandSlot.w - Math.max(5 * ui, commandSlot.h * 0.3)),
-          size => `950 ${size}px ${PLAYER_CARD_STAT_FONT}`,
-          Math.max(7 * ui, Math.min(commandSlot.h * 0.64, 11 * ui)),
-          Math.max(6, 7 * ui)
-        )
-      : { text: '', size: 0, truncated: false };
     const hpFit = fitCanvasTextResult(
       ctx,
-      'HP',
+      `${Math.round(hp)} HP`,
       Math.max(1, barW - Math.max(10 * ui, barH * 0.7)),
       size => `900 ${size}px ${PLAYER_CARD_STAT_FONT}`,
-      Math.max(8 * ui, Math.min(barH * 0.76, 13 * ui)),
+      Math.max(8.5 * ui, Math.min(barH * 0.78, 13.5 * ui)),
       Math.max(6, 7 * ui)
     );
 
@@ -8195,14 +8188,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     roundedRectPath(ctx, plateX - cardW * 0.06, plateY - plateH * 0.18, cardW * 1.12, plateH * 1.36, radius * 1.25);
     ctx.fill();
 
-    ctx.shadowColor = cardAccent ? cardAccent.color : colorWithAlpha(accent, player.teamColor ? 0.34 : state.isLeader ? 0.3 : 0.2);
-    ctx.shadowBlur = cardAccent ? (state.accentType === 'kill' ? 28 : 22) : 16;
+    ctx.shadowColor = cardAccent ? cardAccent.color : colorWithAlpha(accent, player.teamColor ? 0.24 : state.isLeader ? 0.24 : 0.16);
+    ctx.shadowBlur = cardAccent ? (state.accentType === 'kill' ? 22 : 18) : 10;
     drawGlassPanel(plateX, plateY, cardW, plateH, radius, {
-      start: state.isKO ? 'rgba(7,8,12,0.98)' : 'rgba(4,9,18,0.97)',
-      mid: state.isKO ? 'rgba(18,18,24,0.92)' : 'rgba(13,22,34,0.9)',
-      end: state.isKO ? 'rgba(3,4,8,0.98)' : 'rgba(3,6,13,0.98)',
-      stroke: state.isCritical ? colorWithAlpha(THEME.red, 0.78 + state.pulse * 0.14) : colorWithAlpha(accent, player.teamColor ? 0.72 : state.isLeader ? 0.72 : 0.52),
-      lineWidth: state.isCritical ? 2.2 : 1.75,
+      start: state.isKO ? 'rgba(7,8,12,0.99)' : 'rgba(3,7,13,0.985)',
+      mid: state.isKO ? 'rgba(15,15,21,0.94)' : 'rgba(9,16,26,0.94)',
+      end: state.isKO ? 'rgba(2,3,7,0.99)' : 'rgba(2,5,10,0.99)',
+      stroke: state.isCritical ? colorWithAlpha(THEME.red, 0.74 + state.pulse * 0.12) : colorWithAlpha(accent, player.teamColor ? 0.64 : state.isLeader ? 0.66 : 0.46),
+      lineWidth: state.isCritical ? 2 : 1.55,
     });
     ctx.shadowBlur = 0;
 
@@ -8210,11 +8203,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     roundedRectPath(ctx, plateX + cardW * 0.04, plateY + plateH * 0.07, cardW * 0.92, Math.max(4, plateH * 0.038), 5);
     ctx.fill();
 
-    ctx.fillStyle = colorWithAlpha(accent, state.isLeader ? 0.34 : 0.25);
+    ctx.fillStyle = 'rgba(4,8,15,0.72)';
     roundedRectPath(ctx, slots.name.x, slots.name.y, slots.name.w, slots.name.h, Math.max(7 * ui, slots.name.h * 0.22));
     ctx.fill();
-    ctx.strokeStyle = colorWithAlpha(accent, state.isLeader ? 0.58 : 0.42);
-    ctx.lineWidth = Math.max(1, 1.1 * ui);
+    ctx.strokeStyle = colorWithAlpha(accent, state.isLeader ? 0.7 : 0.54);
+    ctx.lineWidth = Math.max(1, 1.2 * ui);
     roundedRectPath(ctx, slots.name.x + 0.5, slots.name.y + 0.5, Math.max(1, slots.name.w - 1), Math.max(1, slots.name.h - 1), Math.max(7 * ui, slots.name.h * 0.22));
     ctx.stroke();
 
@@ -8250,45 +8243,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       lineWidth: compactDemoCard ? Math.max(1.5, 1.8 * ui) : Math.max(1.6, 2.0 * ui),
     });
 
-    const handleCenter = rectCenter(slots.handle);
-    ctx.font = `800 ${handleFit.size}px ${PLAYER_CARD_STAT_FONT}`;
-    const handleTextRect = drawCenteredCanvasText(ctx, handleFit.text, handleCenter.x, handleCenter.y + Math.max(0.1, 0.45 * ui), {
-      fontSize: handleFit.size,
-      fillStyle: state.isKO ? '#7f8797' : colorWithAlpha('#d9e7ff', 0.82),
-      strokeStyle: 'rgba(0,0,0,0.68)',
-      lineWidth: Math.max(0.8, 1.15 * ui),
-    });
+    const handleTextRect = null;
 
-    ctx.strokeStyle = state.isLeader ? 'rgba(246,201,91,0.88)' : colorWithAlpha(accent, 0.62);
-    ctx.lineWidth = Math.max(1.8, avatarR * 0.075);
+    ctx.strokeStyle = state.isLeader ? 'rgba(246,201,91,0.78)' : colorWithAlpha(accent, 0.58);
+    ctx.lineWidth = Math.max(1, avatarR * 0.22);
     ctx.shadowColor = accent;
-    ctx.shadowBlur = state.hasShield ? 13 : 8;
+    ctx.shadowBlur = state.hasShield ? 10 : 5;
     ctx.beginPath(); ctx.arc(avatarX, avatarY, avatarR, 0, Math.PI * 2); ctx.stroke();
     if (state.hasShield) {
       ctx.strokeStyle = colorWithAlpha(THEME.cyan, 0.42 + state.pulse * 0.12);
-      ctx.lineWidth = Math.max(1.2, avatarR * 0.045);
+      ctx.lineWidth = Math.max(1, avatarR * 0.16);
       ctx.beginPath(); ctx.arc(avatarX, avatarY, avatarR + Math.max(2 * ui, avatarR * 0.1), 0, Math.PI * 2); ctx.stroke();
     }
     ctx.shadowBlur = 0;
-    const avatarFill = ctx.createRadialGradient(avatarX - avatarR * 0.32, avatarY - avatarR * 0.35, 1, avatarX, avatarY, avatarR);
-    avatarFill.addColorStop(0, 'rgba(255,255,255,0.14)');
-    avatarFill.addColorStop(0.55, state.isKO ? 'rgba(22,23,28,0.94)' : 'rgba(10,18,32,0.94)');
-    avatarFill.addColorStop(1, state.isKO ? 'rgba(4,4,8,0.96)' : 'rgba(2,4,10,0.96)');
-    ctx.fillStyle = avatarFill;
-    ctx.beginPath(); ctx.arc(avatarX, avatarY, Math.max(1, avatarR - 1.5), 0, Math.PI * 2); ctx.fill();
-
-    const defaultSwordIcon = '\u2694\uFE0F';
-    const defaultGemIcon = '\u{1F48E}';
-    const customIcon = player.iconEmoji;
-    if (customIcon && customIcon !== defaultSwordIcon && customIcon !== defaultGemIcon) {
-      ctx.font = `${avatarR * 1.02}px 'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',Arial,sans-serif`;
-      drawCenteredCanvasText(ctx, normalizeCanvasText(customIcon), avatarX, avatarY + Math.max(0.3, 0.7 * ui), {
-        fontSize: avatarR * 1.02,
-        fillStyle: state.isKO ? '#a8afbd' : '#ffffff',
-      });
-    } else {
-      drawBattleInsignia(avatarX, avatarY, avatarR * 0.82, accent);
-    }
+    ctx.fillStyle = state.isKO ? 'rgba(91,98,112,0.72)' : colorWithAlpha(accent, 0.92);
+    ctx.beginPath(); ctx.arc(avatarX, avatarY, Math.max(1, avatarR - 1.2), 0, Math.PI * 2); ctx.fill();
 
     drawPlayerSlot(
       slots.statusBadges,
@@ -8306,18 +8275,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       lineWidth: Math.max(0.8, 1.15 * ui),
     });
 
-    let commandTextRect = null;
-    if (commandSlot) {
-      drawPlayerSlot(commandSlot, commandSlot.h / 2, colorWithAlpha(accent, 0.2), colorWithAlpha(accent, 0.46), Math.max(0.8, 1 * ui));
-      const commandCenter = rectCenter(commandSlot);
-      ctx.font = `950 ${commandFit.size}px ${PLAYER_CARD_STAT_FONT}`;
-      commandTextRect = drawCenteredCanvasText(ctx, commandFit.text, commandCenter.x, commandCenter.y + Math.max(0.1, 0.35 * ui), {
-        fontSize: commandFit.size,
-        fillStyle: '#ffffff',
-        strokeStyle: 'rgba(0,0,0,0.72)',
-        lineWidth: Math.max(0.9, 1.2 * ui),
-      });
-    }
+    const commandTextRect = null;
 
     const koTextRect = null;
 
@@ -8374,7 +8332,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       text: {
         rawName: identity.rawName,
         fittedName: nameFit.lines.join(' '),
-        handle: handleFit.text,
+        handle: '',
         nameTruncated: nameFit.truncated,
         nameHasReplacement: nameFit.lines.join('').includes('\uFFFD'),
         nameCenterDelta: Math.abs(nameTextCenter - nameSlotCenter),
@@ -8391,7 +8349,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         rank: null,
         rankBadge: null,
         name: cloneTelemetryRect(slots.name),
-        handle: cloneTelemetryRect(slots.handle),
+        handle: null,
         ko: cloneTelemetryRect(slots.koBadge),
         koBadge: cloneTelemetryRect(slots.koBadge),
         commandBadge: cloneTelemetryRect(commandSlot),
@@ -8400,7 +8358,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         statusBadges: cloneTelemetryRect(slots.statusBadges),
         rankText: cloneTelemetryRect(rankTextRect),
         nameText: cloneTelemetryRect(nameTextRect),
-        handleText: cloneTelemetryRect(handleTextRect),
+        handleText: null,
         koText: cloneTelemetryRect(koTextRect),
         commandText: cloneTelemetryRect(commandTextRect || null),
         statusText: cloneTelemetryRect(statusTextRect),
@@ -9244,6 +9202,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       frame,
       safeFrame,
       zones: stage.zones,
+      bannerLane: stage.zones.banner,
       minGap: stage.gap * 0.72,
       players: legacyLayoutPlayers,
       horde: legacyLayoutHorde,

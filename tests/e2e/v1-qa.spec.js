@@ -118,6 +118,8 @@ async function readActiveBannerDetails(page, selector = '.banner:not(.closing)')
     const railRect = rail?.getBoundingClientRect();
     const rowRect = row?.getBoundingClientRect();
     const layout = window.__overlayLegacyLayout || {};
+    const bannerStatus = window.overlayEventEngine?.status?.().banner || {};
+    const lane = bannerStatus.lane || null;
     const titleStyle = title ? getComputedStyle(title) : null;
     const labelStyle = label ? getComputedStyle(label) : null;
     const commandStyle = commandText ? getComputedStyle(commandText) : null;
@@ -173,6 +175,9 @@ async function readActiveBannerDetails(page, selector = '.banner:not(.closing)')
       tickerHeight: tickerRect?.height || 0,
       railHeight: railRect?.height || 0,
       rowHeight: rowRect?.height || 0,
+      lane,
+      laneCenterDelta: lane ? Math.abs((bannerRect.left + bannerRect.width / 2) - (lane.left + lane.width / 2)) : null,
+      laneTopDelta: lane ? Math.abs(bannerRect.top - Math.max(lane.top, Math.min(bannerRect.top, lane.bottom - bannerRect.height))) : null,
       bannerCollisions: (layout.collisions || []).filter(item => JSON.stringify(item).toLowerCase().includes('banner')),
     };
   }, selector);
@@ -422,12 +427,24 @@ test('all rich banner types stay centered, readable, and collision-free', async 
     expect(details.top, `${type} top frame bound`).toBeGreaterThanOrEqual(details.frameTop - 1);
     expect(details.bottom, `${type} bottom frame bound`).toBeLessThanOrEqual(details.frameBottom + 1);
     expect(details.centerDelta, `${type} center delta`).toBeLessThanOrEqual(Math.max(18, details.frameWidth * 0.045));
+    expect(details.lane, `${type} banner lane telemetry`).toBeTruthy();
+    expect(details.left, `${type} lane left bound`).toBeGreaterThanOrEqual(details.lane.left - 2);
+    expect(details.right, `${type} lane right bound`).toBeLessThanOrEqual(details.lane.right + 2);
+    expect(details.top, `${type} lane top bound`).toBeGreaterThanOrEqual(details.lane.top - 3);
+    expect(details.bottom, `${type} lane bottom bound`).toBeLessThanOrEqual(details.lane.bottom + 3);
+    expect(details.laneCenterDelta, `${type} lane center delta`).toBeLessThanOrEqual(Math.max(4, details.lane.width * 0.015));
     expect(details.bannerCollisions, `${type} collisions: ${JSON.stringify(details, null, 2)}`).toEqual([]);
 
     if (type === 'commands') {
+      const compactVisibleCommands = ['engage', '@name', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
+      const microVisibleCommands = ['engage', '@name', '!attack @horde', '!attack @boss', '!shield', '!commands'];
       const expectedVisibleCommands = details.className.includes('is-nano')
         ? ['engage', '@name', '!shield', '!commands']
-        : ['engage', '@name', 'chat', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
+        : details.className.includes('is-micro')
+          ? microVisibleCommands
+          : details.className.includes('is-compact')
+            ? compactVisibleCommands
+            : ['engage', '@name', 'chat', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
       expect(details.rowCount, 'command row count').toBe(1);
       expect(details.railCount, 'command rail count').toBe(1);
       expect(details.tickerCount, 'command ticker count').toBe(0);
@@ -501,9 +518,15 @@ test('command banner shows one static viewer command rail', async ({ context, pa
   expect(details.metaCount).toBe(0);
   expect(details.titleCount).toBe(0);
   const expectedCommands = ['engage', '@name', 'chat', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
+  const compactVisibleCommands = ['engage', '@name', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
+  const microVisibleCommands = ['engage', '@name', '!attack @horde', '!attack @boss', '!shield', '!commands'];
   const expectedVisibleCommands = details.className.includes('is-nano')
     ? ['engage', '@name', '!shield', '!commands']
-    : expectedCommands;
+    : details.className.includes('is-micro')
+      ? microVisibleCommands
+      : details.className.includes('is-compact')
+        ? compactVisibleCommands
+        : expectedCommands;
   for (const text of ['PLAY BY ENGAGING', ...expectedCommands]) {
     expect(details.text).toContain(text);
   }
@@ -518,6 +541,12 @@ test('command banner shows one static viewer command rail', async ({ context, pa
   expect(details.right).toBeLessThanOrEqual(details.frameRight + 1);
   expect(details.top).toBeGreaterThanOrEqual(details.frameTop - 1);
   expect(details.bottom).toBeLessThanOrEqual(details.frameBottom + 1);
+  expect(details.lane).toBeTruthy();
+  expect(details.left).toBeGreaterThanOrEqual(details.lane.left - 2);
+  expect(details.right).toBeLessThanOrEqual(details.lane.right + 2);
+  expect(details.top).toBeGreaterThanOrEqual(details.lane.top - 3);
+  expect(details.bottom).toBeLessThanOrEqual(details.lane.bottom + 3);
+  expect(details.laneCenterDelta).toBeLessThanOrEqual(Math.max(4, details.lane.width * 0.015));
   expect(details.labelHeight).toBeGreaterThan(10);
   expect(details.commandHeight).toBeGreaterThan(10);
   expect(details.railHeight).toBeGreaterThan(20);
