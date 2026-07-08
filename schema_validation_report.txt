@@ -1,4 +1,4 @@
-Schema validation summary: files scanned: 24, files with JSON-LD: 12, blocks: 12, errors: 0, warnings: 0
+Schema validation summary: files scanned: 26, files with JSON-LD: 14, blocks: 14, errors: 0, warnings: 0
 - 404.html: no JSON-LD blocks found
 - battle-clip.html: no JSON-LD blocks found
 - battlegrounds.html: 1 JSON-LD block(s)
@@ -20,6 +20,8 @@ Schema validation summary: files scanned: 24, files with JSON-LD: 12, blocks: 12
   - block #1: OK
 - paywall.html: 1 JSON-LD block(s)
   - block #1: OK
+- privacy.html: 1 JSON-LD block(s)
+  - block #1: OK
 - profile.html: no JSON-LD blocks found
 - register.html: 1 JSON-LD block(s)
   - block #1: OK
@@ -32,6 +34,8 @@ Schema validation summary: files scanned: 24, files with JSON-LD: 12, blocks: 12
 - sponsors.html: 1 JSON-LD block(s)
   - block #1: OK
 - stats.html: 1 JSON-LD block(s)
+  - block #1: OK
+- terms.html: 1 JSON-LD block(s)
   - block #1: OK
 - theme-samples.html: no JSON-LD blocks found
 - verify-email.html: no JSON-LD blocks found

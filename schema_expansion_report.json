@@ -803,6 +803,103 @@
       ]
     },
     {
+      "path": "privacy.html",
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "mode": "pyld",
+          "expanded_sample": [
+            {
+              "@id": "https://intothebattle.com/privacy#webpage",
+              "@type": [
+                "https://schema.org/WebPage"
+              ],
+              "https://schema.org/breadcrumb": [
+                {
+                  "@id": "https://intothebattle.com/privacy#breadcrumb"
+                }
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "How IntoTheBattle collects, uses, shares, and protects information for creator accounts, overlays, analytics, and payments."
+                }
+              ],
+              "https://schema.org/inLanguage": [
+                {
+                  "@value": "en-US"
+                }
+              ],
+              "https://schema.org/isPartOf": [
+                {
+                  "@id": "https://intothebattle.com/#website"
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle Privacy Policy"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/privacy"
+                }
+              ]
+            },
+            {
+              "@id": "https://intothebattle.com/privacy#breadcrumb",
+              "@type": [
+                "https://schema.org/BreadcrumbList"
+              ],
+              "https://schema.org/itemListElement": [
+                {
+                  "@type": [
+                    "https://schema.org/ListItem"
+                  ],
+                  "https://schema.org/item": [
+                    {
+                      "@id": "https://intothebattle.com/"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "Home"
+                    }
+                  ],
+                  "https://schema.org/position": [
+                    {
+                      "@value": 1
+                    }
+                  ]
+                },
+                {
+                  "@type": [
+                    "https://schema.org/ListItem"
+                  ],
+                  "https://schema.org/item": [
+                    {
+                      "@id": "https://intothebattle.com/privacy"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "Privacy Policy"
+                    }
+                  ],
+                  "https://schema.org/position": [
+                    {
+                      "@value": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": "profile.html",
       "blocks": []
     },
@@ -1297,6 +1394,103 @@
       ]
     },
     {
+      "path": "terms.html",
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "mode": "pyld",
+          "expanded_sample": [
+            {
+              "@id": "https://intothebattle.com/terms#webpage",
+              "@type": [
+                "https://schema.org/WebPage"
+              ],
+              "https://schema.org/breadcrumb": [
+                {
+                  "@id": "https://intothebattle.com/terms#breadcrumb"
+                }
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "Terms for using IntoTheBattle creator accounts, live battle overlays, sponsor moments, and related services."
+                }
+              ],
+              "https://schema.org/inLanguage": [
+                {
+                  "@value": "en-US"
+                }
+              ],
+              "https://schema.org/isPartOf": [
+                {
+                  "@id": "https://intothebattle.com/#website"
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "IntoTheBattle Terms of Service"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/terms"
+                }
+              ]
+            },
+            {
+              "@id": "https://intothebattle.com/terms#breadcrumb",
+              "@type": [
+                "https://schema.org/BreadcrumbList"
+              ],
+              "https://schema.org/itemListElement": [
+                {
+                  "@type": [
+                    "https://schema.org/ListItem"
+                  ],
+                  "https://schema.org/item": [
+                    {
+                      "@id": "https://intothebattle.com/"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "Home"
+                    }
+                  ],
+                  "https://schema.org/position": [
+                    {
+                      "@value": 1
+                    }
+                  ]
+                },
+                {
+                  "@type": [
+                    "https://schema.org/ListItem"
+                  ],
+                  "https://schema.org/item": [
+                    {
+                      "@id": "https://intothebattle.com/terms"
+                    }
+                  ],
+                  "https://schema.org/name": [
+                    {
+                      "@value": "Terms of Service"
+                    }
+                  ],
+                  "https://schema.org/position": [
+                    {
+                      "@value": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": "theme-samples.html",
       "blocks": []
     },
@@ -1306,8 +1500,8 @@
     }
   ],
   "summary": {
-    "total_files": 24,
-    "expanded": 12,
+    "total_files": 26,
+    "expanded": 14,
     "errors": 0
   }
 }

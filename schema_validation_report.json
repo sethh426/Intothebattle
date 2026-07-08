@@ -113,6 +113,18 @@
       ]
     },
     {
+      "path": "privacy.html",
+      "blocks": [
+        {
+          "index": 1,
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/privacy#webpage\",\n        \"name\": \"IntoTheBattle Privacy Policy\",\n        \"url\": \"https://intothebattle.com/privacy\",\n        \"description\": \"How IntoTheBattle collects, uses, shares, and protects information for creator accounts, overlays, analytics, and payments.\",\n        \"inLanguage\": \"en-US\",\n        \"isPartOf\": { \"@id\": \"https://intothebattle.com/#website\" }",
+          "ok": true,
+          "errors": [],
+          "warnings": []
+        }
+      ]
+    },
+    {
       "path": "profile.html",
       "blocks": []
     },
@@ -185,6 +197,18 @@
       ]
     },
     {
+      "path": "terms.html",
+      "blocks": [
+        {
+          "index": 1,
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/terms#webpage\",\n        \"name\": \"IntoTheBattle Terms of Service\",\n        \"url\": \"https://intothebattle.com/terms\",\n        \"description\": \"Terms for using IntoTheBattle creator accounts, live battle overlays, sponsor moments, and related services.\",\n        \"inLanguage\": \"en-US\",\n        \"isPartOf\": { \"@id\": \"https://intothebattle.com/#website\" },\n        \"breadc",
+          "ok": true,
+          "errors": [],
+          "warnings": []
+        }
+      ]
+    },
+    {
       "path": "theme-samples.html",
       "blocks": []
     },
@@ -194,9 +218,9 @@
     }
   ],
   "summary": {
-    "total_files": 24,
-    "files_with_jsonld": 12,
-    "total_blocks": 12,
+    "total_files": 26,
+    "files_with_jsonld": 14,
+    "total_blocks": 14,
     "errors": 0,
     "warnings": 0
   }

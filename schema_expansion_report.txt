@@ -1,4 +1,4 @@
-JSON-LD expansion summary: files scanned: 24, expanded blocks: 12, errors: 0
+JSON-LD expansion summary: files scanned: 26, expanded blocks: 14, errors: 0
 - 404.html: no JSON-LD blocks
 - battle-clip.html: no JSON-LD blocks
 - battlegrounds.html: 1 block(s)
@@ -20,6 +20,8 @@ JSON-LD expansion summary: files scanned: 24, expanded blocks: 12, errors: 0
   - block #1: expanded OK (pyld)
 - paywall.html: 1 block(s)
   - block #1: expanded OK (pyld)
+- privacy.html: 1 block(s)
+  - block #1: expanded OK (pyld)
 - profile.html: no JSON-LD blocks
 - register.html: 1 block(s)
   - block #1: expanded OK (pyld)
@@ -32,6 +34,8 @@ JSON-LD expansion summary: files scanned: 24, expanded blocks: 12, errors: 0
 - sponsors.html: 1 block(s)
   - block #1: expanded OK (pyld)
 - stats.html: 1 block(s)
+  - block #1: expanded OK (pyld)
+- terms.html: 1 block(s)
   - block #1: expanded OK (pyld)
 - theme-samples.html: no JSON-LD blocks
 - verify-email.html: no JSON-LD blocks
