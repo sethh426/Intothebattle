@@ -3877,14 +3877,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const frame = stage.frame;
     const playerZone = stage.zones.players;
     const requestedCardH = Math.min(
-      frame.h * (isPublicDemo ? 0.145 : 0.138),
-      playerZone.h * (isPublicDemo ? 0.58 : 0.54)
+      frame.h * (isPublicDemo ? 0.152 : 0.148),
+      playerZone.h * (isPublicDemo ? 0.66 : 0.62)
     ) * layoutZoom;
-    const requestedCardW = requestedCardH * (total >= 5 ? 2.88 : total === 4 ? 2.76 : 2.62);
-    const baseGap = requestedCardW * (total >= 5 ? 0.028 : total === 4 ? 0.04 : total === 3 ? 0.065 : 0.1);
+    const requestedCardW = requestedCardH * (total >= 5 ? 3.06 : total === 4 ? 2.95 : 2.78);
+    const baseGap = requestedCardW * (total >= 5 ? 0.018 : total === 4 ? 0.03 : total === 3 ? 0.052 : 0.085);
     const minGap = stage.gap * 1.42;
-    const maxGap = requestedCardW * (total >= 5 ? 0.085 : total === 4 ? 0.12 : total === 3 ? 0.2 : 0.32);
-    const gapScale = total >= 5 ? 0.13 : total === 4 ? 0.18 : 0.28;
+    const maxGap = requestedCardW * (total >= 5 ? 0.062 : total === 4 ? 0.09 : total === 3 ? 0.17 : 0.28);
+    const gapScale = total >= 5 ? 0.1 : total === 4 ? 0.15 : 0.24;
     const visualGap = Math.min(Math.max(minGap, maxGap), Math.max(minGap, baseGap + Math.max(0, layoutGap) * gapScale));
     const availableW = Math.max(240, playerZone.w - stage.gap * 2);
     const naturalWidth = total > 1 ? requestedCardW * total + visualGap * (total - 1) : requestedCardW;
@@ -3901,18 +3901,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const compactDemoCard = isPublicDemo;
     const ui = canvasUiScale();
     const { cardH, cardW } = getPlayerCardMetrics(total);
-    const plateH = Math.max(compactDemoCard ? 98 * ui : 106 * ui, cardH * 1.1);
+    const plateH = Math.max(compactDemoCard ? 112 * ui : 124 * ui, cardH * 1.18);
     const plateX = pos.x - cardW / 2;
     const plateY = pos.y - plateH / 2;
     const radius = Math.max(13 * ui, plateH * 0.16);
-    const padX = clampNumber(cardW * 0.055, 8 * ui, 17 * ui);
-    const padY = clampNumber(plateH * 0.1, 7 * ui, 12 * ui);
+    const padX = clampNumber(cardW * 0.045, 7 * ui, 14 * ui);
+    const padY = clampNumber(plateH * 0.092, 7 * ui, 13 * ui);
     const slotGap = Math.max(4 * ui, cardW * 0.016);
     const contentRight = plateX + cardW - padX;
-    const nameH = Math.max(30 * ui, Math.min(42 * ui, plateH * 0.38));
-    const handleH = Math.max(10 * ui, Math.min(15 * ui, plateH * 0.13));
-    const barH = Math.max(14 * ui, Math.min(20 * ui, plateH * 0.17));
-    const badgeH = Math.max(16 * ui, Math.min(22 * ui, plateH * 0.19));
+    const nameH = Math.max(42 * ui, Math.min(58 * ui, plateH * 0.45));
+    const handleH = Math.max(9 * ui, Math.min(14 * ui, plateH * 0.12));
+    const barH = Math.max(15 * ui, Math.min(22 * ui, plateH * 0.18));
+    const badgeH = Math.max(18 * ui, Math.min(24 * ui, plateH * 0.2));
     const nameX = plateX + padX;
     const nameY = plateY + padY;
     const nameW = Math.max(1, cardW - padX * 2);
@@ -3920,7 +3920,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const handleY = nameY + nameH - handleH - Math.max(1, 1.5 * ui);
     const handleW = nameW;
     const barX = plateX + padX;
-    const barY = plateY + plateH - padY - barH;
+    const bottomPad = Math.max(4 * ui, padY * 0.55);
+    const barY = plateY + plateH - bottomPad - barH;
     const barW = Math.max(1, cardW - padX * 2);
     const midTop = clampNumber(
       nameY + nameH + slotGap * 0.7,
@@ -3930,12 +3931,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const avatarR = Math.max(10 * ui, Math.min(18 * ui, badgeH * 0.5, cardW * 0.065));
     const avatarX = plateX + padX + avatarR;
     const avatarY = midTop + badgeH / 2;
-    const koW = Math.max(36 * ui, Math.min(58 * ui, cardW * 0.18));
-    const koX = contentRight - koW;
     const statX = avatarX + avatarR + slotGap;
-    const statAreaW = Math.max(1, koX - slotGap - statX);
-    const splitCommand = statAreaW >= 104 * ui;
-    const statusW = splitCommand ? Math.max(42 * ui, statAreaW * 0.48) : statAreaW;
+    const statAreaW = Math.max(1, contentRight - statX);
+    const splitCommand = statAreaW >= 120 * ui;
+    const statusW = splitCommand ? Math.max(56 * ui, statAreaW * 0.58) : statAreaW;
     const commandW = splitCommand ? Math.max(1, statAreaW - statusW - slotGap) : 0;
     const statusX = statX;
     const commandX = statusX + statusW + slotGap;
@@ -3945,7 +3944,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       card: makeRect(plateX, plateY, cardW, plateH),
       name: makeRect(nameX, nameY, nameW, nameH),
       handle: makeRect(handleX, handleY, handleW, handleH),
-      koBadge: makeRect(koX, midTop, koW, badgeH),
+      koBadge: null,
       commandBadge: splitCommand ? makeRect(commandX, midTop, commandW, badgeH) : null,
       avatar: makeRect(avatarX - avatarR, avatarY - avatarR, avatarR * 2, avatarR * 2),
       hpBar: makeRect(barX, barY, barW, barH),
@@ -3953,7 +3952,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
     slots.rank = null;
     slots.rankBadge = null;
-    slots.ko = slots.koBadge;
+    slots.ko = null;
     return {
       compactDemoCard,
       ui,
@@ -3967,7 +3966,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       padY,
       slotGap,
       topH: nameH,
-      koW,
+      koW: 0,
       avatarR,
       avatarX,
       avatarY,
@@ -7885,7 +7884,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function playerCardName(player) {
     const raw = normalizeCanvasText(player?.nickname || player?.name || player?.uniqueId || player?.id || 'Player') || 'Player';
-    return splitCanvasGraphemes(raw).slice(0, 32).join('') || 'Player';
+    return splitCanvasGraphemes(raw).slice(0, 40).join('') || 'Player';
   }
 
   function centerTruncateGraphemes(value, max = 18) {
@@ -7905,14 +7904,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       : '';
     return {
       rawName,
-      displayName: centerTruncateGraphemes(strippedName, 19),
+      displayName: strippedName,
       handle: handleBase ? `@${centerTruncateGraphemes(handleBase, 17)}` : '',
     };
   }
 
   function playerCardDisplayNameText(value) {
-    const text = normalizeCanvasText(value);
-    return /^[A-Za-z0-9 _.-]+$/.test(text) ? text.toUpperCase() : text;
+    return normalizeCanvasText(value);
   }
 
   function stablePlayerAccent(player, fallback = THEME.cyan) {
@@ -7979,6 +7977,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function drawPlayerSlot(rect, radius, fill, stroke, lineWidth = 1) {
+    if (!rect) return;
     ctx.fillStyle = fill;
     roundedRectPath(ctx, rect.x, rect.y, rect.w, rect.h, radius);
     ctx.fill();
@@ -7988,6 +7987,93 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       roundedRectPath(ctx, rect.x + 0.5, rect.y + 0.5, Math.max(1, rect.w - 1), Math.max(1, rect.h - 1), Math.max(1, radius - 0.5));
       ctx.stroke();
     }
+  }
+
+  function wrapCanvasGraphemeLines(c, text, maxWidth, maxLines) {
+    const graphemes = splitCanvasGraphemes(text);
+    if (!graphemes.length) return [''];
+    if (maxLines === 2) {
+      const fullText = graphemes.join('');
+      if (c.measureText(fullText).width <= maxWidth) return [fullText.trim()];
+      let best = null;
+      for (let i = 1; i < graphemes.length; i += 1) {
+        const first = graphemes.slice(0, i).join('').trim();
+        const second = graphemes.slice(i).join('').trim();
+        if (!first || !second) continue;
+        const firstWidth = c.measureText(first).width;
+        const secondWidth = c.measureText(second).width;
+        if (firstWidth > maxWidth || secondWidth > maxWidth) continue;
+        const previous = graphemes[i - 1] || '';
+        const next = graphemes[i] || '';
+        const boundaryBonus = /[\s_.-]/.test(previous) || /[\s_.-]/.test(next) ? -maxWidth * 0.18 : 0;
+        const orphanPenalty = Math.min(first.length, second.length) <= 3 ? maxWidth * 0.7 : 0;
+        const score = Math.max(firstWidth, secondWidth) + Math.abs(firstWidth - secondWidth) * 0.42 + orphanPenalty + boundaryBonus;
+        if (!best || score < best.score) best = { lines: [first, second], score };
+      }
+      if (best) return best.lines;
+    }
+    const lines = [''];
+    for (const grapheme of graphemes) {
+      const index = lines.length - 1;
+      const candidate = `${lines[index]}${grapheme}`;
+      if (!lines[index] || c.measureText(candidate).width <= maxWidth) {
+        lines[index] = candidate;
+        continue;
+      }
+      if (lines.length >= maxLines) return null;
+      lines.push(grapheme);
+    }
+    return lines.map(line => line.trim()).filter(Boolean);
+  }
+
+  function fitCanvasTextLinesResult(c, text, maxWidth, maxLines, fontFactory, maxSize, minSize) {
+    const safeText = normalizeCanvasText(text);
+    const safeMaxWidth = Math.max(1, Number(maxWidth) || 1);
+    const safeMaxLines = Math.max(1, Math.round(Number(maxLines) || 1));
+    let size = Math.max(minSize || 10, maxSize || 12);
+    const floor = Math.max(6, minSize || 10);
+    if (safeMaxLines > 1) {
+      const singleLineFloor = Math.max(floor, Math.round(size * 0.78));
+      for (let singleLineSize = size; singleLineSize >= singleLineFloor; singleLineSize -= 1) {
+        c.font = fontFactory(singleLineSize);
+        if (c.measureText(safeText).width <= safeMaxWidth) {
+          return { lines: [safeText], size: singleLineSize, truncated: false };
+        }
+      }
+    }
+    while (size >= floor) {
+      c.font = fontFactory(size);
+      const lines = wrapCanvasGraphemeLines(c, safeText, safeMaxWidth, safeMaxLines);
+      if (lines && lines.length <= safeMaxLines) {
+        return { lines, size, truncated: false };
+      }
+      size -= 1;
+    }
+
+    c.font = fontFactory(floor);
+    const fallback = fitCanvasTextResult(c, safeText, safeMaxWidth, fontFactory, floor, floor);
+    return { lines: [fallback.text], size: floor, truncated: true };
+  }
+
+  function drawCenteredCanvasTextLines(c, lines, centerX, centerY, options = {}) {
+    const safeLines = (Array.isArray(lines) && lines.length ? lines : ['']).slice(0, 3);
+    const fontSize = options.fontSize || 12;
+    const lineHeight = options.lineHeight || fontSize * 0.9;
+    if (typeof options.fontFactory === 'function') c.font = options.fontFactory(fontSize);
+    let union = null;
+    const startY = centerY - ((safeLines.length - 1) * lineHeight) / 2;
+    safeLines.forEach((line, index) => {
+      const rect = drawCenteredCanvasText(c, line, centerX, startY + index * lineHeight, options);
+      union = union
+        ? makeRect(
+            Math.min(union.left, rect.left),
+            Math.min(union.top, rect.top),
+            Math.max(union.right, rect.right) - Math.min(union.left, rect.left),
+            Math.max(union.bottom, rect.bottom) - Math.min(union.top, rect.top)
+          )
+        : rect;
+    });
+    return union || makeRect(centerX, centerY, 1, 1);
   }
 
   function cloneTelemetryRect(rect) {
@@ -8022,13 +8108,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const accent = state.accent;
     const identity = playerCardIdentity(player);
     const displayName = playerCardDisplayNameText(identity.displayName);
-    const nameFit = fitCanvasTextResult(
+    const nameFontFactory = size => `950 ${size}px ${PLAYER_CARD_NAME_FONT}`;
+    const nameFit = fitCanvasTextLinesResult(
       ctx,
       displayName,
-      Math.max(1, slots.name.w - Math.max(10 * ui, slots.name.h * 0.42)),
-      size => `900 ${size}px ${PLAYER_CARD_NAME_FONT}`,
-      Math.max(17 * ui, Math.min(slots.name.h * 0.66, cardW * 0.088)),
-      Math.max(9, 11 * ui)
+      Math.max(1, slots.name.w - Math.max(7 * ui, slots.name.h * 0.2)),
+      2,
+      nameFontFactory,
+      Math.max(20 * ui, Math.min(slots.name.h * 0.43, cardW * 0.082)),
+      Math.max(7, 8.5 * ui)
     );
     const handleLabel = identity.handle || (state.isLeader ? 'TOP CONTRIBUTOR' : 'BATTLE READY');
     const handleFit = fitCanvasTextResult(
@@ -8039,17 +8127,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       Math.max(7 * ui, Math.min(slots.handle.h * 0.8, 10 * ui)),
       Math.max(6, 7 * ui)
     );
-    const killCount = Math.max(0, Math.round(Number(player.kills) || 0));
-    const koLabel = compactPlayerCardNumber(killCount);
-    const koFit = fitCanvasTextResult(
-      ctx,
-      killCount > 0 ? `KO ${koLabel}` : 'KO',
-      Math.max(1, slots.koBadge.w - Math.max(5 * ui, slots.koBadge.h * 0.34)),
-      size => `950 ${size}px ${PLAYER_CARD_STAT_FONT}`,
-      Math.max(8 * ui, Math.min(slots.koBadge.h * 0.64, 12 * ui)),
-      Math.max(6, 7 * ui)
-    );
     const commandLabel = state.commandLabel || '';
+    const commandSlot = commandLabel && slots.commandBadge ? slots.commandBadge : null;
     const statusLabel = state.isKO
       ? 'KO'
       : state.hasShield
@@ -8061,7 +8140,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
             : state.isLeader
               ? 'LEADER'
               : 'READY';
-    const statusDisplayLabel = commandLabel && !slots.commandBadge ? commandLabel : statusLabel;
+    const statusDisplayLabel = commandLabel && !commandSlot ? commandLabel : statusLabel;
     const statusFit = fitCanvasTextResult(
       ctx,
       statusDisplayLabel,
@@ -8070,13 +8149,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       Math.max(7 * ui, Math.min(slots.statusBadges.h * 0.64, 11 * ui)),
       Math.max(6, 7 * ui)
     );
-    const commandFit = slots.commandBadge && commandLabel
+    const commandFit = commandSlot
       ? fitCanvasTextResult(
           ctx,
           commandLabel,
-          Math.max(1, slots.commandBadge.w - Math.max(5 * ui, slots.commandBadge.h * 0.3)),
+          Math.max(1, commandSlot.w - Math.max(5 * ui, commandSlot.h * 0.3)),
           size => `950 ${size}px ${PLAYER_CARD_STAT_FONT}`,
-          Math.max(7 * ui, Math.min(slots.commandBadge.h * 0.64, 11 * ui)),
+          Math.max(7 * ui, Math.min(commandSlot.h * 0.64, 11 * ui)),
           Math.max(6, 7 * ui)
         )
       : { text: '', size: 0, truncated: false };
@@ -8119,21 +8198,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.shadowColor = cardAccent ? cardAccent.color : colorWithAlpha(accent, player.teamColor ? 0.34 : state.isLeader ? 0.3 : 0.2);
     ctx.shadowBlur = cardAccent ? (state.accentType === 'kill' ? 28 : 22) : 16;
     drawGlassPanel(plateX, plateY, cardW, plateH, radius, {
-      start: state.isKO ? 'rgba(7,8,12,0.94)' : 'rgba(4,9,18,0.93)',
-      mid: state.isKO ? 'rgba(18,18,24,0.8)' : 'rgba(13,22,34,0.78)',
-      end: state.isKO ? 'rgba(3,4,8,0.96)' : 'rgba(3,6,13,0.95)',
-      stroke: state.isCritical ? colorWithAlpha(THEME.red, 0.7 + state.pulse * 0.14) : colorWithAlpha(accent, player.teamColor ? 0.58 : state.isLeader ? 0.58 : 0.36),
-      lineWidth: state.isCritical ? 1.8 : 1.25,
+      start: state.isKO ? 'rgba(7,8,12,0.98)' : 'rgba(4,9,18,0.97)',
+      mid: state.isKO ? 'rgba(18,18,24,0.92)' : 'rgba(13,22,34,0.9)',
+      end: state.isKO ? 'rgba(3,4,8,0.98)' : 'rgba(3,6,13,0.98)',
+      stroke: state.isCritical ? colorWithAlpha(THEME.red, 0.78 + state.pulse * 0.14) : colorWithAlpha(accent, player.teamColor ? 0.72 : state.isLeader ? 0.72 : 0.52),
+      lineWidth: state.isCritical ? 2.2 : 1.75,
     });
     ctx.shadowBlur = 0;
 
     ctx.fillStyle = colorWithAlpha(accent, player.teamColor ? 0.88 : state.isLeader ? 0.9 : 0.72);
-    roundedRectPath(ctx, plateX + cardW * 0.045, plateY + plateH * 0.075, cardW * 0.91, Math.max(3, plateH * 0.032), 5);
+    roundedRectPath(ctx, plateX + cardW * 0.04, plateY + plateH * 0.07, cardW * 0.92, Math.max(4, plateH * 0.038), 5);
     ctx.fill();
 
-    ctx.fillStyle = colorWithAlpha(accent, state.isLeader ? 0.26 : 0.18);
+    ctx.fillStyle = colorWithAlpha(accent, state.isLeader ? 0.34 : 0.25);
     roundedRectPath(ctx, slots.name.x, slots.name.y, slots.name.w, slots.name.h, Math.max(7 * ui, slots.name.h * 0.22));
     ctx.fill();
+    ctx.strokeStyle = colorWithAlpha(accent, state.isLeader ? 0.58 : 0.42);
+    ctx.lineWidth = Math.max(1, 1.1 * ui);
+    roundedRectPath(ctx, slots.name.x + 0.5, slots.name.y + 0.5, Math.max(1, slots.name.w - 1), Math.max(1, slots.name.h - 1), Math.max(7 * ui, slots.name.h * 0.22));
+    ctx.stroke();
 
     if (state.wasHit) {
       const edgeAlpha = Math.sin((1 - state.progress) * Math.PI) * 0.58;
@@ -8157,9 +8240,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     const nameCenter = rectCenter(slots.name);
-    ctx.font = `900 ${nameFit.size}px ${PLAYER_CARD_NAME_FONT}`;
-    const nameTextRect = drawCenteredCanvasText(ctx, nameFit.text, nameCenter.x, slots.name.y + slots.name.h * 0.38, {
+    const nameTextCenterY = slots.name.y + slots.name.h * (nameFit.lines.length > 1 ? 0.465 : 0.44);
+    const nameTextRect = drawCenteredCanvasTextLines(ctx, nameFit.lines, nameCenter.x, nameTextCenterY, {
+      fontFactory: nameFontFactory,
       fontSize: nameFit.size,
+      lineHeight: nameFit.size * 0.88,
       fillStyle: state.isKO ? '#d7dde9' : '#ffffff',
       strokeStyle: 'rgba(0,0,0,0.9)',
       lineWidth: compactDemoCard ? Math.max(2, 2.45 * ui) : Math.max(2.1, 2.7 * ui),
@@ -8222,9 +8307,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     });
 
     let commandTextRect = null;
-    if (slots.commandBadge && commandLabel) {
-      drawPlayerSlot(slots.commandBadge, slots.commandBadge.h / 2, colorWithAlpha(accent, 0.2), colorWithAlpha(accent, 0.46), Math.max(0.8, 1 * ui));
-      const commandCenter = rectCenter(slots.commandBadge);
+    if (commandSlot) {
+      drawPlayerSlot(commandSlot, commandSlot.h / 2, colorWithAlpha(accent, 0.2), colorWithAlpha(accent, 0.46), Math.max(0.8, 1 * ui));
+      const commandCenter = rectCenter(commandSlot);
       ctx.font = `950 ${commandFit.size}px ${PLAYER_CARD_STAT_FONT}`;
       commandTextRect = drawCenteredCanvasText(ctx, commandFit.text, commandCenter.x, commandCenter.y + Math.max(0.1, 0.35 * ui), {
         fontSize: commandFit.size,
@@ -8234,15 +8319,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       });
     }
 
-    drawPlayerSlot(slots.koBadge, slots.koBadge.h / 2, killCount > 0 ? 'rgba(232,59,95,0.7)' : 'rgba(12,18,32,0.44)', killCount > 0 ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.12)', Math.max(0.8, 1 * ui));
-    const koCenter = rectCenter(slots.koBadge);
-    ctx.font = `950 ${koFit.size}px ${PLAYER_CARD_STAT_FONT}`;
-    const koTextRect = drawCenteredCanvasText(ctx, koFit.text, koCenter.x, koCenter.y + Math.max(0.1, 0.35 * ui), {
-      fontSize: koFit.size,
-      fillStyle: killCount > 0 ? '#fff7f8' : '#9da9bd',
-      strokeStyle: killCount > 0 ? 'rgba(34,4,14,0.66)' : 'rgba(0,0,0,0.54)',
-      lineWidth: Math.max(1, 1.35 * ui),
-    });
+    const koTextRect = null;
 
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     roundedRectPath(ctx, barX, barY, barW, barH, barH / 2);
@@ -8296,12 +8373,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       bottom: metrics.bottom,
       text: {
         rawName: identity.rawName,
-        fittedName: nameFit.text,
+        fittedName: nameFit.lines.join(' '),
         handle: handleFit.text,
         nameTruncated: nameFit.truncated,
-        nameHasReplacement: nameFit.text.includes('\uFFFD'),
+        nameHasReplacement: nameFit.lines.join('').includes('\uFFFD'),
         nameCenterDelta: Math.abs(nameTextCenter - nameSlotCenter),
-        koLabel: koFit.text,
+        koLabel: '',
         hpLabel: hpFit.text,
         commandLabel,
         statusLabel: statusFit.text,
@@ -8317,7 +8394,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         handle: cloneTelemetryRect(slots.handle),
         ko: cloneTelemetryRect(slots.koBadge),
         koBadge: cloneTelemetryRect(slots.koBadge),
-        commandBadge: cloneTelemetryRect(slots.commandBadge),
+        commandBadge: cloneTelemetryRect(commandSlot),
         avatar: cloneTelemetryRect(slots.avatar),
         hpBar: cloneTelemetryRect(slots.hpBar),
         statusBadges: cloneTelemetryRect(slots.statusBadges),
@@ -8410,23 +8487,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     roundedRectPath(ctx, railX, plateY + plateH * 0.24, 4, railH, 3);
     ctx.fill();
 
-    const chipW = compactDemoCard ? Math.max(21 * ui, Math.min(28 * ui, cardW * 0.24)) : Math.max(34 * ui, cardW * 0.18);
-    const chipH = compactDemoCard ? Math.max(14 * ui, plateH * 0.105) : Math.max(20 * ui, plateH * 0.13);
-    const chipX = plateX + cardW * (compactDemoCard ? 0.045 : 0.08);
-    const chipY = plateY + plateH * (compactDemoCard ? 0.08 : 0.15);
-    ctx.fillStyle = rank === 1 ? 'rgba(246,201,91,0.18)' : 'rgba(85,231,255,0.12)';
-    roundedRectPath(ctx, chipX, chipY, chipW, chipH, chipH / 2);
-    ctx.fill();
-    ctx.strokeStyle = rank === 1 ? 'rgba(246,201,91,0.52)' : 'rgba(85,231,255,0.42)';
-    ctx.lineWidth = 1;
-    roundedRectPath(ctx, chipX, chipY, chipW, chipH, chipH / 2);
-    ctx.stroke();
-    ctx.font = `900 ${Math.max((compactDemoCard ? 9 : 11) * ui, chipH * 0.58)}px 'Rajdhani','Segoe UI',sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#fff8df';
-    ctx.fillText(`#${rank}`, chipX + chipW / 2, chipY + chipH / 2 + 1);
-
     ctx.strokeStyle = rank === 1 ? 'rgba(246,201,91,0.82)' : 'rgba(85,231,255,0.56)';
     ctx.lineWidth = Math.max(2, avatarR * 0.07);
     ctx.shadowColor = accent;
@@ -8451,13 +8511,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       drawBattleInsignia(pos.x, avatarY, avatarR * 0.936, accent);
     }
 
-    const name = (player.nickname || player.uniqueId || 'Player').slice(0, 20);
+    const name = playerCardName(player);
     const nameY = plateY + plateH * (compactDemoCard ? 0.31 : 0.205);
-    const nameBoxW = compactDemoCard ? cardW * 0.69 : cardW * 0.76;
-    const nameBoxH = compactDemoCard ? Math.max(15, plateH * 0.15) : Math.max(19 * ui, plateH * 0.145);
-    const nameBoxX = compactDemoCard ? plateX + cardW * 0.245 : plateX + cardW * 0.18;
+    const nameBoxW = compactDemoCard ? cardW * 0.82 : cardW * 0.84;
+    const nameBoxH = compactDemoCard ? Math.max(20, plateH * 0.2) : Math.max(26 * ui, plateH * 0.21);
+    const nameBoxX = plateX + (cardW - nameBoxW) / 2;
     const nameTextX = nameBoxX + nameBoxW / 2;
-    const nameMaxW = nameBoxW - Math.max(12 * ui, nameBoxH * 0.58);
+    const nameMaxW = nameBoxW - Math.max(8 * ui, nameBoxH * 0.28);
     const namePlateGrad = ctx.createLinearGradient(nameBoxX, nameY, nameBoxX + nameBoxW, nameY);
     namePlateGrad.addColorStop(0, rank === 1 ? 'rgba(246,201,91,0.14)' : 'rgba(85,231,255,0.11)');
     namePlateGrad.addColorStop(0.48, 'rgba(2,5,12,0.7)');
@@ -8475,8 +8535,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       name,
       nameMaxW,
       size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`,
-      Math.max((compactDemoCard ? 10 : 15) * ui, plateH * (compactDemoCard ? 0.105 : 0.12)),
-      Math.max(6, (compactDemoCard ? 7 : 11) * ui)
+      Math.max((compactDemoCard ? 13 : 18) * ui, plateH * (compactDemoCard ? 0.12 : 0.14)),
+      Math.max(7, (compactDemoCard ? 8 : 10) * ui)
     );
     ctx.lineWidth = compactDemoCard ? 2.6 : 3.5; ctx.strokeStyle = 'rgba(0,0,0,0.82)'; ctx.strokeText(fittedName, nameTextX, nameY);
     ctx.fillStyle = '#ffffff'; ctx.fillText(fittedName, nameTextX, nameY);
@@ -8505,44 +8565,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.fillStyle = nearDeath ? '#ffe2dc' : '#f2f8ff';
     ctx.fillText(fittedHpText, pos.x, hpTextY);
 
-    const killCount = Math.max(0, Math.round(Number(player.kills) || 0));
-    if (killCount > 0) {
-      const killLabel = compactDemoCard ? `${killCount}K` : `${killCount} K`;
-      const badgeH = compactDemoCard ? Math.max(14 * ui, avatarR * 0.5) : Math.max(18 * ui, avatarR * 0.48);
-      const badgeFont = Math.max((compactDemoCard ? 9 : 10) * ui, badgeH * 0.56);
-      ctx.font = `900 ${badgeFont}px 'Rajdhani','Segoe UI',sans-serif`;
-      const badgeW = Math.min(
-        cardW * (compactDemoCard ? 0.44 : 0.34),
-        Math.max(badgeH * 1.78, ctx.measureText(killLabel).width + badgeH * 0.95)
-      );
-      const bx = pos.x - badgeW / 2;
-      const targetBy = avatarY + avatarR * (compactDemoCard ? 0.38 : 0.44);
-      const maxBy = barY - badgeH - Math.max(3, plateH * 0.025);
-      const by = Math.min(targetBy, maxBy);
-      const badgeGrad = ctx.createLinearGradient(bx, by, bx + badgeW, by + badgeH);
-      badgeGrad.addColorStop(0, 'rgba(255,94,117,0.94)');
-      badgeGrad.addColorStop(0.52, 'rgba(232,59,95,0.88)');
-      badgeGrad.addColorStop(1, 'rgba(121,24,49,0.92)');
-      ctx.save();
-      ctx.shadowColor = 'rgba(232,59,95,0.45)';
-      ctx.shadowBlur = compactDemoCard ? 8 : 12;
-      ctx.fillStyle = badgeGrad;
-      roundedRectPath(ctx, bx, by, badgeW, badgeH, badgeH / 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = rank === 1 ? 'rgba(246,201,91,0.82)' : 'rgba(255,255,255,0.34)';
-      ctx.lineWidth = 1.1;
-      roundedRectPath(ctx, bx, by, badgeW, badgeH, badgeH / 2);
-      ctx.stroke();
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.strokeStyle = 'rgba(34,4,14,0.7)';
-      ctx.lineWidth = compactDemoCard ? 2 : 2.5;
-      ctx.strokeText(killLabel, pos.x, by + badgeH / 2 + 1);
-      ctx.fillStyle = '#fff7f8';
-      ctx.fillText(killLabel, pos.x, by + badgeH / 2 + 1);
-      ctx.restore();
-    }
     ctx.restore();
   }
 
