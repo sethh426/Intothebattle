@@ -8161,7 +8161,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       : { text: '', size: 0, truncated: false };
     const hpFit = fitCanvasTextResult(
       ctx,
-      `${Math.round(hp)} HP`,
+      'HP',
       Math.max(1, barW - Math.max(10 * ui, barH * 0.7)),
       size => `900 ${size}px ${PLAYER_CARD_STAT_FONT}`,
       Math.max(8 * ui, Math.min(barH * 0.76, 13 * ui)),
@@ -8240,14 +8240,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     const nameCenter = rectCenter(slots.name);
-    const nameTextCenterY = slots.name.y + slots.name.h * (nameFit.lines.length > 1 ? 0.465 : 0.44);
+    const nameTextCenterY = slots.name.y + slots.name.h * 0.52;
     const nameTextRect = drawCenteredCanvasTextLines(ctx, nameFit.lines, nameCenter.x, nameTextCenterY, {
       fontFactory: nameFontFactory,
       fontSize: nameFit.size,
       lineHeight: nameFit.size * 0.88,
       fillStyle: state.isKO ? '#d7dde9' : '#ffffff',
-      strokeStyle: 'rgba(0,0,0,0.9)',
-      lineWidth: compactDemoCard ? Math.max(2, 2.45 * ui) : Math.max(2.1, 2.7 * ui),
+      strokeStyle: 'rgba(0,0,0,0.76)',
+      lineWidth: compactDemoCard ? Math.max(1.5, 1.8 * ui) : Math.max(1.6, 2.0 * ui),
     });
 
     const handleCenter = rectCenter(slots.handle);
@@ -8352,7 +8352,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       fontSize: hpFit.size,
       fillStyle: state.isCritical ? '#ffe2dc' : '#f2f8ff',
       strokeStyle: 'rgba(0,0,0,0.86)',
-      lineWidth: Math.max(1.2, 1.7 * ui),
+      lineWidth: Math.max(0.95, 1.4 * ui),
     });
 
     ctx.restore();
