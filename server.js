@@ -1277,7 +1277,7 @@ function recordRecentStreamEvent(room, type, payload = {}, options = {}) {
   if (type === 'gameState' && options.recordGameState !== true) return null;
   const source = inferRoomEventSource(room, type, payload);
   const now = Date.now();
-  if (source === 'real' && type !== 'tiktokConnection') room.lastRealEventAt = now;
+  if (source === 'real' && TIKTOK_PLAYER_EVENT_TYPES.has(String(type || ''))) room.lastRealEventAt = now;
   if (source === 'demo') room.lastDemoEventAt = now;
   if (source === 'test') room.lastTestEventAt = now;
   room.lastStreamEventAt = now;
@@ -1302,6 +1302,8 @@ function buildStreamModeStatus(room) {
   const demoPlayers = players.filter(player => player.source === 'demo').length;
   const testPlayers = players.filter(player => player.source === 'test').length;
   const overlayConnected = Number(room?.overlayCount || 0) > 0;
+  const hasPlayerEvents = Number(stream.playerEventCount || 0) > 0 || Boolean(stream.lastPlayerEventAt);
+  const eventFeedDegraded = Boolean(stream.eventFeedDegraded);
   let mode = 'disconnected';
   let label = 'Disconnected';
   let detail = 'Connect the setup preview, then attach TikTok LIVE.';
@@ -1324,7 +1326,13 @@ function buildStreamModeStatus(room) {
     playerSource = 'real';
   } else if (stream.connected) {
     playerSource = 'real';
-    if (realPlayers > 0 || stream.eventCount > 0 || room?.lastRealEventAt) {
+    if (eventFeedDegraded) {
+      mode = realPlayers > 0 ? 'real-feed-degraded' : 'real-waiting';
+      label = 'TikTok Event Feed Degraded';
+      detail = realPlayers > 0
+        ? `${realPlayers} restored player${realPlayers === 1 ? '' : 's'} from @${stream.username || 'TikTok'}, but comments, likes, gifts, follows, and shares are not arriving. Reconnecting the event feed.`
+        : `Connected to @${stream.username || 'TikTok'}, but only system events have arrived. Waiting for comments, likes, gifts, follows, or shares.`;
+    } else if (realPlayers > 0 || hasPlayerEvents) {
       mode = realPlayers > 0 ? 'real-live' : 'real-waiting';
       label = realPlayers > 0 ? 'Real Stream Live' : 'Real Stream Waiting';
       detail = realPlayers > 0
@@ -1348,8 +1356,13 @@ function buildStreamModeStatus(room) {
   if (!stream.connected && !['connecting', 'reconnecting'].includes(stream.status)) {
     blockingReasons.push({ code: 'NO_TIKTOK', message: 'TikTok LIVE is not connected.' });
   }
-  if (stream.connected && !room?.lastRealEventAt) {
-    blockingReasons.push({ code: 'NO_REAL_EVENTS', message: 'No real TikTok events have arrived yet.' });
+  if (stream.connected && eventFeedDegraded) {
+    blockingReasons.push({
+      code: 'TIKTOK_EVENT_FEED_DEGRADED',
+      message: 'TikTok is connected, but comments, likes, gifts, follows, and shares are not arriving yet.',
+    });
+  } else if (stream.connected && !hasPlayerEvents) {
+    blockingReasons.push({ code: 'NO_PLAYER_EVENTS', message: 'No player-bearing TikTok events have arrived yet.' });
   }
   if (stream.connected && realPlayers === 0) {
     blockingReasons.push({ code: 'NO_PLAYERS', message: 'No real players are in the arena yet.' });
@@ -1360,7 +1373,7 @@ function buildStreamModeStatus(room) {
     label,
     detail,
     playerSource,
-    readyForLive: stream.connected && overlayConnected && realPlayers > 0,
+    readyForLive: stream.connected && overlayConnected && realPlayers > 0 && !eventFeedDegraded,
     overlayConnected,
     overlayCount: Number(room?.overlayCount || 0),
     stream,
@@ -3754,6 +3767,7 @@ function buildTikTokConnectionStatus(room) {
     lastPlayerEventAt: room?.lastTikTokPlayerEventAt || null,
     eventCount: Number(connection.eventCount) || 0,
     playerEventCount: Number(room?.tiktokPlayerEventCount) || 0,
+    eventFeedDegraded: hasDegradedTikTokPlayerEventFeed(room),
     repairCount: Number(room?.tiktokRepairCount) || 0,
     lastRepairAt: room?.lastTikTokRepairAt || null,
     lastRepairReason: room?.lastTikTokRepairReason || '',
@@ -3908,6 +3922,8 @@ function isActiveTikTokConnection(room, tiktokClient, connectionId, sessionId = 
 function markTikTokEventAccepted(room, eventType, eventPayload = {}) {
   if (!room?.tiktokConnection) return;
   const now = Date.now();
+  const normalizedEventType = String(eventType || '');
+  const isPlayerEvent = TIKTOK_PLAYER_EVENT_TYPES.has(normalizedEventType);
   const eventMethod = safePlayerText(
     eventPayload?.method || eventPayload?.message?.method || eventPayload?.common?.method || '',
     '',
@@ -3917,7 +3933,7 @@ function markTikTokEventAccepted(room, eventType, eventPayload = {}) {
   room.tiktokConnection.lastEventType = eventType;
   if (eventMethod) room.tiktokConnection.lastEventMethod = eventMethod;
   room.tiktokConnection.eventCount = (Number(room.tiktokConnection.eventCount) || 0) + 1;
-  if (TIKTOK_PLAYER_EVENT_TYPES.has(String(eventType || ''))) {
+  if (isPlayerEvent) {
     room.lastRealEventAt = now;
     room.lastTikTokPlayerEventAt = now;
     room.tiktokPlayerEventCount = (Number(room.tiktokPlayerEventCount) || 0) + 1;
@@ -9906,9 +9922,6 @@ function tikTokRepairDecision(room, now = Date.now()) {
   const statusSince = Number(room.tiktokConnection.updatedAt || room.tiktokConnection.connectedAt || room.tiktokConnection.startedAt) || now;
   const connectedSince = Number(room.tiktokConnection.connectedAt || room.tiktokConnection.startedAt || room.tiktokConnection.updatedAt) || now;
   const hasPlayerEvents = Number(room.tiktokPlayerEventCount || 0) > 0 || Boolean(room.lastTikTokPlayerEventAt);
-  const lastAnyEventAt = Number(room.tiktokConnection.lastEventAt || 0);
-  const hasAnyEvents = Number(room.tiktokConnection.eventCount || 0) > 0 || Boolean(lastAnyEventAt);
-  const overlayConnected = Number(room.overlayCount || 0) > 0;
 
   if ((status === 'connecting' || status === 'reconnecting') && now - statusSince >= TIKTOK_CONNECT_STALE_MS) {
     return { username, reason: `${status}_timeout`, ageMs: now - statusSince };
@@ -9918,10 +9931,14 @@ function tikTokRepairDecision(room, now = Date.now()) {
     return { username, reason: 'client_marked_disconnected', ageMs: now - statusSince };
   }
 
-  if (status === 'connected' && overlayConnected && !hasPlayerEvents && now - connectedSince >= TIKTOK_CONNECTED_NO_EVENT_STALE_MS) {
-    const eventQuietMs = hasAnyEvents ? now - Math.max(lastAnyEventAt || 0, connectedSince) : now - connectedSince;
-    if (hasAnyEvents && eventQuietMs < TIKTOK_CONNECTED_NO_EVENT_STALE_MS * 4) return null;
-    return { username, reason: 'connected_without_player_events', ageMs: now - connectedSince };
+  if (status === 'connected' && !hasPlayerEvents && now - connectedSince >= TIKTOK_CONNECTED_NO_EVENT_STALE_MS) {
+    return {
+      username,
+      reason: 'connected_without_player_events',
+      ageMs: now - connectedSince,
+      lastEventType: room.tiktokConnection.lastEventType || '',
+      lastEventMethod: room.tiktokConnection.lastEventMethod || '',
+    };
   }
 
   return null;
@@ -9938,6 +9955,8 @@ function repairTikTokConnection(room, decision) {
     username: decision.username,
     reason: decision.reason,
     ageMs: decision.ageMs,
+    lastEventType: decision.lastEventType || room.tiktokConnection?.lastEventType || '',
+    lastEventMethod: decision.lastEventMethod || room.tiktokConnection?.lastEventMethod || '',
     repairCount: room.tiktokRepairCount,
   }, 'Repairing stale TikTok LIVE event connection');
 
@@ -10090,7 +10109,6 @@ function startMarketingAutoPoster() {
 function hasDegradedTikTokPlayerEventFeed(room) {
   const status = String(room?.tiktokConnection?.status || '').toLowerCase();
   if (!['connecting', 'reconnecting', 'connected'].includes(status)) return false;
-  if (Number(room?.overlayCount || 0) <= 0) return false;
   return !(Number(room?.tiktokPlayerEventCount || 0) > 0 || Boolean(room?.lastTikTokPlayerEventAt));
 }
 
