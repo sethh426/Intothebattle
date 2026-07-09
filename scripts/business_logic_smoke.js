@@ -275,6 +275,10 @@ function testPlayerCommandCatalog() {
   assert.equal(parseAttackCommand('!projectile @bravo')?.effect, 'projectile');
   assert.equal(parseAttackCommand('!boom @bravo')?.effect, 'explosion');
   assert.equal(parseAttackCommand('!nuke @bravo')?.effect, 'explosion');
+  for (const effect of ['prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard']) {
+    assert.equal(parseAttackCommand(`!${effect} @bravo`)?.effect, effect, `${effect} should parse as a direct attack effect`);
+    assert.equal(parseAttackCommand(`${effect} @bravo`)?.effect, effect, `${effect} should parse without a ! prefix when a target exists`);
+  }
   assert.equal(parseAttackCommand('@nova'), null, 'bare mention should not parse as a NOVA command');
   assert.equal(parseAttackCommand('hello @nova'), null, 'mention target text should not be scanned as command text');
   assert.equal(parseAttackCommand('this is fire', { explicitOnly: true }), null, 'plain comments should not become full-power commands');
@@ -309,7 +313,7 @@ function testPlayerCommandCatalog() {
     assert.ok(commandText.includes(expected), `viewer command text should include ${expected}`);
   }
   assert.equal(commandText.includes('!join'), false, 'viewer command text should not tell viewers to type !join to enter');
-  for (const expected of ['@name', 'enters you and sends a random 5-damage attack']) {
+  for (const expected of ['@name', 'enters you and sends a random 5-damage attack', '!prism @name', '!plasma @name', '!orbital @name']) {
     assert.ok(commandText.includes(expected), `viewer command text should include ${expected}`);
   }
 

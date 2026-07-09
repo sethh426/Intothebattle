@@ -8542,7 +8542,10 @@ app.post('/api/dev/laser-color', requireRoom, (req, res) => {
 
 app.post('/api/dev/overlay-settings', requireRoom, (req, res) => {
   const { shotType, shotSpeed, color, backgroundFit } = req.body || {};
-  const validTypes = ['beam', 'pulse', 'wave', 'burst', 'laser', 'fire', 'sphere', 'projectile', 'bullet', 'railgun', 'comet', 'arc', 'explosion'];
+  const validTypes = [
+    'beam', 'pulse', 'wave', 'burst', 'laser', 'fire', 'sphere', 'projectile', 'bullet', 'railgun', 'comet', 'arc', 'explosion',
+    'prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard',
+  ];
   const validBackgroundFits = ['contain', 'cover'];
   if (typeof shotType === 'string' && shotType) {
     if (!validTypes.includes(shotType)) return res.status(400).json({ success: false, error: `Invalid shot type. Must be one of: ${validTypes.join(', ')}` });

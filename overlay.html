@@ -1831,6 +1831,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
               <button class="shot-btn" data-shot="sphere">Sphere</button>
               <button class="shot-btn" data-shot="pulse">Pulse</button>
               <button class="shot-btn" data-shot="void">Void</button>
+              <button class="shot-btn" data-shot="prism">Prism</button>
+              <button class="shot-btn" data-shot="plasma">Plasma</button>
+              <button class="shot-btn" data-shot="cryo">Cryo</button>
+              <button class="shot-btn" data-shot="ion">Ion</button>
+              <button class="shot-btn" data-shot="sonic">Sonic</button>
+              <button class="shot-btn" data-shot="gravity">Gravity</button>
+              <button class="shot-btn" data-shot="glitch">Glitch</button>
+              <button class="shot-btn" data-shot="orbital">Orbital</button>
+              <button class="shot-btn" data-shot="drone">Drone</button>
+              <button class="shot-btn" data-shot="shard">Shard</button>
             </div>
           </div>
           <div class="ctrl" style="margin-top:10px">
@@ -1983,6 +1993,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1, backgroundFit: 'contain' };
   const APPROVED_EFFECTS = overlayNormalizers.approvedEffects;
   const DEFAULT_EFFECT = overlayNormalizers.defaultEffect;
+  const NEW_ATTACK_EFFECTS = Object.freeze(['prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard']);
   let isDemoMode      = false;
   let streamModeState = {
     mode: 'connecting',
@@ -3305,6 +3316,37 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
   }
 
+  function runEffectCatalogProbe(effectList = NEW_ATTACK_EFFECTS) {
+    clearTransientEffectsForProbe();
+    const top = topPlayers();
+    const ids = (top.length ? top : DEMO_PLAYERS).map(player => player.uniqueId || player.id).filter(Boolean);
+    const roster = ids.length >= 2 ? ids : ['p1', 'p2'];
+    const requestedEffects = (Array.isArray(effectList) ? effectList : NEW_ATTACK_EFFECTS)
+      .map(effect => normalizeEffectType(effect, ''))
+      .filter((effect, index, list) => NEW_ATTACK_EFFECTS.includes(effect) && list.indexOf(effect) === index);
+    const effects = requestedEffects.length ? requestedEffects : Array.from(NEW_ATTACK_EFFECTS);
+    const beforeDropped = effectOwnershipStats.droppedEffects;
+    const results = effects.map((effect, index) => {
+      const attacker = roster[index % roster.length];
+      let target = roster[(index + 1) % roster.length];
+      if (target === attacker) target = roster[(index + 2) % roster.length] || attacker;
+      const fired = fireAttack(attacker, target, 12 + index * 2, false, index % 3 === 0, effect, {
+        attackerScope: 'top',
+        targetScope: 'top',
+        intensity: 0.34 + (index % 4) * 0.12,
+        critical: index % 5 === 0,
+      });
+      return { effect, attacker, target, fired };
+    });
+    return {
+      requested: effects.length,
+      effects: results,
+      firedCount: results.filter(result => result.fired).length,
+      droppedDuringProbe: effectOwnershipStats.droppedEffects - beforeDropped,
+      status: currentOverlayMotionStatus(),
+    };
+  }
+
   function freezeOverlayVisuals() {
     overlayVisualsFrozen = true;
     return {
@@ -3411,6 +3453,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     testPlayerCards: roster => applyTestPlayerCards(roster),
     testEventStorm: (count = 132) => runVisualEventStorm(count),
     testEffectOwnership: () => runEffectOwnershipProbe(),
+    testEffectCatalog: effects => runEffectCatalogProbe(effects),
     testSponsorQueue: (count = 9) => runSponsorQueueStress(count),
     testBackground: (mode = 'valid') => {
       const kind = String(mode || 'valid').toLowerCase();
@@ -5208,7 +5251,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           'Regular chat: enters you and sends a random 5-damage attack',
           'Attacks: @name | @horde | @boss | !laser @name | !fire @name',
           'Icon: !emoji <emoji> or !<emoji>',
-          'Effects: !laser @name | !fire @name | !nova @name | !nuke @name',
+          'Effects: !laser @name | !fire @name | !prism @name | !plasma @name',
           'Teams/help: !team red / !commands or !comments',
         ];
       base.meta = '';
@@ -6311,7 +6354,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       this._impacted      = false;
 
       const speed = Math.max(0.5, options.shotSpeed || overlaySettings.shotSpeed || 1);
-      const durations = { static:1800, beam:430, laser:520, railgun:480, comet:820, arc:620, sphere:700, pulse:680, void:760, projectile:760, neon:640, fire:780, explosion:680, bullet:620 };
+      const durations = {
+        static:1800, beam:430, laser:520, railgun:480, comet:820, arc:620, sphere:700, pulse:680, void:760, projectile:760, neon:640, fire:780, explosion:680, bullet:620,
+        prism:720, plasma:820, cryo:760, ion:560, sonic:700, gravity:820, glitch:620, orbital:780, drone:840, shard:720,
+      };
       this.duration = Math.round((durations[type] || 500) / speed);
 
       if (type === 'fire') {
@@ -6344,7 +6390,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     draw() {
       ctx.save();
       this.drawAnchorCues();
-      if (!['bullet', 'sphere', 'pulse', 'void'].includes(this.type)) this.drawVectorRail();
+      if (!['bullet', 'sphere', 'pulse', 'void', 'prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard'].includes(this.type)) this.drawVectorRail();
       switch (this.type) {
         case 'laser':      this.drawLaser();      break;
         case 'beam':       this.drawBeam();       break;
@@ -6359,6 +6405,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         case 'neon':       this.drawNeon();       break;
         case 'fire':       this.drawFire();       break;
         case 'sphere':     this.drawSphere();     break;
+        case 'prism':      this.drawPrism();      break;
+        case 'plasma':     this.drawPlasma();     break;
+        case 'cryo':       this.drawCryo();       break;
+        case 'ion':        this.drawIon();        break;
+        case 'sonic':      this.drawSonic();      break;
+        case 'gravity':    this.drawGravity();    break;
+        case 'glitch':     this.drawGlitch();     break;
+        case 'orbital':    this.drawOrbital();    break;
+        case 'drone':      this.drawDrone();      break;
+        case 'shard':      this.drawShard();      break;
         case 'static':     break;
         default:           this.drawLaser();
       }
@@ -7084,6 +7140,576 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         ctx.beginPath();
         ctx.arc(t.x, t.y, (radius * 0.8 + impactT * radius * 3.1), 0, Math.PI * 2);
         ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    spawnImpactParticles(colors, count, options = {}) {
+      if (this._impacted) return;
+      this._impacted = true;
+      const palette = Array.isArray(colors) && colors.length ? colors : [this.color || '#7afcff'];
+      const cnt = motionParticleCount(count || 16, { min: options.min || 3, max: options.max || 7 });
+      for (let i = 0; i < cnt; i += 1) {
+        this.particles.push(new Particle(this.to.x, this.to.y, {
+          speed: (options.speed || 3) + Math.random() * (options.speedRange || 5),
+          color: palette[i % palette.length],
+          radius: (options.radius || 1.4) + Math.random() * (options.radiusRange || 2.5),
+          decay: (options.decay || 0.028) + Math.random() * (options.decayRange || 0.016),
+          rise: options.rise == null ? 0.45 : options.rise,
+        }));
+      }
+    }
+
+    drawPrism() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const nx = -uy, ny = ux;
+      const ui = canvasUiScale();
+      const headX = f.x + dx * p;
+      const headY = f.y + dy * p;
+      const fade = pg < 0.78 ? 1 : Math.max(0, 1 - (pg - 0.78) / 0.22);
+      const colors = ['#ff4fd8', '#7afcff', '#f6c95b'];
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      colors.forEach((color, index) => {
+        const lane = index - 1;
+        const offset = lane * (11 + this.intensity * 5) * ui;
+        ctx.globalAlpha = fade * (lane === 0 ? 0.82 : 0.62);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(2, (5 + this.intensity * 4) * ui);
+        ctx.beginPath();
+        ctx.moveTo(f.x + nx * offset, f.y + ny * offset);
+        ctx.quadraticCurveTo(
+          f.x + dx * 0.48 - nx * offset * 1.35,
+          f.y + dy * 0.48 - ny * offset * 1.35,
+          headX,
+          headY
+        );
+        ctx.stroke();
+      });
+      ctx.globalAlpha = fade;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1.2, 2 * ui);
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y);
+      ctx.lineTo(headX, headY);
+      ctx.stroke();
+      const impactT = clamp01((pg - 0.68) / 0.32);
+      if (impactT > 0 && !this._impacted) this.spawnImpactParticles(colors.concat('#ffffff'), 18, { min: 4, max: 7, speed: 3.5 });
+      if (impactT > 0) {
+        ctx.globalAlpha = Math.sin(impactT * Math.PI) * 0.58;
+        colors.forEach((color, index) => {
+          ctx.strokeStyle = color;
+          ctx.lineWidth = Math.max(1, 1.6 * ui);
+          ctx.beginPath();
+          ctx.arc(t.x, t.y, (18 + index * 9 + impactT * 42) * ui, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+      }
+      ctx.restore();
+    }
+
+    drawPlasma() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const nx = -dy / dist, ny = dx / dist;
+      const ui = canvasUiScale();
+      const now = Date.now();
+      const fade = pg < 0.82 ? 1 : Math.max(0, 1 - (pg - 0.82) / 0.18);
+      const segments = 12;
+      const points = [{ x: f.x, y: f.y }];
+      for (let i = 1; i <= segments; i += 1) {
+        const r = Math.min(p, i / segments);
+        if (r <= (i - 1) / segments) break;
+        const envelope = Math.sin(r * Math.PI);
+        const wobble = (prefersReducedMotion() ? 0 : Math.sin(now * 0.024 + i * 1.77)) * (12 + this.intensity * 14) * ui * envelope;
+        points.push({ x: f.x + dx * r + nx * wobble, y: f.y + dy * r + ny * wobble });
+      }
+      const strokePath = (width, color, alpha) => {
+        if (points.length < 2) return;
+        ctx.globalAlpha = alpha * fade;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(1, width * ui);
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i += 1) ctx.lineTo(points[i].x, points[i].y);
+        ctx.stroke();
+      };
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      strokePath(24 + this.intensity * 7, '#7a2cff', 0.22);
+      strokePath(12 + this.intensity * 5, '#ff4fd8', 0.58);
+      strokePath(4, '#fff0ff', 0.95);
+      const head = points[points.length - 1] || f;
+      const r = (15 + this.intensity * 12) * ui;
+      const core = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, r * 2.1);
+      core.addColorStop(0, '#ffffff');
+      core.addColorStop(0.34, '#ff89e8');
+      core.addColorStop(0.72, '#7a2cff');
+      core.addColorStop(1, 'rgba(122,44,255,0)');
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = core;
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, r * 2.1, 0, Math.PI * 2);
+      ctx.fill();
+      if (pg > 0.78 && !this._impacted) this.spawnImpactParticles(['#ff4fd8', '#7a2cff', '#ffffff'], 20, { min: 4, max: 8, speed: 3.2, radius: 1.8 });
+      ctx.restore();
+    }
+
+    drawCryo() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const nx = -uy, ny = ux;
+      const ui = canvasUiScale();
+      const x = f.x + dx * p;
+      const y = f.y + dy * p;
+      const fade = pg < 0.8 ? 1 : Math.max(0, 1 - (pg - 0.8) / 0.2);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = fade * 0.38;
+      ctx.strokeStyle = '#7afcff';
+      ctx.lineWidth = Math.max(8, 13 * ui + this.intensity * 5 * ui);
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.globalAlpha = fade;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1.6, 2.6 * ui);
+      ctx.beginPath();
+      ctx.moveTo(f.x + nx * 3 * ui, f.y + ny * 3 * ui);
+      ctx.lineTo(x + nx * 3 * ui, y + ny * 3 * ui);
+      ctx.moveTo(f.x - nx * 3 * ui, f.y - ny * 3 * ui);
+      ctx.lineTo(x - nx * 3 * ui, y - ny * 3 * ui);
+      ctx.stroke();
+      for (let i = 1; i <= 4; i += 1) {
+        const ringT = clamp01(pg * 1.22 - i * 0.16);
+        if (ringT <= 0 || ringT >= 1) continue;
+        const rx = f.x + dx * ringT;
+        const ry = f.y + dy * ringT;
+        ctx.globalAlpha = fade * (1 - ringT) * 0.46;
+        ctx.strokeStyle = i % 2 ? '#c8fbff' : '#7afcff';
+        ctx.lineWidth = Math.max(1, 1.6 * ui);
+        ctx.beginPath();
+        for (let side = 0; side < 6; side += 1) {
+          const angle = Math.PI / 6 + side * Math.PI / 3;
+          const px = rx + Math.cos(angle) * (14 + i * 4) * ui;
+          const py = ry + Math.sin(angle) * (14 + i * 4) * ui;
+          if (!side) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+      const impactT = clamp01((pg - 0.7) / 0.3);
+      if (impactT > 0 && !this._impacted) this.spawnImpactParticles(['#ffffff', '#bdfcff', '#7afcff'], 18, { min: 4, max: 7, speed: 2.5, radius: 1.2 });
+      if (impactT > 0) {
+        ctx.globalAlpha = Math.sin(impactT * Math.PI) * 0.62;
+        ctx.strokeStyle = '#bdfcff';
+        ctx.lineWidth = Math.max(1, 1.7 * ui);
+        for (let i = 0; i < 8; i += 1) {
+          const a = i * Math.PI / 4;
+          ctx.beginPath();
+          ctx.moveTo(t.x + Math.cos(a) * 10 * ui, t.y + Math.sin(a) * 10 * ui);
+          ctx.lineTo(t.x + Math.cos(a) * (42 + impactT * 28) * ui, t.y + Math.sin(a) * (42 + impactT * 28) * ui);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    drawIon() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(clamp01(pg * 1.1));
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const x = f.x + dx * p, y = f.y + dy * p;
+      const ui = canvasUiScale();
+      const fade = pg < 0.72 ? 1 : Math.max(0, 1 - (pg - 0.72) / 0.28);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = fade * 0.5;
+      ctx.strokeStyle = '#4455ff';
+      ctx.lineWidth = Math.max(7, 11 * ui + this.intensity * 5 * ui);
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.globalAlpha = fade;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1.5, 2.4 * ui);
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      [0.24, 0.48, 0.72, 0.92].forEach((ratio, index) => {
+        const local = clamp01(p - (1 - ratio) * 0.08);
+        if (p < ratio * 0.72) return;
+        const rx = f.x + dx * Math.min(p, ratio);
+        const ry = f.y + dy * Math.min(p, ratio);
+        ctx.globalAlpha = fade * (0.42 - index * 0.05);
+        ctx.strokeStyle = index % 2 ? '#bdfcff' : '#8b7cff';
+        ctx.lineWidth = Math.max(1, 1.4 * ui);
+        ctx.beginPath();
+        ctx.arc(rx, ry, (12 + index * 5 + local * 7) * ui, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+      const impactT = clamp01((pg - 0.68) / 0.32);
+      if (impactT > 0 && !this._impacted) this.spawnImpactParticles(['#ffffff', '#8b7cff', '#7afcff'], 14, { min: 3, max: 6, speed: 4.2, radius: 1.1 });
+      ctx.restore();
+    }
+
+    drawSonic() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const ui = canvasUiScale();
+      const x = f.x + dx * p, y = f.y + dy * p;
+      const fade = pg < 0.76 ? 1 : Math.max(0, 1 - (pg - 0.76) / 0.24);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = fade * 0.28;
+      ctx.strokeStyle = '#d9fffb';
+      ctx.lineWidth = Math.max(4, 6 * ui);
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      for (let i = 0; i < 5; i += 1) {
+        const ringT = clamp01(pg * 1.35 - i * 0.16);
+        if (ringT <= 0 || ringT >= 1) continue;
+        const rx = f.x + dx * Math.min(p, ringT);
+        const ry = f.y + dy * Math.min(p, ringT);
+        ctx.save();
+        ctx.translate(rx, ry);
+        ctx.rotate(Math.atan2(uy, ux));
+        ctx.scale(0.42, 1);
+        ctx.globalAlpha = fade * Math.sin(ringT * Math.PI) * 0.46;
+        ctx.strokeStyle = i % 2 ? '#ffffff' : '#99ffda';
+        ctx.lineWidth = Math.max(1, 1.8 * ui);
+        ctx.beginPath();
+        ctx.arc(0, 0, (18 + ringT * (42 + this.intensity * 14)) * ui, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      const impactT = clamp01((pg - 0.66) / 0.34);
+      if (impactT > 0 && !this._impacted) this.spawnImpactParticles(['#d9fffb', '#99ffda', '#ffffff'], 12, { min: 3, max: 5, speed: 2.2, radius: 1.1 });
+      if (impactT > 0) {
+        ctx.globalAlpha = Math.sin(impactT * Math.PI) * 0.48;
+        ctx.strokeStyle = '#d9fffb';
+        ctx.lineWidth = Math.max(1, 2.2 * ui);
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, (22 + impactT * 82) * ui, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    drawGravity() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const ui = canvasUiScale();
+      const now = Date.now();
+      const x = f.x + dx * p, y = f.y + dy * p;
+      const radius = (16 + this.intensity * 10) * ui;
+      const fade = pg < 0.82 ? 1 : Math.max(0, 1 - (pg - 0.82) / 0.18);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const tail = Math.max(42 * ui, Math.min(dist * 0.36, (96 + this.intensity * 38) * ui));
+      const grad = ctx.createLinearGradient(x - ux * tail, y - uy * tail, x, y);
+      grad.addColorStop(0, 'rgba(20,8,45,0)');
+      grad.addColorStop(0.55, 'rgba(139,124,255,0.24)');
+      grad.addColorStop(1, 'rgba(246,201,91,0.5)');
+      ctx.globalAlpha = fade * 0.7;
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = Math.max(6, 9 * ui + this.intensity * 4 * ui);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(x - ux * tail, y - uy * tail);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      const aura = ctx.createRadialGradient(x, y, 0, x, y, radius * 2.8);
+      aura.addColorStop(0, 'rgba(255,255,255,0.28)');
+      aura.addColorStop(0.24, 'rgba(246,201,91,0.22)');
+      aura.addColorStop(0.62, 'rgba(85,45,180,0.2)');
+      aura.addColorStop(1, 'rgba(20,8,45,0)');
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 2.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#04030b';
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = '#f6c95b';
+      ctx.lineWidth = Math.max(1, 1.6 * ui);
+      for (let ring = 0; ring < 3; ring += 1) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate((prefersReducedMotion() ? 0 : now * 0.003) * (ring % 2 ? -1 : 1) + ring);
+        ctx.scale(1, 0.34 + ring * 0.11);
+        ctx.globalAlpha = fade * (0.62 - ring * 0.14);
+        ctx.beginPath();
+        ctx.arc(0, 0, radius * (1.3 + ring * 0.32), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+      const impactT = clamp01((pg - 0.7) / 0.3);
+      if (impactT > 0 && !this._impacted) this.spawnImpactParticles(['#8b7cff', '#f6c95b', '#7afcff'], 18, { min: 4, max: 7, speed: 2.1, radius: 1.4 });
+      if (impactT > 0) {
+        ctx.globalAlpha = Math.sin(impactT * Math.PI) * 0.42;
+        ctx.strokeStyle = '#8b7cff';
+        ctx.lineWidth = Math.max(1, 2 * ui);
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, (20 + impactT * 68) * ui, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    drawGlitch() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const nx = -uy, ny = ux;
+      const ui = canvasUiScale();
+      const fade = pg < 0.76 ? 1 : Math.max(0, 1 - (pg - 0.76) / 0.24);
+      const headX = f.x + dx * p;
+      const headY = f.y + dy * p;
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'butt';
+      for (let i = 0; i < 9; i += 1) {
+        const startT = Math.max(0, p - 0.08 - i * 0.045);
+        const endT = Math.max(0, p - i * 0.045);
+        if (endT <= 0) continue;
+        const offset = (i % 3 - 1) * (7 + this.intensity * 5) * ui;
+        const color = i % 2 ? '#ff4fd8' : '#7afcff';
+        ctx.globalAlpha = fade * (0.28 + (i % 3) * 0.16);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = Math.max(2, (3 + (i % 2) * 2) * ui);
+        ctx.beginPath();
+        ctx.moveTo(f.x + dx * startT + nx * offset, f.y + dy * startT + ny * offset);
+        ctx.lineTo(f.x + dx * endT + nx * offset, f.y + dy * endT + ny * offset);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = fade;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(1, 1.5 * ui);
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y);
+      ctx.lineTo(headX, headY);
+      ctx.stroke();
+      const impactT = clamp01((pg - 0.66) / 0.34);
+      if (impactT > 0 && !this._impacted) this.spawnImpactParticles(['#ff4fd8', '#7afcff', '#ffffff'], 16, { min: 4, max: 7, speed: 3.8, radius: 1 });
+      if (impactT > 0) {
+        ctx.globalAlpha = Math.sin(impactT * Math.PI) * 0.62;
+        ['#ff4fd8', '#7afcff', '#ffffff'].forEach((color, index) => {
+          ctx.fillStyle = color;
+          for (let i = 0; i < 5; i += 1) {
+            const a = (i * 1.7 + index) * Math.PI / 3;
+            const r = (12 + i * 7 + impactT * 28) * ui;
+            const size = (3 + index * 1.4) * ui;
+            ctx.fillRect(t.x + Math.cos(a) * r, t.y + Math.sin(a) * r, size, size);
+          }
+        });
+      }
+      ctx.restore();
+    }
+
+    drawOrbital() {
+      const { from: f, to: t, progress: pg } = this;
+      const ui = canvasUiScale();
+      const lockT = clamp01(pg / 0.32);
+      const beamT = clamp01((pg - 0.24) / 0.48);
+      const impactT = clamp01((pg - 0.62) / 0.38);
+      const strikeY = Math.max(arenaFrame().y + 12 * ui, t.y - (240 + this.intensity * 70) * ui);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.globalAlpha = (1 - Math.min(pg, 0.92)) * 0.32;
+      ctx.strokeStyle = '#7afcff';
+      ctx.setLineDash([8 * ui, 12 * ui]);
+      ctx.lineDashOffset = -Date.now() * 0.05;
+      ctx.lineWidth = Math.max(1, 1.8 * ui);
+      ctx.beginPath();
+      ctx.moveTo(f.x, f.y);
+      ctx.lineTo(t.x, t.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = Math.sin(lockT * Math.PI) * 0.72;
+      ctx.strokeStyle = '#f6c95b';
+      ctx.lineWidth = Math.max(1.4, 2.3 * ui);
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, (22 + lockT * 24) * ui, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(t.x - 42 * ui, t.y);
+      ctx.lineTo(t.x - 14 * ui, t.y);
+      ctx.moveTo(t.x + 14 * ui, t.y);
+      ctx.lineTo(t.x + 42 * ui, t.y);
+      ctx.moveTo(t.x, t.y - 42 * ui);
+      ctx.lineTo(t.x, t.y - 14 * ui);
+      ctx.moveTo(t.x, t.y + 14 * ui);
+      ctx.lineTo(t.x, t.y + 42 * ui);
+      ctx.stroke();
+      if (beamT > 0) {
+        const hitY = strikeY + (t.y - strikeY) * easeOutCubic(beamT);
+        const fade = beamT < 0.84 ? 1 : Math.max(0, 1 - (beamT - 0.84) / 0.16);
+        ctx.globalAlpha = fade * 0.46;
+        ctx.strokeStyle = '#f6c95b';
+        ctx.lineWidth = Math.max(18, (26 + this.intensity * 15) * ui);
+        ctx.beginPath();
+        ctx.moveTo(t.x, strikeY);
+        ctx.lineTo(t.x, hitY);
+        ctx.stroke();
+        ctx.globalAlpha = fade;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = Math.max(3, 5 * ui);
+        ctx.beginPath();
+        ctx.moveTo(t.x, strikeY);
+        ctx.lineTo(t.x, hitY);
+        ctx.stroke();
+      }
+      if (impactT > 0 && !this._impacted) this.spawnImpactParticles(['#f6c95b', '#ffffff', '#ff8f45'], 22, { min: 5, max: 9, speed: 4.2, radius: 1.7 });
+      if (impactT > 0) {
+        ctx.globalAlpha = Math.sin(impactT * Math.PI) * 0.58;
+        ctx.strokeStyle = '#f6c95b';
+        ctx.lineWidth = Math.max(1.4, 2.6 * ui);
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, (22 + impactT * 92) * ui, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    drawDrone() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const nx = -uy, ny = ux;
+      const ui = canvasUiScale();
+      const fade = pg < 0.82 ? 1 : Math.max(0, 1 - (pg - 0.82) / 0.18);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 3; i += 1) {
+        const lane = i - 1;
+        const orbit = (24 + this.intensity * 9) * ui;
+        const wobble = prefersReducedMotion() ? 0 : Math.sin(Date.now() * 0.01 + i * 2) * 5 * ui;
+        const droneX = f.x + dx * Math.min(p, 0.72) + nx * lane * orbit + ux * wobble;
+        const droneY = f.y + dy * Math.min(p, 0.72) + ny * lane * orbit + uy * wobble;
+        ctx.globalAlpha = fade * 0.38;
+        ctx.strokeStyle = '#7afcff';
+        ctx.lineWidth = Math.max(1, 1.5 * ui);
+        ctx.beginPath();
+        ctx.arc(droneX, droneY, (8 + this.intensity * 2) * ui, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = fade * 0.86;
+        ctx.fillStyle = i === 1 ? '#ffffff' : '#99ffda';
+        ctx.beginPath();
+        ctx.arc(droneX, droneY, (3.4 + this.intensity * 1.2) * ui, 0, Math.PI * 2);
+        ctx.fill();
+        if (pg > 0.42) {
+          const shotT = clamp01((pg - 0.42) / 0.48);
+          const endX = droneX + (t.x - droneX) * shotT;
+          const endY = droneY + (t.y - droneY) * shotT;
+          ctx.globalAlpha = fade * 0.72;
+          ctx.strokeStyle = i === 1 ? '#ffffff' : '#7afcff';
+          ctx.lineWidth = Math.max(1.2, (2.2 + i * 0.4) * ui);
+          ctx.beginPath();
+          ctx.moveTo(droneX, droneY);
+          ctx.lineTo(endX, endY);
+          ctx.stroke();
+        }
+      }
+      const impactT = clamp01((pg - 0.76) / 0.24);
+      if (impactT > 0 && !this._impacted) this.spawnImpactParticles(['#7afcff', '#99ffda', '#ffffff'], 16, { min: 4, max: 7, speed: 3.4, radius: 1.2 });
+      ctx.restore();
+    }
+
+    drawShard() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const nx = -uy, ny = ux;
+      const ui = canvasUiScale();
+      const fade = pg < 0.78 ? 1 : Math.max(0, 1 - (pg - 0.78) / 0.22);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 6; i += 1) {
+        const local = clamp01(p - i * 0.055);
+        if (local <= 0) continue;
+        const lane = ((i % 3) - 1) * (10 + this.intensity * 5) * ui;
+        const x = f.x + dx * local + nx * lane;
+        const y = f.y + dy * local + ny * lane;
+        const size = (11 + this.intensity * 5 - i * 0.7) * ui;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.atan2(dy, dx) + (i % 2 ? 0.18 : -0.18));
+        ctx.globalAlpha = fade * (0.74 - i * 0.055);
+        ctx.fillStyle = i % 2 ? '#bdfcff' : '#ffffff';
+        ctx.strokeStyle = '#7afcff';
+        ctx.lineWidth = Math.max(1, 1.2 * ui);
+        ctx.beginPath();
+        ctx.moveTo(size * 1.2, 0);
+        ctx.lineTo(-size * 0.55, -size * 0.42);
+        ctx.lineTo(-size * 0.25, 0);
+        ctx.lineTo(-size * 0.55, size * 0.42);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+      const impactT = clamp01((pg - 0.7) / 0.3);
+      if (impactT > 0 && !this._impacted) this.spawnImpactParticles(['#ffffff', '#bdfcff', '#7afcff'], 20, { min: 5, max: 8, speed: 4.4, radius: 1.1 });
+      if (impactT > 0) {
+        ctx.globalAlpha = Math.sin(impactT * Math.PI) * 0.56;
+        ctx.strokeStyle = '#bdfcff';
+        ctx.lineWidth = Math.max(1.2, 1.8 * ui);
+        for (let i = 0; i < 9; i += 1) {
+          const a = Math.PI * 2 * (i / 9) + impactT * 0.4;
+          ctx.beginPath();
+          ctx.moveTo(t.x + Math.cos(a) * 10 * ui, t.y + Math.sin(a) * 10 * ui);
+          ctx.lineTo(t.x + Math.cos(a) * (34 + impactT * 40) * ui, t.y + Math.sin(a) * (34 + impactT * 40) * ui);
+          ctx.stroke();
+        }
       }
       ctx.restore();
     }

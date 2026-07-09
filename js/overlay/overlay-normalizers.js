@@ -1,7 +1,10 @@
 (function attachOverlayNormalizers(global) {
   'use strict';
 
-  const approvedEffects = Object.freeze(['beam', 'laser', 'arc', 'sphere', 'railgun', 'comet', 'pulse', 'void']);
+  const approvedEffects = Object.freeze([
+    'beam', 'laser', 'arc', 'sphere', 'railgun', 'comet', 'pulse', 'void',
+    'prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard',
+  ]);
   const defaultEffect = 'beam';
   const effectAliases = Object.freeze({
     beam: 'beam',
@@ -20,6 +23,21 @@
     fire: 'comet',
     flame: 'comet',
     meteor: 'comet',
+    prism: 'prism',
+    plasma: 'plasma',
+    cryo: 'cryo',
+    ice: 'cryo',
+    freeze: 'cryo',
+    ion: 'ion',
+    sonic: 'sonic',
+    gravity: 'gravity',
+    singularity: 'gravity',
+    glitch: 'glitch',
+    orbital: 'orbital',
+    orbit: 'orbital',
+    drone: 'drone',
+    shard: 'shard',
+    shards: 'shard',
     pulse: 'pulse',
     nova: 'pulse',
     ripple: 'pulse',
@@ -32,7 +50,6 @@
     nuke: 'pulse',
     nukes: 'pulse',
     void: 'void',
-    gravity: 'void',
     blackhole: 'void',
     vortex: 'void',
     dark: 'void',

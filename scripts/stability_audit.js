@@ -222,6 +222,9 @@ function checkOverlayModuleContracts() {
   if (!overlayHtml.includes('resolveEffectEntity') || !overlayHtml.includes('testEffectOwnership') || !overlayHtml.includes('unownedEffects')) {
     addError('overlay.html is missing combat effect ownership enforcement/status hooks.');
   }
+  if (!overlayHtml.includes('testEffectCatalog') || !overlayHtml.includes('NEW_ATTACK_EFFECTS')) {
+    addError('overlay.html is missing new attack effect catalog coverage hooks.');
+  }
   if (!overlayHtml.includes('sponsorVideoAgent.status') || !readText('js/overlay/video-agent.js').includes('status(payload = {})')) {
     addError('Overlay sponsor video-agent status hook is missing.');
   }
@@ -269,6 +272,16 @@ function checkOverlayModuleContracts() {
     "effect === 'explosion'",
     "effect === 'projectile'",
     "effect === 'neon'",
+    "prism: 'sphere'",
+    "plasma: 'comet'",
+    "cryo: 'sphere'",
+    "ion: 'arc'",
+    "sonic: 'pulse'",
+    "gravity: 'pulse'",
+    "glitch: 'neon'",
+    "orbital: 'railgun'",
+    "drone: 'projectile'",
+    "shard: 'bullet'",
   ]) {
     if (!overlayV2.includes(expected)) {
       addError(`overlay-v2 direct command effect rendering is missing ${expected}.`);
