@@ -4627,7 +4627,9 @@ function isRestorableLivePlayer(player) {
 
 function restoreRecentRoomPlayers(room, options = {}) {
   if (!room?.roomId || TIKTOK_RECENT_PLAYER_RESTORE_LIMIT <= 0 || TIKTOK_RECENT_PLAYER_RESTORE_MS <= 0) return 0;
-  const existingAlive = Object.values(room.players || {}).some(player => player && player.alive);
+  const existingAlive = Object.values(room.players || {}).some(player => (
+    player && player.alive && isRestorableLivePlayer(player)
+  ));
   if (existingAlive && options.onlyWhenEmpty !== false) return 0;
 
   const now = Date.now();
@@ -4661,6 +4663,12 @@ function restoreRecentRoomPlayers(room, options = {}) {
   }
 
   return candidates.length;
+}
+
+function countAliveRestorableLivePlayers(room) {
+  return Object.values(room?.players || {})
+    .filter(player => player && player.alive && isRestorableLivePlayer(player))
+    .length;
 }
 
 function saveRoomPlayerStats(room) {
@@ -8443,6 +8451,7 @@ app.get('/state', (req, res) => {
 });
 
 app.get('/api/status', requireRoom, (req, res) => {
+  restoreDegradedLiveRoster(req.room);
   const stream = buildTikTokConnectionStatus(req.room);
   const streamMode = buildStreamModeStatus(req.room);
   const playerRoster = buildRoomPlayerRoster(req.room);
@@ -10086,7 +10095,7 @@ function hasDegradedTikTokPlayerEventFeed(room) {
 }
 
 function shouldRetainIdleLivePlayer(room, player, now = Date.now()) {
-  if (!player?.alive || !player.forceSpawn) return false;
+  if (!player?.alive) return false;
   if (!isRestorableLivePlayer(player)) return false;
   if (!hasDegradedTikTokPlayerEventFeed(room)) return false;
   const liveStartedAt = safeEpochMs(
@@ -10096,9 +10105,24 @@ function shouldRetainIdleLivePlayer(room, player, now = Date.now()) {
   return now - liveStartedAt <= TIKTOK_RECENT_PLAYER_RESTORE_MS;
 }
 
+function restoreDegradedLiveRoster(room) {
+  if (!hasDegradedTikTokPlayerEventFeed(room)) return 0;
+  const minimumVisiblePlayers = Math.min(4, TIKTOK_RECENT_PLAYER_RESTORE_LIMIT);
+  if (countAliveRestorableLivePlayers(room) >= minimumVisiblePlayers) return 0;
+
+  const restored = restoreRecentRoomPlayers(room, { onlyWhenEmpty: false });
+  if (restored > 0) {
+    logger.info({ roomId: room.roomId, restored }, 'Restored recent live players for degraded TikTok feed');
+    emitRoomEvent(room, 'gameState', room.players);
+    updatePlayerGauge();
+  }
+  return restored;
+}
+
 setInterval(() => {
   const cutoff = Date.now() - CFG.IDLE_TIMEOUT_MS;
   for (const room of getAllRooms().values()) {
+    restoreDegradedLiveRoster(room);
     for (const id of Object.keys(room.players)) {
       const player = room.players[id];
       if (player.lastActive < cutoff) {
