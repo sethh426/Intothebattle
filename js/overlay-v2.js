@@ -893,6 +893,10 @@
         wave: 'arc',
         shock: 'arc',
         arc: 'arc',
+        nova: 'pulse',
+        pulse: 'pulse',
+        sphere: 'sphere',
+        orb: 'sphere',
         shot: 'bullet',
         shell: 'bullet',
         bullet: 'bullet',
@@ -906,7 +910,12 @@
         beam: 'beam',
         neon: 'neon',
         gift: 'gift',
+        hearts: 'gift',
+        boom: 'explosion',
+        explode: 'explosion',
         explosion: 'explosion',
+        nuke: 'explosion',
+        nukes: 'explosion',
         boss: 'railgun',
         bosswave: 'railgun',
       };
@@ -995,6 +1004,57 @@
           lastX = x;
           lastY = y;
         }
+      } else if (effect === 'sphere') {
+        line(Math.max(4, width * 0.48), color, 0.38, start.x, start.y, end.x, end.y);
+        beam.lineStyle(Math.max(3, 4 * unit), color, 0.86);
+        beam.strokeCircle(end.x, end.y, Math.max(28, 42 * unit));
+        beam.lineStyle(Math.max(1, 2 * unit), 0xffffff, 0.7);
+        beam.strokeCircle(end.x, end.y, Math.max(13, 20 * unit));
+        beam.fillStyle(color, 0.2);
+        beam.fillCircle(end.x, end.y, Math.max(34, 50 * unit));
+      } else if (effect === 'pulse') {
+        line(Math.max(5, width * 0.62), color, 0.42);
+        [0.35, 0.62, 1].forEach((ratio, index) => {
+          const x = start.x + dx * ratio;
+          const y = start.y + dy * ratio;
+          beam.lineStyle(Math.max(2, (5 - index) * unit), index === 2 ? 0xffffff : color, index === 2 ? 0.78 : 0.52);
+          beam.strokeCircle(x, y, (20 + index * 15) * unit);
+        });
+      } else if (effect === 'explosion') {
+        line(Math.max(7, width * 0.9), color, 0.5, start.x, start.y, end.x - ux * 12 * unit, end.y - uy * 12 * unit);
+        beam.fillStyle(color, 0.62);
+        beam.fillCircle(end.x, end.y, Math.max(26, 38 * unit));
+        beam.fillStyle(0xfff0b9, 0.92);
+        beam.fillCircle(end.x, end.y, Math.max(10, 16 * unit));
+        for (let i = 0; i < 10; i += 1) {
+          const angle = (Math.PI * 2 * i) / 10;
+          const inner = Math.max(18, 24 * unit);
+          const outer = Math.max(42, 62 * unit);
+          line(
+            Math.max(2, 3 * unit),
+            i % 2 ? 0xffffff : color,
+            i % 2 ? 0.58 : 0.72,
+            end.x + Math.cos(angle) * inner,
+            end.y + Math.sin(angle) * inner,
+            end.x + Math.cos(angle) * outer,
+            end.y + Math.sin(angle) * outer
+          );
+        }
+      } else if (effect === 'projectile' || effect === 'gift') {
+        line(Math.max(4, width * 0.5), color, 0.34, start.x, start.y, end.x - ux * 24 * unit, end.y - uy * 24 * unit);
+        beam.fillStyle(color, effect === 'gift' ? 0.82 : 0.9);
+        beam.fillCircle(end.x, end.y, Math.max(14, 22 * unit));
+        beam.fillStyle(0xffffff, 0.78);
+        beam.fillCircle(end.x - ux * 5 * unit - nx * 4 * unit, end.y - uy * 5 * unit - ny * 4 * unit, Math.max(4, 7 * unit));
+        if (effect === 'gift') {
+          beam.lineStyle(Math.max(2, 3 * unit), 0xffffff, 0.76);
+          beam.strokeCircle(end.x, end.y, Math.max(24, 34 * unit));
+        }
+      } else if (effect === 'neon' || effect === 'beam') {
+        line(Math.max(8, width * 1.2), color, effect === 'neon' ? 0.36 : 0.5);
+        line(Math.max(3, width * 0.42), 0xffffff, 0.92);
+        line(Math.max(2, width * 0.22), color, 0.82, start.x + nx * 9 * unit, start.y + ny * 9 * unit, end.x + nx * 9 * unit, end.y + ny * 9 * unit);
+        line(Math.max(2, width * 0.22), color, 0.82, start.x - nx * 9 * unit, start.y - ny * 9 * unit, end.x - nx * 9 * unit, end.y - ny * 9 * unit);
       } else {
         beam.lineStyle(Math.max(4, width), color, 0.82);
         beam.lineBetween(start.x, start.y, end.x, end.y);
@@ -1003,6 +1063,18 @@
         beam.fillStyle(color, 0.36);
         beam.fillCircle(end.x, end.y, Math.max(12, 18 * unit));
       }
+      const effectDuration = {
+        arc: 620,
+        bullet: 520,
+        comet: 760,
+        explosion: 720,
+        fire: 760,
+        gift: 680,
+        neon: 600,
+        projectile: 640,
+        pulse: 700,
+        sphere: 760,
+      }[effect] || (type === 'kill' ? 420 : 300);
       if (options.powered) {
         beam.lineStyle(Math.max(2, 3 * unit), 0xf6c95b, 0.78);
         beam.strokeCircle(start.x, start.y, Math.max(20, 30 * unit));
@@ -1014,7 +1086,7 @@
       this.tweens.add({
         targets: beam,
         alpha: 0,
-        duration: effect === 'bullet' ? 520 : effect === 'comet' ? 760 : type === 'kill' ? 420 : 300,
+        duration: effectDuration,
         ease: 'Cubic.easeOut',
         onComplete: () => beam.destroy(),
       });

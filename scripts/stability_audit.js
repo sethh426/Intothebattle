@@ -258,6 +258,22 @@ function checkOverlayModuleContracts() {
   if (!overlayHtml.includes('testEventStorm') || !overlayHtml.includes('runVisualEventStorm')) {
     addError('overlay.html is missing the deterministic visual event storm probe.');
   }
+  const overlayV2 = readText('js/overlay-v2.js');
+  for (const expected of [
+    "nova: 'pulse'",
+    "pulse: 'pulse'",
+    "sphere: 'sphere'",
+    "nuke: 'explosion'",
+    "effect === 'sphere'",
+    "effect === 'pulse'",
+    "effect === 'explosion'",
+    "effect === 'projectile'",
+    "effect === 'neon'",
+  ]) {
+    if (!overlayV2.includes(expected)) {
+      addError(`overlay-v2 direct command effect rendering is missing ${expected}.`);
+    }
+  }
   const overlayVisualCoverageText = [
     readText('scripts/overlay_visual_audit.js'),
     readText('tests/e2e/visual-confidence.spec.js'),
