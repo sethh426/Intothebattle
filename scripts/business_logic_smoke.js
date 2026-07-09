@@ -269,6 +269,7 @@ function testPlayerCommandCatalog() {
   assert.equal(parseAttackCommand('/ fire @nova')?.effect, 'fire');
   assert.equal(parseAttackCommand('!laser@nova')?.effect, 'laser');
   assert.equal(parseAttackCommand('@nova ! railgun')?.effect, 'railgun');
+  assert.equal(parseAttackCommand('nova @bravo')?.effect, 'pulse');
   assert.equal(parseAttackCommand('!nova @bravo')?.effect, 'pulse');
   assert.equal(parseAttackCommand('!sphere @bravo')?.effect, 'sphere');
   assert.equal(parseAttackCommand('!projectile @bravo')?.effect, 'projectile');

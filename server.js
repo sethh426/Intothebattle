@@ -8929,6 +8929,41 @@ app.post('/api/test/horde-attack', blockInProduction, requireDevTestMode, (_req,
   res.json({ success: true, result });
 });
 
+function snapshotDevTestCombatants(room) {
+  return Object.fromEntries(Object.entries(room.players || {})
+    .filter(([id]) => String(id).startsWith('test_'))
+    .map(([id, player]) => [id, {
+      hp: player.hp,
+      maxHp: player.maxHp,
+      alive: player.alive,
+      shieldActive: Boolean(player.shieldUntil && player.shieldUntil > Date.now()),
+    }]));
+}
+
+app.post('/api/test/comment', blockInProduction, requireDevTestMode, (req, res) => {
+  ensureTestPlayers({ reset: req.body?.reset === true });
+  const room = getDefaultRoom();
+  const attackerId = String(req.body?.attackerId || req.body?.uniqueId || 'test_alpha').trim() || 'test_alpha';
+  const attackerNick = String(req.body?.nickname || room.players[attackerId]?.nickname || attackerId);
+  const comment = String(req.body?.comment || '');
+  const before = snapshotDevTestCombatants(room);
+  const utilityCommand = handlePlayerUtilityCommand(room, attackerId, attackerNick, comment);
+  const attackResult = utilityCommand.stop
+    ? { handled: false, skipped: true, reason: 'utility-command' }
+    : handleBattleAttack(room, attackerId, attackerNick, comment);
+  const after = snapshotDevTestCombatants(room);
+
+  emitRoomEvent(room, 'gameState', room.players);
+  res.json({
+    success: true,
+    comment,
+    utilityCommand,
+    attackResult,
+    before,
+    after,
+  });
+});
+
 app.post('/api/test/like', blockInProduction, requireDevTestMode, (_req, res) => {
   ensureTestPlayers();
   const room = getDefaultRoom();

@@ -559,6 +559,57 @@ try {
   await passiveCommentAttackPromise;
   await passiveCommentDamagePromise;
 
+  const devModeOnRes = await request('/api/dev/test-mode', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ enabled: true }),
+  });
+  assert(devModeOnRes.status === 200, `dev test mode enable should return 200, got ${devModeOnRes.status}`);
+
+  const mentionCommentRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ reset: true, comment: '@test_bravo' }),
+  });
+  assert(mentionCommentRes.status === 200, `plain mention comment test should return 200, got ${mentionCommentRes.status}`);
+  const mentionComment = await mentionCommentRes.json();
+  assert(mentionComment.attackResult?.handled === true, 'plain @target comment should create an attack');
+  assert(mentionComment.attackResult?.target === 'test_bravo', 'plain @target comment should attack the mentioned player');
+  assert(mentionComment.attackResult?.result?.passiveCommentAttack !== true, 'plain @target comment should use normal mention damage');
+  assert(Number(mentionComment.attackResult?.result?.damage) > 0, 'plain @target comment should deal positive damage');
+
+  const plainCommentRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ reset: true, comment: 'hello chat' }),
+  });
+  assert(plainCommentRes.status === 200, `plain passive comment test should return 200, got ${plainCommentRes.status}`);
+  const plainComment = await plainCommentRes.json();
+  assert(plainComment.attackResult?.handled === true, 'plain no-target comment should create a weak attack');
+  assert(plainComment.attackResult?.result?.passiveCommentAttack === true, 'plain no-target comment should mark passiveCommentAttack');
+  assert(plainComment.attackResult?.result?.damage === 5, `plain no-target comment should deal 5 raw damage, got ${plainComment.attackResult?.result?.damage}`);
+
+  const utilityCommentRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ reset: true, comment: '!shield' }),
+  });
+  assert(utilityCommentRes.status === 200, `utility comment test should return 200, got ${utilityCommentRes.status}`);
+  const utilityComment = await utilityCommentRes.json();
+  assert(utilityComment.utilityCommand?.stop === true, 'utility command should stop attack routing');
+  assert(utilityComment.attackResult?.skipped === true, 'utility command should not create passive attack result');
+  assert(
+    utilityComment.after?.test_bravo?.hp === utilityComment.before?.test_bravo?.hp,
+    'utility command should not damage another player'
+  );
+
+  const devModeOffRes = await request('/api/dev/test-mode', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ enabled: false }),
+  });
+  assert(devModeOffRes.status === 200, `dev test mode disable should return 200, got ${devModeOffRes.status}`);
+
   const shareSocialBoostPromise = waitForEvent(
     primaryOverlay,
     'socialBoost',
