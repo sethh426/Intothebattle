@@ -8845,6 +8845,32 @@ app.post('/api/connect', requireRoom, (req, res) => {
 });
 
 app.post('/api/reset', requireRoom, (req, res) => { disconnectStreamer(req.room); res.json({ success: true }); });
+
+app.post('/api/admin/rooms/:roomId/reset-live', (req, res) => {
+  if (!hasAdminSession(req)) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  const roomId = normalizeRoomId(req.params.roomId);
+  if (!roomId) {
+    return res.status(400).json({ success: false, error: 'Invalid room id' });
+  }
+
+  const room = getRoom(roomId);
+  if (!room) {
+    return res.status(404).json({ success: false, error: 'Room is not active in this runtime.' });
+  }
+
+  disconnectStreamer(room);
+  res.json({
+    success: true,
+    roomId: room.roomId,
+    stream: buildTikTokConnectionStatus(room),
+    overlayCount: Number(room.overlayCount) || 0,
+    playerCount: Object.values(room.players || {}).filter(player => player && player.alive).length,
+  });
+});
+
 app.post('/api/overlay/reload', requireRoom, (req, res) => {
   emitRoomEvent(req.room, 'forceReload', { v: Date.now(), delayMs: 3000, reason: 'Operator reload' });
   res.json({ success: true });
