@@ -8933,7 +8933,7 @@ app.post('/api/connect', requireRoom, (req, res) => {
       && ['connecting', 'reconnecting', 'connected'].includes(currentStreamStatus)
       && (currentStreamStatus !== 'connected' || isTikTokClientConnected(req.room));
     if (streamAlreadyActive) {
-      restoreRecentRoomPlayers(req.room, { reason: 'same_stream_connect', onlyWhenEmpty: false });
+      restoreRecentRoomPlayers(req.room, { reason: 'same_stream_connect' });
       const stream = buildTikTokConnectionStatus(req.room);
       return res.json({ success: true, username: stream.username, status: stream.status, stream, reused: true });
     }
