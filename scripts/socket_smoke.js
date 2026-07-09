@@ -531,6 +531,32 @@ try {
   await passiveCommentAttackPromise;
   await passiveCommentDamagePromise;
 
+  const shareSocialBoostPromise = waitForEvent(
+    primaryOverlay,
+    'socialBoost',
+    payload => payload?.type === 'share' && payload?.fullHeal === true && payload?.selfFullHeal > 0,
+    10000
+  );
+  const shareFullHealStatePromise = waitForEvent(
+    primaryOverlay,
+    'gameState',
+    payload => {
+      const player = payload?.arena_nova;
+      return player?.alive && Number(player.hp) > 0 && Number(player.hp) === Number(player.maxHp);
+    },
+    10000
+  );
+  const shareOverlayTestRes = await request('/api/overlay/test/share', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(shareOverlayTestRes.status === 200, `overlay share test should return 200, got ${shareOverlayTestRes.status}`);
+  const shareOverlayTest = await shareOverlayTestRes.json();
+  assert(shareOverlayTest.reward?.fullHeal === true, 'share overlay test should mark fullHeal');
+  assert(shareOverlayTest.reward?.selfFullHeal > 0, 'share overlay test should heal the sharer to full');
+  await shareSocialBoostPromise;
+  await shareFullHealStatePromise;
+
   const overlayTestPowerStartedPromise = waitForEvent(primaryOverlay, 'arenaPowerUp', payload => payload.type === 'started' && payload.active === true, 10000);
   const overlayTestLeaderboardPromise = waitForEvent(
     primaryOverlay,

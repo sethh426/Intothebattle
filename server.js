@@ -5365,6 +5365,17 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
   const shieldMs = isRepost ? CFG.REPOST_SHIELD_MS : 0;
   awardStats(room, uniqueId, nickname, 0, strengthBoost);
   const affected = applySquadRally(room, rallyHeal, { shieldMs });
+  const selfFullHeal = isRepost ? 0 : healPlayer(room, uniqueId, Math.max(0, (Number(player.maxHp) || CFG.BASE_HP) - (Number(player.hp) || 0)));
+  if (selfFullHeal > 0) {
+    emitRoomEvent(room, 'heal', {
+      uniqueId,
+      nickname,
+      amount: selfFullHeal,
+      source: 'share',
+      fullHeal: true,
+      color: room.players[uniqueId]?.color || baseColor,
+    });
+  }
   let bossPressure = false;
   if (room.bossWave?.active) {
     bossPressure = true;
@@ -5379,6 +5390,8 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
     amount: strengthBoost,
     strengthBoost,
     rallyHeal,
+    selfFullHeal,
+    fullHeal: !isRepost,
     shieldMs,
     affectedCount: affected.length,
     affected,
@@ -5393,7 +5406,7 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
   emitRoomEvent(room, 'socialBoost', payload);
   emitEngagementSurge(room, payload, momentum);
   emitRoomEvent(room, 'gameState', room.players);
-  return { type, affectedCount: affected.length, rallyHeal, strengthBoost, shieldMs, bossPressure, momentum };
+  return { type, affectedCount: affected.length, rallyHeal, selfFullHeal, fullHeal: !isRepost, strengthBoost, shieldMs, bossPressure, momentum };
 }
 
 // ────────────────────────────────
@@ -8322,6 +8335,11 @@ function runRoomOverlayTestAction(room, normalizedAction) {
   }
 
   if (normalizedAction === 'share' || normalizedAction === 'social') {
+    const player = room.players[supportId];
+    if (player) {
+      const maxHp = Math.max(1, Number(player.maxHp) || CFG.BASE_HP);
+      player.hp = Math.max(1, Math.floor(maxHp * 0.35));
+    }
     const reward = applyEngagementReward(room, supportId, 'Nova', 'share', { type: 'share' });
     return { success: true, action: normalizedAction, reward };
   }
