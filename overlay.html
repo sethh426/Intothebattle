@@ -384,7 +384,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     inset 0 1px 0 rgba(255,255,255,0.13),
     inset 0 -1px 0 rgba(0,0,0,0.45);
   backdrop-filter:blur(10px) saturate(1.12);
-  animation:cyberBannerIn 150ms cubic-bezier(.16,1,.3,1) both;
+  animation:cyberBannerIn 420ms cubic-bezier(.16,1,.3,1) both;
 }
 .banner::before {
   content:""; position:absolute; inset:0; pointer-events:none; opacity:.28;
@@ -403,7 +403,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.transition-slam,
 .banner.transition-sweep,
 .banner.transition-signal,
-.banner.transition-surge { animation:cyberBannerIn 150ms cubic-bezier(.16,1,.3,1) both; }
+.banner.transition-surge { animation:cyberBannerIn 420ms cubic-bezier(.16,1,.3,1) both; }
 .banner-signal {
   position:relative; width:48px; height:40px; display:grid; place-items:center; flex:0 0 auto;
   color:var(--banner-accent); border-right:1px solid rgba(255,255,255,0.1);
@@ -422,18 +422,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner-copy { min-width:0; position:relative; z-index:1; display:grid; gap:2px; }
 .banner-kicker {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:var(--banner-accent); font-size:12px; line-height:1; font-weight:950; letter-spacing:1.35px; text-transform:uppercase;
+  color:var(--banner-accent); font-size:11px; line-height:1; font-weight:900; letter-spacing:1.35px; text-transform:uppercase;
   text-shadow:0 0 12px rgba(var(--banner-accent-rgb),0.48);
 }
 .banner-title {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#fff; font-size:22px; line-height:1.08; font-weight:950; letter-spacing:.2px; text-transform:uppercase;
-  text-shadow:0 0 22px rgba(255,255,255,0.34),0 2px 7px rgba(0,0,0,0.88);
+  color:#fff; font-size:24px; line-height:1.04; font-weight:950; letter-spacing:.1px; text-transform:uppercase;
+  text-shadow:0 0 24px rgba(255,255,255,0.38),0 2px 8px rgba(0,0,0,0.9);
 }
 .banner-title strong { color:var(--banner-accent); font-weight:900; }
 .banner-meta {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#d5deec; font-size:12px; line-height:1; font-weight:900; letter-spacing:.52px; text-transform:uppercase;
+  color:#aebcd0; font-size:10px; line-height:1; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
 }
 .banner-meter {
   position:relative; z-index:1; width:6px; height:40px; border:1px solid rgba(255,255,255,0.12);
@@ -452,6 +452,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.special { --banner-accent:#9dff8b; --banner-accent-rgb:157,255,139; --banner-accent-soft:rgba(157,255,139,0.15); }
 .banner.follow { --banner-accent:#6dffcb; --banner-accent-rgb:109,255,203; --banner-accent-soft:rgba(109,255,203,0.15); }
 .banner.heal { --banner-accent:#8fffd2; --banner-accent-rgb:143,255,210; --banner-accent-soft:rgba(143,255,210,0.16); }
+.banner.event-combat { --banner-accent:#ff496b; --banner-accent-rgb:255,73,107; --banner-accent-soft:rgba(255,73,107,0.2); }
+.banner.event-info { --banner-accent:#55e7ff; --banner-accent-rgb:85,231,255; --banner-accent-soft:rgba(85,231,255,0.16); }
+.banner.event-support { --banner-accent:#8fffd2; --banner-accent-rgb:143,255,210; --banner-accent-soft:rgba(143,255,210,0.16); }
+.banner.event-reward { --banner-accent:#f6c95b; --banner-accent-rgb:246,201,91; --banner-accent-soft:rgba(246,201,91,0.18); }
 .banner.commands {
   --banner-accent:#55e7ff; --banner-accent-rgb:85,231,255; --banner-accent-soft:rgba(246,201,91,0.15);
   min-height:70px; max-height:82px; padding:0 16px;
@@ -541,6 +545,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     0 0 86px rgba(255,84,54,0.14),
     inset 0 1px 0 rgba(255,255,255,0.18);
 }
+.banner:not(.commands).event-combat { --banner-accent:#ff496b; --banner-accent-rgb:255,73,107; --banner-accent-soft:rgba(255,73,107,0.2); }
+.banner:not(.commands).event-info { --banner-accent:#55e7ff; --banner-accent-rgb:85,231,255; --banner-accent-soft:rgba(85,231,255,0.16); }
+.banner:not(.commands).event-support { --banner-accent:#8fffd2; --banner-accent-rgb:143,255,210; --banner-accent-soft:rgba(143,255,210,0.16); }
+.banner:not(.commands).event-reward { --banner-accent:#f6c95b; --banner-accent-rgb:246,201,91; --banner-accent-soft:rgba(246,201,91,0.18); }
 .banner.legendary .banner-title { font-size:24px; text-shadow:0 0 22px rgba(255,227,111,0.38),0 2px 8px rgba(0,0,0,0.9); }
 .banner.is-compact {
   min-height:58px; max-height:68px; padding:0 12px; gap:9px;
@@ -619,7 +627,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.commands.is-nano .banner-command-chip span { display:none; }
 .banner.is-nano .banner-meter { width:3px; height:20px; }
 @keyframes cyberBannerIn {
-  0% { opacity:0; transform:translate(-50%,0) scale(1); filter:blur(2px) brightness(1.12); }
+  0% { opacity:0; transform:translate(-50%,10px) scale(.96); filter:blur(6px) brightness(1.45); box-shadow:0 10px 22px rgba(0,0,0,0.42),0 0 0 rgba(var(--banner-accent-rgb),0); }
+  58% { opacity:1; transform:translate(-50%,-2px) scale(1.018); filter:blur(0) brightness(1.16); box-shadow:0 16px 42px rgba(0,0,0,0.62),0 0 48px rgba(var(--banner-accent-rgb),0.3); }
   100% { opacity:1; transform:translate(-50%,0) scale(1); filter:none; }
 }
 @keyframes cyberBannerOut {
@@ -3881,22 +3890,26 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const stage = computeOverlayLayout();
     const frame = stage.frame;
     const playerZone = stage.zones.players;
+    const cardAspect = total >= 5 ? 2.38 : total === 4 ? 2.52 : total === 3 ? 2.68 : 2.84;
     const requestedCardH = Math.min(
-      frame.h * (isPublicDemo ? 0.158 : 0.152),
-      playerZone.h * (isPublicDemo ? 0.68 : 0.64)
+      frame.h * (isPublicDemo ? 0.205 : 0.192),
+      playerZone.h * (isPublicDemo ? 0.9 : 0.86)
     ) * layoutZoom;
-    const requestedCardW = requestedCardH * (total >= 5 ? 3.36 : total === 4 ? 3.18 : 2.98);
-    const baseGap = requestedCardW * (total >= 5 ? 0.006 : total === 4 ? 0.018 : total === 3 ? 0.04 : 0.074);
-    const minGap = stage.gap * (total >= 5 ? 1.66 : 1.42);
-    const maxGap = requestedCardW * (total >= 5 ? 0.046 : total === 4 ? 0.064 : total === 3 ? 0.14 : 0.24);
-    const gapScale = total >= 5 ? 0.055 : total === 4 ? 0.1 : 0.2;
-    const visualGap = Math.min(Math.max(minGap, maxGap), Math.max(minGap, baseGap + Math.max(0, layoutGap) * gapScale));
-    const availableW = Math.max(240, playerZone.w - stage.gap * 2);
-    const naturalWidth = total > 1 ? requestedCardW * total + visualGap * (total - 1) : requestedCardW;
-    const fitScale = naturalWidth > availableW ? availableW / naturalWidth : 1;
+    const requestedCardW = requestedCardH * cardAspect;
+    const baseGap = requestedCardW * (total >= 5 ? 0.022 : total === 4 ? 0.034 : total === 3 ? 0.06 : 0.1);
+    const minGap = stage.gap * (total >= 5 ? 0.8 : 1);
+    const maxGap = requestedCardW * (total >= 5 ? 0.07 : total === 4 ? 0.096 : total === 3 ? 0.15 : 0.23);
+    const gapScale = total >= 5 ? 0.055 : total === 4 ? 0.09 : 0.18;
+    const visualGap = clampNumber(baseGap + Math.max(0, layoutGap) * gapScale, minGap, maxGap);
+    const availableW = Math.max(240, playerZone.w - stage.gap * 0.82);
+    const minFinalGap = total > 1 ? stage.gap * (total >= 5 ? 0.82 : 0.9) : 0;
+    const reservedGap = total > 1 ? clampNumber(visualGap, minFinalGap, maxGap) : 0;
+    const availableForCards = Math.max(120, availableW - reservedGap * Math.max(0, total - 1));
+    const fitScale = requestedCardW * total > availableForCards ? availableForCards / (requestedCardW * total) : 1;
     const cardH = requestedCardH * fitScale;
     const cardW = requestedCardW * fitScale;
-    const gap = visualGap * fitScale;
+    const remainingGap = total > 1 ? Math.max(minFinalGap, (availableW - cardW * total) / (total - 1)) : 0;
+    const gap = total > 1 ? clampNumber(reservedGap, minFinalGap, remainingGap) : 0;
     const spacing = cardW + gap;
     const totalWidth = total > 1 ? cardW + spacing * (total - 1) : cardW;
     return { cardH, cardW, spacing, totalWidth };
@@ -3905,36 +3918,44 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function getPlayerCardDrawMetrics(pos, total = 1) {
     const compactDemoCard = isPublicDemo;
     const ui = canvasUiScale();
+    const stage = computeOverlayLayout();
+    const playerZone = stage.zones.players;
     const { cardH, cardW } = getPlayerCardMetrics(total);
-    const plateH = Math.max(compactDemoCard ? 132 * ui : 138 * ui, cardH * 1.36);
+    const maxPlateH = Math.max(1, playerZone.h - stage.gap * 0.42);
+    const minReadablePlateH = Math.min(maxPlateH, compactDemoCard ? 172 * ui : 180 * ui);
+    const requestedPlateH = Math.max(minReadablePlateH, cardH * 1.78);
+    const plateH = Math.min(requestedPlateH, maxPlateH);
     const plateX = pos.x - cardW / 2;
     const plateY = pos.y - plateH / 2;
-    const radius = Math.max(13 * ui, plateH * 0.16);
-    const padX = clampNumber(cardW * 0.045, 7 * ui, 14 * ui);
-    const padY = clampNumber(plateH * 0.074, 7 * ui, 11 * ui);
-    const slotGap = Math.max(4 * ui, cardW * 0.016);
+    const radius = Math.max(16 * ui, plateH * 0.14);
+    const padX = clampNumber(cardW * 0.058, 11 * ui, 20 * ui);
+    const padY = clampNumber(plateH * 0.07, 9 * ui, 16 * ui);
+    const slotGap = Math.max(6 * ui, cardW * 0.018);
     const contentRight = plateX + cardW - padX;
-    const nameH = Math.max(54 * ui, Math.min(64 * ui, plateH * 0.49));
-    const barH = Math.max(22 * ui, Math.min(27 * ui, plateH * 0.19));
-    const badgeH = Math.max(16 * ui, Math.min(18 * ui, plateH * 0.14));
+    const nameH = clampNumber(plateH * 0.27, 42 * ui, 62 * ui);
+    const barH = clampNumber(plateH * 0.25, 40 * ui, 48 * ui);
     const nameX = plateX + padX;
     const nameY = plateY + padY;
     const nameW = Math.max(1, cardW - padX * 2);
-    const barX = plateX + padX;
-    const bottomPad = Math.max(6 * ui, padY * 0.62);
+    const bottomPad = Math.max(7 * ui, padY * 0.62);
     const barY = plateY + plateH - bottomPad - barH;
-    const barW = Math.max(1, cardW - padX * 2);
-    const midTop = clampNumber(
-      nameY + nameH + slotGap * 0.45,
-      nameY + nameH + slotGap * 0.18,
-      Math.max(nameY + nameH * 0.94, barY - slotGap * 1.05 - badgeH)
-    );
-    const avatarR = Math.max(4.5 * ui, Math.min(7 * ui, badgeH * 0.34, cardW * 0.032));
-    const avatarX = plateX + padX + avatarR + Math.max(2 * ui, badgeH * 0.12);
+    const barW = clampNumber(cardW * 0.39, 76 * ui, 92 * ui);
+    const barX = contentRight - barW;
+    const midTopMin = nameY + nameH + slotGap;
+    const midBottomMax = barY - slotGap * 0.9;
+    const midSpace = Math.max(1, midBottomMax - midTopMin);
+    const badgeMax = Math.max(1, Math.min(midSpace, plateH * 0.36, 66 * ui));
+    const badgeMin = Math.min(badgeMax, 44 * ui);
+    const badgeH = clampNumber(Math.min(midSpace, plateH * 0.34), badgeMin, badgeMax);
+    const midTop = midTopMin + Math.max(0, (midSpace - badgeH) * 0.48);
+    const avatarMax = Math.max(1, Math.min(badgeH * 0.59, cardW * 0.17, 38 * ui));
+    const avatarMin = Math.min(avatarMax, Math.max(24 * ui, badgeH * 0.52));
+    const avatarR = clampNumber(Math.min(badgeH * 0.57, cardW * 0.16), avatarMin, avatarMax);
+    const avatarX = plateX + padX + avatarR + Math.max(3 * ui, badgeH * 0.12);
     const avatarY = midTop + badgeH / 2;
-    const statX = avatarX + avatarR + Math.max(5 * ui, slotGap);
+    const statX = avatarX + avatarR + Math.max(7 * ui, slotGap);
     const statAreaW = Math.max(1, contentRight - statX);
-    const statusW = Math.min(statAreaW, Math.max(62 * ui, cardW * 0.38));
+    const statusW = Math.max(1, statAreaW);
     const statusX = statX;
     const hpTextY = barY + barH / 2;
     const glowPad = 0;
@@ -4002,7 +4023,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const hordeZone = stage.zones.horde;
     const ui = canvasUiScale();
     const barW = Math.min(hordeZone.w, frame.w * 0.7 * HORDE_SIZE_SCALE);
-    const barH = Math.max(46 * ui * HORDE_SIZE_SCALE, Math.min(hordeZone.h, 74 * ui * HORDE_SIZE_SCALE, frame.h * 0.088 * layoutZoom * HORDE_SIZE_SCALE));
+    const barH = Math.max(40 * ui * HORDE_SIZE_SCALE, Math.min(hordeZone.h, 60 * ui * HORDE_SIZE_SCALE, frame.h * 0.074 * layoutZoom * HORDE_SIZE_SCALE));
     const centerX = clampNumber(hordeZone.x + hordeZone.w / 2 + offsetX * 0.12, hordeZone.x + barW / 2, hordeZone.right - barW / 2);
     const liveHordeTopY = hordeZone.y + hordeZone.h * 0.24 - barH / 2;
     const desiredTopY = hasDemoHordeYOverride ? H * demoHordeTopRatio : liveHordeTopY + offsetY * 0.22;
@@ -4903,12 +4924,27 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       `;
   }
 
+  function bannerEventTone(item) {
+    const text = [
+      item?.cls,
+      stripBannerHtml(item?.codeHtml || ''),
+      stripBannerHtml(item?.kickerHtml || ''),
+      stripBannerHtml(item?.titleHtml || ''),
+      stripBannerHtml(item?.metaHtml || ''),
+    ].join(' ').toLowerCase();
+    if (/\b(?:kill|ko|hit|attack|horde|boss|laser|arc|nova|critical|damage|strike|fire|target|pressure)\b/.test(text)) return 'combat';
+    if (/\b(?:heal|shield|follow|return|respawn|join|share|like|boost|rally|support)\b/.test(text)) return 'support';
+    if (/\b(?:gift|legend|legendary|streak|power|reward|surge)\b/.test(text)) return 'reward';
+    return 'info';
+  }
+
   function renderBannerItem(item) {
     const el = document.createElement('div');
     item.el = el;
     activeBanner = item;
     const commandStrip = item.cls === 'commands' && (item.commands?.length || item.tickerItems?.length);
-    el.className = `banner ${item.cls} ${commandStrip ? 'command-strip' : ''} ${item.transition || ''}`;
+    const eventTone = bannerEventTone(item);
+    el.className = `banner ${item.cls} event-${eventTone} ${commandStrip ? 'command-strip' : ''} ${item.transition || ''}`;
     el.style.setProperty('--banner-duration', `${item.duration}ms`);
     el.style.setProperty('--banner-charge', `${item.charge}%`);
     if (item.tickerItems?.length) {
@@ -5431,6 +5467,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       // if we're connected to server, a state update will soon overwrite this,
       // but it gives immediate feedback.
     }
+  }
+
+  function applyPlayerHealthSnapshot(uniqueId, hp, maxHp) {
+    if (!uniqueId) return null;
+    const target = activePlayers().find(p => p.uniqueId === uniqueId || p.id === uniqueId);
+    const safeMaxHp = Math.max(1, Number(maxHp) || Number(target?.maxHp) || 100);
+    const safeHp = clampNumber(Number(hp), 0, safeMaxHp);
+    if (!target || !Number.isFinite(safeHp)) return null;
+    target.maxHp = Math.max(safeMaxHp, Number(target.maxHp) || 0);
+    target.hp = safeHp;
+    target.alive = true;
+    target.forceSpawn = true;
+    const demo = DEMO_PLAYERS.find(p => p.uniqueId === uniqueId || p.id === uniqueId);
+    if (demo) {
+      demo.maxHp = target.maxHp;
+      demo.hp = target.hp;
+      demo.alive = true;
+    }
+    return target;
   }
 
   // ═══════════════════════════════════════
@@ -6022,6 +6077,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       this.intensity = clamp01(intensity);
       this.rate      = Number(meta.rate) || 0;
       this.kind      = meta.kind || 'like';
+      this.fullHeal  = Boolean(meta.fullHeal);
       this.color     = meta.color || '#ff4f8f';
       this.amount    = this.kind === 'heal'
         ? Math.max(1, Math.round(Number(meta.amount) || this.hearts * 5))
@@ -6132,7 +6188,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         const text = this.kind === 'follow'
           ? 'NEW FOLLOWER'
           : this.kind === 'share'
-            ? 'SQUAD RALLY'
+            ? (this.fullHeal ? 'HP FULL' : 'SQUAD RALLY')
             : this.kind === 'repost'
               ? 'BROADCAST SURGE'
               : '';
@@ -7417,6 +7473,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function fireHeartEffect(playerId, hearts, intensity, meta) {
     meta = meta || {};
     hearts = hearts || 1; intensity = intensity || 0;
+    if (meta.fullHeal) applyPlayerHealthSnapshot(playerId, meta.hp ?? meta.maxHp, meta.maxHp);
     const owner = resolveEffectEntity(playerId, meta.scope || meta.targetScope, 'owner');
     if (owner?.unresolved) return dropUnresolvedEntity(owner, 'missing_owner', { type: meta.kind || 'heart' });
     const useSupportUnitOnly = meta.kind === 'like' || meta.kind === 'heal';
@@ -7428,14 +7485,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       if (!bloom) return false;
     }
     if (owner.kind === 'player') {
-      const type = meta.kind === 'follow' || meta.kind === 'share' || meta.kind === 'repost'
+      const fullHealShare = meta.kind === 'share' && meta.fullHeal;
+      const type = fullHealShare
+        ? 'heal'
+        : meta.kind === 'follow' || meta.kind === 'share' || meta.kind === 'repost'
         ? 'follow'
         : meta.kind === 'heal'
           ? 'heal'
           : 'like';
       const color = meta.color || (type === 'heal' ? THEME.green : type === 'follow' ? THEME.cyan : '#ff7ab6');
-      setCardAccent(owner.id, type, color, meta.kind === 'repost' ? 2200 : type === 'follow' ? 1400 : 820, {
-        label: type === 'heal' ? 'HEAL' : type === 'follow' ? (meta.kind === 'follow' ? 'JOIN' : 'PWR') : 'LIKE',
+      setCardAccent(owner.id, type, color, meta.kind === 'repost' ? 2200 : fullHealShare ? 2200 : type === 'follow' ? 1400 : 820, {
+        label: fullHealShare ? 'FULL' : type === 'heal' ? 'HEAL' : type === 'follow' ? (meta.kind === 'follow' ? 'JOIN' : 'PWR') : 'LIKE',
       });
     }
 
@@ -7510,21 +7570,65 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const name = data.nickname || data.uniqueId || 'viewer';
     const type = String(data.type || 'share').toLowerCase();
     const isRepost = type === 'repost';
+    const isFullHealShare = !isRepost && data.fullHeal === true;
     const affected = Number(data.affectedCount) || 0;
     const rallyHeal = Number(data.rallyHeal) || 0;
+    const selfFullHeal = Math.max(0, Math.round(Number(data.selfFullHeal) || 0));
+    const finalMaxHp = Math.max(1, Math.round(Number(data.maxHp) || 0));
+    const finalHp = Math.max(0, Math.round(Number(data.hp) || finalMaxHp || 0));
+    if (isFullHealShare && data.uniqueId) applyPlayerHealthSnapshot(data.uniqueId, finalHp || finalMaxHp, finalMaxHp || finalHp);
     showBanner(isRepost ? 'legendary' : 'special', {
       code: isRepost ? 'RPT' : 'SHR',
-      kicker: isRepost ? 'Broadcast surge' : 'Squad rally',
-      title: `${name} ${isRepost ? 'reposted the battle' : 'shared the battle'}`,
+      kicker: isRepost ? 'Broadcast surge' : 'Full HP share',
+      title: `${name} ${isRepost ? 'reposted the battle' : 'shared and refilled HP'}`,
       meta: [
-        affected ? `${affected} fighters rallied` : 'Arena reach increased',
-        rallyHeal ? `+${rallyHeal} HP pulse` : '',
+        isFullHealShare ? 'HP bar filled' : affected ? `${affected} fighters rallied` : 'Arena reach increased',
+        isFullHealShare && finalMaxHp ? `${finalHp || finalMaxHp}/${finalMaxHp} HP` : rallyHeal ? `+${rallyHeal} HP pulse` : '',
         data.bossPressure ? 'boss pressure' : '',
         data.combo ? `combo x${Math.round(Number(data.combo))}` : '',
       ].filter(Boolean).join(' | '),
       charge: data.surgeTier === 'takeover' ? 100 : isRepost ? 92 : 72,
       priority: data.surgeTier ? 88 : isRepost ? 92 : 66,
     }, isRepost ? 3900 : 3100);
+
+    if (isFullHealShare) {
+      const actor = data.uniqueId ? resolveEffectEntity(data.uniqueId, data.attackerScope || data.scope, 'source') : null;
+      if (actor?.unresolved) return dropUnresolvedEntity(actor, 'share_source_missing', { type: 'share_full_heal' });
+      const owner = actor && !actor.unresolved ? actor : null;
+      if (owner?.kind === 'player') {
+        const color = data.color || '#99ffda';
+        const alreadyCheered = hasRecentCheer(owner.id);
+        if (!alreadyCheered) {
+          showSupportUnit({
+            type: 'heal',
+            amount: selfFullHeal || finalMaxHp || rallyHeal || 1,
+            name,
+          });
+        }
+        addImpactBurst(owner.point.x, owner.point.y, {
+          owner,
+          type: 'shield',
+          color,
+          accent: THEME.cyan,
+          radius: 34,
+          intensity: 0.48,
+          duration: 720,
+        });
+        fireHeartEffect(owner.id, 3, 0.52, {
+          ...data,
+          kind: 'share',
+          fullHeal: true,
+          hp: finalHp || finalMaxHp,
+          maxHp: finalMaxHp || finalHp,
+          color,
+          scope: owner.scope,
+        });
+        setCardAccent(owner.id, 'heal', color, 2300, { label: 'FULL' });
+      }
+      showBattlePrompt(`${name} restored to full HP`, 'return', 2100);
+      return;
+    }
+
     const target = resolveEffectEntity(HORDE_ID, 'horde', 'target');
     if (target?.unresolved) return dropUnresolvedEntity(target, 'horde_missing', { type: 'social_boost' });
     const actor = data.uniqueId ? resolveEffectEntity(data.uniqueId, data.attackerScope || data.scope, 'source') : null;
@@ -7967,6 +8071,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return normalizeCanvasText(value);
   }
 
+  const LOW_HP_WARNING_THRESHOLD = 60;
+  const DAMAGED_HP_WARNING_THRESHOLD = 120;
+
   function stablePlayerAccent(player, fallback = THEME.cyan) {
     if (player?.teamColor) return player.teamColor;
     const source = String(player?.uniqueId || player?.id || player?.nickname || player?.name || '').toLowerCase();
@@ -7975,6 +8082,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     let hash = 0;
     for (let i = 0; i < source.length; i += 1) hash = (hash * 31 + source.charCodeAt(i)) >>> 0;
     return palette[hash % palette.length] || fallback;
+  }
+
+  function semanticPlayerAccent(player, rank, healthState, fallback = THEME.cyan) {
+    if (player?.teamColor) return player.teamColor;
+    if (healthState === 'ko' || healthState === 'critical') return THEME.red;
+    if (rank === 1) return THEME.gold;
+    const roleText = String(player?.role || player?.class || player?.team || player?.archetype || '').toLowerCase();
+    if (/\b(?:heal|support|medic|cleric)\b/.test(roleText)) return THEME.green;
+    if (/\b(?:tank|shield|guard|defense|defender)\b/.test(roleText)) return THEME.cyan;
+    if (Number(player?.kills) >= 25) return '#ff78b2';
+    if (Number(player?.kills) >= 8) return THEME.ember;
+    return stablePlayerAccent(player, fallback);
   }
 
   function cardCommandLabel(type = '', label = '') {
@@ -7994,17 +8113,26 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return '';
   }
 
-  function playerCardVisualState(player, rank, hpPct, cardAccent) {
-    const accent = cardAccent?.color || stablePlayerAccent(player, rank === 1 ? THEME.gold : THEME.cyan);
-    const healthState = hpPct <= 0 ? 'ko' : hpPct < 0.2 ? 'critical' : hpPct < 0.46 ? 'damaged' : 'healthy';
+  function playerCardVisualState(player, rank, hp, hpPct, cardAccent) {
+    const hpValue = Math.max(0, Number(hp) || 0);
     const accentType = String(cardAccent?.type || '').toLowerCase();
+    const isKO = hpValue <= 0 || player?.alive === false || accentType === 'kill';
+    const healthState = isKO
+      ? 'ko'
+      : hpValue <= LOW_HP_WARNING_THRESHOLD
+        ? 'critical'
+        : hpValue <= DAMAGED_HP_WARNING_THRESHOLD
+          ? 'damaged'
+          : 'healthy';
+    const accent = cardAccent?.color || semanticPlayerAccent(player, rank, healthState, rank === 1 ? THEME.gold : THEME.cyan);
     const progress = cardAccent ? clamp01(cardAccent.progress) : 1;
     return {
       accent,
       healthState,
       isLeader: rank === 1,
-      isKO: hpPct <= 0 || player?.alive === false || accentType === 'kill',
+      isKO,
       isCritical: healthState === 'critical',
+      isLowHpWarning: healthState === 'critical',
       hasShield: accentType === 'shield' || accentType === 'follow',
       hasHeal: accentType === 'heal' || accentType === 'boost' || accentType === 'respawn',
       wasHit: accentType === 'hit' || accentType === 'critical' || accentType === 'kill',
@@ -8158,7 +8286,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       slots,
     } = metrics;
     const cardAccent = getCardAccent(player);
-    const state = playerCardVisualState(player, rank, hpPct, cardAccent);
+    const state = playerCardVisualState(player, rank, hp, hpPct, cardAccent);
     const accent = state.accent;
     const identity = playerCardIdentity(player);
     const displayName = playerCardDisplayNameText(identity.displayName);
@@ -8166,11 +8294,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const nameFit = fitCanvasTextLinesResult(
       ctx,
       displayName,
-      Math.max(1, slots.name.w - Math.max(8 * ui, slots.name.h * 0.18)),
+      Math.max(1, slots.name.w - Math.max(10 * ui, slots.name.h * 0.16)),
       2,
       nameFontFactory,
-      Math.max(24 * ui, Math.min(slots.name.h * 0.62, cardW * 0.135)),
-      Math.max(9, 10.5 * ui)
+      Math.max(30 * ui, Math.min(slots.name.h * 0.8, cardW * 0.17)),
+      Math.max(10, 11 * ui)
     );
     const commandLabel = state.commandLabel || '';
     const commandSlot = null;
@@ -8186,20 +8314,30 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
               ? 'LEADER'
               : 'READY';
     const statusDisplayLabel = commandLabel || statusLabel;
+    const leaderStatusBadge = !commandLabel && statusLabel === 'LEADER';
     const statusFit = fitCanvasTextResult(
       ctx,
       statusDisplayLabel,
       Math.max(1, slots.statusBadges.w - Math.max(5 * ui, slots.statusBadges.h * 0.3)),
-      size => `900 ${size}px ${PLAYER_CARD_STAT_FONT}`,
-      Math.max(7.5 * ui, Math.min(slots.statusBadges.h * 0.7, 12.5 * ui)),
-      Math.max(6, 7 * ui)
+      size => `${leaderStatusBadge ? 950 : 900} ${size}px ${PLAYER_CARD_STAT_FONT}`,
+      Math.max(9.5 * ui, Math.min(slots.statusBadges.h * (leaderStatusBadge ? 0.82 : 0.74), leaderStatusBadge ? 19.5 * ui : 17.5 * ui)),
+      Math.max(6.5, 7.5 * ui)
     );
-    const hpFit = fitCanvasTextResult(
+    const hpLabelText = `${Math.round(hp)} HP`;
+    const hpNumberFit = fitCanvasTextResult(
       ctx,
-      `${Math.round(hp)} HP`,
-      Math.max(1, barW - Math.max(10 * ui, barH * 0.7)),
+      `${Math.round(hp)}`,
+      Math.max(1, barW * 0.58),
       size => `900 ${size}px ${PLAYER_CARD_STAT_FONT}`,
-      Math.max(10 * ui, Math.min(barH * 0.78, 16 * ui)),
+      Math.max(18 * ui, Math.min(barH * 0.66, 27 * ui)),
+      Math.max(9, 11 * ui)
+    );
+    const hpUnitFit = fitCanvasTextResult(
+      ctx,
+      'HP',
+      Math.max(1, barW * 0.26),
+      size => `950 ${size}px ${PLAYER_CARD_STAT_FONT}`,
+      Math.max(9 * ui, Math.min(barH * 0.34, 13 * ui)),
       Math.max(7, 8 * ui)
     );
 
@@ -8224,32 +8362,45 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     ctx.save();
     const glow = ctx.createRadialGradient(plateX + cardW * 0.5, plateY + plateH * 0.38, 0, plateX + cardW * 0.5, plateY + plateH * 0.44, Math.max(cardW, plateH) * 0.58);
-    glow.addColorStop(0, colorWithAlpha(accent, player.teamColor ? 0.18 : state.isLeader ? 0.17 : 0.12));
+    glow.addColorStop(0, colorWithAlpha(accent, player.teamColor ? 0.26 : state.isLeader ? 0.24 : 0.18));
     glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow;
     roundedRectPath(ctx, plateX - cardW * 0.06, plateY - plateH * 0.18, cardW * 1.12, plateH * 1.36, radius * 1.25);
     ctx.fill();
 
     ctx.shadowColor = cardAccent ? cardAccent.color : colorWithAlpha(accent, player.teamColor ? 0.24 : state.isLeader ? 0.24 : 0.16);
-    ctx.shadowBlur = cardAccent ? (state.accentType === 'kill' ? 22 : 18) : 10;
+    ctx.shadowBlur = cardAccent ? (state.accentType === 'kill' ? 28 : 22) : 14;
     drawGlassPanel(plateX, plateY, cardW, plateH, radius, {
-      start: state.isKO ? 'rgba(7,8,12,0.99)' : 'rgba(3,7,13,0.985)',
-      mid: state.isKO ? 'rgba(15,15,21,0.94)' : 'rgba(9,16,26,0.94)',
-      end: state.isKO ? 'rgba(2,3,7,0.99)' : 'rgba(2,5,10,0.99)',
-      stroke: state.isCritical ? colorWithAlpha(THEME.red, 0.74 + state.pulse * 0.12) : colorWithAlpha(accent, player.teamColor ? 0.64 : state.isLeader ? 0.66 : 0.46),
-      lineWidth: state.isCritical ? 2 : 1.55,
+      start: state.isKO ? 'rgba(5,6,10,0.995)' : 'rgba(2,6,12,0.995)',
+      mid: state.isKO ? 'rgba(12,13,19,0.965)' : 'rgba(8,14,24,0.972)',
+      end: state.isKO ? 'rgba(1,2,6,0.995)' : 'rgba(1,4,9,0.997)',
+      stroke: state.isCritical ? colorWithAlpha(THEME.red, 0.82 + state.pulse * 0.12) : colorWithAlpha(accent, player.teamColor ? 0.76 : state.isLeader ? 0.78 : 0.62),
+      lineWidth: state.isCritical ? 2.4 : 1.95,
     });
     ctx.shadowBlur = 0;
 
-    ctx.fillStyle = colorWithAlpha(accent, player.teamColor ? 0.88 : state.isLeader ? 0.9 : 0.72);
-    roundedRectPath(ctx, plateX + cardW * 0.04, plateY + plateH * 0.07, cardW * 0.92, Math.max(4, plateH * 0.038), 5);
+    if (state.isLeader) {
+      ctx.strokeStyle = colorWithAlpha(THEME.goldBright, 0.42 + state.pulse * 0.12);
+      ctx.lineWidth = Math.max(1.2, 1.35 * ui);
+      roundedRectPath(ctx, plateX - 2 * ui, plateY - 2 * ui, cardW + 4 * ui, plateH + 4 * ui, radius + 2 * ui);
+      ctx.stroke();
+    }
+    if (state.isLowHpWarning) {
+      ctx.strokeStyle = colorWithAlpha(THEME.red, 0.38 + state.pulse * 0.22);
+      ctx.lineWidth = Math.max(1.4, 1.5 * ui);
+      roundedRectPath(ctx, plateX + 2 * ui, plateY + 2 * ui, Math.max(1, cardW - 4 * ui), Math.max(1, plateH - 4 * ui), Math.max(1, radius - 1 * ui));
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = colorWithAlpha(accent, player.teamColor ? 0.94 : state.isLeader ? 0.96 : 0.86);
+    roundedRectPath(ctx, plateX + cardW * 0.04, plateY + plateH * 0.064, cardW * 0.92, Math.max(5, plateH * 0.044), 5);
     ctx.fill();
 
-    ctx.fillStyle = 'rgba(4,8,15,0.72)';
+    ctx.fillStyle = 'rgba(2,6,13,0.9)';
     roundedRectPath(ctx, slots.name.x, slots.name.y, slots.name.w, slots.name.h, Math.max(7 * ui, slots.name.h * 0.22));
     ctx.fill();
-    ctx.strokeStyle = colorWithAlpha(accent, state.isLeader ? 0.7 : 0.54);
-    ctx.lineWidth = Math.max(1, 1.2 * ui);
+    ctx.strokeStyle = colorWithAlpha(accent, state.isLeader ? 0.82 : 0.68);
+    ctx.lineWidth = Math.max(1.2, 1.55 * ui);
     roundedRectPath(ctx, slots.name.x + 0.5, slots.name.y + 0.5, Math.max(1, slots.name.w - 1), Math.max(1, slots.name.h - 1), Math.max(7 * ui, slots.name.h * 0.22));
     ctx.stroke();
 
@@ -8275,22 +8426,28 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     const nameCenter = rectCenter(slots.name);
-    const nameTextCenterY = slots.name.y + slots.name.h * 0.52;
+    const nameTextCenterY = slots.name.y + slots.name.h * 0.63;
     const nameTextRect = drawCenteredCanvasTextLines(ctx, nameFit.lines, nameCenter.x, nameTextCenterY, {
       fontFactory: nameFontFactory,
       fontSize: nameFit.size,
       lineHeight: nameFit.size * 0.86,
       fillStyle: state.isKO ? '#d7dde9' : '#ffffff',
-      strokeStyle: 'rgba(0,0,0,0.76)',
-      lineWidth: compactDemoCard ? Math.max(1.8, 2.15 * ui) : Math.max(1.9, 2.25 * ui),
+      strokeStyle: 'rgba(0,0,0,0.86)',
+      lineWidth: compactDemoCard ? Math.max(2, 2.35 * ui) : Math.max(2.1, 2.55 * ui),
     });
 
     const handleTextRect = null;
 
-    ctx.strokeStyle = state.isLeader ? 'rgba(246,201,91,0.78)' : colorWithAlpha(accent, 0.58);
-    ctx.lineWidth = Math.max(1, avatarR * 0.22);
+    const midBandX = slots.avatar.x - Math.max(3 * ui, avatarR * 0.2);
+    const midBandW = Math.max(1, slots.statusBadges.right - midBandX);
+    ctx.fillStyle = state.isKO ? 'rgba(7,8,14,0.74)' : 'rgba(3,10,20,0.76)';
+    roundedRectPath(ctx, midBandX, slots.statusBadges.y - Math.max(2 * ui, avatarR * 0.12), midBandW, slots.statusBadges.h + Math.max(4 * ui, avatarR * 0.24), Math.max(8 * ui, slots.statusBadges.h * 0.45));
+    ctx.fill();
+
+    ctx.strokeStyle = state.isLeader ? 'rgba(246,201,91,0.86)' : colorWithAlpha(accent, 0.72);
+    ctx.lineWidth = Math.max(1.8, avatarR * 0.16);
     ctx.shadowColor = accent;
-    ctx.shadowBlur = state.hasShield ? 10 : 5;
+    ctx.shadowBlur = state.hasShield ? 16 : 8;
     ctx.beginPath(); ctx.arc(avatarX, avatarY, avatarR, 0, Math.PI * 2); ctx.stroke();
     if (state.hasShield) {
       ctx.strokeStyle = colorWithAlpha(THEME.cyan, 0.42 + state.pulse * 0.12);
@@ -8298,62 +8455,138 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.beginPath(); ctx.arc(avatarX, avatarY, avatarR + Math.max(2 * ui, avatarR * 0.1), 0, Math.PI * 2); ctx.stroke();
     }
     ctx.shadowBlur = 0;
-    ctx.fillStyle = state.isKO ? 'rgba(91,98,112,0.72)' : colorWithAlpha(accent, 0.92);
-    ctx.beginPath(); ctx.arc(avatarX, avatarY, Math.max(1, avatarR - 1.2), 0, Math.PI * 2); ctx.fill();
+    const avatarFill = ctx.createRadialGradient(avatarX - avatarR * 0.32, avatarY - avatarR * 0.36, 1, avatarX, avatarY, avatarR);
+    avatarFill.addColorStop(0, state.isKO ? 'rgba(180,188,205,0.18)' : 'rgba(255,255,255,0.2)');
+    avatarFill.addColorStop(0.5, state.isKO ? 'rgba(50,56,70,0.86)' : 'rgba(10,20,34,0.96)');
+    avatarFill.addColorStop(1, state.isKO ? 'rgba(12,13,18,0.96)' : colorWithAlpha(accent, 0.7));
+    ctx.fillStyle = avatarFill;
+    ctx.beginPath(); ctx.arc(avatarX, avatarY, Math.max(1, avatarR - 1.4), 0, Math.PI * 2); ctx.fill();
+
+    const defaultSwordIcon = '\u2694\uFE0F';
+    const defaultGemIcon = '\u{1F48E}';
+    const customIcon = player.iconEmoji;
+    if (customIcon && customIcon !== defaultSwordIcon && customIcon !== defaultGemIcon) {
+      ctx.save();
+      const iconGlow = ctx.createRadialGradient(avatarX, avatarY, 0, avatarX, avatarY, avatarR * 1.45);
+      iconGlow.addColorStop(0, 'rgba(255,255,255,0.2)');
+      iconGlow.addColorStop(0.58, colorWithAlpha(accent, 0.34));
+      iconGlow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = iconGlow;
+      ctx.beginPath();
+      ctx.arc(avatarX, avatarY, avatarR * 1.35, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.font = `${avatarR * 1.92}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,0.86)';
+      ctx.shadowBlur = Math.max(4, avatarR * 0.26);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(customIcon, avatarX, avatarY + avatarR * 0.01);
+      ctx.restore();
+    } else {
+      drawBattleInsignia(avatarX, avatarY, avatarR * 0.88, accent);
+    }
 
     drawPlayerSlot(
       slots.statusBadges,
       slots.statusBadges.h / 2,
-      state.isCritical ? 'rgba(232,59,95,0.82)' : state.hasShield ? 'rgba(7,62,78,0.82)' : state.isKO ? 'rgba(38,13,20,0.82)' : 'rgba(8,15,28,0.7)',
-      state.isCritical ? 'rgba(255,213,189,0.68)' : state.hasShield ? 'rgba(151,252,255,0.6)' : colorWithAlpha(accent, 0.5),
-      Math.max(0.8, 1 * ui)
+      leaderStatusBadge ? 'rgba(76,54,13,0.92)' : state.isCritical ? 'rgba(232,59,95,0.9)' : state.hasShield ? 'rgba(7,62,78,0.9)' : state.isKO ? 'rgba(38,13,20,0.88)' : 'rgba(5,12,24,0.86)',
+      leaderStatusBadge ? colorWithAlpha(THEME.goldBright, 0.94) : state.isCritical ? 'rgba(255,213,189,0.78)' : state.hasShield ? 'rgba(151,252,255,0.7)' : colorWithAlpha(accent, 0.66),
+      Math.max(1, (leaderStatusBadge ? 1.9 : 1.2) * ui)
     );
     const statusCenter = rectCenter(slots.statusBadges);
-    ctx.font = `900 ${statusFit.size}px ${PLAYER_CARD_STAT_FONT}`;
+    ctx.font = `${leaderStatusBadge ? 950 : 900} ${statusFit.size}px ${PLAYER_CARD_STAT_FONT}`;
     const statusTextRect = drawCenteredCanvasText(ctx, statusFit.text, statusCenter.x, statusCenter.y + Math.max(0.1, 0.35 * ui), {
       fontSize: statusFit.size,
-      fillStyle: state.isCritical ? '#ffe1dc' : state.hasShield ? '#dffcff' : state.isKO ? '#fff5dd' : '#dce8ff',
-      strokeStyle: 'rgba(0,0,0,0.74)',
-      lineWidth: Math.max(0.8, 1.15 * ui),
+      fillStyle: leaderStatusBadge ? '#fff2b9' : state.isCritical ? '#ffe1dc' : state.hasShield ? '#dffcff' : state.isKO ? '#fff5dd' : '#dce8ff',
+      strokeStyle: 'rgba(0,0,0,0.82)',
+      lineWidth: Math.max(0.9, (leaderStatusBadge ? 1.55 : 1.3) * ui),
     });
 
     const commandTextRect = null;
 
     const koTextRect = null;
 
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    roundedRectPath(ctx, barX, barY, barW, barH, barH / 2);
+    const hpStart = state.isKO || state.isLowHpWarning ? THEME.red : state.healthState === 'damaged' ? THEME.gold : THEME.green;
+    const hpDisplayPct = state.isKO ? 0 : clamp01(hp / DAMAGED_HP_WARNING_THRESHOLD);
+    const hpCut = Math.min(barH * 0.34, barW * 0.12);
+    const hpCellPath = (x, y, w, h, cut) => {
+      ctx.beginPath();
+      ctx.moveTo(x + cut, y);
+      ctx.lineTo(x + w - cut * 0.6, y);
+      ctx.lineTo(x + w, y + h * 0.5);
+      ctx.lineTo(x + w - cut * 0.6, y + h);
+      ctx.lineTo(x + cut, y + h);
+      ctx.lineTo(x, y + h * 0.5);
+      ctx.closePath();
+    };
+    const hpNumberX = barX + barW * 0.42;
+    const hpUnitX = barX + barW * 0.77;
+    const hpCellTextY = barY + barH * 0.54;
+
+    ctx.save();
+    ctx.shadowColor = colorWithAlpha(hpStart, state.isLowHpWarning ? 0.62 : 0.36);
+    ctx.shadowBlur = state.isLowHpWarning ? Math.max(9, 8 * ui) : Math.max(4, 4 * ui);
+    hpCellPath(barX, barY, barW, barH, hpCut);
+    const hpCellGrad = ctx.createLinearGradient(barX, barY, barX + barW, barY + barH);
+    hpCellGrad.addColorStop(0, colorWithAlpha(hpStart, state.isLowHpWarning ? 0.34 : 0.22));
+    hpCellGrad.addColorStop(0.48, 'rgba(5,10,20,0.98)');
+    hpCellGrad.addColorStop(1, 'rgba(2,5,12,0.99)');
+    ctx.fillStyle = hpCellGrad;
     ctx.fill();
-    const barGrad = ctx.createLinearGradient(barX, 0, barX + barW, 0);
-    const hpStart = hpPct > 0.52 ? THEME.green : hpPct > 0.24 ? THEME.gold : THEME.red;
-    barGrad.addColorStop(0, hpStart);
-    barGrad.addColorStop(0.62, hpPct > 0.24 ? THEME.goldBright : '#ff8b7e');
-    barGrad.addColorStop(1, 'rgba(255,255,255,0.78)');
-    ctx.fillStyle = barGrad;
-    const hpFillW = Math.max(hpPct > 0 ? barH : 0, (barW - 4) * hpPct);
-    if (hpFillW > 0) {
-      roundedRectPath(ctx, barX + 2, barY + 2, hpFillW, Math.max(1, barH - 4), Math.max(1, (barH - 4) / 2));
-      ctx.fill();
-    }
-    if (state.hasHeal) {
-      const healW = Math.max(barH, barW * (0.16 + 0.16 * Math.sin((1 - state.progress) * Math.PI)));
-      const healX = Math.min(barX + barW - healW, barX + barW * state.progress);
-      ctx.fillStyle = colorWithAlpha(THEME.green, Math.sin((1 - state.progress) * Math.PI) * 0.5);
-      roundedRectPath(ctx, healX, barY + 2, healW, Math.max(1, barH - 4), Math.max(1, (barH - 4) / 2));
-      ctx.fill();
-    }
-    ctx.strokeStyle = state.isLeader ? 'rgba(246,201,91,0.5)' : colorWithAlpha(accent, 0.34);
-    ctx.lineWidth = Math.max(1, 1.1 * ui);
-    roundedRectPath(ctx, barX, barY, barW, barH, barH / 2);
+    ctx.shadowBlur = 0;
+
+    hpCellPath(barX + 1, barY + 1, Math.max(1, barW - 2), Math.max(1, barH - 2), Math.max(1, hpCut - 1));
+    ctx.strokeStyle = colorWithAlpha(hpStart, state.isLowHpWarning || state.isKO ? 0.96 : 0.78);
+    ctx.lineWidth = Math.max(1.3, 1.55 * ui);
     ctx.stroke();
 
-    ctx.font = `900 ${hpFit.size}px ${PLAYER_CARD_STAT_FONT}`;
-    const hpTextRect = drawCenteredCanvasText(ctx, hpFit.text, barX + barW / 2, hpTextY + Math.max(0.2, 0.5 * ui), {
-      fontSize: hpFit.size,
-      fillStyle: state.isCritical ? '#ffe2dc' : '#f2f8ff',
-      strokeStyle: 'rgba(0,0,0,0.86)',
-      lineWidth: Math.max(0.95, 1.4 * ui),
+    const hpFillW = Math.max(barH * 0.32, (barW - hpCut * 1.8) * hpDisplayPct);
+    ctx.save();
+    hpCellPath(barX + 2, barY + 2, Math.max(1, barW - 4), Math.max(1, barH - 4), Math.max(1, hpCut - 2));
+    ctx.clip();
+    const hpSignalGrad = ctx.createLinearGradient(barX, 0, barX + hpFillW, 0);
+    hpSignalGrad.addColorStop(0, colorWithAlpha(hpStart, 0.22));
+    hpSignalGrad.addColorStop(1, colorWithAlpha(hpStart, 0.08));
+    ctx.fillStyle = hpSignalGrad;
+    ctx.fillRect(barX + hpCut * 0.62, barY + 2, Math.max(0, hpFillW), Math.max(1, barH - 4));
+    ctx.restore();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = Math.max(1, 1 * ui);
+    ctx.beginPath();
+    ctx.moveTo(barX + barW * 0.65, barY + barH * 0.22);
+    ctx.lineTo(barX + barW * 0.65, barY + barH * 0.78);
+    ctx.stroke();
+
+    if (state.hasHeal) {
+      const healAlpha = Math.sin((1 - state.progress) * Math.PI) * 0.24;
+      ctx.fillStyle = colorWithAlpha(THEME.green, healAlpha);
+      hpCellPath(barX, barY, barW, barH, hpCut);
+      ctx.fill();
+    }
+
+    ctx.font = `900 ${hpNumberFit.size}px ${PLAYER_CARD_STAT_FONT}`;
+    const hpNumberRect = drawCenteredCanvasText(ctx, hpNumberFit.text, hpNumberX, hpCellTextY, {
+      fontSize: hpNumberFit.size,
+      fillStyle: state.isCritical ? '#fff2ed' : '#ffffff',
+      strokeStyle: 'rgba(0,0,0,0.96)',
+      lineWidth: Math.max(1.05, 1.45 * ui),
     });
+    ctx.font = `950 ${hpUnitFit.size}px ${PLAYER_CARD_STAT_FONT}`;
+    const hpUnitRect = drawCenteredCanvasText(ctx, hpUnitFit.text, hpUnitX, hpCellTextY + Math.max(0.2, 0.4 * ui), {
+      fontSize: hpUnitFit.size,
+      fillStyle: colorWithAlpha(hpStart, 0.94),
+      strokeStyle: 'rgba(0,0,0,0.88)',
+      lineWidth: Math.max(0.65, 0.8 * ui),
+    });
+    ctx.restore();
+    const hpTextRect = makeRect(
+      Math.min(hpNumberRect.left, hpUnitRect.left),
+      Math.min(hpNumberRect.top, hpUnitRect.top),
+      Math.max(hpNumberRect.right, hpUnitRect.right) - Math.min(hpNumberRect.left, hpUnitRect.left),
+      Math.max(hpNumberRect.bottom, hpUnitRect.bottom) - Math.min(hpNumberRect.top, hpUnitRect.top)
+    );
 
     ctx.restore();
 
@@ -8379,7 +8612,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         nameHasReplacement: nameFit.lines.join('').includes('\uFFFD'),
         nameCenterDelta: Math.abs(nameTextCenter - nameSlotCenter),
         koLabel: '',
-        hpLabel: hpFit.text,
+        hpLabel: hpLabelText,
         commandLabel,
         statusLabel: statusFit.text,
         healthState: state.healthState,
@@ -8830,7 +9063,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       titleY
     );
     ctx.textAlign = 'right';
-    const hpLabel = fitCanvasText(ctx, `${Math.round(hp)} / ${Math.round(maxHp)} HP`, trackW * 0.44, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10 * ui, cardH * 0.16), Math.max(7, 8 * ui));
+    const hpLabel = fitCanvasText(ctx, `${Math.round(hp)} HP`, trackW * 0.44, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10 * ui, cardH * 0.16), Math.max(7, 8 * ui));
     ctx.fillStyle = '#ffd9a8';
     ctx.fillText(hpLabel, rightX, titleY);
 
@@ -8905,11 +9138,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const now = Date.now() * 0.001;
     const pulse = 0.5 + Math.sin(now * 3) * 0.5;
     const ui = canvasUiScale();
-    const badgeW = Math.min(barW * 0.27, Math.max(142 * ui, barW * 0.18));
+    const badgeW = Math.min(barW * 0.24, Math.max(118 * ui, barW * 0.15));
     const trackX = barX + badgeW + barH * 0.28;
-    const trackY = barY + barH * 0.5;
+    const trackY = barY + barH * 0.53;
     const trackW = Math.max(80 * ui, barX + barW - trackX - barH * 0.24);
-    const trackH = Math.max(14 * ui, barH * 0.24);
+    const trackH = Math.max(12 * ui, barH * 0.25);
     const compactHorde = barW < 580;
 
     ctx.save();
@@ -8963,8 +9196,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     const topRail = ctx.createLinearGradient(barX, 0, barX + barW, 0);
     topRail.addColorStop(0, 'rgba(232,59,95,0.98)');
-    topRail.addColorStop(0.48, 'rgba(246,201,91,0.78)');
-    topRail.addColorStop(1, 'rgba(85,231,255,0.72)');
+    topRail.addColorStop(0.5, 'rgba(232,59,95,0.82)');
+    topRail.addColorStop(1, 'rgba(232,59,95,0.54)');
     ctx.fillStyle = topRail;
     roundedRectPath(ctx, barX + 8 * ui, barY + 7 * ui, barW - 16 * ui, Math.max(4 * ui, barH * 0.055), 4 * ui);
     ctx.fill();
@@ -8988,55 +9221,77 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.shadowColor = 'rgba(0,0,0,0.8)';
     ctx.shadowBlur = 8;
     ctx.fillText('HORDE', barX + 12 * ui + (badgeW - 20 * ui) / 2, barY + barH * 0.43);
-    ctx.font = `800 ${Math.max(10 * ui, barH * 0.14)}px 'Rajdhani','Segoe UI',sans-serif`;
-    ctx.fillStyle = '#ffe0bf';
-    const reserveText = fitCanvasText(ctx, `${horde.hordeCount} IN RESERVE`, badgeW - 34 * ui, size => `800 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(10 * ui, barH * 0.14), Math.max(5, 8 * ui));
-    ctx.fillText(reserveText, barX + 12 * ui + (badgeW - 20 * ui) / 2, barY + barH * 0.64);
+    const pipSlots = hordeThreshold;
+    const activePips = clampNumber(Math.round(Number(horde.hordeCount) || 0), 0, pipSlots);
+    const pipGap = Math.max(3 * ui, barH * 0.032);
+    const pipW = Math.max(8 * ui, Math.min(18 * ui, (badgeW - 42 * ui - pipGap * (pipSlots - 1)) / pipSlots));
+    const pipH = Math.max(5 * ui, Math.min(8 * ui, barH * 0.075));
+    const pipStartX = barX + 12 * ui + (badgeW - 20 * ui - (pipSlots * pipW + (pipSlots - 1) * pipGap)) / 2;
+    const pipY = barY + barH * 0.64 - pipH / 2;
+    for (let i = 0; i < pipSlots; i += 1) {
+      const lit = i < activePips;
+      ctx.fillStyle = lit ? colorWithAlpha(THEME.red, 0.78 + pulse * 0.12) : 'rgba(255,255,255,0.12)';
+      roundedRectPath(ctx, pipStartX + i * (pipW + pipGap), pipY, pipW, pipH, pipH / 2);
+      ctx.fill();
+      ctx.strokeStyle = lit ? colorWithAlpha(THEME.goldBright, 0.28) : 'rgba(255,255,255,0.08)';
+      ctx.lineWidth = 1;
+      roundedRectPath(ctx, pipStartX + i * (pipW + pipGap) + 0.5, pipY + 0.5, Math.max(1, pipW - 1), Math.max(1, pipH - 1), Math.max(1, pipH / 2 - 0.5));
+      ctx.stroke();
+    }
     ctx.shadowBlur = 0;
 
     const titleFontMax = Math.max(11 * ui, barH * (compactHorde ? 0.15 : 0.19));
-    const titleMaxW = trackW * (compactHorde ? 0.42 : 0.52);
+    const titleMaxW = trackW * (compactHorde ? 0.62 : 0.72);
     const hordeTitle = fitCanvasText(ctx, 'HORDE PRESSURE', titleMaxW, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, titleFontMax, Math.max(5, 8 * ui));
     ctx.textAlign = 'left';
     ctx.fillStyle = '#fff3d7';
     ctx.fillText(hordeTitle, trackX, barY + barH * (compactHorde ? 0.29 : 0.31));
-    const hpFontMax = Math.max(10 * ui, barH * (compactHorde ? 0.13 : 0.16));
-    const hordeHpText = fitCanvasText(ctx, `${Math.round(horde.hp)} / ${Math.round(horde.maxHp)} HP`, trackW * (compactHorde ? 0.34 : 0.42), size => `700 ${size}px 'Rajdhani','Segoe UI',sans-serif`, hpFontMax, Math.max(5, 8 * ui));
-    ctx.textAlign = 'right';
-    ctx.fillStyle = '#ffd9a8';
-    ctx.fillText(hordeHpText, barX + barW - barH * 0.22, barY + barH * (compactHorde ? 0.29 : 0.31));
-
-    ctx.fillStyle = 'rgba(0,0,0,0.58)';
+    ctx.fillStyle = 'rgba(7,10,18,0.82)';
     roundedRectPath(ctx, trackX, trackY, trackW, trackH, trackH / 2);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
     ctx.lineWidth = 1;
     roundedRectPath(ctx, trackX, trackY, trackW, trackH, trackH / 2);
     ctx.stroke();
 
     const fillW = hpPct > 0 ? Math.max(trackH, trackW * hpPct) : 0;
-    const hpGrad = ctx.createLinearGradient(trackX, 0, trackX + trackW, 0);
-    hpGrad.addColorStop(0, THEME.red);
-    hpGrad.addColorStop(0.48, THEME.ember);
-    hpGrad.addColorStop(0.78, THEME.gold);
-    hpGrad.addColorStop(1, '#fff0ad');
-    ctx.fillStyle = hpGrad;
+    const activePressure = ctx.createLinearGradient(trackX, 0, trackX + trackW, 0);
+    activePressure.addColorStop(0, 'rgba(232,59,95,0.88)');
+    activePressure.addColorStop(0.55, 'rgba(232,59,95,0.96)');
+    activePressure.addColorStop(1, 'rgba(255,91,119,0.98)');
+    ctx.fillStyle = activePressure;
     if (fillW > 0) {
       roundedRectPath(ctx, trackX + 2, trackY + 2, Math.max(0, fillW - 4), trackH - 4, (trackH - 4) / 2);
       ctx.fill();
     }
 
-    ctx.globalAlpha = 0.2;
-    ctx.strokeStyle = '#fff6d2';
-    ctx.lineWidth = 1;
-    for (let i = 1; i < 12; i++) {
-      const sx = trackX + trackW * (i / 12);
-      ctx.beginPath();
-      ctx.moveTo(sx, trackY + 3);
-      ctx.lineTo(sx, trackY + trackH - 3);
-      ctx.stroke();
+    const consumedX = trackX + fillW;
+    const consumedW = Math.max(0, trackX + trackW - consumedX);
+    if (consumedW > trackH * 0.6) {
+      ctx.save();
+      roundedRectPath(ctx, consumedX, trackY, consumedW, trackH, trackH / 2);
+      ctx.clip();
+      ctx.globalAlpha = 0.1;
+      ctx.strokeStyle = '#b8c1d6';
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 9; i += 1) {
+        const sx = trackX + trackW * (i / 9);
+        if (sx <= consumedX + 1) continue;
+        ctx.beginPath();
+        ctx.moveTo(sx, trackY + 4);
+        ctx.lineTo(sx, trackY + trackH - 4);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 0.08;
+      ctx.lineWidth = Math.max(2, trackH * 0.18);
+      for (let x = consumedX - trackW + ((now * 28) % 52); x < trackX + trackW; x += 52) {
+        ctx.beginPath();
+        ctx.moveTo(x, trackY + trackH + 2);
+        ctx.lineTo(x + 24, trackY - 2);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
-    ctx.globalAlpha = 1;
 
     if (fillW > trackH) {
       const sweepX = trackX + Math.max(0, fillW - trackH) * pulse;
@@ -9045,33 +9300,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.fill();
     }
 
-    ctx.save();
-    ctx.beginPath();
-    roundedRectPath(ctx, trackX, trackY, trackW, trackH, trackH / 2);
-    ctx.clip();
-    ctx.globalAlpha = 0.2;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = Math.max(3, trackH * 0.28);
-    for (let x = trackX - trackW + ((now * 48) % 42); x < trackX + trackW; x += 42) {
-      ctx.beginPath();
-      ctx.moveTo(x, trackY + trackH + 3);
-      ctx.lineTo(x + 28, trackY - 3);
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    const blips = Math.min(12, horde.hordeCount || 0);
-    const blipY = barY + barH * 0.8;
-    ctx.textAlign = 'center';
-    for (let i = 0; i < blips; i++) {
-      const t = blips === 1 ? 0.5 : i / (blips - 1);
-      const bx = trackX + trackW * t;
-      const h = Math.max(8, barH * (0.1 + (i % 3) * 0.025));
-      ctx.fillStyle = i % 3 === 0 ? THEME.red : THEME.cyan;
-      ctx.globalAlpha = 0.58 + Math.sin(now * 3.3 + i) * 0.16;
-      roundedRectPath(ctx, bx - 2.4, blipY - h / 2, 4.8, h, 3);
-      ctx.fill();
-    }
     ctx.globalAlpha = 1;
     ctx.restore();
   }
@@ -9697,6 +9925,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function handleHealEvent(data) {
     if (!data || !data.uniqueId) return;
+    if (data.fullHeal) {
+      applyPlayerHealthSnapshot(data.uniqueId, data.hp ?? data.maxHp, data.maxHp);
+    }
     setTimeout(() => {
       if (hasRecentCheer(data.uniqueId)) return;
       const hearts = Math.max(1, Math.min(3, Math.round((Number(data.amount) || 5) / 10)));
@@ -9705,8 +9936,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         amount: Number(data.amount) || hearts * 10,
         name: data.nickname || data.sourceNick || data.uniqueId,
       });
-      fireHeartEffect(data.uniqueId, hearts, 0.35, { ...data, kind: 'heal', color: data.color || '#8fffd2' });
-      setCardAccent(data.uniqueId, 'heal', data.color || THEME.green, 1400, { label: 'HEAL' });
+      fireHeartEffect(data.uniqueId, hearts, data.fullHeal ? 0.48 : 0.35, { ...data, kind: 'heal', color: data.color || '#8fffd2' });
+      setCardAccent(data.uniqueId, 'heal', data.color || THEME.green, data.fullHeal ? 2100 : 1400, { label: data.fullHeal ? 'FULL' : 'HEAL' });
       playSound('heal');
     }, 140);
   }
@@ -10011,11 +10242,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         code: `${pct}%`,
         kicker: 'Boss wave damage',
         title: `${hitter} hit the boss wave`,
-        meta: `${hp} / ${maxHp} HP remaining`,
+        meta: `${hp} HP remaining`,
         charge: Math.max(24, 100 - pct),
         priority: pct <= 25 ? 88 : 64,
       }, pct <= 25 ? 3200 : 2400);
-      showBattlePrompt(`Boss HP ${hp}/${maxHp}`, 'horde', 1500);
+      showBattlePrompt(`Boss HP ${hp}`, 'horde', 1500);
       return;
     }
     if (type === 'defeated') {
