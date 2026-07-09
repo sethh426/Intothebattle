@@ -150,6 +150,8 @@ async function testFreeUserGrant() {
   assert.equal(result.subscription.plan_type, FREE_FOREVER_PLAN_TYPE);
   assert.equal(activeGrant(db, 1)?.status, 'active');
   assert.equal(publicSubscriptionView(result.subscription).admin_granted, undefined);
+  assert.equal(publicSubscriptionView(result.subscription).free_forever, true);
+  assert.equal(publicSubscriptionView(result.subscription).display_plan, 'Free forever');
 }
 
 async function testTrialUserGrant() {

@@ -45,6 +45,7 @@
     .subscription-chip { cursor:pointer; }
     .subscription-chip.active { color:var(--green); border-color:rgba(119,240,161,.25); background:rgba(119,240,161,.08); }
     .subscription-chip.free { color:var(--gold2); border-color:rgba(246,201,91,.28); background:rgba(246,201,91,.08); }
+    .subscription-chip.free-forever { color:#ffe99a !important; border-color:rgba(246,201,91,.46) !important; background:rgba(246,201,91,.13) !important; box-shadow:0 0 20px rgba(246,201,91,.12), inset 0 1px 0 rgba(255,255,255,.08); }
     .subscription-chip.attention { color:#ff9aa8; border-color:rgba(232,59,95,.28); background:rgba(232,59,95,.1); }
     .hero { display:grid; grid-template-columns:minmax(0,1.08fr) minmax(380px,.92fr); gap:20px; align-items:stretch; }
     .hero-card,.card { position:relative; overflow:hidden; border:1px solid var(--line2); border-radius:28px; background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); box-shadow:0 24px 80px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.08); }
@@ -2215,6 +2216,11 @@ function setSubscriptionChip(data) {
     label = `Plan ${data.status || 'attention'}`;
     className += ' attention';
     setSponsorControlsAvailability(false);
+  } else if (data.freeForever || data.free_forever || data.subscription?.freeForever || data.subscription?.free_forever || /free\s*forever/i.test(data.planName || data.subscription?.planType || '')) {
+    label = 'Free forever';
+    className += ' free-forever';
+    setSponsorControlsAvailability(true);
+    if (!wasSponsorEnabled || !sponsorLibraryData.length) loadSponsors();
   } else if (data.tier === 'paid' || data.canUseCreatorSponsors) {
     label = data.planName || 'Creator Pro';
     className += ' active';

@@ -33,7 +33,11 @@ import {
   isPaidAccessCode as isSharedPaidAccessCode,
   isPaidAuthRecord,
 } from './tiktokbr/services/entitlements.js';
-import { getEffectiveUserSubscription } from './tiktokbr/services/userSubscriptions.js';
+import {
+  FREE_FOREVER_PLAN_TYPE,
+  getEffectiveUserSubscription,
+  isActiveAdminGrantedSubscription,
+} from './tiktokbr/services/userSubscriptions.js';
 import { buildLaunchReadinessReport } from './tiktokbr/services/launchReadiness.js';
 import { buildUploadDecision, getStorageUsage, uploadLimitBytes } from './tiktokbr/services/storagePolicy.js';
 import { growthIntegrationDiagnostics, syncLeadToGrowthApis } from './tiktokbr/services/growthIntegrations.js';
@@ -7076,6 +7080,13 @@ function buildAccessCodeSubscriptionStatus(row, now = new Date()) {
 function buildUserSubscriptionStatus(user, now = new Date(), subscriptionOverride = null) {
   const subscription = subscriptionOverride || getLatestUserSubscription(user?.id);
   const access = buildUserAccountAccessStatus(user, subscription, now);
+  const freeForever = Boolean(
+    isActiveAdminGrantedSubscription(subscription)
+    || (
+      String(subscription?.plan_type || subscription?.planType || '').trim().toLowerCase() === FREE_FOREVER_PLAN_TYPE.toLowerCase()
+      && String(subscription?.status || '').trim().toLowerCase() === 'active'
+    )
+  );
   const rawStatus = subscription
     ? String(subscription.status || 'unknown').toLowerCase()
     : (access.subscriptionStatus || access.status || 'trialing');
@@ -7092,7 +7103,9 @@ function buildUserSubscriptionStatus(user, now = new Date(), subscriptionOverrid
     type: 'user',
     status: access.status,
     tier: access.tier,
-    planName: access.planName,
+    planName: freeForever ? 'Free forever' : access.planName,
+    freeForever,
+    free_forever: freeForever,
     canUseCreatorSponsors: access.canUseCreatorSponsors,
     platformSponsorManaged: access.platformSponsorManaged,
     betaTester: false,
@@ -7102,7 +7115,9 @@ function buildUserSubscriptionStatus(user, now = new Date(), subscriptionOverrid
     paywallUrl: access.paywallUrl,
     subscription: {
       status: rawStatus,
-      planType: subscription?.plan_type || subscription?.planType || access.planName,
+      planType: freeForever ? FREE_FOREVER_PLAN_TYPE : (subscription?.plan_type || subscription?.planType || access.planName),
+      freeForever,
+      free_forever: freeForever,
       paypalSubscriptionId: subscription?.paypal_subscription_id || subscription?.paypalSubscriptionId || null,
       startedAt: toIsoStringOrNull(startedAt),
       nextBillingDate: toIsoStringOrNull(nextBillingDate),

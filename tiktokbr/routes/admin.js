@@ -719,6 +719,9 @@ function renderUserRows(users = [], emptyMessage = 'No users found yet.') {
       status: user.subscription_status,
     });
     const plan = user.plan_type || user.subscription_status || user.access_code_type || 'Free / pending';
+    const planMarkup = adminGrantActive
+      ? '<span class="free-forever-badge">Free forever</span>'
+      : escapeHtml(plan);
     const tiktokUsername = accountTikTokUsername(user);
     const beta = isAdminBetaUser(user);
     const grantAction = active === 'Disabled'
@@ -734,7 +737,7 @@ function renderUserRows(users = [], emptyMessage = 'No users found yet.') {
       <td data-label="ID">${escapeHtml(String(user.id))}<br><span class="muted">${beta ? 'Beta tester' : 'Standard'}</span></td>
       <td data-label="Email / Name"><strong>${escapeHtml(user.email || '')}</strong><br><span class="muted">${escapeHtml(user.name || '')}</span></td>
       <td data-label="TikTok">${escapeHtml(tiktokUsername ? `@${tiktokUsername}` : '')}</td>
-      <td data-label="Plan">${escapeHtml(plan)}${user.access_code ? `<br><span class="muted">Code ${escapeHtml(user.access_code)}</span>` : ''}</td>
+      <td data-label="Plan">${planMarkup}${user.access_code ? `<br><span class="muted">Code ${escapeHtml(user.access_code)}</span>` : ''}</td>
       <td data-label="Status">${escapeHtml(`${active} / ${verified}`)}</td>
       <td data-label="Created">${escapeHtml(formatSponsorDate(user.created_at))}</td>
       <td data-label="Last Login">${escapeHtml(formatSponsorDate(user.last_login))}</td>
@@ -851,6 +854,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     button { margin-top: 12px; width: 100%; min-height:44px; padding: 0 14px; border: none; border-radius: 14px; background: linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color: #170c02; cursor: pointer; font-weight: 900; }
     .danger-button { background: rgba(232,59,95,.16); color:#ffb7c1; border:1px solid rgba(232,59,95,.32); }
     .secondary-button { background: rgba(255,255,255,.07); color:#fff8e6; border:1px solid rgba(255,255,255,.12); }
+    .free-forever-badge { display:inline-flex; align-items:center; min-height:26px; padding:0 10px; border-radius:999px; border:1px solid rgba(246,201,91,.42); color:#ffe99a; background:rgba(246,201,91,.12); font-weight:900; box-shadow:0 0 18px rgba(246,201,91,.12); }
     .mini-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; min-width:260px; }
     .mini-form input { min-height:38px; padding:8px 10px; border-radius:10px; font-size:12px; }
     .mini-form button { grid-column:1 / -1; min-height:36px; margin-top:0; }

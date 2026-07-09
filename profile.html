@@ -213,6 +213,11 @@
       font-weight: 700;
       font-size: 13px;
     }
+    .free-forever-label {
+      color: #ffe99a;
+      text-shadow: 0 0 18px rgba(245,200,66,0.28);
+      font-weight: 900;
+    }
 
     @media (max-width: 820px) {
       .topbar { position: static; flex-direction: column; align-items: flex-start; }
@@ -301,12 +306,19 @@
         const subscription = json.subscription;
         const subscriptionStatus = String(subscription?.status || '').toLowerCase();
         const isTrial = ['trial', 'trialing', 'free-trial', 'full-access-trial'].includes(subscriptionStatus);
+        const freeForever = Boolean(subscription?.free_forever || subscription?.freeForever || /free\s*forever/i.test(subscription?.display_plan || subscription?.plan_type || subscription?.planType || ''));
         if (subscription && (subscriptionStatus === 'active' || isTrial)) {
-          subscriptionEl.innerHTML = `
-            <p class="note">Status: <strong>${subscription.status}</strong></p>
-            <p class="note">Plan: ${subscription.plan_type || (isTrial ? '7-Day Full Access' : 'Creator Pro')}</p>
-            <p class="note">${isTrial ? 'Trial ends' : 'Next billing'}: ${subscription.expires_at || subscription.next_billing_date || 'Pending'}</p>
-          `;
+          subscriptionEl.innerHTML = freeForever
+            ? `
+              <p class="note">Status: <strong>active</strong></p>
+              <p class="note">Plan: <strong class="free-forever-label">Free forever</strong></p>
+              <p class="note">Billing: No billing. This account has permanent access.</p>
+            `
+            : `
+              <p class="note">Status: <strong>${subscription.status}</strong></p>
+              <p class="note">Plan: ${subscription.display_plan || subscription.plan_type || (isTrial ? '7-Day Full Access' : 'Creator Pro')}</p>
+              <p class="note">${isTrial ? 'Trial ends' : 'Next billing'}: ${subscription.expires_at || subscription.next_billing_date || 'Pending'}</p>
+            `;
         } else {
           subscriptionEl.innerHTML = '<p class="note">Plan: <strong>Free</strong></p><p class="note">Upgrade to Creator Pro when you want advanced creator controls.</p><p style="margin-top:14px;"><a class="small-button" href="/paywall" style="margin-left:0;">Upgrade to Creator Pro</a></p>';
         }

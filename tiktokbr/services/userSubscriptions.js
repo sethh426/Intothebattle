@@ -109,6 +109,11 @@ export function getEffectiveUserSubscription(database, userId) {
 
 export function publicSubscriptionView(subscription) {
   if (!subscription) return null;
+  const freeForever = isActiveAdminGrantedSubscription(subscription)
+    || (
+      String(subscription.plan_type || '').trim().toLowerCase() === FREE_FOREVER_PLAN_TYPE.toLowerCase()
+      && String(subscription.status || '').trim().toLowerCase() === 'active'
+    );
   return {
     paypal_subscription_id: subscription.paypal_subscription_id || null,
     plan_type: subscription.plan_type || null,
@@ -116,6 +121,8 @@ export function publicSubscriptionView(subscription) {
     started_at: subscription.started_at || null,
     next_billing_date: subscription.next_billing_date || null,
     expires_at: subscription.expires_at || null,
+    free_forever: freeForever,
+    display_plan: freeForever ? 'Free forever' : (subscription.plan_type || null),
   };
 }
 
