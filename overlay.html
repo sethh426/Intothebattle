@@ -2640,6 +2640,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       posterData: String(payload.posterData || payload.thumbnailData || ''),
       posterUrl: String(payload.posterUrl || ''),
       muted: payload.muted !== false,
+      volume: normalizeMasterVolume(payload.volume, currentMasterVolume()),
       fit,
       statsMode,
       timingProfile,
@@ -2825,7 +2826,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     });
   }
 
-  function playSponsorTone(kind) {
+  function playSponsorTone(kind, payload = {}) {
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) return;
@@ -2833,10 +2834,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const audioCtx = sponsorAudioContext;
       if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
       const now = audioCtx.currentTime;
+      const masterVolume = normalizeMasterVolume(payload.volume, currentMasterVolume());
       const output = audioCtx.createGain();
       const compressor = audioCtx.createDynamicsCompressor();
       output.gain.setValueAtTime(0.0001, now);
-      output.gain.exponentialRampToValueAtTime(kind === 'intro' ? 0.16 : 0.11, now + 0.08);
+      output.gain.exponentialRampToValueAtTime((kind === 'intro' ? 0.16 : 0.11) * masterVolume, now + 0.08);
       output.gain.exponentialRampToValueAtTime(0.0001, now + (kind === 'intro' ? 1.28 : 0.82));
       output.connect(compressor);
       compressor.connect(audioCtx.destination);
@@ -3008,7 +3010,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     document.body.classList.add('sponsor-active');
     renderSponsorStats(true);
     setSponsorSceneState('intro');
-    playSponsorTone('intro');
+    playSponsorTone('intro', payload);
 
     const videoReady = hasPreparedVideo ? Promise.resolve(sponsorVideoAgent.hasReadyFrame()) : preloadSponsorVideo(payload);
     Promise.all([
@@ -3071,7 +3073,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     setSponsorText(sponsorOutroTitle, forced ? 'RETURNING TO BATTLE' : 'BACK TO THE BATTLE', 'BACK TO THE BATTLE');
     resetSponsorVideo(false);
     setSponsorSceneState('outro');
-    playSponsorTone('outro');
+    playSponsorTone('outro', payload);
 
     sponsorTimer = setTimeout(() => {
       sponsorTimer = null;
@@ -4511,13 +4513,49 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   // ═══════════════════════════════════════
   // AUDIO
   // ═══════════════════════════════════════
+  const DEFAULT_OVERLAY_MASTER_VOLUME = 0.5;
+  const OVERLAY_AUDIO_EVENT_KEYS = Object.keys(DEFAULT_OVERLAY_AUDIO_CONFIG);
+
+  function normalizeMasterVolume(value, fallback = DEFAULT_OVERLAY_MASTER_VOLUME) {
+    const numeric = Number(value);
+    const fallbackNumeric = Number(fallback);
+    const safeFallback = Number.isFinite(fallbackNumeric) ? fallbackNumeric : DEFAULT_OVERLAY_MASTER_VOLUME;
+    const next = Number.isFinite(numeric) ? numeric : safeFallback;
+    return Math.max(0, Math.min(1, Math.round(next * 100) / 100));
+  }
+
+  function currentMasterVolume() {
+    return normalizeMasterVolume(audioConfig.masterVolume);
+  }
+
+  function audioEventFilenames(config = audioConfig) {
+    return OVERLAY_AUDIO_EVENT_KEYS.map(key => config[key]).filter(Boolean);
+  }
+
+  function applyMasterVolumeToAudio(audio) {
+    if (!audio) return;
+    audio.volume = currentMasterVolume();
+  }
+
+  function applyMasterVolumeToAudioCache() {
+    Object.values(audioCache).forEach(audio => {
+      try { applyMasterVolumeToAudio(audio); } catch (_) {}
+    });
+  }
+
   function applyAudioConfig(cfg) {
     const incoming = cfg && typeof cfg === 'object' ? cfg : {};
-    const hasAssignedAudio = Object.values(incoming).some(Boolean);
-    audioConfig = hasAssignedAudio
-      ? { ...DEFAULT_OVERLAY_AUDIO_CONFIG, ...incoming }
-      : { ...DEFAULT_OVERLAY_AUDIO_CONFIG };
-    Object.values(audioConfig).forEach(filename => {
+    const incomingEvents = {};
+    OVERLAY_AUDIO_EVENT_KEYS.forEach(key => {
+      if (Object.prototype.hasOwnProperty.call(incoming, key)) incomingEvents[key] = incoming[key] || null;
+    });
+    const hasAssignedAudio = Object.values(incomingEvents).some(Boolean);
+    audioConfig = {
+      ...(hasAssignedAudio ? { ...DEFAULT_OVERLAY_AUDIO_CONFIG, ...incomingEvents } : { ...DEFAULT_OVERLAY_AUDIO_CONFIG }),
+      masterVolume: normalizeMasterVolume(incoming.masterVolume, audioConfig.masterVolume),
+    };
+    applyMasterVolumeToAudioCache();
+    audioEventFilenames(audioConfig).forEach(filename => {
       if (!filename) return;
       try { getAudio(filename); } catch (_) {}
     });
@@ -4527,16 +4565,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (!audioCache[filename]) {
       const a = new Audio(withOverlayAuth(`/audio/${encodeURIComponent(filename)}`));
       a.preload = 'auto';
+      applyMasterVolumeToAudio(a);
       a.load();
       audioCache[filename] = a;
     }
+    applyMasterVolumeToAudio(audioCache[filename]);
     return audioCache[filename];
   }
 
   function audioFilenames() {
     return [...new Set([
       ...Object.values(DEFAULT_OVERLAY_AUDIO_CONFIG),
-      ...Object.values(audioConfig),
+      ...audioEventFilenames(audioConfig),
     ].filter(Boolean))];
   }
 
@@ -4557,7 +4597,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       pendingReplayType: pendingAudioReplay?.type || '',
       warningCount: audioWarnings.size,
       warnings: Array.from(audioWarnings).slice(0, 8),
-      assignedEvents: Object.keys(audioConfig).filter(key => audioConfig[key]).sort(),
+      masterVolume: currentMasterVolume(),
+      assignedEvents: OVERLAY_AUDIO_EVENT_KEYS.filter(key => audioConfig[key]).sort(),
       filenames,
       cachedCount: cacheEntries.length,
       readyCount: cacheEntries.filter(entry => entry.readyState >= 2).length,
@@ -4649,6 +4690,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     lastAnySoundAt = now;
     try {
       const a = getAudio(fn);
+      applyMasterVolumeToAudio(a);
       a.currentTime = 0;
       const playPromise = a.play();
       if (playPromise && typeof playPromise.catch === 'function') {
@@ -10170,6 +10212,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         subtitle: overlayParams.get('sponsor_subtitle') || 'Stay locked in. The next fight is loading.',
         durationMs: Number(overlayParams.get('sponsor_duration')) || 15000,
         muted: overlayParams.get('sponsor_muted') !== '0',
+        volume: normalizeMasterVolume(overlayParams.get('sponsor_volume'), currentMasterVolume()),
         fit: overlayParams.get('sponsor_fit') || 'contain',
         statsMode: overlayParams.get('sponsor_stats') || 'endcap',
         timingProfile: overlayParams.get('sponsor_timing') || 'spotlight',

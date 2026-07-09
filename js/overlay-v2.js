@@ -83,6 +83,7 @@
       this.sponsorStartedAt = 0;
       this.sponsorReporter = null;
       this.preparedSponsor = null;
+      this.masterVolume = 0.5;
       this.bossState = null;
       this.bossCoreBounds = null;
       this.bossCoreAnchorCache = null;
@@ -696,6 +697,32 @@
 
     setSponsorPlaybackReporter(reporter) {
       this.sponsorReporter = typeof reporter === 'function' ? reporter : null;
+    }
+
+    normalizeMasterVolume(value, fallback = this.masterVolume) {
+      const numeric = Number(value);
+      const fallbackNumeric = Number(fallback);
+      const safeFallback = Number.isFinite(fallbackNumeric) ? fallbackNumeric : 0.5;
+      const next = Number.isFinite(numeric) ? numeric : safeFallback;
+      return Math.max(0, Math.min(1, Math.round(next * 100) / 100));
+    }
+
+    setMasterVolume(value) {
+      this.masterVolume = this.normalizeMasterVolume(value, this.masterVolume);
+      this.applySponsorVideoVolume(this.sponsorVideo, { volume: this.masterVolume });
+      if (this.preparedSponsor?.video) this.preparedSponsor.video.volume = this.masterVolume;
+    }
+
+    applySponsorVideoVolume(video, payload = {}) {
+      if (!video) return;
+      const volume = this.normalizeMasterVolume(payload.volume, this.masterVolume);
+      try {
+        if (typeof video.setVolume === 'function') video.setVolume(volume);
+      } catch (_err) {}
+      try {
+        if (video.video) video.video.volume = volume;
+        else if ('volume' in video) video.volume = volume;
+      } catch (_err) {}
     }
 
     reportSponsor(payload, status, message = '') {
@@ -2230,6 +2257,7 @@
       video.preload = 'auto';
       video.playsInline = true;
       video.muted = payload.muted !== false;
+      video.volume = this.normalizeMasterVolume(payload.volume, this.masterVolume);
       video.crossOrigin = 'anonymous';
       this.preparedSponsor = { breakId: payload.breakId, payload, video, decoded: false, ready: false };
 
@@ -2273,6 +2301,7 @@
     }
 
     playSponsorBreak(payload = {}) {
+      payload = { ...payload, volume: this.normalizeMasterVolume(payload.volume, this.masterVolume) };
       this.activeSponsorPayload = payload;
       this.sponsorFinalized = false;
       this.sponsorEndcapShown = false;
@@ -2326,7 +2355,8 @@
           this.sponsorLayer.add(this.sponsorVideo);
           this.sponsorVideo.setDisplaySize(videoBox.w, videoBox.h);
           this.sponsorVideo.setMute(payload.muted !== false);
-          this.sponsorVideo.loadURL(payload.videoUrl, true);
+          this.applySponsorVideoVolume(this.sponsorVideo, payload);
+          this.sponsorVideo.loadURL(payload.videoUrl, payload.muted !== false);
           let firstFrameReported = false;
           const reportFirstFrame = (message = 'Phaser video first frame confirmed') => {
             if (firstFrameReported) return;
@@ -2335,6 +2365,7 @@
             this.reportSponsor(payload, 'first_frame', message);
           };
           this.sponsorVideo.once('play', () => {
+            this.applySponsorVideoVolume(this.sponsorVideo, payload);
             this.showSponsorEndCap(payload, this.sponsorEndcapDelayMs(payload, plannedDurationMs));
             const videoEl = this.sponsorVideo?.video;
             if (videoEl && typeof videoEl.requestVideoFrameCallback === 'function') {

@@ -306,13 +306,20 @@ test('dashboard mobile audio manager keeps controls usable at phone widths', asy
   });
 
   await expect(page.locator('#audioManagerCard')).toBeVisible();
+  await expect(page.locator('#audioVolumeInput')).toBeVisible();
+  await expect(page.locator('#audioVolumeInput')).toHaveValue('50');
+  await page.locator('#audioVolumeInput').evaluate(input => {
+    input.value = '65';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await expect(page.locator('#audioVolumeLabel')).toHaveText('65%');
   await expect(page.locator('#audioLibrary .audio-row')).toBeVisible();
   await expect(page.locator('#audioLibrary .audio-actions .btn')).toHaveCount(2);
   await expectNoHorizontalOverflow(page);
 
   const badBoxes = await page.evaluate(() => {
     const viewportWidth = document.documentElement.clientWidth;
-    return Array.from(document.querySelectorAll('#audioManagerCard .audio-row, #audioManagerCard .btn')).map(el => {
+    return Array.from(document.querySelectorAll('#audioManagerCard .audio-row, #audioManagerCard .btn, #audioManagerCard input[type=range], #audioManagerCard .volume-value')).map(el => {
       const rect = el.getBoundingClientRect();
       return { text: el.textContent.trim(), left: rect.left, right: rect.right, width: rect.width };
     }).filter(box => box.left < -1 || box.right > viewportWidth + 1 || box.width < 24);

@@ -16,6 +16,14 @@
     return Math.round(video.duration * 1000);
   }
 
+  function normalizeMasterVolume(value, fallback = 0.5) {
+    const numeric = Number(value);
+    const fallbackNumeric = Number(fallback);
+    const safeFallback = Number.isFinite(fallbackNumeric) ? fallbackNumeric : 0.5;
+    const next = Number.isFinite(numeric) ? numeric : safeFallback;
+    return Math.max(0, Math.min(1, Math.round(next * 100) / 100));
+  }
+
   class OverlayVideoAgent {
     constructor(options = {}) {
       this.scene = options.scene || null;
@@ -122,6 +130,11 @@
       if (this.scene) this.scene.classList.toggle('has-poster', Boolean(source));
     }
 
+    applyVolume(payload = {}) {
+      if (!this.video) return;
+      this.video.volume = normalizeMasterVolume(payload.volume);
+    }
+
     clearPoster() {
       if (this.poster) this.poster.style.backgroundImage = '';
       if (this.video) this.video.removeAttribute('poster');
@@ -188,6 +201,7 @@
         hasSource: Boolean(currentSrc || this.loadedPayload?.videoUrl || payload?.videoUrl),
         ready: this.hasReadyFrame(),
         readyState: this.readyState(),
+        volume: this.video ? this.video.volume : normalizeMasterVolume(payload.volume),
         paused: this.video ? this.video.paused : null,
         ended: this.video ? this.video.ended : null,
         stateClass,
@@ -275,6 +289,7 @@
         this.video.playsInline = true;
         this.video.disablePictureInPicture = true;
         this.video.muted = payload.muted;
+        this.applyVolume(payload);
         this.video.loop = false;
         this.applyPoster(payload);
         this.video.src = payload.videoUrl;
@@ -376,6 +391,7 @@
       };
 
       this.video.muted = payload.muted !== false;
+      this.applyVolume(payload);
       this.applyPoster(payload);
       this.applyFit(payload);
       if (this.video.readyState >= 2) {

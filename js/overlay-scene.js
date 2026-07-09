@@ -29,6 +29,7 @@ class OverlayScene extends Phaser.Scene {
     this.sponsorVideo = null;
     this.sponsorClockStarted = false;
     this.sponsorAudioContext = null;
+    this.masterVolume = 0.5;
   }
 
   create() {
@@ -526,6 +527,30 @@ class OverlayScene extends Phaser.Scene {
     if (typeof fn === 'function') this.withOverlayAuth = fn;
   }
 
+  normalizeMasterVolume(value, fallback = this.masterVolume) {
+    const numeric = Number(value);
+    const fallbackNumeric = Number(fallback);
+    const safeFallback = Number.isFinite(fallbackNumeric) ? fallbackNumeric : 0.5;
+    const next = Number.isFinite(numeric) ? numeric : safeFallback;
+    return Math.max(0, Math.min(1, Math.round(next * 100) / 100));
+  }
+
+  setMasterVolume(value) {
+    this.masterVolume = this.normalizeMasterVolume(value, this.masterVolume);
+    if (this.sponsorVideo) this.applySponsorVideoVolume(this.sponsorVideo, { volume: this.masterVolume });
+  }
+
+  applySponsorVideoVolume(video, payload = {}) {
+    if (!video) return;
+    const volume = this.normalizeMasterVolume(payload.volume, this.masterVolume);
+    try {
+      if (typeof video.setVolume === 'function') video.setVolume(volume);
+    } catch (_err) {}
+    try {
+      if (video.video) video.video.volume = volume;
+    } catch (_err) {}
+  }
+
   normalizeSponsorPayload(payload = {}) {
     const duration = Number(payload.durationMs);
     const filename = payload.filename ? String(payload.filename) : '';
@@ -543,6 +568,7 @@ class OverlayScene extends Phaser.Scene {
       videoUrl,
       fit: payload.fit === 'cover' ? 'cover' : 'contain',
       muted: payload.muted !== false,
+      volume: this.normalizeMasterVolume(payload.volume, this.masterVolume),
       durationMs: Number.isFinite(duration) ? Math.max(5000, Math.min(120000, duration)) : 15000,
     };
   }
@@ -575,7 +601,7 @@ class OverlayScene extends Phaser.Scene {
     this.sponsorState = 'intro';
     this.prepareSponsorLayer();
     this.setBattlePresentation(true);
-    this.playSponsorTone('intro');
+    this.playSponsorTone('intro', payload);
 
     const dim = this.add.rectangle(w / 2, h / 2, w, h, 0x02040a, 0).setOrigin(0.5);
     const centerGlow = this.add.circle(w / 2, h * 0.5, h * 0.16, 0xf6c95b, 0.04)
@@ -736,7 +762,7 @@ class OverlayScene extends Phaser.Scene {
     const h = this.scale.height;
     this.sponsorState = 'outro';
     this.clearSponsorTimer();
-    this.playSponsorTone('outro');
+    this.playSponsorTone('outro', payload);
 
     const outro = this.add.text(w / 2, h / 2, forced ? 'RETURNING TO BATTLE' : 'BACK TO THE BATTLE', {
       font: '900 64px Exo 2',
@@ -770,7 +796,9 @@ class OverlayScene extends Phaser.Scene {
       video.setAlpha(0);
       video.setDisplaySize(width, height);
       video.loadURL(payload.videoUrl, payload.muted, 'anonymous');
+      this.applySponsorVideoVolume(video, payload);
       video.once('play', () => {
+        this.applySponsorVideoVolume(video, payload);
         this.tweens.add({ targets: video, alpha: payload.fit === 'contain' ? 1 : 0.92, duration: 450, ease: 'Quad.easeOut' });
         this.fitSponsorVideo(video, payload.fit, width, height);
         hooks.onFirstFrame?.();
@@ -854,7 +882,7 @@ class OverlayScene extends Phaser.Scene {
     });
   }
 
-  playSponsorTone(kind) {
+  playSponsorTone(kind, payload = {}) {
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (!AudioContext) return;
@@ -862,6 +890,7 @@ class OverlayScene extends Phaser.Scene {
       const ctx = this.sponsorAudioContext;
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
       const now = ctx.currentTime;
+      const masterVolume = this.normalizeMasterVolume(payload.volume, this.masterVolume);
 
       const playTone = (start, duration, from, to, type, volume) => {
         const osc = ctx.createOscillator();
@@ -870,7 +899,7 @@ class OverlayScene extends Phaser.Scene {
         osc.frequency.setValueAtTime(from, now + start);
         osc.frequency.exponentialRampToValueAtTime(to, now + start + duration);
         gain.gain.setValueAtTime(0.0001, now + start);
-        gain.gain.exponentialRampToValueAtTime(volume, now + start + duration * 0.24);
+        gain.gain.exponentialRampToValueAtTime(volume * masterVolume, now + start + duration * 0.24);
         gain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
         osc.connect(gain);
         gain.connect(ctx.destination);

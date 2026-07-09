@@ -356,6 +356,7 @@ async function assertOverlayAudioStatus(page, testInfo, label) {
   await attachJson(testInfo, `${label}-audio`, result);
   expect(result.hasModule).toBe(true);
   expect(result.status?.module).toBe('overlay-audio');
+  expect(result.status?.masterVolume).toBe(0.5);
   expect(result.status?.assignedEvents).toEqual(expect.arrayContaining(['attack', 'gift', 'kill', 'respawn', 'heal', 'follow']));
   expect(result.status?.cachedCount).toBe(result.status?.filenames?.length);
   expect(result.status?.errorCount).toBe(0);

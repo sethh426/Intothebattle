@@ -16,6 +16,30 @@ function initSocketOverlay(game) {
   const audioConfig = {};
   const audioCache = {};
   let audioUnlocked = false;
+  const DEFAULT_MASTER_VOLUME = 0.5;
+
+  function normalizeMasterVolume(value, fallback = DEFAULT_MASTER_VOLUME) {
+    const numeric = Number(value);
+    const fallbackNumeric = Number(fallback);
+    const safeFallback = Number.isFinite(fallbackNumeric) ? fallbackNumeric : DEFAULT_MASTER_VOLUME;
+    const next = Number.isFinite(numeric) ? numeric : safeFallback;
+    return Math.max(0, Math.min(1, Math.round(next * 100) / 100));
+  }
+
+  function currentMasterVolume() {
+    return normalizeMasterVolume(audioConfig.masterVolume);
+  }
+
+  function applyMasterVolumeToAudio(audio) {
+    if (!audio) return;
+    audio.volume = currentMasterVolume();
+  }
+
+  function applyMasterVolumeToAudioCache() {
+    Object.values(audioCache).forEach(audio => {
+      try { applyMasterVolumeToAudio(audio); } catch (_err) {}
+    });
+  }
 
   function withOverlayAuth(path, extraParams = {}) {
     const url = new URL(path, window.location.origin);
@@ -109,8 +133,10 @@ function initSocketOverlay(game) {
       const audio = new Audio(withOverlayAuth(`/audio/${encodeURIComponent(filename)}`));
       audio.preload = 'auto';
       audio.playsInline = true;
+      applyMasterVolumeToAudio(audio);
       audioCache[filename] = audio;
     }
+    applyMasterVolumeToAudio(audioCache[filename]);
     return audioCache[filename];
   }
 
@@ -137,6 +163,7 @@ function initSocketOverlay(game) {
     try {
       const audio = getAudio(filename);
       if (!audio) return;
+      applyMasterVolumeToAudio(audio);
       audio.currentTime = 0;
       audio.play().then(() => { audioUnlocked = true; }).catch(() => {
         if (options.force || audioUnlocked) {
@@ -153,6 +180,7 @@ function initSocketOverlay(game) {
     if (scenePayload.filename && !scenePayload.videoUrl) {
       scenePayload.videoUrl = withOverlayAuth(`/sponsor/${encodeURIComponent(scenePayload.filename)}`, { v: scenePayload._ts || Date.now() });
     }
+    scenePayload.volume = normalizeMasterVolume(scenePayload.volume, currentMasterVolume());
     return scenePayload;
   }
 
@@ -173,6 +201,7 @@ function initSocketOverlay(game) {
   }
 
   if (scene.setSponsorPlaybackReporter) scene.setSponsorPlaybackReporter(reportSponsorPlayback);
+  if (scene.setMasterVolume) scene.setMasterVolume(DEFAULT_MASTER_VOLUME);
 
   const SCENE_EVENT_LANES = Object.freeze({
     exclusive: { cooldownMs: 110, ttlMs: 120000, maxQueued: 8, sponsorPolicy: 'allow' },
@@ -467,7 +496,11 @@ function initSocketOverlay(game) {
     Object.keys(audioConfig).forEach(key => delete audioConfig[key]);
     if (config && typeof config === 'object') {
       Object.assign(audioConfig, config);
+      audioConfig.masterVolume = currentMasterVolume();
+      if (scene.setMasterVolume) scene.setMasterVolume(audioConfig.masterVolume);
+      applyMasterVolumeToAudioCache();
       Object.values(audioConfig).forEach(filename => {
+        if (typeof filename !== 'string' || !filename) return;
         const audio = getAudio(filename);
         if (audio) {
           try { audio.load(); } catch (_err) {}
@@ -753,6 +786,7 @@ function initSocketOverlay(game) {
       subtitle: overlayParams.get('sponsor_subtitle') || 'Stay locked in. The next fight is loading.',
       durationMs: Number(overlayParams.get('sponsor_duration')) || 15000,
       muted: overlayParams.get('sponsor_muted') !== '0',
+      volume: normalizeMasterVolume(overlayParams.get('sponsor_volume'), currentMasterVolume()),
       fit: overlayParams.get('sponsor_fit') || 'contain',
       statsMode: overlayParams.get('sponsor_stats') || 'endcap',
       timingProfile: overlayParams.get('sponsor_timing') || 'spotlight',

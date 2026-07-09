@@ -259,6 +259,10 @@
     .background-preview span { color:var(--muted); font-size:13px; font-weight:800; text-align:center; padding:20px; }
     .audio-layout,.sponsor-layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
     #audioManagerCard .audio-layout { grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; }
+    #audioManagerCard .audio-volume-tool { grid-column:1 / -1; }
+    .volume-control-row { display:grid; grid-template-columns:minmax(0,1fr) 64px; gap:14px; align-items:center; }
+    .volume-control-row input[type=range] { width:100%; accent-color:var(--gold2); }
+    .volume-value { min-height:38px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.11); border-radius:12px; background:rgba(255,255,255,.055); color:#fff8e6; font-weight:950; }
     .sponsor-layout { grid-template-columns:minmax(360px,.9fr) minmax(520px,1.1fr); align-items:start; }
     .sponsor-creative,.sponsor-controls { min-width:0; display:grid; gap:14px; }
     .sponsor-fields,.sponsor-playback,.sponsor-library-panel,.sponsor-selected {
@@ -958,6 +962,16 @@
     <article class="card col-12" id="audioManagerCard">
       <div class="card-head"><div><div class="card-title">Audio manager</div><h3>Sound library</h3><p class="muted">Upload sounds and assign them to live overlay events.</p></div><span class="card-badge" id="audioCountBadge">0 Sounds Loaded</span></div>
       <div class="audio-layout">
+        <details class="tool subtool audio-volume-tool" open>
+          <summary>Master volume</summary>
+          <div class="tool-body">
+            <label class="input-label" for="audioVolumeInput">Overlay volume</label>
+            <div class="volume-control-row">
+              <input id="audioVolumeInput" type="range" min="0" max="100" step="5" value="50" oninput="updateAudioVolumeLabel()" onchange="saveAudioVolume()">
+              <span class="volume-value" id="audioVolumeLabel">50%</span>
+            </div>
+          </div>
+        </details>
         <details class="tool subtool" open>
           <summary>Upload sounds</summary>
           <div class="tool-body">
@@ -1350,6 +1364,7 @@ function renderNextAction() {
 const EVENTS = ['attack','gift','kill','respawn','heal','follow','socialBoost','engagementSurge'];
 const EVENT_LABELS = { attack:'Attack', gift:'Gift', kill:'Kill', respawn:'Respawn', heal:'Heal', follow:'Follow', socialBoost:'Share/Repost boost', engagementSurge:'Audience surge' };
 const EVENT_CLASSES = { attack:'event-attack', gift:'event-gift', kill:'event-kill', respawn:'event-respawn', heal:'event-heal', follow:'event-follow', socialBoost:'event-social', engagementSurge:'event-surge' };
+const DEFAULT_AUDIO_MASTER_VOLUME = 0.5;
 const SPONSOR_CLIENT_MAX_BYTES = 100 * 1024 * 1024;
 const SPONSOR_CLIENT_MAX_SECONDS = 120;
 const SPONSOR_TIMING_PRESETS = {
@@ -2033,6 +2048,52 @@ async function apiCall(endpoint, method = 'POST', body = null) {
   return json;
 }
 
+function normalizeAudioVolume(value, fallback = DEFAULT_AUDIO_MASTER_VOLUME) {
+  const numeric = Number(value);
+  const fallbackNumeric = Number(fallback);
+  const safeFallback = Number.isFinite(fallbackNumeric) ? fallbackNumeric : DEFAULT_AUDIO_MASTER_VOLUME;
+  const next = Number.isFinite(numeric) ? numeric : safeFallback;
+  return Math.max(0, Math.min(1, Math.round(next * 100) / 100));
+}
+
+function mergeAudioConfig(config = {}) {
+  if (config && typeof config === 'object') audioConfigData = { ...audioConfigData, ...config };
+  audioConfigData.masterVolume = normalizeAudioVolume(audioConfigData.masterVolume);
+  return audioConfigData;
+}
+
+function currentMasterVolume() {
+  return normalizeAudioVolume(audioConfigData.masterVolume);
+}
+
+function renderAudioVolumeControl() {
+  const input = document.getElementById('audioVolumeInput');
+  const label = document.getElementById('audioVolumeLabel');
+  const percent = Math.round(currentMasterVolume() * 100);
+  if (input) input.value = String(percent);
+  if (label) label.textContent = `${percent}%`;
+}
+
+function updateAudioVolumeLabel() {
+  const input = document.getElementById('audioVolumeInput');
+  const label = document.getElementById('audioVolumeLabel');
+  const percent = Math.round(normalizeAudioVolume(Number(input?.value) / 100) * 100);
+  if (label) label.textContent = `${percent}%`;
+}
+
+async function saveAudioVolume() {
+  const input = document.getElementById('audioVolumeInput');
+  const volume = normalizeAudioVolume(Number(input?.value) / 100);
+  audioConfigData.masterVolume = volume;
+  updateAudioVolumeLabel();
+  const result = await apiCall('/api/audio/volume', 'POST', { volume });
+  if (result.success) {
+    audioConfigData.masterVolume = normalizeAudioVolume(result.volume);
+    renderAudioVolumeControl();
+    toast(`Volume set to ${Math.round(audioConfigData.masterVolume * 100)}%`);
+  }
+}
+
 socket.on('overlayCount', data => setOverlayCount(data?.count ?? data));
 socket.on('gameState', state => {
   const players = buildRosterFromGameState(state || {});
@@ -2056,7 +2117,7 @@ socket.on('streamEvent', event => {
   renderStreamEvents();
 });
 socket.on('devModeChanged', data => { dashboardState.devTestMode = !!data.enabled; const value = data.enabled ? 'ON' : 'OFF'; text('dev-mode-badge', value); updateAdvancedToolState(); updateReadinessChecklist(); });
-socket.on('audioConfig', cfg => { if (cfg) audioConfigData = cfg; renderAssignTable(); });
+socket.on('audioConfig', cfg => { mergeAudioConfig(cfg); renderAudioVolumeControl(); renderAssignTable(); });
 socket.on('sponsorBreakStatus', data => updateSponsorBreakStatus(data || {}));
 socket.on('sessionStatus', data => renderSessionStatus(data || {}));
 socket.on('setupMode', data => setSetupRehearsalStatus(data || {}));
@@ -2692,6 +2753,7 @@ function currentSponsorPayload(filename = selectedSponsorFilename) {
     subtitle: sponsorInputValue('sponsorSubtitleInput', selected?.subtitle || 'Stay locked in. The next fight is loading.'),
     durationMs: sponsorDurationMs(filename),
     muted: document.getElementById('sponsorMutedInput')?.value !== 'false',
+    volume: currentMasterVolume(),
     fit: document.getElementById('sponsorFitInput')?.value || 'contain',
     statsMode: sponsorStatsMode(),
     timingProfile,
@@ -2943,6 +3005,7 @@ function openSponsorPreview() {
   overlayUrl.searchParams.set('sponsor_subtitle',payload.subtitle);
   overlayUrl.searchParams.set('sponsor_duration',payload.durationMs);
   overlayUrl.searchParams.set('sponsor_muted',payload.muted ? '1':'0');
+  overlayUrl.searchParams.set('sponsor_volume',payload.volume);
   overlayUrl.searchParams.set('sponsor_fit',payload.fit);
   overlayUrl.searchParams.set('sponsor_stats',payload.statsMode);
   overlayUrl.searchParams.set('sponsor_timing',payload.timingProfile);
@@ -2958,7 +3021,7 @@ function loadSponsors() {
 }
 
 let previewAudio = null;
-function playPreview(filename,label){ if(previewAudio){ previewAudio.pause(); previewAudio=null; } const a=new Audio('/audio/'+filename); a.currentTime=0; a.play().catch(()=>{}); previewAudio=a; a.onended=()=>{ previewAudio=null; }; toast('Playing: '+label); }
+function playPreview(filename,label){ if(previewAudio){ previewAudio.pause(); previewAudio=null; } const a=new Audio('/audio/'+filename); a.volume=currentMasterVolume(); a.currentTime=0; a.play().catch(()=>{}); previewAudio=a; a.onended=()=>{ previewAudio=null; }; toast('Playing: '+label); }
 function renderAudioLibrary() {
   const container = document.getElementById('audioLibrary');
   if (!container) return;
@@ -3011,7 +3074,8 @@ audioFileInput.addEventListener('change',()=>{ if(audioFileInput.files[0]) uploa
 dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', e=>{ e.preventDefault(); dropZone.classList.remove('dragover'); const file=e.dataTransfer.files[0]; if(file) uploadAudioFile(file); });
-fetch('/api/audio').then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData=d.library || []; audioConfigData=d.config || {}; renderAudioLibrary(); renderAssignTable(); }}).catch(()=>{});
+renderAudioVolumeControl();
+fetch('/api/audio').then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData=d.library || []; mergeAudioConfig(d.config || {}); renderAudioLibrary(); renderAudioVolumeControl(); renderAssignTable(); }}).catch(()=>{});
 initDashboardWorkflows();
 initBetaFeatureVisibility();
 initMobileOverlayControls();

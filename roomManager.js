@@ -14,7 +14,20 @@ export const DEFAULT_OVERLAY_SETTINGS = {
   backgroundFit: 'contain',
 };
 
+export const DEFAULT_AUDIO_MASTER_VOLUME = 0.5;
+export const AUDIO_EVENT_KEYS = Object.freeze([
+  'attack',
+  'gift',
+  'kill',
+  'respawn',
+  'heal',
+  'follow',
+  'socialBoost',
+  'engagementSurge',
+]);
+
 export const DEFAULT_AUDIO_CONFIG = {
+  masterVolume:    DEFAULT_AUDIO_MASTER_VOLUME,
   attack:          null,
   gift:            null,
   kill:            null,
@@ -24,6 +37,26 @@ export const DEFAULT_AUDIO_CONFIG = {
   socialBoost:     null,
   engagementSurge: null,
 };
+
+export function normalizeAudioVolume(value, fallback = DEFAULT_AUDIO_MASTER_VOLUME) {
+  const numeric = Number(value);
+  const fallbackNumeric = Number(fallback);
+  const safeFallback = Number.isFinite(fallbackNumeric) ? fallbackNumeric : DEFAULT_AUDIO_MASTER_VOLUME;
+  const next = Number.isFinite(numeric) ? numeric : safeFallback;
+  return Math.max(0, Math.min(1, Math.round(next * 100) / 100));
+}
+
+export function normalizeAudioConfig(config = {}) {
+  const incoming = config && typeof config === 'object' ? config : {};
+  const normalized = { ...DEFAULT_AUDIO_CONFIG };
+  for (const event of AUDIO_EVENT_KEYS) {
+    if (Object.prototype.hasOwnProperty.call(incoming, event)) {
+      normalized[event] = incoming[event] || null;
+    }
+  }
+  normalized.masterVolume = normalizeAudioVolume(incoming.masterVolume, DEFAULT_AUDIO_MASTER_VOLUME);
+  return normalized;
+}
 
 const rooms = new Map();
 
@@ -81,8 +114,8 @@ export function getOrCreateRoom(roomId) {
       ? { ...DEFAULT_OVERLAY_SETTINGS, ...JSON.parse(saved.overlay_settings) }
       : { ...DEFAULT_OVERLAY_SETTINGS },
     audioConfig: saved?.audio_config
-      ? { ...DEFAULT_AUDIO_CONFIG, ...JSON.parse(saved.audio_config) }
-      : { ...DEFAULT_AUDIO_CONFIG },
+      ? normalizeAudioConfig(JSON.parse(saved.audio_config))
+      : normalizeAudioConfig(),
     audioLibrary: saved?.audio_library
       ? JSON.parse(saved.audio_library)
       : [],

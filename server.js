@@ -84,6 +84,9 @@ import {
   saveRoomSettings,
   getRoomPaths,
   DEFAULT_AUDIO_CONFIG,
+  AUDIO_EVENT_KEYS,
+  normalizeAudioConfig,
+  normalizeAudioVolume,
   DEFAULT_OVERLAY_SETTINGS,
 } from './roomManager.js';
 
@@ -3927,12 +3930,14 @@ function startSponsorBreak(room, payload = {}, options = {}) {
   if (!room?.roomId) return null;
   const source = payload.source || options.source || 'creator';
   const breakId = payload.breakId || createSponsorBreakId(source);
+  const volume = normalizeAudioVolume(payload.volume ?? room.audioConfig?.masterVolume, room.audioConfig?.masterVolume);
   const scenePayload = {
     ...payload,
     action: 'show',
     source,
     breakId,
     statsMode: payload.statsMode || 'endcap',
+    volume,
     _ts: Date.now(),
   };
 
@@ -4675,14 +4680,14 @@ function loadRoomAudioConfig(room) {
 
     if (!room.audioLibrary.length && fs.existsSync(audioConfigFile)) {
       const saved = JSON.parse(fs.readFileSync(audioConfigFile, 'utf8'));
-      room.audioConfig = { ...DEFAULT_AUDIO_CONFIG, ...(saved.config || {}) };
+      room.audioConfig = normalizeAudioConfig(saved.config || {});
       room.audioLibrary = Array.isArray(saved.library) ? saved.library : [];
       room.overlaySettings = { ...DEFAULT_OVERLAY_SETTINGS, ...(saved.settings || {}) };
       saveRoomSettings(room.roomId);
       console.log(`🔊 Migrated legacy room audio settings into DB for room ${room.roomId}`);
     } else if (!room.audioLibrary.length && repoConfig) {
       const saved = JSON.parse(fs.readFileSync(repoConfig, 'utf8'));
-      room.audioConfig = { ...DEFAULT_AUDIO_CONFIG, ...(saved.config || {}) };
+      room.audioConfig = normalizeAudioConfig(saved.config || {});
       room.audioLibrary = Array.isArray(saved.library) ? saved.library : [];
       room.overlaySettings = { ...DEFAULT_OVERLAY_SETTINGS, ...(saved.settings || {}) };
       saveRoomSettings(room.roomId);
@@ -4730,10 +4735,10 @@ function loadRoomAudioConfig(room) {
 
     room.audioLibrary.sort((a, b) => a.originalName.localeCompare(b.originalName, undefined, { numeric: true, sensitivity: 'base' }));
 
-    const allUnassigned = Object.values(room.audioConfig).every(val => !val);
+    room.audioConfig = normalizeAudioConfig(room.audioConfig);
+    const allUnassigned = AUDIO_EVENT_KEYS.every(event => !room.audioConfig[event]);
     if (allUnassigned && room.audioLibrary.length) {
-      const eventOrder = ['attack', 'gift', 'kill', 'respawn', 'heal', 'follow', 'socialBoost', 'engagementSurge'];
-      eventOrder.forEach((event, idx) => {
+      AUDIO_EVENT_KEYS.forEach((event, idx) => {
         if (idx < room.audioLibrary.length) room.audioConfig[event] = room.audioLibrary[idx].filename;
       });
     }
@@ -4753,6 +4758,7 @@ function loadRoomAudioConfig(room) {
 
 function saveRoomAudioConfig(room) {
   try {
+    room.audioConfig = normalizeAudioConfig(room.audioConfig);
     saveRoomSettings(room.roomId);
   } catch (err) {
     console.error('Error saving audio config for room', room.roomId, err);
@@ -8676,6 +8682,7 @@ app.get('/background/:filename', (req, res) => {
 });
 
 app.get('/api/audio', requireRoom, (req, res) => {
+  req.room.audioConfig = normalizeAudioConfig(req.room.audioConfig);
   res.json({ success: true, library: req.room.audioLibrary, config: req.room.audioConfig, settings: req.room.overlaySettings });
 });
 
@@ -8701,10 +8708,11 @@ app.post('/api/audio/upload', requireRoom, (req, res) => {
 
 app.post('/api/audio/assign', requireRoom, (req, res) => {
   const { event, filename } = req.body;
-  const validEvents = Object.keys(DEFAULT_AUDIO_CONFIG);
+  const validEvents = AUDIO_EVENT_KEYS;
   if (!validEvents.includes(event)) {
     return res.status(400).json({ success: false, error: `Invalid event. Must be one of: ${validEvents.join(', ')}` });
   }
+  req.room.audioConfig = normalizeAudioConfig(req.room.audioConfig);
   if (filename === null || filename === '') {
     req.room.audioConfig[event] = null;
     saveRoomAudioConfig(req.room);
@@ -8721,6 +8729,15 @@ app.post('/api/audio/assign', requireRoom, (req, res) => {
   res.json({ success: true, event, filename });
 });
 
+app.post('/api/audio/volume', requireRoom, (req, res) => {
+  req.room.audioConfig = normalizeAudioConfig(req.room.audioConfig);
+  const volume = normalizeAudioVolume(req.body?.volume, req.room.audioConfig.masterVolume);
+  req.room.audioConfig.masterVolume = volume;
+  saveRoomAudioConfig(req.room);
+  emitRoomEvent(req.room, 'audioConfig', req.room.audioConfig);
+  res.json({ success: true, volume });
+});
+
 app.delete('/api/audio/delete/:filename', requireRoom, (req, res) => {
   const { filename } = req.params;
   const { audioDir } = getRoomPaths(req.room.roomId);
@@ -8730,7 +8747,8 @@ app.delete('/api/audio/delete/:filename', requireRoom, (req, res) => {
   req.room.audioLibrary = req.room.audioLibrary.filter(f => f.filename !== filename);
   if (req.room.audioLibrary.length === before) return res.status(404).json({ success: false, error: 'File not found in library.' });
   let changed = false;
-  for (const ev of Object.keys(req.room.audioConfig)) {
+  req.room.audioConfig = normalizeAudioConfig(req.room.audioConfig);
+  for (const ev of AUDIO_EVENT_KEYS) {
     if (req.room.audioConfig[ev] === filename) { req.room.audioConfig[ev] = null; changed = true; }
   }
   try { if (fs.existsSync(filepath)) fs.unlinkSync(filepath); } catch (_e) {}

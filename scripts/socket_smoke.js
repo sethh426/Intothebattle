@@ -279,7 +279,8 @@ try {
     overlay.emit('register', { type: 'overlay' });
 
     await overlayGameStatePromise;
-    await overlayAudioConfigPromise;
+    const overlayAudioConfig = await overlayAudioConfigPromise;
+    assert(overlayAudioConfig.masterVolume === 0.5, `signed overlay audio config should default masterVolume to 0.5, got ${overlayAudioConfig.masterVolume}`);
     await overlaySettingsPromise;
     await overlayLaserColorPromise;
 
@@ -308,6 +309,31 @@ try {
   assert(dashboardStatus.setupOverlayUrl?.includes('mode=setup'), 'setup overlay URL should carry mode=setup');
   assert(dashboardStatus.streamMode && typeof dashboardStatus.streamMode.mode === 'string', 'status should expose stream mode');
   assert(Array.isArray(dashboardStatus.recentPlayers), 'status should expose recentPlayers');
+
+  const audioConfigRes = await request('/api/audio', { headers: authedHeaders });
+  assert(audioConfigRes.status === 200, `audio config should return 200, got ${audioConfigRes.status}`);
+  const audioConfigBody = await audioConfigRes.json();
+  assert(audioConfigBody.config?.masterVolume === 0.5, `audio config should default masterVolume to 0.5, got ${audioConfigBody.config?.masterVolume}`);
+
+  const invalidVolumeAssignRes = await request('/api/audio/assign', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ event: 'masterVolume', filename: null }),
+  });
+  assert(invalidVolumeAssignRes.status === 400, `masterVolume should not be assignable as an event, got ${invalidVolumeAssignRes.status}`);
+
+  const overlayVolumePromise = waitForEvent(primaryOverlay, 'audioConfig', payload => payload?.masterVolume === 0.35, 10000);
+  const dashboardVolumePromise = waitForEvent(dashboard, 'audioConfig', payload => payload?.masterVolume === 0.35, 10000);
+  const volumeRes = await request('/api/audio/volume', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ volume: 0.35 }),
+  });
+  assert(volumeRes.status === 200, `audio volume update should return 200, got ${volumeRes.status}`);
+  const volumeBody = await volumeRes.json();
+  assert(volumeBody.success === true && volumeBody.volume === 0.35, `audio volume update should persist 0.35, got ${JSON.stringify(volumeBody)}`);
+  await overlayVolumePromise;
+  await dashboardVolumePromise;
   assert(Array.isArray(dashboardStatus.recentEvents), 'status should expose recentEvents');
 
   const sessionStartedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.active === true && payload.sessionId, 10000);
@@ -427,8 +453,10 @@ try {
   assert(sponsorPlayRes.status === 200, `sponsor play should return 200, got ${sponsorPlayRes.status}`);
   const sponsorPlay = await sponsorPlayRes.json();
   assert(sponsorPlay.success === true && sponsorPlay.breakId, 'sponsor play should return a break id');
+  assert(sponsorPlay.scene?.volume === 0.35, `sponsor scene should inherit master volume 0.35, got ${sponsorPlay.scene?.volume}`);
   const prepared = await preparePromise;
   assert(prepared.breakId === sponsorPlay.breakId, 'overlay should receive sponsor prepare before playback starts');
+  assert(prepared.volume === 0.35, `sponsor prepare should broadcast master volume 0.35, got ${prepared.volume}`);
   assert(prepared._epoch >= 1, 'sponsor prepare should carry a runtime epoch');
 
   const decodedStatusPromise = waitForEvent(dashboard, 'sponsorBreakStatus', payload => payload.status === 'decoded' && payload.breakId === sponsorPlay.breakId, 10000);
