@@ -6758,6 +6758,31 @@ app.use((req, res, next) => {
   next();
 });
 
+function safeAuthRedirectPath(value, fallback = '/dashboard') {
+  const text = String(value || '').trim();
+  if (!text || !text.startsWith('/') || text.startsWith('//') || text.includes('\\')) return fallback;
+  return text.split('#')[0].slice(0, 300) || fallback;
+}
+
+app.post('/auth/user/login', (req, res, next) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  if (!email) return next();
+  try {
+    const user = db.prepare('SELECT id, password_hash FROM users WHERE email = ?').get(email);
+    if (!user || user.password_hash) return next();
+    const redirectPath = safeAuthRedirectPath(req.body?.next, '/dashboard');
+    return res.json({
+      success: true,
+      message: 'Continue with Google to log in.',
+      redirectUrl: `/auth/google?next=${encodeURIComponent(redirectPath)}`,
+      authProvider: 'google',
+    });
+  } catch (err) {
+    logger.warn({ err: err?.message || err, email }, 'Google-only login preflight failed');
+    return next();
+  }
+});
+
 app.use('/', authRoutes);
 app.use('/admin', adminRoutes);
 app.use('/', paypalRoutes);
