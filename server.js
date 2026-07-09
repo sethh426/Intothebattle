@@ -583,6 +583,14 @@ const TIKTOK_AUTO_RECONNECT = process.env.TIKTOK_AUTO_RECONNECT == null
   : process.env.TIKTOK_AUTO_RECONNECT === 'true';
 const TIKTOK_MAX_RECONNECT_ATTEMPTS = Math.max(0, Number(process.env.TIKTOK_MAX_RECONNECT_ATTEMPTS || 3));
 const TIKTOK_HEARTBEAT_MS = Math.max(5000, Number(process.env.TIKTOK_HEARTBEAT_MS || 10000));
+const TIKTOK_LIVE_REPAIR_ENABLED = process.env.TIKTOK_LIVE_REPAIR_ENABLED == null
+  ? true
+  : process.env.TIKTOK_LIVE_REPAIR_ENABLED === 'true';
+const TIKTOK_LIVE_REPAIR_INTERVAL_MS = Math.max(5000, Number(process.env.TIKTOK_LIVE_REPAIR_INTERVAL_MS || 15000));
+const TIKTOK_CONNECT_STALE_MS = Math.max(15000, Number(process.env.TIKTOK_CONNECT_STALE_MS || 60000));
+const TIKTOK_CONNECTED_NO_EVENT_STALE_MS = Math.max(30000, Number(process.env.TIKTOK_CONNECTED_NO_EVENT_STALE_MS || 90000));
+const TIKTOK_REPAIR_COOLDOWN_MS = Math.max(30000, Number(process.env.TIKTOK_REPAIR_COOLDOWN_MS || 120000));
+const TIKTOK_PLAYER_EVENT_TYPES = new Set(['member', 'chat', 'gift', 'like', 'social', 'follow']);
 
 const CFG = {
   BASE_HP:                        300,
@@ -3711,6 +3719,14 @@ function clearLikeRateTrackerForRoom(roomId) {
   }
 }
 
+function isTikTokClientConnected(room) {
+  const tiktokClient = room?.tiktokClient;
+  if (!tiktokClient) return false;
+  if (typeof tiktokClient.connected === 'boolean') return tiktokClient.connected;
+  if (typeof tiktokClient.isConnected === 'boolean') return tiktokClient.isConnected;
+  return room?.tiktokConnection?.status === 'connected';
+}
+
 function buildTikTokConnectionStatus(room) {
   const connection = room?.tiktokConnection || {};
   const status = connection.status || 'disconnected';
@@ -3719,14 +3735,19 @@ function buildTikTokConnectionStatus(room) {
     sessionId: connection.sessionId || null,
     username: connection.username || room?.streamerUsername || '',
     status,
-    connected: Boolean(status === 'connected' && room?.tiktokClient?.connected),
+    connected: Boolean(status === 'connected' && isTikTokClientConnected(room)),
     tiktokRoomId: connection.tiktokRoomId || null,
     startedAt: connection.startedAt || null,
     connectedAt: connection.connectedAt || null,
     disconnectedAt: connection.disconnectedAt || null,
     lastEventAt: connection.lastEventAt || null,
     lastEventType: connection.lastEventType || '',
+    lastPlayerEventAt: room?.lastTikTokPlayerEventAt || null,
     eventCount: Number(connection.eventCount) || 0,
+    playerEventCount: Number(room?.tiktokPlayerEventCount) || 0,
+    repairCount: Number(room?.tiktokRepairCount) || 0,
+    lastRepairAt: room?.lastTikTokRepairAt || null,
+    lastRepairReason: room?.lastTikTokRepairReason || '',
     staleEventsDropped: Number(room?.staleTikTokEventsDropped) || 0,
     reason: connection.reason || '',
     error: connection.error || '',
@@ -3880,7 +3901,11 @@ function markTikTokEventAccepted(room, eventType) {
   room.tiktokConnection.lastEventAt = now;
   room.tiktokConnection.lastEventType = eventType;
   room.tiktokConnection.eventCount = (Number(room.tiktokConnection.eventCount) || 0) + 1;
-  room.lastRealEventAt = now;
+  if (TIKTOK_PLAYER_EVENT_TYPES.has(String(eventType || ''))) {
+    room.lastRealEventAt = now;
+    room.lastTikTokPlayerEventAt = now;
+    room.tiktokPlayerEventCount = (Number(room.tiktokPlayerEventCount) || 0) + 1;
+  }
   room.lastStreamEventAt = now;
   room.lastStreamEventType = eventType;
   recordRecentStreamEvent(room, eventType, {
@@ -9524,8 +9549,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
   });
 
   onTikTok('follow', (e) => {
-    const id   = e.user?.uniqueId;
-    const nick = e.user?.nickname || id;
+    const { id, nickname: nick } = resolveTikTokUser(e);
     if (!id) return;
     console.log(`❤️  @${nick} followed!`);
     applyEngagementReward(room, id, nick, 'follow', e);
@@ -9533,7 +9557,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
 
   onTikTok('error', (err) => {
     emitTikTokConnectionStatus(room, {
-      status: room.tiktokClient?.connected ? 'connected' : 'error',
+      status: isTikTokClientConnected(room) ? 'connected' : 'error',
       error: err?.message || String(err || 'TikTok connection error'),
     });
     console.error('⚠️  TikTok error:', err?.message || err);
@@ -9574,9 +9598,10 @@ function connectToStreamer(username, room = getDefaultRoom(), options = {}) {
   if (!room) throw new Error('Cannot connect TikTok stream without a room');
   const normalizedUsername = normalizeTikTokUsername(username);
   if (!normalizedUsername) throw new Error('Enter a valid TikTok username.');
-  safeDisconnectClient(room, 'new_stream_requested');
+  const disconnectReason = options.repair ? 'auto_repair_reconnect' : 'new_stream_requested';
+  safeDisconnectClient(room, disconnectReason);
   if (options.resetLiveRuntime !== false) {
-    resetRoomLiveRuntime(room, { reason: 'new_stream_requested', clearPlayers: true });
+    resetRoomLiveRuntime(room, { reason: disconnectReason, clearPlayers: true });
   }
   if (room.roomId === DEFAULT_ROOM_ID) currentStreamer = normalizedUsername;
   room.streamerUsername = normalizedUsername;
@@ -9607,6 +9632,91 @@ function connectToStreamer(username, room = getDefaultRoom(), options = {}) {
     if (client === tiktokClient) client = null;
   });
   return buildTikTokConnectionStatus(room);
+}
+
+function tikTokRepairDecision(room, now = Date.now()) {
+  if (!TIKTOK_LIVE_REPAIR_ENABLED || !room?.roomId || !room.tiktokClient || !room.tiktokConnection) return null;
+  if (room.tiktokRepairInFlight) return null;
+
+  const status = String(room.tiktokConnection.status || 'disconnected');
+  if (!['connecting', 'reconnecting', 'connected'].includes(status)) return null;
+
+  const username = normalizeTikTokUsername(room.tiktokConnection.username || room.streamerUsername || '');
+  if (!username) return null;
+
+  const lastRepairAt = Number(room.lastTikTokRepairAt) || 0;
+  if (lastRepairAt && now - lastRepairAt < TIKTOK_REPAIR_COOLDOWN_MS) return null;
+
+  const statusSince = Number(room.tiktokConnection.updatedAt || room.tiktokConnection.connectedAt || room.tiktokConnection.startedAt) || now;
+  const connectedSince = Number(room.tiktokConnection.connectedAt || room.tiktokConnection.startedAt || room.tiktokConnection.updatedAt) || now;
+  const hasPlayerEvents = Number(room.tiktokPlayerEventCount || 0) > 0 || Boolean(room.lastTikTokPlayerEventAt);
+  const overlayConnected = Number(room.overlayCount || 0) > 0;
+
+  if ((status === 'connecting' || status === 'reconnecting') && now - statusSince >= TIKTOK_CONNECT_STALE_MS) {
+    return { username, reason: `${status}_timeout`, ageMs: now - statusSince };
+  }
+
+  if (status === 'connected' && !isTikTokClientConnected(room) && now - statusSince >= TIKTOK_CONNECT_STALE_MS) {
+    return { username, reason: 'client_marked_disconnected', ageMs: now - statusSince };
+  }
+
+  if (status === 'connected' && overlayConnected && !hasPlayerEvents && now - connectedSince >= TIKTOK_CONNECTED_NO_EVENT_STALE_MS) {
+    return { username, reason: 'connected_without_player_events', ageMs: now - connectedSince };
+  }
+
+  return null;
+}
+
+function repairTikTokConnection(room, decision) {
+  if (!room?.roomId || !decision?.username) return false;
+  room.tiktokRepairInFlight = true;
+  room.lastTikTokRepairAt = Date.now();
+  room.lastTikTokRepairReason = decision.reason || 'auto_repair';
+  room.tiktokRepairCount = (Number(room.tiktokRepairCount) || 0) + 1;
+  logger.warn({
+    roomId: room.roomId,
+    username: decision.username,
+    reason: decision.reason,
+    ageMs: decision.ageMs,
+    repairCount: room.tiktokRepairCount,
+  }, 'Repairing stale TikTok LIVE event connection');
+
+  emitTikTokConnectionStatus(room, {
+    status: 'reconnecting',
+    reason: `auto_repair:${decision.reason || 'stale_connection'}`,
+    error: '',
+  });
+
+  try {
+    const status = connectToStreamer(decision.username, room, {
+      resetLiveRuntime: false,
+      repair: true,
+    });
+    const clearRepairFlag = () => { room.tiktokRepairInFlight = false; };
+    if (room.tiktokConnectPromise && typeof room.tiktokConnectPromise.finally === 'function') {
+      room.tiktokConnectPromise.finally(clearRepairFlag);
+    } else {
+      setTimeout(clearRepairFlag, TIKTOK_CONNECT_STALE_MS).unref?.();
+    }
+    return status;
+  } catch (err) {
+    room.tiktokRepairInFlight = false;
+    logger.error({ err, roomId: room.roomId, username: decision.username }, 'TikTok LIVE auto-repair failed');
+    emitTikTokConnectionStatus(room, {
+      status: 'error',
+      error: err?.message || String(err || 'TikTok repair failed'),
+      reason: 'auto_repair_failed',
+    });
+    return false;
+  }
+}
+
+function repairStaleTikTokConnections() {
+  const now = Date.now();
+  for (const room of getAllRooms().values()) {
+    const decision = tikTokRepairDecision(room, now);
+    if (decision) repairTikTokConnection(room, decision);
+  }
 }
 
 function disconnectStreamer(room = getDefaultRoom()) {
@@ -9752,6 +9862,10 @@ function tick() {
 
 const GAME_TICK_MS = Math.max(100, Number(process.env.GAME_TICK_MS || 250));
 setInterval(tick, GAME_TICK_MS);
+if (TIKTOK_LIVE_REPAIR_ENABLED) {
+  const tikTokRepairTimer = setInterval(repairStaleTikTokConnections, TIKTOK_LIVE_REPAIR_INTERVAL_MS);
+  tikTokRepairTimer.unref?.();
+}
 
 // Quiet known noisy probes.
 app.all('/wp-login.php', (_req, res) => {
