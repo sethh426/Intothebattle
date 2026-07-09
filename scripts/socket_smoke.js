@@ -598,10 +598,61 @@ try {
   const utilityComment = await utilityCommentRes.json();
   assert(utilityComment.utilityCommand?.stop === true, 'utility command should stop attack routing');
   assert(utilityComment.attackResult?.skipped === true, 'utility command should not create passive attack result');
+  assert(utilityComment.after?.test_alpha?.shieldActive === true, 'shield command should activate shield on the caster');
+  assert(
+    Number(utilityComment.after?.test_alpha?.shieldRemainingMs) > 9000 &&
+      Number(utilityComment.after?.test_alpha?.shieldRemainingMs) <= 10000,
+    `shield command should last about 10 seconds, got ${utilityComment.after?.test_alpha?.shieldRemainingMs}`
+  );
   assert(
     utilityComment.after?.test_bravo?.hp === utilityComment.before?.test_bravo?.hp,
     'utility command should not damage another player'
   );
+
+  const shieldedAttackRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ attackerId: 'test_bravo', nickname: 'Bravo', comment: '@test_alpha' }),
+  });
+  assert(shieldedAttackRes.status === 200, `shielded attack test should return 200, got ${shieldedAttackRes.status}`);
+  const shieldedAttack = await shieldedAttackRes.json();
+  assert(shieldedAttack.attackResult?.result?.damage === 0, `shielded regular attack should deal 0 damage, got ${shieldedAttack.attackResult?.result?.damage}`);
+  assert(shieldedAttack.attackResult?.result?.shielded === true, 'shielded regular attack should mark shielded');
+  assert(Number(shieldedAttack.attackResult?.result?.shieldAbsorbed) > 0, 'shielded regular attack should report absorbed damage');
+  assert(
+    shieldedAttack.after?.test_alpha?.hp === shieldedAttack.before?.test_alpha?.hp,
+    'shielded regular attack should not reduce HP'
+  );
+
+  const activeShieldRefreshRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ attackerId: 'test_alpha', nickname: 'Alpha', comment: '!shield' }),
+  });
+  assert(activeShieldRefreshRes.status === 200, `active shield refresh test should return 200, got ${activeShieldRefreshRes.status}`);
+  const activeShieldRefresh = await activeShieldRefreshRes.json();
+  assert(activeShieldRefresh.utilityCommand?.reason === 'shield_active', `active shield refresh should be rejected, got ${activeShieldRefresh.utilityCommand?.reason}`);
+
+  const giftBreakRes = await request('/api/test/gift', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ attackerId: 'test_charlie', targetId: 'test_alpha', diamonds: 25 }),
+  });
+  assert(giftBreakRes.status === 200, `gift shield break test should return 200, got ${giftBreakRes.status}`);
+  const giftBreak = await giftBreakRes.json();
+  assert(giftBreak.attacks?.[0]?.shieldBroken === true, 'gift should break an active shield');
+  assert(giftBreak.after?.test_alpha?.shieldActive === false, 'gift break should clear active shield');
+  assert(Number(giftBreak.after?.test_alpha?.shieldCooldownMs) > 40000, `gift break should start shield cooldown, got ${giftBreak.after?.test_alpha?.shieldCooldownMs}`);
+
+  const cooldownShieldRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ attackerId: 'test_alpha', nickname: 'Alpha', comment: '!shield' }),
+  });
+  assert(cooldownShieldRes.status === 200, `shield cooldown test should return 200, got ${cooldownShieldRes.status}`);
+  const cooldownShield = await cooldownShieldRes.json();
+  assert(cooldownShield.utilityCommand?.reason === 'shield_cooldown', `shield cooldown should reject new shield, got ${cooldownShield.utilityCommand?.reason}`);
+  assert(cooldownShield.after?.test_alpha?.shieldActive === false, 'shield cooldown attempt should not reactivate shield');
 
   const devModeOffRes = await request('/api/dev/test-mode', {
     method: 'POST',
@@ -613,7 +664,11 @@ try {
   const shareSocialBoostPromise = waitForEvent(
     primaryOverlay,
     'socialBoost',
-    payload => payload?.type === 'share' && payload?.fullHeal === true && payload?.selfFullHeal > 0,
+    payload => payload?.type === 'share' &&
+      payload?.fullHeal === true &&
+      payload?.selfFullHeal > 0 &&
+      Number(payload.hp) > 0 &&
+      Number(payload.hp) === Number(payload.maxHp),
     10000
   );
   const shareFullHealStatePromise = waitForEvent(
@@ -633,6 +688,10 @@ try {
   const shareOverlayTest = await shareOverlayTestRes.json();
   assert(shareOverlayTest.reward?.fullHeal === true, 'share overlay test should mark fullHeal');
   assert(shareOverlayTest.reward?.selfFullHeal > 0, 'share overlay test should heal the sharer to full');
+  assert(
+    Number(shareOverlayTest.reward?.hp) > 0 && Number(shareOverlayTest.reward?.hp) === Number(shareOverlayTest.reward?.maxHp),
+    'share overlay test should return final hp equal to maxHp'
+  );
   await shareSocialBoostPromise;
   await shareFullHealStatePromise;
 

@@ -626,6 +626,28 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.commands.is-nano .banner-command-chip strong { font-size:10.5px; line-height:1; letter-spacing:0; white-space:nowrap; overflow:visible; text-overflow:clip; }
 .banner.commands.is-nano .banner-command-chip span { display:none; }
 .banner.is-nano .banner-meter { width:3px; height:20px; }
+.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) {
+  min-height:54px; max-height:64px; padding:0 12px; gap:8px;
+  grid-template-columns:42px minmax(0,1fr) 5px;
+}
+.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-signal { width:42px; height:34px; }
+.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-code {
+  min-width:30px; padding:3px 5px; font-size:9.5px; letter-spacing:.7px;
+}
+.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-pulse { width:25px; height:25px; }
+.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-kicker {
+  font-size:9px; letter-spacing:1px;
+}
+.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-title,
+.banner.legendary[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-title {
+  font-size:20px; line-height:1.02; letter-spacing:.08px;
+}
+.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-meta {
+  font-size:8.5px; letter-spacing:.38px;
+}
+.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-meter {
+  width:5px; height:30px;
+}
 @keyframes cyberBannerIn {
   0% { opacity:0; transform:translate(-50%,0) scale(1); filter:blur(6px) brightness(1.45); box-shadow:0 10px 22px rgba(0,0,0,0.42),0 0 0 rgba(var(--banner-accent-rgb),0); }
   58% { opacity:1; transform:translate(-50%,0) scale(1); filter:blur(0) brightness(1.16); box-shadow:0 16px 42px rgba(0,0,0,0.62),0 0 48px rgba(var(--banner-accent-rgb),0.3); }
@@ -5291,18 +5313,94 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const frame = canvasRectToOverlay(stage.frame);
     const bannerZone = canvasRectToOverlay(stage.zones.banner);
     const gapX = stage.gap * scale.x;
+    const gapY = stage.gap * scale.y;
     const innerLeft = frame.x + gapX;
     const innerRight = frame.right - gapX;
     const maxLaneW = Math.max(1, innerRight - innerLeft);
     const targetRatio = isCommandBanner ? 0.88 : 0.62;
     const laneW = Math.min(maxLaneW, Math.max(bannerZone.w, frame.w * targetRatio));
-    const laneH = Math.min(
+    const desiredLaneH = Math.min(
       frame.h * 0.12,
       Math.max(bannerZone.h, frame.h * (isCommandBanner ? 0.096 : 0.105))
     );
     const centeredX = frame.x + frame.w / 2 - laneW / 2;
     const laneX = clampNumber(centeredX, innerLeft, innerRight - laneW);
-    return makeRect(laneX, bannerZone.y, laneW, laneH);
+    const staticLane = makeRect(laneX, bannerZone.y, laneW, desiredLaneH);
+    staticLane.source = 'static-zone';
+    staticLane.availableGap = null;
+    staticLane.playerBottom = null;
+    staticLane.hordeTop = null;
+    staticLane.bossTop = null;
+    staticLane.bossBottom = null;
+
+    const top = topPlayers();
+    const horde = hordePlayer();
+    if (!top.length || !horde) return staticLane;
+
+    let playerBottom = null;
+    try {
+      const bottoms = top.map((_, index) => {
+        const pos = getPlayerPosition(index, top.length);
+        return getPlayerCardDrawMetrics(pos, top.length).bottom * scale.y;
+      }).filter(value => Number.isFinite(value));
+      if (bottoms.length) playerBottom = Math.max(...bottoms);
+    } catch (_err) {}
+
+    let hordeTop = null;
+    try {
+      hordeTop = getHordeLayout().barY * scale.y;
+    } catch (_err) {}
+
+    if (!Number.isFinite(playerBottom) || !Number.isFinite(hordeTop)) return staticLane;
+
+    let laneTopLimit = playerBottom + Math.max(5, gapY * 0.38);
+    let laneBottomLimit = hordeTop - Math.max(5, gapY * 0.38);
+    const fullAvailableGap = laneBottomLimit - laneTopLimit;
+    const minReadableLaneH = Math.max(24, frame.h * (isCommandBanner ? 0.045 : 0.04));
+    if (fullAvailableGap < minReadableLaneH) {
+      staticLane.availableGap = fullAvailableGap;
+      staticLane.playerBottom = playerBottom;
+      staticLane.hordeTop = hordeTop;
+      return staticLane;
+    }
+
+    let bossTop = null;
+    let bossBottom = null;
+    if (bossWaveState?.active) {
+      try {
+        const bossLayout = getBossLayout();
+        bossTop = bossLayout.panelY * scale.y;
+        bossBottom = (bossLayout.panelY + bossLayout.panelH) * scale.y;
+      } catch (_err) {}
+    }
+
+    if (Number.isFinite(bossTop) && Number.isFinite(bossBottom)) {
+      const bossGap = Math.max(4, gapY * 0.32);
+      const segments = [
+        { top: laneTopLimit, bottom: Math.min(laneBottomLimit, bossTop - bossGap) },
+        { top: Math.max(laneTopLimit, bossBottom + bossGap), bottom: laneBottomLimit },
+      ]
+        .map(segment => ({ ...segment, height: segment.bottom - segment.top }))
+        .filter(segment => segment.height >= minReadableLaneH)
+        .sort((a, b) => b.height - a.height);
+      if (segments.length) {
+        laneTopLimit = segments[0].top;
+        laneBottomLimit = segments[0].bottom;
+      }
+    }
+
+    const availableGap = laneBottomLimit - laneTopLimit;
+    const cssReadableLaneH = isCommandBanner ? 54 : 62;
+    const laneH = Math.min(availableGap, Math.max(desiredLaneH, Math.min(cssReadableLaneH, availableGap)));
+    const laneY = laneTopLimit + Math.max(0, (availableGap - laneH) / 2);
+    const combatLane = makeRect(laneX, laneY, laneW, laneH);
+    combatLane.source = 'combat-gap';
+    combatLane.availableGap = fullAvailableGap;
+    combatLane.playerBottom = playerBottom;
+    combatLane.hordeTop = hordeTop;
+    combatLane.bossTop = bossTop;
+    combatLane.bossBottom = bossBottom;
+    return combatLane;
   }
 
   function currentBannerStatus() {
@@ -5310,6 +5408,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const nodes = Array.from(container.querySelectorAll('.banner'));
     const activeRect = activeBanner?.el ? activeBanner.el.getBoundingClientRect() : null;
     let laneRect = null;
+    let laneSource = null;
+    let lanePlayerBottom = null;
+    let laneHordeTop = null;
+    let laneBossTop = null;
+    let laneBossBottom = null;
+    let laneAvailableGap = null;
     try {
       const stage = computeOverlayLayout();
       const isCommandBanner = activeBanner?.el?.classList.contains('commands') || activeBanner?.cls === 'commands';
@@ -5321,6 +5425,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         localLane.w,
         localLane.h
       );
+      laneSource = localLane.source || 'static-zone';
+      lanePlayerBottom = Number.isFinite(localLane.playerBottom) ? parentRect.top + localLane.playerBottom : null;
+      laneHordeTop = Number.isFinite(localLane.hordeTop) ? parentRect.top + localLane.hordeTop : null;
+      laneBossTop = Number.isFinite(localLane.bossTop) ? parentRect.top + localLane.bossTop : null;
+      laneBossBottom = Number.isFinite(localLane.bossBottom) ? parentRect.top + localLane.bossBottom : null;
+      laneAvailableGap = Number.isFinite(localLane.availableGap) ? localLane.availableGap : null;
     } catch (_err) {}
     return {
       active: activeBanner ? {
@@ -5345,6 +5455,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         width: laneRect.w,
         height: laneRect.h,
       } : null,
+      laneSource,
+      playerBottom: lanePlayerBottom,
+      hordeTop: laneHordeTop,
+      bossTop: laneBossTop,
+      bossBottom: laneBossBottom,
+      availableGap: laneAvailableGap,
       queued: bannerQueue.length,
       oldestQueuedAgeMs: bannerQueue.length
         ? Math.max(...bannerQueue.map(item => Math.max(0, now - item.createdAt)))
@@ -5385,16 +5501,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const isCommandBanner = el.classList.contains('commands');
     const gapY = stage.gap * scale.y;
     const placementZone = bannerPlacementZone(stage, isCommandBanner);
+    const laneIsCombat = placementZone.source === 'combat-gap';
+    el.dataset.placement = laneIsCombat ? 'combat-gap' : 'banner-lane';
     const forceNano = stage.frame.h < 260 || stage.frame.w < 430 || placementZone.h < 36;
     const availableWidth = Math.max(1, placementZone.w);
     const largeMomentBanner = el.classList.contains('legendary') || el.classList.contains('kill') || el.classList.contains('streak');
-    const frameWidthRatio = isCommandBanner ? 0.88 : largeMomentBanner ? 0.74 : 0.68;
+    const frameWidthRatio = isCommandBanner ? 0.88 : largeMomentBanner ? 0.68 : 0.62;
     const frameMaxWidth = Math.min(availableWidth, Math.max(220, frame.w * frameWidthRatio));
-    const readableMinWidth = Math.min(frameMaxWidth, Math.max(isCommandBanner ? 440 : 300, frame.w * (isCommandBanner ? 0.58 : 0.42)));
+    const readableMinWidth = Math.min(frameMaxWidth, Math.max(isCommandBanner ? 440 : 280, frame.w * (isCommandBanner ? 0.58 : 0.36)));
     const maxWidth = Math.min(availableWidth, Math.max(readableMinWidth, frameMaxWidth));
     const preferredWidth = isCommandBanner
       ? maxWidth
-      : Math.min(maxWidth, Math.max(Math.min(readableMinWidth, maxWidth), availableWidth * 0.94));
+      : Math.min(maxWidth, Math.max(Math.min(readableMinWidth, maxWidth), availableWidth * (laneIsCombat ? 0.86 : 0.94)));
     const forceCompact = placementZone.h <= (isCommandBanner ? 58 : 72) || preferredWidth < (isCommandBanner ? 640 : 620);
     const forceMicro = placementZone.h <= (isCommandBanner ? 46 : 50) || preferredWidth < (isCommandBanner ? 500 : 460);
     el.classList.remove('is-compact', 'is-micro', 'is-nano');
@@ -5420,8 +5538,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const halfWidth = rect.width / 2;
     const centerX = clampNumber(frame.x + frame.w / 2, placementZone.x + halfWidth, placementZone.right - halfWidth);
     const maxTop = Math.max(placementZone.y, placementZone.bottom - rect.height);
-    const top = clampNumber(placementZone.y + (placementZone.h - rect.height) / 2, frame.y + gapY * 0.35, maxTop);
-    el.dataset.placement = 'banner-lane';
+    const minTop = laneIsCombat ? placementZone.y : frame.y + gapY * 0.35;
+    const top = clampNumber(placementZone.y + (placementZone.h - rect.height) / 2, minTop, maxTop);
     el.style.left = `${centerX}px`;
     el.style.top = `${top}px`;
   }
@@ -8746,6 +8864,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function playerCardVisualState(player, rank, hp, hpPct, cardAccent) {
     const hpValue = Math.max(0, Number(hp) || 0);
     const accentType = String(cardAccent?.type || '').toLowerCase();
+    const shieldUntil = Number(player?.shieldUntil) || 0;
+    const shieldRemainingMs = Math.max(0, shieldUntil - Date.now());
+    const shieldActive = shieldRemainingMs > 0;
+    const syntheticShieldProgress = shieldActive ? clamp01(1 - (shieldRemainingMs / 10000)) : 1;
     const isKO = hpValue <= 0 || player?.alive === false || accentType === 'kill';
     const healthState = isKO
       ? 'ko'
@@ -8755,7 +8877,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           ? 'damaged'
           : 'healthy';
     const accent = cardAccent?.color || semanticPlayerAccent(player, rank, healthState, rank === 1 ? THEME.gold : THEME.cyan);
-    const progress = cardAccent ? clamp01(cardAccent.progress) : 1;
+    const progress = cardAccent ? clamp01(cardAccent.progress) : syntheticShieldProgress;
     return {
       accent,
       healthState,
@@ -8763,12 +8885,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       isKO,
       isCritical: healthState === 'critical',
       isLowHpWarning: healthState === 'critical',
-      hasShield: accentType === 'shield' || accentType === 'follow',
+      hasShield: shieldActive || accentType === 'shield' || accentType === 'follow',
       hasHeal: accentType === 'heal' || accentType === 'boost' || accentType === 'respawn',
       wasHit: accentType === 'hit' || accentType === 'critical' || accentType === 'kill',
       isJoining: accentType === 'join' || accentType === 'respawn',
       commandLabel: cardCommandLabel(accentType, cardAccent?.label),
       accentType,
+      shieldRemainingMs,
+      shieldProgress: shieldActive ? syntheticShieldProgress : progress,
       progress,
       pulse: 0.5 + Math.sin(Date.now() / 240 + rank) * 0.5,
     };
@@ -8892,6 +9016,176 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return rect ? makeRect(rect.x, rect.y, rect.w, rect.h) : null;
   }
 
+  const PLAYER_CARD_SHIELD_IMAGE_SVG = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 640">
+  <defs>
+    <linearGradient id="shieldBody" x1="84" y1="34" x2="438" y2="612" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".74"/>
+      <stop offset=".16" stop-color="#8fffd2" stop-opacity=".54"/>
+      <stop offset=".54" stop-color="#55e7ff" stop-opacity=".23"/>
+      <stop offset="1" stop-color="#2235ff" stop-opacity=".4"/>
+    </linearGradient>
+    <linearGradient id="shieldEdge" x1="98" y1="26" x2="422" y2="598" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f8ffff"/>
+      <stop offset=".38" stop-color="#8fffd2"/>
+      <stop offset=".72" stop-color="#55e7ff"/>
+      <stop offset="1" stop-color="#f6c95b"/>
+    </linearGradient>
+    <radialGradient id="shieldCore" cx="50%" cy="35%" r="72%">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".9"/>
+      <stop offset=".22" stop-color="#8fffd2" stop-opacity=".42"/>
+      <stop offset=".62" stop-color="#55e7ff" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#07101f" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="aegisGlow" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.33 0 0 0 0 0.91 0 0 0 0 1 0 0 0 .78 0" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <path filter="url(#aegisGlow)" d="M256 30C344 46 409 83 450 128c-4 218-75 361-194 480C137 489 66 346 62 128c41-45 106-82 194-98Z" fill="url(#shieldBody)" stroke="url(#shieldEdge)" stroke-width="15"/>
+  <path d="M256 82c65 13 113 39 144 70-8 162-56 276-144 368-88-92-136-206-144-368 31-31 79-57 144-70Z" fill="url(#shieldCore)" stroke="#dffcff" stroke-opacity=".46" stroke-width="5"/>
+  <path d="M256 112v364M145 178c44 25 81 39 111 42 30-3 67-17 111-42M126 278c53 23 96 35 130 37 34-2 77-14 130-37M163 396c38 15 69 24 93 27 24-3 55-12 93-27" fill="none" stroke="#f8ffff" stroke-opacity=".34" stroke-width="7" stroke-linecap="round"/>
+  <path d="M82 144 132 92M430 144 380 92M106 438l56 72M406 438l-56 72" fill="none" stroke="#f6c95b" stroke-opacity=".52" stroke-width="8" stroke-linecap="round"/>
+</svg>`;
+  let cachedPlayerCardShieldImage = null;
+
+  function getPlayerCardShieldImage() {
+    if (typeof Image === 'undefined') return null;
+    if (cachedPlayerCardShieldImage) return cachedPlayerCardShieldImage;
+    const image = new Image();
+    image.decoding = 'async';
+    image.onload = () => requestAnimationFrame(draw);
+    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(PLAYER_CARD_SHIELD_IMAGE_SVG)}`;
+    cachedPlayerCardShieldImage = image;
+    return image;
+  }
+
+  function drawShieldCrestPath(c, cx, cy, width, height) {
+    const half = width / 2;
+    const top = cy - height * 0.5;
+    const bottom = cy + height * 0.5;
+    c.beginPath();
+    c.moveTo(cx, top);
+    c.bezierCurveTo(cx + half * 0.82, top + height * 0.04, cx + half * 0.96, top + height * 0.18, cx + half * 0.92, top + height * 0.33);
+    c.bezierCurveTo(cx + half * 0.84, top + height * 0.62, cx + half * 0.42, top + height * 0.84, cx, bottom);
+    c.bezierCurveTo(cx - half * 0.42, top + height * 0.84, cx - half * 0.84, top + height * 0.62, cx - half * 0.92, top + height * 0.33);
+    c.bezierCurveTo(cx - half * 0.96, top + height * 0.18, cx - half * 0.82, top + height * 0.04, cx, top);
+    c.closePath();
+  }
+
+  function drawPlayerCardShieldOverlay(x, y, w, h, radius, state, ui) {
+    if (!state.hasShield) return false;
+    const reduced = prefersReducedMotion();
+    const progress = clamp01(Number(state.shieldProgress ?? state.progress) || 0);
+    const intro = clamp01(progress / 0.18);
+    const outro = 1 - clamp01((progress - 0.84) / 0.16);
+    const presence = Math.max(0.18, intro * outro);
+    const pulse = reduced ? 0.64 : (0.58 + Math.sin(Date.now() / 260) * 0.18 + state.pulse * 0.12);
+    const glowAlpha = Math.max(0.16, Math.min(0.52, presence * pulse));
+    const cx = x + w / 2;
+    const cy = y + h / 2;
+    const crestW = w * 0.72;
+    const crestH = h * 0.98;
+
+    ctx.save();
+    roundedRectPath(ctx, x, y, w, h, radius);
+    ctx.clip();
+
+    const wash = ctx.createLinearGradient(x, y, x + w, y + h);
+    wash.addColorStop(0, `rgba(255,255,255,${0.04 * presence})`);
+    wash.addColorStop(0.18, `rgba(143,255,210,${0.12 * presence})`);
+    wash.addColorStop(0.52, `rgba(85,231,255,${0.11 * presence})`);
+    wash.addColorStop(1, `rgba(246,201,91,${0.06 * presence})`);
+    ctx.fillStyle = wash;
+    ctx.fillRect(x, y, w, h);
+
+    const image = getPlayerCardShieldImage();
+    if (image?.complete && image.naturalWidth > 0) {
+      ctx.save();
+      ctx.globalAlpha = 0.72 * presence;
+      ctx.globalCompositeOperation = 'screen';
+      ctx.drawImage(image, x + w * 0.14, y + h * 0.01, w * 0.72, h * 0.98);
+      ctx.restore();
+    }
+
+    const crestFill = ctx.createLinearGradient(cx - crestW * 0.42, y, cx + crestW * 0.4, y + h);
+    crestFill.addColorStop(0, `rgba(255,255,255,${0.26 * presence})`);
+    crestFill.addColorStop(0.36, `rgba(143,255,210,${0.19 * presence})`);
+    crestFill.addColorStop(0.7, `rgba(85,231,255,${0.12 * presence})`);
+    crestFill.addColorStop(1, `rgba(7,16,31,${0.02 * presence})`);
+    ctx.fillStyle = crestFill;
+    drawShieldCrestPath(ctx, cx, cy + h * 0.01, crestW, crestH);
+    ctx.fill();
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.shadowColor = colorWithAlpha(THEME.cyan, 0.72 * presence);
+    ctx.shadowBlur = Math.max(8, 12 * ui) * presence;
+    ctx.lineWidth = Math.max(1.4, 2.2 * ui);
+    ctx.strokeStyle = `rgba(204,252,255,${0.86 * glowAlpha})`;
+    drawShieldCrestPath(ctx, cx, cy + h * 0.01, crestW * 0.98, crestH * 0.98);
+    ctx.stroke();
+    ctx.lineWidth = Math.max(0.9, 1.2 * ui);
+    ctx.strokeStyle = `rgba(246,201,91,${0.34 * presence})`;
+    drawShieldCrestPath(ctx, cx, cy + h * 0.03, crestW * 0.66, crestH * 0.7);
+    ctx.stroke();
+
+    const sweepT = reduced ? 0.5 : ((Date.now() % 1650) / 1650);
+    const sweepX = x - w * 0.32 + (w * 1.64 * sweepT);
+    const sweep = ctx.createLinearGradient(sweepX - w * 0.14, y, sweepX + w * 0.18, y + h);
+    sweep.addColorStop(0, 'rgba(255,255,255,0)');
+    sweep.addColorStop(0.45, `rgba(255,255,255,${0.2 * presence})`);
+    sweep.addColorStop(0.55, `rgba(143,255,210,${0.22 * presence})`);
+    sweep.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sweep;
+    ctx.fillRect(x - w * 0.12, y - h * 0.08, w * 1.24, h * 1.16);
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.shadowColor = colorWithAlpha(THEME.cyan, 0.56 * presence);
+    ctx.shadowBlur = Math.max(5, 7 * ui) * presence;
+    ctx.strokeStyle = `rgba(143,255,210,${0.38 * presence})`;
+    ctx.lineWidth = Math.max(1.2, 1.35 * ui);
+    roundedRectPath(ctx, x + Math.max(1, 1.4 * ui), y + Math.max(1, 1.4 * ui), Math.max(1, w - Math.max(2, 2.8 * ui)), Math.max(1, h - Math.max(2, 2.8 * ui)), Math.max(1, radius - 1.4 * ui));
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.strokeStyle = `rgba(143,255,210,${0.42 * presence})`;
+    ctx.lineWidth = Math.max(1, 1.25 * ui);
+    const bracket = Math.max(6 * ui, Math.min(w, h) * 0.13);
+    const inset = Math.max(5 * ui, Math.min(w, h) * 0.07);
+    [
+      [x + inset, y + inset, 1, 1],
+      [x + w - inset, y + inset, -1, 1],
+      [x + inset, y + h - inset, 1, -1],
+      [x + w - inset, y + h - inset, -1, -1],
+    ].forEach(([bx, by, sx, sy]) => {
+      ctx.beginPath();
+      ctx.moveTo(bx, by + sy * bracket);
+      ctx.lineTo(bx, by);
+      ctx.lineTo(bx + sx * bracket, by);
+      ctx.stroke();
+    });
+
+    ctx.strokeStyle = `rgba(255,255,255,${0.16 * presence})`;
+    ctx.lineWidth = Math.max(0.8, 0.95 * ui);
+    for (let i = -1; i <= 1; i += 1) {
+      const lineY = cy + i * h * 0.19;
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.18, lineY);
+      ctx.lineTo(x + w * 0.82, lineY + h * 0.035);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+    return true;
+  }
+
   function drawPlayerCard(player, pos, rank, total = 1) {
     const hp = Number(player.hp) || 0;
     const maxHp = Math.max(1, Number(player.maxHp) || 100);
@@ -9008,6 +9302,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       lineWidth: state.isCritical ? 2.4 : 1.95,
     });
     ctx.shadowBlur = 0;
+
+    const shieldOverlayDrawn = drawPlayerCardShieldOverlay(plateX, plateY, cardW, plateH, radius, state, ui);
 
     if (state.isLeader) {
       ctx.strokeStyle = colorWithAlpha(THEME.goldBright, 0.42 + state.pulse * 0.12);
@@ -9247,6 +9543,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         statusLabel: statusFit.text,
         healthState: state.healthState,
         accentType: state.accentType,
+        shieldActive: state.hasShield,
+        shieldOverlay: shieldOverlayDrawn ? 'full-card-aegis-image' : '',
         cardDesign: 'broadcast-identity-card',
       },
       slots: {
@@ -9260,6 +9558,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         commandBadge: cloneTelemetryRect(commandSlot),
         avatar: cloneTelemetryRect(slots.avatar),
         hpBar: cloneTelemetryRect(slots.hpBar),
+        shieldOverlay: shieldOverlayDrawn ? cloneTelemetryRect(slots.card) : null,
         statusBadges: cloneTelemetryRect(slots.statusBadges),
         rankText: cloneTelemetryRect(rankTextRect),
         nameText: cloneTelemetryRect(nameTextRect),
@@ -10279,6 +10578,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (type === 'commandBannerShowcase') return 80;
     if (type === 'killEvent' || type === 'streakEvent') return 95;
     if (type === 'giftAttack' || type === 'giftCelebration') return 88;
+    if (type === 'playerCommand' && data.type === 'shieldBreak') return 89;
+    if (type === 'playerCommand' && data.type === 'shieldCooldown') return 54;
     if (type === 'attack' || type === 'commentDamage') return data.special ? 82 : 70;
     if (type === 'like' && data.milestoneTier === 'mega') return 90;
     if (type === 'like' && data.milestone) return 66;
@@ -10729,7 +11030,24 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         type: 'shield',
         name,
       });
-      setCardAccent(data.uniqueId || data.userId || data.nickname, 'shield', THEME.cyan, 1600, { label: 'DEF' });
+      setCardAccent(data.uniqueId || data.userId || data.nickname, 'shield', THEME.cyan, 10000, { label: 'DEF' });
+      return;
+    }
+    if (data.type === 'shieldBreak') {
+      const targetId = data.uniqueId || data.userId || data.nickname;
+      setCardAccent(targetId, 'critical', THEME.ember, 1650, { label: 'BREAK' });
+      showBattlePrompt('Gift broke a shield', 'return', 1900);
+      playSound('gift');
+      return;
+    }
+    if (data.type === 'shieldCooldown') {
+      const waitSeconds = Math.max(1, Math.ceil((Number(data.cooldownMs) || 0) / 1000));
+      if (data.reason === 'shield_active') {
+        showBattlePrompt(`Shield already active (${waitSeconds}s)`, 'return', 1500);
+      } else {
+        setCardAccent(data.uniqueId || data.userId || data.nickname, 'hit', THEME.gold, 1100, { label: 'WAIT' });
+        showBattlePrompt(`Shield cooldown ${waitSeconds}s`, 'return', 1700);
+      }
       return;
     }
     if (data.type === 'help') {

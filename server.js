@@ -319,6 +319,8 @@ const BOSS_WAVE_DURATION_MS = Number(process.env.BOSS_WAVE_DURATION_MS || 90 * 1
 const BOSS_WAVE_ATTACK_INTERVAL_MS = Number(process.env.BOSS_WAVE_ATTACK_INTERVAL_MS || 11 * 1000);
 const BOSS_WAVE_ATTACK_DAMAGE = Number(process.env.BOSS_WAVE_ATTACK_DAMAGE || 18);
 const BOSS_WAVE_ATTACK_EFFECTS = Object.freeze(['railgun', 'comet', 'arc', 'bullet']);
+const PLAYER_SHIELD_DURATION_MS = 10000;
+const PLAYER_SHIELD_COOLDOWN_MS = 45000;
 const configuredFreeTrialDays = Number(process.env.FREE_TRIAL_DAYS || 7);
 const FREE_TRIAL_DAYS = Number.isFinite(configuredFreeTrialDays) && configuredFreeTrialDays > 0
   ? Math.round(configuredFreeTrialDays)
@@ -3270,11 +3272,13 @@ function applyBossDamageToPlayer(room, target, damage, options = {}) {
   const targetScope = options.targetScope || 'top';
   const attackEffect = options.effect || 'boss';
   const player = room.players[target.uniqueId];
-  let dmg = Math.max(1, Math.round(Number(damage) || BOSS_WAVE_ATTACK_DAMAGE));
+  const rawDamage = Math.max(1, Math.round(Number(damage) || BOSS_WAVE_ATTACK_DAMAGE));
+  let dmg = rawDamage;
   let shieldAbsorbed = 0;
-  if (player.shieldUntil && player.shieldUntil > Date.now()) {
-    shieldAbsorbed = Math.min(Math.max(1, Math.ceil(dmg * 0.45)), Math.max(0, dmg - 1));
-    dmg = Math.max(1, dmg - shieldAbsorbed);
+  const shieldStatus = normalizePlayerShieldStatus(player);
+  if (shieldStatus.shieldActive) {
+    shieldAbsorbed = dmg;
+    dmg = 0;
   }
 
   player.hp = Math.max(0, (Number(player.hp) || 0) - dmg);
@@ -3307,7 +3311,7 @@ function applyBossDamageToPlayer(room, target, damage, options = {}) {
     special: true,
     effect: killed ? 'explosion' : attackEffect,
     intensity: killed ? 0.95 : 0.72,
-    critical: dmg >= Math.max(12, (Number(player.maxHp) || CFG.BASE_HP) * 0.16),
+    critical: dmg > 0 && dmg >= Math.max(12, (Number(player.maxHp) || CFG.BASE_HP) * 0.16),
     shielded: shieldAbsorbed > 0,
     shieldAbsorbed,
     attackerScope: 'boss',
@@ -4379,6 +4383,98 @@ function buildAttackPayload(room, base, targetPlayer) {
 // ────────────────────────────────
 // SOUND ENRICHMENT
 // ────────────────────────────────
+function normalizePlayerShieldStatus(player, now = Date.now()) {
+  if (!player) {
+    return {
+      shieldActive: false,
+      shieldUntil: 0,
+      shieldRemainingMs: 0,
+      cooldownActive: false,
+      cooldownUntil: 0,
+      cooldownMs: 0,
+    };
+  }
+
+  let shieldUntil = Math.max(0, Math.round(Number(player.shieldUntil) || 0));
+  let cooldownUntil = Math.max(0, Math.round(Number(player.shieldCooldownUntil) || 0));
+
+  if (shieldUntil > 0 && shieldUntil <= now) {
+    cooldownUntil = Math.max(cooldownUntil, shieldUntil + PLAYER_SHIELD_COOLDOWN_MS);
+    player.shieldUntil = 0;
+    player.shieldCooldownUntil = cooldownUntil;
+    shieldUntil = 0;
+  }
+
+  if (cooldownUntil > 0 && cooldownUntil <= now) {
+    player.shieldCooldownUntil = 0;
+    cooldownUntil = 0;
+  }
+
+  return {
+    shieldActive: shieldUntil > now,
+    shieldUntil,
+    shieldRemainingMs: Math.max(0, shieldUntil - now),
+    cooldownActive: cooldownUntil > now,
+    cooldownUntil,
+    cooldownMs: Math.max(0, cooldownUntil - now),
+  };
+}
+
+function grantPlayerShield(player, durationMs = PLAYER_SHIELD_DURATION_MS, now = Date.now()) {
+  if (!player) return { granted: false, reason: 'missing_player' };
+  const status = normalizePlayerShieldStatus(player, now);
+  if (status.shieldActive) return { granted: false, reason: 'shield_active', ...status };
+  if (status.cooldownActive) return { granted: false, reason: 'shield_cooldown', ...status };
+
+  const duration = Math.max(1000, Math.round(Number(durationMs) || PLAYER_SHIELD_DURATION_MS));
+  player.shieldUntil = now + duration;
+  player.shieldCooldownUntil = 0;
+  return {
+    granted: true,
+    reason: 'granted',
+    shieldActive: true,
+    shieldUntil: player.shieldUntil,
+    shieldRemainingMs: duration,
+    cooldownActive: false,
+    cooldownUntil: 0,
+    cooldownMs: 0,
+    durationMs: duration,
+  };
+}
+
+function breakPlayerShield(room, targetId, options = {}) {
+  const player = room?.players?.[targetId];
+  if (!player) return { broken: false, reason: 'missing_player' };
+  const now = Date.now();
+  const status = normalizePlayerShieldStatus(player, now);
+  if (!status.shieldActive) return { broken: false, reason: 'not_shielded', ...status };
+
+  const cooldownUntil = now + PLAYER_SHIELD_COOLDOWN_MS;
+  player.shieldUntil = 0;
+  player.shieldCooldownUntil = cooldownUntil;
+  player.lastActive = now;
+
+  const payload = {
+    type: 'shieldBreak',
+    uniqueId: targetId,
+    nickname: player.nickname || targetId,
+    source: options.source || 'gift',
+    attacker: options.attackerId || options.attacker || '',
+    attackerNick: options.attackerNick || '',
+    giftName: options.giftName || '',
+    diamonds: Math.max(0, Math.round(Number(options.diamonds) || 0)),
+    damage: Math.max(0, Math.round(Number(options.damage) || 0)),
+    previousShieldUntil: status.shieldUntil,
+    shieldRemainingMs: status.shieldRemainingMs,
+    cooldownUntil,
+    cooldownMs: PLAYER_SHIELD_COOLDOWN_MS,
+    message: `${player.nickname || targetId}'s shield broke`,
+  };
+
+  emitRoomEvent(room, 'playerCommand', payload);
+  return { broken: true, ...payload };
+}
+
 function emitSoundAndSync(roomOrEvent, eventOrOptions = {}, options = {}) {
   if (typeof roomOrEvent === 'string') {
     const event = roomOrEvent;
@@ -5106,6 +5202,7 @@ function spawnPlayer(room, uniqueId, nickname, options = {}) {
   if (!room || !uniqueId) return;
   const source = inferPlayerSource(room, options.source);
   if (room.players[uniqueId]?.alive) {
+    normalizePlayerShieldStatus(room.players[uniqueId]);
     room.players[uniqueId].lastActive = Date.now();
     if (nickname) room.players[uniqueId].nickname = nickname;
     if (source === 'real' || !room.players[uniqueId].source) room.players[uniqueId].source = source;
@@ -5137,6 +5234,7 @@ function spawnPlayer(room, uniqueId, nickname, options = {}) {
     iconEmoji:           ex?.iconEmoji           || '💎',
     messageBoostExpires: ex?.messageBoostExpires || 0,
     shieldUntil:         ex?.shieldUntil         || 0,
+    shieldCooldownUntil: ex?.shieldCooldownUntil || 0,
     forceSpawn:          ex?.forceSpawn          || false,
   };
   console.log(`⚔️  Spawned: @${uniqueId} (HP: ${room.players[uniqueId].hp}, STR: ${room.players[uniqueId].strength}, Kills: ${room.players[uniqueId].kills})`);
@@ -5230,12 +5328,13 @@ function applySquadRally(room, amount, options = {}) {
     const maxHp = Math.max(1, Number(player.maxHp) || CFG.BASE_HP);
     const before = Number(player.hp) || 0;
     player.hp = Math.min(maxHp, before + amount);
-    if (shieldMs) player.shieldUntil = Math.max(Number(player.shieldUntil) || 0, now + shieldMs);
+    const shieldGrant = shieldMs ? grantPlayerShield(player, shieldMs, now) : null;
     affected.push({
       uniqueId: player.uniqueId,
       nickname: player.nickname,
       amount: Math.max(0, Math.round(player.hp - before)),
-      shielded: Boolean(shieldMs),
+      shielded: Boolean(shieldGrant?.granted),
+      shieldCooldownMs: shieldGrant && !shieldGrant.granted ? shieldGrant.cooldownMs || shieldGrant.shieldRemainingMs || 0 : 0,
     });
   });
   return affected;
@@ -5348,7 +5447,7 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
     const strengthBoost = Math.max(CFG.FOLLOW_STR_BOOST, Math.round(CFG.FOLLOW_STR_BOOST * comboBoost));
     awardStats(room, uniqueId, nickname, hpBoost, strengthBoost);
     const current = room.players[uniqueId];
-    if (current) current.shieldUntil = Math.max(Number(current.shieldUntil) || 0, Date.now() + CFG.FOLLOW_SHIELD_MS);
+    const shieldGrant = current ? grantPlayerShield(current, CFG.FOLLOW_SHIELD_MS) : { granted: false, reason: 'missing_player' };
     emitSoundAndSync(room, 'follow', { intensity: 0.72, tier: 'common' });
     const payload = {
       uniqueId,
@@ -5357,7 +5456,8 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
       rewardLabel: 'Recruit Shield',
       hpBoost,
       strengthBoost,
-      shieldMs: CFG.FOLLOW_SHIELD_MS,
+      shieldMs: shieldGrant.granted ? CFG.FOLLOW_SHIELD_MS : 0,
+      shieldCooldownMs: shieldGrant.granted ? 0 : shieldGrant.cooldownMs || shieldGrant.shieldRemainingMs || 0,
       combo: momentum.combo,
       comboScore: momentum.score,
       surgeTier: momentum.tier,
@@ -5367,7 +5467,7 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
     emitRoomEvent(room, 'follow', payload);
     emitEngagementSurge(room, payload, momentum);
     emitRoomEvent(room, 'gameState', room.players);
-    return { type, affectedCount: 1, hpBoost, strengthBoost, momentum };
+    return { type, affectedCount: 1, hpBoost, strengthBoost, shieldGrant, momentum };
   }
 
   const isRepost = type === 'repost';
@@ -5377,6 +5477,9 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
   awardStats(room, uniqueId, nickname, 0, strengthBoost);
   const affected = applySquadRally(room, rallyHeal, { shieldMs });
   const selfFullHeal = isRepost ? 0 : healPlayer(room, uniqueId, Math.max(0, (Number(player.maxHp) || CFG.BASE_HP) - (Number(player.hp) || 0)));
+  const currentPlayer = room.players[uniqueId] || player;
+  const currentHp = Math.max(0, Math.round(Number(currentPlayer?.hp) || 0));
+  const currentMaxHp = Math.max(1, Math.round(Number(currentPlayer?.maxHp) || CFG.BASE_HP));
   if (selfFullHeal > 0) {
     emitRoomEvent(room, 'heal', {
       uniqueId,
@@ -5384,6 +5487,8 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
       amount: selfFullHeal,
       source: 'share',
       fullHeal: true,
+      hp: currentHp,
+      maxHp: currentMaxHp,
       color: room.players[uniqueId]?.color || baseColor,
     });
   }
@@ -5403,6 +5508,8 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
     rallyHeal,
     selfFullHeal,
     fullHeal: !isRepost,
+    hp: currentHp,
+    maxHp: currentMaxHp,
     shieldMs,
     affectedCount: affected.length,
     affected,
@@ -5417,7 +5524,7 @@ function applyEngagementReward(room, uniqueId, nickname, engagementType = 'share
   emitRoomEvent(room, 'socialBoost', payload);
   emitEngagementSurge(room, payload, momentum);
   emitRoomEvent(room, 'gameState', room.players);
-  return { type, affectedCount: affected.length, rallyHeal, selfFullHeal, fullHeal: !isRepost, strengthBoost, shieldMs, bossPressure, momentum };
+  return { type, affectedCount: affected.length, rallyHeal, selfFullHeal, fullHeal: !isRepost, hp: currentHp, maxHp: currentMaxHp, strengthBoost, shieldMs, bossPressure, momentum };
 }
 
 // ────────────────────────────────
@@ -5439,9 +5546,22 @@ function dealDamage(room, attackerId, targetId, multiplier = 1, options = {}) {
       (1 - CFG.ATTACK_VARIANCE / 2 + Math.random() * CFG.ATTACK_VARIANCE)
     );
   let shieldAbsorbed = 0;
-  if (target.shieldUntil && target.shieldUntil > Date.now()) {
-    shieldAbsorbed = Math.min(Math.max(1, Math.ceil(dmg * 0.55)), Math.max(0, dmg - 1));
-    dmg = Math.max(1, dmg - shieldAbsorbed);
+  let shieldBreak = null;
+  const shieldStatus = normalizePlayerShieldStatus(target);
+  if (shieldStatus.shieldActive) {
+    if (options.breakShield) {
+      shieldBreak = breakPlayerShield(room, targetId, {
+        source: options.shieldBreakSource || 'gift',
+        attackerId,
+        attackerNick: attacker.nickname,
+        damage: dmg,
+        diamonds: options.diamonds,
+        giftName: options.giftName,
+      });
+    } else {
+      shieldAbsorbed = dmg;
+      dmg = 0;
+    }
   }
 
   const preDamageHp = target.hp;
@@ -5519,6 +5639,8 @@ function dealDamage(room, attackerId, targetId, multiplier = 1, options = {}) {
     passiveCommentAttack: Boolean(options.passiveCommentAttack),
     shielded: shieldAbsorbed > 0,
     shieldAbsorbed,
+    shieldBroken: Boolean(shieldBreak?.broken),
+    shieldCooldownMs: shieldBreak?.cooldownMs || 0,
   };
   return buildAttackPayload(room, baseResult, { ...target, hp: preDamageHp });
 }
@@ -5665,6 +5787,14 @@ function applyGiftAttackToTarget(room, attackerId, target, options = {}) {
   const visualizesHorde = options.forceHordeVisual || (attackerScope === 'top' && actualTargetScope === 'horde');
   const visualTargetId = visualizesHorde ? SERVER_HORDE_ID : target.uniqueId;
   const visualTargetNick = visualizesHorde ? 'The Horde' : (target.nickname || target.uniqueId);
+  const shieldBreak = breakPlayerShield(room, target.uniqueId, {
+    source: 'gift',
+    attackerId,
+    attackerNick: room.players[attackerId]?.nickname || attackerId,
+    giftName: options.giftName,
+    diamonds,
+    damage,
+  });
 
   target.hp = Math.max(0, Number(target.hp) - damage);
   target.lastActive = Date.now();
@@ -5698,6 +5828,8 @@ function applyGiftAttackToTarget(room, attackerId, target, options = {}) {
     effect: options.effect || 'laser',
     intensity: options.intensity || 0.7,
     giftColor: options.giftColor || '#7afcff',
+    shieldBroken: Boolean(shieldBreak?.broken),
+    shieldCooldownMs: shieldBreak?.cooldownMs || 0,
     attackerScope,
     targetScope: visualizesHorde ? 'horde' : actualTargetScope,
   };
@@ -5744,6 +5876,7 @@ function emitGiftAttacksForGift(room, attackerId, options = {}) {
           effect,
           intensity,
           giftColor,
+          giftName: options.giftName,
           snapshot: giftTargets.snapshot,
           forceHordeVisual: assignment.forceHordeVisual,
         })
@@ -5752,6 +5885,7 @@ function emitGiftAttacksForGift(room, attackerId, options = {}) {
           effect,
           intensity,
           giftColor,
+          giftName: options.giftName,
           snapshot: giftTargets.snapshot,
         });
     if (!attack) return;
@@ -5928,19 +6062,41 @@ function handlePlayerUtilityCommand(room, playerId, nickname, comment) {
 
   if (['shield', 'guard', 'block'].includes(command)) {
     if (!room.players[playerId]?.alive) spawnPlayer(room, playerId, nickname);
-    if (room.players[playerId]) {
-      room.players[playerId].shieldUntil = Date.now() + 12000;
-      room.players[playerId].lastActive = Date.now();
-      room.players[playerId].forceSpawn = true;
+    const player = room.players[playerId];
+    if (!player) return { handled: true, stop: true, reason: 'Shield player not found' };
+
+    const shieldGrant = grantPlayerShield(player, PLAYER_SHIELD_DURATION_MS);
+    player.lastActive = Date.now();
+    player.forceSpawn = true;
+
+    if (!shieldGrant.granted) {
+      const retryMs = shieldGrant.cooldownMs || shieldGrant.shieldRemainingMs || 0;
+      emitRoomEvent(room, 'playerCommand', {
+        type: 'shieldCooldown',
+        uniqueId: playerId,
+        nickname,
+        reason: shieldGrant.reason,
+        cooldownMs: retryMs,
+        cooldownUntil: shieldGrant.cooldownUntil || shieldGrant.shieldUntil || 0,
+        message: shieldGrant.reason === 'shield_active'
+          ? `${nickname} already has a shield`
+          : `${nickname} can shield again soon`,
+      });
+      emitRoomEvent(room, 'gameState', room.players);
+      return { handled: true, stop: true, reason: shieldGrant.reason, cooldownMs: retryMs };
     }
+
     emitSoundAndSync(room, 'heal', { intensity: 0.35, tier: 'common' });
     emitRoomEvent(room, 'playerCommand', {
       type: 'shield',
       uniqueId: playerId,
       nickname,
       message: `${nickname} raised a shield`,
-      durationMs: 12000,
+      durationMs: PLAYER_SHIELD_DURATION_MS,
+      shieldUntil: shieldGrant.shieldUntil,
+      cooldownMs: PLAYER_SHIELD_COOLDOWN_MS,
     });
+    emitRoomEvent(room, 'gameState', room.players);
     return { handled: true, stop: true };
   }
 
@@ -8292,7 +8448,12 @@ function runRoomOverlayTestAction(room, normalizedAction) {
   if (normalizedAction === 'gift') {
     const diamonds = 25;
     awardStats(room, supportId, 'Nova', diamonds * CFG.GIFT_HP_PER_DIAMOND, diamonds * CFG.GIFT_STR_PER_DIAMOND);
-    const result = dealDamage(room, supportId, targetId, 2.1);
+    const result = dealDamage(room, supportId, targetId, 2.1, {
+      breakShield: true,
+      shieldBreakSource: 'gift',
+      giftName: 'Test Gift',
+      diamonds,
+    });
     if (result) {
       emitGiftAttackAndSync(room, {
         ...result,
@@ -8899,6 +9060,7 @@ function ensureTestPlayers(options = {}) {
   ];
   testPlayers.forEach((item, index) => {
     if (!reset && room.players[item.id]) {
+      normalizePlayerShieldStatus(room.players[item.id]);
       room.players[item.id].alive = room.players[item.id].alive !== false;
       room.players[item.id].forceSpawn = true;
       room.players[item.id].lastActive = Date.now();
@@ -8917,7 +9079,7 @@ function ensureTestPlayers(options = {}) {
       x: 100 + index * 100, y: 100 + index * 40,
       vx: (Math.random() - 0.5) * 1.5,
       vy: (Math.random() - 0.5) * 1.5,
-      color: randomColor(), messageBoostExpires: 0, forceSpawn: true,
+      color: randomColor(), messageBoostExpires: 0, shieldUntil: 0, shieldCooldownUntil: 0, forceSpawn: true,
     };
   });
   emitRoomEvent(room, 'gameState', room.players);
@@ -8950,12 +9112,19 @@ app.post('/api/test/horde-attack', blockInProduction, requireDevTestMode, (_req,
 function snapshotDevTestCombatants(room) {
   return Object.fromEntries(Object.entries(room.players || {})
     .filter(([id]) => String(id).startsWith('test_'))
-    .map(([id, player]) => [id, {
+    .map(([id, player]) => {
+      const shield = normalizePlayerShieldStatus(player);
+      return [id, {
       hp: player.hp,
       maxHp: player.maxHp,
       alive: player.alive,
-      shieldActive: Boolean(player.shieldUntil && player.shieldUntil > Date.now()),
-    }]));
+      shieldActive: shield.shieldActive,
+      shieldUntil: shield.shieldUntil,
+      shieldRemainingMs: shield.shieldRemainingMs,
+      shieldCooldownUntil: shield.cooldownUntil,
+      shieldCooldownMs: shield.cooldownMs,
+    }];
+    }));
 }
 
 app.post('/api/test/comment', blockInProduction, requireDevTestMode, (req, res) => {
@@ -9024,10 +9193,12 @@ app.post('/api/test/social', blockInProduction, requireDevTestMode, (_req, res) 
 });
 
 app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) => {
-  ensureTestPlayers();
+  ensureTestPlayers({ reset: _req.body?.reset === true });
   const room = getDefaultRoom();
-  const attackerId  = 'test_charlie';
-  const diamonds    = 25;
+  const attackerId = String(_req.body?.attackerId || 'test_charlie').trim() || 'test_charlie';
+  const targetId = String(_req.body?.targetId || '').trim();
+  const diamonds = Math.max(1, Math.round(Number(_req.body?.diamonds) || 25));
+  const before = snapshotDevTestCombatants(room);
 
   awardStats(room, attackerId, room.players[attackerId].nickname,
     diamonds * CFG.GIFT_HP_PER_DIAMOND,
@@ -9039,11 +9210,29 @@ app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) =>
   emitRoomEvent(room, 'gameState', room.players);
 
   const giftMeta = classifyGift(diamonds);
-  const attacksMade = emitGiftAttacksForGift(room, attackerId, {
+  const giftOptions = {
     diamonds,
     intensity: diamonds > 100 ? 1.0 : 0.7,
     tier: giftMeta.tier || 'common',
-  });
+    giftName: 'Test Gift',
+  };
+  let attacksMade = [];
+  if (targetId && room.players[targetId]?.alive) {
+    const effect = nextGiftAttackEffect(room);
+    const giftColor = giftAttackColor(effect, giftMeta.color);
+    const attack = applyGiftAttackToTarget(room, attackerId, room.players[targetId], {
+      ...giftOptions,
+      effect,
+      giftColor,
+    });
+    if (attack) {
+      attacksMade = [attack];
+      emitGiftAttackAndSync(room, attack);
+      emitSoundAndSync(room, attack.killed ? 'kill' : 'gift', { intensity: attack.intensity, tier: giftOptions.tier });
+    }
+  } else {
+    attacksMade = emitGiftAttacksForGift(room, attackerId, giftOptions);
+  }
   emitRoomEvent(room, 'giftEffect', { attacker: attackerId, giftName: 'Test Gift', diamonds, ...giftMeta });
   setTimeout(() => {
     emitRoomEvent(room, 'giftCelebration', {
@@ -9054,7 +9243,8 @@ app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) =>
 
   emitRoomEvent(room, 'gameState', room.players);
   console.log('🧪 Test gift attack sent');
-  res.json({ success: true, attacks: attacksMade });
+  const after = snapshotDevTestCombatants(room);
+  res.json({ success: true, attacks: attacksMade, before, after });
 });
 
 // ... (other test endpoints unchanged, they can remain as is)
@@ -9176,6 +9366,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
       diamonds,
       intensity: giftIntensity,
       tier: giftMeta.tier || (diamonds > 100 ? 'legendary' : 'common'),
+      giftName: e.giftName,
     });
     giftAttacks.forEach(giftAttack => {
       console.log(`Gift attack: @${id} -> ${giftAttack.targetNick || giftAttack.target} using ${giftAttack.effect} for ${giftAttack.damage} dmg${giftAttack.killed ? ' (KILL!)' : ''}`);

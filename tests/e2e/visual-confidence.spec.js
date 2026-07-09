@@ -417,6 +417,32 @@ async function assertBannerBacklog(page, testInfo, label, options = {}) {
   return status;
 }
 
+async function assertBannerCombatGap(page, testInfo, label, options = {}) {
+  await page.waitForTimeout(options.settleMs ?? 480);
+  const status = await assertBannerBacklog(page, testInfo, label, options);
+  const active = status.active?.rect;
+  const lane = status.lane;
+  expect(active, `${label} missing active banner rect`).toBeTruthy();
+  expect(lane, `${label} missing banner lane`).toBeTruthy();
+  expect(status.laneSource, `${label} should use combat-gap banner lane`).toBe('combat-gap');
+  expect(status.playerBottom, `${label} missing player bottom telemetry`).toBeGreaterThan(0);
+  expect(status.hordeTop, `${label} missing horde top telemetry`).toBeGreaterThan(status.playerBottom);
+  expect(status.availableGap, `${label} combat gap too small`).toBeGreaterThan(options.minAvailableGap ?? 24);
+  assertRectInside(active, lane, `${label} active banner in lane`, options.tolerance ?? 2.5);
+  expect(active.top, `${label} banner should sit below player cards`).toBeGreaterThan(status.playerBottom + (options.minSeparation ?? 1));
+  expect(active.bottom, `${label} banner should sit above horde`).toBeLessThan(status.hordeTop - (options.minSeparation ?? 1));
+  if (options.avoidBoss) {
+    expect(status.bossTop, `${label} missing boss top telemetry`).toBeGreaterThan(status.playerBottom);
+    expect(status.bossBottom, `${label} missing boss bottom telemetry`).toBeGreaterThan(status.bossTop);
+    expect(
+      active.bottom <= status.bossTop - (options.minSeparation ?? 1) ||
+        active.top >= status.bossBottom + (options.minSeparation ?? 1),
+      `${label} banner should not overlap boss HUD`
+    ).toBe(true);
+  }
+  return status;
+}
+
 async function assertEffectOwnership(page, testInfo, label, options = {}) {
   await page.waitForFunction(() => typeof window.overlayEventEngine?.testEffectOwnership === 'function', null, { timeout: 5000 });
   const result = await page.evaluate(() => window.overlayEventEngine.testEffectOwnership());
@@ -539,6 +565,13 @@ test('@visual demo battle with five players and horde remains readable', async (
   expect(layout.horde).toBeTruthy();
   assertHordeProminence(layout, 'demo-battle');
   assertPlayerCardSlots(layout, 'demo-battle');
+  await page.evaluate(() => window.overlayEventEngine.testBannerPlacement('kill', {
+    title: 'NeonAce eliminated ShadowByte',
+    meta: '7 total kills | streak x5 | momentum x4',
+    durationMs: 12000,
+  }));
+  await page.waitForFunction(() => Boolean(document.querySelector('.banner:not(.closing)')), null, { timeout: 6000 });
+  await assertBannerCombatGap(page, testInfo, 'demo-battle-banner');
   await assertConnectionStatus(page, testInfo, 'demo-battle', { mode: 'demo', state: 'demo', ready: true, demoMode: true, connected: false });
   await assertOverlayAudioStatus(page, testInfo, 'demo-battle');
   await assertVisualQueueHealth(page, testInfo, 'demo-battle', { maxQueued: 0 });
@@ -569,7 +602,13 @@ test('@visual player cards keep stats and special-character names aligned', asyn
   assertPlayerCardSlots(layout, 'special-player-cards');
   const cardsById = Object.fromEntries(layout.players.map(player => [player.id, player]));
   expect(cardsById.card_plain?.text).toMatchObject({ healthState: 'healthy', commandLabel: 'LASER' });
-  expect(cardsById.card_fire?.text).toMatchObject({ healthState: 'healthy', commandLabel: 'DEF' });
+  expect(cardsById.card_fire?.text).toMatchObject({
+    healthState: 'healthy',
+    commandLabel: 'DEF',
+    shieldActive: true,
+    shieldOverlay: 'full-card-aegis-image',
+  });
+  expect(cardsById.card_fire?.slots?.shieldOverlay).toBeTruthy();
   expect(cardsById.card_accent?.text).toMatchObject({ healthState: 'damaged', commandLabel: 'HEAL' });
   expect(cardsById.card_cjk?.text).toMatchObject({ healthState: 'critical', commandLabel: 'CRIT' });
   expect(cardsById.card_long?.text).toMatchObject({ healthState: 'ko', commandLabel: 'KO' });
@@ -588,6 +627,8 @@ test('@visual boss wave uses one integrated boss HUD and hits all targets', asyn
   await waitForDemoLayout(page, { horde: true, boss: true, settleMs: 700 });
   const layout = await readLegacyLayout(page, testInfo, 'boss-wave-layout');
   assertBossHudIntegrated(layout, 'boss-wave');
+  await page.waitForFunction(() => Boolean(document.querySelector('.banner:not(.closing)')), null, { timeout: 6000 });
+  await assertBannerCombatGap(page, testInfo, 'boss-wave-banner', { avoidBoss: true });
   await assertEffectOwnership(page, testInfo, 'boss-wave-effects', { minOwnedEffects: 1 });
   await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'boss-wave-canvas' });
   await freezeOverlayVisuals(page, testInfo, 'boss-wave-freeze');
@@ -719,6 +760,7 @@ test('@visual reduced-motion mobile overlay keeps banners and sponsor stats usab
   expect(motion?.arenaShakeActive).toBe(false);
   expect(motion?.particles).toBeLessThanOrEqual(32);
   await assertEffectOwnership(page, testInfo, 'reduced-motion-effects', { minOwnedEffects: 1 });
+  await assertBannerCombatGap(page, testInfo, 'reduced-motion-banner', { minAvailableGap: 20, tolerance: 3 });
   await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'reduced-motion-canvas', minLitRatio: 0.05 });
   await freezeOverlayVisuals(page, testInfo, 'reduced-motion-freeze');
   await expectStableScreenshot(page.getByTestId('overlay-source-frame'), testInfo, 'reduced-motion-mobile-overlay', { maxDiffPixelRatio: 0.18 });
