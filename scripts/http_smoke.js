@@ -167,6 +167,8 @@ try {
 
   const adminMarketing = await expectStatus('/admin/marketing', 302);
   assert((adminMarketing.headers.get('location') || '').startsWith('/admin/login'), '/admin/marketing should redirect to /admin/login');
+  const adminEmail = await expectStatus('/admin/email', 302);
+  assert((adminEmail.headers.get('location') || '').startsWith('/admin/login'), '/admin/email should redirect to /admin/login');
   await expectStatus('/admin/issue-code', 403, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: 'https://evil.example' },
@@ -177,12 +179,33 @@ try {
     headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: 'https://evil.example' },
     body: 'account=creator%40example.com',
   });
+  await expectStatus('/admin/email/preview', 403, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: 'https://evil.example' },
+    body: 'subject=Hello&message=This%20is%20a%20service%20announcement%20for%20accounts',
+  });
+  await expectStatus('/admin/email/send', 403, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: 'https://evil.example' },
+    body: 'confirmSend=1&subject=Hello&message=This%20is%20a%20service%20announcement%20for%20accounts',
+  });
+  await expectStatus('/admin/email/1/retry-failed', 403, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: 'https://evil.example' },
+    body: '',
+  });
   const unauthGrant = await expectStatus('/admin/users/free-pro/grant', 302, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: baseUrl },
     body: 'account=creator%40example.com',
   });
   assert((unauthGrant.headers.get('location') || '').startsWith('/admin/login'), 'admin Free Forever grant should require admin login');
+  const unauthEmailSend = await expectStatus('/admin/email/send', 302, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: baseUrl },
+    body: 'confirmSend=1&subject=Hello&message=This%20is%20a%20service%20announcement%20for%20accounts',
+  });
+  assert((unauthEmailSend.headers.get('location') || '').startsWith('/admin/login'), 'admin account email send should require admin login');
 
   await expectStatus('/server.js', 404);
   await expectStatus('/package.json', 404);

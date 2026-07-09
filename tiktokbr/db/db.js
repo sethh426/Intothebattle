@@ -325,6 +325,62 @@ async function initDb() {
     await safeExec('ALTER TABLE users ADD COLUMN dashboard_rules_acknowledged_at TIMESTAMP');
 
     await safeExec(`
+      CREATE TABLE IF NOT EXISTS admin_email_campaigns (
+        id SERIAL PRIMARY KEY,
+        subject TEXT NOT NULL,
+        body TEXT NOT NULL,
+        cta_label TEXT,
+        cta_url TEXT,
+        status TEXT DEFAULT 'queued',
+        recipient_count INTEGER DEFAULT 0,
+        sent_count INTEGER DEFAULT 0,
+        skipped_count INTEGER DEFAULT 0,
+        failed_count INTEGER DEFAULT 0,
+        error_message TEXT,
+        queued_at TIMESTAMP,
+        started_at TIMESTAMP,
+        completed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS admin_email_deliveries (
+        id SERIAL PRIMARY KEY,
+        campaign_id INTEGER NOT NULL,
+        user_id INTEGER,
+        email TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        provider_message_id TEXT,
+        error_message TEXT,
+        attempts INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        last_attempt_at TIMESTAMP,
+        sent_at TIMESTAMP,
+        FOREIGN KEY(campaign_id) REFERENCES admin_email_campaigns(id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
+    await safeExec('ALTER TABLE admin_email_campaigns ADD COLUMN cta_label TEXT');
+    await safeExec('ALTER TABLE admin_email_campaigns ADD COLUMN cta_url TEXT');
+    await safeExec('ALTER TABLE admin_email_campaigns ADD COLUMN skipped_count INTEGER DEFAULT 0');
+    await safeExec('ALTER TABLE admin_email_campaigns ADD COLUMN error_message TEXT');
+    await safeExec('ALTER TABLE admin_email_campaigns ADD COLUMN queued_at TIMESTAMP');
+    await safeExec('ALTER TABLE admin_email_campaigns ADD COLUMN started_at TIMESTAMP');
+    await safeExec('ALTER TABLE admin_email_campaigns ADD COLUMN completed_at TIMESTAMP');
+    await safeExec('ALTER TABLE admin_email_campaigns ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+    await safeExec('ALTER TABLE admin_email_deliveries ADD COLUMN provider_message_id TEXT');
+    await safeExec('ALTER TABLE admin_email_deliveries ADD COLUMN error_message TEXT');
+    await safeExec('ALTER TABLE admin_email_deliveries ADD COLUMN attempts INTEGER DEFAULT 0');
+    await safeExec('ALTER TABLE admin_email_deliveries ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+    await safeExec('ALTER TABLE admin_email_deliveries ADD COLUMN last_attempt_at TIMESTAMP');
+    await safeExec('ALTER TABLE admin_email_deliveries ADD COLUMN sent_at TIMESTAMP');
+    await safeExec('CREATE INDEX IF NOT EXISTS admin_email_campaigns_status_idx ON admin_email_campaigns(status, queued_at)');
+    await safeExec('CREATE INDEX IF NOT EXISTS admin_email_deliveries_campaign_status_idx ON admin_email_deliveries(campaign_id, status)');
+    await safeExec('CREATE INDEX IF NOT EXISTS admin_email_deliveries_email_idx ON admin_email_deliveries(email)');
+
+    await safeExec(`
       CREATE TABLE IF NOT EXISTS user_rooms (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,

@@ -13,6 +13,18 @@ function routeLiteral(pathname) {
   return pathname.replace(/:[A-Za-z0-9_]+/g, '');
 }
 
+function routeLiteralCandidates(pathname, sourceName) {
+  const literal = routeLiteral(pathname);
+  const candidates = [literal, pathname];
+  if (sourceName === 'admin' && literal.startsWith('/admin')) {
+    candidates.push(literal.slice('/admin'.length) || '/');
+  }
+  if (sourceName === 'admin' && pathname.startsWith('/admin')) {
+    candidates.push(pathname.slice('/admin'.length) || '/');
+  }
+  return candidates;
+}
+
 assert.equal(contract.csrfEquivalent?.sameOriginMutationGuard, true, 'route contract must require same-origin mutation guard');
 assert.equal(contract.csrfEquivalent?.adminSameSiteCookie, 'strict', 'admin cookies must stay SameSite=strict');
 assert.match(server, /Blocked cross-origin state-changing request/, 'server must enforce same-origin state-changing browser requests');
@@ -38,9 +50,10 @@ for (const endpoint of endpoints) {
   assert.ok(endpoint.access, `${endpoint.method} ${endpoint.path} is missing access policy`);
   assert.ok(endpoint.production, `${endpoint.method} ${endpoint.path} is missing production policy`);
 
-  const literal = routeLiteral(endpoint.path);
   const source = endpoint.path.startsWith('/admin') ? admin : endpoint.path.includes('/paypal') ? paypal : server;
-  assert.ok(source.includes(literal), `${endpoint.method} ${endpoint.path} is not present in the expected source file`);
+  const sourceName = endpoint.path.startsWith('/admin') ? 'admin' : endpoint.path.includes('/paypal') ? 'paypal' : 'server';
+  const candidates = routeLiteralCandidates(endpoint.path, sourceName);
+  assert.ok(candidates.some(literal => source.includes(literal)), `${endpoint.method} ${endpoint.path} is not present in the expected source file`);
 
   if (endpoint.category === 'admin-mutation') {
     assert.match(endpoint.access, /same-origin-mutation/, `${endpoint.path} must name same-origin mutation protection`);

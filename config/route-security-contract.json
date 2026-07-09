@@ -191,6 +191,38 @@
       "production": "enabled"
     },
     {
+      "method": "GET",
+      "path": "/admin/email",
+      "category": "admin",
+      "access": "admin-session",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/email/preview",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/email/send",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/email/:id/retry-failed",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
       "method": "POST",
       "path": "/admin/sponsors/upload",
       "category": "admin-mutation",

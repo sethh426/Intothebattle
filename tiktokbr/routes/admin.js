@@ -75,6 +75,15 @@ import {
   getActiveUserCounts,
   injectActiveUserMetrics,
 } from '../services/adminUserCounts.js';
+import {
+  createAdminEmailCampaign,
+  listAdminAnnouncementRecipients,
+  listAdminEmailCampaigns,
+  processAdminEmailQueue,
+  retryAdminEmailCampaignFailures,
+  scheduleAdminEmailQueue,
+  validateAdminAnnouncementPayload,
+} from '../services/adminEmailCampaigns.js';
 import { getAllRooms } from '../../roomManager.js';
 
 const router = express.Router();
@@ -867,7 +876,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
         <div><h1>Admin Panel</h1><p>Access, promos, and room controls</p></div>
       </div>
-      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/logout">Logout</a></div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/logout">Logout</a></div>
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${createdCode ? `<div class="notice success">New access code created: <strong>${escapeHtml(createdCode)}</strong> <button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(createdCode)}')">Copy</button></div>` : ''}
@@ -1096,6 +1105,156 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
 </html>`;
 }
 
+function loadAdminEmailCampaigns() {
+  try {
+    return listAdminEmailCampaigns(db, 25);
+  } catch (err) {
+    console.warn('Failed to list admin email campaigns:', err?.message || err);
+    return [];
+  }
+}
+
+function countAdminEmailRecipients() {
+  try {
+    return listAdminAnnouncementRecipients(db).length;
+  } catch (err) {
+    console.warn('Failed to count admin email recipients:', err?.message || err);
+    return 0;
+  }
+}
+
+function renderAdminEmailCampaignRows(campaigns = []) {
+  return campaigns.map(campaign => {
+    const status = String(campaign.status || 'queued');
+    const failed = Number(campaign.failed_count) || 0;
+    const skipped = Number(campaign.skipped_count) || 0;
+    const retry = failed || skipped
+      ? `<form method="POST" action="/admin/email/${escapeAttr(campaign.id)}/retry-failed" onsubmit="return confirm('Retry failed or skipped deliveries for this campaign?')">
+          <button type="submit" class="secondary-button">Retry failed/skipped</button>
+        </form>`
+      : '<span class="muted">No retry needed</span>';
+    return `<tr>
+      <td data-label="Created">${escapeHtml(formatSponsorDate(campaign.created_at))}</td>
+      <td data-label="Subject"><strong>${escapeHtml(campaign.subject || '')}</strong><br><span class="muted">${escapeHtml(status)}</span></td>
+      <td data-label="Recipients">${escapeHtml(String(campaign.recipient_count || 0))}</td>
+      <td data-label="Sent">${escapeHtml(String(campaign.sent_count || 0))}</td>
+      <td data-label="Skipped">${escapeHtml(String(skipped))}</td>
+      <td data-label="Failed">${escapeHtml(String(failed))}</td>
+      <td data-label="Completed">${escapeHtml(formatSponsorDate(campaign.completed_at))}</td>
+      <td data-label="Actions">${retry}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8">No account email campaigns yet.</td></tr>';
+}
+
+function renderAdminEmailPage({ message = '', error = '', form = {}, preview = null, recipientCount = countAdminEmailRecipients(), campaigns = loadAdminEmailCampaigns() } = {}) {
+  const subject = form.subject || '';
+  const body = form.message || '';
+  const ctaLabel = form.ctaLabel || '';
+  const ctaUrl = form.ctaUrl || '';
+  const previewBlock = preview
+    ? `<div class="preview-box">
+        <h2>Confirm send</h2>
+        <p class="muted">This will queue an account announcement to <strong>${escapeHtml(String(preview.recipientCount))}</strong> active account email${preview.recipientCount === 1 ? '' : 's'}.</p>
+        <div class="message-preview">
+          <h3>${escapeHtml(preview.payload.subject)}</h3>
+          ${escapeHtml(preview.payload.message).split('\n').map(line => `<p>${line || '&nbsp;'}</p>`).join('')}
+          ${preview.payload.ctaLabel && preview.payload.ctaUrl ? `<p><strong>${escapeHtml(preview.payload.ctaLabel)}</strong>: ${escapeHtml(preview.payload.ctaUrl)}</p>` : ''}
+        </div>
+        <form method="POST" action="/admin/email/send">
+          <input type="hidden" name="subject" value="${escapeAttr(preview.payload.subject)}" />
+          <input type="hidden" name="message" value="${escapeAttr(preview.payload.message)}" />
+          <input type="hidden" name="ctaLabel" value="${escapeAttr(preview.payload.ctaLabel)}" />
+          <input type="hidden" name="ctaUrl" value="${escapeAttr(preview.payload.ctaUrl)}" />
+          <label class="confirm-line"><input type="checkbox" name="confirmSend" value="1" required /> I understand this will email every active account recipient shown above.</label>
+          <button type="submit">Queue Account Email</button>
+        </form>
+      </div>`
+    : '';
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Accounts - IntoTheBattle Admin</title>
+  <style>
+    * { box-sizing:border-box; }
+    body { min-height:100vh; font-family:Inter,Arial,sans-serif; background:linear-gradient(180deg,#050608,#030406); color:#fff8e6; margin:0; padding:24px; }
+    .wrapper { max-width:1120px; margin:0 auto; display:grid; gap:18px; }
+    .admin-hero { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:18px; border:1px solid rgba(246,201,91,.24); border-radius:24px; background:rgba(5,7,11,.82); }
+    h1 { margin:0; font-size:clamp(28px,4vw,44px); text-transform:uppercase; line-height:1; }
+    .admin-hero p { margin:6px 0 0; color:#a8afbf; font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+    .admin-nav { display:flex; gap:10px; flex-wrap:wrap; }
+    .admin-nav a { display:inline-flex; min-height:40px; align-items:center; justify-content:center; padding:0 14px; border-radius:999px; border:1px solid rgba(255,255,255,.1); color:#fff8e6; background:rgba(255,255,255,.055); text-decoration:none; font-weight:800; }
+    .notice { padding:14px 16px; border-radius:16px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06); }
+    .error { color:#ffb6b6; }
+    .success { color:#c6ffc3; }
+    .card, .preview-box { padding:20px; border-radius:22px; border:1px solid rgba(255,255,255,.1); background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); box-shadow:0 20px 60px rgba(0,0,0,.24); }
+    .grid { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(280px,.85fr); gap:16px; align-items:start; }
+    label { display:block; margin:12px 0 6px; color:#a8afbf; font-size:12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
+    input, textarea { width:100%; min-height:46px; padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,.12); background:#111827; color:#fff8e6; }
+    textarea { min-height:220px; resize:vertical; line-height:1.5; }
+    input[type="checkbox"] { width:auto; min-height:0; }
+    button { margin-top:14px; width:100%; min-height:44px; border:0; border-radius:14px; background:linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color:#170c02; cursor:pointer; font-weight:900; }
+    .secondary-button { background:rgba(255,255,255,.07); color:#fff8e6; border:1px solid rgba(255,255,255,.12); }
+    .muted { color:#a8afbf; line-height:1.5; }
+    .stat { padding:16px; border-radius:18px; border:1px solid rgba(246,201,91,.24); background:rgba(246,201,91,.07); }
+    .stat strong { display:block; font-size:40px; line-height:1; }
+    .message-preview { margin:12px 0; padding:16px; border-radius:16px; background:#0b1019; border:1px solid rgba(246,201,91,.18); }
+    .message-preview h3 { margin:0 0 12px; }
+    .message-preview p { margin:0 0 10px; color:#d9e1ef; line-height:1.55; }
+    .confirm-line { display:flex; align-items:flex-start; gap:8px; color:#fff8e6; text-transform:none; letter-spacing:0; font-size:14px; font-weight:800; }
+    .table-shell { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; overflow:hidden; border-radius:16px; }
+    th, td { border-bottom:1px solid rgba(255,255,255,.08); padding:12px; font-size:13px; text-align:left; vertical-align:top; }
+    th { background:rgba(246,201,91,.09); color:#ffdf8a; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
+    table button { min-height:36px; margin-top:0; }
+    a { color:#ffdf8a; }
+    @media(max-width:780px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.grid{grid-template-columns:1fr}.admin-nav{display:grid;grid-template-columns:1fr 1fr;width:100%;} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <header class="admin-hero">
+      <div><h1>Email Accounts</h1><p>Service announcements to active creator accounts</p></div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/logout">Logout</a></div>
+    </header>
+    ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
+    ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
+    <div class="grid">
+      <section class="card">
+        <h2>Compose Account Announcement</h2>
+        <p class="muted">Plain-text service/account updates only. Preview first, then confirm before delivery is queued.</p>
+        <form method="POST" action="/admin/email/preview">
+          <label>Subject</label>
+          <input name="subject" value="${escapeAttr(subject)}" maxlength="140" required />
+          <label>Message</label>
+          <textarea name="message" maxlength="5000" required>${escapeHtml(body)}</textarea>
+          <label>CTA label (optional)</label>
+          <input name="ctaLabel" value="${escapeAttr(ctaLabel)}" maxlength="80" placeholder="Open dashboard" />
+          <label>CTA URL (optional, https:// or same-site path)</label>
+          <input name="ctaUrl" value="${escapeAttr(ctaUrl)}" placeholder="/dashboard" />
+          <button type="submit">Preview Recipients and Message</button>
+        </form>
+      </section>
+      <aside class="card">
+        <h2>Audience</h2>
+        <div class="stat"><span class="muted">Active account recipients</span><strong>${escapeHtml(String(recipientCount))}</strong></div>
+        <p class="muted">Recipients are valid, de-duplicated emails from active user accounts. Disabled accounts and invalid emails are excluded.</p>
+      </aside>
+    </div>
+    ${previewBlock}
+    <section class="card table-shell">
+      <h2>Recent Campaigns</h2>
+      <table>
+        <thead><tr><th>Created</th><th>Subject</th><th>Recipients</th><th>Sent</th><th>Skipped</th><th>Failed</th><th>Completed</th><th>Actions</th></tr></thead>
+        <tbody>${renderAdminEmailCampaignRows(campaigns)}</tbody>
+      </table>
+    </section>
+  </div>
+</body>
+</html>`;
+}
+
 router.get('/login', (_req, res) => {
   res.send(`<!DOCTYPE html>
 <html lang="en">
@@ -1177,6 +1336,81 @@ router.get('/', requireAdminAuth, (req, res) => {
     users,
     comments,
   }));
+});
+
+router.get('/email', requireAdminAuth, (_req, res) => {
+  scheduleAdminEmailQueue(db, { delayMs: 25 });
+  res.send(renderAdminEmailPage());
+});
+
+router.post('/email/preview', requireAdminAuth, (req, res) => {
+  const validation = validateAdminAnnouncementPayload(req.body || {});
+  const recipients = listAdminAnnouncementRecipients(db);
+  if (!validation.ok) {
+    return res.status(400).send(renderAdminEmailPage({
+      error: validation.errors.join(' '),
+      form: req.body || {},
+      recipientCount: recipients.length,
+    }));
+  }
+  return res.send(renderAdminEmailPage({
+    form: validation.payload,
+    recipientCount: recipients.length,
+    preview: {
+      payload: validation.payload,
+      recipientCount: recipients.length,
+    },
+  }));
+});
+
+router.post('/email/send', requireAdminAuth, (req, res) => {
+  if (req.body?.confirmSend !== '1') {
+    return res.status(400).send(renderAdminEmailPage({
+      error: 'Confirm the send before queueing account email.',
+      form: req.body || {},
+    }));
+  }
+  const validation = validateAdminAnnouncementPayload(req.body || {});
+  const recipients = listAdminAnnouncementRecipients(db);
+  if (!validation.ok) {
+    return res.status(400).send(renderAdminEmailPage({
+      error: validation.errors.join(' '),
+      form: req.body || {},
+      recipientCount: recipients.length,
+    }));
+  }
+  if (!recipients.length) {
+    return res.status(400).send(renderAdminEmailPage({
+      error: 'No active account recipients are available.',
+      form: validation.payload,
+      recipientCount: 0,
+    }));
+  }
+
+  try {
+    const campaign = createAdminEmailCampaign(db, validation.payload, recipients);
+    scheduleAdminEmailQueue(db, { delayMs: 25 });
+    return res.redirect(`/admin/email?message=${encodeURIComponent(`Queued account email #${campaign.id} for ${recipients.length} recipient${recipients.length === 1 ? '' : 's'}.`)}`);
+  } catch (err) {
+    return res.status(500).send(renderAdminEmailPage({
+      error: err?.message || 'Failed to queue account email.',
+      form: validation.payload,
+      recipientCount: recipients.length,
+    }));
+  }
+});
+
+router.post('/email/:id/retry-failed', requireAdminAuth, (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    return res.redirect(`/admin/email?error=${encodeURIComponent('Campaign not found.')}`);
+  }
+  const result = retryAdminEmailCampaignFailures(db, Math.floor(id));
+  if (!result.ok) {
+    return res.redirect(`/admin/email?error=${encodeURIComponent(result.error || 'Campaign not found.')}`);
+  }
+  scheduleAdminEmailQueue(db, { delayMs: 25 });
+  return res.redirect(`/admin/email?message=${encodeURIComponent(`Requeued failed/skipped deliveries for campaign #${Math.floor(id)}.`)}`);
 });
 
 function redirectAdmin(res, type, message) {
@@ -1815,6 +2049,7 @@ function renderWritefreelyPosterPage({
       <h1>Manual WriteFreely Poster</h1>
       <div class="admin-nav">
         <a href="/admin">Access Codes</a>
+        <a href="/admin/email">Email Accounts</a>
         <a href="/admin/sponsors">Video Platform</a>
         <a href="/admin/marketing">Company Growth</a>
         <a href="/admin/blog">Blog Posts</a>
@@ -1924,6 +2159,7 @@ function renderBlogAdminPage({ message = '', error = '', posts = [] } = {}) {
       </div>
       <div class="admin-nav">
         <a href="/admin">Access Codes</a>
+        <a href="/admin/email">Email Accounts</a>
         <a href="/admin/sponsors">Video Platform</a>
         <a href="/admin/marketing">Company Growth</a>
         <a href="/admin/blog/manual">Manual poster</a>
@@ -2219,7 +2455,7 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
         <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
         <div><h1>Video Platform</h1><p>Company-controlled creative inventory</p></div>
       </div>
-      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/logout">Logout</a></div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/logout">Logout</a></div>
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
@@ -3422,7 +3658,7 @@ function renderMarketingAdminPage({
         <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
         <div><h1>Company Growth</h1><p>Admin-only sales workflow</p></div>
       </div>
-      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/logout">Logout</a></div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/logout">Logout</a></div>
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
