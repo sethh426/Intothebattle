@@ -4,6 +4,7 @@ import {
 } from './entitlements.js';
 
 export const CREATOR_PRO_PLAN_TYPE = 'Creator Pro';
+export const FREE_FOREVER_PLAN_TYPE = 'Free Forever';
 export const ADMIN_GRANTED_SUBSCRIPTION_ORDER_SQL = `
   CASE
     WHEN COALESCE(admin_granted, 0) <> 0
@@ -177,14 +178,14 @@ function upsertAdminGrant(database, userId) {
           admin_granted = 1,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `).run(CREATOR_PRO_PLAN_TYPE, existing.id);
+    `).run(FREE_FOREVER_PLAN_TYPE, existing.id);
   } else {
     database.prepare(`
       INSERT INTO subscriptions (
         user_id, paypal_subscription_id, plan_type, status, started_at,
         next_billing_date, expires_at, admin_granted, created_at, updated_at
       ) VALUES (?, NULL, ?, 'active', CURRENT_TIMESTAMP, NULL, NULL, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    `).run(userId, CREATOR_PRO_PLAN_TYPE);
+    `).run(userId, FREE_FOREVER_PLAN_TYPE);
   }
   return getEffectiveUserSubscription(database, userId);
 }
@@ -192,17 +193,17 @@ function upsertAdminGrant(database, userId) {
 export async function grantPermanentCreatorPro(database, user, options = {}) {
   const userId = normalizeUserId(user?.id);
   if (!userId) throw new Error('User not found');
-  if (Number(user.is_active) === 0) throw new Error('Disabled users cannot receive Creator Pro grants');
+  if (Number(user.is_active) === 0) throw new Error('Disabled users cannot receive Free Forever grants');
 
   const activePayPalSubscriptions = listActivePayPalSubscriptions(database, userId);
   if (activePayPalSubscriptions.length && typeof options.cancelPayPalSubscription !== 'function') {
-    throw new Error('PayPal cancellation is required before granting Creator Pro');
+    throw new Error('PayPal cancellation is required before granting Free Forever');
   }
 
   const cancelledPayPalSubscriptions = [];
   for (const subscription of activePayPalSubscriptions) {
     await options.cancelPayPalSubscription(subscription.paypal_subscription_id, {
-      reason: options.reason || 'Creator Pro granted by admin',
+      reason: options.reason || 'Free Forever granted by admin',
     });
     cancelledPayPalSubscriptions.push(subscription);
   }

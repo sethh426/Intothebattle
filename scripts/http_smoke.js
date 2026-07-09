@@ -182,7 +182,7 @@ try {
     headers: { 'content-type': 'application/x-www-form-urlencoded', Origin: baseUrl },
     body: 'account=creator%40example.com',
   });
-  assert((unauthGrant.headers.get('location') || '').startsWith('/admin/login'), 'admin Creator Pro grant should require admin login');
+  assert((unauthGrant.headers.get('location') || '').startsWith('/admin/login'), 'admin Free Forever grant should require admin login');
 
   await expectStatus('/server.js', 404);
   await expectStatus('/package.json', 404);

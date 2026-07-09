@@ -1576,6 +1576,7 @@ function renderSitemapXml(req = null) {
     { loc: absolute('/paywall'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle Creator Pro game key art' }] },
     { loc: absolute('/privacy'), lastmod: '2026-07-07', changefreq: 'monthly', priority: '0.6' },
     { loc: absolute('/terms'), lastmod: '2026-07-07', changefreq: 'monthly', priority: '0.6' },
+    { loc: absolute('/incident-runbook'), lastmod: '2026-07-08', changefreq: 'monthly', priority: '0.3' },
     { loc: absolute('/site-map'), lastmod: '2026-07-02', changefreq: 'monthly', priority: '0.7' },
   ];
   const blogPages = listBlogPosts({ status: 'published', limit: 60 })
@@ -6482,6 +6483,7 @@ app.get(['/battlegrounds', '/battlegrounds.html', '/the-battlegrounds'], (_req, 
 app.get(['/site-map', '/site-map.html', '/sitemap'], (_req, res) => res.sendFile(path.join(__dirname, 'sitemap.html')));
 app.get(['/privacy', '/privacy.html', '/privacy-policy'], (_req, res) => res.sendFile(path.join(__dirname, 'privacy.html')));
 app.get(['/terms', '/terms.html', '/terms-of-service'], (_req, res) => res.sendFile(path.join(__dirname, 'terms.html')));
+app.get(['/incident-runbook', '/incident-runbook.html', '/runbook'], (_req, res) => res.sendFile(path.join(__dirname, 'incident-runbook.html')));
 app.get('/verify-email', (_req, res) => res.sendFile(path.join(__dirname, 'verify-email.html')));
 app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));
 app.get(['/battle-clip', '/battle-clip.html'], (_req, res) => res.sendFile(path.join(__dirname, 'battle-clip.html')));

@@ -86,7 +86,7 @@ export async function cancelPayPalSubscription(subscriptionId, options = {}) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      reason: String(options.reason || 'Creator Pro granted by admin').slice(0, 128),
+      reason: String(options.reason || 'Free Forever granted by admin').slice(0, 128),
     }),
   });
 

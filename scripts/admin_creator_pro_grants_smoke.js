@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   CREATOR_PRO_PLAN_TYPE,
+  FREE_FOREVER_PLAN_TYPE,
   findUserForCreatorProGrant,
   grantPermanentCreatorPro,
   publicSubscriptionView,
@@ -146,7 +147,7 @@ async function testFreeUserGrant() {
   const db = new FakeGrantDb({ users: [{ id: 1, email: 'free@example.com', is_active: 1 }] });
   const result = await grantPermanentCreatorPro(db, db.users[0]);
   assert.equal(result.cancelledPayPalSubscriptions.length, 0);
-  assert.equal(result.subscription.plan_type, CREATOR_PRO_PLAN_TYPE);
+  assert.equal(result.subscription.plan_type, FREE_FOREVER_PLAN_TYPE);
   assert.equal(activeGrant(db, 1)?.status, 'active');
   assert.equal(publicSubscriptionView(result.subscription).admin_granted, undefined);
 }
@@ -194,7 +195,7 @@ async function testPayPalCancelThenGrant() {
   assert.deepEqual(cancelled, ['I-ACTIVE']);
   assert.deepEqual(result.cancelledPayPalSubscriptions, ['I-ACTIVE']);
   assert.equal(db.subscriptions.find(subscription => subscription.id === 20).status, 'cancelled');
-  assert.equal(activeGrant(db, 3)?.plan_type, CREATOR_PRO_PLAN_TYPE);
+  assert.equal(activeGrant(db, 3)?.plan_type, FREE_FOREVER_PLAN_TYPE);
 }
 
 async function testPayPalCancelFailureBlocksGrant() {
@@ -292,4 +293,4 @@ await testAdminGrantBeatsLateWebhook();
 await testRemoveGrantFallsBackToOtherActivePaidRow();
 testGrantLookup();
 
-console.log('Admin Creator Pro grant smoke checks passed');
+console.log('Admin Free Forever grant smoke checks passed');

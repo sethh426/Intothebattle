@@ -715,11 +715,11 @@ function renderUserRows(users = [], emptyMessage = 'No users found yet.') {
     const grantAction = active === 'Disabled'
       ? '<span class="muted">Disabled account</span>'
       : adminGrantActive
-        ? `<form method="POST" action="/admin/users/${escapeAttr(user.id)}/free-pro/remove" onsubmit="return confirm('Remove this Creator Pro grant?')">
-            <button type="submit" class="secondary-button">Remove Pro Grant</button>
+        ? `<form method="POST" action="/admin/users/${escapeAttr(user.id)}/free-forever/remove" onsubmit="return confirm('Remove this Free Forever grant?')">
+            <button type="submit" class="secondary-button">Remove Free Forever</button>
           </form>`
-        : `<form method="POST" action="/admin/users/${escapeAttr(user.id)}/free-pro/grant" onsubmit="return confirm('Grant permanent Creator Pro to this account?')">
-            <button type="submit">Grant Creator Pro</button>
+        : `<form method="POST" action="/admin/users/${escapeAttr(user.id)}/free-forever/grant" onsubmit="return confirm('Switch this account to Free Forever? This grants permanent full access and cancels active PayPal billing first.')">
+            <button type="submit">Free Forever</button>
           </form>`;
     return `<tr>
       <td data-label="ID">${escapeHtml(String(user.id))}<br><span class="muted">${beta ? 'Beta tester' : 'Standard'}</span></td>
@@ -787,7 +787,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
   const metrics = userMetrics || emptyAdminUserMetrics();
   const metricCards = [
     adminMetricCard('Free accounts', 'accounts.free', metrics.accounts.free, 'Active free creator accounts and free access-code rooms'),
-    adminMetricCard('Paid accounts', 'accounts.paid', metrics.accounts.paid, 'Active Creator Pro users and paid access codes'),
+    adminMetricCard('Pro / free forever', 'accounts.paid', metrics.accounts.paid, 'Active paid users, admin Free Forever grants, and paid access codes'),
     adminMetricCard('Trial accounts', 'accounts.trialBeta', metrics.accounts.trialBeta, 'Real 7-day full-access trial accounts only'),
     adminMetricCard('Beta testers', 'accounts.beta', metrics.accounts.beta || betaCodes.length + betaUsers.length, 'Dedicated beta tester access codes and accounts, separated from trials'),
     adminMetricCard('Live free rooms', 'live.free', metrics.live.free, 'Connected overlay rooms on free access'),
@@ -919,16 +919,17 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         </form>
           </div>
           <div class="control-panel">
-        <h2>Creator Pro grant</h2>
-        <form method="POST" action="/admin/users/free-pro/grant">
+        <h2>Free Forever</h2>
+        <p class="muted">Switch any existing account to permanent full access by email or user ID, even if it is not listed below. Active PayPal billing is cancelled first.</p>
+        <form method="POST" action="/admin/users/free-forever/grant">
           <label>Email or user ID</label>
           <input name="account" type="text" placeholder="creator@example.com or 42" required />
-          <button type="submit">Grant Creator Pro</button>
+          <button type="submit">Set Free Forever</button>
         </form>
-        <form method="POST" action="/admin/users/free-pro/remove" style="margin-top: 14px;" onsubmit="return confirm('Remove this Creator Pro grant?')">
+        <form method="POST" action="/admin/users/free-forever/remove" style="margin-top: 14px;" onsubmit="return confirm('Remove this Free Forever grant?')">
           <label>Email or user ID</label>
           <input name="account" type="text" placeholder="creator@example.com or 42" required />
-          <button type="submit" class="secondary-button">Remove Pro Grant</button>
+          <button type="submit" class="secondary-button">Remove Free Forever</button>
         </form>
           </div>
           <div class="control-panel">
@@ -1202,15 +1203,15 @@ async function grantCreatorProFromRequest(req, res) {
   try {
     const result = await grantPermanentCreatorPro(db, user, {
       cancelPayPalSubscription,
-      reason: 'Creator Pro granted by admin',
+      reason: 'Free Forever granted by admin',
     });
     const cancelledCount = result.cancelledPayPalSubscriptions.length;
     const billingNote = cancelledCount
       ? ` Cancelled ${cancelledCount} PayPal subscription${cancelledCount === 1 ? '' : 's'} first.`
       : '';
-    return redirectAdmin(res, 'message', `Granted Creator Pro to ${creatorLabel(user)}.${billingNote}`);
+    return redirectAdmin(res, 'message', `Set ${creatorLabel(user)} to Free Forever.${billingNote}`);
   } catch (err) {
-    return redirectAdmin(res, 'error', err?.message || 'Failed to grant Creator Pro');
+    return redirectAdmin(res, 'error', err?.message || 'Failed to set Free Forever');
   }
 }
 
@@ -1220,9 +1221,9 @@ function removeCreatorProFromRequest(req, res) {
 
   try {
     removePermanentCreatorPro(db, user);
-    return redirectAdmin(res, 'message', `Removed Creator Pro grant from ${creatorLabel(user)}`);
+    return redirectAdmin(res, 'message', `Removed Free Forever grant from ${creatorLabel(user)}`);
   } catch (err) {
-    return redirectAdmin(res, 'error', err?.message || 'Failed to remove Creator Pro grant');
+    return redirectAdmin(res, 'error', err?.message || 'Failed to remove Free Forever grant');
   }
 }
 
@@ -1234,6 +1235,10 @@ router.post('/users/free-pro/grant', requireAdminAuth, grantCreatorProFromReques
 router.post('/users/free-pro/remove', requireAdminAuth, removeCreatorProFromRequest);
 router.post('/users/:id/free-pro/grant', requireAdminAuth, grantCreatorProFromRequest);
 router.post('/users/:id/free-pro/remove', requireAdminAuth, removeCreatorProFromRequest);
+router.post('/users/free-forever/grant', requireAdminAuth, grantCreatorProFromRequest);
+router.post('/users/free-forever/remove', requireAdminAuth, removeCreatorProFromRequest);
+router.post('/users/:id/free-forever/grant', requireAdminAuth, grantCreatorProFromRequest);
+router.post('/users/:id/free-forever/remove', requireAdminAuth, removeCreatorProFromRequest);
 router.post('/users/:id/delete', requireAdminAuth, denyAccountDelete);
 router.delete('/users/:id', requireAdminAuth, denyAccountDelete);
 router.post('/accounts/:id/delete', requireAdminAuth, denyAccountDelete);
