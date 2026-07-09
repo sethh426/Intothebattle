@@ -5132,12 +5132,22 @@ function normalizeTikTokId(user) {
   return String(
     user.uniqueId ||
     user.unique_id ||
+    user.uniqueID ||
     user.userId ||
     user.user_id ||
     user.userID ||
+    user.userIdStr ||
+    user.user_id_str ||
+    user.uid ||
+    user.openId ||
+    user.open_id ||
+    user.secUid ||
+    user.sec_uid ||
     user.id ||
     user.username ||
     user.userName ||
+    user.screenName ||
+    user.screen_name ||
     user.displayId ||
     user.handle ||
     ''
@@ -5151,6 +5161,10 @@ function normalizeTikTokNick(user) {
     user.nick ||
     user.displayName ||
     user.display_name ||
+    user.profileName ||
+    user.profile_name ||
+    user.screenName ||
+    user.screen_name ||
     user.name ||
     user.uniqueId ||
     user.username ||
@@ -5160,10 +5174,33 @@ function normalizeTikTokNick(user) {
   ).trim() || null;
 }
 
+function tikTokUserCandidates(eventPayload) {
+  if (!eventPayload || typeof eventPayload !== 'object') return [];
+  return [
+    eventPayload.user,
+    eventPayload.sender,
+    eventPayload.author,
+    eventPayload.member,
+    eventPayload.viewer,
+    eventPayload.profile,
+    eventPayload.userInfo,
+    eventPayload.user_info,
+    eventPayload.data?.user,
+    eventPayload.data?.sender,
+    eventPayload.data?.author,
+    eventPayload.payload?.user,
+    eventPayload.payload?.sender,
+    eventPayload.payload?.author,
+    eventPayload,
+  ].filter(candidate => candidate && typeof candidate === 'object');
+}
+
 function resolveTikTokUser(eventPayload) {
-  const user = eventPayload?.user || eventPayload?.sender || eventPayload?.author || {};
-  const id = normalizeTikTokId(user) || normalizeTikTokId(eventPayload);
-  const nickname = normalizeTikTokNick(user) || normalizeTikTokNick(eventPayload) || id;
+  const candidates = tikTokUserCandidates(eventPayload);
+  const id = candidates.map(normalizeTikTokId).find(Boolean)
+    || candidates.map(normalizeTikTokNick).find(Boolean)?.replace(/^@+/, '').toLowerCase()
+    || null;
+  const nickname = candidates.map(normalizeTikTokNick).find(Boolean) || id;
   return { id, nickname };
 }
 
