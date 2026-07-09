@@ -3749,6 +3749,7 @@ function buildTikTokConnectionStatus(room) {
     disconnectedAt: connection.disconnectedAt || null,
     lastEventAt: connection.lastEventAt || null,
     lastEventType: connection.lastEventType || '',
+    lastEventMethod: connection.lastEventMethod || '',
     lastPlayerEventAt: room?.lastTikTokPlayerEventAt || null,
     eventCount: Number(connection.eventCount) || 0,
     playerEventCount: Number(room?.tiktokPlayerEventCount) || 0,
@@ -3883,6 +3884,7 @@ function createTikTokConnection(room, username) {
     disconnectedAt: null,
     lastEventAt: null,
     lastEventType: '',
+    lastEventMethod: '',
     eventCount: 0,
     staleEventsDropped: 0,
     tiktokRoomId: null,
@@ -3902,11 +3904,17 @@ function isActiveTikTokConnection(room, tiktokClient, connectionId, sessionId = 
   );
 }
 
-function markTikTokEventAccepted(room, eventType) {
+function markTikTokEventAccepted(room, eventType, eventPayload = {}) {
   if (!room?.tiktokConnection) return;
   const now = Date.now();
+  const eventMethod = safePlayerText(
+    eventPayload?.method || eventPayload?.message?.method || eventPayload?.common?.method || '',
+    '',
+    120
+  );
   room.tiktokConnection.lastEventAt = now;
   room.tiktokConnection.lastEventType = eventType;
+  if (eventMethod) room.tiktokConnection.lastEventMethod = eventMethod;
   room.tiktokConnection.eventCount = (Number(room.tiktokConnection.eventCount) || 0) + 1;
   if (TIKTOK_PLAYER_EVENT_TYPES.has(String(eventType || ''))) {
     room.lastRealEventAt = now;
@@ -9454,7 +9462,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
         markTikTokEventDropped(room, connectionId, eventType);
         return;
       }
-      markTikTokEventAccepted(room, eventType);
+      markTikTokEventAccepted(room, eventType, args[0]);
       handler(...args);
     });
   };
@@ -9467,7 +9475,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
       return;
     }
 
-    markTikTokEventAccepted(room, eventType);
+    markTikTokEventAccepted(room, eventType, eventPayload);
     const enteredCount = enterPlayersFromTikTokEvent(room, eventType, eventPayload);
     if (enteredCount > 0) {
       logger.info({ roomId: room.roomId, eventType, enteredCount }, 'Entered players from generic TikTok event');
@@ -9977,11 +9985,34 @@ function startMarketingAutoPoster() {
   if (typeof marketingAutoPostTimer.unref === 'function') marketingAutoPostTimer.unref();
 }
 
+function hasDegradedTikTokPlayerEventFeed(room) {
+  const status = String(room?.tiktokConnection?.status || '').toLowerCase();
+  if (!['connecting', 'reconnecting', 'connected'].includes(status)) return false;
+  if (Number(room?.overlayCount || 0) <= 0) return false;
+  return !(Number(room?.tiktokPlayerEventCount || 0) > 0 || Boolean(room?.lastTikTokPlayerEventAt));
+}
+
+function shouldRetainIdleLivePlayer(room, player, now = Date.now()) {
+  if (!player?.alive || !player.forceSpawn) return false;
+  if (!isRestorableLivePlayer(player)) return false;
+  if (!hasDegradedTikTokPlayerEventFeed(room)) return false;
+  const liveStartedAt = safeEpochMs(
+    room?.tiktokConnection?.connectedAt || room?.tiktokConnection?.startedAt,
+    now
+  );
+  return now - liveStartedAt <= TIKTOK_RECENT_PLAYER_RESTORE_MS;
+}
+
 setInterval(() => {
   const cutoff = Date.now() - CFG.IDLE_TIMEOUT_MS;
   for (const room of getAllRooms().values()) {
     for (const id of Object.keys(room.players)) {
-      if (room.players[id].lastActive < cutoff) {
+      const player = room.players[id];
+      if (player.lastActive < cutoff) {
+        if (shouldRetainIdleLivePlayer(room, player)) {
+          player.lastActive = Date.now();
+          continue;
+        }
         delete room.players[id];
         logger.info({ player: id, room: room.roomId }, 'Removed idle player due to inactivity');
       }
