@@ -9822,6 +9822,8 @@ function tikTokRepairDecision(room, now = Date.now()) {
   const statusSince = Number(room.tiktokConnection.updatedAt || room.tiktokConnection.connectedAt || room.tiktokConnection.startedAt) || now;
   const connectedSince = Number(room.tiktokConnection.connectedAt || room.tiktokConnection.startedAt || room.tiktokConnection.updatedAt) || now;
   const hasPlayerEvents = Number(room.tiktokPlayerEventCount || 0) > 0 || Boolean(room.lastTikTokPlayerEventAt);
+  const lastAnyEventAt = Number(room.tiktokConnection.lastEventAt || 0);
+  const hasAnyEvents = Number(room.tiktokConnection.eventCount || 0) > 0 || Boolean(lastAnyEventAt);
   const overlayConnected = Number(room.overlayCount || 0) > 0;
 
   if ((status === 'connecting' || status === 'reconnecting') && now - statusSince >= TIKTOK_CONNECT_STALE_MS) {
@@ -9833,6 +9835,8 @@ function tikTokRepairDecision(room, now = Date.now()) {
   }
 
   if (status === 'connected' && overlayConnected && !hasPlayerEvents && now - connectedSince >= TIKTOK_CONNECTED_NO_EVENT_STALE_MS) {
+    const eventQuietMs = hasAnyEvents ? now - Math.max(lastAnyEventAt || 0, connectedSince) : now - connectedSince;
+    if (hasAnyEvents && eventQuietMs < TIKTOK_CONNECTED_NO_EVENT_STALE_MS * 4) return null;
     return { username, reason: 'connected_without_player_events', ageMs: now - connectedSince };
   }
 
