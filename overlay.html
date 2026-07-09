@@ -3884,10 +3884,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       playerZone.h * (isPublicDemo ? 0.68 : 0.64)
     ) * layoutZoom;
     const requestedCardW = requestedCardH * (total >= 5 ? 3.36 : total === 4 ? 3.18 : 2.98);
-    const baseGap = requestedCardW * (total >= 5 ? 0.012 : total === 4 ? 0.024 : total === 3 ? 0.044 : 0.078);
-    const minGap = stage.gap * 1.6;
-    const maxGap = requestedCardW * (total >= 5 ? 0.042 : total === 4 ? 0.072 : total === 3 ? 0.15 : 0.25);
-    const gapScale = total >= 5 ? 0.075 : total === 4 ? 0.12 : 0.22;
+    const baseGap = requestedCardW * (total >= 5 ? 0.006 : total === 4 ? 0.018 : total === 3 ? 0.04 : 0.074);
+    const minGap = stage.gap * (total >= 5 ? 1.66 : 1.42);
+    const maxGap = requestedCardW * (total >= 5 ? 0.046 : total === 4 ? 0.064 : total === 3 ? 0.14 : 0.24);
+    const gapScale = total >= 5 ? 0.055 : total === 4 ? 0.1 : 0.2;
     const visualGap = Math.min(Math.max(minGap, maxGap), Math.max(minGap, baseGap + Math.max(0, layoutGap) * gapScale));
     const availableW = Math.max(240, playerZone.w - stage.gap * 2);
     const naturalWidth = total > 1 ? requestedCardW * total + visualGap * (total - 1) : requestedCardW;
@@ -3904,28 +3904,28 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const compactDemoCard = isPublicDemo;
     const ui = canvasUiScale();
     const { cardH, cardW } = getPlayerCardMetrics(total);
-    const plateH = Math.max(compactDemoCard ? 118 * ui : 128 * ui, cardH * 1.24);
+    const plateH = Math.max(compactDemoCard ? 132 * ui : 138 * ui, cardH * 1.36);
     const plateX = pos.x - cardW / 2;
     const plateY = pos.y - plateH / 2;
     const radius = Math.max(13 * ui, plateH * 0.16);
     const padX = clampNumber(cardW * 0.045, 7 * ui, 14 * ui);
-    const padY = clampNumber(plateH * 0.086, 7 * ui, 12 * ui);
+    const padY = clampNumber(plateH * 0.074, 7 * ui, 11 * ui);
     const slotGap = Math.max(4 * ui, cardW * 0.016);
     const contentRight = plateX + cardW - padX;
-    const nameH = Math.max(48 * ui, Math.min(60 * ui, plateH * 0.48));
-    const barH = Math.max(16 * ui, Math.min(20 * ui, plateH * 0.165));
-    const badgeH = Math.max(16 * ui, Math.min(19 * ui, plateH * 0.155));
+    const nameH = Math.max(54 * ui, Math.min(64 * ui, plateH * 0.49));
+    const barH = Math.max(22 * ui, Math.min(27 * ui, plateH * 0.19));
+    const badgeH = Math.max(16 * ui, Math.min(18 * ui, plateH * 0.14));
     const nameX = plateX + padX;
     const nameY = plateY + padY;
     const nameW = Math.max(1, cardW - padX * 2);
     const barX = plateX + padX;
-    const bottomPad = Math.max(6 * ui, padY * 0.68);
+    const bottomPad = Math.max(6 * ui, padY * 0.62);
     const barY = plateY + plateH - bottomPad - barH;
     const barW = Math.max(1, cardW - padX * 2);
     const midTop = clampNumber(
-      nameY + nameH + slotGap * 0.55,
-      nameY + nameH + slotGap * 0.25,
-      Math.max(nameY + nameH * 0.92, barY - slotGap * 1.15 - badgeH)
+      nameY + nameH + slotGap * 0.45,
+      nameY + nameH + slotGap * 0.18,
+      Math.max(nameY + nameH * 0.94, barY - slotGap * 1.05 - badgeH)
     );
     const avatarR = Math.max(4.5 * ui, Math.min(7 * ui, badgeH * 0.34, cardW * 0.032));
     const avatarX = plateX + padX + avatarR + Math.max(2 * ui, badgeH * 0.12);
@@ -8127,8 +8127,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       Math.max(1, slots.name.w - Math.max(8 * ui, slots.name.h * 0.18)),
       2,
       nameFontFactory,
-      Math.max(22 * ui, Math.min(slots.name.h * 0.5, cardW * 0.096)),
-      Math.max(8, 9.5 * ui)
+      Math.max(24 * ui, Math.min(slots.name.h * 0.62, cardW * 0.135)),
+      Math.max(9, 10.5 * ui)
     );
     const commandLabel = state.commandLabel || '';
     const commandSlot = null;
@@ -8149,7 +8149,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       statusDisplayLabel,
       Math.max(1, slots.statusBadges.w - Math.max(5 * ui, slots.statusBadges.h * 0.3)),
       size => `900 ${size}px ${PLAYER_CARD_STAT_FONT}`,
-      Math.max(7 * ui, Math.min(slots.statusBadges.h * 0.64, 11 * ui)),
+      Math.max(7.5 * ui, Math.min(slots.statusBadges.h * 0.7, 12.5 * ui)),
       Math.max(6, 7 * ui)
     );
     const hpFit = fitCanvasTextResult(
@@ -8157,8 +8157,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       `${Math.round(hp)} HP`,
       Math.max(1, barW - Math.max(10 * ui, barH * 0.7)),
       size => `900 ${size}px ${PLAYER_CARD_STAT_FONT}`,
-      Math.max(8.5 * ui, Math.min(barH * 0.78, 13.5 * ui)),
-      Math.max(6, 7 * ui)
+      Math.max(10 * ui, Math.min(barH * 0.78, 16 * ui)),
+      Math.max(7, 8 * ui)
     );
 
     if (state.isCritical) {
@@ -8237,10 +8237,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const nameTextRect = drawCenteredCanvasTextLines(ctx, nameFit.lines, nameCenter.x, nameTextCenterY, {
       fontFactory: nameFontFactory,
       fontSize: nameFit.size,
-      lineHeight: nameFit.size * 0.88,
+      lineHeight: nameFit.size * 0.86,
       fillStyle: state.isKO ? '#d7dde9' : '#ffffff',
       strokeStyle: 'rgba(0,0,0,0.76)',
-      lineWidth: compactDemoCard ? Math.max(1.5, 1.8 * ui) : Math.max(1.6, 2.0 * ui),
+      lineWidth: compactDemoCard ? Math.max(1.8, 2.15 * ui) : Math.max(1.9, 2.25 * ui),
     });
 
     const handleTextRect = null;

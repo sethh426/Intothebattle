@@ -179,6 +179,9 @@ function assertPlayerCardSlots(layout, label, options = {}) {
     assertRectInside(slots.nameText, slots.name, `${cardLabel} name text`, 3);
     assertRectInside(slots.hpText, slots.hpBar, `${cardLabel} hp text`, 3);
     assertRectInside(slots.statusText, slots.statusBadges, `${cardLabel} status text`, 2.5);
+    expect(slots.nameText.h, `${cardLabel} source-scale name readability`).toBeGreaterThanOrEqual(Math.max(16, slots.card.h * 0.13));
+    expect(slots.hpBar.h, `${cardLabel} source-scale hp rail readability`).toBeGreaterThanOrEqual(slots.card.h * 0.17);
+    expect(slots.hpText.h, `${cardLabel} source-scale hp text readability`).toBeGreaterThanOrEqual(Math.max(9.5, slots.card.h * 0.07));
     assertNoSlotOverlap(slots.name, slots.avatar, `${cardLabel} name/avatar`);
     assertNoSlotOverlap(slots.name, slots.hpBar, `${cardLabel} name/hp`);
     assertNoSlotOverlap(slots.statusBadges, slots.hpBar, `${cardLabel} status/hp`);
