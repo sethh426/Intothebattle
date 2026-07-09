@@ -5209,6 +5209,8 @@ function safePlayerText(value, fallback = '', maxLength = 120) {
 
 function isPersistablePlayerId(id) {
   const value = String(id || '').trim();
+  const normalized = value.toLowerCase();
+  if (['0', 'unknown', 'undefined', 'null', 'anonymous'].includes(normalized)) return false;
   return Boolean(value && value !== SERVER_HORDE_ID && value !== SERVER_BOSS_ID);
 }
 
@@ -5387,7 +5389,7 @@ function spawnPlayer(room, uniqueId, nickname, options = {}) {
 }
 
 function ensurePlayerEnteredBattle(room, uniqueId, nickname, engagementType = 'engagement', options = {}) {
-  if (!room || !uniqueId) return { entered: false, wasAlive: false, player: null };
+  if (!room || !uniqueId || !isPersistablePlayerId(uniqueId)) return { entered: false, wasAlive: false, player: null };
   const wasAlive = Boolean(room.players[uniqueId]?.alive);
   spawnPlayer(room, uniqueId, nickname, options);
   const player = room.players[uniqueId];
