@@ -359,6 +359,7 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
     const viewport = { width: window.innerWidth, height: window.innerHeight };
     const title = el.querySelector('.banner-title')?.getBoundingClientRect();
     const meta = el.querySelector('.banner-meta')?.getBoundingClientRect();
+    const bannerStatus = window.overlayEventEngine?.status?.().banner || null;
     return {
       className: el.className,
       left: rect.left,
@@ -371,6 +372,7 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
       viewport,
       titleHeight: title?.height || 0,
       metaHeight: meta?.height || 0,
+      bannerStatus,
     };
   });
 
@@ -398,6 +400,9 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
   }
   expect(geometry.centerDelta).toBeLessThanOrEqual(Math.max(18, geometry.viewport.width * 0.035));
   expect(geometry.titleHeight).toBeGreaterThan(12);
+  expect(geometry.bannerStatus?.laneSource).toBe('combat-gap');
+  expect(geometry.bannerStatus?.active?.rect?.top).toBeGreaterThan(geometry.bannerStatus.playerBottom + 1);
+  expect(geometry.bannerStatus?.active?.rect?.bottom).toBeLessThan(geometry.bannerStatus.hordeTop - 1);
 
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'qa-overlay-v1-banner');
