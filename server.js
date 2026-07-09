@@ -590,6 +590,8 @@ const TIKTOK_LIVE_REPAIR_INTERVAL_MS = Math.max(5000, Number(process.env.TIKTOK_
 const TIKTOK_CONNECT_STALE_MS = Math.max(15000, Number(process.env.TIKTOK_CONNECT_STALE_MS || 60000));
 const TIKTOK_CONNECTED_NO_EVENT_STALE_MS = Math.max(30000, Number(process.env.TIKTOK_CONNECTED_NO_EVENT_STALE_MS || 90000));
 const TIKTOK_REPAIR_COOLDOWN_MS = Math.max(30000, Number(process.env.TIKTOK_REPAIR_COOLDOWN_MS || 120000));
+const TIKTOK_RECENT_PLAYER_RESTORE_MS = Math.max(0, Number(process.env.TIKTOK_RECENT_PLAYER_RESTORE_MS || 24 * 60 * 60 * 1000));
+const TIKTOK_RECENT_PLAYER_RESTORE_LIMIT = Math.max(0, Number(process.env.TIKTOK_RECENT_PLAYER_RESTORE_LIMIT || 24));
 const TIKTOK_DIRECT_PLAYER_EVENT_TYPES = new Set(['member', 'chat', 'gift', 'like', 'social', 'follow']);
 const TIKTOK_GENERIC_PLAYER_EVENT_TYPES = new Set(['subscribe', 'emoteChat', 'question', 'liveIntro', 'linkMic']);
 const TIKTOK_PLAYER_EVENT_TYPES = new Set([
@@ -4605,6 +4607,51 @@ function loadRoomPlayerStats(room) {
   } catch (err) {
     console.error('Error loading player stats for room', room.roomId, err);
   }
+}
+
+function isRestorableLivePlayer(player) {
+  const uniqueId = safePlayerText(player?.uniqueId || '', '', 80);
+  if (!isPersistablePlayerId(uniqueId)) return false;
+  if (/^(arena|test|demo|bot)[_-]/i.test(uniqueId)) return false;
+  return true;
+}
+
+function restoreRecentRoomPlayers(room, options = {}) {
+  if (!room?.roomId || TIKTOK_RECENT_PLAYER_RESTORE_LIMIT <= 0 || TIKTOK_RECENT_PLAYER_RESTORE_MS <= 0) return 0;
+  const existingAlive = Object.values(room.players || {}).some(player => player && player.alive);
+  if (existingAlive && options.onlyWhenEmpty !== false) return 0;
+
+  const now = Date.now();
+  const candidates = Object.values(room.players || {})
+    .filter(player => player && !player.alive && isRestorableLivePlayer(player))
+    .filter(player => {
+      const lastActive = safeEpochMs(player.lastActive, 0);
+      return lastActive > 0 && now - lastActive <= TIKTOK_RECENT_PLAYER_RESTORE_MS;
+    })
+    .sort((a, b) => safeEpochMs(b.lastActive, 0) - safeEpochMs(a.lastActive, 0))
+    .slice(0, TIKTOK_RECENT_PLAYER_RESTORE_LIMIT);
+
+  for (const player of candidates) {
+    const maxHp = safeStatInt(player.maxHp, CFG.BASE_HP, 1, 1_000_000);
+    player.maxHp = maxHp;
+    player.hp = Math.max(1, safeStatInt(player.hp || maxHp, maxHp, 0, maxHp));
+    player.alive = true;
+    player.forceSpawn = true;
+    player.source = player.source || 'real';
+    player.lastActive = Math.max(safeEpochMs(player.lastActive, 0), now);
+  }
+
+  if (candidates.length > 0) {
+    logger.warn({
+      roomId: room.roomId,
+      restoredCount: candidates.length,
+      reason: options.reason || 'live_reconnect',
+    }, 'Restored recent players for live reconnect');
+    emitRoomEvent(room, 'gameState', room.players);
+    emitRoomRealtimeStatus(room);
+  }
+
+  return candidates.length;
 }
 
 function saveRoomPlayerStats(room) {
@@ -8913,7 +8960,7 @@ app.post('/api/admin/rooms/:roomId/reset-live', (req, res) => {
   );
   let stream;
   if (reconnect && username) {
-    stream = connectToStreamer(username, room, { repair: true, resetLiveRuntime: false });
+    stream = connectToStreamer(username, room, { repair: true, resetLiveRuntime: false, restoreRecentPlayers: true });
   } else {
     disconnectStreamer(room);
     stream = buildTikTokConnectionStatus(room);
@@ -9717,6 +9764,9 @@ function connectToStreamer(username, room = getDefaultRoom(), options = {}) {
   if (room.roomId === DEFAULT_ROOM_ID) client = tiktokClient;
   setupTikTokEvents(tiktokClient, room, connection.id);
   if (room.planEntitlements) updatePlatformSponsorSchedule(room, room.planEntitlements);
+  if (options.restoreRecentPlayers === true) {
+    restoreRecentRoomPlayers(room, { reason: disconnectReason });
+  }
   room.tiktokConnectPromise = tiktokClient.connect().catch(err => {
     console.error('❌ Could not connect:', err?.message || err);
     console.error(`   Make sure @${normalizedUsername} is currently LIVE on TikTok`);
@@ -9791,6 +9841,7 @@ function repairTikTokConnection(room, decision) {
     const status = connectToStreamer(decision.username, room, {
       resetLiveRuntime: false,
       repair: true,
+      restoreRecentPlayers: true,
     });
     const clearRepairFlag = () => { room.tiktokRepairInFlight = false; };
     if (room.tiktokConnectPromise && typeof room.tiktokConnectPromise.finally === 'function') {
