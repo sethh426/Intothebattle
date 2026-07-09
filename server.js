@@ -590,7 +590,12 @@ const TIKTOK_LIVE_REPAIR_INTERVAL_MS = Math.max(5000, Number(process.env.TIKTOK_
 const TIKTOK_CONNECT_STALE_MS = Math.max(15000, Number(process.env.TIKTOK_CONNECT_STALE_MS || 60000));
 const TIKTOK_CONNECTED_NO_EVENT_STALE_MS = Math.max(30000, Number(process.env.TIKTOK_CONNECTED_NO_EVENT_STALE_MS || 90000));
 const TIKTOK_REPAIR_COOLDOWN_MS = Math.max(30000, Number(process.env.TIKTOK_REPAIR_COOLDOWN_MS || 120000));
-const TIKTOK_PLAYER_EVENT_TYPES = new Set(['member', 'chat', 'gift', 'like', 'social', 'follow']);
+const TIKTOK_DIRECT_PLAYER_EVENT_TYPES = new Set(['member', 'chat', 'gift', 'like', 'social', 'follow']);
+const TIKTOK_GENERIC_PLAYER_EVENT_TYPES = new Set(['subscribe', 'emoteChat', 'question', 'liveIntro', 'linkMic']);
+const TIKTOK_PLAYER_EVENT_TYPES = new Set([
+  ...TIKTOK_DIRECT_PLAYER_EVENT_TYPES,
+  ...TIKTOK_GENERIC_PLAYER_EVENT_TYPES,
+]);
 
 const CFG = {
   BASE_HP:                        300,
@@ -5229,6 +5234,30 @@ function resolveTikTokUser(eventPayload) {
   return { id, nickname };
 }
 
+function enterPlayersFromTikTokEvent(room, eventType, eventPayload, options = {}) {
+  if (!room || !eventPayload || typeof eventPayload !== 'object') return 0;
+  const seen = new Set();
+  const users = Array.isArray(eventPayload.users) ? eventPayload.users : [];
+  const payloads = users.length ? users.map(user => ({ user })) : [eventPayload];
+  let enteredCount = 0;
+
+  for (const payload of payloads) {
+    const { id, nickname } = resolveTikTokUser(payload);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ensurePlayerEnteredBattle(room, id, nickname, eventType, {
+      announceExisting: options.announceExisting === true,
+    });
+    enteredCount += 1;
+  }
+
+  if (enteredCount > 0) {
+    emitRoomEvent(room, 'gameState', room.players);
+  }
+
+  return enteredCount;
+}
+
 function likeIncrementFromEvent(eventPayload = {}) {
   const raw = Number(eventPayload.likeCount ?? eventPayload.count ?? eventPayload.likes ?? 1);
   if (!Number.isFinite(raw) || raw <= 0) return 1;
@@ -5329,6 +5358,11 @@ function ensurePlayerEnteredBattle(room, uniqueId, nickname, engagementType = 'e
       repost: 'a repost',
       social: 'engagement',
       member: 'the LIVE entry',
+      subscribe: 'a subscription',
+      emotechat: 'an emote',
+      question: 'a question',
+      liveintro: 'the LIVE intro',
+      linkmic: 'link mic',
     }[type] || 'engagement';
     emitRoomEvent(room, 'spawn', { uniqueId, nickname, autoJoin: true, engagementType: type });
     emitRoomEvent(room, 'playerCommand', {
@@ -9377,6 +9411,21 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
       handler(...args);
     });
   };
+
+  tiktokClient.on('event', (eventPayload = {}) => {
+    const eventType = String(eventPayload?.type || '').trim();
+    if (!eventType || TIKTOK_DIRECT_PLAYER_EVENT_TYPES.has(eventType)) return;
+    if (!isActiveTikTokConnection(room, tiktokClient, connectionId, connectionSessionId)) {
+      markTikTokEventDropped(room, connectionId, eventType || 'event');
+      return;
+    }
+
+    markTikTokEventAccepted(room, eventType);
+    const enteredCount = enterPlayersFromTikTokEvent(room, eventType, eventPayload);
+    if (enteredCount > 0) {
+      logger.info({ roomId: room.roomId, eventType, enteredCount }, 'Entered players from generic TikTok event');
+    }
+  });
 
   onTikTok('connected', () => {
     startLiveSession(room, 'tiktok', { sessionId: connectionSessionId, phase: MATCH_PHASES.LIVE });
