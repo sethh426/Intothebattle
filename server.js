@@ -6761,12 +6761,29 @@ app.use((req, res, next) => {
 function safeAuthRedirectPath(value, fallback = '/dashboard') {
   const text = String(value || '').trim();
   if (!text || !text.startsWith('/') || text.startsWith('//') || text.includes('\\')) return fallback;
-  return text.split('#')[0].slice(0, 300) || fallback;
+  const clean = text.split('#')[0].slice(0, 300) || fallback;
+  const pathOnly = clean.split('?')[0].replace(/\/+$/, '') || '/';
+  const blockedPaths = new Set([
+    '/',
+    '/login',
+    '/login.html',
+    '/signup',
+    '/signup.html',
+    '/register',
+    '/register.html',
+    '/request-password-reset',
+    '/reset-password',
+    '/paywall',
+  ]);
+  return blockedPaths.has(pathOnly) ? fallback : clean;
 }
 
 app.post('/auth/user/login', (req, res, next) => {
   const email = String(req.body?.email || '').trim().toLowerCase();
   if (!email) return next();
+  if (req.body && typeof req.body === 'object') {
+    req.body.next = safeAuthRedirectPath(req.body.next, '/dashboard');
+  }
   try {
     const user = db.prepare('SELECT id, password_hash FROM users WHERE email = ?').get(email);
     if (!user || user.password_hash) return next();
@@ -10118,6 +10135,18 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
+  const statusCode = Number(err?.statusCode || err?.status || 500);
+  if (statusCode >= 400 && statusCode < 500) {
+    logger.warn({ err, method: req.method, path: req.path }, 'Client request error');
+    const message = err?.type === 'entity.parse.failed'
+      ? 'Invalid JSON request body.'
+      : (err?.message || 'Bad request');
+    if (req.accepts('json')) {
+      return res.status(statusCode).json({ success: false, error: message });
+    }
+    return res.status(statusCode).send(message);
+  }
+
   logger.error({ err, method: req.method, path: req.path }, 'Unhandled server error');
   res.status(500).send('Internal server error');
 });
