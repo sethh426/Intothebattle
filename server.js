@@ -8926,7 +8926,12 @@ app.post('/api/connect', requireRoom, (req, res) => {
   }
   if (!API_KEY)  return res.status(500).json({ success: false, error: 'Missing TikTok API_KEY in .env for the legacy LIVE event adapter' });
   try {
-    const stream = connectToStreamer(username, req.room);
+    const existingUsername = normalizeTikTokUsername(req.room.streamerUsername || req.room.tiktokConnection?.username || '');
+    const sameStreamerReconnect = Boolean(existingUsername && existingUsername === username);
+    const stream = connectToStreamer(username, req.room, {
+      resetLiveRuntime: sameStreamerReconnect ? false : undefined,
+      restoreRecentPlayers: sameStreamerReconnect,
+    });
     res.json({ success: true, username: stream.username, status: stream.status, stream });
   } catch (err) {
     res.status(400).json({ success: false, error: err.message || 'Unable to connect TikTok stream' });
