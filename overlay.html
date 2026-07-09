@@ -627,31 +627,31 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.commands.is-nano .banner-command-chip span { display:none; }
 .banner.is-nano .banner-meter { width:3px; height:20px; }
 @keyframes cyberBannerIn {
-  0% { opacity:0; transform:translate(-50%,10px) scale(.96); filter:blur(6px) brightness(1.45); box-shadow:0 10px 22px rgba(0,0,0,0.42),0 0 0 rgba(var(--banner-accent-rgb),0); }
-  58% { opacity:1; transform:translate(-50%,-2px) scale(1.018); filter:blur(0) brightness(1.16); box-shadow:0 16px 42px rgba(0,0,0,0.62),0 0 48px rgba(var(--banner-accent-rgb),0.3); }
+  0% { opacity:0; transform:translate(-50%,0) scale(1); filter:blur(6px) brightness(1.45); box-shadow:0 10px 22px rgba(0,0,0,0.42),0 0 0 rgba(var(--banner-accent-rgb),0); }
+  58% { opacity:1; transform:translate(-50%,0) scale(1); filter:blur(0) brightness(1.16); box-shadow:0 16px 42px rgba(0,0,0,0.62),0 0 48px rgba(var(--banner-accent-rgb),0.3); }
   100% { opacity:1; transform:translate(-50%,0) scale(1); filter:none; }
 }
 @keyframes cyberBannerOut {
   to { opacity:0; transform:translate(-50%,0) scale(1); filter:blur(2px); }
 }
 @keyframes cyberBannerSlamIn {
-  0% { opacity:0; transform:translate(-50%,-30px) scale(.88,1.18); filter:blur(8px) brightness(1.8); }
-  54% { opacity:1; transform:translate(-50%,5px) scale(1.035,.98); filter:blur(0) brightness(1.18); }
+  0% { opacity:0; transform:translate(-50%,0) scale(1); filter:blur(8px) brightness(1.8); }
+  54% { opacity:1; transform:translate(-50%,0) scale(1); filter:blur(0) brightness(1.18); }
   100% { opacity:1; transform:translate(-50%,0) scale(1); filter:none; }
 }
 @keyframes cyberBannerSweepIn {
-  0% { opacity:0; transform:translate(calc(-50% - 54px),0) scaleX(.72); clip-path:polygon(0 0,24% 0,14% 100%,0 100%); filter:blur(6px) brightness(1.55); }
-  58% { opacity:1; transform:translate(calc(-50% + 7px),0) scaleX(1.028); clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px); filter:blur(0) brightness(1.12); }
-  100% { opacity:1; transform:translate(-50%,0) scaleX(1); clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px); filter:none; }
+  0% { opacity:0; transform:translate(-50%,0) scale(1); clip-path:polygon(0 0,24% 0,14% 100%,0 100%); filter:blur(6px) brightness(1.55); }
+  58% { opacity:1; transform:translate(-50%,0) scale(1); clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px); filter:blur(0) brightness(1.12); }
+  100% { opacity:1; transform:translate(-50%,0) scale(1); clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px); filter:none; }
 }
 @keyframes cyberBannerSignalIn {
-  0% { opacity:0; transform:translate(-50%,12px) scaleX(.86); filter:blur(5px) saturate(1.4); }
-  42% { opacity:.65; transform:translate(-50%,-3px) scaleX(1.02); filter:blur(0) saturate(1.35); }
-  100% { opacity:1; transform:translate(-50%,0) scaleX(1); filter:none; }
+  0% { opacity:0; transform:translate(-50%,0) scale(1); filter:blur(5px) saturate(1.4); }
+  42% { opacity:.65; transform:translate(-50%,0) scale(1); filter:blur(0) saturate(1.35); }
+  100% { opacity:1; transform:translate(-50%,0) scale(1); filter:none; }
 }
 @keyframes cyberBannerSurgeIn {
-  0% { opacity:0; transform:translate(-50%,0) scale(.62); filter:blur(9px) brightness(2); }
-  48% { opacity:1; transform:translate(-50%,0) scale(1.06); filter:blur(0) brightness(1.24); }
+  0% { opacity:0; transform:translate(-50%,0) scale(1); filter:blur(9px) brightness(2); }
+  48% { opacity:1; transform:translate(-50%,0) scale(1); filter:blur(0) brightness(1.24); }
   100% { opacity:1; transform:translate(-50%,0) scale(1); filter:none; }
 }
 @keyframes cyberBannerSweep {
@@ -5251,11 +5251,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const innerLeft = frame.x + gapX;
     const innerRight = frame.right - gapX;
     const maxLaneW = Math.max(1, innerRight - innerLeft);
-    const targetRatio = isCommandBanner ? 0.78 : 0.62;
+    const targetRatio = isCommandBanner ? 0.88 : 0.62;
     const laneW = Math.min(maxLaneW, Math.max(bannerZone.w, frame.w * targetRatio));
+    const laneH = Math.min(
+      frame.h * 0.12,
+      Math.max(bannerZone.h, frame.h * (isCommandBanner ? 0.096 : 0.105))
+    );
     const centeredX = frame.x + frame.w / 2 - laneW / 2;
     const laneX = clampNumber(centeredX, innerLeft, innerRight - laneW);
-    return makeRect(laneX, bannerZone.y, laneW, bannerZone.h);
+    return makeRect(laneX, bannerZone.y, laneW, laneH);
   }
 
   function currentBannerStatus() {
