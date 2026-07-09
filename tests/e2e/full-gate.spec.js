@@ -124,6 +124,7 @@ test('@cross-browser authenticated dashboard exposes real creator controls', asy
   await expect(page.getByTestId('mobile-overlay-panel')).toBeVisible();
   await expect(page.locator('#mobileOverlayLayoutInput')).toHaveValue('pip-corner');
   await page.locator('#liveWorkflow').evaluate(el => { el.open = true; });
+  await expect(page.locator('#bossWaveHpInput')).toHaveValue('1200');
   await expect(page.getByRole('button', { name: 'Boss Wave' })).toBeVisible();
   await page.locator('#toolsWorkflow').evaluate(el => { el.open = true; });
   await expect(page.locator('.danger-zone')).toBeVisible();
