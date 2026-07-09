@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { Worker } from 'worker_threads';
 import { Client } from 'pg';
+import { seedBlogPosts } from './seedBlogPosts.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_ROOT = process.env.DISK_PATH || path.join(__dirname, '..');
@@ -910,6 +911,44 @@ async function initDb() {
     await safeExec("CREATE INDEX IF NOT EXISTS local_blog_posts_slug_idx ON local_blog_posts(slug)");
     await safeExec("CREATE INDEX IF NOT EXISTS local_blog_posts_status_published_idx ON local_blog_posts(status, published_at)");
     await safeExec("CREATE INDEX IF NOT EXISTS local_blog_posts_source_idx ON local_blog_posts(source, status)");
+
+    try {
+      for (const post of seedBlogPosts) {
+        await client.query(
+          `INSERT INTO local_blog_posts (
+            slug, title, summary, content_html, status, source, source_key,
+            seo_title, seo_description, seo_keywords, published_at, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          ON CONFLICT (slug) DO UPDATE SET
+            title = EXCLUDED.title,
+            summary = EXCLUDED.summary,
+            content_html = EXCLUDED.content_html,
+            status = EXCLUDED.status,
+            source = EXCLUDED.source,
+            source_key = EXCLUDED.source_key,
+            seo_title = EXCLUDED.seo_title,
+            seo_description = EXCLUDED.seo_description,
+            seo_keywords = EXCLUDED.seo_keywords,
+            published_at = COALESCE(local_blog_posts.published_at, EXCLUDED.published_at),
+            updated_at = CURRENT_TIMESTAMP`,
+          [
+            post.slug,
+            post.title,
+            post.summary,
+            post.contentHtml,
+            post.status,
+            post.source,
+            post.sourceKey,
+            post.seoTitle,
+            post.seoDescription,
+            post.seoKeywords,
+            post.publishedAt,
+          ]
+        );
+      }
+    } catch (err) {
+      console.warn('Blog seed skipped:', err?.message || err);
+    }
 
     await safeExec('ALTER TABLE room_player_stats ALTER COLUMN last_kill_time TYPE BIGINT USING last_kill_time::bigint');
     await safeExec('ALTER TABLE room_player_stats ALTER COLUMN last_active TYPE BIGINT USING last_active::bigint');
