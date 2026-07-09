@@ -4547,9 +4547,12 @@ function emitSoundAndSync(roomOrEvent, eventOrOptions = {}, options = {}) {
 }
 
 // ────────────────────────────────
-// Random non-command attacks use a small readable visual pool.
-const RANDOM_ATTACK_EFFECTS = ['laser', 'beam', 'fire', 'bullet', 'railgun', 'comet', 'arc'];
-const GIFT_ATTACK_EFFECTS = ['laser', 'arc', 'railgun', 'comet', 'sphere', 'pulse'];
+// Non-command attacks rotate through the approved V1 overlay catalog so every
+// viewer comment can surface the newer visual styles during a live room.
+const CORE_ATTACK_EFFECTS = Object.freeze(['beam', 'laser', 'arc', 'sphere', 'railgun', 'comet', 'pulse']);
+const NEW_ATTACK_EFFECTS = Object.freeze(['prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard']);
+const RANDOM_ATTACK_EFFECTS = Object.freeze([...CORE_ATTACK_EFFECTS, ...NEW_ATTACK_EFFECTS]);
+const GIFT_ATTACK_EFFECTS = Object.freeze(['laser', 'arc', 'railgun', 'comet', 'sphere', 'pulse', 'prism', 'plasma', 'gravity', 'orbital', 'shard']);
 const GIFT_ATTACK_COLORS = Object.freeze({
   laser: '#7afcff',
   arc: '#99ffda',
@@ -4557,7 +4560,20 @@ const GIFT_ATTACK_COLORS = Object.freeze({
   comet: '#ff8f45',
   sphere: '#c77dff',
   pulse: '#ff78b2',
+  prism: '#f6c95b',
+  plasma: '#ff78b2',
+  gravity: '#8b7cff',
+  orbital: '#7afcff',
+  shard: '#bdfcff',
 });
+
+function nextRoomEffect(room, key, effects, fallback = 'beam') {
+  const list = Array.isArray(effects) ? effects : [];
+  if (!list.length) return fallback;
+  const current = Math.max(0, Math.floor(Number(room?.[key]) || 0));
+  if (room) room[key] = current + 1;
+  return list[current % list.length] || fallback;
+}
 
 // ────────────────────────────────
 // HELPER FUNCTIONS (unchanged)
@@ -6303,8 +6319,8 @@ function handleMentionAttack(room, attackerId, attackerNick, comment) {
       isSpecialCommand   = commandMultiplier > 1.5;
     }
   } else {
-    // No !command – use a random effect from the default pool
-    requestedEffect = RANDOM_ATTACK_EFFECTS[Math.floor(Math.random() * RANDOM_ATTACK_EFFECTS.length)];
+    // No !command - use the rotating live effect pool.
+    requestedEffect = nextRoomEffect(room, 'randomAttackEffectIndex', RANDOM_ATTACK_EFFECTS, 'beam');
     commandMultiplier = CFG.MESSAGE_LASER_MULTIPLIER;
   }
 
@@ -6416,7 +6432,7 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
     commandDescription = 'OVERDRIVE';
     isSpecialCommand = true;
   } else {
-    requestedEffect = RANDOM_ATTACK_EFFECTS[Math.floor(Math.random() * RANDOM_ATTACK_EFFECTS.length)];
+    requestedEffect = nextRoomEffect(room, 'randomAttackEffectIndex', RANDOM_ATTACK_EFFECTS, 'beam');
     commandMultiplier = CFG.MESSAGE_LASER_MULTIPLIER;
   }
 

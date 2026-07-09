@@ -589,6 +589,25 @@ try {
   assert(plainComment.attackResult?.result?.passiveCommentAttack === true, 'plain no-target comment should mark passiveCommentAttack');
   assert(plainComment.attackResult?.result?.damage === 5, `plain no-target comment should deal 5 raw damage, got ${plainComment.attackResult?.result?.damage}`);
 
+  const newAttackEffects = new Set(['prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard']);
+  const observedPassiveEffects = new Set();
+  for (let i = 0; i < 24; i += 1) {
+    const effectCycleRes = await request('/api/test/comment', {
+      method: 'POST',
+      headers: authedHeaders,
+      body: JSON.stringify({ reset: i === 0, comment: `effect cycle ${i}` }),
+    });
+    assert(effectCycleRes.status === 200, `effect cycle comment ${i} should return 200, got ${effectCycleRes.status}`);
+    const effectCycle = await effectCycleRes.json();
+    const effect = effectCycle.attackResult?.result?.effect;
+    if (newAttackEffects.has(effect)) observedPassiveEffects.add(effect);
+  }
+  const missingPassiveEffects = [...newAttackEffects].filter(effect => !observedPassiveEffects.has(effect));
+  assert(
+    missingPassiveEffects.length === 0,
+    `plain comment rotation should include every new effect, missing ${missingPassiveEffects.join(', ') || 'none'}`
+  );
+
   const utilityCommentRes = await request('/api/test/comment', {
     method: 'POST',
     headers: authedHeaders,
