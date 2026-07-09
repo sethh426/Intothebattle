@@ -8861,11 +8861,24 @@ app.post('/api/admin/rooms/:roomId/reset-live', (req, res) => {
     return res.status(404).json({ success: false, error: 'Room is not active in this runtime.' });
   }
 
-  disconnectStreamer(room);
+  const reconnect = req.body?.reconnect !== false;
+  const username = normalizeTikTokUsername(
+    req.body?.username || room.tiktokConnection?.username || room.streamerUsername || ''
+  );
+  let stream;
+  if (reconnect && username) {
+    stream = connectToStreamer(username, room, { repair: true, resetLiveRuntime: false });
+  } else {
+    disconnectStreamer(room);
+    stream = buildTikTokConnectionStatus(room);
+  }
+
   res.json({
     success: true,
+    action: reconnect && username ? 'reconnect' : 'disconnect',
     roomId: room.roomId,
-    stream: buildTikTokConnectionStatus(room),
+    username: username || '',
+    stream,
     overlayCount: Number(room.overlayCount) || 0,
     playerCount: Object.values(room.players || {}).filter(player => player && player.alive).length,
   });
