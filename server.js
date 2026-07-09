@@ -3,6 +3,7 @@ import { TikTokLive } from '@tiktool/live';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
+import bcrypt from 'bcryptjs';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import path from 'path';
@@ -6796,6 +6797,36 @@ app.post('/auth/user/login', (req, res, next) => {
     });
   } catch (err) {
     logger.warn({ err: err?.message || err, email }, 'Google-only login preflight failed');
+    return next();
+  }
+});
+
+app.post('/auth/user/reset-password', async (req, res, next) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const newPassword = String(req.body?.newPassword || '');
+  const sessionToken = req.cookies?.session_token;
+  if (!email || !newPassword || !sessionToken) return next();
+
+  try {
+    const user = db.prepare('SELECT id, email, is_active FROM users WHERE session_token = ?').get(sessionToken);
+    if (!user || !user.is_active || String(user.email || '').trim().toLowerCase() !== email) {
+      return next();
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    db.prepare(`
+      UPDATE users
+      SET password_hash = ?,
+          password_reset_token = NULL,
+          password_reset_expires = NULL,
+          last_login = CURRENT_TIMESTAMP,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(passwordHash, user.id);
+    logger.info({ userId: user.id }, 'Password reset completed from active session');
+    return res.json({ success: true, message: 'Password reset successfully.' });
+  } catch (err) {
+    logger.warn({ err: err?.message || err, email }, 'Session password reset preflight failed');
     return next();
   }
 });
