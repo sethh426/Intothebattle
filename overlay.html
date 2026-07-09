@@ -1977,7 +1977,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
   let socket          = null;
   const DEFAULT_OVERLAY_AUDIO_CONFIG = overlayAudio.defaultAudioConfig;
-  let audioConfig     = { ...DEFAULT_OVERLAY_AUDIO_CONFIG };
+  const DEFAULT_OVERLAY_MASTER_VOLUME = Math.max(0, Math.min(1, Math.round((Number(overlayAudio.defaultMasterVolume) || 0.5) * 100) / 100));
+  let audioConfig     = { ...DEFAULT_OVERLAY_AUDIO_CONFIG, masterVolume: DEFAULT_OVERLAY_MASTER_VOLUME };
   let audioCache      = {};
   let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1, backgroundFit: 'contain' };
   const APPROVED_EFFECTS = overlayNormalizers.approvedEffects;
@@ -4534,7 +4535,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   // ═══════════════════════════════════════
   // AUDIO
   // ═══════════════════════════════════════
-  const DEFAULT_OVERLAY_MASTER_VOLUME = 0.5;
   const OVERLAY_AUDIO_EVENT_KEYS = Object.keys(DEFAULT_OVERLAY_AUDIO_CONFIG);
 
   function normalizeMasterVolume(value, fallback = DEFAULT_OVERLAY_MASTER_VOLUME) {

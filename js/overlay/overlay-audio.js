@@ -11,8 +11,10 @@
     socialBoost: 'sound6.mp3',
     engagementSurge: 'sound2.mp3',
   });
+  const defaultMasterVolume = 0.5;
 
   global.IntoTheBattleOverlayAudio = Object.freeze({
     defaultAudioConfig,
+    defaultMasterVolume,
   });
 })(window);
