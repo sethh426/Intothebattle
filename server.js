@@ -8846,6 +8846,18 @@ app.post('/api/connect', requireRoom, (req, res) => {
 
 app.post('/api/reset', requireRoom, (req, res) => { disconnectStreamer(req.room); res.json({ success: true }); });
 
+app.get('/api/admin/live-reset-ready', (req, res) => {
+  if (!hasAdminSession(req)) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+
+  res.json({
+    success: true,
+    version: 2,
+    mode: 'reconnect-default',
+  });
+});
+
 app.post('/api/admin/rooms/:roomId/reset-live', (req, res) => {
   if (!hasAdminSession(req)) {
     return res.status(401).json({ success: false, error: 'Unauthorized' });
