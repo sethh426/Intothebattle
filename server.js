@@ -624,6 +624,8 @@ const CFG = {
   GIFT_MESSAGE_BOOST_DURATION_MS: 45000,
   MESSAGE_LASER_MULTIPLIER:       1.5,
   PASSIVE_COMMENT_DAMAGE:            5,
+  MAX_NORMAL_ATTACK_DAMAGE:          50,
+  POWERED_ATTACK_DAMAGE:            150,
   ATTACK_VARIANCE:                0.4,
   RESPAWN_DELAY_MS:             60000,
   IDLE_TIMEOUT_MS:             600000,
@@ -2965,7 +2967,10 @@ function fireArenaPowerBarrageAttack(room, contributor) {
   const selected = chooseArenaPowerBarrageTarget(room, attackerId);
   if (!selected?.target) return null;
   const { target, visualTarget, snapshot } = selected;
-  const result = dealDamage(room, attackerId, target.uniqueId, powerAttack.multiplier);
+  const result = dealDamage(room, attackerId, target.uniqueId, powerAttack.multiplier, {
+    poweredDamage: true,
+    special: true,
+  });
   if (!result) return null;
 
   const attackerScope = battleScopeForPlayer(room, attackerId, snapshot);
@@ -5733,12 +5738,19 @@ function dealDamage(room, attackerId, targetId, multiplier = 1, options = {}) {
   const fixedDamage = Number.isFinite(Number(options.fixedDamage))
     ? Math.max(1, Math.round(Number(options.fixedDamage)))
     : null;
+  const poweredDamage = Boolean(options.poweredDamage || options.poweredAttack || options.giftBoosted);
+  const poweredDamageAmount = Math.max(1, Math.round(Number(options.poweredDamageAmount || CFG.POWERED_ATTACK_DAMAGE) || CFG.POWERED_ATTACK_DAMAGE));
   let dmg = fixedDamage != null
     ? fixedDamage
-    : Math.floor(
-      attacker.strength * multiplier *
-      (1 - CFG.ATTACK_VARIANCE / 2 + Math.random() * CFG.ATTACK_VARIANCE)
-    );
+    : poweredDamage
+      ? poweredDamageAmount
+      : Math.min(
+        CFG.MAX_NORMAL_ATTACK_DAMAGE,
+        Math.floor(
+          attacker.strength * multiplier *
+          (1 - CFG.ATTACK_VARIANCE / 2 + Math.random() * CFG.ATTACK_VARIANCE)
+        )
+      );
   let shieldAbsorbed = 0;
   let shieldBreak = null;
   const shieldStatus = normalizePlayerShieldStatus(target);
@@ -5821,7 +5833,7 @@ function dealDamage(room, attackerId, targetId, multiplier = 1, options = {}) {
     }, CFG.RESPAWN_DELAY_MS);
   }
 
-  const special = options.special != null ? Boolean(options.special) : fixedDamage == null && multiplier > 1;
+  const special = options.special != null ? Boolean(options.special) : poweredDamage || (fixedDamage == null && multiplier > 1);
   console.log(`⚡ @${attackerId} → @${targetId} for ${dmg} dmg${killed ? ' (KILL!)' : ''}${special ? ' (SPECIAL!)' : ''}`);
 
   const baseResult = {
@@ -5830,6 +5842,7 @@ function dealDamage(room, attackerId, targetId, multiplier = 1, options = {}) {
     damage: dmg,
     killed,
     special,
+    poweredDamage,
     passiveCommentAttack: Boolean(options.passiveCommentAttack),
     shielded: shieldAbsorbed > 0,
     shieldAbsorbed,
@@ -5974,7 +5987,7 @@ function giftAttackColor(effect, fallback = '') {
 function applyGiftAttackToTarget(room, attackerId, target, options = {}) {
   if (!room?.players?.[attackerId] || !target?.uniqueId || !room.players[target.uniqueId]?.alive) return null;
   const diamonds = Math.max(1, Math.round(Number(options.diamonds) || 1));
-  const damage = diamonds;
+  const damage = CFG.POWERED_ATTACK_DAMAGE;
   const snapshot = options.snapshot || getBattleSideSnapshot(room);
   const attackerScope = battleScopeForPlayer(room, attackerId, snapshot);
   const actualTargetScope = battleScopeForPlayer(room, target.uniqueId, snapshot);
@@ -6018,6 +6031,8 @@ function applyGiftAttackToTarget(room, attackerId, target, options = {}) {
     actualTargetNick: target.nickname || target.uniqueId,
     damage,
     killed,
+    special: true,
+    poweredDamage: true,
     diamonds,
     effect: options.effect || 'laser',
     intensity: options.intensity || 0.7,
@@ -6032,6 +6047,7 @@ function applyGiftAttackToTarget(room, attackerId, target, options = {}) {
 function buildVisualHordeGiftAttack(room, attackerId, options = {}) {
   if (!room?.players?.[attackerId]) return null;
   const diamonds = Math.max(1, Math.round(Number(options.diamonds) || 1));
+  const damage = CFG.POWERED_ATTACK_DAMAGE;
   const snapshot = options.snapshot || getBattleSideSnapshot(room);
   return {
     attacker: attackerId,
@@ -6039,8 +6055,10 @@ function buildVisualHordeGiftAttack(room, attackerId, options = {}) {
     targetNick: 'The Horde',
     actualTarget: SERVER_HORDE_ID,
     actualTargetNick: 'The Horde',
-    damage: diamonds,
+    damage,
     killed: false,
+    special: true,
+    poweredDamage: true,
     diamonds,
     effect: options.effect || 'laser',
     intensity: options.intensity || 0.7,
@@ -6362,17 +6380,21 @@ function handleMentionAttack(room, attackerId, attackerNick, comment) {
     const topBefore = new Set(getTopPlayers(room, 5).map(p => p.uniqueId));
     const attackerScope = topBefore.has(attackerId) ? 'top' : 'horde';
     const targetScope = topBefore.has(target.uniqueId) ? 'top' : 'horde';
-    const result = dealDamage(room, attackerId, target.uniqueId, multiplier);
+    const result = dealDamage(room, attackerId, target.uniqueId, multiplier, {
+      poweredDamage: isSpecialCommand || boostActive,
+      special: isSpecialCommand || boostActive,
+      giftBoosted: boostActive,
+    });
     if (result) {
       result.effect = requestedEffect;                // force the chosen effect
-      result.special            = isSpecialCommand;
+      result.special            = isSpecialCommand || boostActive;
       result.commandDescription = commandDescription || requestedEffect;
       result.giftBoosted        = boostActive;
       result.attackerScope      = attackerScope;
       result.targetScope        = targetScope;
 
       emitAttackAndSync(room, result);
-      emitSoundAndSync(room, isSpecialCommand ? 'gift' : 'attack');
+      emitSoundAndSync(room, (isSpecialCommand || boostActive) ? 'gift' : 'attack');
       emitRoomEvent(room, 'commentDamage', {
         attacker: attackerId,
         attackerNick,
@@ -6381,7 +6403,7 @@ function handleMentionAttack(room, attackerId, attackerNick, comment) {
         damage:   result.damage,
         killed:   result.killed,
         comment,
-        special:  isSpecialCommand,
+        special:  isSpecialCommand || boostActive,
         effect:   requestedEffect,
         intensity: result.intensity,
         critical:  result.critical,
@@ -6480,12 +6502,20 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
     const visualId = visualTarget?.id || actualTarget.uniqueId;
     const visualNick = visualTarget?.nickname || actualTarget.nickname || actualTarget.uniqueId;
     const targetScope = visualTarget?.scope || actualTargetScope;
-    const result = dealDamage(room, attackerId, actualTarget.uniqueId, multiplier, attackOptions);
+    const effectiveAttackOptions = { ...attackOptions };
+    const shouldUsePoweredDamage = !effectiveAttackOptions.passiveCommentAttack && (isSpecialCommand || Boolean(powerAttack) || boostActive);
+    if (shouldUsePoweredDamage) {
+      effectiveAttackOptions.poweredDamage = true;
+      effectiveAttackOptions.giftBoosted = boostActive;
+      if (effectiveAttackOptions.special == null) effectiveAttackOptions.special = true;
+    }
+    const result = dealDamage(room, attackerId, actualTarget.uniqueId, multiplier, effectiveAttackOptions);
     if (!result) return null;
-    const eventDescription = attackOptions.commandDescription || commandDescription || requestedEffect;
+    const specialAttackVisual = isSpecialCommand || Boolean(powerAttack) || shouldUsePoweredDamage;
+    const eventDescription = effectiveAttackOptions.commandDescription || commandDescription || requestedEffect;
 
     result.effect = requestedEffect;
-    result.special = isSpecialCommand || Boolean(powerAttack);
+    result.special = specialAttackVisual;
     result.commandDescription = eventDescription;
     result.giftBoosted = boostActive;
     result.attackerNick = attackerNick;
@@ -6501,7 +6531,7 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
     if (powerAttack) applyArenaPowerAttackMeta(result, powerAttack);
 
     emitAttackAndSync(room, result);
-    emitSoundAndSync(room, isSpecialCommand ? 'gift' : 'attack');
+    emitSoundAndSync(room, specialAttackVisual ? 'gift' : 'attack');
     emitRoomEvent(room, 'commentDamage', {
       attacker: attackerId,
       attackerNick,
@@ -6512,7 +6542,7 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
       damage: result.damage,
       killed: result.killed,
       comment,
-      special: isSpecialCommand || Boolean(powerAttack),
+      special: specialAttackVisual,
       effect: requestedEffect,
       intensity: result.intensity,
       critical: result.critical,
@@ -8720,6 +8750,8 @@ function runRoomOverlayTestAction(room, normalizedAction) {
       shieldBreakSource: 'gift',
       giftName: 'Test Gift',
       diamonds,
+      poweredDamage: true,
+      special: true,
     });
     if (result) {
       emitGiftAttackAndSync(room, {
@@ -9465,6 +9497,18 @@ app.post('/api/test/comment', blockInProduction, requireDevTestMode, (req, res) 
   const attackerId = String(req.body?.attackerId || req.body?.uniqueId || 'test_alpha').trim() || 'test_alpha';
   const attackerNick = String(req.body?.nickname || room.players[attackerId]?.nickname || attackerId);
   const comment = String(req.body?.comment || '');
+  const attacker = room.players[attackerId];
+  if (attacker) {
+    const attackerStrength = Number(req.body?.attackerStrength);
+    if (Number.isFinite(attackerStrength) && attackerStrength > 0) {
+      attacker.strength = Math.round(attackerStrength);
+    }
+    if (req.body?.messageBoost === true) {
+      attacker.messageBoostExpires = Date.now() + CFG.GIFT_MESSAGE_BOOST_DURATION_MS;
+    } else if (req.body?.messageBoost === false) {
+      attacker.messageBoostExpires = 0;
+    }
+  }
   const before = snapshotDevTestCombatants(room);
   const utilityCommand = handlePlayerUtilityCommand(room, attackerId, attackerNick, comment);
   const attackResult = utilityCommand.stop

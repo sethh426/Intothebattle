@@ -569,7 +569,7 @@ try {
   const mentionCommentRes = await request('/api/test/comment', {
     method: 'POST',
     headers: authedHeaders,
-    body: JSON.stringify({ reset: true, comment: '@test_bravo' }),
+    body: JSON.stringify({ reset: true, attackerStrength: 1000, comment: '@test_bravo' }),
   });
   assert(mentionCommentRes.status === 200, `plain mention comment test should return 200, got ${mentionCommentRes.status}`);
   const mentionComment = await mentionCommentRes.json();
@@ -577,6 +577,31 @@ try {
   assert(mentionComment.attackResult?.target === 'test_bravo', 'plain @target comment should attack the mentioned player');
   assert(mentionComment.attackResult?.result?.passiveCommentAttack !== true, 'plain @target comment should use normal mention damage');
   assert(Number(mentionComment.attackResult?.result?.damage) > 0, 'plain @target comment should deal positive damage');
+  assert(Number(mentionComment.attackResult?.result?.damage) <= 50, `high-strength regular attack should cap at 50 damage, got ${mentionComment.attackResult?.result?.damage}`);
+
+  const specialDamageRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ reset: true, attackerStrength: 1000, comment: '!orbital @test_bravo' }),
+  });
+  assert(specialDamageRes.status === 200, `special damage cap test should return 200, got ${specialDamageRes.status}`);
+  const specialDamage = await specialDamageRes.json();
+  assert(specialDamage.attackResult?.handled === true, 'special command should create an attack');
+  assert(specialDamage.attackResult?.result?.damage === 150, `special command should deal fixed 150 damage, got ${specialDamage.attackResult?.result?.damage}`);
+  assert(specialDamage.attackResult?.result?.special === true, 'special command should be marked special');
+  assert(specialDamage.attackResult?.result?.poweredDamage === true, 'special command should be marked poweredDamage');
+
+  const boostedDamageRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ reset: true, messageBoost: true, comment: '@test_bravo' }),
+  });
+  assert(boostedDamageRes.status === 200, `gift-boost damage test should return 200, got ${boostedDamageRes.status}`);
+  const boostedDamage = await boostedDamageRes.json();
+  assert(boostedDamage.attackResult?.handled === true, 'gift-boosted message should create an attack');
+  assert(boostedDamage.attackResult?.result?.damage === 150, `gift-boosted message attack should deal fixed 150 damage, got ${boostedDamage.attackResult?.result?.damage}`);
+  assert(boostedDamage.attackResult?.result?.giftBoosted === true, 'gift-boosted message should be marked giftBoosted');
+  assert(boostedDamage.attackResult?.result?.poweredDamage === true, 'gift-boosted message should be marked poweredDamage');
 
   const plainCommentRes = await request('/api/test/comment', {
     method: 'POST',
@@ -660,6 +685,8 @@ try {
   assert(giftBreakRes.status === 200, `gift shield break test should return 200, got ${giftBreakRes.status}`);
   const giftBreak = await giftBreakRes.json();
   assert(giftBreak.attacks?.[0]?.shieldBroken === true, 'gift should break an active shield');
+  assert(giftBreak.attacks?.[0]?.damage === 150, `direct gift strike should deal fixed 150 damage, got ${giftBreak.attacks?.[0]?.damage}`);
+  assert(giftBreak.attacks?.[0]?.poweredDamage === true, 'direct gift strike should be marked poweredDamage');
   assert(giftBreak.after?.test_alpha?.shieldActive === false, 'gift break should clear active shield');
   assert(Number(giftBreak.after?.test_alpha?.shieldCooldownMs) > 40000, `gift break should start shield cooldown, got ${giftBreak.after?.test_alpha?.shieldCooldownMs}`);
 
