@@ -9169,8 +9169,13 @@ app.post('/api/overlay/reload', requireRoom, (req, res) => {
 app.post('/api/players/clear', requireRoom, (req, res) => {
   if (req.room.arenaPowerUp?.active) completeArenaPowerUp(req.room, 'players_cleared');
   req.room.players = {};
+  req.room.recentLiveRestoreAllowedUntil = 0;
+  req.room.lastTikTokPlayerEventAt = null;
+  req.room.tiktokPlayerEventCount = 0;
+  req.room.lastRealEventAt = null;
   markRoomPlayerPresenceOffline(req.room);
   emitRoomEvent(req.room, 'gameState', req.room.players);
+  emitRoomRealtimeStatus(req.room);
   updatePlayerGauge();
   res.json({ success: true });
 });
@@ -9664,6 +9669,8 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
     }
 
     if (!TIKTOK_DIRECT_PLAYER_EVENT_TYPES.has(eventType)) markTikTokEventAccepted(room, eventType, eventPayload);
+    if (!TIKTOK_PLAYER_EVENT_TYPES.has(eventType) || TIKTOK_DIRECT_PLAYER_EVENT_TYPES.has(eventType)) return;
+
     const enteredCount = enterPlayersFromTikTokEvent(room, eventType, eventPayload);
     if (enteredCount > 0) {
       logger.info({ roomId: room.roomId, eventType, enteredCount }, 'Entered players from generic TikTok event');
