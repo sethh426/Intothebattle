@@ -582,6 +582,9 @@ let client = null;
 const TIKTOK_AUTO_RECONNECT = process.env.TIKTOK_AUTO_RECONNECT == null
   ? true
   : process.env.TIKTOK_AUTO_RECONNECT === 'true';
+const TIKTOK_LIVE_MODE = ['direct', 'relayed'].includes(String(process.env.TIKTOK_LIVE_MODE || '').toLowerCase())
+  ? String(process.env.TIKTOK_LIVE_MODE).toLowerCase()
+  : 'relayed';
 const TIKTOK_MAX_RECONNECT_ATTEMPTS = Math.max(0, Number(process.env.TIKTOK_MAX_RECONNECT_ATTEMPTS || 3));
 const TIKTOK_HEARTBEAT_MS = Math.max(5000, Number(process.env.TIKTOK_HEARTBEAT_MS || 10000));
 const TIKTOK_LIVE_REPAIR_ENABLED = process.env.TIKTOK_LIVE_REPAIR_ENABLED == null
@@ -7772,6 +7775,7 @@ app.get('/api/runtime/diagnostics', requireDiagnosticsAccess, (req, res) => {
       jwtSecretPresent: Boolean(process.env.JWT_SECRET),
       overlayTokenSecretPresent: Boolean(process.env.OVERLAY_TOKEN_SECRET),
       apiKeyPresent: Boolean(API_KEY),
+      tiktokLiveMode: TIKTOK_LIVE_MODE,
       metricsTokenPresent: Boolean(process.env.METRICS_TOKEN),
       diagnosticsTokenPresent: Boolean(process.env.DIAGNOSTICS_TOKEN),
       platformSponsorEnabled: PLATFORM_SPONSOR_ENABLED,
@@ -9949,6 +9953,7 @@ function connectToStreamer(username, room = getDefaultRoom(), options = {}) {
   const tiktokClient = new TikTokLive({
     uniqueId: normalizedUsername,
     apiKey: API_KEY,
+    mode: TIKTOK_LIVE_MODE,
     autoReconnect: TIKTOK_AUTO_RECONNECT,
     maxReconnectAttempts: TIKTOK_MAX_RECONNECT_ATTEMPTS,
     heartbeatInterval: TIKTOK_HEARTBEAT_MS,
