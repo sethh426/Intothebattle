@@ -591,6 +591,10 @@ const TIKTOK_LIVE_REPAIR_ENABLED = process.env.TIKTOK_LIVE_REPAIR_ENABLED == nul
   ? true
   : process.env.TIKTOK_LIVE_REPAIR_ENABLED === 'true';
 const TIKTOK_LIVE_REPAIR_INTERVAL_MS = Math.max(5000, Number(process.env.TIKTOK_LIVE_REPAIR_INTERVAL_MS || 15000));
+const TIKTOK_AUTO_RESUME_SAVED_STREAM = process.env.TIKTOK_AUTO_RESUME_SAVED_STREAM == null
+  ? true
+  : process.env.TIKTOK_AUTO_RESUME_SAVED_STREAM === 'true';
+const TIKTOK_AUTO_RESUME_COOLDOWN_MS = Math.max(30000, Number(process.env.TIKTOK_AUTO_RESUME_COOLDOWN_MS || 120000));
 const TIKTOK_CONNECT_STALE_MS = Math.max(15000, Number(process.env.TIKTOK_CONNECT_STALE_MS || 60000));
 const TIKTOK_CONNECTED_NO_EVENT_STALE_MS = Math.max(30000, Number(process.env.TIKTOK_CONNECTED_NO_EVENT_STALE_MS || 90000));
 const TIKTOK_REPAIR_COOLDOWN_MS = Math.max(30000, Number(process.env.TIKTOK_REPAIR_COOLDOWN_MS || 120000));
@@ -8206,6 +8210,34 @@ function buildSponsorScenePayload(room, body = {}) {
   };
 }
 
+function maybeAutoResumeSavedTikTokStream(room, reason = 'socket_registered') {
+  if (!TIKTOK_AUTO_RESUME_SAVED_STREAM || !room?.roomId) return false;
+  if (!API_KEY) return false;
+  const cfg = tiktokOfficialConfig();
+  if (cfg.provider !== 'legacy') return false;
+
+  const username = normalizeTikTokUsername(room.streamerUsername || room.tiktokConnection?.username || '');
+  if (!username) return false;
+
+  const status = String(room.tiktokConnection?.status || '').toLowerCase();
+  if (room.tiktokClient && ['connecting', 'reconnecting', 'connected'].includes(status)) return false;
+  if (['connecting', 'reconnecting'].includes(status)) return false;
+
+  const now = Date.now();
+  const lastAttemptAt = Number(room.tiktokAutoResumeAttemptedAt) || 0;
+  if (lastAttemptAt && now - lastAttemptAt < TIKTOK_AUTO_RESUME_COOLDOWN_MS) return false;
+  room.tiktokAutoResumeAttemptedAt = now;
+
+  try {
+    connectToStreamer(username, room, { restoreRecentPlayers: false });
+    logger.info({ roomId: room.roomId, username, reason }, 'Auto-resumed saved TikTok LIVE stream');
+    return true;
+  } catch (err) {
+    logger.warn({ err: err?.message || err, roomId: room.roomId, username, reason }, 'Failed to auto-resume saved TikTok LIVE stream');
+    return false;
+  }
+}
+
 io.on('connection', (socket) => {
   const room = getOrCreateRoom(socket.roomId);
   if (!room) {
@@ -8248,6 +8280,7 @@ io.on('connection', (socket) => {
       if (previousType !== 'overlay') room.overlayCount++;
       emitRoomEvent(room, 'overlayCount', { count: room.overlayCount });
       updateOverlayGauge();
+      maybeAutoResumeSavedTikTokStream(room, 'overlay_registered');
 
       socket.emit('gameState',        room.players);
       socket.emit('audioConfig',      room.audioConfig);
@@ -8270,6 +8303,7 @@ io.on('connection', (socket) => {
         emitRoomEvent(room, 'overlayCount', { count: room.overlayCount });
         updateOverlayGauge();
       }
+      if (clientType === 'dashboard') maybeAutoResumeSavedTikTokStream(room, 'dashboard_registered');
       socket.emit('overlayCount',    { count: room.overlayCount });
       socket.emit('overlaySettings', room.overlaySettings);
       socket.emit('laserColor',      room.overlaySettings.laserColor);
