@@ -5348,9 +5348,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       frame.h * 0.12,
       Math.max(bannerZone.h, frame.h * (isCommandBanner ? 0.096 : 0.105))
     );
+    const minReadableLaneH = Math.max(24, frame.h * (isCommandBanner ? 0.045 : 0.04));
     const centeredX = frame.x + frame.w / 2 - laneW / 2;
     const laneX = clampNumber(centeredX, innerLeft, innerRight - laneW);
-    const staticLane = makeRect(laneX, bannerZone.y, laneW, desiredLaneH);
+    const staticLaneY = clampNumber(
+      bannerZone.bottom - desiredLaneH,
+      frame.y + gapY * 0.35,
+      Math.max(frame.y + gapY * 0.35, bannerZone.bottom - Math.max(1, minReadableLaneH || desiredLaneH))
+    );
+    const staticLane = makeRect(laneX, staticLaneY, laneW, desiredLaneH);
     staticLane.source = 'static-zone';
     staticLane.anchor = laneAnchor;
     staticLane.availableGap = null;
@@ -5386,7 +5392,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     let laneTopLimit = playerBottom + playerClearance;
     let laneBottomLimit = hordeTop - hordeClearance;
     const fullAvailableGap = laneBottomLimit - laneTopLimit;
-    const minReadableLaneH = Math.max(24, frame.h * (isCommandBanner ? 0.045 : 0.04));
     if (fullAvailableGap < minReadableLaneH) {
       staticLane.availableGap = fullAvailableGap;
       staticLane.playerBottom = playerBottom;
@@ -5428,7 +5433,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const availableGap = laneBottomLimit - laneTopLimit;
     const cssReadableLaneH = isCommandBanner ? 54 : 62;
     const laneH = Math.min(availableGap, Math.max(desiredLaneH, Math.min(cssReadableLaneH, availableGap)));
-    const laneY = laneTopLimit + Math.max(0, (availableGap - laneH) * (isCommandBanner ? 0.5 : 0.78));
+    const laneY = laneTopLimit + Math.max(0, (availableGap - laneH) * (isCommandBanner ? 0.5 : 0.88));
     const combatLane = makeRect(laneX, laneY, laneW, laneH);
     combatLane.source = 'combat-gap';
     combatLane.anchor = laneAnchor;
@@ -5588,7 +5593,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const centerX = clampNumber(frame.x + frame.w / 2, placementZone.x + halfWidth, placementZone.right - halfWidth);
     const maxTop = Math.max(placementZone.y, placementZone.bottom - rect.height);
     const minTop = laneIsCombat ? placementZone.y : frame.y + gapY * 0.35;
-    const verticalBias = laneIsCombat && placementZone.anchor === 'horde-side' ? 0.72 : 0.5;
+    const verticalBias = laneIsCombat && placementZone.anchor === 'horde-side' ? 0.84 : 0.5;
     const top = clampNumber(placementZone.y + Math.max(0, placementZone.h - rect.height) * verticalBias, minTop, maxTop);
     el.style.left = `${centerX}px`;
     el.style.top = `${top}px`;
