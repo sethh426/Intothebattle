@@ -1036,6 +1036,26 @@
       line-height: 1.55;
     }
 
+    .creator-code-notice {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: -4px 0 18px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(57, 216, 117, .24);
+      background: rgba(57, 216, 117, .08);
+      color: #d8ffe8;
+      font-size: 13px;
+      font-weight: 850;
+      line-height: 1.25;
+    }
+
+    .creator-code-notice[hidden] { display: none !important; }
+    .creator-code-notice span { color: #9ff7bf; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+    .creator-code-notice strong { color: #fff; overflow-wrap: anywhere; }
+
     .signup-actions {
       display: grid;
       gap: 11px;
@@ -1319,6 +1339,10 @@
           <h2 class="signup-panel-title">Create your room</h2>
           <p class="signup-panel-copy">Google is fastest. Email signup is there if you want a separate login.</p>
         </div>
+        <div class="creator-code-notice" id="creatorCodeNotice" hidden>
+          <span>Creator code applied</span>
+          <strong id="creatorCodeValue"></strong>
+        </div>
 
         <div class="signup-actions">
           <a href="/auth/google" class="signup-button primary" id="googleSignupLink">Start free with Google &rarr;</a>
@@ -1360,6 +1384,8 @@
     const loginLink = document.getElementById('loginLink');
     const navSignupLink = document.querySelector('.nav-cta');
     const previewFrame = document.querySelector('.battle-preview');
+    const creatorCodeNotice = document.getElementById('creatorCodeNotice');
+    const creatorCodeValue = document.getElementById('creatorCodeValue');
 
 
     function trackSignupEvent(name, tags = {}, upgrade = false) {
@@ -1392,6 +1418,10 @@
       return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : DEFAULT_ONBOARDING_PATH;
     })();
     const referralCode = String(pageParams.get('ref') || pageParams.get('referralCode') || '').trim();
+    if (referralCode && creatorCodeNotice && creatorCodeValue) {
+      creatorCodeValue.textContent = referralCode.toUpperCase();
+      creatorCodeNotice.hidden = false;
+    }
     const signupParams = new URLSearchParams({ next: nextPath });
     if (referralCode) signupParams.set('ref', referralCode);
     const nextQuery = `?${signupParams.toString()}`;

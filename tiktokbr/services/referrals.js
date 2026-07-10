@@ -124,6 +124,13 @@ export function buildReferralShareUrl(baseUrl, code) {
   }
 }
 
+export function buildReferralChatMessage(baseUrl, code) {
+  const normalized = normalizeReferralCode(code);
+  const shareUrl = buildReferralShareUrl(baseUrl, normalized);
+  if (!normalized || !shareUrl) return '';
+  return `Want your own IntoTheBattle arena? Use my code ${normalized} when you sign up: ${shareUrl}`;
+}
+
 export function getReferralCodeForUser(database, userId) {
   if (!userId) return null;
   return database.prepare('SELECT * FROM streamer_referral_codes WHERE user_id = ? LIMIT 1').get(userId) || null;
@@ -194,6 +201,7 @@ export function getReferralSummary(database, user, options = {}) {
     hasCode: Boolean(code),
     suggestedCode: suggestedReferralCode(user),
     shareUrl: buildReferralShareUrl(options.baseUrl, code),
+    chatText: buildReferralChatMessage(options.baseUrl, code),
     cooldownHours: REFERRAL_CODE_COOLDOWN_HOURS,
     resetAvailableAt: codeRow?.reset_available_at || null,
     resetCountdownSeconds: secondsUntilReferralReset(codeRow),

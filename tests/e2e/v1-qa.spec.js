@@ -176,6 +176,9 @@ async function readActiveBannerDetails(page, selector = '.banner:not(.closing)')
       railHeight: railRect?.height || 0,
       rowHeight: rowRect?.height || 0,
       lane,
+      laneSource: bannerStatus.laneSource || null,
+      playerBottom: bannerStatus.playerBottom ?? null,
+      hordeTop: bannerStatus.hordeTop ?? null,
       laneCenterDelta: lane ? Math.abs((bannerRect.left + bannerRect.width / 2) - (lane.left + lane.width / 2)) : null,
       laneTopDelta: lane ? Math.abs(bannerRect.top - Math.max(lane.top, Math.min(bannerRect.top, lane.bottom - bannerRect.height))) : null,
       bannerCollisions: (layout.collisions || []).filter(item => JSON.stringify(item).toLowerCase().includes('banner')),
@@ -329,6 +332,94 @@ test('dashboard mobile audio manager keeps controls usable at phone widths', asy
   expect(errors).toEqual([]);
 });
 
+test('dashboard creator promo code can be created and copied for chat', async ({ context, page }) => {
+  await addAuthCookie(context);
+  await context.addInitScript(() => {
+    window.__clipboardWrites = [];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value) => {
+          window.__clipboardWrites.push(String(value || ''));
+        },
+      },
+    });
+  });
+
+  let referral = {
+    hasCode: false,
+    code: '',
+    suggestedCode: 'NEONACE',
+    shareUrl: '',
+    chatText: '',
+    canReset: true,
+    resetCountdownSeconds: 0,
+    cooldownHours: 234,
+    stats: { signups: 0, qualified: 0, pendingReview: 0, paid: 0, pendingAmountCents: 0, paidAmountCents: 0 },
+  };
+  let savedCode = '';
+  await page.route(`${baseUrl}/api/referrals/me`, async route => {
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, referral }) });
+  });
+  await page.route(`${baseUrl}/api/referrals/code`, async route => {
+    const body = route.request().postDataJSON();
+    savedCode = String(body.code || '').trim().toUpperCase();
+    referral = {
+      ...referral,
+      hasCode: true,
+      code: savedCode,
+      shareUrl: `${baseUrl}/signup?ref=${encodeURIComponent(savedCode)}`,
+      chatText: `Want your own IntoTheBattle arena? Use my code ${savedCode} when you sign up: ${baseUrl}/signup?ref=${encodeURIComponent(savedCode)}`,
+      stats: { signups: 3, qualified: 1, pendingReview: 1, paid: 0, pendingAmountCents: 2500, paidAmountCents: 0 },
+    };
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, referral }) });
+  });
+
+  const errors = await watchPage(page);
+  await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('IntoTheBattle Command Center')).toBeVisible();
+  await page.locator('#liveWorkflow').evaluate(element => { element.open = true; });
+  const panel = page.getByTestId('creator-referral-panel');
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText('Creator promo code')).toBeVisible();
+  await expect(panel.getByLabel('Choose code')).toHaveValue('NEONACE');
+
+  await panel.getByLabel('Choose code').fill('NEON_777');
+  await panel.getByRole('button', { name: 'Create code' }).click();
+  await expect.poll(() => savedCode, { timeout: 5000 }).toBe('NEON_777');
+  await expect(panel.locator('.referral-code-display strong')).toHaveText('NEON_777');
+  await expect(panel.getByLabel('Signup link')).toHaveValue(`${baseUrl}/signup?ref=NEON_777`);
+  await expect(panel.getByLabel('Chat promo')).toHaveValue(/Use my code NEON_777/);
+  await expect(panel.getByText('Signups')).toBeVisible();
+  await expect(panel.getByText('$25.00')).toBeVisible();
+
+  await panel.getByRole('button', { name: 'Copy chat promo' }).click();
+  const clipboardWrites = await page.evaluate(() => window.__clipboardWrites || []);
+  expect(clipboardWrites.at(-1)).toContain('Use my code NEON_777');
+  expect(clipboardWrites.at(-1)).toContain('/signup?ref=NEON_777');
+
+  await expectNoHorizontalOverflow(page);
+  expect(errors.filter(error => !/battle-clip net::ERR_ABORTED/.test(error))).toEqual([]);
+});
+
+test('signup pages visibly preserve creator promo code attribution', async ({ page }) => {
+  const errors = await watchPage(page);
+
+  await page.goto(`${baseUrl}/signup?ref=NEON_777`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('Creator code applied')).toBeVisible();
+  await expect(page.getByText('NEON_777')).toBeVisible();
+  await expect(page.locator('#googleSignupLink')).toHaveAttribute('href', /ref=NEON_777/);
+  await expect(page.locator('#emailSignupLink')).toHaveAttribute('href', /ref=NEON_777/);
+
+  await page.goto(`${baseUrl}/register?ref=NEON_777`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('Creator code applied')).toBeVisible();
+  await expect(page.getByText('NEON_777')).toBeVisible();
+  await expect(page.locator('.google-option a')).toHaveAttribute('href', /ref=NEON_777/);
+
+  await expectNoHorizontalOverflow(page);
+  expect(errors).toEqual([]);
+});
+
 test('v1 overlay banner stays centered, bounded, and readable', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
   const params = new URLSearchParams({
@@ -360,6 +451,7 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
     const title = el.querySelector('.banner-title')?.getBoundingClientRect();
     const meta = el.querySelector('.banner-meta')?.getBoundingClientRect();
     const bannerStatus = window.overlayEventEngine?.status?.().banner || null;
+    const stageZones = window.IntoTheBattleOverlayStageConfig?.zones || {};
     return {
       className: el.className,
       left: rect.left,
@@ -373,6 +465,8 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
       titleHeight: title?.height || 0,
       metaHeight: meta?.height || 0,
       bannerStatus,
+      stageBannerZone: stageZones.banner || null,
+      stageHordeZone: stageZones.horde || null,
     };
   });
 
@@ -403,6 +497,11 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
   expect(geometry.bannerStatus?.laneSource).toBe('combat-gap');
   expect(geometry.bannerStatus?.active?.rect?.top).toBeGreaterThan(geometry.bannerStatus.playerBottom + 1);
   expect(geometry.bannerStatus?.active?.rect?.bottom).toBeLessThan(geometry.bannerStatus.hordeTop - 1);
+  const bannerCenterY = (geometry.bannerStatus.active.rect.top + geometry.bannerStatus.active.rect.bottom) / 2;
+  const gapMidY = geometry.bannerStatus.playerBottom + (geometry.bannerStatus.hordeTop - geometry.bannerStatus.playerBottom) * 0.5;
+  expect(bannerCenterY, 'elimination banner should sit in the lower half of the player-to-horde gap').toBeGreaterThan(gapMidY);
+  expect(geometry.stageBannerZone?.top, 'hard-coded banner fallback should be near the bottom').toBeGreaterThanOrEqual(0.6);
+  expect(geometry.stageBannerZone?.bottom, 'hard-coded banner fallback should stay above horde zone').toBeLessThan(geometry.stageHordeZone?.top);
 
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'qa-overlay-v1-banner');
@@ -446,6 +545,11 @@ test('all rich banner types stay centered, readable, and collision-free', async 
     expect(details.bottom, `${type} lane bottom bound`).toBeLessThanOrEqual(details.lane.bottom + 3);
     expect(details.laneCenterDelta, `${type} lane center delta`).toBeLessThanOrEqual(Math.max(4, details.lane.width * 0.015));
     expect(details.bannerCollisions, `${type} collisions: ${JSON.stringify(details, null, 2)}`).toEqual([]);
+    if (type !== 'commands' && details.laneSource === 'combat-gap' && Number.isFinite(details.playerBottom) && Number.isFinite(details.hordeTop)) {
+      const centerY = (details.top + details.bottom) / 2;
+      const gapMidY = details.playerBottom + (details.hordeTop - details.playerBottom) * 0.5;
+      expect(centerY, `${type} banner should sit in the lower half above the horde`).toBeGreaterThan(gapMidY);
+    }
 
     if (type === 'commands') {
       const compactVisibleCommands = ['engage', '@name', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];

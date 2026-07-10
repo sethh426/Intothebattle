@@ -386,6 +386,26 @@
       margin: 0 auto;
     }
 
+    .creator-code-notice {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: -6px 0 18px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(57, 216, 117, .24);
+      background: rgba(57, 216, 117, .08);
+      color: #d8ffe8;
+      font-size: 13px;
+      font-weight: 850;
+      line-height: 1.25;
+    }
+
+    .creator-code-notice[hidden] { display: none !important; }
+    .creator-code-notice span { color: #9ff7bf; font-size: 11px; font-weight: 950; text-transform: uppercase; letter-spacing: .08em; }
+    .creator-code-notice strong { color: #fff; overflow-wrap: anywhere; }
+
     .google-option {
       display: grid;
       gap: 10px;
@@ -694,6 +714,11 @@
           <p class="card-sub">7-day full access trial — no credit card required. Every creator control unlocked from day one.</p>
         </div>
 
+        <div class="creator-code-notice" id="creatorCodeNotice" hidden>
+          <span>Creator code applied</span>
+          <strong id="creatorCodeValue"></strong>
+        </div>
+
         <div class="google-option">
           <a href="/auth/google" class="btn btn-secondary">Continue with Google instead →</a>
           <p class="helper">Google signup takes one click. This page is for email setup.</p>
@@ -756,6 +781,8 @@
     const challengeGrid = document.getElementById('challengeGrid');
     const captchaTokenInput = document.getElementById('captchaToken');
     const captchaAnswerInput = document.getElementById('captchaAnswer');
+    const creatorCodeNotice = document.getElementById('creatorCodeNotice');
+    const creatorCodeValue = document.getElementById('creatorCodeValue');
     let selectedChallenge = '';
     const DEFAULT_ONBOARDING_PATH = '/dashboard?welcome=1';
     const pageParams = new URLSearchParams(window.location.search);
@@ -764,6 +791,10 @@
       return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : DEFAULT_ONBOARDING_PATH;
     })();
     const referralCode = String(pageParams.get('ref') || pageParams.get('referralCode') || '').trim();
+    if (referralCode && creatorCodeNotice && creatorCodeValue) {
+      creatorCodeValue.textContent = referralCode.toUpperCase();
+      creatorCodeNotice.hidden = false;
+    }
     const googleBtn = document.querySelector('.google-option a[href="/auth/google"]');
     if (googleBtn) {
       const googleParams = new URLSearchParams({ next: nextPath });

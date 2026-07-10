@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   REFERRAL_CODE_COOLDOWN_HOURS,
+  buildReferralChatMessage,
   buildReferralShareUrl,
   canResetReferralCode,
   normalizeReferralCode,
@@ -24,6 +25,10 @@ assert.equal(secondsUntilReferralReset({ reset_available_at: '2026-07-09T12:01:0
 
 assert.equal(buildReferralShareUrl('https://intothebattle.com/', 'SF_CLOUDS'), 'https://intothebattle.com/signup?ref=SF_CLOUDS');
 assert.equal(buildReferralShareUrl('', 'SF_CLOUDS'), '/signup?ref=SF_CLOUDS');
+assert.equal(
+  buildReferralChatMessage('https://intothebattle.com/', 'SF_CLOUDS'),
+  'Want your own IntoTheBattle arena? Use my code SF_CLOUDS when you sign up: https://intothebattle.com/signup?ref=SF_CLOUDS'
+);
 assert.equal(suggestedReferralCode({ id: 42, tiktok_username: '@Mr.Clouds' }), 'MRCLOUDS');
 
 console.log('Referral logic smoke checks passed');
