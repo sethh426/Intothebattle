@@ -64,6 +64,10 @@ function ensureDir(dir) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
+function normalizeStoredStreamerUsername(value) {
+  return String(value || '').trim().replace(/^@+/, '').toLowerCase();
+}
+
 function getRoomBackgroundDir(roomId) {
   return path.join(ROOT_DIR, 'backgrounds', roomId);
 }
@@ -109,7 +113,7 @@ export function getOrCreateRoom(roomId) {
     roomId,
     players: {},
     tiktokClient: null,
-    streamerUsername: '',
+    streamerUsername: normalizeStoredStreamerUsername(saved?.streamer_username),
     overlaySettings: saved?.overlay_settings
       ? { ...DEFAULT_OVERLAY_SETTINGS, ...JSON.parse(saved.overlay_settings) }
       : { ...DEFAULT_OVERLAY_SETTINGS },
@@ -148,9 +152,10 @@ export function saveRoomSettings(roomId) {
 
   db.prepare(`
     INSERT INTO room_settings
-      (room_id, overlay_settings, audio_config, audio_library, background_filename, updated_at)
-    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      (room_id, streamer_username, overlay_settings, audio_config, audio_library, background_filename, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(room_id) DO UPDATE SET
+      streamer_username = excluded.streamer_username,
       overlay_settings = excluded.overlay_settings,
       audio_config = excluded.audio_config,
       audio_library = excluded.audio_library,
@@ -158,6 +163,7 @@ export function saveRoomSettings(roomId) {
       updated_at = CURRENT_TIMESTAMP
   `).run(
     roomId,
+    normalizeStoredStreamerUsername(room.streamerUsername),
     JSON.stringify(room.overlaySettings),
     JSON.stringify(room.audioConfig),
     JSON.stringify(room.audioLibrary),

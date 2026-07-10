@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS access_codes (
 
 CREATE TABLE IF NOT EXISTS room_settings (
   room_id TEXT PRIMARY KEY,
+  streamer_username TEXT,
   overlay_settings TEXT DEFAULT '{}',
   audio_config TEXT DEFAULT '{}',
   audio_library TEXT DEFAULT '[]',

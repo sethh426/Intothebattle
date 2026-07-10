@@ -278,6 +278,7 @@ async function initDb() {
     await safeExec(`
       CREATE TABLE IF NOT EXISTS room_settings (
         room_id TEXT PRIMARY KEY,
+        streamer_username TEXT,
         overlay_settings TEXT DEFAULT '{}',
         audio_config TEXT DEFAULT '{}',
         audio_library TEXT DEFAULT '[]',
@@ -285,6 +286,15 @@ async function initDb() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+    await safeExec('ALTER TABLE room_settings ADD COLUMN streamer_username TEXT');
+    await safeExec(`
+      UPDATE room_settings AS rs
+      SET streamer_username = lower(trim(leading '@' from ac.tiktok_username))
+      FROM access_codes AS ac
+      WHERE rs.room_id = ac.room_id
+        AND COALESCE(NULLIF(rs.streamer_username, ''), '') = ''
+        AND COALESCE(NULLIF(ac.tiktok_username, ''), '') <> ''
     `);
 
     await safeExec(`
@@ -436,6 +446,16 @@ async function initDb() {
     await safeExec('ALTER TABLE tiktok_accounts ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
     await safeExec('CREATE UNIQUE INDEX IF NOT EXISTS tiktok_accounts_user_id_unique ON tiktok_accounts(user_id)');
     await safeExec('CREATE UNIQUE INDEX IF NOT EXISTS tiktok_accounts_open_id_unique ON tiktok_accounts(tiktok_open_id)');
+    await safeExec(`
+      UPDATE room_settings AS rs
+      SET streamer_username = lower(trim(leading '@' from COALESCE(NULLIF(ta.tiktok_username, ''), u.tiktok_username)))
+      FROM user_rooms AS ur
+      JOIN users AS u ON u.id = ur.user_id
+      LEFT JOIN tiktok_accounts AS ta ON ta.user_id = u.id AND COALESCE(ta.status, 'connected') = 'connected'
+      WHERE rs.room_id = ur.room_id
+        AND COALESCE(NULLIF(rs.streamer_username, ''), '') = ''
+        AND COALESCE(NULLIF(COALESCE(ta.tiktok_username, u.tiktok_username), ''), '') <> ''
+    `);
 
     await safeExec(`
       CREATE TABLE IF NOT EXISTS subscriptions (

@@ -5271,6 +5271,8 @@ function normalizeTikTokId(user) {
     user.userID ||
     user.userIdStr ||
     user.user_id_str ||
+    user.senderUserId ||
+    user.sender_user_id ||
     user.uid ||
     user.openId ||
     user.open_id ||
@@ -5279,9 +5281,12 @@ function normalizeTikTokId(user) {
     user.id ||
     user.username ||
     user.userName ||
+    user.senderUniqueId ||
+    user.sender_unique_id ||
     user.screenName ||
     user.screen_name ||
     user.displayId ||
+    user.senderDisplayId ||
     user.handle ||
     ''
   ).trim().replace(/^@+/, '').toLowerCase() || null;
@@ -5296,6 +5301,8 @@ function normalizeTikTokNick(user) {
     user.display_name ||
     user.profileName ||
     user.profile_name ||
+    user.senderNickname ||
+    user.sender_nickname ||
     user.screenName ||
     user.screen_name ||
     user.name ||
@@ -8202,6 +8209,9 @@ io.on('connection', (socket) => {
     const previousType = socket.data.clientType;
     socket.data.clientType = clientType;
     socket.join(room.roomId);
+    if (clientType === 'overlay' || clientType === 'dashboard' || clientType === 'stats') {
+      maybeRestorePersistedTikTokConnection(room, `${clientType}_register`);
+    }
 
     if (clientType === 'overlay') {
       if (previousType !== 'overlay') room.overlayCount++;
@@ -9643,13 +9653,13 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
 
   tiktokClient.on('event', (eventPayload = {}) => {
     const eventType = String(eventPayload?.type || '').trim();
-    if (!eventType || TIKTOK_DIRECT_PLAYER_EVENT_TYPES.has(eventType)) return;
+    if (!eventType) return;
     if (!isActiveTikTokConnection(room, tiktokClient, connectionId, connectionSessionId)) {
       markTikTokEventDropped(room, connectionId, eventType || 'event');
       return;
     }
 
-    markTikTokEventAccepted(room, eventType, eventPayload);
+    if (!TIKTOK_DIRECT_PLAYER_EVENT_TYPES.has(eventType)) markTikTokEventAccepted(room, eventType, eventPayload);
     const enteredCount = enterPlayersFromTikTokEvent(room, eventType, eventPayload);
     if (enteredCount > 0) {
       logger.info({ roomId: room.roomId, eventType, enteredCount }, 'Entered players from generic TikTok event');
@@ -9934,6 +9944,7 @@ function connectToStreamer(username, room = getDefaultRoom(), options = {}) {
   }
   if (room.roomId === DEFAULT_ROOM_ID) currentStreamer = normalizedUsername;
   room.streamerUsername = normalizedUsername;
+  saveRoomSettings(room.roomId);
   const connection = createTikTokConnection(room, normalizedUsername);
   const tiktokClient = new TikTokLive({
     uniqueId: normalizedUsername,
@@ -9964,6 +9975,48 @@ function connectToStreamer(username, room = getDefaultRoom(), options = {}) {
     if (client === tiktokClient) client = null;
   });
   return buildTikTokConnectionStatus(room);
+}
+
+function maybeRestorePersistedTikTokConnection(room, trigger = 'socket_register') {
+  if (!room?.roomId || room.tiktokClient || room.tiktokAutoRestoreInFlight) return null;
+  const username = normalizeTikTokUsername(room.streamerUsername || '');
+  if (!username) return null;
+  const status = String(room.tiktokConnection?.status || '').toLowerCase();
+  if (['connecting', 'reconnecting', 'connected'].includes(status)) return null;
+
+  room.tiktokAutoRestoreInFlight = true;
+  logger.warn({ roomId: room.roomId, username, trigger }, 'Restoring persisted TikTok LIVE connection');
+  emitTikTokConnectionStatus(room, {
+    username,
+    status: 'reconnecting',
+    reason: `auto_restore:${trigger}`,
+    error: '',
+  });
+
+  try {
+    const restored = connectToStreamer(username, room, {
+      repair: true,
+      resetLiveRuntime: false,
+      restoreRecentPlayers: true,
+    });
+    const clearRestoreFlag = () => { room.tiktokAutoRestoreInFlight = false; };
+    if (room.tiktokConnectPromise && typeof room.tiktokConnectPromise.finally === 'function') {
+      room.tiktokConnectPromise.finally(clearRestoreFlag);
+    } else {
+      setTimeout(clearRestoreFlag, TIKTOK_CONNECT_STALE_MS).unref?.();
+    }
+    return restored;
+  } catch (err) {
+    room.tiktokAutoRestoreInFlight = false;
+    logger.error({ err, roomId: room.roomId, username, trigger }, 'Persisted TikTok LIVE restore failed');
+    emitTikTokConnectionStatus(room, {
+      username,
+      status: 'error',
+      reason: 'auto_restore_failed',
+      error: err?.message || String(err || 'TikTok restore failed'),
+    });
+    return null;
+  }
 }
 
 function tikTokRepairDecision(room, now = Date.now()) {
@@ -10064,6 +10117,7 @@ function disconnectStreamer(room = getDefaultRoom()) {
   if (!room || room.roomId === DEFAULT_ROOM_ID) currentStreamer = '';
   if (room) {
     room.streamerUsername = '';
+    saveRoomSettings(room.roomId);
     resetRoomLiveRuntime(room, { reason: 'operator_disconnect', clearPlayers: true });
     emitTikTokConnectionStatus(room, {
       username: '',
