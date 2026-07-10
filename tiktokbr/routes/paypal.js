@@ -7,6 +7,7 @@ import {
   normalizePayPalSubscriptionStatus,
 } from '../services/billingPolicy.js';
 import { recordServerGrowthEvent } from '../services/growthEvents.js';
+import { qualifyReferralForUser } from '../services/referrals.js';
 import {
   getPayPalAccessToken,
   getPayPalSubscription,
@@ -131,6 +132,16 @@ function activateUserSubscription(user, subscription) {
     dates.expiresAt
   );
   ensureUserRoom(user);
+  if (localStatus === 'active') {
+    try {
+      qualifyReferralForUser(db, user.id, {
+        source: 'paypal_activation',
+        notes: `Qualified by PayPal subscription ${subscriptionId}`,
+      });
+    } catch (err) {
+      console.warn('Referral qualification failed:', err?.message || err);
+    }
+  }
 
   return {
     subscriptionId,
@@ -218,7 +229,8 @@ router.post('/api/paypal/webhook', express.json(), async (req, res) => {
 
       const user = findUserByEmail(email);
       if (user) {
-        activateUserSubscription(user, subscription);
+        const activation = activateUserSubscription(user, subscription);
+        trackSubscriptionStarted(req, user, activation);
         console.log(`✅ Linked PayPal subscription ${subId} to existing user ${email}`);
         return res.json({ success: true });
       }

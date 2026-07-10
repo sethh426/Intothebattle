@@ -1386,11 +1386,15 @@
     }
 
     const DEFAULT_ONBOARDING_PATH = '/dashboard?welcome=1';
+    const pageParams = new URLSearchParams(window.location.search);
     const nextPath = (() => {
-      const value = new URLSearchParams(window.location.search).get('next') || DEFAULT_ONBOARDING_PATH;
+      const value = pageParams.get('next') || DEFAULT_ONBOARDING_PATH;
       return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : DEFAULT_ONBOARDING_PATH;
     })();
-    const nextQuery = `?next=${encodeURIComponent(nextPath)}`;
+    const referralCode = String(pageParams.get('ref') || pageParams.get('referralCode') || '').trim();
+    const signupParams = new URLSearchParams({ next: nextPath });
+    if (referralCode) signupParams.set('ref', referralCode);
+    const nextQuery = `?${signupParams.toString()}`;
     if (googleSignupLink) googleSignupLink.href = `/auth/google${nextQuery}`;
     if (emailSignupLink) emailSignupLink.href = `/register${nextQuery}`;
     if (loginLink && nextPath !== '/dashboard') loginLink.href = `/login${nextQuery}`;

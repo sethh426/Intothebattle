@@ -758,13 +758,17 @@
     const captchaAnswerInput = document.getElementById('captchaAnswer');
     let selectedChallenge = '';
     const DEFAULT_ONBOARDING_PATH = '/dashboard?welcome=1';
+    const pageParams = new URLSearchParams(window.location.search);
     const nextPath = (() => {
-      const value = new URLSearchParams(window.location.search).get('next') || DEFAULT_ONBOARDING_PATH;
+      const value = pageParams.get('next') || DEFAULT_ONBOARDING_PATH;
       return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : DEFAULT_ONBOARDING_PATH;
     })();
+    const referralCode = String(pageParams.get('ref') || pageParams.get('referralCode') || '').trim();
     const googleBtn = document.querySelector('.google-option a[href="/auth/google"]');
     if (googleBtn) {
-      googleBtn.href = `/auth/google?next=${encodeURIComponent(nextPath)}`;
+      const googleParams = new URLSearchParams({ next: nextPath });
+      if (referralCode) googleParams.set('ref', referralCode);
+      googleBtn.href = `/auth/google?${googleParams.toString()}`;
     }
 
     function escapeHtml(value) {
@@ -869,6 +873,7 @@
             captchaToken,
             captchaAnswer,
             next: nextPath,
+            referralCode,
           }),
         });
         const json = await res.json();

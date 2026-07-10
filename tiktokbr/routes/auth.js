@@ -21,6 +21,13 @@ import {
   publicSubscriptionView,
 } from '../services/userSubscriptions.js';
 import { recordServerGrowthEvent } from '../services/growthEvents.js';
+import {
+  claimOrResetReferralCode,
+  getReferralSummary,
+  normalizeReferralCode,
+  recordReferralAttribution,
+  validateReferralCode,
+} from '../services/referrals.js';
 
 function getGoogleClientId() {
   return process.env.GOOGLE_CLIENT_ID;
@@ -40,6 +47,16 @@ function requestOrigin(req) {
   return `${proto}://${host}`;
 }
 
+function referralBaseUrl(req) {
+  return process.env.APP_BASE_URL || requestOrigin(req) || '';
+}
+
+function referralCodeFromRequest(req, fallback = '') {
+  const raw = req?.body?.referralCode || req?.body?.ref || req?.query?.referralCode || req?.query?.ref || fallback || '';
+  const normalized = normalizeReferralCode(raw);
+  return validateReferralCode(normalized).ok ? normalized : '';
+}
+
 export function getGoogleRedirectUri(req = null, env = process.env) {
   if (env.GOOGLE_OAUTH_REDIRECT_URI) return String(env.GOOGLE_OAUTH_REDIRECT_URI).trim();
   const base = env.APP_BASE_URL || requestOrigin(req) || 'http://localhost:3000';
@@ -56,12 +73,14 @@ export function getGoogleUserInfoUrl(env = process.env) {
 
 const DEFAULT_ONBOARDING_REDIRECT = '/dashboard?welcome=1';
 
-export function createOAuthState(nextPath = DEFAULT_ONBOARDING_REDIRECT) {
+export function createOAuthState(nextPath = DEFAULT_ONBOARDING_REDIRECT, referralCode = '') {
+  const normalizedReferralCode = normalizeReferralCode(referralCode);
   return jwt.sign(
     {
       purpose: 'google_oauth',
       nonce: crypto.randomBytes(16).toString('hex'),
       next: safeRedirectPath(nextPath, DEFAULT_ONBOARDING_REDIRECT),
+      ...(normalizedReferralCode ? { referralCode: normalizedReferralCode } : {}),
     },
     process.env.JWT_SECRET,
     { expiresIn: '10m' }
@@ -714,7 +733,11 @@ function clearSessionCookie(res) {
 function safeRedirectPath(value, fallback = '/dashboard') {
   const text = String(value || '').trim();
   if (!text || !text.startsWith('/') || text.startsWith('//') || text.includes('\\')) return fallback;
-  return text;
+  const clean = text.split('#')[0];
+  if (clean === '/dashboard.html' || clean === '/dashboard-login.html') return '/dashboard';
+  if (clean === '/dashboard/welcome' || clean === '/dashboard/welcome/') return '/dashboard?welcome=1';
+  if (clean === '/login.html') return '/login';
+  return clean.slice(0, 300);
 }
 
 function getUserFromToken(token) {
@@ -725,6 +748,11 @@ function getUserFromToken(token) {
     return null;
   }
   return db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
+}
+
+function getSessionUserFromRequest(req) {
+  const user = getUserFromToken(req.cookies?.session_token);
+  return user && user.is_active ? user : null;
 }
 
 router.post('/auth/user/verify-email', express.json(), async (req, res) => {
@@ -946,6 +974,7 @@ router.post('/auth/user/register', registrationLimiter, express.json(), async (r
   const captchaToken = String(req.body.captchaToken || '').trim();
   const captchaAnswer = String(req.body.captchaAnswer || '').trim();
   const redirectUrl = safeRedirectPath(req.body.next, DEFAULT_ONBOARDING_REDIRECT);
+  const referralCode = referralCodeFromRequest(req);
   if (!verifyRegistrationChallenge(captchaToken, captchaAnswer)) {
     return res.status(400).json({ success: false, error: 'Please complete the registration security check correctly.' });
   }
@@ -1066,6 +1095,11 @@ router.post('/auth/user/register', registrationLimiter, express.json(), async (r
     `${name}'s room`
   );
   db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
+  try {
+    recordReferralAttribution(db, { referralCode, referredUserId: userId, signupMethod: 'email' });
+  } catch (err) {
+    console.warn('Referral attribution failed for email signup:', err?.message || err);
+  }
   createFullAccessTrial(userId);
   const subscription = getEffectiveUserSubscription(db, userId);
   const finalRedirectUrl = userAccessRedirect(
@@ -1117,7 +1151,7 @@ router.get('/auth/google', (req, res) => {
     return res.status(501).send('Google OAuth is not configured.');
   }
 
-  const state = createOAuthState(req.query.next);
+  const state = createOAuthState(req.query.next, referralCodeFromRequest(req));
   res.cookie('google_oauth_state', state, { ...getCookieOptions(true), maxAge: 10 * 60 * 1000 });
 
   const params = new URLSearchParams({
@@ -1197,6 +1231,15 @@ router.get('/auth/google/callback', async (req, res) => {
         [userId, roomId, `${name}'s room`]
       );
       await runAsync('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING', roomId);
+      try {
+        recordReferralAttribution(db, {
+          referralCode: referralCodeFromRequest(req, statePayload?.referralCode),
+          referredUserId: userId,
+          signupMethod: 'google',
+        });
+      } catch (err) {
+        console.warn('Referral attribution failed for Google signup:', err?.message || err);
+      }
       await createFullAccessTrialAsync(userId);
       await markSignupIntentConvertedAsync(email);
       user = await getAsync('SELECT * FROM users WHERE id = ?', userId);
@@ -1307,6 +1350,40 @@ router.get('/auth/user/me', (req, res) => {
   }, rooms, subscription });
 });
 
+router.get('/api/referrals/me', (req, res) => {
+  const user = getSessionUserFromRequest(req);
+  if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+  try {
+    return res.json({
+      success: true,
+      referral: getReferralSummary(db, user, { baseUrl: referralBaseUrl(req) }),
+    });
+  } catch (err) {
+    console.error('Referral summary failed:', err);
+    return res.status(err.statusCode || 500).json({ success: false, error: err.message || 'Unable to load referral details.' });
+  }
+});
+
+router.post('/api/referrals/code', express.json(), (req, res) => {
+  const user = getSessionUserFromRequest(req);
+  if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+  try {
+    const referral = claimOrResetReferralCode(db, user, req.body?.code);
+    return res.json({
+      success: true,
+      referral: getReferralSummary(db, user, { baseUrl: referralBaseUrl(req), ...referral }),
+    });
+  } catch (err) {
+    return res.status(err.statusCode || 500).json({
+      success: false,
+      error: err.message || 'Unable to update referral code.',
+      retryAfterSeconds: err.retryAfterSeconds || 0,
+    });
+  }
+});
+
 router.get('/legacy-login', (req, res) => {
   const token = req.cookies.session_token;
   const fp = req.cookies.fp;
@@ -1328,6 +1405,7 @@ router.get('/legacy-login', (req, res) => {
 router.post('/login', loginLimiter, (req, res) => {
   const submittedCode = sanitizeCode(req.body.code);
   const fingerprint = String(req.body.fingerprint || '').trim();
+  const redirectPath = safeRedirectPath(req.body.next, '/dashboard');
   if (!submittedCode) return res.status(400).send(renderLoginPage({ error: 'Please enter a code.' }));
   if (!fingerprint) return res.status(400).send(renderLoginPage({ error: 'Device fingerprint is required.' }));
 
@@ -1350,7 +1428,7 @@ router.post('/login', loginLimiter, (req, res) => {
 
   res.cookie('session_token', sessionToken, getCookieOptions(true));
   res.cookie('fp', fingerprint, getCookieOptions(false));
-  res.redirect('/dashboard');
+  res.redirect(redirectPath);
 });
 
 router.post('/logout', (req, res) => {

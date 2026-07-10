@@ -72,6 +72,10 @@ import {
   writefreelyPublishConfig,
 } from '../services/blogEngine.js';
 import {
+  listReferralAdminRows,
+  updateReferralRewardStatus,
+} from '../services/referrals.js';
+import {
   getActiveUserCounts,
   injectActiveUserMetrics,
 } from '../services/adminUserCounts.js';
@@ -880,7 +884,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
         <div><h1>Admin Panel</h1><p>Access, promos, and room controls</p></div>
       </div>
-      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/logout">Logout</a></div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/referrals">Referrals</a><a href="/admin/logout">Logout</a></div>
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${createdCode ? `<div class="notice success">New access code created: <strong>${escapeHtml(createdCode)}</strong> <button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(createdCode)}')">Copy</button></div>` : ''}
@@ -1220,7 +1224,7 @@ function renderAdminEmailPage({ message = '', error = '', form = {}, preview = n
   <div class="wrapper">
     <header class="admin-hero">
       <div><h1>Email Accounts</h1><p>Service announcements to active creator accounts</p></div>
-      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/logout">Logout</a></div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/referrals">Referrals</a><a href="/admin/logout">Logout</a></div>
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
@@ -1345,6 +1349,31 @@ router.get('/', requireAdminAuth, (req, res) => {
 router.get('/email', requireAdminAuth, (_req, res) => {
   scheduleAdminEmailQueue(db, { delayMs: 25 });
   res.send(renderAdminEmailPage());
+});
+
+router.get('/referrals', requireAdminAuth, (req, res) => {
+  try {
+    res.send(renderReferralAdminPage({
+      message: String(req.query.message || ''),
+      error: String(req.query.error || ''),
+      rows: listReferralAdminRows(db),
+    }));
+  } catch (err) {
+    console.error('Admin referrals page failed:', err);
+    res.status(500).send(renderReferralAdminPage({ error: err.message || 'Unable to load referrals.' }));
+  }
+});
+
+router.post('/referrals/rewards/:id/status', requireAdminAuth, (req, res) => {
+  try {
+    updateReferralRewardStatus(db, req.params.id, req.body.status, {
+      amountCents: req.body.amountCents,
+      notes: req.body.notes,
+    });
+    return res.redirect('/admin/referrals?message=Reward%20updated');
+  } catch (err) {
+    return res.redirect(`/admin/referrals?error=${encodeURIComponent(err.message || 'Unable to update reward')}`);
+  }
 });
 
 router.post('/email/preview', requireAdminAuth, (req, res) => {
@@ -1902,6 +1931,122 @@ function formatSponsorDate(value) {
   return date.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
+function formatRewardAmount(cents = 0, currency = 'USD') {
+  const amount = Number(cents || 0) / 100;
+  return `${String(currency || 'USD').toUpperCase()} ${amount.toFixed(2)}`;
+}
+
+function referralRewardStatusLabel(status) {
+  return String(status || 'waiting_for_paid_conversion').replace(/_/g, ' ');
+}
+
+function renderReferralAdminRows(rows = []) {
+  if (!rows.length) return '<tr><td colspan="9">No referral activity yet.</td></tr>';
+  return rows.map((row) => {
+    const rewardStatus = row.reward_status || '';
+    const rewardAction = row.reward_id
+      ? `<form method="POST" action="/admin/referrals/rewards/${escapeAttr(row.reward_id)}/status" class="mini-form">
+          <select name="status">
+            ${['pending_review', 'approved', 'paid', 'rejected'].map(status => `<option value="${status}" ${status === rewardStatus ? 'selected' : ''}>${escapeHtml(referralRewardStatusLabel(status))}</option>`).join('')}
+          </select>
+          <input name="amountCents" type="number" min="0" step="1" value="${escapeAttr(row.amount_cents || 0)}" placeholder="Amount cents" />
+          <input name="notes" type="text" value="${escapeAttr(row.notes || '')}" placeholder="Admin note" />
+          <button type="submit">Update reward</button>
+        </form>`
+      : '<span class="muted">Waiting for paid conversion</span>';
+    return `<tr>
+      <td data-label="Code"><strong>${escapeHtml(row.code_snapshot || '')}</strong><br><span class="muted">${escapeHtml(referralRewardStatusLabel(row.attribution_status))}</span></td>
+      <td data-label="Referrer"><strong>${escapeHtml(row.referrer_name || 'Creator')}</strong><br><span class="muted">${escapeHtml(row.referrer_email || '')}</span><br><span class="muted">${escapeHtml(row.referrer_tiktok ? `@${row.referrer_tiktok}` : '')}</span></td>
+      <td data-label="Referred"><strong>${escapeHtml(row.referred_name || 'New account')}</strong><br><span class="muted">${escapeHtml(row.referred_email || '')}</span><br><span class="muted">${escapeHtml(row.referred_tiktok ? `@${row.referred_tiktok}` : '')}</span></td>
+      <td data-label="Signup">${escapeHtml(row.signup_method || 'unknown')}<br><span class="muted">${escapeHtml(formatSponsorDate(row.signup_at || row.created_at))}</span></td>
+      <td data-label="Qualified">${escapeHtml(formatSponsorDate(row.qualified_at))}</td>
+      <td data-label="Reward">${escapeHtml(referralRewardStatusLabel(rewardStatus))}<br><span class="muted">${escapeHtml(row.reward_id ? formatRewardAmount(row.amount_cents, row.currency) : '')}</span></td>
+      <td data-label="Approved">${escapeHtml(formatSponsorDate(row.approved_at))}</td>
+      <td data-label="Paid">${escapeHtml(formatSponsorDate(row.paid_at))}</td>
+      <td data-label="Action">${rewardAction}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderReferralAdminPage({ message = '', error = '', rows = [] } = {}) {
+  const totals = rows.reduce((acc, row) => {
+    acc.signups += 1;
+    if (row.attribution_status === 'qualified') acc.qualified += 1;
+    if (row.reward_status === 'pending_review') acc.pending += 1;
+    if (row.reward_status === 'approved') acc.approved += 1;
+    if (row.reward_status === 'paid') acc.paid += 1;
+    return acc;
+  }, { signups: 0, qualified: 0, pending: 0, approved: 0, paid: 0 });
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Referral Rewards - Admin</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { min-height:100vh; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 16% 0,rgba(246,201,91,.18),transparent 30%),radial-gradient(circle at 88% 12%,rgba(232,59,95,.14),transparent 28%),linear-gradient(180deg,#050608,#030406); color:#fff8e6; margin:0; padding:24px; }
+    .wrapper { max-width:1240px; margin:0 auto; display:grid; gap:18px; }
+    .admin-hero { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:18px; border:1px solid rgba(246,201,91,.24); border-radius:26px; background:rgba(5,7,11,.78); box-shadow:0 28px 80px rgba(0,0,0,.38); }
+    .admin-brand { display:flex; align-items:center; gap:14px; min-width:0; }
+    .admin-brand img { width:52px; height:52px; border-radius:16px; border:1px solid rgba(246,201,91,.34); background:rgba(246,201,91,.08); }
+    h1 { margin:0; font-size:clamp(28px,4vw,48px); line-height:1; text-transform:uppercase; }
+    .admin-brand p { margin:6px 0 0; color:#a8afbf; font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+    .admin-nav { display:flex; gap:10px; flex-wrap:wrap; }
+    .admin-nav a { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:999px; border:1px solid rgba(255,255,255,.1); color:#fff8e6; background:rgba(255,255,255,.055); text-decoration:none; font-weight:800; }
+    .notice { padding:14px 16px; border-radius:16px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.06); }
+    .error { color:#ffb6b6; }
+    .success { color:#c6ffc3; }
+    .muted { color:#a8afbf; line-height:1.5; }
+    .card { background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.24); }
+    .metrics-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; }
+    .metric-card { min-width:0; padding:16px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.22); }
+    .metric-card span { display:block; color:#a8afbf; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+    .metric-card strong { display:block; margin-top:7px; color:#fff8e6; font-size:34px; line-height:1; }
+    .table-shell { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; }
+    th, td { border-bottom:1px solid rgba(255,255,255,.08); padding:12px; font-size:13px; text-align:left; vertical-align:top; }
+    th { background:rgba(246,201,91,.09); color:#ffdf8a; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
+    input, select { width:100%; min-height:38px; padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.12); background:#111827; color:#fff8e6; }
+    button { width:100%; min-height:36px; margin-top:0; border:0; border-radius:10px; background:linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color:#170c02; cursor:pointer; font-weight:900; }
+    .mini-form { display:grid; grid-template-columns:minmax(100px,.8fr) minmax(90px,.7fr) minmax(140px,1fr); gap:8px; min-width:360px; }
+    .mini-form button { grid-column:1 / -1; }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.metrics-grid{grid-template-columns:1fr 1fr}.mini-form{grid-template-columns:1fr;min-width:0} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
+    @media(max-width:420px){ .admin-nav,.metrics-grid{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <header class="admin-hero">
+      <div class="admin-brand">
+        <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
+        <div><h1>Referrals</h1><p>Streamer rewards and signup attribution</p></div>
+      </div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/referrals">Referrals</a><a href="/admin/logout">Logout</a></div>
+    </header>
+    ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
+    ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
+    <section class="metrics-grid">
+      <div class="metric-card"><span>Signups</span><strong>${escapeHtml(String(totals.signups))}</strong></div>
+      <div class="metric-card"><span>Qualified</span><strong>${escapeHtml(String(totals.qualified))}</strong></div>
+      <div class="metric-card"><span>Pending review</span><strong>${escapeHtml(String(totals.pending))}</strong></div>
+      <div class="metric-card"><span>Approved</span><strong>${escapeHtml(String(totals.approved))}</strong></div>
+      <div class="metric-card"><span>Paid</span><strong>${escapeHtml(String(totals.paid))}</strong></div>
+    </section>
+    <section class="card table-shell">
+      <h2>Referral Activity</h2>
+      <p class="muted">Signup attribution is automatic. A reward appears when the referred account becomes an active paid PayPal subscriber. Payouts stay admin-reviewed in v1.</p>
+      <table>
+        <thead><tr><th>Code</th><th>Referrer</th><th>Referred</th><th>Signup</th><th>Qualified</th><th>Reward</th><th>Approved</th><th>Paid</th><th>Action</th></tr></thead>
+        <tbody>${renderReferralAdminRows(rows)}</tbody>
+      </table>
+    </section>
+  </div>
+</body>
+</html>`;
+}
+
 function normalizePostDateInput(value) {
   const date = parseDateTimeLocal(value);
   return date || null;
@@ -2057,6 +2202,7 @@ function renderWritefreelyPosterPage({
         <a href="/admin/sponsors">Video Platform</a>
         <a href="/admin/marketing">Company Growth</a>
         <a href="/admin/blog">Blog Posts</a>
+        <a href="/admin/referrals">Referrals</a>
         <a href="/admin/logout">Logout</a>
       </div>
     </header>
@@ -2167,6 +2313,7 @@ function renderBlogAdminPage({ message = '', error = '', posts = [] } = {}) {
         <a href="/admin/sponsors">Video Platform</a>
         <a href="/admin/marketing">Company Growth</a>
         <a href="/admin/blog/manual">Manual poster</a>
+        <a href="/admin/referrals">Referrals</a>
         <a href="/admin/logout">Logout</a>
       </div>
     </header>
@@ -2459,7 +2606,7 @@ function renderSponsorAdminPage({ message = '', error = '', creatives = [], even
         <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
         <div><h1>Video Platform</h1><p>Company-controlled creative inventory</p></div>
       </div>
-      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/logout">Logout</a></div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/referrals">Referrals</a><a href="/admin/logout">Logout</a></div>
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
@@ -3662,7 +3809,7 @@ function renderMarketingAdminPage({
         <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
         <div><h1>Company Growth</h1><p>Admin-only sales workflow</p></div>
       </div>
-      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/logout">Logout</a></div>
+      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/referrals">Referrals</a><a href="/admin/logout">Logout</a></div>
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}

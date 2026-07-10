@@ -598,8 +598,14 @@
     const emailHint = params.get('email');
     if (emailHint) emailInput.value = emailHint;
 
-    const nextQuery = nextPath === '/dashboard' ? '' : `?next=${encodeURIComponent(nextPath)}`;
-    const authNextQuery = `?next=${encodeURIComponent(nextPath)}`;
+    const referralCode = String(params.get('ref') || params.get('referralCode') || '').trim();
+    const signupParams = new URLSearchParams();
+    if (nextPath !== '/dashboard') signupParams.set('next', nextPath);
+    if (referralCode) signupParams.set('ref', referralCode);
+    const authParams = new URLSearchParams({ next: nextPath });
+    if (referralCode) authParams.set('ref', referralCode);
+    const nextQuery = signupParams.toString() ? `?${signupParams.toString()}` : '';
+    const authNextQuery = `?${authParams.toString()}`;
     const signupLink     = document.getElementById('signupLink');
     const registerLink   = document.getElementById('registerLink');
     const googleLoginBtn = document.getElementById('googleLoginBtn');

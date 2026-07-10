@@ -132,6 +132,64 @@ CREATE TABLE IF NOT EXISTS signup_intents (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS streamer_referral_codes (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL UNIQUE,
+  code TEXT UNIQUE NOT NULL,
+  reset_count INTEGER DEFAULT 0,
+  last_reset_at TIMESTAMP,
+  reset_available_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS streamer_referral_codes_code_upper_idx ON streamer_referral_codes (UPPER(code));
+
+CREATE TABLE IF NOT EXISTS referral_attributions (
+  id SERIAL PRIMARY KEY,
+  referral_code_id INTEGER NOT NULL,
+  referrer_user_id INTEGER NOT NULL,
+  referred_user_id INTEGER NOT NULL UNIQUE,
+  code_snapshot TEXT NOT NULL,
+  signup_method TEXT DEFAULT 'unknown',
+  status TEXT DEFAULT 'signup_pending',
+  signup_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  qualified_at TIMESTAMP,
+  disqualified_at TIMESTAMP,
+  disqualification_reason TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(referral_code_id) REFERENCES streamer_referral_codes(id),
+  FOREIGN KEY(referrer_user_id) REFERENCES users(id),
+  FOREIGN KEY(referred_user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS referral_attributions_referrer_status_idx ON referral_attributions(referrer_user_id, status);
+CREATE INDEX IF NOT EXISTS referral_attributions_code_idx ON referral_attributions(referral_code_id);
+
+CREATE TABLE IF NOT EXISTS referral_rewards (
+  id SERIAL PRIMARY KEY,
+  attribution_id INTEGER NOT NULL UNIQUE,
+  referrer_user_id INTEGER NOT NULL,
+  referred_user_id INTEGER NOT NULL,
+  status TEXT DEFAULT 'pending_review',
+  amount_cents INTEGER DEFAULT 0,
+  currency TEXT DEFAULT 'USD',
+  notes TEXT,
+  approved_at TIMESTAMP,
+  rejected_at TIMESTAMP,
+  paid_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(attribution_id) REFERENCES referral_attributions(id),
+  FOREIGN KEY(referrer_user_id) REFERENCES users(id),
+  FOREIGN KEY(referred_user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS referral_rewards_referrer_status_idx ON referral_rewards(referrer_user_id, status);
+CREATE INDEX IF NOT EXISTS referral_rewards_status_idx ON referral_rewards(status, created_at);
+
 CREATE TABLE IF NOT EXISTS admin_email_campaigns (
   id SERIAL PRIMARY KEY,
   subject TEXT NOT NULL,
