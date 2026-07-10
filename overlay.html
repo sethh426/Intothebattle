@@ -3369,6 +3369,29 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
   }
 
+  function runOrbitalTrackingProbe() {
+    clearTransientEffectsForProbe();
+    const top = topPlayers();
+    const ids = (top.length ? top : DEMO_PLAYERS).map(player => player.uniqueId || player.id).filter(Boolean);
+    const roster = ids.length >= 2 ? ids : ['p1', 'p2'];
+    const attacker = roster[0];
+    const target = roster[Math.min(roster.length - 1, 4)] || roster[1] || roster[0];
+    const beforeDropped = effectOwnershipStats.droppedEffects;
+    const fired = fireAttack(attacker, target, 30, false, true, 'orbital', {
+      attackerScope: 'top',
+      targetScope: 'top',
+      intensity: 0.86,
+      critical: true,
+    });
+    return {
+      attacker,
+      target,
+      fired,
+      droppedDuringProbe: effectOwnershipStats.droppedEffects - beforeDropped,
+      status: currentOverlayMotionStatus(),
+    };
+  }
+
   function freezeOverlayVisuals() {
     overlayVisualsFrozen = true;
     return {
@@ -3476,6 +3499,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     testEventStorm: (count = 132) => runVisualEventStorm(count),
     testEffectOwnership: () => runEffectOwnershipProbe(),
     testEffectCatalog: effects => runEffectCatalogProbe(effects),
+    testOrbitalTracking: () => runOrbitalTrackingProbe(),
     testSponsorQueue: (count = 9) => runSponsorQueueStress(count),
     testBackground: (mode = 'valid') => {
       const kind = String(mode || 'valid').toLowerCase();
@@ -7668,15 +7692,42 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     drawOrbital() {
       const { from: f, to: t, progress: pg } = this;
       const ui = canvasUiScale();
-      const lockT = clamp01(pg / 0.32);
-      const beamT = clamp01((pg - 0.24) / 0.48);
-      const impactT = clamp01((pg - 0.62) / 0.38);
-      const strikeY = Math.max(arenaFrame().y + 12 * ui, t.y - (240 + this.intensity * 70) * ui);
+      const dx = t.x - f.x;
+      const dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist;
+      const uy = dy / dist;
+      const nx = -uy;
+      const ny = ux;
+      const safe = arenaSafeFrame();
+      const lockT = clamp01(pg / 0.34);
+      const beamT = clamp01((pg - 0.2) / 0.56);
+      const impactT = clamp01((pg - 0.66) / 0.34);
+      const fade = pg < 0.88 ? 1 : Math.max(0, 1 - (pg - 0.88) / 0.12);
+      const sourceBias = clampNumber(dist * 0.24, 44 * ui, 138 * ui);
+      const altitude = (220 + this.intensity * 82) * ui;
+      const wobble = prefersReducedMotion() ? 0 : Math.sin(Date.now() * 0.014 + this.start * 0.001) * 10 * ui;
+      const originX = clampNumber(t.x - ux * sourceBias + nx * wobble, safe.left, safe.right);
+      const originY = clampNumber(t.y - altitude, safe.top, Math.max(safe.top, t.y - 72 * ui));
+      const beamDx = t.x - originX;
+      const beamDy = t.y - originY;
+      const beamDist = Math.max(1, Math.hypot(beamDx, beamDy));
+      const bux = beamDx / beamDist;
+      const buy = beamDy / beamDist;
+      const bnx = -buy;
+      const bny = bux;
+      const beamEase = easeOutCubic(beamT);
+      const hitX = originX + beamDx * beamEase;
+      const hitY = originY + beamDy * beamEase;
+      const reticlePulse = prefersReducedMotion() ? 1 : 0.88 + Math.sin(Date.now() * 0.018) * 0.12;
+      const reticleR = (24 + this.intensity * 14 + lockT * 18) * ui * reticlePulse;
+      const satelliteR = (11 + this.intensity * 4) * ui;
 
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
       ctx.lineCap = 'round';
-      ctx.globalAlpha = (1 - Math.min(pg, 0.92)) * 0.32;
+
+      ctx.globalAlpha = (1 - Math.min(pg, 0.92)) * 0.3;
       ctx.strokeStyle = '#7afcff';
       ctx.setLineDash([8 * ui, 12 * ui]);
       ctx.lineDashOffset = -Date.now() * 0.05;
@@ -7685,49 +7736,141 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.moveTo(f.x, f.y);
       ctx.lineTo(t.x, t.y);
       ctx.stroke();
+
+      ctx.globalAlpha = Math.max(0, 0.22 + lockT * 0.24) * fade;
+      ctx.strokeStyle = '#f6c95b';
+      ctx.setLineDash([4 * ui, 10 * ui]);
+      ctx.beginPath();
+      ctx.moveTo(originX, originY);
+      ctx.lineTo(t.x, t.y);
+      ctx.stroke();
       ctx.setLineDash([]);
-      ctx.globalAlpha = Math.sin(lockT * Math.PI) * 0.72;
+
+      const satelliteAlpha = Math.max(0.28, Math.sin(lockT * Math.PI) * 0.68 + beamT * 0.28) * fade;
+      ctx.save();
+      ctx.translate(originX, originY);
+      ctx.rotate(Math.atan2(beamDy, beamDx));
+      ctx.globalAlpha = satelliteAlpha * 0.44;
+      ctx.strokeStyle = '#7afcff';
+      ctx.lineWidth = Math.max(1.1, 1.7 * ui);
+      ctx.beginPath();
+      ctx.arc(0, 0, satelliteR * 1.75, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = satelliteAlpha;
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#7afcff';
+      ctx.shadowBlur = 16 * ui;
+      ctx.beginPath();
+      ctx.moveTo(satelliteR, 0);
+      ctx.lineTo(0, satelliteR * 0.72);
+      ctx.lineTo(-satelliteR * 1.22, 0);
+      ctx.lineTo(0, -satelliteR * 0.72);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = satelliteAlpha * 0.72;
+      ctx.strokeStyle = '#f6c95b';
+      ctx.lineWidth = Math.max(1.2, 2 * ui);
+      ctx.beginPath();
+      ctx.moveTo(satelliteR * 1.45, 0);
+      ctx.lineTo(satelliteR * 2.55, 0);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.globalAlpha = Math.max(Math.sin(lockT * Math.PI) * 0.66, beamT * 0.64) * fade;
       ctx.strokeStyle = '#f6c95b';
       ctx.lineWidth = Math.max(1.4, 2.3 * ui);
       ctx.beginPath();
-      ctx.arc(t.x, t.y, (22 + lockT * 24) * ui, 0, Math.PI * 2);
+      ctx.arc(t.x, t.y, reticleR, 0, Math.PI * 2);
       ctx.stroke();
+      ctx.globalAlpha *= 0.72;
       ctx.beginPath();
-      ctx.moveTo(t.x - 42 * ui, t.y);
-      ctx.lineTo(t.x - 14 * ui, t.y);
-      ctx.moveTo(t.x + 14 * ui, t.y);
-      ctx.lineTo(t.x + 42 * ui, t.y);
-      ctx.moveTo(t.x, t.y - 42 * ui);
-      ctx.lineTo(t.x, t.y - 14 * ui);
-      ctx.moveTo(t.x, t.y + 14 * ui);
-      ctx.lineTo(t.x, t.y + 42 * ui);
+      ctx.moveTo(t.x - bux * (reticleR + 18 * ui), t.y - buy * (reticleR + 18 * ui));
+      ctx.lineTo(t.x - bux * Math.max(8 * ui, reticleR - 6 * ui), t.y - buy * Math.max(8 * ui, reticleR - 6 * ui));
+      ctx.moveTo(t.x + bux * Math.max(8 * ui, reticleR - 6 * ui), t.y + buy * Math.max(8 * ui, reticleR - 6 * ui));
+      ctx.lineTo(t.x + bux * (reticleR + 18 * ui), t.y + buy * (reticleR + 18 * ui));
+      ctx.moveTo(t.x - bnx * (reticleR + 13 * ui), t.y - bny * (reticleR + 13 * ui));
+      ctx.lineTo(t.x - bnx * Math.max(7 * ui, reticleR - 8 * ui), t.y - bny * Math.max(7 * ui, reticleR - 8 * ui));
+      ctx.moveTo(t.x + bnx * Math.max(7 * ui, reticleR - 8 * ui), t.y + bny * Math.max(7 * ui, reticleR - 8 * ui));
+      ctx.lineTo(t.x + bnx * (reticleR + 13 * ui), t.y + bny * (reticleR + 13 * ui));
       ctx.stroke();
+
       if (beamT > 0) {
-        const hitY = strikeY + (t.y - strikeY) * easeOutCubic(beamT);
         const fade = beamT < 0.84 ? 1 : Math.max(0, 1 - (beamT - 0.84) / 0.16);
-        ctx.globalAlpha = fade * 0.46;
-        ctx.strokeStyle = '#f6c95b';
-        ctx.lineWidth = Math.max(18, (26 + this.intensity * 15) * ui);
+        const widthIn = clamp01(beamT / 0.18);
+        const outerW = Math.max(18, (30 + this.intensity * 18) * ui) * widthIn;
+        const innerW = Math.max(3, (5.8 + this.intensity * 2.4) * ui) * widthIn;
+        ctx.globalAlpha = fade * 0.42;
+        ctx.strokeStyle = '#7afcff';
+        ctx.lineWidth = outerW * 1.35;
         ctx.beginPath();
-        ctx.moveTo(t.x, strikeY);
-        ctx.lineTo(t.x, hitY);
+        ctx.moveTo(originX - bnx * 2 * ui, originY - bny * 2 * ui);
+        ctx.lineTo(hitX - bnx * 2 * ui, hitY - bny * 2 * ui);
+        ctx.stroke();
+        ctx.globalAlpha = fade * 0.56;
+        ctx.strokeStyle = '#f6c95b';
+        ctx.lineWidth = outerW;
+        ctx.beginPath();
+        ctx.moveTo(originX, originY);
+        ctx.lineTo(hitX, hitY);
         ctx.stroke();
         ctx.globalAlpha = fade;
         ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = Math.max(3, 5 * ui);
+        ctx.lineWidth = innerW;
         ctx.beginPath();
-        ctx.moveTo(t.x, strikeY);
-        ctx.lineTo(t.x, hitY);
+        ctx.moveTo(originX, originY);
+        ctx.lineTo(hitX, hitY);
         ctx.stroke();
+
+        const headR = (18 + this.intensity * 12) * ui * Math.max(0.35, widthIn);
+        const head = ctx.createRadialGradient(hitX, hitY, 0, hitX, hitY, headR);
+        head.addColorStop(0, 'rgba(255,255,255,0.92)');
+        head.addColorStop(0.35, 'rgba(246,201,91,0.62)');
+        head.addColorStop(1, 'rgba(122,252,255,0)');
+        ctx.globalAlpha = fade;
+        ctx.fillStyle = head;
+        ctx.beginPath();
+        ctx.arc(hitX, hitY, headR, 0, Math.PI * 2);
+        ctx.fill();
       }
+
       if (impactT > 0 && !this._impacted) this.spawnImpactParticles(['#f6c95b', '#ffffff', '#ff8f45'], 22, { min: 5, max: 9, speed: 4.2, radius: 1.7 });
       if (impactT > 0) {
-        ctx.globalAlpha = Math.sin(impactT * Math.PI) * 0.58;
+        const impactAlpha = Math.sin(impactT * Math.PI);
+        ctx.globalAlpha = impactAlpha * 0.38;
+        const flash = ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, (62 + this.intensity * 28) * ui);
+        flash.addColorStop(0, 'rgba(255,255,255,0.8)');
+        flash.addColorStop(0.32, 'rgba(246,201,91,0.5)');
+        flash.addColorStop(1, 'rgba(246,201,91,0)');
+        ctx.fillStyle = flash;
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, (62 + this.intensity * 28) * ui, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = impactAlpha * 0.64;
         ctx.strokeStyle = '#f6c95b';
         ctx.lineWidth = Math.max(1.4, 2.6 * ui);
         ctx.beginPath();
-        ctx.arc(t.x, t.y, (22 + impactT * 92) * ui, 0, Math.PI * 2);
+        ctx.arc(t.x, t.y, (24 + impactT * 98) * ui, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.globalAlpha = impactAlpha * 0.78;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = Math.max(1, 1.6 * ui);
+        ctx.beginPath();
+        ctx.moveTo(t.x - ux * 18 * ui, t.y - uy * 18 * ui);
+        ctx.lineTo(t.x + ux * 18 * ui, t.y + uy * 18 * ui);
+        ctx.moveTo(t.x - nx * 18 * ui, t.y - ny * 18 * ui);
+        ctx.lineTo(t.x + nx * 18 * ui, t.y + ny * 18 * ui);
+        ctx.stroke();
+      }
+
+      if (isPublicDemo || overlayParams.get('debug') === '1') {
+        window.__overlayLastOrbitalGeometry = {
+          target: { x: t.x, y: t.y },
+          origin: { x: originX, y: originY },
+          beamEnd: { x: hitX, y: hitY },
+          progress: pg,
+          beamProgress: beamT,
+          projectedTargetDrift: Math.hypot((originX + beamDx) - t.x, (originY + beamDy) - t.y),
+        };
       }
       ctx.restore();
     }

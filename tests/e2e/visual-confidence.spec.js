@@ -504,6 +504,29 @@ async function auditEffectCatalogViewport(page, testInfo) {
   await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'new-effect-catalog-canvas', minLitRatio: 0.05 });
 }
 
+async function auditOrbitalTrackingViewport(page, testInfo) {
+  await openPreview(page);
+  await waitForDemoLayout(page, { horde: true });
+  await page.waitForFunction(() => typeof window.overlayEventEngine?.testOrbitalTracking === 'function', null, { timeout: 5000 });
+  const result = await page.evaluate(() => window.overlayEventEngine.testOrbitalTracking());
+  await attachJson(testInfo, 'orbital-tracking-result', result);
+  expect(result?.fired).toBe(true);
+  expect(result?.droppedDuringProbe).toBe(0);
+  expect(result?.status?.unownedEffects).toBe(0);
+  expect(result?.status?.ownedEffects).toBeGreaterThanOrEqual(1);
+
+  await page.waitForFunction(() => {
+    const geometry = window.__overlayLastOrbitalGeometry;
+    return geometry && geometry.beamProgress > 0.3;
+  }, null, { timeout: 2500 });
+  const geometry = await page.evaluate(() => window.__overlayLastOrbitalGeometry || null);
+  await attachJson(testInfo, 'orbital-tracking-geometry', geometry);
+  expect(geometry?.projectedTargetDrift).toBeLessThanOrEqual(0.5);
+  expect(geometry?.origin?.y).toBeLessThan((geometry?.target?.y || 0) - 40);
+  await attachScreenshot(page, testInfo, 'orbital-tracking-preview');
+  await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'orbital-tracking-canvas', minLitRatio: 0.045 });
+}
+
 async function auditEventStormViewport(page, testInfo) {
   await openPreview(page);
   await waitForDemoLayout(page, { horde: true });
@@ -791,6 +814,10 @@ test('@visual overlay diagnostic hooks emit Playwright artifacts for hard failur
 
   await test.step('new effect catalog health', async () => {
     await auditEffectCatalogViewport(page, testInfo);
+  });
+
+  await test.step('orbital tracking health', async () => {
+    await auditOrbitalTrackingViewport(page, testInfo);
   });
 
   await test.step('visual event storm health', async () => {
