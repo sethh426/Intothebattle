@@ -51,7 +51,7 @@ test('@cross-browser marketing, auth, and conversion pages keep semantic structu
   await expect(page.locator('#googleSignupLink')).toHaveAttribute('href', '/auth/google?next=%2Fdashboard%3Fwelcome%3D1');
   await expect(page.locator('#emailSignupLink')).toHaveAttribute('href', '/register?next=%2Fdashboard%3Fwelcome%3D1');
   await expect(page.locator('#loginLink')).toHaveAttribute('href', '/login?next=%2Fdashboard%3Fwelcome%3D1');
-  await expect(page.getByText('Open setup preview, copy the source, and test the battle.')).toBeVisible();
+  await expect(page.getByText('Start the demo, copy the TikTok Studio source, and test the battle.')).toBeVisible();
   await expect(page.getByText('Free means you can create and test the battle overlay.')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Create creator account' })).toMatchAriaSnapshot(`
     - region "Create creator account":
@@ -111,6 +111,9 @@ test('@cross-browser authenticated dashboard exposes real creator controls', asy
   const errors = await gotoWatched(page, '/dashboard?welcome=1', testInfo, page => page.getByRole('heading', { name: 'IntoTheBattle Command Center' }), 'dashboard-command-center');
 
   await expect(page.getByTestId('welcome-setup-panel')).toBeVisible();
+  await expect(page.getByTestId('quick-setup-panel')).toBeVisible();
+  await expect(page.getByTestId('quick-setup-panel')).toContainText('10-minute Quick Setup');
+  await expect(page.getByTestId('quick-setup-panel')).toContainText('TikTok Studio');
   await expect(page.locator('#subscription-chip')).toBeVisible();
   await expect(page.locator('#nextActionPanel')).toBeVisible();
   await expect(page.locator('#streamModeLabel')).toBeVisible();
@@ -132,20 +135,15 @@ test('@cross-browser authenticated dashboard exposes real creator controls', asy
   await expect(page.locator('#toggleDevModeButton')).toHaveText(/Enable Dev Mode|Disable Dev Mode/);
   await expect(page.locator('[data-beta-feature="overlay-v2"]')).toBeHidden();
   await expect(page.locator('.card').first()).toHaveCSS('border-radius', '8px');
-  await expect(page.locator('#launchActionGrid')).toMatchAriaSnapshot(`
-    - button /Start setup demo/
-    - button /Copy setup source/
-    - button /Open source/
-    - button /Send test event/
-    - button /Connect TikTok/
-    - button /Start live battle/
-  `);
-  await expect(page.locator('#setupChecklistCard')).toMatchAriaSnapshot(`
-    - heading "Get live without guessing."
-    - button /Start setup demo/
-    - button /Copy setup source/
-    - button /Open source/
-  `);
+  await expect(page.locator('#launchActionGrid')).toContainText('Start demo');
+  await expect(page.locator('#launchActionGrid')).toContainText('Copy TikTok Studio source');
+  await expect(page.locator('#launchActionGrid')).toContainText('Confirm source');
+  await expect(page.locator('#launchActionGrid')).toContainText('Verify overlay');
+  await expect(page.locator('#launchActionGrid')).toContainText('Connect TikTok');
+  await expect(page.locator('#launchActionGrid')).toContainText('Start battle');
+  await expect(page.locator('#setupChecklistCard')).toContainText('Get live in under 10 minutes.');
+  await expect(page.locator('#setupChecklistCard')).toContainText('Use the setup source first.');
+  await expect(page.locator('#quickSetupPrimary').getByRole('button', { name: 'Start Setup Demo' })).toBeVisible();
   await expectNoPageErrors(errors, testInfo, 'dashboard');
 });
 
@@ -198,9 +196,11 @@ test('@dashboard setup rehearsal changes demo state and then resets toward real 
     await expect(page.locator('#streamModeDetail')).toContainText('Demo events are running');
     await expect(page.locator('#streamModePill')).toContainText('Setup Demo');
     await expect(page.locator('#playerSourceCounts')).toContainText(/Demo [1-9]/);
-    await expect(page.locator('#nextActionPanel')).toContainText('Open the signed setup preview');
+    await expect(page.locator('#quickSetupPanel')).toContainText('Copy the TikTok Studio source');
+    await expect(page.locator('#nextActionPanel')).toContainText('Copy the TikTok Studio source');
+    await expect(page.locator('#nextActionPanel')).toContainText('Paste this signed setup URL into TikTok Studio');
     await expect(page.locator('#nextActionButtons').getByRole('button', { name: 'Open Setup Preview' })).toBeVisible();
-    await expect(page.locator('#nextActionButtons').getByRole('button', { name: 'Copy Setup URL' })).toBeVisible();
+    await expect(page.locator('#nextActionButtons').getByRole('button', { name: 'Copy TikTok Studio Source' })).toBeVisible();
   });
 
   await test.step('reset clears demo state without pretending real stream players exist', async () => {

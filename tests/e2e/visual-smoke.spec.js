@@ -201,7 +201,7 @@ test('conversion pages clarify proof before payment and Creator Pro scope', asyn
   const errors = await watchPage(page);
 
   await page.goto(`${baseUrl}/signup`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByText('Open setup preview, copy the source, and test the battle.')).toBeVisible();
+  await expect(page.getByText('Start the demo, copy the TikTok Studio source, and test the battle.')).toBeVisible();
   await expect(page.getByText('Free means you can create and test the battle overlay.')).toBeVisible();
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'conversion-signup-copy');
