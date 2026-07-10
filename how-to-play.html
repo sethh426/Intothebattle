@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IntoTheBattle Player Commands | How To Play</title>
-  <meta name="description" content="IntoTheBattle player command manual for TikTok LIVE: enter through any engagement, attack players, target The Horde, fight boss waves, shield, heal, pick teams, and change your fighter icon." />
+  <meta name="description" content="IntoTheBattle player command manual for TikTok LIVE: auto-join through engagement, attack players, target The Horde, fight boss waves, use all effects, shield, heal, team up, and change your fighter icon." />
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
   <link rel="canonical" href="https://intothebattle.com/how-to-play" />
@@ -12,7 +12,7 @@
   <meta property="og:type" content="article" />
   <meta property="og:locale" content="en_US" />
   <meta property="og:title" content="IntoTheBattle Player Commands | How To Play" />
-  <meta property="og:description" content="The viewer-first command manual for entering through engagement, attacking, defending, healing, targeting The Horde, and fighting boss waves in IntoTheBattle." />
+  <meta property="og:description" content="The viewer-first command manual for auto-joining, attacking, defending, healing, targeting The Horde, breaking shields with gifts, and fighting boss waves in IntoTheBattle." />
   <meta property="og:url" content="https://intothebattle.com/how-to-play" />
   <meta property="og:image" content="https://intothebattle.com/og-intothebattle.png?v=20260704" />
   <meta property="og:image:secure_url" content="https://intothebattle.com/og-intothebattle.png?v=20260704" />
@@ -23,7 +23,7 @@
   <meta property="og:site_name" content="IntoTheBattle" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="IntoTheBattle Player Commands" />
-  <meta name="twitter:description" content="Learn the current player commands for IntoTheBattle: enter through engagement, attack, shield, heal, target horde, target boss, and use advanced effects." />
+  <meta name="twitter:description" content="Learn the current IntoTheBattle commands: auto-join, attack, shield, heal, target horde, target boss, team up, change emoji, and use every active effect." />
   <meta name="twitter:image" content="https://intothebattle.com/og-intothebattle.png?v=20260704" />
   <meta name="twitter:image:alt" content="IntoTheBattle player command battlefield." />
   <link rel="image_src" href="https://intothebattle.com/og-intothebattle.png?v=20260704" />
@@ -43,7 +43,7 @@
         "@id": "https://intothebattle.com/how-to-play#webpage",
         "url": "https://intothebattle.com/how-to-play",
         "name": "IntoTheBattle Player Commands | How To Play",
-        "description": "A viewer-first command manual for IntoTheBattle player commands, targets, defenses, support actions, teams, and engagement triggers.",
+        "description": "A viewer-first command manual for IntoTheBattle player commands, targets, defenses, support actions, teams, shield cooldowns, gift breaks, power-up commands, and engagement triggers.",
         "inLanguage": "en-US",
         "isPartOf": { "@id": "https://intothebattle.com/#website" },
         "about": { "@id": "https://intothebattle.com/#software" },
@@ -63,14 +63,15 @@
         "@id": "https://intothebattle.com/how-to-play#commands",
         "name": "IntoTheBattle player commands",
         "itemListElement": [
-          { "@type": "ListItem", "position": 1, "name": "Any engagement", "description": "Comment, like, follow, share, repost, or gift to enter or rally your fighter in the arena." },
+          { "@type": "ListItem", "position": 1, "name": "Any engagement", "description": "Comment, like, follow, share, repost, or gift to enter or rally your fighter in the arena. Typing !join is optional." },
           { "@type": "ListItem", "position": 2, "name": "@name", "description": "Attack a visible player by name. No exclamation point required." },
           { "@type": "ListItem", "position": 3, "name": "!attack @horde", "description": "Send damage into The Horde." },
           { "@type": "ListItem", "position": 4, "name": "!attack @boss", "description": "Damage the active boss wave." },
-          { "@type": "ListItem", "position": 5, "name": "!shield", "description": "Reduce incoming damage for a short defensive window." },
+          { "@type": "ListItem", "position": 5, "name": "!shield", "description": "Block regular attacks for 10 seconds. A new shield cannot be added for 45 seconds after the shield goes down." },
           { "@type": "ListItem", "position": 6, "name": "!heal @name", "description": "Restore health to yourself or a named fighter." },
           { "@type": "ListItem", "position": 7, "name": "!team red", "description": "Join a named team and receive team color styling." },
-          { "@type": "ListItem", "position": 8, "name": "!commands", "description": "Show the current command reminder on the overlay." }
+          { "@type": "ListItem", "position": 8, "name": "!emoji <emoji>", "description": "Change the icon shown on your fighter card." },
+          { "@type": "ListItem", "position": 9, "name": "!commands", "description": "Show the current command reminder on the overlay." }
         ]
       },
       {
@@ -80,12 +81,17 @@
           {
             "@type": "Question",
             "name": "Do viewers need to install anything to play IntoTheBattle?",
-            "acceptedAnswer": { "@type": "Answer", "text": "No. Viewers enter from normal TikTok LIVE engagement such as comments, likes, follows, shares, reposts, and gifts. They can also type supported commands such as @name, !shield, and !heal @name. Regular comments send weak random attacks." }
+            "acceptedAnswer": { "@type": "Answer", "text": "No. Viewers enter from normal TikTok LIVE engagement such as comments, likes, follows, shares, reposts, and gifts. They can also type supported commands such as @name, !shield, !heal @name, !team red, and !emoji. Regular comments send weak random attacks." }
           },
           {
             "@type": "Question",
             "name": "What can IntoTheBattle attacks target?",
             "acceptedAnswer": { "@type": "Answer", "text": "Command attacks resolve onto one of three target types: a player, The Horde, or the active boss wave." }
+          },
+          {
+            "@type": "Question",
+            "name": "How do shields work in IntoTheBattle?",
+            "acceptedAnswer": { "@type": "Answer", "text": "The !shield, !guard, and !block commands raise a 10-second shield that blocks regular attack damage. Gifts can break an active shield, and a player cannot add another shield for 45 seconds after the shield goes down." }
           },
           {
             "@type": "Question",
@@ -389,7 +395,7 @@
       padding: 12px;
     }
     .status-note { min-height: 20px; color: var(--green); font-size: 13px; font-weight: 800; }
-    .rules-grid { grid-template-columns: repeat(3, minmax(0,1fr)); }
+    .rules-grid { grid-template-columns: repeat(4, minmax(0,1fr)); }
     .engagement-grid { grid-template-columns: repeat(5, minmax(0,1fr)); }
     footer {
       max-width: var(--max);
@@ -456,7 +462,7 @@
       <div>
         <p class="eyebrow">Current player command manual</p>
         <h1 id="hero-title">Engage once. Fight on screen.</h1>
-        <p class="lede">IntoTheBattle turns TikTok LIVE engagement into a playable arena. Comments, likes, follows, shares, gifts, attacks, defenses, and support moves resolve onto a player, The Horde, or the active boss wave.</p>
+        <p class="lede">IntoTheBattle turns TikTok LIVE engagement into a playable arena. Viewers auto-join from normal engagement, then use short chat commands to attack players, pressure The Horde, fight bosses, shield, heal, team up, and customize their fighter card.</p>
         <div class="hero-actions" aria-label="Manual shortcuts">
           <a class="btn btn-primary" href="#quick-start">Quick start</a>
           <a class="btn" href="#commands">All commands</a>
@@ -484,7 +490,7 @@
         <article class="quick-card">
           <code>comment / like</code>
           <h3>Enter the arena</h3>
-          <p>Any comment, like, follow, share, repost, or gift creates your fighter or rallies you back into the live battle.</p>
+          <p>Any comment, like, follow, share, repost, or gift creates your fighter or rallies you back into the live battle. <code>!join</code> is optional.</p>
         </article>
         <article class="quick-card">
           <code>@name</code>
@@ -494,7 +500,7 @@
         <article class="quick-card">
           <code>!shield</code>
           <h3>Block damage</h3>
-          <p>Raises a short guard that reduces incoming damage while the fight continues.</p>
+          <p>Blocks regular attacks for 10 seconds. Gifts can break it, then shield has a 45-second cooldown.</p>
         </article>
         <article class="quick-card">
           <code>!heal @name</code>
@@ -524,7 +530,7 @@
         </article>
         <article class="target-card">
           <h3>No mention</h3>
-          <p>Regular comments without a target send a weak random attack. If you are in The Horde and attack without a mention, the game pressures a top visible player.</p>
+          <p>Regular comments without a target enter the viewer and send a weak 5-damage random attack. If you are in The Horde and attack without a mention, the game pressures a top visible player.</p>
         </article>
       </div>
     </section>
@@ -532,7 +538,7 @@
     <section class="section" id="commands" aria-labelledby="commands-title">
       <div class="section-head">
         <h2 id="commands-title">All current commands</h2>
-        <p>This list matches the current server parser, dashboard command panel, and overlay command banner.</p>
+        <p>This list matches the current server parser and includes every active viewer-facing attack word.</p>
       </div>
       <div class="command-layout">
         <nav class="command-nav" aria-label="Command groups">
@@ -553,6 +559,11 @@
                 <p>Any comment or like creates your fighter if you are new, or rallies your existing fighter back into view.</p>
               </article>
               <article class="command-card">
+                <code>!join</code>
+                <h3>Manual entry</h3>
+                <p>Optional. Also accepts <code>!spawn</code>, <code>!play</code>, <code>start</code>, <code>enter</code>, and <code>ready</code>.</p>
+              </article>
+              <article class="command-card">
                 <code>follow / share</code>
                 <h3>Social entry</h3>
                 <p>Follows, shares, and reposts enter you and can trigger rally rewards for the room.</p>
@@ -560,12 +571,17 @@
               <article class="command-card">
                 <code>gift</code>
                 <h3>Power entry</h3>
-                <p>Gifts enter you, boost your fighter, and can launch stronger visual attacks.</p>
+                <p>Gifts enter you, boost your fighter, launch stronger visual attacks, and break active shields.</p>
               </article>
               <article class="command-card">
                 <code>!emoji &lt;emoji&gt;</code>
                 <h3>Change icon</h3>
                 <p>Sets the icon on your fighter card. Direct shorthand also works, such as <code>!&#x2694;</code>.</p>
+              </article>
+              <article class="command-card">
+                <code>!🔥</code>
+                <h3>Icon shorthand</h3>
+                <p>Typing an emoji directly after <code>!</code> or <code>/</code> changes your fighter icon.</p>
               </article>
             </div>
           </section>
@@ -576,7 +592,7 @@
               <article class="command-card">
                 <code>@name</code>
                 <h3>Basic player hit</h3>
-                <p>The recommended beginner attack. Aliases: <code>!hit</code>, <code>!strike</code>, and <code>!fight</code>.</p>
+                <p>The recommended beginner attack. You can also use <code>!attack @name</code>, <code>!hit @name</code>, <code>!strike @name</code>, or <code>!fight @name</code>.</p>
               </article>
               <article class="command-card">
                 <code>!attack @horde</code>
@@ -586,12 +602,17 @@
               <article class="command-card">
                 <code>!attack @boss</code>
                 <h3>Hit the boss</h3>
-                <p>Damages the active boss wave. If no boss wave is active, no boss damage is applied.</p>
+                <p>Damages the active boss wave. <code>!boss</code> and effects like <code>!laser @boss</code> also work while a boss wave is active.</p>
               </article>
               <article class="command-card">
                 <code>!laser @name</code>
                 <h3>Named effect attack</h3>
                 <p>Uses a specific visual effect instead of the basic attack label.</p>
+              </article>
+              <article class="command-card">
+                <code>!overdrive</code>
+                <h3>Power-up command</h3>
+                <p>Contextual. During Arena Power-Up, <code>!overdrive</code> can trigger the stronger barrage rotation.</p>
               </article>
             </div>
           </section>
@@ -599,7 +620,7 @@
           <section class="command-group" id="advanced-effects" aria-labelledby="advanced-effects-title">
             <header><h3 id="advanced-effects-title">Advanced effects</h3><span>Use these before a target name, @horde, or @boss.</span></header>
             <div class="effect-cloud" aria-label="Advanced attack effect commands">
-              <code>!laser</code><code>!fire</code><code>!nova</code><code>!arc</code><code>!sphere</code><code>!rail</code><code>!railgun</code><code>!comet</code><code>!bullet</code><code>!nuke</code><code>!neon</code><code>!beam</code><code>!wave</code><code>!spiral</code><code>!shock</code><code>!orb</code><code>!shot</code><code>!shell</code><code>!meteor</code><code>!flame</code><code>!inferno</code><code>!boom</code><code>!explode</code><code>!explosion</code><code>!projectile</code><code>!gift</code><code>!hearts</code>
+              <code>!attack</code><code>!hit</code><code>!strike</code><code>!fight</code><code>!laser</code><code>!beam</code><code>!fire</code><code>!flame</code><code>!inferno</code><code>!neon</code><code>!sphere</code><code>!orb</code><code>!projectile</code><code>!gift</code><code>!hearts</code><code>!nova</code><code>!wave</code><code>!spiral</code><code>!shock</code><code>!arc</code><code>!bullet</code><code>!shell</code><code>!shot</code><code>!rail</code><code>!railgun</code><code>!comet</code><code>!meteor</code><code>!prism</code><code>!plasma</code><code>!cryo</code><code>!ion</code><code>!sonic</code><code>!gravity</code><code>!glitch</code><code>!orbital</code><code>!drone</code><code>!shard</code><code>!boom</code><code>!explode</code><code>!explosion</code><code>!nuke</code><code>!nukes</code>
             </div>
           </section>
 
@@ -609,22 +630,32 @@
               <article class="command-card">
                 <code>!shield</code>
                 <h3>Guard yourself</h3>
-                <p>Raises a 12-second shield. Some damage can still pass through.</p>
+                <p>Raises a 10-second shield that blocks regular player and boss attack damage.</p>
               </article>
               <article class="command-card">
                 <code>!guard</code>
                 <h3>Shield alias</h3>
-                <p>Works like <code>!shield</code>.</p>
+                <p>Works like <code>!shield</code>. <code>!defend</code> and <code>!protect</code> also work.</p>
               </article>
               <article class="command-card">
                 <code>!block</code>
-                <h3>Shield alias</h3>
-                <p>Works like <code>!shield</code>.</p>
+                <h3>Block alias</h3>
+                <p>Works like <code>!shield</code>. A shield cannot be refreshed while already active.</p>
+              </article>
+              <article class="command-card">
+                <code>gift</code>
+                <h3>Break shields</h3>
+                <p>Gifts can break an active shield, clear it immediately, and start the shield cooldown.</p>
+              </article>
+              <article class="command-card">
+                <code>45s cooldown</code>
+                <h3>Shield lockout</h3>
+                <p>After a shield ends or breaks, that player cannot add another shield for 45 seconds.</p>
               </article>
               <article class="command-card">
                 <code>!heal @name</code>
                 <h3>Heal a fighter</h3>
-                <p>Restores HP for the named fighter. Type <code>!heal</code> alone to heal yourself.</p>
+                <p>Restores HP for the named fighter. Type <code>!heal</code> alone to heal yourself. <code>!hp</code> and <code>!health</code> also work.</p>
               </article>
             </div>
           </section>
@@ -635,7 +666,7 @@
               <article class="command-card">
                 <code>!team red</code>
                 <h3>Join a team</h3>
-                <p>Sets your team name and color. Any clean team name can be used.</p>
+                <p>Sets your team name and color. Any clean team name can be used. <code>!squad red</code> also works.</p>
               </article>
               <article class="command-card">
                 <code>!team leave</code>
@@ -645,12 +676,12 @@
               <article class="command-card">
                 <code>!commands</code>
                 <h3>Show command list</h3>
-                <p>Requests the current command reminder on the battle overlay.</p>
+                <p>Requests the current command reminder on the battle overlay. <code>!comments</code> also works.</p>
               </article>
               <article class="command-card">
                 <code>!help</code>
                 <h3>Help alias</h3>
-                <p>Works like <code>!commands</code>.</p>
+                <p>Works like <code>!commands</code>. Other help aliases include <code>!command</code>, <code>!cmd</code>, and <code>!howto</code>.</p>
               </article>
             </div>
           </section>
@@ -666,8 +697,8 @@
       <div class="engagement-grid">
         <article class="engagement-card"><h3>Comments</h3><p>Enter the viewer and send a weak random attack when no target is named.</p></article>
         <article class="engagement-card"><h3>Likes</h3><p>Enter the viewer, emit heart energy, and help keep the overlay active.</p></article>
-        <article class="engagement-card"><h3>Gifts</h3><p>Enter the viewer, create stronger visual attacks, and add temporary message impact boosts.</p></article>
-        <article class="engagement-card"><h3>Follows</h3><p>Enter or rally a fighter and add a defensive shield moment.</p></article>
+        <article class="engagement-card"><h3>Gifts</h3><p>Enter the viewer, create stronger visual attacks, break active shields, and add temporary message impact boosts.</p></article>
+        <article class="engagement-card"><h3>Follows</h3><p>Enter or rally a fighter and add a defensive shield moment when the shield cooldown allows it.</p></article>
         <article class="engagement-card"><h3>Shares</h3><p>Enter the viewer and support squad-wide rally rewards during the battle.</p></article>
         <article class="engagement-card"><h3>Reposts</h3><p>Enter the viewer, add social boost pressure, and help the room survive bigger moments.</p></article>
       </div>
@@ -691,6 +722,10 @@
           <h3>Respawns keep it moving</h3>
           <p>Knocked-out fighters can return, and the next comment, like, follow, share, repost, or gift can rally viewers back into the arena.</p>
         </article>
+        <article class="rule-card">
+          <h3>Shields have counters</h3>
+          <p>Shield blocks regular attack damage for 10 seconds, but gifts can break it. After it ends or breaks, the player waits 45 seconds before shielding again.</p>
+        </article>
       </div>
     </section>
 
@@ -701,8 +736,8 @@
       </div>
       <div class="prompt-box">
         <div>
-          <p id="pinPromptText">Comment, like, follow, share, or gift to enter the battle. Attack a player with @name. Regular comments send weak random attacks. Hit The Horde with @horde. Fight the boss with @boss. Defend with !shield. Heal with !heal @name. Type !commands for help.</p>
-          <code>engage to enter | @name | @horde | @boss | regular chat = 5 damage | !shield | !heal @name | !commands</code>
+          <p id="pinPromptText">Comment, like, follow, share, or gift to enter. Attack with @name, @horde, or @boss. Try effects like !laser @name, !fire @horde, or !nuke @boss. !shield blocks attacks for 10s, gifts break shields, then shield waits 45s. Heal with !heal @name. Change icon with !emoji 🔥. Type !commands for help.</p>
+          <code>auto-enter | @name | @horde | @boss | !laser @name | !shield 10s | gifts break shields | !heal @name | !emoji 🔥 | !commands</code>
         </div>
         <div>
           <button class="btn btn-primary" type="button" id="copyPromptButton">Copy prompt</button>
