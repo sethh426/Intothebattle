@@ -566,6 +566,29 @@ try {
   });
   assert(devModeOnRes.status === 200, `dev test mode enable should return 200, got ${devModeOnRes.status}`);
 
+  const restoreAllowedRes = await request('/api/test/live-restore-guard?suppress=0', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(restoreAllowedRes.status === 200, `unsuppressed live restore guard should return 200, got ${restoreAllowedRes.status}`);
+  const restoreAllowed = await restoreAllowedRes.json();
+  assert(
+    Number(restoreAllowed.directRestore) > 0 || Number(restoreAllowed.degradedRestore) > 0,
+    'unsuppressed live restore guard should prove a stale player can be restored'
+  );
+  assert(Number(restoreAllowed.alivePlayers) > 0, 'unsuppressed live restore guard should have a restored alive player');
+
+  const restoreSuppressedRes = await request('/api/test/live-restore-guard?suppress=1', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(restoreSuppressedRes.status === 200, `suppressed live restore guard should return 200, got ${restoreSuppressedRes.status}`);
+  const restoreSuppressed = await restoreSuppressedRes.json();
+  assert(Number(restoreSuppressed.directRestore) === 0, `suppressed direct restore should be blocked, got ${restoreSuppressed.directRestore}`);
+  assert(Number(restoreSuppressed.degradedRestore) === 0, `suppressed degraded restore should be blocked, got ${restoreSuppressed.degradedRestore}`);
+  assert(Number(restoreSuppressed.alivePlayers) === 0, `suppressed restore should leave no stale alive players, got ${restoreSuppressed.alivePlayers}`);
+  assert(restoreSuppressed.recentRestoreSuppressed === true, 'suppressed restore guard should report active suppression');
+
   const mentionCommentRes = await request('/api/test/comment', {
     method: 'POST',
     headers: authedHeaders,

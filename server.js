@@ -596,6 +596,10 @@ const TIKTOK_CONNECTED_NO_EVENT_STALE_MS = Math.max(30000, Number(process.env.TI
 const TIKTOK_REPAIR_COOLDOWN_MS = Math.max(30000, Number(process.env.TIKTOK_REPAIR_COOLDOWN_MS || 120000));
 const TIKTOK_REPAIR_PLAYER_RESTORE_WINDOW_MS = Math.max(0, Number(process.env.TIKTOK_REPAIR_PLAYER_RESTORE_WINDOW_MS || 5 * 60 * 1000));
 const TIKTOK_RECENT_PLAYER_RESTORE_MS = Math.max(0, Number(process.env.TIKTOK_RECENT_PLAYER_RESTORE_MS || 24 * 60 * 60 * 1000));
+const TIKTOK_RECENT_RESTORE_SUPPRESSION_MS = Math.max(
+  0,
+  Number(process.env.TIKTOK_RECENT_RESTORE_SUPPRESSION_MS || TIKTOK_RECENT_PLAYER_RESTORE_MS)
+);
 const TIKTOK_RECENT_PLAYER_RESTORE_LIMIT = Math.max(0, Number(process.env.TIKTOK_RECENT_PLAYER_RESTORE_LIMIT || 24));
 const TIKTOK_DIRECT_PLAYER_EVENT_TYPES = new Set(['member', 'chat', 'gift', 'like', 'social', 'follow']);
 const TIKTOK_GENERIC_PLAYER_EVENT_TYPES = new Set(['subscribe', 'emoteChat', 'question', 'liveIntro', 'linkMic']);
@@ -3777,6 +3781,9 @@ function buildTikTokConnectionStatus(room) {
     eventCount: Number(connection.eventCount) || 0,
     playerEventCount: Number(room?.tiktokPlayerEventCount) || 0,
     eventFeedDegraded: hasDegradedTikTokPlayerEventFeed(room),
+    recentRestoreSuppressed: isRecentLiveRestoreSuppressed(room),
+    recentRestoreSuppressedUntil: room?.recentLiveRestoreSuppressedUntil || null,
+    recentRestoreSuppressedReason: room?.recentLiveRestoreSuppressedReason || '',
     repairCount: Number(room?.tiktokRepairCount) || 0,
     lastRepairAt: room?.lastTikTokRepairAt || null,
     lastRepairReason: room?.lastTikTokRepairReason || '',
@@ -3795,6 +3802,23 @@ function emitTikTokConnectionStatus(room, patch = {}) {
   };
   emitRoomEvent(room, 'tiktokConnection', buildTikTokConnectionStatus(room));
   emitRoomRealtimeStatus(room);
+}
+
+function isRecentLiveRestoreSuppressed(room, username = '') {
+  if (!room?.roomId) return false;
+  const until = Number(room.recentLiveRestoreSuppressedUntil) || 0;
+  if (!until || Date.now() > until) return false;
+  const suppressedUsername = normalizeTikTokUsername(room.recentLiveRestoreSuppressedForUsername || '');
+  const currentUsername = normalizeTikTokUsername(username || room.streamerUsername || room.tiktokConnection?.username || '');
+  return !suppressedUsername || !currentUsername || suppressedUsername === currentUsername;
+}
+
+function suppressRecentLiveRestore(room, reason = 'live_roster_reset', username = '') {
+  if (!room?.roomId || TIKTOK_RECENT_RESTORE_SUPPRESSION_MS <= 0) return;
+  room.recentLiveRestoreAllowedUntil = 0;
+  room.recentLiveRestoreSuppressedUntil = Date.now() + TIKTOK_RECENT_RESTORE_SUPPRESSION_MS;
+  room.recentLiveRestoreSuppressedForUsername = normalizeTikTokUsername(username || room.streamerUsername || room.tiktokConnection?.username || '');
+  room.recentLiveRestoreSuppressedReason = reason;
 }
 
 function resetRoomLiveRuntime(room, options = {}) {
@@ -3842,6 +3866,7 @@ function resetRoomLiveRuntime(room, options = {}) {
 
   if (clearPlayers) {
     room.players = {};
+    suppressRecentLiveRestore(room, reason);
   } else {
     for (const player of Object.values(room.players || {})) {
       player.alive = false;
@@ -4668,6 +4693,10 @@ function isRestorableLivePlayer(player) {
 
 function restoreRecentRoomPlayers(room, options = {}) {
   if (!room?.roomId || TIKTOK_RECENT_PLAYER_RESTORE_LIMIT <= 0 || TIKTOK_RECENT_PLAYER_RESTORE_MS <= 0) return 0;
+  if (isRecentLiveRestoreSuppressed(room, options.username)) {
+    room.recentLiveRestoreAllowedUntil = 0;
+    return 0;
+  }
   const existingAlive = Object.values(room.players || {}).some(player => (
     player && player.alive && isRestorableLivePlayer(player)
   ));
@@ -9169,7 +9198,7 @@ app.post('/api/overlay/reload', requireRoom, (req, res) => {
 app.post('/api/players/clear', requireRoom, (req, res) => {
   if (req.room.arenaPowerUp?.active) completeArenaPowerUp(req.room, 'players_cleared');
   req.room.players = {};
-  req.room.recentLiveRestoreAllowedUntil = 0;
+  suppressRecentLiveRestore(req.room, 'players_cleared');
   req.room.lastTikTokPlayerEventAt = null;
   req.room.tiktokPlayerEventCount = 0;
   req.room.lastRealEventAt = null;
@@ -9469,6 +9498,74 @@ function ensureTestPlayers(options = {}) {
 }
 
 app.get('/api/test/status', blockInProduction, (_req, res) => res.json({ enabled: DEV_TEST_MODE }));
+
+app.post('/api/test/live-restore-guard', blockInProduction, requireDevTestMode, (req, res) => {
+  const room = getDefaultRoom();
+  const now = Date.now();
+  const username = 'restore_guard_streamer';
+  const suppress = String(req.query?.suppress ?? req.body?.suppress ?? '1') !== '0';
+  room.players = {
+    stale_live_viewer: {
+      uniqueId: 'stale_live_viewer',
+      nickname: 'Stale Viewer',
+      hp: CFG.BASE_HP,
+      maxHp: CFG.BASE_HP,
+      strength: CFG.BASE_STRENGTH,
+      kills: 0,
+      killStreak: 0,
+      lastKillTime: 0,
+      alive: false,
+      lastActive: now,
+      firstSeenAt: now - 60000,
+      source: 'real',
+      x: 100,
+      y: 100,
+      vx: 0,
+      vy: 0,
+      color: randomColor(),
+      messageBoostExpires: 0,
+      forceSpawn: false,
+    },
+  };
+  room.streamerUsername = username;
+  room.tiktokConnection = {
+    ...(room.tiktokConnection || {}),
+    id: 'restore-guard-connection',
+    sessionId: 'restore-guard-session',
+    username,
+    status: 'connected',
+    startedAt: now - TIKTOK_CONNECTED_NO_EVENT_STALE_MS - 1000,
+    connectedAt: now - TIKTOK_CONNECTED_NO_EVENT_STALE_MS - 1000,
+    updatedAt: now,
+    disconnectedAt: null,
+  };
+  room.tiktokPlayerEventCount = 0;
+  room.lastTikTokPlayerEventAt = null;
+  room.lastRealEventAt = null;
+  if (suppress) {
+    suppressRecentLiveRestore(room, 'test_players_cleared', username);
+  } else {
+    room.recentLiveRestoreSuppressedUntil = 0;
+    room.recentLiveRestoreSuppressedForUsername = '';
+    room.recentLiveRestoreSuppressedReason = '';
+    room.recentLiveRestoreAllowedUntil = now + TIKTOK_REPAIR_PLAYER_RESTORE_WINDOW_MS;
+  }
+
+  const directRestore = restoreRecentRoomPlayers(room, { reason: 'test_direct_restore', username });
+  room.recentLiveRestoreAllowedUntil = now + TIKTOK_REPAIR_PLAYER_RESTORE_WINDOW_MS;
+  const degradedRestore = restoreDegradedLiveRoster(room);
+  const alivePlayers = Object.values(room.players || {}).filter(player => player?.alive).length;
+
+  res.json({
+    success: true,
+    suppress,
+    directRestore,
+    degradedRestore,
+    alivePlayers,
+    recentRestoreSuppressed: isRecentLiveRestoreSuppressed(room, username),
+    recentLiveRestoreAllowedUntil: room.recentLiveRestoreAllowedUntil || 0,
+  });
+});
 
 app.post('/api/test/spawn', blockInProduction, requireDevTestMode, (_req, res) => {
   ensureTestPlayers({ reset: true });
@@ -9950,11 +10047,13 @@ function connectToStreamer(username, room = getDefaultRoom(), options = {}) {
   if (!normalizedUsername) throw new Error('Enter a valid TikTok username.');
   const disconnectReason = options.repair ? 'auto_repair_reconnect' : 'new_stream_requested';
   safeDisconnectClient(room, disconnectReason);
-  if (options.resetLiveRuntime !== false) {
+  const resetLiveRuntimeForConnect = options.resetLiveRuntime !== false;
+  if (resetLiveRuntimeForConnect) {
     resetRoomLiveRuntime(room, { reason: disconnectReason, clearPlayers: true });
   }
   if (room.roomId === DEFAULT_ROOM_ID) currentStreamer = normalizedUsername;
   room.streamerUsername = normalizedUsername;
+  if (resetLiveRuntimeForConnect) suppressRecentLiveRestore(room, disconnectReason, normalizedUsername);
   saveRoomSettings(room.roomId);
   const connection = createTikTokConnection(room, normalizedUsername);
   const tiktokClient = new TikTokLive({
@@ -9970,8 +10069,17 @@ function connectToStreamer(username, room = getDefaultRoom(), options = {}) {
   setupTikTokEvents(tiktokClient, room, connection.id);
   if (room.planEntitlements) updatePlatformSponsorSchedule(room, room.planEntitlements);
   if (options.restoreRecentPlayers === true) {
-    room.recentLiveRestoreAllowedUntil = Date.now() + TIKTOK_REPAIR_PLAYER_RESTORE_WINDOW_MS;
-    restoreRecentRoomPlayers(room, { reason: disconnectReason });
+    if (isRecentLiveRestoreSuppressed(room, normalizedUsername)) {
+      room.recentLiveRestoreAllowedUntil = 0;
+      logger.info({
+        roomId: room.roomId,
+        username: normalizedUsername,
+        reason: room.recentLiveRestoreSuppressedReason || 'restore_suppressed',
+      }, 'Skipped recent player restore for suppressed live room');
+    } else {
+      room.recentLiveRestoreAllowedUntil = Date.now() + TIKTOK_REPAIR_PLAYER_RESTORE_WINDOW_MS;
+      restoreRecentRoomPlayers(room, { reason: disconnectReason, username: normalizedUsername });
+    }
   } else {
     room.recentLiveRestoreAllowedUntil = 0;
   }
@@ -10212,6 +10320,10 @@ function shouldRetainIdleLivePlayer(room, player, now = Date.now()) {
 
 function restoreDegradedLiveRoster(room) {
   if (!hasDegradedTikTokPlayerEventFeed(room)) return 0;
+  if (isRecentLiveRestoreSuppressed(room)) {
+    room.recentLiveRestoreAllowedUntil = 0;
+    return 0;
+  }
   const allowedUntil = Number(room.recentLiveRestoreAllowedUntil) || 0;
   if (!allowedUntil || Date.now() > allowedUntil) return 0;
   const minimumVisiblePlayers = Math.min(4, TIKTOK_RECENT_PLAYER_RESTORE_LIMIT);
