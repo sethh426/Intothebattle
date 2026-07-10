@@ -2174,6 +2174,32 @@
       if (!this.bannerActive) this.playNextBanner();
     }
 
+    eventBannerCenterY(bannerHeight) {
+      const u = this.scaleUnit || 1;
+      const safeTop = this.safe?.y || 0;
+      const safeBottom = safeTop + (this.safe?.height || this.H || 0);
+      const visiblePlayers = (this.playerGroups || []).filter(record => record?.container?.visible !== false);
+      const playerBottoms = visiblePlayers
+        .map(record => (record.targetY || record.container?.y || 0) + (record.cardH || 150 * u) / 2)
+        .filter(value => Number.isFinite(value));
+      const playerBottom = playerBottoms.length
+        ? Math.max(...playerBottoms)
+        : safeTop + (this.safe?.height || this.H || 0) * 0.58 + 78 * u;
+      const hordeTop = Number.isFinite(this.hordeBounds?.y)
+        ? this.hordeBounds.y
+        : safeTop + (this.safe?.height || this.H || 0) * 0.88;
+      const topLimit = playerBottom + Math.max(12, 20 * u);
+      const bottomLimit = hordeTop - Math.max(16, 26 * u);
+      const minCenter = Math.max(safeTop + bannerHeight / 2, topLimit + bannerHeight / 2);
+      const maxCenter = Math.min(safeBottom - bannerHeight / 2, bottomLimit - bannerHeight / 2);
+
+      if (maxCenter >= minCenter) {
+        return clamp(topLimit + (bottomLimit - topLimit - bannerHeight) * 0.76 + bannerHeight / 2, minCenter, maxCenter);
+      }
+
+      return clamp(safeTop + (this.safe?.height || this.H || 0) * 0.74, safeTop + bannerHeight / 2, safeBottom - bannerHeight / 2);
+    }
+
     playNextBanner() {
       const next = this.bannerQueue.shift();
       if (!next) {
@@ -2184,7 +2210,7 @@
       const u = this.scaleUnit;
       const w = Math.min(this.safe.width * 0.5, this.W * 0.46);
       const h = Math.max(48, 58 * u);
-      const y = this.safe.y + this.safe.height * 0.42;
+      const y = this.eventBannerCenterY(h);
       const accent = next.type === 'gift' ? 0xf6c95b : next.type === 'kill' ? 0xff315f : 0x7afcff;
 
       const group = this.add.container(this.W / 2, y - 20 * u).setAlpha(0);

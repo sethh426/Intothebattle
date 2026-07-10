@@ -5338,6 +5338,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const bannerZone = canvasRectToOverlay(stage.zones.banner);
     const gapX = stage.gap * scale.x;
     const gapY = stage.gap * scale.y;
+    const laneAnchor = isCommandBanner ? 'center' : 'horde-side';
     const innerLeft = frame.x + gapX;
     const innerRight = frame.right - gapX;
     const maxLaneW = Math.max(1, innerRight - innerLeft);
@@ -5351,11 +5352,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const laneX = clampNumber(centeredX, innerLeft, innerRight - laneW);
     const staticLane = makeRect(laneX, bannerZone.y, laneW, desiredLaneH);
     staticLane.source = 'static-zone';
+    staticLane.anchor = laneAnchor;
     staticLane.availableGap = null;
     staticLane.playerBottom = null;
     staticLane.hordeTop = null;
     staticLane.bossTop = null;
     staticLane.bossBottom = null;
+    staticLane.playerClearance = null;
+    staticLane.hordeClearance = null;
 
     const top = topPlayers();
     const horde = hordePlayer();
@@ -5377,14 +5381,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     if (!Number.isFinite(playerBottom) || !Number.isFinite(hordeTop)) return staticLane;
 
-    let laneTopLimit = playerBottom + Math.max(5, gapY * 0.38);
-    let laneBottomLimit = hordeTop - Math.max(5, gapY * 0.38);
+    const playerClearance = Math.max(5, gapY * (isCommandBanner ? 0.38 : 0.34));
+    const hordeClearance = Math.max(isCommandBanner ? 5 : 8, gapY * (isCommandBanner ? 0.38 : 0.62));
+    let laneTopLimit = playerBottom + playerClearance;
+    let laneBottomLimit = hordeTop - hordeClearance;
     const fullAvailableGap = laneBottomLimit - laneTopLimit;
     const minReadableLaneH = Math.max(24, frame.h * (isCommandBanner ? 0.045 : 0.04));
     if (fullAvailableGap < minReadableLaneH) {
       staticLane.availableGap = fullAvailableGap;
       staticLane.playerBottom = playerBottom;
       staticLane.hordeTop = hordeTop;
+      staticLane.playerClearance = playerClearance;
+      staticLane.hordeClearance = hordeClearance;
       return staticLane;
     }
 
@@ -5405,25 +5413,32 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         { top: Math.max(laneTopLimit, bossBottom + bossGap), bottom: laneBottomLimit },
       ]
         .map(segment => ({ ...segment, height: segment.bottom - segment.top }))
-        .filter(segment => segment.height >= minReadableLaneH)
-        .sort((a, b) => b.height - a.height);
+        .filter(segment => segment.height >= minReadableLaneH);
       if (segments.length) {
-        laneTopLimit = segments[0].top;
-        laneBottomLimit = segments[0].bottom;
+        const ordered = segments.sort((a, b) => (
+          isCommandBanner
+            ? b.height - a.height
+            : (b.bottom - a.bottom) || (b.height - a.height)
+        ));
+        laneTopLimit = ordered[0].top;
+        laneBottomLimit = ordered[0].bottom;
       }
     }
 
     const availableGap = laneBottomLimit - laneTopLimit;
     const cssReadableLaneH = isCommandBanner ? 54 : 62;
     const laneH = Math.min(availableGap, Math.max(desiredLaneH, Math.min(cssReadableLaneH, availableGap)));
-    const laneY = laneTopLimit + Math.max(0, (availableGap - laneH) / 2);
+    const laneY = laneTopLimit + Math.max(0, (availableGap - laneH) * (isCommandBanner ? 0.5 : 0.78));
     const combatLane = makeRect(laneX, laneY, laneW, laneH);
     combatLane.source = 'combat-gap';
+    combatLane.anchor = laneAnchor;
     combatLane.availableGap = fullAvailableGap;
     combatLane.playerBottom = playerBottom;
     combatLane.hordeTop = hordeTop;
     combatLane.bossTop = bossTop;
     combatLane.bossBottom = bossBottom;
+    combatLane.playerClearance = playerClearance;
+    combatLane.hordeClearance = hordeClearance;
     return combatLane;
   }
 
@@ -5438,6 +5453,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     let laneBossTop = null;
     let laneBossBottom = null;
     let laneAvailableGap = null;
+    let laneAnchor = null;
+    let lanePlayerClearance = null;
+    let laneHordeClearance = null;
     try {
       const stage = computeOverlayLayout();
       const isCommandBanner = activeBanner?.el?.classList.contains('commands') || activeBanner?.cls === 'commands';
@@ -5455,6 +5473,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       laneBossTop = Number.isFinite(localLane.bossTop) ? parentRect.top + localLane.bossTop : null;
       laneBossBottom = Number.isFinite(localLane.bossBottom) ? parentRect.top + localLane.bossBottom : null;
       laneAvailableGap = Number.isFinite(localLane.availableGap) ? localLane.availableGap : null;
+      laneAnchor = localLane.anchor || null;
+      lanePlayerClearance = Number.isFinite(localLane.playerClearance) ? localLane.playerClearance : null;
+      laneHordeClearance = Number.isFinite(localLane.hordeClearance) ? localLane.hordeClearance : null;
     } catch (_err) {}
     return {
       active: activeBanner ? {
@@ -5485,6 +5506,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       bossTop: laneBossTop,
       bossBottom: laneBossBottom,
       availableGap: laneAvailableGap,
+      laneAnchor,
+      playerClearance: lanePlayerClearance,
+      hordeClearance: laneHordeClearance,
       queued: bannerQueue.length,
       oldestQueuedAgeMs: bannerQueue.length
         ? Math.max(...bannerQueue.map(item => Math.max(0, now - item.createdAt)))
@@ -5527,6 +5551,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const placementZone = bannerPlacementZone(stage, isCommandBanner);
     const laneIsCombat = placementZone.source === 'combat-gap';
     el.dataset.placement = laneIsCombat ? 'combat-gap' : 'banner-lane';
+    el.dataset.placementAnchor = placementZone.anchor || 'center';
     const forceNano = stage.frame.h < 260 || stage.frame.w < 430 || placementZone.h < 36;
     const availableWidth = Math.max(1, placementZone.w);
     const largeMomentBanner = el.classList.contains('legendary') || el.classList.contains('kill') || el.classList.contains('streak');
@@ -5563,7 +5588,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const centerX = clampNumber(frame.x + frame.w / 2, placementZone.x + halfWidth, placementZone.right - halfWidth);
     const maxTop = Math.max(placementZone.y, placementZone.bottom - rect.height);
     const minTop = laneIsCombat ? placementZone.y : frame.y + gapY * 0.35;
-    const top = clampNumber(placementZone.y + (placementZone.h - rect.height) / 2, minTop, maxTop);
+    const verticalBias = laneIsCombat && placementZone.anchor === 'horde-side' ? 0.72 : 0.5;
+    const top = clampNumber(placementZone.y + Math.max(0, placementZone.h - rect.height) * verticalBias, minTop, maxTop);
     el.style.left = `${centerX}px`;
     el.style.top = `${top}px`;
   }

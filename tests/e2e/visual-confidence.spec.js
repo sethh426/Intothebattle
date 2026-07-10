@@ -425,12 +425,24 @@ async function assertBannerCombatGap(page, testInfo, label, options = {}) {
   expect(active, `${label} missing active banner rect`).toBeTruthy();
   expect(lane, `${label} missing banner lane`).toBeTruthy();
   expect(status.laneSource, `${label} should use combat-gap banner lane`).toBe('combat-gap');
+  if (options.expectHordeSide !== false) {
+    expect(status.laneAnchor, `${label} should prefer the Horde-side banner lane`).toBe('horde-side');
+  }
   expect(status.playerBottom, `${label} missing player bottom telemetry`).toBeGreaterThan(0);
   expect(status.hordeTop, `${label} missing horde top telemetry`).toBeGreaterThan(status.playerBottom);
   expect(status.availableGap, `${label} combat gap too small`).toBeGreaterThan(options.minAvailableGap ?? 24);
   assertRectInside(active, lane, `${label} active banner in lane`, options.tolerance ?? 2.5);
   expect(active.top, `${label} banner should sit below player cards`).toBeGreaterThan(status.playerBottom + (options.minSeparation ?? 1));
   expect(active.bottom, `${label} banner should sit above horde`).toBeLessThan(status.hordeTop - (options.minSeparation ?? 1));
+  if (options.expectLowerPlacement !== false) {
+    const activeCenter = (active.top + active.bottom) / 2;
+    const playerDistance = activeCenter - status.playerBottom;
+    const hordeDistance = status.hordeTop - activeCenter;
+    expect(
+      playerDistance + (options.lowerPlacementTolerance ?? 8),
+      `${label} banner should sit closer to the Horde than the player cards`
+    ).toBeGreaterThanOrEqual(hordeDistance);
+  }
   if (options.avoidBoss) {
     expect(status.bossTop, `${label} missing boss top telemetry`).toBeGreaterThan(status.playerBottom);
     expect(status.bossBottom, `${label} missing boss bottom telemetry`).toBeGreaterThan(status.bossTop);
