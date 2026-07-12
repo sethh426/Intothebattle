@@ -631,8 +631,8 @@ async function initDb() {
     await safeExec('ALTER TABLE referral_clicks ADD COLUMN utm_campaign TEXT');
     await safeExec('ALTER TABLE referral_clicks ADD COLUMN utm_content TEXT');
     await safeExec('ALTER TABLE referral_clicks ADD COLUMN ttclid TEXT');
-    await safeExec('ALTER TABLE referral_clicks ADD COLUMN converted_user_id INTEGER');
-    await safeExec('ALTER TABLE referral_clicks ADD COLUMN converted_at TIMESTAMP');
+    await safeExec('ALTER TABLE referral_clicks ADD COLUMN IF NOT EXISTS converted_user_id INTEGER');
+    await safeExec('ALTER TABLE referral_clicks ADD COLUMN IF NOT EXISTS converted_at TIMESTAMP');
     await safeExec('ALTER TABLE referral_clicks ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
     await safeExec('CREATE INDEX IF NOT EXISTS referral_clicks_code_created_idx ON referral_clicks(referral_code_id, created_at)');
     await safeExec('CREATE INDEX IF NOT EXISTS referral_clicks_referrer_created_idx ON referral_clicks(referrer_user_id, created_at)');
@@ -660,8 +660,8 @@ async function initDb() {
       )
     `);
     await safeExec("ALTER TABLE referral_attributions ADD COLUMN signup_method TEXT DEFAULT 'unknown'");
-    await safeExec('ALTER TABLE referral_attributions ADD COLUMN referral_click_id INTEGER');
-    await safeExec("ALTER TABLE referral_attributions ADD COLUMN status TEXT DEFAULT 'signup_pending'");
+    await safeExec('ALTER TABLE referral_attributions ADD COLUMN IF NOT EXISTS referral_click_id INTEGER');
+    await safeExec("ALTER TABLE referral_attributions ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'signup_pending'");
     await safeExec('ALTER TABLE referral_attributions ADD COLUMN signup_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
     await safeExec('ALTER TABLE referral_attributions ADD COLUMN qualified_at TIMESTAMP');
     await safeExec('ALTER TABLE referral_attributions ADD COLUMN disqualified_at TIMESTAMP');

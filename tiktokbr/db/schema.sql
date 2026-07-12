@@ -171,6 +171,8 @@ CREATE TABLE IF NOT EXISTS referral_clicks (
   FOREIGN KEY(converted_user_id) REFERENCES users(id)
 );
 
+ALTER TABLE referral_clicks ADD COLUMN IF NOT EXISTS converted_user_id INTEGER;
+ALTER TABLE referral_clicks ADD COLUMN IF NOT EXISTS converted_at TIMESTAMP;
 CREATE INDEX IF NOT EXISTS referral_clicks_code_created_idx ON referral_clicks(referral_code_id, created_at);
 CREATE INDEX IF NOT EXISTS referral_clicks_referrer_created_idx ON referral_clicks(referrer_user_id, created_at);
 CREATE INDEX IF NOT EXISTS referral_clicks_converted_idx ON referral_clicks(converted_user_id, converted_at);
@@ -196,6 +198,8 @@ CREATE TABLE IF NOT EXISTS referral_attributions (
   FOREIGN KEY(referral_click_id) REFERENCES referral_clicks(id)
 );
 
+ALTER TABLE referral_attributions ADD COLUMN IF NOT EXISTS referral_click_id INTEGER;
+ALTER TABLE referral_attributions ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'signup_pending';
 CREATE INDEX IF NOT EXISTS referral_attributions_referrer_status_idx ON referral_attributions(referrer_user_id, status);
 CREATE INDEX IF NOT EXISTS referral_attributions_code_idx ON referral_attributions(referral_code_id);
 CREATE INDEX IF NOT EXISTS referral_attributions_click_idx ON referral_attributions(referral_click_id);
