@@ -22,9 +22,11 @@ import {
 } from '../services/userSubscriptions.js';
 import { recordServerGrowthEvent } from '../services/growthEvents.js';
 import {
+  REFERRAL_CLICK_COOKIE_MAX_AGE_MS,
   claimOrResetReferralCode,
   getReferralSummary,
   normalizeReferralCode,
+  recordReferralClick,
   recordReferralAttribution,
   validateReferralCode,
 } from '../services/referrals.js';
@@ -52,9 +54,25 @@ function referralBaseUrl(req) {
 }
 
 function referralCodeFromRequest(req, fallback = '') {
-  const raw = req?.body?.referralCode || req?.body?.ref || req?.query?.referralCode || req?.query?.ref || fallback || '';
-  const normalized = normalizeReferralCode(raw);
-  return validateReferralCode(normalized).ok ? normalized : '';
+  const candidates = [
+    req?.body?.referralCode,
+    req?.body?.ref,
+    req?.query?.referralCode,
+    req?.query?.ref,
+    fallback,
+    req?.cookies?.itb_referral_code,
+  ];
+  for (const candidate of candidates) {
+    const normalized = normalizeReferralCode(candidate);
+    if (validateReferralCode(normalized).ok) return normalized;
+  }
+  return '';
+}
+
+function referralClickIdFromRequest(req) {
+  const raw = req?.body?.referralClickId || req?.query?.referralClickId || req?.cookies?.itb_referral_click_id || '';
+  const id = Number(raw);
+  return Number.isInteger(id) && id > 0 ? id : null;
 }
 
 export function getGoogleRedirectUri(req = null, env = process.env) {
@@ -255,6 +273,12 @@ const promoLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
   message: 'Too many promo code attempts. Try again in 15 minutes.',
+});
+
+const referralClickLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  message: 'Too many referral link visits. Try again shortly.',
 });
 
 const PAYPAL_LINK = process.env.PAYPAL_PAYMENT_LINK || 'https://www.paypal.com';
@@ -726,6 +750,17 @@ function setSessionCookie(res, token) {
   res.cookie('session_token', token, getCookieOptions(true));
 }
 
+function setReferralCookies(res, { code = '', clickId = null } = {}) {
+  const normalizedCode = normalizeReferralCode(code);
+  const cookieOptions = { ...getCookieOptions(true), maxAge: REFERRAL_CLICK_COOKIE_MAX_AGE_MS };
+  if (validateReferralCode(normalizedCode).ok) {
+    res.cookie('itb_referral_code', normalizedCode, cookieOptions);
+  }
+  if (clickId) {
+    res.cookie('itb_referral_click_id', String(clickId), cookieOptions);
+  }
+}
+
 function clearSessionCookie(res) {
   res.clearCookie('session_token', getCookieOptions(true));
 }
@@ -960,6 +995,42 @@ router.post('/auth/user/reset-password', express.json(), async (req, res) => {
   return res.json({ success: true, message: 'Password reset successfully.' });
 });
 
+router.get('/r/:code', referralClickLimiter, (req, res) => {
+  const normalizedCode = normalizeReferralCode(req.params.code);
+  if (!validateReferralCode(normalizedCode).ok) {
+    return res.status(404).send('Referral code not found.');
+  }
+
+  let click = { recorded: false, code: normalizedCode };
+  try {
+    click = recordReferralClick(db, {
+      referralCode: normalizedCode,
+      anonymousId: req.cookies?.itb_growth_anon || '',
+      ip: req.ip || req.headers?.['x-forwarded-for'] || '',
+      userAgent: req.get?.('user-agent') || '',
+      referrer: req.get?.('referer') || '',
+      landingPath: req.originalUrl || req.url || '',
+      query: req.query || {},
+    });
+  } catch (err) {
+    console.warn('Referral click tracking failed:', err?.message || err);
+  }
+
+  if (!click.recorded && click.reason === 'code_not_found') {
+    return res.status(404).send('Referral code not found.');
+  }
+
+  setReferralCookies(res, { code: click.code || normalizedCode, clickId: click.clickId || null });
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(req.query || {})) {
+    if (key === 'ref' || key === 'referralCode') continue;
+    const raw = Array.isArray(value) ? value[0] : value;
+    if (raw != null && String(raw).length <= 500) params.set(key, String(raw));
+  }
+  params.set('ref', click.code || normalizedCode);
+  return res.redirect(302, `/signup?${params.toString()}`);
+});
+
 router.get('/auth/user/register-challenge', (req, res) => {
   const challenge = buildRegistrationChallenge();
   const token = jwt.sign(
@@ -1096,7 +1167,12 @@ router.post('/auth/user/register', registrationLimiter, express.json(), async (r
   );
   db.prepare('INSERT INTO room_settings (room_id) VALUES (?) ON CONFLICT (room_id) DO NOTHING').run(roomId);
   try {
-    recordReferralAttribution(db, { referralCode, referredUserId: userId, signupMethod: 'email' });
+    recordReferralAttribution(db, {
+      referralCode,
+      referredUserId: userId,
+      signupMethod: 'email',
+      referralClickId: referralClickIdFromRequest(req),
+    });
   } catch (err) {
     console.warn('Referral attribution failed for email signup:', err?.message || err);
   }
@@ -1236,6 +1312,7 @@ router.get('/auth/google/callback', async (req, res) => {
           referralCode: referralCodeFromRequest(req, statePayload?.referralCode),
           referredUserId: userId,
           signupMethod: 'google',
+          referralClickId: referralClickIdFromRequest(req),
         });
       } catch (err) {
         console.warn('Referral attribution failed for Google signup:', err?.message || err);

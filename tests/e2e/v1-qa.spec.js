@@ -355,7 +355,8 @@ test('dashboard creator promo code can be created and copied for chat', async ({
     canReset: true,
     resetCountdownSeconds: 0,
     cooldownHours: 234,
-    stats: { signups: 0, qualified: 0, pendingReview: 0, paid: 0, pendingAmountCents: 0, paidAmountCents: 0 },
+    stats: { clicks: 0, signups: 0, clickToSignupRate: 0, qualified: 0, pendingReview: 0, paid: 0, pendingAmountCents: 0, paidAmountCents: 0 },
+    recent: [],
   };
   let savedCode = '';
   await page.route(`${baseUrl}/api/referrals/me`, async route => {
@@ -368,9 +369,10 @@ test('dashboard creator promo code can be created and copied for chat', async ({
       ...referral,
       hasCode: true,
       code: savedCode,
-      shareUrl: `${baseUrl}/signup?ref=${encodeURIComponent(savedCode)}`,
-      chatText: `Want your own IntoTheBattle arena? Use my code ${savedCode} when you sign up: ${baseUrl}/signup?ref=${encodeURIComponent(savedCode)}`,
-      stats: { signups: 3, qualified: 1, pendingReview: 1, paid: 0, pendingAmountCents: 2500, paidAmountCents: 0 },
+      shareUrl: `${baseUrl}/r/${encodeURIComponent(savedCode)}`,
+      chatText: `Want your own IntoTheBattle arena? Use my code ${savedCode} when you sign up: ${baseUrl}/r/${encodeURIComponent(savedCode)}`,
+      stats: { clicks: 12, signups: 3, clickToSignupRate: 25, qualified: 1, pendingReview: 1, paid: 0, pendingAmountCents: 2500, paidAmountCents: 0 },
+      recent: [{ referred_tiktok: 'neon_player', signup_method: 'email', status: 'signup_pending', reward_status: 'pending_review', signup_at: '2026-07-10T12:00:00Z' }],
     };
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, referral }) });
   });
@@ -388,15 +390,17 @@ test('dashboard creator promo code can be created and copied for chat', async ({
   await panel.getByRole('button', { name: 'Create code' }).click();
   await expect.poll(() => savedCode, { timeout: 5000 }).toBe('NEON_777');
   await expect(panel.locator('.referral-code-display strong')).toHaveText('NEON_777');
-  await expect(panel.getByLabel('Signup link')).toHaveValue(`${baseUrl}/signup?ref=NEON_777`);
+  await expect(panel.getByLabel('Signup link')).toHaveValue(`${baseUrl}/r/NEON_777`);
   await expect(panel.getByLabel('Chat promo')).toHaveValue(/Use my code NEON_777/);
+  await expect(panel.getByText('Clicks')).toBeVisible();
+  await expect(panel.getByText('@neon_player')).toBeVisible();
   await expect(panel.getByText('Signups')).toBeVisible();
   await expect(panel.getByText('$25.00')).toBeVisible();
 
   await panel.getByRole('button', { name: 'Copy chat promo' }).click();
   const clipboardWrites = await page.evaluate(() => window.__clipboardWrites || []);
   expect(clipboardWrites.at(-1)).toContain('Use my code NEON_777');
-  expect(clipboardWrites.at(-1)).toContain('/signup?ref=NEON_777');
+  expect(clipboardWrites.at(-1)).toContain('/r/NEON_777');
 
   await expectNoHorizontalOverflow(page);
   expect(errors.filter(error => !/battle-clip net::ERR_ABORTED/.test(error))).toEqual([]);

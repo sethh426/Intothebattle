@@ -1,5 +1,9 @@
+import crypto from 'node:crypto';
+
 export const REFERRAL_CODE_COOLDOWN_HOURS = 234;
 export const REFERRAL_CODE_COOLDOWN_MS = REFERRAL_CODE_COOLDOWN_HOURS * 60 * 60 * 1000;
+export const REFERRAL_CLICK_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+export const DEFAULT_REFERRAL_REWARD_CENTS = 2500;
 
 const RESERVED_CODES = new Set([
   'ADMIN',
@@ -46,6 +50,26 @@ function cleanNotes(value) {
   return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 500);
 }
 
+function cleanText(value, maxLength = 500) {
+  return String(value || '').replace(/\s+/g, ' ').trim().slice(0, maxLength);
+}
+
+function cleanQueryValue(value, maxLength = 180) {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return cleanText(raw, maxLength);
+}
+
+function referralClickIdValue(value) {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
+function hashReferralValue(value) {
+  const text = cleanText(value, 1000);
+  if (!text) return '';
+  return crypto.createHash('sha256').update(text).digest('hex');
+}
+
 function rewardAmountCents(value, fallback = defaultRewardAmountCents()) {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
@@ -53,7 +77,7 @@ function rewardAmountCents(value, fallback = defaultRewardAmountCents()) {
 }
 
 function defaultRewardAmountCents() {
-  return rewardAmountCents(process.env.REFERRAL_REWARD_DEFAULT_CENTS, 0);
+  return rewardAmountCents(process.env.REFERRAL_REWARD_DEFAULT_CENTS, DEFAULT_REFERRAL_REWARD_CENTS);
 }
 
 function rewardCurrency() {
@@ -114,13 +138,12 @@ export function buildReferralShareUrl(baseUrl, code) {
   const normalized = normalizeReferralCode(code);
   if (!normalized) return '';
   const base = String(baseUrl || process.env.APP_BASE_URL || '').trim().replace(/\/+$/, '');
-  if (!base) return `/signup?ref=${encodeURIComponent(normalized)}`;
+  if (!base) return `/r/${encodeURIComponent(normalized)}`;
   try {
-    const url = new URL('/signup', base);
-    url.searchParams.set('ref', normalized);
+    const url = new URL(`/r/${encodeURIComponent(normalized)}`, base);
     return url.toString();
   } catch (_err) {
-    return `/signup?ref=${encodeURIComponent(normalized)}`;
+    return `/r/${encodeURIComponent(normalized)}`;
   }
 }
 
@@ -152,11 +175,32 @@ export function getReferralSummary(database, user, options = {}) {
     WHERE referrer_user_id = ?
     GROUP BY status
   `).all(user.id);
-  const recent = database.prepare(`
-    SELECT status, signup_method, code_snapshot, signup_at, qualified_at, created_at
-    FROM referral_attributions
+  const clickStats = database.prepare(`
+    SELECT
+      COUNT(*) AS total_clicks,
+      COUNT(converted_at) AS converted_clicks,
+      COUNT(DISTINCT COALESCE(NULLIF(anonymous_id, ''), NULLIF(ip_hash, ''), CAST(id AS TEXT))) AS unique_clicks
+    FROM referral_clicks
     WHERE referrer_user_id = ?
-    ORDER BY created_at DESC
+  `).get(user.id) || {};
+  const recent = database.prepare(`
+    SELECT
+      a.status,
+      a.signup_method,
+      a.code_snapshot,
+      a.signup_at,
+      a.qualified_at,
+      a.created_at,
+      referred.name AS referred_name,
+      referred.tiktok_username AS referred_tiktok,
+      r.status AS reward_status,
+      r.amount_cents,
+      r.currency
+    FROM referral_attributions a
+    LEFT JOIN users referred ON referred.id = a.referred_user_id
+    LEFT JOIN referral_rewards r ON r.attribution_id = a.id
+    WHERE a.referrer_user_id = ?
+    ORDER BY a.created_at DESC
     LIMIT 10
   `).all(user.id);
 
@@ -170,6 +214,11 @@ export function getReferralSummary(database, user, options = {}) {
     pendingAmountCents: 0,
     approvedAmountCents: 0,
     paidAmountCents: 0,
+    clicks: numberValue(clickStats.total_clicks),
+    uniqueClicks: numberValue(clickStats.unique_clicks),
+    convertedClicks: numberValue(clickStats.converted_clicks),
+    clickToSignupRate: 0,
+    signupToQualifiedRate: 0,
   };
 
   for (const row of statusRows) {
@@ -195,6 +244,9 @@ export function getReferralSummary(database, user, options = {}) {
       stats.rejected += count;
     }
   }
+
+  stats.clickToSignupRate = stats.clicks > 0 ? Math.round((stats.signups / stats.clicks) * 1000) / 10 : 0;
+  stats.signupToQualifiedRate = stats.signups > 0 ? Math.round((stats.qualified / stats.signups) * 1000) / 10 : 0;
 
   return {
     code,
@@ -253,7 +305,63 @@ export function claimOrResetReferralCode(database, user, requestedCode) {
   })();
 }
 
-export function recordReferralAttribution(database, { referralCode, referredUserId, signupMethod = 'unknown' } = {}) {
+export function recordReferralClick(database, {
+  referralCode,
+  anonymousId = '',
+  ip = '',
+  userAgent = '',
+  referrer = '',
+  landingPath = '',
+  query = {},
+} = {}) {
+  const validation = validateReferralCode(referralCode);
+  if (!validation.ok) return { recorded: false, reason: 'invalid_code' };
+
+  const codeRow = database.prepare('SELECT * FROM streamer_referral_codes WHERE UPPER(code) = ? LIMIT 1').get(validation.code);
+  if (!codeRow) return { recorded: false, reason: 'code_not_found' };
+
+  const result = database.prepare(`
+    INSERT INTO referral_clicks (
+      referral_code_id,
+      referrer_user_id,
+      code_snapshot,
+      anonymous_id,
+      ip_hash,
+      user_agent_hash,
+      referrer_url,
+      landing_path,
+      utm_source,
+      utm_medium,
+      utm_campaign,
+      utm_content,
+      ttclid,
+      created_at,
+      updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    RETURNING id
+  `).run(
+    codeRow.id,
+    codeRow.user_id,
+    codeRow.code,
+    cleanText(anonymousId, 120),
+    hashReferralValue(ip),
+    hashReferralValue(userAgent),
+    cleanText(referrer, 500),
+    cleanText(landingPath, 500),
+    cleanQueryValue(query.utm_source),
+    cleanQueryValue(query.utm_medium),
+    cleanQueryValue(query.utm_campaign),
+    cleanQueryValue(query.utm_content),
+    cleanQueryValue(query.ttclid)
+  );
+
+  const inserted = firstRow(result);
+  return inserted
+    ? { recorded: true, clickId: inserted.id, code: codeRow.code, referrerUserId: codeRow.user_id }
+    : { recorded: false, reason: 'insert_failed' };
+}
+
+export function recordReferralAttribution(database, { referralCode, referredUserId, signupMethod = 'unknown', referralClickId = null } = {}) {
   const validation = validateReferralCode(referralCode);
   if (!validation.ok || !referredUserId) return { recorded: false, reason: validation.ok ? 'missing_user' : 'invalid_code' };
 
@@ -261,25 +369,44 @@ export function recordReferralAttribution(database, { referralCode, referredUser
   if (!codeRow) return { recorded: false, reason: 'code_not_found' };
   if (Number(codeRow.user_id) === Number(referredUserId)) return { recorded: false, reason: 'self_referral' };
 
+  const clickId = referralClickIdValue(referralClickId);
+  const clickRow = clickId
+    ? database.prepare('SELECT * FROM referral_clicks WHERE id = ? AND referral_code_id = ? LIMIT 1').get(clickId, codeRow.id)
+    : null;
+
   const result = database.prepare(`
     INSERT INTO referral_attributions (
-      referral_code_id, referrer_user_id, referred_user_id, code_snapshot, signup_method,
+      referral_code_id, referrer_user_id, referred_user_id, referral_click_id, code_snapshot, signup_method,
       status, signup_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, 'signup_pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ) VALUES (?, ?, ?, ?, ?, ?, 'signup_pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     ON CONFLICT(referred_user_id) DO NOTHING
     RETURNING id
   `).run(
     codeRow.id,
     codeRow.user_id,
     referredUserId,
+    clickRow?.id || null,
     codeRow.code,
     String(signupMethod || 'unknown').slice(0, 40)
   );
 
   const inserted = firstRow(result);
-  return inserted
-    ? { recorded: true, attributionId: inserted.id, referrerUserId: codeRow.user_id }
-    : { recorded: false, reason: 'already_attributed' };
+  if (!inserted) return { recorded: false, reason: 'already_attributed' };
+
+  if (clickRow?.id) {
+    database.prepare(`
+      UPDATE referral_clicks
+      SET converted_user_id = ?, converted_at = COALESCE(converted_at, CURRENT_TIMESTAMP), updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(referredUserId, clickRow.id);
+  }
+
+  return {
+    recorded: true,
+    attributionId: inserted.id,
+    referrerUserId: codeRow.user_id,
+    referralClickId: clickRow?.id || null,
+  };
 }
 
 export function qualifyReferralForUser(database, referredUserId, options = {}) {
@@ -330,17 +457,53 @@ export function qualifyReferralForUser(database, referredUserId, options = {}) {
   };
 }
 
-export function listReferralAdminRows(database, limit = 200) {
-  const safeLimit = Math.max(1, Math.min(500, Math.round(numberValue(limit, 200))));
+export function listReferralAdminRows(database, options = {}) {
+  const config = typeof options === 'number' ? { limit: options } : (options || {});
+  const safeLimit = Math.max(1, Math.min(500, Math.round(numberValue(config.limit, 200))));
+  const clauses = [];
+  const params = [];
+  const status = cleanText(config.status, 40).toLowerCase();
+  const search = cleanText(config.search, 120).toLowerCase();
+  const code = normalizeReferralCode(config.code);
+
+  if (status) {
+    clauses.push('(LOWER(a.status) = ? OR LOWER(COALESCE(r.status, ?)) = ?)');
+    params.push(status, 'waiting_for_paid_conversion', status);
+  }
+  if (code) {
+    clauses.push('UPPER(a.code_snapshot) LIKE ?');
+    params.push(`%${code}%`);
+  }
+  if (search) {
+    clauses.push(`(
+      LOWER(COALESCE(a.code_snapshot, '')) LIKE ?
+      OR LOWER(COALESCE(referrer.email, '')) LIKE ?
+      OR LOWER(COALESCE(referrer.name, '')) LIKE ?
+      OR LOWER(COALESCE(referrer.tiktok_username, '')) LIKE ?
+      OR LOWER(COALESCE(referred.email, '')) LIKE ?
+      OR LOWER(COALESCE(referred.name, '')) LIKE ?
+      OR LOWER(COALESCE(referred.tiktok_username, '')) LIKE ?
+    )`);
+    const like = `%${search}%`;
+    params.push(like, like, like, like, like, like, like);
+  }
+
+  params.push(safeLimit);
   return database.prepare(`
     SELECT
       a.id AS attribution_id,
       a.status AS attribution_status,
+      a.referral_click_id,
       a.signup_method,
       a.code_snapshot,
       a.signup_at,
       a.qualified_at,
       a.created_at,
+      c.created_at AS click_at,
+      c.utm_source,
+      c.utm_medium,
+      c.utm_campaign,
+      c.ttclid,
       r.id AS reward_id,
       r.status AS reward_status,
       r.amount_cents,
@@ -359,11 +522,13 @@ export function listReferralAdminRows(database, limit = 200) {
       referred.tiktok_username AS referred_tiktok
     FROM referral_attributions a
     LEFT JOIN referral_rewards r ON r.attribution_id = a.id
+    LEFT JOIN referral_clicks c ON c.id = a.referral_click_id
     LEFT JOIN users referrer ON referrer.id = a.referrer_user_id
     LEFT JOIN users referred ON referred.id = a.referred_user_id
+    ${clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''}
     ORDER BY a.created_at DESC
     LIMIT ?
-  `).all(safeLimit);
+  `).all(...params);
 }
 
 export function updateReferralRewardStatus(database, rewardId, status, patch = {}) {

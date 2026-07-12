@@ -1353,14 +1353,29 @@ router.get('/email', requireAdminAuth, (_req, res) => {
 
 router.get('/referrals', requireAdminAuth, (req, res) => {
   try {
+    const filters = referralAdminFiltersFromQuery(req.query);
     res.send(renderReferralAdminPage({
       message: String(req.query.message || ''),
       error: String(req.query.error || ''),
-      rows: listReferralAdminRows(db),
+      rows: listReferralAdminRows(db, filters),
+      filters,
     }));
   } catch (err) {
     console.error('Admin referrals page failed:', err);
     res.status(500).send(renderReferralAdminPage({ error: err.message || 'Unable to load referrals.' }));
+  }
+});
+
+router.get('/referrals/export.csv', requireAdminAuth, (req, res) => {
+  try {
+    const filters = referralAdminFiltersFromQuery(req.query, { limit: 500 });
+    const rows = listReferralAdminRows(db, filters);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="intothebattle-referrals.csv"');
+    res.send(buildReferralAdminCsv(rows));
+  } catch (err) {
+    console.error('Admin referrals export failed:', err);
+    res.status(500).send('Unable to export referrals.');
   }
 });
 
@@ -1936,14 +1951,105 @@ function formatRewardAmount(cents = 0, currency = 'USD') {
   return `${String(currency || 'USD').toUpperCase()} ${amount.toFixed(2)}`;
 }
 
+function referralAdminFiltersFromQuery(query = {}, defaults = {}) {
+  const limit = Math.max(1, Math.min(500, Number(query.limit || defaults.limit || 200) || 200));
+  return {
+    status: String(query.status || '').trim().toLowerCase().slice(0, 40),
+    code: String(query.code || '').trim().toUpperCase().slice(0, 40),
+    search: String(query.search || '').trim().slice(0, 120),
+    limit,
+  };
+}
+
+function referralAdminQueryString(filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.status) params.set('status', filters.status);
+  if (filters.code) params.set('code', filters.code);
+  if (filters.search) params.set('search', filters.search);
+  if (filters.limit) params.set('limit', String(filters.limit));
+  return params.toString();
+}
+
+function referralFilterStatusOptions(selected = '') {
+  return [
+    ['', 'All statuses'],
+    ['signup_pending', 'Signup pending'],
+    ['qualified', 'Qualified'],
+    ['waiting_for_paid_conversion', 'Waiting for paid conversion'],
+    ['pending_review', 'Pending review'],
+    ['approved', 'Approved'],
+    ['paid', 'Paid'],
+    ['rejected', 'Rejected'],
+  ].map(([value, label]) => `<option value="${escapeAttr(value)}" ${value === selected ? 'selected' : ''}>${escapeHtml(label)}</option>`).join('');
+}
+
+function referralTrafficLabel(row = {}) {
+  const parts = [row.utm_source, row.utm_medium, row.utm_campaign].filter(Boolean);
+  if (parts.length) return parts.join(' / ');
+  if (row.ttclid) return 'TikTok click';
+  return '';
+}
+
+function escapeCsv(value) {
+  const text = String(value ?? '');
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function buildReferralAdminCsv(rows = []) {
+  const headers = [
+    'Code',
+    'Attribution Status',
+    'Referrer Name',
+    'Referrer Email',
+    'Referrer TikTok',
+    'Referred Name',
+    'Referred Email',
+    'Referred TikTok',
+    'Signup Method',
+    'Signup At',
+    'Click At',
+    'Traffic Source',
+    'Qualified At',
+    'Reward Status',
+    'Reward Amount Cents',
+    'Currency',
+    'Approved At',
+    'Paid At',
+    'Notes',
+  ];
+  const body = rows.map(row => [
+    row.code_snapshot,
+    row.attribution_status,
+    row.referrer_name,
+    row.referrer_email,
+    row.referrer_tiktok,
+    row.referred_name,
+    row.referred_email,
+    row.referred_tiktok,
+    row.signup_method,
+    row.signup_at,
+    row.click_at,
+    referralTrafficLabel(row),
+    row.qualified_at,
+    row.reward_status || 'waiting_for_paid_conversion',
+    row.amount_cents || 0,
+    row.currency || 'USD',
+    row.approved_at,
+    row.paid_at,
+    row.notes,
+  ].map(escapeCsv).join(','));
+  return `${headers.map(escapeCsv).join(',')}\n${body.join('\n')}\n`;
+}
+
 function referralRewardStatusLabel(status) {
   return String(status || 'waiting_for_paid_conversion').replace(/_/g, ' ');
 }
 
 function renderReferralAdminRows(rows = []) {
-  if (!rows.length) return '<tr><td colspan="9">No referral activity yet.</td></tr>';
+  if (!rows.length) return '<tr><td colspan="10">No referral activity yet.</td></tr>';
   return rows.map((row) => {
     const rewardStatus = row.reward_status || '';
+    const trafficLabel = referralTrafficLabel(row);
     const rewardAction = row.reward_id
       ? `<form method="POST" action="/admin/referrals/rewards/${escapeAttr(row.reward_id)}/status" class="mini-form">
           <select name="status">
@@ -1959,6 +2065,7 @@ function renderReferralAdminRows(rows = []) {
       <td data-label="Referrer"><strong>${escapeHtml(row.referrer_name || 'Creator')}</strong><br><span class="muted">${escapeHtml(row.referrer_email || '')}</span><br><span class="muted">${escapeHtml(row.referrer_tiktok ? `@${row.referrer_tiktok}` : '')}</span></td>
       <td data-label="Referred"><strong>${escapeHtml(row.referred_name || 'New account')}</strong><br><span class="muted">${escapeHtml(row.referred_email || '')}</span><br><span class="muted">${escapeHtml(row.referred_tiktok ? `@${row.referred_tiktok}` : '')}</span></td>
       <td data-label="Signup">${escapeHtml(row.signup_method || 'unknown')}<br><span class="muted">${escapeHtml(formatSponsorDate(row.signup_at || row.created_at))}</span></td>
+      <td data-label="Click">${row.click_at ? `${escapeHtml(formatSponsorDate(row.click_at))}<br><span class="muted">${escapeHtml(trafficLabel || 'Tracked referral link')}</span>` : '<span class="muted">Direct code signup</span>'}</td>
       <td data-label="Qualified">${escapeHtml(formatSponsorDate(row.qualified_at))}</td>
       <td data-label="Reward">${escapeHtml(referralRewardStatusLabel(rewardStatus))}<br><span class="muted">${escapeHtml(row.reward_id ? formatRewardAmount(row.amount_cents, row.currency) : '')}</span></td>
       <td data-label="Approved">${escapeHtml(formatSponsorDate(row.approved_at))}</td>
@@ -1968,7 +2075,7 @@ function renderReferralAdminRows(rows = []) {
   }).join('');
 }
 
-function renderReferralAdminPage({ message = '', error = '', rows = [] } = {}) {
+function renderReferralAdminPage({ message = '', error = '', rows = [], filters = {} } = {}) {
   const totals = rows.reduce((acc, row) => {
     acc.signups += 1;
     if (row.attribution_status === 'qualified') acc.qualified += 1;
@@ -1977,6 +2084,9 @@ function renderReferralAdminPage({ message = '', error = '', rows = [] } = {}) {
     if (row.reward_status === 'paid') acc.paid += 1;
     return acc;
   }, { signups: 0, qualified: 0, pending: 0, approved: 0, paid: 0 });
+
+  const exportQuery = referralAdminQueryString(filters);
+  const exportHref = `/admin/referrals/export.csv${exportQuery ? `?${exportQuery}` : ''}`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -2008,11 +2118,15 @@ function renderReferralAdminPage({ message = '', error = '', rows = [] } = {}) {
     table { width:100%; border-collapse:collapse; margin-top:12px; }
     th, td { border-bottom:1px solid rgba(255,255,255,.08); padding:12px; font-size:13px; text-align:left; vertical-align:top; }
     th { background:rgba(246,201,91,.09); color:#ffdf8a; font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
+    label { display:grid; gap:5px; color:#a8afbf; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+    .filter-grid { display:grid; grid-template-columns:1fr 1fr 1fr auto auto; gap:10px; align-items:end; margin-top:14px; }
+    .filter-grid button,.button-link { min-height:38px; display:inline-flex; align-items:center; justify-content:center; padding:0 14px; border-radius:10px; border:0; background:linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color:#170c02; text-decoration:none; cursor:pointer; font-weight:900; }
+    .button-link.secondary { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); color:#fff8e6; }
     input, select { width:100%; min-height:38px; padding:8px 10px; border-radius:10px; border:1px solid rgba(255,255,255,.12); background:#111827; color:#fff8e6; }
     button { width:100%; min-height:36px; margin-top:0; border:0; border-radius:10px; background:linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color:#170c02; cursor:pointer; font-weight:900; }
     .mini-form { display:grid; grid-template-columns:minmax(100px,.8fr) minmax(90px,.7fr) minmax(140px,1fr); gap:8px; min-width:360px; }
     .mini-form button { grid-column:1 / -1; }
-    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.metrics-grid{grid-template-columns:1fr 1fr}.mini-form{grid-template-columns:1fr;min-width:0} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.metrics-grid,.filter-grid{grid-template-columns:1fr 1fr}.mini-form{grid-template-columns:1fr;min-width:0} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
     @media(max-width:420px){ .admin-nav,.metrics-grid{grid-template-columns:1fr} }
   </style>
 </head>
@@ -2037,8 +2151,16 @@ function renderReferralAdminPage({ message = '', error = '', rows = [] } = {}) {
     <section class="card table-shell">
       <h2>Referral Activity</h2>
       <p class="muted">Signup attribution is automatic. A reward appears when the referred account becomes an active paid PayPal subscriber. Payouts stay admin-reviewed in v1.</p>
+      <form class="filter-grid" method="GET" action="/admin/referrals">
+        <label>Status<select name="status">${referralFilterStatusOptions(filters.status || '')}</select></label>
+        <label>Code<input name="code" value="${escapeAttr(filters.code || '')}" placeholder="CREATORCODE" /></label>
+        <label>Search<input name="search" value="${escapeAttr(filters.search || '')}" placeholder="email, name, TikTok" /></label>
+        <input type="hidden" name="limit" value="${escapeAttr(filters.limit || 200)}" />
+        <button type="submit">Filter</button>
+        <a class="button-link secondary" href="${escapeAttr(exportHref)}">Export CSV</a>
+      </form>
       <table>
-        <thead><tr><th>Code</th><th>Referrer</th><th>Referred</th><th>Signup</th><th>Qualified</th><th>Reward</th><th>Approved</th><th>Paid</th><th>Action</th></tr></thead>
+        <thead><tr><th>Code</th><th>Referrer</th><th>Referred</th><th>Signup</th><th>Click</th><th>Qualified</th><th>Reward</th><th>Approved</th><th>Paid</th><th>Action</th></tr></thead>
         <tbody>${renderReferralAdminRows(rows)}</tbody>
       </table>
     </section>

@@ -361,10 +361,17 @@
     .referral-code-display { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
     .referral-code-display span { color:var(--muted); font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
     .referral-code-display strong { display:inline-flex; min-height:34px; align-items:center; padding:6px 10px; border-radius:10px; border:1px solid rgba(246,201,91,.28); color:#fff4bf; background:rgba(246,201,91,.08); font-size:18px; line-height:1; letter-spacing:.08em; overflow-wrap:anywhere; }
-    .referral-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
+    .referral-stats { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; }
     .referral-stat { min-width:0; padding:9px; border-radius:12px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.16); }
     .referral-stat span { display:block; color:var(--muted); font-size:9px; font-weight:950; text-transform:uppercase; letter-spacing:.06em; }
     .referral-stat strong { display:block; margin-top:4px; color:#fff; font-size:16px; line-height:1; }
+    .referral-recent { display:grid; gap:8px; }
+    .referral-recent-title { color:#fff; font-size:12px; font-weight:950; text-transform:uppercase; letter-spacing:.08em; }
+    .referral-recent-list { display:grid; gap:6px; }
+    .referral-recent-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:center; padding:8px 10px; border-radius:12px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.14); }
+    .referral-recent-row strong { display:block; color:#fff; font-size:12px; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .referral-recent-row span { display:block; color:var(--muted); font-size:10px; font-weight:850; line-height:1.3; }
+    .referral-status-chip { min-height:24px; display:inline-flex; align-items:center; justify-content:center; padding:4px 7px; border-radius:999px; border:1px solid rgba(128,255,210,.22); color:var(--green); background:rgba(128,255,210,.07); font-size:9px; font-style:normal; font-weight:950; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
     .referral-chat-copy { min-height:86px; resize:vertical; font-size:12px; line-height:1.45; }
     .referral-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
     .referral-actions .btn { min-height:38px; padding:0 12px; font-size:12px; }
@@ -1549,6 +1556,37 @@ function formatReferralCooldown(seconds) {
   if (hours <= 0) return `${minutes || 1}m`;
   return `${hours}h ${minutes}m`;
 }
+function formatReferralPercent(value) {
+  const number = Number(value || 0);
+  return `${Number.isFinite(number) ? number.toFixed(number % 1 ? 1 : 0) : '0'}%`;
+}
+function formatReferralDate(value) {
+  if (!value) return 'No date';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+function referralStatusLabel(value) {
+  return String(value || 'signup_pending').replace(/_/g, ' ');
+}
+function renderReferralRecent(referral = {}) {
+  const rows = Array.isArray(referral.recent) ? referral.recent.slice(0, 5) : [];
+  if (!rows.length) {
+    return '<div class="referral-recent"><div class="referral-recent-title">Recent referrals</div><p class="muted">No referred creators yet. Copy the chat promo and pin it during your LIVE.</p></div>';
+  }
+  return `
+    <div class="referral-recent">
+      <div class="referral-recent-title">Recent referrals</div>
+      <div class="referral-recent-list">
+        ${rows.map(row => {
+          const name = row.referred_tiktok ? `@${row.referred_tiktok}` : (row.referred_name || 'New creator');
+          const detail = `${referralStatusLabel(row.reward_status || row.status)} • ${formatReferralDate(row.signup_at || row.created_at)}`;
+          return `<div class="referral-recent-row"><span><strong>${escapeHtml(name)}</strong><span>${escapeHtml(detail)}</span></span><em class="referral-status-chip">${escapeHtml(row.signup_method || 'signup')}</em></div>`;
+        }).join('')}
+      </div>
+    </div>
+  `;
+}
 function referralChatText(referral = dashboardState.referral || {}) {
   const code = String(referral.code || '').trim();
   const url = String(referral.shareUrl || '').trim();
@@ -1623,15 +1661,18 @@ function renderCreatorReferral(referral = {}) {
     </div>
     <div class="referral-actions">
       <button class="btn btn-primary" type="button" onclick="copyCreatorReferralChatPromo()">Copy chat promo</button>
-      <a class="btn btn-secondary" href="/signup?ref=${encodeURIComponent(code)}" target="_blank" rel="noreferrer">Open signup</a>
+      <a class="btn btn-secondary" href="${escapeAttr(shareUrl || `/signup?ref=${encodeURIComponent(code)}`)}" target="_blank" rel="noreferrer">Open signup</a>
       <a class="btn btn-secondary" href="/profile">Rewards</a>
     </div>
     <div class="referral-stats" aria-label="Creator promo code stats">
+      <div class="referral-stat"><span>Clicks</span><strong>${escapeHtml(stats.clicks || 0)}</strong></div>
       <div class="referral-stat"><span>Signups</span><strong>${escapeHtml(stats.signups || 0)}</strong></div>
+      <div class="referral-stat"><span>Click rate</span><strong>${escapeHtml(formatReferralPercent(stats.clickToSignupRate))}</strong></div>
       <div class="referral-stat"><span>Qualified</span><strong>${escapeHtml(stats.qualified || 0)}</strong></div>
       <div class="referral-stat"><span>Pending</span><strong>${escapeHtml(formatReferralMoney(stats.pendingAmountCents))}</strong></div>
       <div class="referral-stat"><span>Paid</span><strong>${escapeHtml(formatReferralMoney(stats.paidAmountCents))}</strong></div>
     </div>
+    ${renderReferralRecent(referral)}
     <div class="referral-create-row">
       <div class="form-group" style="margin-bottom:0;">
         <label class="input-label" for="creatorReferralCodeInput">Change code</label>

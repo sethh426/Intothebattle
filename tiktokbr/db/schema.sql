@@ -147,11 +147,40 @@ CREATE TABLE IF NOT EXISTS streamer_referral_codes (
 
 CREATE UNIQUE INDEX IF NOT EXISTS streamer_referral_codes_code_upper_idx ON streamer_referral_codes (UPPER(code));
 
+CREATE TABLE IF NOT EXISTS referral_clicks (
+  id SERIAL PRIMARY KEY,
+  referral_code_id INTEGER NOT NULL,
+  referrer_user_id INTEGER NOT NULL,
+  code_snapshot TEXT NOT NULL,
+  anonymous_id TEXT,
+  ip_hash TEXT,
+  user_agent_hash TEXT,
+  referrer_url TEXT,
+  landing_path TEXT,
+  utm_source TEXT,
+  utm_medium TEXT,
+  utm_campaign TEXT,
+  utm_content TEXT,
+  ttclid TEXT,
+  converted_user_id INTEGER,
+  converted_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(referral_code_id) REFERENCES streamer_referral_codes(id),
+  FOREIGN KEY(referrer_user_id) REFERENCES users(id),
+  FOREIGN KEY(converted_user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS referral_clicks_code_created_idx ON referral_clicks(referral_code_id, created_at);
+CREATE INDEX IF NOT EXISTS referral_clicks_referrer_created_idx ON referral_clicks(referrer_user_id, created_at);
+CREATE INDEX IF NOT EXISTS referral_clicks_converted_idx ON referral_clicks(converted_user_id, converted_at);
+
 CREATE TABLE IF NOT EXISTS referral_attributions (
   id SERIAL PRIMARY KEY,
   referral_code_id INTEGER NOT NULL,
   referrer_user_id INTEGER NOT NULL,
   referred_user_id INTEGER NOT NULL UNIQUE,
+  referral_click_id INTEGER,
   code_snapshot TEXT NOT NULL,
   signup_method TEXT DEFAULT 'unknown',
   status TEXT DEFAULT 'signup_pending',
@@ -163,11 +192,13 @@ CREATE TABLE IF NOT EXISTS referral_attributions (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(referral_code_id) REFERENCES streamer_referral_codes(id),
   FOREIGN KEY(referrer_user_id) REFERENCES users(id),
-  FOREIGN KEY(referred_user_id) REFERENCES users(id)
+  FOREIGN KEY(referred_user_id) REFERENCES users(id),
+  FOREIGN KEY(referral_click_id) REFERENCES referral_clicks(id)
 );
 
 CREATE INDEX IF NOT EXISTS referral_attributions_referrer_status_idx ON referral_attributions(referrer_user_id, status);
 CREATE INDEX IF NOT EXISTS referral_attributions_code_idx ON referral_attributions(referral_code_id);
+CREATE INDEX IF NOT EXISTS referral_attributions_click_idx ON referral_attributions(referral_click_id);
 
 CREATE TABLE IF NOT EXISTS referral_rewards (
   id SERIAL PRIMARY KEY,

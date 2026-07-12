@@ -19,6 +19,8 @@ assert.match(schema, /consent_state TEXT DEFAULT 'unknown'/i, 'growth_events mus
 assert.match(schema, /segment_status TEXT DEFAULT 'skipped'/i, 'growth_events must persist Segment forwarding status');
 assert.match(schema, /CREATE TABLE IF NOT EXISTS admin_email_campaigns/i, 'schema.sql must define admin email campaigns');
 assert.match(schema, /CREATE TABLE IF NOT EXISTS admin_email_deliveries/i, 'schema.sql must define admin email deliveries');
+assert.match(schema, /CREATE TABLE IF NOT EXISTS referral_clicks/i, 'schema.sql must define referral click tracking');
+assert.match(schema, /referral_click_id INTEGER/i, 'referral attributions must retain the originating tracked click when available');
 assert.match(db, /INSERT INTO schema_migrations/i, 'db startup must record the baseline schema migration');
 assert.match(db, /ALTER TABLE subscriptions ADD COLUMN admin_granted INTEGER DEFAULT 0/i, 'db startup must backfill subscriptions.admin_granted');
 assert.match(db, /CREATE TABLE IF NOT EXISTS tiktok_accounts/i, 'db startup must create tiktok_accounts');
@@ -28,6 +30,8 @@ assert.match(db, /CREATE TABLE IF NOT EXISTS growth_events/i, 'db startup must c
 assert.match(db, /CREATE UNIQUE INDEX IF NOT EXISTS growth_events_event_id_unique/i, 'db startup must keep growth event ids unique');
 assert.match(db, /CREATE TABLE IF NOT EXISTS admin_email_campaigns/i, 'db startup must create admin email campaigns');
 assert.match(db, /CREATE TABLE IF NOT EXISTS admin_email_deliveries/i, 'db startup must create admin email deliveries');
+assert.match(db, /CREATE TABLE IF NOT EXISTS referral_clicks/i, 'db startup must create referral click tracking');
+assert.match(db, /ALTER TABLE referral_attributions ADD COLUMN referral_click_id INTEGER/i, 'db startup must backfill referral_attributions.referral_click_id');
 assert.match(db, /2026-07-02-baseline/, 'baseline schema migration version must be recorded');
 assert.match(ci, /postgres-migrations:/, 'CI must keep a real Postgres migration/startup check');
 assert.match(ci, /DATABASE_URL: postgresql:\/\/postgres:postgres@localhost:5432\/intothebattle_ci/, 'CI migration job must run against Postgres, not the stub DB');

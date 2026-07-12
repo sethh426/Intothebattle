@@ -13,7 +13,7 @@
     "audit:stability": "node scripts/stability_audit.js",
     "lint": "node scripts/stability_audit.js",
     "ci:triage": "node scripts/github_actions_triage.js",
-    "test:logic": "node scripts/business_logic_smoke.js && node scripts/admin_user_counts_smoke.js && node scripts/admin_email_campaigns_smoke.js && node scripts/admin_creator_pro_grants_smoke.js && node scripts/tiktok_official_auth_smoke.js && node scripts/google_oauth_smoke.js && node scripts/production_readiness_contract.js",
+    "test:logic": "node scripts/business_logic_smoke.js && node scripts/admin_user_counts_smoke.js && node scripts/admin_email_campaigns_smoke.js && node scripts/admin_creator_pro_grants_smoke.js && node scripts/referral_logic_smoke.js && node scripts/tiktok_official_auth_smoke.js && node scripts/google_oauth_smoke.js && node scripts/production_readiness_contract.js",
     "test:marketing": "node scripts/marketing_logic_smoke.js && node scripts/blog_logic_smoke.js",
     "test:blog": "node scripts/blog_logic_smoke.js",
     "test:http": "node scripts/http_smoke.js && node scripts/account_trial_http_smoke.js",
