@@ -90,6 +90,7 @@ import {
   getRoomPaths,
   DEFAULT_AUDIO_CONFIG,
   AUDIO_EVENT_KEYS,
+  defaultAudioAssignmentsForLibrary,
   normalizeAudioConfig,
   normalizeAudioVolume,
   DEFAULT_OVERLAY_SETTINGS,
@@ -721,6 +722,13 @@ function roomRuntimeEpoch(room) {
   return room.runtimeEpoch;
 }
 
+function bumpRoomRuntimeEpoch(room) {
+  if (!room) return 0;
+  clearRoomEventQueue(room);
+  room.runtimeEpoch = roomRuntimeEpoch(room) + 1;
+  return room.runtimeEpoch;
+}
+
 function clearRoomEventQueue(room) {
   if (!room) return;
   if (room.eventQueueTimer) {
@@ -732,10 +740,61 @@ function clearRoomEventQueue(room) {
 
 function advanceRoomRuntimeEpoch(room, reason = 'reset') {
   if (!room) return 0;
-  clearRoomEventQueue(room);
-  room.runtimeEpoch = roomRuntimeEpoch(room) + 1;
+  const epoch = bumpRoomRuntimeEpoch(room);
   setRoomMatchPhase(room, MATCH_PHASES.RESET, reason);
-  return room.runtimeEpoch;
+  return epoch;
+}
+
+function roomRuntimeSnapshot(room, options = {}) {
+  return {
+    roomId: room?.roomId || '',
+    epoch: roomRuntimeEpoch(room),
+    sessionId: options.sessionId === undefined ? currentRoomSessionId(room) : options.sessionId,
+  };
+}
+
+function roomRuntimeSnapshotMatches(room, snapshot, options = {}) {
+  if (!room || !snapshot || room.roomId !== snapshot.roomId) return false;
+  if (roomRuntimeEpoch(room) !== snapshot.epoch) return false;
+  if (options.sameSession !== false && snapshot.sessionId && currentRoomSessionId(room) !== snapshot.sessionId) return false;
+  return true;
+}
+
+function setRoomRuntimeTimeout(room, callback, delayMs, options = {}) {
+  const snapshot = roomRuntimeSnapshot(room, options);
+  const timer = setTimeout(() => {
+    if (!roomRuntimeSnapshotMatches(room, snapshot, options)) return;
+    callback(snapshot);
+  }, Math.max(0, Math.round(Number(delayMs) || 0)));
+  if (typeof timer.unref === 'function') timer.unref();
+  return timer;
+}
+
+function markPlayerDeath(player) {
+  if (!player) return 0;
+  player.deathSeq = (Number(player.deathSeq) || 0) + 1;
+  return player.deathSeq;
+}
+
+function schedulePlayerRespawn(room, targetId, nickname, deathSeq, payload = {}) {
+  return setRoomRuntimeTimeout(room, () => {
+    const current = room?.players?.[targetId];
+    if (!current || current.alive || Number(current.deathSeq) !== Number(deathSeq)) return;
+    const respawnSource = current.source || payload.source;
+    spawnPlayer(room, targetId, nickname || current.nickname || targetId, { source: respawnSource });
+    emitRoomEvent(room, 'respawn', {
+      uniqueId:      targetId,
+      nickname:      room.players[targetId]?.nickname || nickname || targetId,
+      hp:            room.players[targetId]?.hp,
+      maxHp:         room.players[targetId]?.maxHp,
+      color:         room.players[targetId]?.color,
+      respawnEffect: payload.respawnEffect || 'beam_down',
+      delayMs:       CFG.RESPAWN_DELAY_MS,
+      ...payload,
+    });
+    emitRoomEvent(room, 'soundEvent', { event: 'respawn', intensity: 0.5, tier: 'common' });
+    emitRoomEvent(room, 'gameState', room.players);
+  }, CFG.RESPAWN_DELAY_MS);
 }
 
 function roomEventLane(type, payload = {}) {
@@ -2848,8 +2907,7 @@ function queueArenaPowerLeaderboard(room) {
     return;
   }
   if (power.leaderboardTimer) return;
-  power.leaderboardTimer = setTimeout(() => emitArenaPowerLeaderboard(room), waitMs);
-  if (typeof power.leaderboardTimer.unref === 'function') power.leaderboardTimer.unref();
+  power.leaderboardTimer = setRoomRuntimeTimeout(room, () => emitArenaPowerLeaderboard(room), waitMs);
 }
 
 function recordArenaPowerContribution(room, uniqueId, nickname, type, amount = 1, options = {}) {
@@ -3016,14 +3074,13 @@ function runArenaPowerBarrage(room) {
 
   const fired = [];
   topContributors.forEach((contributor, index) => {
-    const timer = setTimeout(() => {
+    setRoomRuntimeTimeout(room, () => {
       const result = fireArenaPowerBarrageAttack(room, contributor);
       if (result) fired.push(result);
       if (index === topContributors.length - 1) {
         emitRoomEvent(room, 'gameState', room.players);
       }
     }, index * ARENA_POWER_UP_BARRAGE_STAGGER_MS);
-    if (typeof timer.unref === 'function') timer.unref();
   });
   scheduleArenaPowerBarrage(room, ARENA_POWER_UP_BARRAGE_INTERVAL_MS);
   return fired;
@@ -3035,8 +3092,7 @@ function scheduleArenaPowerBarrage(room, delayMs = ARENA_POWER_UP_BARRAGE_INTERV
   const remaining = Math.max(0, Number(power.endsAt) - Date.now());
   if (remaining <= 800) return;
   const nextDelay = Math.max(500, Math.min(Math.round(delayMs), remaining - 250));
-  power.barrageTimer = setTimeout(() => runArenaPowerBarrage(room), nextDelay);
-  if (typeof power.barrageTimer.unref === 'function') power.barrageTimer.unref();
+  power.barrageTimer = setRoomRuntimeTimeout(room, () => runArenaPowerBarrage(room), nextDelay);
 }
 
 function completeArenaPowerUp(room, reason = 'ended', options = {}) {
@@ -3118,8 +3174,7 @@ function startArenaPowerUp(room, options = {}) {
       { silent: true }
     );
   }
-  room.arenaPowerUp.timer = setTimeout(() => completeArenaPowerUp(room, 'ended'), durationMs);
-  if (typeof room.arenaPowerUp.timer.unref === 'function') room.arenaPowerUp.timer.unref();
+  room.arenaPowerUp.timer = setRoomRuntimeTimeout(room, () => completeArenaPowerUp(room, 'ended'), durationMs);
   scheduleArenaPowerBarrage(room, ARENA_POWER_UP_BARRAGE_INITIAL_DELAY_MS);
   emitSoundAndSync(room, 'engagementSurge', { intensity: 1, tier: 'rare' });
   emitArenaPowerUp(room, 'started', {
@@ -3265,8 +3320,7 @@ function startBattleRound(room, options = {}) {
     endsAt: Date.now() + durationMs,
     timer: null,
   };
-  room.roundState.timer = setTimeout(() => endBattleRound(room, 'timer'), durationMs);
-  if (typeof room.roundState.timer.unref === 'function') room.roundState.timer.unref();
+  room.roundState.timer = setRoomRuntimeTimeout(room, () => endBattleRound(room, 'timer'), durationMs);
   emitRoomEvent(room, 'roundEvent', {
     type: 'round_started',
     number,
@@ -3511,7 +3565,7 @@ function runBossWaveAttack(room, reason = 'pulse') {
       intensity: attacks.some(attack => attack.killed) ? 0.9 : 0.72,
       tier: attacks.some(attack => attack.killed) ? 'rare' : 'common',
     });
-    setTimeout(() => emitRoomEvent(room, 'gameState', room.players), 40);
+    setRoomRuntimeTimeout(room, () => emitRoomEvent(room, 'gameState', room.players), 40);
     emitSessionStatus(room);
   }
   if (attacks.length) {
@@ -3533,14 +3587,13 @@ function scheduleBossWaveAttack(room, delayMs = BOSS_WAVE_ATTACK_INTERVAL_MS) {
   }
   const nextDelay = Math.max(900, Math.min(Math.round(delayMs), remaining));
   boss.nextAttackAt = Date.now() + nextDelay;
-  boss.attackTimer = setTimeout(() => {
+  boss.attackTimer = setRoomRuntimeTimeout(room, () => {
     boss.attackTimer = null;
     if (!room?.bossWave?.active) return;
     if (scheduledSessionId && currentRoomSessionId(room) !== scheduledSessionId) return;
     runBossWaveAttack(room);
     scheduleBossWaveAttack(room, room.bossWave.attackIntervalMs || BOSS_WAVE_ATTACK_INTERVAL_MS);
-  }, nextDelay);
-  if (typeof boss.attackTimer.unref === 'function') boss.attackTimer.unref();
+  }, nextDelay, { sessionId: scheduledSessionId });
 }
 
 function completeBossWave(room, finalHit = null, reason = 'defeated') {
@@ -3623,8 +3676,7 @@ function startBossWave(room, options = {}) {
     attackTimer: null,
     lastHitBy: null,
   };
-  room.bossWave.timer = setTimeout(() => completeBossWave(room, null, 'expired'), durationMs);
-  if (typeof room.bossWave.timer.unref === 'function') room.bossWave.timer.unref();
+  room.bossWave.timer = setRoomRuntimeTimeout(room, () => completeBossWave(room, null, 'expired'), durationMs, { sessionId: session.sessionId });
   scheduleBossWaveAttack(room, Math.min(2400, Math.max(1000, attackIntervalMs * 0.28)));
   session.bossWavesStarted = (Number(session.bossWavesStarted) || 0) + 1;
   emitRoomEvent(room, 'bossWave', {
@@ -3719,6 +3771,7 @@ function endLiveSession(room, reason = 'manual_end') {
     return { ok: false, reason: 'no_active_session', recap: room?.lastSessionRecap || null };
   }
   const session = room.liveSession;
+  bumpRoomRuntimeEpoch(room);
   clearRoundTimer(room);
   if (room.roundState?.active) {
     room.roundState.active = false;
@@ -3916,8 +3969,7 @@ function startRoomSetupRehearsal(room, options = {}) {
     title: 'Setup rehearsal running',
     message: 'Previewing chat, likes, gifts, boss wave, and broadcast break before TikTok connects.',
   });
-  const timer = setTimeout(() => runRoomOverlayTest(room, options.action || 'burst'), 450);
-  if (typeof timer.unref === 'function') timer.unref();
+  setRoomRuntimeTimeout(room, () => runRoomOverlayTest(room, options.action || 'burst'), 450);
   return room.setupRehearsal;
 }
 
@@ -5006,9 +5058,17 @@ function loadRoomAudioConfig(room) {
     room.audioConfig = normalizeAudioConfig(room.audioConfig);
     const allUnassigned = AUDIO_EVENT_KEYS.every(event => !room.audioConfig[event]);
     if (allUnassigned && room.audioLibrary.length) {
-      AUDIO_EVENT_KEYS.forEach((event, idx) => {
-        if (idx < room.audioLibrary.length) room.audioConfig[event] = room.audioLibrary[idx].filename;
-      });
+      const defaultAssignments = defaultAudioAssignmentsForLibrary(room.audioLibrary);
+      const hasDefaultAssignments = Object.values(defaultAssignments).some(Boolean);
+      if (hasDefaultAssignments) {
+        AUDIO_EVENT_KEYS.forEach(event => {
+          if (defaultAssignments[event]) room.audioConfig[event] = defaultAssignments[event];
+        });
+      } else {
+        AUDIO_EVENT_KEYS.forEach((event, idx) => {
+          if (idx < room.audioLibrary.length) room.audioConfig[event] = room.audioLibrary[idx].filename;
+        });
+      }
     }
 
     const afterAudioState = JSON.stringify({
@@ -5828,6 +5888,7 @@ function dealDamage(room, attackerId, targetId, multiplier = 1, options = {}) {
     attacker.killStreak  = streakExpired ? 1 : (attacker.killStreak || 0) + 1;
     attacker.lastKillTime = now;
     target.killStreak    = 0;
+    const deathSeq = markPlayerDeath(target);
 
     killed = true;
     console.log(`💀 @${targetId} defeated by @${attackerId}! (streak: ${attacker.killStreak})`);
@@ -5861,20 +5922,7 @@ function dealDamage(room, attackerId, targetId, multiplier = 1, options = {}) {
 
     emitRoomEvent(room, 'soundEvent', { event: 'kill', intensity: Math.min(multiplier / 8, 1), tier: multiplier >= 5 ? 'rare' : 'common' });
 
-    setTimeout(() => {
-      spawnPlayer(room, targetId, target.nickname);
-      emitRoomEvent(room, 'respawn', {
-        uniqueId:      targetId,
-        nickname:      target.nickname,
-        hp:            room.players[targetId]?.hp,
-        maxHp:         room.players[targetId]?.maxHp,
-        color:         room.players[targetId]?.color,
-        respawnEffect: 'beam_down',
-        delayMs:       CFG.RESPAWN_DELAY_MS,
-      });
-      emitRoomEvent(room, 'soundEvent', { event: 'respawn', intensity: 0.5, tier: 'common' });
-      emitRoomEvent(room, 'gameState', room.players);
-    }, CFG.RESPAWN_DELAY_MS);
+    schedulePlayerRespawn(room, targetId, target.nickname, deathSeq);
   }
 
   const special = options.special != null ? Boolean(options.special) : poweredDamage || (fixedDamage == null && multiplier > 1);
@@ -6054,17 +6102,9 @@ function applyGiftAttackToTarget(room, attackerId, target, options = {}) {
   if (target.hp === 0) {
     killed = true;
     target.alive = false;
+    const deathSeq = markPlayerDeath(target);
     room.players[attackerId].kills++;
-    setTimeout(() => {
-      spawnPlayer(room, target.uniqueId, target.nickname);
-      emitRoomEvent(room, 'respawn', {
-        uniqueId: target.uniqueId,
-        nickname: target.nickname,
-        respawnEffect: 'beam_down',
-      });
-      emitSoundAndSync(room, 'respawn', { intensity: 0.5, tier: 'common' });
-      emitRoomEvent(room, 'gameState', room.players);
-    }, CFG.RESPAWN_DELAY_MS);
+    schedulePlayerRespawn(room, target.uniqueId, target.nickname, deathSeq);
   }
 
   return {
@@ -6754,12 +6794,12 @@ function emitAttackAndSync(room, result) {
     logger.warn({ attacker: result.attacker, target: result.target, room: room.roomId }, 'Emitting attack for player(s) not present in room state');
   }
   emitRoomEvent(room, 'attack', result);
-  setTimeout(() => emitRoomEvent(room, 'gameState', room.players), 40);
+  setRoomRuntimeTimeout(room, () => emitRoomEvent(room, 'gameState', room.players), 40);
 }
 
 function emitGiftAttackAndSync(room, result) {
   emitRoomEvent(room, 'giftAttack', result);
-  setTimeout(() => emitRoomEvent(room, 'gameState', room.players), 40);
+  setRoomRuntimeTimeout(room, () => emitRoomEvent(room, 'gameState', room.players), 40);
 }
 
 const enableRedisAdapter = process.env.ENABLE_REDIS_ADAPTER === 'true';
@@ -8933,11 +8973,10 @@ function runRoomOverlayTestAction(room, normalizedAction) {
   if (normalizedAction === 'boss') {
     const session = startLiveSession(room, 'overlay_test');
     const bossWave = startBossWave(room, { source: 'overlay_test', maxHp: 900 });
-    const timer = setTimeout(() => {
+    setRoomRuntimeTimeout(room, () => {
       damageBossWave(room, attackerId, 'Orion', 2.4, 'laser', '!laser @boss');
       emitRoomEvent(room, 'gameState', room.players);
-    }, 650);
-    if (typeof timer.unref === 'function') timer.unref();
+    }, 650, { sessionId: session?.sessionId || null });
     return {
       success: true,
       action: normalizedAction,
@@ -8986,8 +9025,7 @@ function runRoomOverlayTestAction(room, normalizedAction) {
   if (normalizedAction === 'burst' || normalizedAction === 'show') {
     const sequence = ['attack', 'like', 'follow', 'share', 'repost', 'gift', 'power-up', 'boss', 'sponsor'];
     sequence.forEach((eventName, index) => {
-      const timer = setTimeout(() => runRoomOverlayTest(room, eventName), index * 950);
-      if (typeof timer.unref === 'function') timer.unref();
+      setRoomRuntimeTimeout(room, () => runRoomOverlayTest(room, eventName), index * 950);
     });
     emitRoomEvent(room, 'roundEvent', {
       type: 'overlay_test_burst',
@@ -9230,6 +9268,7 @@ app.post('/api/overlay/reload', requireRoom, (req, res) => {
 });
 
 app.post('/api/players/clear', requireRoom, (req, res) => {
+  bumpRoomRuntimeEpoch(req.room);
   if (req.room.arenaPowerUp?.active) completeArenaPowerUp(req.room, 'players_cleared');
   req.room.players = {};
   suppressRecentLiveRestore(req.room, 'players_cleared');
@@ -9760,7 +9799,7 @@ app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) =>
     attacksMade = emitGiftAttacksForGift(room, attackerId, giftOptions);
   }
   emitRoomEvent(room, 'giftEffect', { attacker: attackerId, giftName: 'Test Gift', diamonds, ...giftMeta });
-  setTimeout(() => {
+  setRoomRuntimeTimeout(room, () => {
     emitRoomEvent(room, 'giftCelebration', {
       attacker: attackerId, nickname: room.players[attackerId]?.nickname || 'Charlie',
       giftName: 'Test Gift', diamonds, ...giftMeta,
@@ -9964,7 +10003,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
     */
     emitRoomEvent(room, 'giftEffect', { attacker: id, giftName: e.giftName, diamonds, ...giftMeta });
 
-    setTimeout(() => {
+    setRoomRuntimeTimeout(room, () => {
       emitRoomEvent(room, 'giftCelebration', {
         attacker: id,
         nickname,

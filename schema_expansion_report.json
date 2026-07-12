@@ -376,7 +376,7 @@
               ],
               "https://schema.org/description": [
                 {
-                  "@value": "A viewer-first command manual for IntoTheBattle player commands, targets, defenses, support actions, teams, and engagement triggers."
+                  "@value": "A viewer-first command manual for IntoTheBattle player commands, targets, defenses, support actions, teams, shield cooldowns, gift breaks, power-up commands, and engagement triggers."
                 }
               ],
               "https://schema.org/inLanguage": [
@@ -473,6 +473,10 @@
           ]
         }
       ]
+    },
+    {
+      "path": "incident-runbook.html",
+      "blocks": []
     },
     {
       "path": "login.html",
@@ -987,7 +991,7 @@
               ],
               "https://schema.org/description": [
                 {
-                  "@value": "Create your IntoTheBattle account, choose Google or email, and launch a TikTok LIVE battle overlay for OBS or TikTok Studio in under 5 minutes."
+                  "@value": "Create your IntoTheBattle account, choose Google or email, and launch a TikTok Studio battle overlay setup in under 10 minutes."
                 }
               ],
               "https://schema.org/inLanguage": [
@@ -1500,7 +1504,7 @@
     }
   ],
   "summary": {
-    "total_files": 26,
+    "total_files": 27,
     "expanded": 14,
     "errors": 0
   }

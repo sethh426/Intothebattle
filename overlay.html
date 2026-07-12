@@ -4642,6 +4642,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return OVERLAY_AUDIO_EVENT_KEYS.map(key => config[key]).filter(Boolean);
   }
 
+  function audioEventAssignments(config = audioConfig) {
+    return Object.fromEntries(OVERLAY_AUDIO_EVENT_KEYS.map(key => [key, config[key] || '']));
+  }
+
   function applyMasterVolumeToAudio(audio) {
     if (!audio) return;
     audio.volume = currentMasterVolume();
@@ -4709,6 +4713,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       warnings: Array.from(audioWarnings).slice(0, 8),
       masterVolume: currentMasterVolume(),
       assignedEvents: OVERLAY_AUDIO_EVENT_KEYS.filter(key => audioConfig[key]).sort(),
+      eventFiles: audioEventAssignments(audioConfig),
       filenames,
       cachedCount: cacheEntries.length,
       readyCount: cacheEntries.filter(entry => entry.readyState >= 2).length,

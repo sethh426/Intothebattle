@@ -362,6 +362,16 @@ async function assertOverlayAudioStatus(page, testInfo, label) {
   expect(result.status?.module).toBe('overlay-audio');
   expect(result.status?.masterVolume).toBe(0.5);
   expect(result.status?.assignedEvents).toEqual(expect.arrayContaining(['attack', 'gift', 'kill', 'respawn', 'heal', 'follow']));
+  expect(result.status?.eventFiles).toMatchObject({
+    attack: 'sound1.mp3',
+    gift: 'sound2.mp3',
+    kill: 'sound3.mp3',
+    respawn: 'sound4.mp3',
+    heal: 'sound5.mp3',
+    follow: 'sound6.mp3',
+    socialBoost: 'sound6.mp3',
+    engagementSurge: 'sound2.mp3',
+  });
   expect(result.status?.cachedCount).toBe(result.status?.filenames?.length);
   expect(result.status?.errorCount).toBe(0);
   return result.status;

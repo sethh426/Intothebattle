@@ -38,6 +38,17 @@ export const DEFAULT_AUDIO_CONFIG = {
   engagementSurge: null,
 };
 
+export const DEFAULT_BUNDLED_AUDIO_ASSIGNMENTS = Object.freeze({
+  attack:          'sound1.mp3',
+  gift:            'sound2.mp3',
+  kill:            'sound3.mp3',
+  respawn:         'sound4.mp3',
+  heal:            'sound5.mp3',
+  follow:          'sound6.mp3',
+  socialBoost:     'sound6.mp3',
+  engagementSurge: 'sound2.mp3',
+});
+
 export function normalizeAudioVolume(value, fallback = DEFAULT_AUDIO_MASTER_VOLUME) {
   const numeric = Number(value);
   const fallbackNumeric = Number(fallback);
@@ -56,6 +67,18 @@ export function normalizeAudioConfig(config = {}) {
   }
   normalized.masterVolume = normalizeAudioVolume(incoming.masterVolume, DEFAULT_AUDIO_MASTER_VOLUME);
   return normalized;
+}
+
+export function defaultAudioAssignmentsForLibrary(library = []) {
+  const available = new Set((Array.isArray(library) ? library : [])
+    .map(entry => path.basename(entry?.filename || ''))
+    .filter(Boolean));
+  const assignments = {};
+  for (const event of AUDIO_EVENT_KEYS) {
+    const filename = DEFAULT_BUNDLED_AUDIO_ASSIGNMENTS[event];
+    assignments[event] = filename && available.has(filename) ? filename : null;
+  }
+  return assignments;
 }
 
 const rooms = new Map();

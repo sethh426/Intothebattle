@@ -45,12 +45,16 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/how-to-play#webpage\",\n        \"url\": \"https://intothebattle.com/how-to-play\",\n        \"name\": \"IntoTheBattle Player Commands | How To Play\",\n        \"description\": \"A viewer-first command manual for IntoTheBattle player commands, targets, defenses, support actions, teams, and engagement triggers.\",\n        \"inLanguage\": \"en-US\",\n        \"isPartOf\": { \"@id\": \"https",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/how-to-play#webpage\",\n        \"url\": \"https://intothebattle.com/how-to-play\",\n        \"name\": \"IntoTheBattle Player Commands | How To Play\",\n        \"description\": \"A viewer-first command manual for IntoTheBattle player commands, targets, defenses, support actions, teams, shield cooldowns, gift breaks, power-up commands, and engagement triggers.\",\n        \"inLangu",
           "ok": true,
           "errors": [],
           "warnings": []
         }
       ]
+    },
+    {
+      "path": "incident-runbook.html",
+      "blocks": []
     },
     {
       "path": "login.html",
@@ -153,7 +157,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/signup#webpage\",\n        \"name\": \"IntoTheBattle Free Account Signup\",\n        \"url\": \"https://intothebattle.com/signup\",\n        \"description\": \"Create your IntoTheBattle account, choose Google or email, and launch a TikTok LIVE battle overlay for OBS or TikTok Studio in under 5 minutes.\",\n        \"inLanguage\": \"en-US\",\n        \"isPartOf\": {\n          \"@id\": \"http",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/signup#webpage\",\n        \"name\": \"IntoTheBattle Free Account Signup\",\n        \"url\": \"https://intothebattle.com/signup\",\n        \"description\": \"Create your IntoTheBattle account, choose Google or email, and launch a TikTok Studio battle overlay setup in under 10 minutes.\",\n        \"inLanguage\": \"en-US\",\n        \"isPartOf\": {\n          \"@id\": \"https://intothebattl",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -218,7 +222,7 @@
     }
   ],
   "summary": {
-    "total_files": 26,
+    "total_files": 27,
     "files_with_jsonld": 14,
     "total_blocks": 14,
     "errors": 0,

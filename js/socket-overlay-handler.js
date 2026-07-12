@@ -13,10 +13,27 @@ function initSocketOverlay(game) {
   const overlayParams = new URLSearchParams(window.location.search);
   const overlayRoomId = overlayParams.get('room_id') || '';
   const overlayToken = overlayParams.get('overlay_token') || overlayParams.get('overlayToken') || '';
-  const audioConfig = {};
+  const overlayAudio = window.IntoTheBattleOverlayAudio || {};
+  const DEFAULT_AUDIO_CONFIG = Object.freeze({
+    attack: 'sound1.mp3',
+    gift: 'sound2.mp3',
+    kill: 'sound3.mp3',
+    respawn: 'sound4.mp3',
+    heal: 'sound5.mp3',
+    follow: 'sound6.mp3',
+    socialBoost: 'sound6.mp3',
+    engagementSurge: 'sound2.mp3',
+    ...(overlayAudio.defaultAudioConfig || {}),
+  });
+  const AUDIO_EVENT_KEYS = Object.keys(DEFAULT_AUDIO_CONFIG);
+  const defaultMasterVolumeValue = Number(overlayAudio.defaultMasterVolume);
+  const DEFAULT_MASTER_VOLUME = Math.max(0, Math.min(1, Math.round((Number.isFinite(defaultMasterVolumeValue) ? defaultMasterVolumeValue : 0.5) * 100) / 100));
+  const audioConfig = { ...DEFAULT_AUDIO_CONFIG, masterVolume: DEFAULT_MASTER_VOLUME };
   const audioCache = {};
   let audioUnlocked = false;
-  const DEFAULT_MASTER_VOLUME = 0.5;
+  let lastAnySoundAt = 0;
+  let pendingAudioReplay = null;
+  const audioWarnings = new Set();
 
   function normalizeMasterVolume(value, fallback = DEFAULT_MASTER_VOLUME) {
     const numeric = Number(value);
@@ -28,6 +45,28 @@ function initSocketOverlay(game) {
 
   function currentMasterVolume() {
     return normalizeMasterVolume(audioConfig.masterVolume);
+  }
+
+  function configuredSoundFilename(event) {
+    const key = String(event || '');
+    if (!key) return '';
+    if (Object.prototype.hasOwnProperty.call(audioConfig, key)) return audioConfig[key] || '';
+    return DEFAULT_AUDIO_CONFIG[key] || '';
+  }
+
+  function audioEventAssignments(config = audioConfig) {
+    return Object.fromEntries(AUDIO_EVENT_KEYS.map(key => [key, config[key] || '']));
+  }
+
+  function audioEventFilenames(config = audioConfig) {
+    return AUDIO_EVENT_KEYS.map(key => config[key]).filter(Boolean);
+  }
+
+  function audioFilenames() {
+    return [...new Set([
+      ...Object.values(DEFAULT_AUDIO_CONFIG),
+      ...audioEventFilenames(audioConfig),
+    ].filter(Boolean))];
   }
 
   function applyMasterVolumeToAudio(audio) {
@@ -53,6 +92,18 @@ function initSocketOverlay(game) {
       }
     });
     return `${url.pathname}${url.search}`;
+  }
+
+  function scrubOverlayUrl(value = '') {
+    if (!value) return '';
+    try {
+      const url = new URL(value, window.location.origin);
+      url.searchParams.delete('overlay_token');
+      url.searchParams.delete('overlayToken');
+      return `${url.pathname}${url.search}`;
+    } catch (_err) {
+      return '';
+    }
   }
 
   window.overlayAuth = { roomId: overlayRoomId, overlayToken, withOverlayAuth };
@@ -140,11 +191,61 @@ function initSocketOverlay(game) {
     return audioCache[filename];
   }
 
+  function applyAudioConfig(config) {
+    const incoming = config && typeof config === 'object' ? config : {};
+    const incomingEvents = {};
+    AUDIO_EVENT_KEYS.forEach(key => {
+      if (Object.prototype.hasOwnProperty.call(incoming, key)) incomingEvents[key] = incoming[key] || null;
+    });
+    const hasAssignedAudio = Object.values(incomingEvents).some(Boolean);
+    const previousMasterVolume = audioConfig.masterVolume;
+    Object.keys(audioConfig).forEach(key => delete audioConfig[key]);
+    Object.assign(
+      audioConfig,
+      hasAssignedAudio ? { ...DEFAULT_AUDIO_CONFIG, ...incomingEvents } : { ...DEFAULT_AUDIO_CONFIG },
+      { masterVolume: normalizeMasterVolume(incoming.masterVolume, previousMasterVolume) }
+    );
+    if (scene.setMasterVolume) scene.setMasterVolume(audioConfig.masterVolume);
+    applyMasterVolumeToAudioCache();
+    audioEventFilenames(audioConfig).forEach(filename => {
+      try {
+        const audio = getAudio(filename);
+        if (audio) audio.load();
+      } catch (_err) {}
+    });
+  }
+
   function resolveSoundFilename(input) {
     if (!input) return '';
-    const fallback = { socialBoost: audioConfig.follow || audioConfig.gift, engagementSurge: audioConfig.gift || audioConfig.follow };
-    if (typeof input === 'string') return audioConfig[input] || fallback[input] || '';
-    return input.filename || audioConfig[input.event] || fallback[input.event] || '';
+    if (typeof input === 'string') return configuredSoundFilename(input);
+    return input.filename || configuredSoundFilename(input.event);
+  }
+
+  function currentAudioStatus() {
+    const cacheEntries = Object.entries(audioCache).map(([filename, audio]) => ({
+      filename,
+      readyState: audio ? audio.readyState : 0,
+      networkState: audio ? audio.networkState : 0,
+      currentSrc: scrubOverlayUrl(audio ? audio.currentSrc || audio.src || '' : ''),
+      errorCode: audio?.error?.code || 0,
+    }));
+    return {
+      module: 'socket-overlay-audio',
+      hasModule: Boolean(overlayAudio.defaultAudioConfig),
+      unlocked: audioUnlocked,
+      pendingReplayType: pendingAudioReplay?.type || '',
+      warningCount: audioWarnings.size,
+      warnings: Array.from(audioWarnings).slice(0, 8),
+      masterVolume: currentMasterVolume(),
+      assignedEvents: AUDIO_EVENT_KEYS.filter(key => audioConfig[key]).sort(),
+      eventFiles: audioEventAssignments(audioConfig),
+      filenames: audioFilenames(),
+      cachedCount: cacheEntries.length,
+      readyCount: cacheEntries.filter(entry => entry.readyState >= 2).length,
+      errorCount: cacheEntries.filter(entry => entry.errorCode > 0).length,
+      cacheEntries,
+      lastSoundAgeMs: lastAnySoundAt ? Date.now() - lastAnySoundAt : null,
+    };
   }
 
   function markAudioUnlocked() {
@@ -152,6 +253,9 @@ function initSocketOverlay(game) {
     Object.values(audioCache).forEach(audio => {
       try { audio.load(); } catch (_err) {}
     });
+    const replay = pendingAudioReplay;
+    pendingAudioReplay = null;
+    if (replay) setTimeout(() => playSound(replay.input, { ...replay.options, force: true }), 0);
   }
 
   window.addEventListener('pointerdown', markAudioUnlocked, { once: true, passive: true });
@@ -160,18 +264,22 @@ function initSocketOverlay(game) {
   function playSound(input, options = {}) {
     const filename = resolveSoundFilename(input);
     if (!filename) return;
+    lastAnySoundAt = Date.now();
     try {
       const audio = getAudio(filename);
       if (!audio) return;
       applyMasterVolumeToAudio(audio);
       audio.currentTime = 0;
       audio.play().then(() => { audioUnlocked = true; }).catch(() => {
+        pendingAudioReplay = { input, options };
+        if (!audioWarnings.has(filename)) audioWarnings.add(filename);
         if (options.force || audioUnlocked) {
           setTimeout(() => audio.play().catch(() => {}), 120);
         }
       });
     } catch (_err) {
-      // Browser autoplay policies can reject playback until OBS/user interaction.
+      pendingAudioReplay = { input, options };
+      if (!audioWarnings.has(filename)) audioWarnings.add(filename);
     }
   }
 
@@ -201,7 +309,7 @@ function initSocketOverlay(game) {
   }
 
   if (scene.setSponsorPlaybackReporter) scene.setSponsorPlaybackReporter(reportSponsorPlayback);
-  if (scene.setMasterVolume) scene.setMasterVolume(DEFAULT_MASTER_VOLUME);
+  applyAudioConfig(audioConfig);
 
   const SCENE_EVENT_LANES = Object.freeze({
     exclusive: { cooldownMs: 110, ttlMs: 120000, maxQueued: 8, sponsorPolicy: 'allow' },
@@ -492,22 +600,7 @@ function initSocketOverlay(game) {
       scene.demoModeActive = false;
     }
   });
-  socket.on('audioConfig', (config) => {
-    Object.keys(audioConfig).forEach(key => delete audioConfig[key]);
-    if (config && typeof config === 'object') {
-      Object.assign(audioConfig, config);
-      audioConfig.masterVolume = currentMasterVolume();
-      if (scene.setMasterVolume) scene.setMasterVolume(audioConfig.masterVolume);
-      applyMasterVolumeToAudioCache();
-      Object.values(audioConfig).forEach(filename => {
-        if (typeof filename !== 'string' || !filename) return;
-        const audio = getAudio(filename);
-        if (audio) {
-          try { audio.load(); } catch (_err) {}
-        }
-      });
-    }
-  });
+  socket.on('audioConfig', applyAudioConfig);
   socket.on('backgroundChanged', (data) => {
     const filename = data && data.filename;
     if (!filename) {
@@ -717,6 +810,9 @@ function initSocketOverlay(game) {
   // Demo data for testing (remove in production)
   window.overlaySocket = {
     socket,
+    audioStatus: currentAudioStatus,
+    applyAudioConfig,
+    testSound: (event = 'attack') => playSound(event, { force: true }),
     testDamage: (dmg = 25, type = 'normal') => {
       socket.emit('damage', {
         x: game.scale.width / 2 + Math.random() * 200 - 100,

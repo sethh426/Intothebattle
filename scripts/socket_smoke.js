@@ -21,6 +21,16 @@ const overlayClientCount = Number(process.env.SOCKET_SMOKE_OVERLAY_COUNT || 10);
 const diskPath = fs.mkdtempSync(path.join(os.tmpdir(), 'intothebattle-socket-smoke-'));
 const overlayToken = jwt.sign({ purpose: 'overlay', roomId }, jwtSecret, { expiresIn: '1h' });
 const expiredTrialOverlayToken = jwt.sign({ purpose: 'overlay', roomId: expiredTrialRoomId }, jwtSecret, { expiresIn: '1h' });
+const expectedDefaultAudioAssignments = {
+  attack: 'sound1.mp3',
+  gift: 'sound2.mp3',
+  kill: 'sound3.mp3',
+  respawn: 'sound4.mp3',
+  heal: 'sound5.mp3',
+  follow: 'sound6.mp3',
+  socialBoost: 'sound6.mp3',
+  engagementSurge: 'sound2.mp3',
+};
 
 const server = spawn(process.execPath, ['server.js'], {
   cwd: process.cwd(),
@@ -66,6 +76,12 @@ function stopServer() {
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function assertDefaultAudioAssignments(config, label) {
+  for (const [event, filename] of Object.entries(expectedDefaultAudioAssignments)) {
+    assert(config?.[event] === filename, `${label} should assign ${event} to ${filename}, got ${config?.[event]}`);
+  }
 }
 
 async function request(pathname, options = {}) {
@@ -281,6 +297,7 @@ try {
     await overlayGameStatePromise;
     const overlayAudioConfig = await overlayAudioConfigPromise;
     assert(overlayAudioConfig.masterVolume === 0.5, `signed overlay audio config should default masterVolume to 0.5, got ${overlayAudioConfig.masterVolume}`);
+    assertDefaultAudioAssignments(overlayAudioConfig, 'signed overlay audio config');
     await overlaySettingsPromise;
     await overlayLaserColorPromise;
 
@@ -314,6 +331,7 @@ try {
   assert(audioConfigRes.status === 200, `audio config should return 200, got ${audioConfigRes.status}`);
   const audioConfigBody = await audioConfigRes.json();
   assert(audioConfigBody.config?.masterVolume === 0.5, `audio config should default masterVolume to 0.5, got ${audioConfigBody.config?.masterVolume}`);
+  assertDefaultAudioAssignments(audioConfigBody.config, 'audio API config');
 
   const invalidVolumeAssignRes = await request('/api/audio/assign', {
     method: 'POST',

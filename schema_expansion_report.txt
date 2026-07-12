@@ -1,4 +1,4 @@
-JSON-LD expansion summary: files scanned: 26, expanded blocks: 14, errors: 0
+JSON-LD expansion summary: files scanned: 27, expanded blocks: 14, errors: 0
 - 404.html: no JSON-LD blocks
 - battle-clip.html: no JSON-LD blocks
 - battlegrounds.html: 1 block(s)
@@ -9,6 +9,7 @@ JSON-LD expansion summary: files scanned: 26, expanded blocks: 14, errors: 0
   - block #1: expanded OK (pyld)
 - how-to-play.html: 1 block(s)
   - block #1: expanded OK (pyld)
+- incident-runbook.html: no JSON-LD blocks
 - login.html: 1 block(s)
   - block #1: expanded OK (pyld)
 - overlay-legacy.html: 1 block(s)
