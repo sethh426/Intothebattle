@@ -4636,6 +4636,12 @@ function emitSoundAndSync(roomOrEvent, eventOrOptions = {}, options = {}) {
   emitRoomEvent(room, 'soundEvent', { event, intensity, tier });
 }
 
+function soundEventForAttackResult(result, fallback = 'attack') {
+  if (result?.killed) return 'kill';
+  const effect = String(result?.effect || result?.shotType || '').trim();
+  return effect || fallback;
+}
+
 // ────────────────────────────────
 // Non-command attacks rotate through the approved V1 overlay catalog so every
 // viewer comment can surface the newer visual styles during a live room.
@@ -6478,7 +6484,10 @@ function handleMentionAttack(room, attackerId, attackerNick, comment) {
       result.targetScope        = targetScope;
 
       emitAttackAndSync(room, result);
-      emitSoundAndSync(room, (isSpecialCommand || boostActive) ? 'gift' : 'attack');
+      emitSoundAndSync(room, soundEventForAttackResult(result, (isSpecialCommand || boostActive) ? 'gift' : 'attack'), {
+        intensity: result.intensity,
+        tier: (isSpecialCommand || boostActive) ? 'rare' : 'common',
+      });
       emitRoomEvent(room, 'commentDamage', {
         attacker: attackerId,
         attackerNick,
@@ -6615,7 +6624,10 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
     if (powerAttack) applyArenaPowerAttackMeta(result, powerAttack);
 
     emitAttackAndSync(room, result);
-    emitSoundAndSync(room, specialAttackVisual ? 'gift' : 'attack');
+    emitSoundAndSync(room, soundEventForAttackResult(result, specialAttackVisual ? 'gift' : 'attack'), {
+      intensity: result.intensity,
+      tier: specialAttackVisual ? 'rare' : 'common',
+    });
     emitRoomEvent(room, 'commentDamage', {
       attacker: attackerId,
       attackerNick,

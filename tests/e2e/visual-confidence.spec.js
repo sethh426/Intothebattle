@@ -371,6 +371,10 @@ async function assertOverlayAudioStatus(page, testInfo, label) {
     follow: 'sound6.mp3',
     socialBoost: 'sound6.mp3',
     engagementSurge: 'sound2.mp3',
+    laser: 'sound4.mp3',
+    arc: 'sound4.mp3',
+    pulse: 'sound7.mp3',
+    orbital: 'sound9.mp3',
   });
   expect(result.status?.cachedCount).toBe(result.status?.filenames?.length);
   expect(result.status?.errorCount).toBe(0);
