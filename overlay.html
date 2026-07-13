@@ -1956,6 +1956,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let players         = {};
   let attacks         = [];
   let overlayVisualsFrozen = false;
+  let legacyLayoutAuditAt = 0;
+  const LEGACY_LAYOUT_AUDIT_INTERVAL_MS = 750;
   let layoutGap       = 0;
   let offsetX         = 0;
   let offsetY         = 0;
@@ -6265,7 +6267,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
     if (options.fillStyle) c.fillStyle = options.fillStyle;
     c.fillText(text, drawX, centerY);
-    return makeRect(drawX - ink.left, centerY - ink.ascent, ink.width, ink.height);
+    const strokePad = options.strokeStyle && options.lineWidth > 0 ? options.lineWidth * 0.5 : 0;
+    return makeRect(
+      drawX - ink.left - strokePad,
+      centerY - ink.ascent - strokePad,
+      ink.width + strokePad * 2,
+      ink.height + strokePad * 2
+    );
   }
 
   function drawGlassPanel(x, y, w, h, r, options) {
@@ -8976,7 +8984,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (chars.length <= max) return chars.join('');
     const keepStart = Math.max(4, Math.ceil((max - 1) * 0.56));
     const keepEnd = Math.max(3, max - keepStart - 1);
-    return `${chars.slice(0, keepStart).join('')}…${chars.slice(chars.length - keepEnd).join('')}`;
+    return `${chars.slice(0, keepStart).join('')}...${chars.slice(chars.length - keepEnd).join('')}`;
   }
 
   function playerCardIdentity(player) {
@@ -8994,7 +9002,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function playerCardDisplayNameText(value) {
-    return normalizeCanvasText(value);
+    const normalized = normalizeCanvasText(value) || 'Player';
+    const withoutDecorativeEmoji = splitCanvasGraphemes(normalized)
+      .filter(grapheme => {
+        for (const char of String(grapheme || '')) {
+          const code = char.codePointAt(0);
+          if ((code >= 0x1f000 && code <= 0x1faff) || (code >= 0x2600 && code <= 0x27bf)) return false;
+        }
+        return true;
+      })
+      .join('');
+    const compact = normalizeCanvasText(withoutDecorativeEmoji.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ')) || normalized;
+    return centerTruncateGraphemes(compact, 30);
   }
 
   const LOW_HP_WARNING_THRESHOLD = 60;
@@ -9108,7 +9127,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (!graphemes.length) return [''];
     if (maxLines === 2) {
       const fullText = graphemes.join('');
-      if (c.measureText(fullText).width <= maxWidth) return [fullText.trim()];
+      const preferTwoLine = graphemes.length > 16 && /[\s_.-]/.test(fullText);
+      if (!preferTwoLine && c.measureText(fullText).width <= maxWidth) return [fullText.trim()];
       let best = null;
       for (let i = 1; i < graphemes.length; i += 1) {
         const first = graphemes.slice(0, i).join('').trim();
@@ -9125,6 +9145,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         if (!best || score < best.score) best = { lines: [first, second], score };
       }
       if (best) return best.lines;
+      if (preferTwoLine) return null;
+      if (c.measureText(fullText).width <= maxWidth) return [fullText.trim()];
     }
     const lines = [''];
     for (const grapheme of graphemes) {
@@ -9146,7 +9168,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const safeMaxLines = Math.max(1, Math.round(Number(maxLines) || 1));
     let size = Math.max(minSize || 10, maxSize || 12);
     const floor = Math.max(6, minSize || 10);
-    if (safeMaxLines > 1) {
+    const preferWrappedText = safeMaxLines > 1 && splitCanvasGraphemes(safeText).length > 16 && /[\s_.-]/.test(safeText);
+    if (safeMaxLines > 1 && !preferWrappedText) {
       const singleLineFloor = Math.max(floor, Math.round(size * 0.78));
       for (let singleLineSize = size; singleLineSize >= singleLineFloor; singleLineSize -= 1) {
         c.font = fontFactory(singleLineSize);
@@ -9162,6 +9185,31 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         return { lines, size, truncated: false };
       }
       size -= 1;
+    }
+
+    const fallbackGraphemes = splitCanvasGraphemes(safeText);
+    if (safeMaxLines > 1 && fallbackGraphemes.length > 14) {
+      const midpoint = Math.floor(fallbackGraphemes.length / 2);
+      let splitIndex = midpoint;
+      let bestScore = Infinity;
+      for (let i = 1; i < fallbackGraphemes.length; i += 1) {
+        const previous = fallbackGraphemes[i - 1] || '';
+        const next = fallbackGraphemes[i] || '';
+        const boundaryBonus = /[\s_.-]/.test(previous) || /[\s_.-]/.test(next) ? 4 : 0;
+        const score = Math.abs(i - midpoint) - boundaryBonus;
+        if (score < bestScore) {
+          bestScore = score;
+          splitIndex = i;
+        }
+      }
+      const fallbackSize = Math.max(floor, Math.min(maxSize || floor, Math.round((maxSize || floor) * 0.72)));
+      const firstRaw = fallbackGraphemes.slice(0, splitIndex).join('').trim();
+      const secondRaw = fallbackGraphemes.slice(splitIndex).join('').trim();
+      const fittedLines = [firstRaw, secondRaw]
+        .filter(Boolean)
+        .map(line => fitCanvasTextResult(c, line, safeMaxWidth, fontFactory, fallbackSize, fallbackSize).text)
+        .filter(Boolean);
+      if (fittedLines.length) return { lines: fittedLines.slice(0, safeMaxLines), size: fallbackSize, truncated: true };
     }
 
     c.font = fontFactory(floor);
@@ -9393,15 +9441,29 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const identity = playerCardIdentity(player);
     const displayName = playerCardDisplayNameText(identity.displayName);
     const nameFontFactory = size => `950 ${size}px ${PLAYER_CARD_NAME_FONT}`;
-    const nameFit = fitCanvasTextLinesResult(
+    let nameFit = fitCanvasTextLinesResult(
       ctx,
       displayName,
       Math.max(1, slots.name.w - Math.max(10 * ui, slots.name.h * 0.16)),
       2,
       nameFontFactory,
-      Math.max(30 * ui, Math.min(slots.name.h * 0.8, cardW * 0.17)),
+      Math.max(26 * ui, Math.min(slots.name.h * 0.72, cardW * 0.16)),
       Math.max(10, 11 * ui)
     );
+    if (nameFit.lines.length > 1) {
+      const twoLineMaxSize = Math.max(9, Math.min(nameFit.size, slots.name.h * 0.4));
+      if (twoLineMaxSize < nameFit.size) {
+        nameFit = fitCanvasTextLinesResult(
+          ctx,
+          displayName,
+          Math.max(1, slots.name.w - Math.max(10 * ui, slots.name.h * 0.16)),
+          2,
+          nameFontFactory,
+          twoLineMaxSize,
+          Math.max(8, 9 * ui)
+        );
+      }
+    }
     const commandLabel = state.commandLabel || '';
     const commandSlot = null;
     const statusLabel = state.isKO
@@ -9530,11 +9592,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     const nameCenter = rectCenter(slots.name);
-    const nameTextCenterY = slots.name.y + slots.name.h * 0.63;
+    const nameLineHeight = nameFit.lines.length > 1 ? nameFit.size * 0.76 : nameFit.size * 0.86;
+    const nameTextCenterY = slots.name.y + slots.name.h * (nameFit.lines.length > 1 ? 0.53 : 0.62);
     const nameTextRect = drawCenteredCanvasTextLines(ctx, nameFit.lines, nameCenter.x, nameTextCenterY, {
       fontFactory: nameFontFactory,
       fontSize: nameFit.size,
-      lineHeight: nameFit.size * 0.86,
+      lineHeight: nameLineHeight,
       fillStyle: state.isKO ? '#d7dde9' : '#ffffff',
       strokeStyle: 'rgba(0,0,0,0.86)',
       lineWidth: compactDemoCard ? Math.max(2, 2.35 * ui) : Math.max(2.1, 2.55 * ui),
@@ -10559,38 +10622,55 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     placeSupportUnit();
     const frame = stage.frame;
     const safeFrame = stage.safe;
-    const domObjects = Array.from(container.querySelectorAll('.banner,.damage,#status-badge,.support-unit'))
-      .map((el, index) => {
-        const type = el.id === 'status-badge' ? 'status' : el.classList.contains('banner') ? 'banner' : el.classList.contains('support-unit') ? 'support' : 'damage';
-        return domElementToCanvasRect(el, `${type}-${index}`, type);
-      })
-      .filter(Boolean);
-    const domLayerLeaks = overlayDiagnostics.domLayerLeakLabels(domObjects);
-    const damageObjects = domObjects.filter(item => item.type === 'damage');
-    const collisionDomObjects = domObjects.filter(item => item.type === 'status' || item.type === 'support');
-    const supportChip = domObjects.find(item => item.type === 'support') || null;
-    const containedObjects = legacyLayoutPlayers
-      .concat(legacyLayoutHorde ? [legacyLayoutHorde] : [])
-      .concat(legacyLayoutBoss ? [legacyLayoutBoss] : [])
-      .concat(collisionDomObjects);
-    const audit = overlayDiagnostics.auditObjectLayout(containedObjects, frame, stage.gap * 0.72);
-    const damageAudit = overlayDiagnostics.auditObjectLayout(damageObjects, frame, 0);
-    window.__overlayLegacyLayout = {
-      frame,
-      safeFrame,
-      zones: stage.zones,
-      bannerLane: stage.zones.banner,
-      minGap: stage.gap * 0.72,
-      players: legacyLayoutPlayers,
-      horde: legacyLayoutHorde,
-      boss: legacyLayoutBoss,
-      supportChip,
-      domObjects,
-      domLayerLeaks,
-      objects: audit.objects.concat(damageAudit.objects),
-      leaks: audit.leaks.concat(damageAudit.leaks),
-      collisions: audit.collisions,
-    };
+    const auditNow = Date.now();
+    const shouldRefreshLayoutAudit = overlayVisualsFrozen
+      || !window.__overlayLegacyLayout
+      || auditNow - legacyLayoutAuditAt >= LEGACY_LAYOUT_AUDIT_INTERVAL_MS
+      || attacks.length > 0
+      || impactBursts.length > 0;
+    if (shouldRefreshLayoutAudit) {
+      legacyLayoutAuditAt = auditNow;
+      const domObjects = Array.from(container.querySelectorAll('.banner,.damage,#status-badge,.support-unit'))
+        .map((el, index) => {
+          const type = el.id === 'status-badge' ? 'status' : el.classList.contains('banner') ? 'banner' : el.classList.contains('support-unit') ? 'support' : 'damage';
+          return domElementToCanvasRect(el, `${type}-${index}`, type);
+        })
+        .filter(Boolean);
+      const domLayerLeaks = overlayDiagnostics.domLayerLeakLabels(domObjects);
+      const damageObjects = domObjects.filter(item => item.type === 'damage');
+      const collisionDomObjects = domObjects.filter(item => item.type === 'status' || item.type === 'support');
+      const supportChip = domObjects.find(item => item.type === 'support') || null;
+      const containedObjects = legacyLayoutPlayers
+        .concat(legacyLayoutHorde ? [legacyLayoutHorde] : [])
+        .concat(legacyLayoutBoss ? [legacyLayoutBoss] : [])
+        .concat(collisionDomObjects);
+      const audit = overlayDiagnostics.auditObjectLayout(containedObjects, frame, stage.gap * 0.72);
+      const damageAudit = overlayDiagnostics.auditObjectLayout(damageObjects, frame, 0);
+      window.__overlayLegacyLayout = {
+        frame,
+        safeFrame,
+        zones: stage.zones,
+        bannerLane: stage.zones.banner,
+        minGap: stage.gap * 0.72,
+        players: legacyLayoutPlayers,
+        horde: legacyLayoutHorde,
+        boss: legacyLayoutBoss,
+        supportChip,
+        domObjects,
+        domLayerLeaks,
+        objects: audit.objects.concat(damageAudit.objects),
+        leaks: audit.leaks.concat(damageAudit.leaks),
+        collisions: audit.collisions,
+      };
+    } else if (window.__overlayLegacyLayout) {
+      window.__overlayLegacyLayout.frame = frame;
+      window.__overlayLegacyLayout.safeFrame = safeFrame;
+      window.__overlayLegacyLayout.zones = stage.zones;
+      window.__overlayLegacyLayout.bannerLane = stage.zones.banner;
+      window.__overlayLegacyLayout.players = legacyLayoutPlayers;
+      window.__overlayLegacyLayout.horde = legacyLayoutHorde;
+      window.__overlayLegacyLayout.boss = legacyLayoutBoss;
+    }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     attacks = attacks.filter(updateAndDrawAttackEffect);
     trimVisualEffects();

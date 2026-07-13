@@ -858,15 +858,67 @@ function roomEventEnvelope(room, type, payload = {}, meta = {}) {
   };
 }
 
+function playerForOverlayState(room, player, fallbackId = '') {
+  if (!player || typeof player !== 'object' || player.alive === false) return null;
+  const uniqueId = safePlayerText(player.uniqueId || player.id || fallbackId, '', 80);
+  if (!uniqueId) return null;
+  const lastActive = safeEpochMs(player.lastActive, Date.now());
+  if (lastActive && Date.now() - lastActive > CFG.IDLE_TIMEOUT_MS && !shouldRetainIdleLivePlayer(room, player)) return null;
+  const maxHp = safeStatInt(player.maxHp, CFG.BASE_HP, 1, 1_000_000);
+  const hp = safeStatInt(player.hp, maxHp, 0, maxHp);
+  const safeColor = /^#[0-9a-f]{6}$/i.test(String(player.color || '')) ? player.color : '#55e7ff';
+  const safeTeamColor = /^#[0-9a-f]{6}$/i.test(String(player.teamColor || '')) ? player.teamColor : '';
+  return {
+    uniqueId,
+    id: uniqueId,
+    nickname: safePlayerText(player.nickname || player.name || uniqueId, uniqueId, 80),
+    name: safePlayerText(player.name || player.nickname || uniqueId, uniqueId, 80),
+    hp,
+    maxHp,
+    strength: safeStatInt(player.strength, CFG.BASE_STRENGTH, 1, 1_000_000),
+    kills: safeStatInt(player.kills, 0, 0, 1_000_000),
+    killStreak: safeStatInt(player.killStreak, 0, 0, 1_000_000),
+    alive: true,
+    lastActive,
+    firstSeenAt: safeEpochMs(player.firstSeenAt, 0),
+    x: Number.isFinite(Number(player.x)) ? Number(player.x) : 0,
+    y: Number.isFinite(Number(player.y)) ? Number(player.y) : 0,
+    vx: Number.isFinite(Number(player.vx)) ? Number(player.vx) : 0,
+    vy: Number.isFinite(Number(player.vy)) ? Number(player.vy) : 0,
+    color: safeColor,
+    iconEmoji: safePlayerText(player.iconEmoji || '', '', 8),
+    source: inferPlayerSource(room, player.source),
+    shieldUntil: safeEpochMs(player.shieldUntil, 0),
+    teamColor: safeTeamColor,
+    role: safePlayerText(player.role || '', '', 24),
+    class: safePlayerText(player.class || '', '', 24),
+  };
+}
+
+function buildOverlayGameState(room, payload = room?.players || {}) {
+  const source = payload && typeof payload === 'object' ? payload : room?.players || {};
+  const state = {};
+  for (const [key, player] of Object.entries(source)) {
+    const clean = playerForOverlayState(room, player, key);
+    if (clean) state[clean.uniqueId || key] = clean;
+  }
+  return state;
+}
+
 function dispatchRoomEvent(room, type, payload = {}, meta = {}) {
   try {
     recordRoomBattleAction(room, type);
     room.eventSeq = (room.eventSeq || 0) + 1;
     if (type === 'gameState') {
-      recordRecentStreamEvent(room, type, payload, { recordGameState: true });
-      io.to(room.roomId).emit(type, payload);
-      emitRoomRealtimeStatus(room);
-      io.to(room.roomId).emit('sessionStatus', buildSessionStatus(room));
+      const overlayPayload = buildOverlayGameState(room, payload);
+      recordRecentStreamEvent(room, type, overlayPayload, { recordGameState: true });
+      io.to(room.roomId).emit(type, overlayPayload);
+      const statusNow = Date.now();
+      if (statusNow - (Number(room.lastGameStateStatusEmitAt) || 0) >= 2000) {
+        room.lastGameStateStatusEmitAt = statusNow;
+        emitRoomRealtimeStatus(room);
+        io.to(room.roomId).emit('sessionStatus', buildSessionStatus(room));
+      }
       return;
     }
     const streamEvent = recordRecentStreamEvent(room, type, payload);
@@ -5062,6 +5114,9 @@ function loadRoomAudioConfig(room) {
     room.audioLibrary.sort((a, b) => a.originalName.localeCompare(b.originalName, undefined, { numeric: true, sensitivity: 'base' }));
 
     room.audioConfig = normalizeAudioConfig(room.audioConfig);
+    if (Math.abs((Number(room.audioConfig.masterVolume) || 0) - 0.3) < 0.001) {
+      room.audioConfig.masterVolume = DEFAULT_AUDIO_CONFIG.masterVolume;
+    }
     const allUnassigned = AUDIO_EVENT_KEYS.every(event => !room.audioConfig[event]);
     if (allUnassigned && room.audioLibrary.length) {
       const defaultAssignments = defaultAudioAssignmentsForLibrary(room.audioLibrary);
@@ -5084,7 +5139,11 @@ function loadRoomAudioConfig(room) {
     });
     if (afterAudioState !== beforeAudioState) saveRoomSettings(room.roomId);
 
-    console.log(`🔊 Loaded audio settings for room ${room.roomId} (${room.audioLibrary.length} files)`);
+    const lastAudioSettingsLogAt = Number(room.lastAudioSettingsLogAt) || 0;
+    if (afterAudioState !== beforeAudioState || Date.now() - lastAudioSettingsLogAt >= 60_000) {
+      room.lastAudioSettingsLogAt = Date.now();
+      console.log(`Loaded audio settings for room ${room.roomId} (${room.audioLibrary.length} files)`);
+    }
   } catch (err) {
     console.error('Error loading audio config for room', room.roomId, err);
   }
@@ -8334,7 +8393,7 @@ io.on('connection', (socket) => {
       updateOverlayGauge();
       maybeAutoResumeSavedTikTokStream(room, 'overlay_registered');
 
-      socket.emit('gameState',        room.players);
+      socket.emit('gameState',        buildOverlayGameState(room, room.players));
       socket.emit('audioConfig',      room.audioConfig);
       socket.emit('overlaySettings',  room.overlaySettings);
       socket.emit('laserColor',       room.overlaySettings.laserColor);
@@ -8359,7 +8418,7 @@ io.on('connection', (socket) => {
       socket.emit('overlayCount',    { count: room.overlayCount });
       socket.emit('overlaySettings', room.overlaySettings);
       socket.emit('laserColor',      room.overlaySettings.laserColor);
-      socket.emit('gameState',       room.players);
+      socket.emit('gameState',       buildOverlayGameState(room, room.players));
       socket.emit('sessionStatus',   buildSessionStatus(room));
       socket.emit('tiktokConnection', buildTikTokConnectionStatus(room));
       socket.emit('setupMode',        room.setupRehearsal || { active: false });
@@ -10427,6 +10486,8 @@ setInterval(() => {
   const cutoff = Date.now() - CFG.IDLE_TIMEOUT_MS;
   for (const room of getAllRooms().values()) {
     restoreDegradedLiveRoster(room);
+    let removed = 0;
+    const samples = [];
     for (const id of Object.keys(room.players)) {
       const player = room.players[id];
       if (player.lastActive < cutoff) {
@@ -10435,10 +10496,14 @@ setInterval(() => {
           continue;
         }
         delete room.players[id];
-        logger.info({ player: id, room: room.roomId }, 'Removed idle player due to inactivity');
+        removed += 1;
+        if (samples.length < 8) samples.push(id);
       }
     }
-    emitRoomEvent(room, 'gameState', room.players);
+    if (removed > 0) {
+      logger.info({ room: room.roomId, removed, samples }, 'Removed idle players due to inactivity');
+      emitRoomEvent(room, 'gameState', room.players);
+    }
   }
   updatePlayerGauge();
 }, 60_000);
@@ -10463,7 +10528,7 @@ function tick() {
   if (++saveCounter >= 100) { savePlayerStats(); saveCounter = 0; }
 }
 
-const GAME_TICK_MS = Math.max(100, Number(process.env.GAME_TICK_MS || 250));
+const GAME_TICK_MS = Math.max(250, Number(process.env.GAME_TICK_MS || 750));
 setInterval(tick, GAME_TICK_MS);
 if (TIKTOK_LIVE_REPAIR_ENABLED) {
   const tikTokRepairTimer = setInterval(repairStaleTikTokConnections, TIKTOK_LIVE_REPAIR_INTERVAL_MS);
