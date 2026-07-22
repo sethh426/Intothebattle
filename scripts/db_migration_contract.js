@@ -27,6 +27,7 @@ assert.match(db, /ALTER TABLE subscriptions ADD COLUMN admin_granted INTEGER DEF
 assert.match(db, /CREATE TABLE IF NOT EXISTS tiktok_accounts/i, 'db startup must create tiktok_accounts');
 assert.match(db, /ALTER TABLE tiktok_accounts ADD COLUMN tiktok_username TEXT/i, 'db startup must backfill tiktok_accounts.tiktok_username');
 assert.match(db, /CREATE UNIQUE INDEX IF NOT EXISTS tiktok_accounts_user_id_unique/i, 'db startup must keep one linked TikTok account per user');
+assert.doesNotMatch(db, /SET\s+streamer_username\s*=\s*lower/i, 'db startup must not repopulate saved LIVE streamer usernames');
 assert.match(db, /CREATE TABLE IF NOT EXISTS growth_events/i, 'db startup must create growth_events when needed');
 assert.match(db, /CREATE UNIQUE INDEX IF NOT EXISTS growth_events_event_id_unique/i, 'db startup must keep growth event ids unique');
 assert.match(db, /CREATE TABLE IF NOT EXISTS admin_email_campaigns/i, 'db startup must create admin email campaigns');
