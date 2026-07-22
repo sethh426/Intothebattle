@@ -1,0 +1,99 @@
+name: OVH Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovh-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      OVH_HOST: ${{ vars.OVH_HOST || '51.81.186.80' }}
+      OVH_USER: ${{ vars.OVH_USER || 'ubuntu' }}
+
+    steps:
+      - name: Check deploy credentials
+        id: deploy_config
+        env:
+          OVH_SSH_KEY: ${{ secrets.OVH_SSH_KEY }}
+        run: |
+          if [ -z "$OVH_SSH_KEY" ]; then
+            echo "::notice::Skipping OVH deploy because the OVH_SSH_KEY repository secret is not set."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.deploy_config.outputs.ready == 'true'
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        if: steps.deploy_config.outputs.ready == 'true'
+        env:
+          OVH_SSH_KEY: ${{ secrets.OVH_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$OVH_SSH_KEY" > ~/.ssh/ovh_deploy_key
+          chmod 600 ~/.ssh/ovh_deploy_key
+          ssh-keyscan -H "$OVH_HOST" >> ~/.ssh/known_hosts
+
+      - name: Package release
+        if: steps.deploy_config.outputs.ready == 'true'
+        run: |
+          git archive --format=tar.gz -o "/tmp/intothebattle-${GITHUB_SHA}.tar.gz" "$GITHUB_SHA"
+
+      - name: Upload release
+        if: steps.deploy_config.outputs.ready == 'true'
+        run: |
+          scp -i ~/.ssh/ovh_deploy_key "/tmp/intothebattle-${GITHUB_SHA}.tar.gz" "${OVH_USER}@${OVH_HOST}:/tmp/intothebattle-${GITHUB_SHA}.tar.gz"
+
+      - name: Deploy on OVH
+        if: steps.deploy_config.outputs.ready == 'true'
+        run: |
+          ssh -i ~/.ssh/ovh_deploy_key "${OVH_USER}@${OVH_HOST}" 'bash -s' -- "$GITHUB_SHA" <<'REMOTE'
+          set -euo pipefail
+          commit="$1"
+          archive="/tmp/intothebattle-$commit.tar.gz"
+          app_dir=/opt/intothebattle
+          backup_dir="/opt/intothebattle.previous-$(date +%Y%m%d%H%M%S)"
+
+          test -f "$archive"
+          sudo mv "$app_dir" "$backup_dir"
+          sudo mkdir -p "$app_dir"
+          sudo tar -xzf "$archive" -C "$app_dir"
+          if compgen -G "$backup_dir/.env.production*" >/dev/null; then sudo cp -a "$backup_dir"/.env.production* "$app_dir"/; fi
+          if [ -d "$backup_dir/backups" ]; then sudo cp -a "$backup_dir/backups" "$app_dir/backups"; fi
+          printf '%s\n' "$commit" | sudo tee "$app_dir/.deployed-github-commit" >/dev/null
+          sudo chown -R "$USER:$USER" "$app_dir"
+
+          cd "$app_dir"
+          docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build --remove-orphans
+
+          for i in $(seq 1 30); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' intothebattle-app-1 2>/dev/null || echo starting)
+            [ "$status" = healthy ] && break
+            sleep 2
+          done
+
+          docker exec intothebattle-postgres-1 psql -U intothebattle -d intothebattle -v ON_ERROR_STOP=1 \
+            -c "UPDATE room_player_stats SET alive = 0, force_spawn = 0 WHERE alive <> 0 OR force_spawn <> 0;"
+
+          started_iso=$(docker inspect -f '{{.State.StartedAt}}' intothebattle-app-1)
+          cutoff=$(date -u -d "$started_iso" '+%Y-%m-%d %H:%M:%S')
+          docker exec intothebattle-postgres-1 psql -U intothebattle -d intothebattle -v ON_ERROR_STOP=1 \
+            -c "UPDATE live_sessions SET status = 'ended', ended_at = CURRENT_TIMESTAMP, summary_json = COALESCE(summary_json, '{\"reason\":\"github_auto_deploy_cleanup\"}'), updated_at = CURRENT_TIMESTAMP WHERE status = 'active' AND started_at < TIMESTAMP '$cutoff';"
+
+          curl -fsS --max-time 20 https://intothebattle.com/healthz >/dev/null
+          REMOTE
