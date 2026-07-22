@@ -605,6 +605,22 @@ try {
   assert(Number(restoreSuppressed.alivePlayers) === 0, `suppressed restore should leave no stale alive players, got ${restoreSuppressed.alivePlayers}`);
   assert(restoreSuppressed.recentRestoreSuppressed === true, 'suppressed restore guard should report active suppression');
 
+  const liveEndedCleanupRes = await request('/api/test/live-ended-cleanup', {
+    method: 'POST',
+    headers: authedHeaders,
+  });
+  assert(liveEndedCleanupRes.status === 200, `live-ended cleanup should return 200, got ${liveEndedCleanupRes.status}`);
+  const liveEndedCleanup = await liveEndedCleanupRes.json();
+  assert(liveEndedCleanup.stopped === true, 'live-ended cleanup should stop the active TikTok connection');
+  assert(liveEndedCleanup.clientCleared === true, 'live-ended cleanup should clear the room TikTok client');
+  assert(liveEndedCleanup.clientDestroyed === true, 'live-ended cleanup should destroy the TikTok client');
+  assert(liveEndedCleanup.connectionStatus === 'disconnected', `live-ended cleanup should mark connection disconnected, got ${liveEndedCleanup.connectionStatus}`);
+  assert(liveEndedCleanup.connectionUsername === '', 'live-ended cleanup should clear the connection username');
+  assert(liveEndedCleanup.streamUsername === '', 'live-ended cleanup should clear the saved stream username');
+  assert(liveEndedCleanup.sessionActive === false, 'live-ended cleanup should end the live session');
+  assert(Number(liveEndedCleanup.alivePlayers) === 0, `live-ended cleanup should clear live players, got ${liveEndedCleanup.alivePlayers}`);
+  assert(liveEndedCleanup.autoResumeSuppressed === true, 'live-ended cleanup should suppress stale auto-resume');
+
   const mentionCommentRes = await request('/api/test/comment', {
     method: 'POST',
     headers: authedHeaders,

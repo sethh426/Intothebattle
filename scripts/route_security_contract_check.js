@@ -50,6 +50,11 @@ assert.match(server, /const TIKTOK_RECENT_PLAYER_RESTORE_ENABLED = process\.env\
 assert.match(server, /restoreRecentPlayers:\s*false/, 'TikTok reconnects must not restore old players by default');
 assert.doesNotMatch(server, /restoreRecentPlayers:\s*true/, 'TikTok reconnects must not opt into stale player restore');
 assert.match(server, /closeSupersededLiveSessions\(room\.roomId, session\.sessionId/, 'new live sessions must close older active room sessions');
+assert.match(server, /TIKTOK_LIVE_ENDED_AUTO_RESUME_SUPPRESSION_MS/, 'LIVE-ended streams must suppress stale auto-resume');
+assert.match(server, /function isTikTokLiveEndedControlEvent/, 'TikTok control events must detect LIVE-ended actions');
+assert.match(server, /function handleTikTokLiveEnded/, 'TikTok LIVE-ended events must hard-stop the game runtime');
+assert.match(server, /onTikTok\('control'/, 'TikTok control events must be subscribed directly');
+assert.match(server, /resetRoomLiveRuntime\(room, \{ reason, clearPlayers: true \}\)/, 'LIVE-ended cleanup must clear live game players');
 assert.doesNotMatch(admin, /DELETE\s+FROM\s+users/i, 'admin routes must not delete user accounts');
 assert.doesNotMatch(admin, /action=["']\/admin\/users\/[^"']*delete/i, 'admin UI must not render user account delete forms');
 assert.match(admin, /function denyAccountDelete/, 'admin routes must explicitly deny user account deletion attempts');

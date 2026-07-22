@@ -593,6 +593,10 @@ const TIKTOK_LIVE_REPAIR_ENABLED = process.env.TIKTOK_LIVE_REPAIR_ENABLED == nul
   ? true
   : process.env.TIKTOK_LIVE_REPAIR_ENABLED === 'true';
 const TIKTOK_LIVE_REPAIR_INTERVAL_MS = Math.max(5000, Number(process.env.TIKTOK_LIVE_REPAIR_INTERVAL_MS || 15000));
+const TIKTOK_LIVE_ENDED_AUTO_RESUME_SUPPRESSION_MS = Math.max(
+  0,
+  Number(process.env.TIKTOK_LIVE_ENDED_AUTO_RESUME_SUPPRESSION_MS || 30 * 60 * 1000)
+);
 const TIKTOK_AUTO_RESUME_SAVED_STREAM = process.env.TIKTOK_AUTO_RESUME_SAVED_STREAM == null
   ? true
   : process.env.TIKTOK_AUTO_RESUME_SAVED_STREAM === 'true';
@@ -3961,6 +3965,94 @@ function suppressRecentLiveRestore(room, reason = 'live_roster_reset', username 
   room.recentLiveRestoreSuppressedUntil = Date.now() + TIKTOK_RECENT_RESTORE_SUPPRESSION_MS;
   room.recentLiveRestoreSuppressedForUsername = normalizeTikTokUsername(username || room.streamerUsername || room.tiktokConnection?.username || '');
   room.recentLiveRestoreSuppressedReason = reason;
+}
+
+function suppressTikTokAutoResume(room, reason = 'stream_ended', username = '') {
+  if (!room?.roomId || TIKTOK_LIVE_ENDED_AUTO_RESUME_SUPPRESSION_MS <= 0) return;
+  room.tiktokAutoResumeSuppressedUntil = Date.now() + TIKTOK_LIVE_ENDED_AUTO_RESUME_SUPPRESSION_MS;
+  room.tiktokAutoResumeSuppressedForUsername = normalizeTikTokUsername(username || room.streamerUsername || room.tiktokConnection?.username || '');
+  room.tiktokAutoResumeSuppressedReason = reason;
+}
+
+function clearTikTokAutoResumeSuppression(room) {
+  if (!room) return;
+  room.tiktokAutoResumeSuppressedUntil = 0;
+  room.tiktokAutoResumeSuppressedForUsername = '';
+  room.tiktokAutoResumeSuppressedReason = '';
+}
+
+function isTikTokAutoResumeSuppressed(room, username = '') {
+  if (!room?.roomId) return false;
+  const until = Number(room.tiktokAutoResumeSuppressedUntil) || 0;
+  if (!until || Date.now() > until) return false;
+  const suppressedUsername = normalizeTikTokUsername(room.tiktokAutoResumeSuppressedForUsername || '');
+  const currentUsername = normalizeTikTokUsername(username || room.streamerUsername || room.tiktokConnection?.username || '');
+  return !suppressedUsername || !currentUsername || suppressedUsername === currentUsername;
+}
+
+function isTikTokLiveEndedControlEvent(event = {}) {
+  const actionCandidates = [
+    event?.action,
+    event?.actionType,
+    event?.controlAction,
+    event?.data?.action,
+    event?.payload?.action,
+    event?.message?.action,
+  ];
+  return actionCandidates.some(value => Number(value) === 3);
+}
+
+function isTikTokLiveEndedDisconnect(code, reason = '') {
+  const text = `${code || ''} ${reason || ''}`.toLowerCase();
+  return (
+    /\b(live|stream|room)\b.{0,24}\b(end|ended|closed|finished|stopped|offline)\b/.test(text)
+    || /\b(owner|anchor|host)\b.{0,24}\b(end|ended|closed|finished|stopped)\b/.test(text)
+    || /\bnot\s+live\b/.test(text)
+  );
+}
+
+function tiktokReconnectAvailable(tiktokClient) {
+  const attempts = Math.max(0, Number(tiktokClient?.reconnectAttempts) || 0);
+  const max = Math.max(0, Number(tiktokClient?.maxReconnectAttempts ?? TIKTOK_MAX_RECONNECT_ATTEMPTS));
+  return attempts < max;
+}
+
+function stopTikTokLiveConnection(room, tiktokClient) {
+  if (!tiktokClient) return;
+  try {
+    tiktokClient.intentionalClose = true;
+    if (typeof tiktokClient.destroy === 'function') tiktokClient.destroy();
+    else if (typeof tiktokClient.disconnect === 'function') tiktokClient.disconnect();
+  } catch (err) {
+    logger.warn({ err: err?.message || err, roomId: room?.roomId }, 'Error while stopping TikTok LIVE connection');
+  }
+  if (room?.tiktokClient === tiktokClient) room.tiktokClient = null;
+  if (tiktokClient === client) client = null;
+}
+
+function handleTikTokLiveEnded(room, tiktokClient, connectionId, connectionSessionId, payload = {}) {
+  if (!isActiveTikTokConnection(room, tiktokClient, connectionId, connectionSessionId)) return false;
+  if (tiktokClient.liveEndedHandled) return false;
+  const username = normalizeTikTokUsername(
+    payload?.username || room.tiktokConnection?.username || room.streamerUsername || ''
+  );
+  const reason = payload?.reason || 'stream_ended';
+  tiktokClient.liveEndedHandled = true;
+  suppressTikTokAutoResume(room, reason, username);
+  stopTikTokLiveConnection(room, tiktokClient);
+  resetRoomLiveRuntime(room, { reason, clearPlayers: true });
+  if (room.roomId === DEFAULT_ROOM_ID) currentStreamer = '';
+  room.streamerUsername = '';
+  saveRoomSettings(room.roomId);
+  emitTikTokConnectionStatus(room, {
+    username: '',
+    status: 'disconnected',
+    disconnectedAt: Date.now(),
+    reason,
+    error: '',
+  });
+  logger.info({ roomId: room.roomId, username, reason }, 'TikTok LIVE ended; stopped game runtime');
+  return true;
 }
 
 function resetRoomLiveRuntime(room, options = {}) {
@@ -8360,6 +8452,7 @@ function maybeAutoResumeSavedTikTokStream(room, reason = 'socket_registered') {
 
   const username = normalizeTikTokUsername(room.streamerUsername || room.tiktokConnection?.username || '');
   if (!username) return false;
+  if (isTikTokAutoResumeSuppressed(room, username)) return false;
 
   const status = String(room.tiktokConnection?.status || '').toLowerCase();
   if (room.tiktokClient && ['connecting', 'reconnecting', 'connected'].includes(status)) return false;
@@ -8371,7 +8464,7 @@ function maybeAutoResumeSavedTikTokStream(room, reason = 'socket_registered') {
   room.tiktokAutoResumeAttemptedAt = now;
 
   try {
-    connectToStreamer(username, room, { restoreRecentPlayers: false });
+    connectToStreamer(username, room, { autoResume: true, restoreRecentPlayers: false });
     logger.info({ roomId: room.roomId, username, reason }, 'Auto-resumed saved TikTok LIVE stream');
     return true;
   } catch (err) {
@@ -9730,6 +9823,89 @@ app.post('/api/test/live-restore-guard', blockInProduction, requireDevTestMode, 
   });
 });
 
+app.post('/api/test/live-ended-cleanup', blockInProduction, requireDevTestMode, (_req, res) => {
+  const room = getDefaultRoom();
+  const now = Date.now();
+  const username = 'live_end_streamer';
+  const testClient = {
+    intentionalClose: false,
+    connected: true,
+    destroyed: false,
+    destroy() {
+      this.destroyed = true;
+      this.connected = false;
+    },
+  };
+
+  room.players = {
+    live_end_viewer: {
+      uniqueId: 'live_end_viewer',
+      nickname: 'Live End Viewer',
+      hp: CFG.BASE_HP,
+      maxHp: CFG.BASE_HP,
+      strength: CFG.BASE_STRENGTH,
+      kills: 0,
+      killStreak: 0,
+      lastKillTime: 0,
+      alive: true,
+      lastActive: now,
+      firstSeenAt: now - 60000,
+      source: 'real',
+      x: 100,
+      y: 100,
+      vx: 0,
+      vy: 0,
+      color: randomColor(),
+      messageBoostExpires: 0,
+      forceSpawn: true,
+    },
+  };
+  room.streamerUsername = username;
+  room.tiktokConnection = {
+    id: 'live-ended-test-connection',
+    sessionId: 'live-ended-test-session',
+    username,
+    status: 'connected',
+    startedAt: now - 60000,
+    connectedAt: now - 55000,
+    updatedAt: now,
+    disconnectedAt: null,
+  };
+  room.tiktokClient = testClient;
+  room.liveSession = {
+    sessionId: 'live-ended-test-session',
+    status: 'active',
+    source: 'tiktok',
+    startedAt: now - 60000,
+    roundsStarted: 1,
+    roundsCompleted: 0,
+    bossWavesStarted: 0,
+    bossDefeats: 0,
+  };
+
+  const stopped = handleTikTokLiveEnded(
+    room,
+    testClient,
+    'live-ended-test-connection',
+    'live-ended-test-session',
+    { action: 3, reason: 'stream_ended' }
+  );
+  const alivePlayers = Object.values(room.players || {}).filter(player => player?.alive).length;
+
+  res.json({
+    success: true,
+    stopped,
+    clientCleared: room.tiktokClient === null,
+    clientDestroyed: testClient.destroyed === true,
+    connectionStatus: room.tiktokConnection?.status || '',
+    connectionUsername: room.tiktokConnection?.username || '',
+    streamUsername: room.streamerUsername || '',
+    sessionActive: room.liveSession?.status === 'active',
+    alivePlayers,
+    autoResumeSuppressed: isTikTokAutoResumeSuppressed(room, username),
+  });
+});
+
 app.post('/api/test/spawn', blockInProduction, requireDevTestMode, (_req, res) => {
   ensureTestPlayers({ reset: true });
   console.log('🧪 Test players spawned');
@@ -9929,6 +10105,13 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
     }
 
     if (!TIKTOK_DIRECT_PLAYER_EVENT_TYPES.has(eventType)) markTikTokEventAccepted(room, eventType, eventPayload);
+    if (eventType === 'control' && isTikTokLiveEndedControlEvent(eventPayload)) {
+      handleTikTokLiveEnded(room, tiktokClient, connectionId, connectionSessionId, {
+        ...eventPayload,
+        reason: 'stream_ended',
+      });
+      return;
+    }
     if (!TIKTOK_PLAYER_EVENT_TYPES.has(eventType) || TIKTOK_DIRECT_PLAYER_EVENT_TYPES.has(eventType)) return;
 
     const enteredCount = enterPlayersFromTikTokEvent(room, eventType, eventPayload);
@@ -9956,19 +10139,49 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
     });
   });
 
+  onTikTok('control', (event = {}) => {
+    if (!isTikTokLiveEndedControlEvent(event)) return;
+    handleTikTokLiveEnded(room, tiktokClient, connectionId, connectionSessionId, {
+      ...event,
+      reason: 'stream_ended',
+    });
+  });
+
   onTikTok('disconnected', (code, reason) => {
-    const willReconnect = !tiktokClient.intentionalClose && TIKTOK_AUTO_RECONNECT;
+    if (tiktokClient.liveEndedHandled) {
+      if (room.tiktokClient === tiktokClient) room.tiktokClient = null;
+      if (tiktokClient === client) client = null;
+      return;
+    }
+    if (!tiktokClient.intentionalClose && isTikTokLiveEndedDisconnect(code, reason)) {
+      handleTikTokLiveEnded(room, tiktokClient, connectionId, connectionSessionId, {
+        code,
+        reason: 'stream_ended',
+        source: 'disconnected',
+      });
+      return;
+    }
+    const willReconnect = !tiktokClient.intentionalClose && TIKTOK_AUTO_RECONNECT && tiktokReconnectAvailable(tiktokClient);
+    const disconnectReason = tiktokClient.intentionalClose ? 'operator_disconnect' : 'stream_disconnected';
     if (willReconnect) {
       setRoomMatchPhase(room, MATCH_PHASES.SETUP, 'stream_reconnecting', { sessionId: connectionSessionId });
-    } else if (room.liveSession?.status === 'active') {
-      endLiveSession(room, 'stream_disconnected');
+    } else {
+      if (!tiktokClient.intentionalClose) {
+        suppressTikTokAutoResume(
+          room,
+          disconnectReason,
+          room.tiktokConnection?.username || room.streamerUsername || ''
+        );
+      }
+      resetRoomLiveRuntime(room, { reason: disconnectReason, clearPlayers: true });
     }
     emitTikTokConnectionStatus(room, {
       status: willReconnect ? 'reconnecting' : 'disconnected',
       disconnectedAt: Date.now(),
-      reason: reason || `code ${code || 'unknown'}`,
+      reason: willReconnect ? (reason || `code ${code || 'unknown'}`) : disconnectReason,
     });
     if (!willReconnect && room.tiktokClient === tiktokClient) room.tiktokClient = null;
+    if (!willReconnect && tiktokClient === client) client = null;
   });
 
   onTikTok('member', (e) => {
@@ -10209,6 +10422,7 @@ function connectToStreamer(username, room = getDefaultRoom(), options = {}) {
   const normalizedUsername = normalizeTikTokUsername(username);
   if (!normalizedUsername) throw new Error('Enter a valid TikTok username.');
   const disconnectReason = options.repair ? 'auto_repair_reconnect' : 'new_stream_requested';
+  if (options.autoResume !== true) clearTikTokAutoResumeSuppression(room);
   safeDisconnectClient(room, disconnectReason);
   const resetLiveRuntimeForConnect = options.resetLiveRuntime !== false;
   if (resetLiveRuntimeForConnect) {
