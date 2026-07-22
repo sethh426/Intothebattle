@@ -8,6 +8,7 @@ const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
 const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 const admin = fs.readFileSync(path.join(root, 'tiktokbr', 'routes', 'admin.js'), 'utf8');
 const paypal = fs.readFileSync(path.join(root, 'tiktokbr', 'routes', 'paypal.js'), 'utf8');
+const authRoutes = fs.readFileSync(path.join(root, 'tiktokbr', 'routes', 'auth.js'), 'utf8');
 const sessionAuth = fs.readFileSync(path.join(root, 'tiktokbr', 'services', 'sessionAuth.js'), 'utf8');
 
 function routeLiteral(pathname) {
@@ -41,6 +42,9 @@ assert.match(sessionAuth, /WHERE id = \? AND session_token = \?/, 'user session 
 assert.match(sessionAuth, /WHERE UPPER\(code\) = \? AND session_token = \?/, 'access-code session lookup must bind the JWT code and token');
 assert.match(sessionAuth, /tokenId:/, 'session tokens must include a unique token id');
 assert.match(sessionAuth, /jti:/, 'session tokens must include a JWT id');
+assert.match(authRoutes, /function clearCookieVariants/, 'auth routes must clear host-only and domain-scoped cookie variants');
+assert.match(authRoutes, /clearSessionCookie\(res\);\s*res\.cookie\('session_token'/, 'session cookie writers must clear old variants before setting a new token');
+assert.match(server, /clearCookieVariants\(res, 'session_token', true\)/, 'server-level auth redirects must clear old session cookie variants');
 assert.doesNotMatch(server, /logger\.error\(\{\s*err,\s*token\s*\}/, 'auth logs must not include raw session tokens');
 assert.match(server, /const TIKTOK_RECENT_PLAYER_RESTORE_ENABLED = process\.env\.TIKTOK_RECENT_PLAYER_RESTORE_ENABLED === 'true'/, 'recent player restore must be opt-in');
 assert.match(server, /restoreRecentPlayers:\s*false/, 'TikTok reconnects must not restore old players by default');

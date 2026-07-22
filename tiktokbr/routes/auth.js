@@ -329,6 +329,18 @@ export function getCookieOptions(httpOnly = true, env = process.env) {
   return options;
 }
 
+function hostOnlyCookieOptions(options) {
+  const copy = { ...options };
+  delete copy.domain;
+  return copy;
+}
+
+export function clearCookieVariants(res, name, httpOnly = true) {
+  const options = getCookieOptions(httpOnly);
+  res.clearCookie(name, options);
+  if (options.domain) res.clearCookie(name, hostOnlyCookieOptions(options));
+}
+
 function getBcryptRounds(hash) {
   const match = String(hash || '').match(/^\$2[aby]\$(\d{2})\$/);
   return match ? Number(match[1]) : null;
@@ -752,6 +764,7 @@ function createSessionToken(payload) {
 }
 
 function setSessionCookie(res, token) {
+  clearSessionCookie(res);
   res.cookie('session_token', token, getCookieOptions(true));
 }
 
@@ -767,7 +780,7 @@ function setReferralCookies(res, { code = '', clickId = null } = {}) {
 }
 
 function clearSessionCookie(res) {
-  res.clearCookie('session_token', getCookieOptions(true));
+  clearCookieVariants(res, 'session_token', true);
 }
 
 function safeRedirectPath(value, fallback = '/dashboard') {
@@ -1506,7 +1519,9 @@ router.post('/login', loginLimiter, (req, res) => {
   db.prepare('UPDATE access_codes SET session_token = ?, last_seen = CURRENT_TIMESTAMP, fingerprint = COALESCE(fingerprint, ?) WHERE id = ?')
     .run(sessionToken, fingerprint, row.id);
 
+  clearSessionCookie(res);
   res.cookie('session_token', sessionToken, getCookieOptions(true));
+  clearCookieVariants(res, 'fp', false);
   res.cookie('fp', fingerprint, getCookieOptions(false));
   res.redirect(redirectPath);
 });
@@ -1517,8 +1532,8 @@ router.post('/logout', (req, res) => {
     const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
     if (row) db.prepare('UPDATE access_codes SET session_token = NULL WHERE id = ?').run(row.id);
   }
-  res.clearCookie('session_token', getCookieOptions(true));
-  res.clearCookie('fp', getCookieOptions(false));
+  clearSessionCookie(res);
+  clearCookieVariants(res, 'fp', false);
   res.redirect('/login');
 });
 

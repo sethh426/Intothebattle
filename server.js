@@ -18,7 +18,7 @@ import multer from 'multer';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import db, { getDbHealthSnapshot, waitForDbReady } from './tiktokbr/db/db.js';
-import authRoutes from './tiktokbr/routes/auth.js';
+import authRoutes, { clearCookieVariants, getCookieOptions } from './tiktokbr/routes/auth.js';
 import adminRoutes from './tiktokbr/routes/admin.js';
 import paypalRoutes from './tiktokbr/routes/paypal.js';
 import requireAccess from './tiktokbr/middleware/auth.js';
@@ -7110,7 +7110,7 @@ app.get('/', (req, res) => {
         const row = auth.record;
         if (row && !row.is_revoked) {
           if (new Date(row.expires_at) >= new Date()) return res.redirect('/dashboard');
-          res.clearCookie('session_token', { path: '/', httpOnly: true, sameSite: 'lax' });
+          clearCookieVariants(res, 'session_token', true);
         }
       }
       if (auth?.type === 'user') {
@@ -7121,7 +7121,7 @@ app.get('/', (req, res) => {
       }
     } catch (err) {
       logger.error({ err, path: req.path }, 'Homepage auth check failed; clearing auth cookie');
-      res.clearCookie('session_token', { path: '/', httpOnly: true, sameSite: 'lax' });
+      clearCookieVariants(res, 'session_token', true);
     }
   }
   // If not authenticated, serve the public homepage instead of forcing login
@@ -7371,13 +7371,8 @@ app.post('/auth/create-account', express.json(), (req, res) => {
       JSON.stringify([])
     );
 
-    // Set session cookie using Express helper so browsers accept it with fetch credentials
-    res.cookie('session_token', sessionToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 90 * 24 * 60 * 60 * 1000,
-    });
+    clearCookieVariants(res, 'session_token', true);
+    res.cookie('session_token', sessionToken, getCookieOptions(true));
     res.json({ success: true, roomId });
   } catch (err) {
     console.error('Account creation error:', err);
@@ -8501,7 +8496,7 @@ app.get('/dashboard/logout', (req, res) => {
     db.prepare('UPDATE access_codes SET session_token = NULL WHERE session_token = ?').run(token);
     db.prepare('UPDATE users SET session_token = NULL WHERE session_token = ?').run(token);
   }
-  res.clearCookie('session_token', { path: '/', httpOnly: true, sameSite: 'lax' });
+  clearCookieVariants(res, 'session_token', true);
   res.redirect('/login');
 });
 
@@ -8511,8 +8506,8 @@ app.get('/logout', (req, res) => {
     db.prepare('UPDATE access_codes SET session_token = NULL WHERE session_token = ?').run(token);
     db.prepare('UPDATE users SET session_token = NULL WHERE session_token = ?').run(token);
   }
-  res.clearCookie('session_token', { path: '/', httpOnly: true, sameSite: 'lax' });
-  res.clearCookie('fp', { path: '/', sameSite: 'lax' });
+  clearCookieVariants(res, 'session_token', true);
+  clearCookieVariants(res, 'fp', false);
   res.redirect('/');
 });
 
