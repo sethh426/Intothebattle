@@ -311,12 +311,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   display:flex; align-items:center; justify-content:flex-start; gap:5px;
   font-family:'Rajdhani','Segoe UI',sans-serif; color:#f8fbff;
   background:
-    linear-gradient(90deg, rgba(5,10,20,0.78), rgba(8,18,28,0.7)),
+    linear-gradient(90deg, rgba(4,6,12,0.94), rgba(14,22,34,0.88), rgba(4,6,12,0.92)),
     radial-gradient(circle at 12% 50%, rgba(255,120,178,0.2), transparent 42%),
     radial-gradient(circle at 88% 50%, rgba(143,255,210,0.17), transparent 42%);
-  border:1px solid rgba(255,255,255,0.2);
-  border-radius:999px;
-  box-shadow:0 10px 24px rgba(0,0,0,0.34),0 0 16px rgba(143,255,210,0.1),inset 0 1px 0 rgba(255,255,255,0.16);
+  border:1px solid rgba(246,201,91,0.3);
+  border-radius:4px;
+  clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+  box-shadow:0 12px 28px rgba(0,0,0,0.46),0 0 18px rgba(143,255,210,0.12),inset 0 1px 0 rgba(255,255,255,0.16);
   backdrop-filter:blur(8px) saturate(1.08);
   animation:supportUnitIn 180ms cubic-bezier(.16,1,.3,1) both;
 }
@@ -369,19 +370,19 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   --banner-accent-soft:rgba(122,252,255,0.18);
   --banner-duration:3200ms;
   position:absolute; left:50%; top:50%; transform:translate(-50%,0); z-index:26; pointer-events:none;
-  min-height:62px; max-height:70px; padding:0 15px; box-sizing:border-box; overflow:hidden;
-  display:grid; grid-template-columns:48px minmax(0,1fr) 6px; align-items:center; gap:10px;
+  min-height:66px; max-height:76px; padding:0 16px; box-sizing:border-box; overflow:hidden;
+  display:grid; grid-template-columns:50px minmax(0,1fr) 7px; align-items:center; gap:11px;
   font-family:'Rajdhani','Segoe UI',sans-serif; color:#f8fbff;
   background:
-    linear-gradient(90deg, rgba(2,7,14,0.98), rgba(5,16,31,0.94) 34%, rgba(3,9,18,0.96)),
+    linear-gradient(90deg, rgba(3,5,11,0.99), rgba(13,22,36,0.97) 38%, rgba(3,8,16,0.985)),
     radial-gradient(circle at 12% 50%, var(--banner-accent-soft), transparent 40%);
-  border:1px solid rgba(var(--banner-accent-rgb),0.48);
-  border-radius:7px;
-  clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);
+  border:1px solid rgba(var(--banner-accent-rgb),0.56);
+  border-radius:4px;
+  clip-path:polygon(14px 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%,0 14px);
   box-shadow:
-    0 14px 34px rgba(0,0,0,0.58),
-    0 0 24px rgba(var(--banner-accent-rgb),0.16),
-    inset 0 1px 0 rgba(255,255,255,0.13),
+    0 18px 42px rgba(0,0,0,0.64),
+    0 0 30px rgba(var(--banner-accent-rgb),0.2),
+    inset 0 1px 0 rgba(255,255,255,0.17),
     inset 0 -1px 0 rgba(0,0,0,0.45);
   backdrop-filter:blur(10px) saturate(1.12);
   animation:cyberBannerIn 420ms cubic-bezier(.16,1,.3,1) both;
@@ -427,8 +428,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 }
 .banner-title {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#fff; font-size:24px; line-height:1.04; font-weight:950; letter-spacing:.1px; text-transform:uppercase;
-  text-shadow:0 0 24px rgba(255,255,255,0.38),0 2px 8px rgba(0,0,0,0.9);
+  color:#fff; font-size:26px; line-height:1.02; font-weight:950; letter-spacing:.15px; text-transform:uppercase;
+  text-shadow:0 0 26px rgba(255,255,255,0.42),0 2px 9px rgba(0,0,0,0.94);
 }
 .banner-title strong { color:var(--banner-accent); font-weight:900; }
 .banner-meta {
@@ -705,21 +706,39 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .banner-title,.banner.legendary .banner-title { font-size:18px; letter-spacing:.22px; }
   .banner-meta { font-size:9px; }
   .banner-meter { height:30px; }
-  .banner.commands:not(.is-nano) { min-height:50px; max-height:60px; grid-template-columns:1fr; }
+  .banner.commands:not(.is-nano) { height:40px; min-height:40px; max-height:40px; padding:0 9px; grid-template-columns:1fr; }
   .banner.commands:not(.is-nano) .banner-signal,
   .banner.commands:not(.is-nano) .banner-meter { display:none; }
-  .banner.commands .banner-command-strip { min-height:38px; grid-template-columns:minmax(104px,0.22fr) minmax(0,1fr); }
-  .banner.commands .banner-command-label,
-  .banner.commands .banner-command-run span { font-size:13px; }
-  .banner.commands .banner-command-label { padding:0 12px; }
-  .banner.commands .banner-command-run { height:38px; padding:0 12px; gap:12px; }
+  .banner.commands .banner-command-strip { min-height:32px; grid-template-columns:minmax(112px,0.24fr) minmax(0,1fr); }
+  .banner.commands .banner-command-label { font-size:10.5px; }
+  .banner.commands .banner-command-run span { font-size:12px; }
+  .banner.commands .banner-command-label { padding:0 10px; white-space:nowrap; line-height:1; }
+  .banner.commands .banner-command-run { height:32px; padding:0 10px; gap:10px; }
   .banner.commands .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(72px,1fr)); max-height:22px; gap:3px; }
   .banner.commands .banner-command-rail { grid-template-columns:repeat(6,minmax(44px,1fr)); gap:2px; padding:3px; }
   .banner.commands .banner-command-chip.banner-command-secondary,
   .banner.commands .banner-command-chip.banner-command-micro-hidden { display:none; }
-  .banner.commands .banner-command-chip { min-height:26px; padding:1px 4px; font-size:7px; }
+  .banner.commands .banner-command-chip { min-height:24px; padding:1px 4px; font-size:7px; }
   .banner.commands .banner-command-chip strong { font-size:8.5px; }
   .banner.commands .banner-command-chip span { display:none; }
+  .banner.commands.is-compact,
+  .banner.commands.is-micro { height:40px; min-height:40px; max-height:40px; padding:0 8px; }
+  .banner.commands.is-compact .banner-command-strip,
+  .banner.commands.is-micro .banner-command-strip { min-height:31px; grid-template-columns:minmax(112px,0.24fr) minmax(0,1fr); }
+  .banner.commands.is-compact .banner-command-label,
+  .banner.commands.is-micro .banner-command-label { font-size:10.5px; }
+  .banner.commands.is-compact .banner-command-run span,
+  .banner.commands.is-micro .banner-command-run span { font-size:12px; }
+  .banner.commands.is-compact .banner-command-run,
+  .banner.commands.is-micro .banner-command-run { height:31px; padding:0 10px; gap:10px; }
+  .banner.commands.is-compact .banner-command-label,
+  .banner.commands.is-micro .banner-command-label { white-space:nowrap; line-height:1; }
+  .banner.commands.is-compact .banner-command-rail,
+  .banner.commands.is-micro .banner-command-rail { gap:2px; padding:2px; }
+  .banner.commands.is-compact .banner-command-chip,
+  .banner.commands.is-micro .banner-command-chip { min-height:24px; padding:1px 4px; }
+  .banner.commands.is-compact .banner-command-chip strong,
+  .banner.commands.is-micro .banner-command-chip strong { min-height:20px; font-size:8px; }
   .banner.commands.is-nano { min-height:24px; max-height:26px; }
 }
 @keyframes battleReturnFrame {
@@ -2199,6 +2218,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     red: '#e83b5f',
     cyan: '#55e7ff',
     green: '#77f0a1',
+    ice: '#d8fbff',
+    steel: '#90a4bd',
+    graphite: '#080d16',
+    graphite2: '#101724',
+    blackGlass: '#03060d',
     panel: 'rgba(5,10,20,0.88)',
     panelDeep: 'rgba(3,6,12,0.94)',
     panelSoft: 'rgba(16,24,38,0.74)',
@@ -3597,6 +3621,39 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return { ok: true, count: Object.keys(players).length, ids: Object.keys(players) };
   }
 
+  function runPremiumEsportsPreview() {
+    const result = applyTestPlayerCards([
+      { uniqueId: 'premium_leader', nickname: 'NeonAce', hp: 240, maxHp: 240, kills: 18, iconEmoji: '⚔️', teamColor: THEME.gold, cardAccentType: 'attack', cardAccentLabel: 'LASER', cardAccentColor: THEME.cyan },
+      { uniqueId: 'premium_shield', nickname: 'ShieldQueen', hp: 210, maxHp: 240, kills: 7, iconEmoji: '🛡️', teamColor: THEME.cyan, cardAccentType: 'shield', cardAccentLabel: 'DEF', cardAccentColor: THEME.cyan },
+      { uniqueId: 'premium_heal', nickname: 'PulseMedic', hp: 184, maxHp: 230, kills: 4, iconEmoji: '💚', teamColor: THEME.green, cardAccentType: 'heal', cardAccentLabel: 'HEAL', cardAccentColor: THEME.green },
+      { uniqueId: 'premium_critical', nickname: 'CriticalRift', hp: 38, maxHp: 220, kills: 11, iconEmoji: '🔥', teamColor: THEME.ember, cardAccentType: 'critical', cardAccentLabel: 'CRIT', cardAccentColor: THEME.red },
+      { uniqueId: 'premium_ko', nickname: 'GhostByte_KO', hp: 0, maxHp: 200, alive: false, kills: 2, iconEmoji: '💀', teamColor: '#9ca7ff', cardAccentType: 'kill', cardAccentLabel: 'KO', cardAccentColor: THEME.gold },
+      { uniqueId: 'premium_horde_1', nickname: 'HordeOne', hp: 120, maxHp: 160 },
+      { uniqueId: 'premium_horde_2', nickname: 'HordeTwo', hp: 110, maxHp: 160 },
+      { uniqueId: 'premium_horde_3', nickname: 'HordeThree', hp: 140, maxHp: 170 },
+    ]);
+    handleBossWave({
+      type: 'started',
+      hp: 920,
+      maxHp: 1200,
+      durationMs: 90000,
+      remainingMs: 62000,
+      attackIntervalMs: 11000,
+      nextAttackMs: 3200,
+    });
+    showBanner('legendary', {
+      code: 'KO',
+      kicker: 'Arena takeover',
+      title: 'NeonAce broke the frontline',
+      meta: '18 kills | shield active | boss charging',
+      charge: 92,
+      priority: 99,
+    }, 10000);
+    showSupportUnit({ type: 'shield', amount: 1, name: 'ShieldQueen' });
+    requestAnimationFrame(draw);
+    return { ok: true, mode: 'premium-esports-preview', playerCards: result };
+  }
+
   window.overlayEventEngine = {
     status: () => ({
       sponsorState,
@@ -3638,6 +3695,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       enqueueVisualEvent('roundEvent', { type: 'round_started', label: 'Round started' }, handleRoundEvent, { mergeKey: () => 'round_started' });
     },
     testBannerPlacement: (type = 'legendary', options = {}) => runBannerPlacementProbe(type, options),
+    testPremiumEsportsPreview: () => runPremiumEsportsPreview(),
     testSupportUnit: () => runSupportUnitProbe(),
     testPlayerCards: roster => applyTestPlayerCards(roster),
     testEventStorm: (count = 132) => runVisualEventStorm(count),
@@ -4126,7 +4184,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const stage = computeOverlayLayout();
     const frame = stage.frame;
     const playerZone = stage.zones.players;
-    const cardAspect = total >= 5 ? 2.38 : total === 4 ? 2.52 : total === 3 ? 2.68 : 2.84;
+    const cardAspect = total >= 5 ? 2.42 : total === 4 ? 2.56 : total === 3 ? 2.72 : 2.88;
     const requestedCardH = Math.min(
       frame.h * (isPublicDemo ? 0.205 : 0.192),
       playerZone.h * (isPublicDemo ? 0.9 : 0.86)
@@ -4159,17 +4217,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const { cardH, cardW } = getPlayerCardMetrics(total);
     const maxPlateH = Math.max(1, playerZone.h - stage.gap * 0.42);
     const minReadablePlateH = Math.min(maxPlateH, compactDemoCard ? 172 * ui : 180 * ui);
-    const requestedPlateH = Math.max(minReadablePlateH, cardH * 1.78);
+    const requestedPlateH = Math.max(minReadablePlateH, cardH * 1.84);
     const plateH = Math.min(requestedPlateH, maxPlateH);
     const plateX = pos.x - cardW / 2;
     const plateY = pos.y - plateH / 2;
-    const radius = Math.max(16 * ui, plateH * 0.14);
-    const padX = clampNumber(cardW * 0.058, 11 * ui, 20 * ui);
-    const padY = clampNumber(plateH * 0.07, 9 * ui, 16 * ui);
+    const radius = Math.max(14 * ui, plateH * 0.12);
+    const padX = clampNumber(cardW * 0.052, 10 * ui, 19 * ui);
+    const padY = clampNumber(plateH * 0.055, 8 * ui, 13 * ui);
     const slotGap = Math.max(6 * ui, cardW * 0.018);
     const contentRight = plateX + cardW - padX;
-    const nameH = clampNumber(plateH * 0.27, 42 * ui, 62 * ui);
-    const barH = clampNumber(plateH * 0.25, 40 * ui, 48 * ui);
+    const nameH = clampNumber(plateH * 0.25, 40 * ui, 60 * ui);
+    const barH = clampNumber(plateH * 0.22, 34 * ui, 44 * ui);
     const nameX = plateX + padX;
     const nameY = plateY + padY;
     const nameW = Math.max(1, cardW - padX * 2);
@@ -4184,9 +4242,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const badgeMin = Math.min(badgeMax, 44 * ui);
     const badgeH = clampNumber(Math.min(midSpace, plateH * 0.34), badgeMin, badgeMax);
     const midTop = midTopMin + Math.max(0, (midSpace - badgeH) * 0.48);
-    const avatarMax = Math.max(1, Math.min(badgeH * 0.59, cardW * 0.17, 38 * ui));
-    const avatarMin = Math.min(avatarMax, Math.max(24 * ui, badgeH * 0.52));
-    const avatarR = clampNumber(Math.min(badgeH * 0.57, cardW * 0.16), avatarMin, avatarMax);
+    const avatarVerticalRoom = Math.max(1, midBottomMax - midTopMin);
+    const avatarMax = Math.max(1, Math.min(avatarVerticalRoom * 0.49, cardW * 0.22, 46 * ui));
+    const avatarMin = Math.min(avatarMax, Math.max(28 * ui, avatarVerticalRoom * 0.42));
+    const avatarR = clampNumber(Math.min(avatarVerticalRoom * 0.47, cardW * 0.2), avatarMin, avatarMax);
     const avatarX = plateX + padX + avatarR + Math.max(3 * ui, badgeH * 0.12);
     const avatarY = midTop + badgeH / 2;
     const statX = avatarX + avatarR + Math.max(7 * ui, slotGap);
@@ -5539,10 +5598,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const minReadableLaneH = Math.max(24, frame.h * (isCommandBanner ? 0.045 : 0.04));
     const centeredX = frame.x + frame.w / 2 - laneW / 2;
     const laneX = clampNumber(centeredX, innerLeft, innerRight - laneW);
+    const staticLaneBottom = isCommandBanner
+      ? Math.min(frame.bottom - gapY * 0.5, bannerZone.bottom + Math.max(8, gapY * 0.7))
+      : bannerZone.bottom;
     const staticLaneY = clampNumber(
-      bannerZone.bottom - desiredLaneH,
+      staticLaneBottom - desiredLaneH,
       frame.y + gapY * 0.35,
-      Math.max(frame.y + gapY * 0.35, bannerZone.bottom - Math.max(1, minReadableLaneH || desiredLaneH))
+      Math.max(frame.y + gapY * 0.35, staticLaneBottom - Math.max(1, minReadableLaneH || desiredLaneH))
     );
     const staticLane = makeRect(laneX, staticLaneY, laneW, desiredLaneH);
     staticLane.source = 'static-zone';
@@ -5575,8 +5637,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     if (!Number.isFinite(playerBottom) || !Number.isFinite(hordeTop)) return staticLane;
 
-    const playerClearance = Math.max(5, gapY * (isCommandBanner ? 0.38 : 0.34));
-    const hordeClearance = Math.max(isCommandBanner ? 5 : 8, gapY * (isCommandBanner ? 0.38 : 0.62));
+    const playerClearance = isCommandBanner ? Math.max(2, gapY * 0.12) : Math.max(5, gapY * 0.34);
+    const hordeClearance = isCommandBanner ? Math.max(2, gapY * 0.12) : Math.max(8, gapY * 0.62);
     let laneTopLimit = playerBottom + playerClearance;
     let laneBottomLimit = hordeTop - hordeClearance;
     const fullAvailableGap = laneBottomLimit - laneTopLimit;
@@ -5649,9 +5711,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     let laneAnchor = null;
     let lanePlayerClearance = null;
     let laneHordeClearance = null;
+    let activeIsCommandBanner = false;
     try {
       const stage = computeOverlayLayout();
       const isCommandBanner = activeBanner?.el?.classList.contains('commands') || activeBanner?.cls === 'commands';
+      activeIsCommandBanner = Boolean(isCommandBanner);
       const localLane = bannerPlacementZone(stage, isCommandBanner);
       const parentRect = container.getBoundingClientRect();
       laneRect = makeRect(
@@ -5670,6 +5734,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       lanePlayerClearance = Number.isFinite(localLane.playerClearance) ? localLane.playerClearance : null;
       laneHordeClearance = Number.isFinite(localLane.hordeClearance) ? localLane.hordeClearance : null;
     } catch (_err) {}
+    if (activeIsCommandBanner && activeRect && laneRect) {
+      const expandedLeft = Math.min(laneRect.left, activeRect.left);
+      const expandedTop = Math.min(laneRect.top, activeRect.top);
+      const expandedRight = Math.max(laneRect.right, activeRect.right);
+      const expandedBottom = Math.max(laneRect.bottom, activeRect.bottom);
+      laneRect = makeRect(expandedLeft, expandedTop, expandedRight - expandedLeft, expandedBottom - expandedTop);
+    }
     return {
       active: activeBanner ? {
         type: activeBanner.cls,
@@ -5781,10 +5852,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const centerX = clampNumber(frame.x + frame.w / 2, placementZone.x + halfWidth, placementZone.right - halfWidth);
     const maxTop = Math.max(placementZone.y, placementZone.bottom - rect.height);
     const minTop = laneIsCombat ? placementZone.y : frame.y + gapY * 0.35;
-    const verticalBias = laneIsCombat && placementZone.anchor === 'horde-side' ? 0.84 : 0.5;
+    const verticalBias = isCommandBanner ? 0 : laneIsCombat && placementZone.anchor === 'horde-side' ? 0.84 : 0.5;
     const top = clampNumber(placementZone.y + Math.max(0, placementZone.h - rect.height) * verticalBias, minTop, maxTop);
     el.style.left = `${centerX}px`;
     el.style.top = `${top}px`;
+    const parentRect = container.getBoundingClientRect();
+    const actualRect = el.getBoundingClientRect();
+    const laneBottom = parentRect.top + placementZone.bottom;
+    if (actualRect.bottom > laneBottom) {
+      const correctedTop = clampNumber(top - (actualRect.bottom - laneBottom), placementZone.y, maxTop);
+      el.style.top = `${correctedTop}px`;
+    }
   }
 
   function placeStatusBadge() {
@@ -6484,12 +6562,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function drawGlassPanel(x, y, w, h, r, options) {
     const opts = options || {};
     const grad = ctx.createLinearGradient(x, y, x + w, y + h);
-    grad.addColorStop(0, opts.start || 'rgba(7,14,26,0.92)');
-    grad.addColorStop(0.55, opts.mid || 'rgba(15,22,36,0.82)');
-    grad.addColorStop(1, opts.end || 'rgba(6,9,18,0.94)');
+    grad.addColorStop(0, opts.start || 'rgba(10,17,29,0.96)');
+    grad.addColorStop(0.45, opts.mid || 'rgba(13,22,36,0.88)');
+    grad.addColorStop(1, opts.end || 'rgba(3,7,15,0.98)');
     ctx.fillStyle = grad;
     roundedRectPath(ctx, x, y, w, h, r);
     ctx.fill();
+
+    if (opts.innerGlow !== false) {
+      const glow = ctx.createRadialGradient(x + w * 0.5, y + h * 0.34, 0, x + w * 0.5, y + h * 0.5, Math.max(w, h) * 0.68);
+      glow.addColorStop(0, opts.innerGlow || 'rgba(255,255,255,0.045)');
+      glow.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = glow;
+      roundedRectPath(ctx, x + 1, y + 1, Math.max(1, w - 2), Math.max(1, h - 2), Math.max(1, r - 1));
+      ctx.fill();
+    }
 
     ctx.strokeStyle = opts.stroke || THEME.lineSoft;
     ctx.lineWidth = opts.lineWidth || 1;
@@ -6505,6 +6592,67 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       ctx.stroke();
       ctx.globalAlpha /= 0.72;
     }
+  }
+
+  function cutCornerPanelPath(c, x, y, w, h, cut, radius = 0) {
+    const safeCut = Math.max(0, Math.min(cut, w * 0.18, h * 0.32));
+    if (radius > 0 && safeCut < 1) return roundedRectPath(c, x, y, w, h, radius);
+    c.beginPath();
+    c.moveTo(x + safeCut, y);
+    c.lineTo(x + w - safeCut * 0.55, y);
+    c.lineTo(x + w, y + safeCut * 0.55);
+    c.lineTo(x + w, y + h - safeCut);
+    c.lineTo(x + w - safeCut, y + h);
+    c.lineTo(x + safeCut * 0.55, y + h);
+    c.lineTo(x, y + h - safeCut * 0.55);
+    c.lineTo(x, y + safeCut);
+    c.closePath();
+  }
+
+  function drawPremiumEsportsPanel(x, y, w, h, radius, options = {}) {
+    const accent = options.accent || THEME.cyan;
+    const cut = options.cut ?? Math.max(8, Math.min(w, h) * 0.12);
+    const pulse = options.pulse ?? 0.5;
+    ctx.save();
+    ctx.shadowColor = colorWithAlpha(accent, options.glowAlpha ?? 0.22);
+    ctx.shadowBlur = options.glowBlur ?? Math.max(10, Math.min(w, h) * 0.08);
+    const fill = ctx.createLinearGradient(x, y, x + w, y + h);
+    fill.addColorStop(0, options.start || 'rgba(18,26,40,0.985)');
+    fill.addColorStop(0.32, options.mid || 'rgba(7,13,24,0.975)');
+    fill.addColorStop(0.72, options.mid2 || 'rgba(4,8,16,0.992)');
+    fill.addColorStop(1, options.end || 'rgba(1,3,9,0.998)');
+    ctx.fillStyle = fill;
+    cutCornerPanelPath(ctx, x, y, w, h, cut, radius);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    const inner = ctx.createRadialGradient(x + w * 0.48, y + h * 0.26, 0, x + w * 0.48, y + h * 0.42, Math.max(w, h) * 0.72);
+    inner.addColorStop(0, colorWithAlpha(accent, options.innerAccentAlpha ?? 0.09));
+    inner.addColorStop(0.45, 'rgba(255,255,255,0.025)');
+    inner.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = inner;
+    cutCornerPanelPath(ctx, x + 1, y + 1, Math.max(1, w - 2), Math.max(1, h - 2), Math.max(1, cut - 1), radius);
+    ctx.fill();
+
+    ctx.strokeStyle = options.stroke || colorWithAlpha(accent, 0.66 + pulse * 0.1);
+    ctx.lineWidth = options.lineWidth || Math.max(1.2, Math.min(w, h) * 0.012);
+    cutCornerPanelPath(ctx, x + 0.5, y + 0.5, Math.max(1, w - 1), Math.max(1, h - 1), Math.max(1, cut - 0.5), radius);
+    ctx.stroke();
+
+    ctx.globalAlpha = options.detailAlpha ?? 0.38;
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = Math.max(0.8, Math.min(w, h) * 0.004);
+    ctx.beginPath();
+    ctx.moveTo(x + cut * 1.28, y + 2);
+    ctx.lineTo(x + w * 0.58, y + 2);
+    ctx.stroke();
+    ctx.strokeStyle = colorWithAlpha(accent, 0.44);
+    ctx.beginPath();
+    ctx.moveTo(x + w - cut * 1.15, y + h - 2);
+    ctx.lineTo(x + w * 0.58, y + h - 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   class HeartBloom {
@@ -8884,15 +9032,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     const grad = ctx.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, darkMode ? '#08111f' : '#102217');
-    grad.addColorStop(0.44, darkMode ? '#09101a' : '#0d1710');
-    grad.addColorStop(1, darkMode ? '#030509' : '#050b08');
+    grad.addColorStop(0, darkMode ? '#0a1220' : '#102217');
+    grad.addColorStop(0.32, darkMode ? '#050b15' : '#0d1710');
+    grad.addColorStop(0.68, '#060813');
+    grad.addColorStop(1, '#020309');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
 
-    const spotlight = ctx.createRadialGradient(W * 0.5, H * 0.3, 0, W * 0.5, H * 0.42, H * 0.74);
-    spotlight.addColorStop(0, 'rgba(246,201,91,0.16)');
-    spotlight.addColorStop(0.34, 'rgba(85,231,255,0.08)');
+    const spotlight = ctx.createRadialGradient(W * 0.5, H * 0.28, 0, W * 0.5, H * 0.42, H * 0.78);
+    spotlight.addColorStop(0, 'rgba(246,201,91,0.2)');
+    spotlight.addColorStop(0.24, 'rgba(85,231,255,0.1)');
+    spotlight.addColorStop(0.54, 'rgba(232,59,95,0.045)');
     spotlight.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = spotlight;
     ctx.fillRect(0, 0, W, H);
@@ -8900,48 +9050,55 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const horizon = H * 0.58;
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
-    ctx.strokeStyle = 'rgba(246,201,91,0.2)';
-    ctx.lineWidth = Math.max(1, H * 0.002);
+    ctx.strokeStyle = 'rgba(246,201,91,0.32)';
+    ctx.lineWidth = Math.max(1.4, H * 0.0024);
     ctx.beginPath();
     ctx.moveTo(W * 0.08, horizon);
     ctx.quadraticCurveTo(W * 0.5, horizon - H * 0.04, W * 0.92, horizon);
     ctx.stroke();
 
-    const ringCount = 7;
+    const ringCount = 9;
     for (let i = 0; i < ringCount; i++) {
       const t = i / (ringCount - 1);
       const y = horizon + H * 0.05 + t * H * 0.32;
       const rw = W * (0.24 + t * 0.86);
       const rh = H * (0.035 + t * 0.095);
-      ctx.globalAlpha = 0.22 * (1 - t * 0.68);
-      ctx.strokeStyle = i % 2 ? 'rgba(85,231,255,0.32)' : 'rgba(246,201,91,0.3)';
+      ctx.globalAlpha = 0.3 * (1 - t * 0.7);
+      ctx.strokeStyle = i % 2 ? 'rgba(85,231,255,0.36)' : 'rgba(246,201,91,0.34)';
       ctx.beginPath();
       ctx.ellipse(W * 0.5, y, rw * 0.5, rh, 0, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    ctx.globalAlpha = 0.13;
-    ctx.strokeStyle = 'rgba(85,231,255,0.85)';
-    for (let i = -4; i <= 4; i++) {
-      const x = W * 0.5 + i * W * 0.075;
+    ctx.globalAlpha = 0.16;
+    ctx.strokeStyle = 'rgba(85,231,255,0.9)';
+    for (let i = -6; i <= 6; i++) {
+      const x = W * 0.5 + i * W * 0.062;
       ctx.beginPath();
       ctx.moveTo(x, horizon);
-      ctx.lineTo(W * 0.5 + i * W * 0.24, H);
+      ctx.lineTo(W * 0.5 + i * W * 0.23, H);
       ctx.stroke();
     }
 
-    ctx.globalAlpha = 0.12;
-    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.globalAlpha = 0.16;
+    ctx.fillStyle = 'rgba(255,255,255,0.78)';
     const scanY = prefersReducedMotion() ? H * 0.16 : ((now * 34) % (H + 80)) - 40;
     ctx.fillRect(0, scanY, W, 1.5);
     ctx.restore();
 
     const vignette = ctx.createRadialGradient(W * 0.5, H * 0.44, H * 0.18, W * 0.5, H * 0.52, H * 0.86);
     vignette.addColorStop(0, 'rgba(0,0,0,0)');
-    vignette.addColorStop(0.68, 'rgba(0,0,0,0.1)');
-    vignette.addColorStop(1, 'rgba(0,0,0,0.62)');
+    vignette.addColorStop(0.58, 'rgba(0,0,0,0.08)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.72)');
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, W, H);
+
+    const lowerShade = ctx.createLinearGradient(0, H * 0.52, 0, H);
+    lowerShade.addColorStop(0, 'rgba(0,0,0,0)');
+    lowerShade.addColorStop(0.58, 'rgba(1,3,8,0.34)');
+    lowerShade.addColorStop(1, 'rgba(0,0,0,0.64)');
+    ctx.fillStyle = lowerShade;
+    ctx.fillRect(0, H * 0.5, W, H * 0.5);
     ctx.restore();
   }
 
@@ -8959,18 +9116,19 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.globalCompositeOperation = 'source-over';
 
     const deck = ctx.createLinearGradient(frame.x, playerBandY, frame.x, frame.y + frame.h);
-    deck.addColorStop(0, 'rgba(85,231,255,0.025)');
-    deck.addColorStop(0.44, 'rgba(246,201,91,0.045)');
-    deck.addColorStop(1, 'rgba(232,59,95,0.055)');
+    deck.addColorStop(0, 'rgba(85,231,255,0.038)');
+    deck.addColorStop(0.34, 'rgba(246,201,91,0.06)');
+    deck.addColorStop(0.78, 'rgba(232,59,95,0.075)');
+    deck.addColorStop(1, 'rgba(0,0,0,0.18)');
     ctx.fillStyle = deck;
     roundedRectPath(ctx, frame.x + frame.w * 0.035, playerBandY, frame.w * 0.93, frame.h * 0.74, Math.max(16 * ui, frame.r * 0.7));
     ctx.fill();
 
-    ctx.globalAlpha = 0.18;
-    ctx.strokeStyle = 'rgba(85,231,255,0.42)';
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = 'rgba(85,231,255,0.48)';
     ctx.lineWidth = Math.max(1, 1.2 * ui);
-    for (let i = 0; i <= 10; i += 1) {
-      const t = i / 10;
+    for (let i = 0; i <= 12; i += 1) {
+      const t = i / 12;
       const x = frame.x + frame.w * (0.075 + t * 0.85);
       ctx.beginPath();
       ctx.moveTo(x, playerBandY + 4 * ui);
@@ -8999,26 +9157,38 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.lineTo(frame.x + frame.w * 0.92, horizonY);
     ctx.stroke();
 
+    ctx.globalAlpha = 0.16;
+    ctx.strokeStyle = 'rgba(255,255,255,0.44)';
+    ctx.lineWidth = Math.max(1, 1 * ui);
+    for (let i = 0; i < 4; i += 1) {
+      const y = lowerBandY + lowerBandH * (0.2 + i * 0.17);
+      ctx.beginPath();
+      ctx.moveTo(frame.x + frame.w * 0.16, y);
+      ctx.lineTo(frame.x + frame.w * 0.84, y + Math.sin(now * 0.6 + i) * 3 * ui);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
     if (hasHorde) {
       const horde = getHordeLayout();
       const halo = ctx.createLinearGradient(horde.barX, 0, horde.barX + horde.barW, 0);
-      halo.addColorStop(0, 'rgba(232,59,95,0.02)');
-      halo.addColorStop(0.5, 'rgba(232,59,95,0.11)');
-      halo.addColorStop(1, 'rgba(246,201,91,0.04)');
+      halo.addColorStop(0, 'rgba(232,59,95,0.035)');
+      halo.addColorStop(0.5, 'rgba(232,59,95,0.18)');
+      halo.addColorStop(1, 'rgba(246,201,91,0.07)');
       ctx.fillStyle = halo;
-      roundedRectPath(ctx, horde.barX - 20 * ui, horde.barY - 16 * ui, horde.barW + 40 * ui, horde.barH + 30 * ui, horde.radius + 10 * ui);
+      roundedRectPath(ctx, horde.barX - 28 * ui, horde.barY - 22 * ui, horde.barW + 56 * ui, horde.barH + 42 * ui, horde.radius + 16 * ui);
       ctx.fill();
     }
 
     if (hasBoss) {
       const boss = getBossLayout();
       const bossGlow = ctx.createRadialGradient(boss.x, boss.y, 0, boss.x, boss.y, boss.r * 4.2);
-      bossGlow.addColorStop(0, 'rgba(255,106,61,0.18)');
-      bossGlow.addColorStop(0.4, 'rgba(246,201,91,0.07)');
+      bossGlow.addColorStop(0, 'rgba(255,106,61,0.28)');
+      bossGlow.addColorStop(0.36, 'rgba(246,201,91,0.13)');
       bossGlow.addColorStop(1, 'rgba(255,106,61,0)');
       ctx.fillStyle = bossGlow;
       ctx.beginPath();
-      ctx.arc(boss.x, boss.y, boss.r * 4.2, 0, Math.PI * 2);
+      ctx.arc(boss.x, boss.y, boss.r * 4.6, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -9056,23 +9226,29 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       [W - pad, H - pad, -1, -1],
     ].forEach(([x, y, sx, sy]) => {
       const grad = ctx.createLinearGradient(x, y, x + sx * len, y + sy * len);
-      grad.addColorStop(0, `rgba(246,201,91,${0.46 + pulse * 0.14})`);
-      grad.addColorStop(1, 'rgba(246,201,91,0.08)');
+      grad.addColorStop(0, `rgba(246,201,91,${0.58 + pulse * 0.18})`);
+      grad.addColorStop(0.42, `rgba(85,231,255,${0.26 + pulse * 0.08})`);
+      grad.addColorStop(1, 'rgba(246,201,91,0.06)');
       ctx.strokeStyle = grad;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = Math.max(2, 2.4 * canvasUiScale());
       ctx.beginPath();
       ctx.moveTo(x + sx * len, y);
       ctx.lineTo(x, y);
       ctx.lineTo(x, y + sy * len);
       ctx.stroke();
 
-      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(x + sx * (len * 0.64), y + sy * 8);
       ctx.lineTo(x + sx * 8, y + sy * 8);
       ctx.lineTo(x + sx * 8, y + sy * (len * 0.64));
       ctx.stroke();
+
+      ctx.fillStyle = `rgba(246,201,91,${0.5 + pulse * 0.12})`;
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(2.2, canvasUiScale() * 2.6), 0, Math.PI * 2);
+      ctx.fill();
     });
 
     ctx.globalAlpha = 0.3;
@@ -9083,7 +9259,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const x = pad + len + t * (W - (pad + len) * 2);
       ctx.beginPath();
       ctx.moveTo(x, pad + 2);
-      ctx.lineTo(x + 16, pad + 2);
+      ctx.lineTo(x + 20, pad + 2);
       ctx.stroke();
     }
     ctx.restore();
@@ -9641,7 +9817,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       Math.max(1, slots.name.w - Math.max(10 * ui, slots.name.h * 0.16)),
       2,
       nameFontFactory,
-      Math.max(26 * ui, Math.min(slots.name.h * 0.72, cardW * 0.16)),
+      Math.max(27 * ui, Math.min(slots.name.h * 0.84, cardW * 0.2)),
       Math.max(10, 11 * ui)
     );
     if (nameFit.lines.length > 1) {
@@ -9719,49 +9895,78 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     ctx.save();
-    const glow = ctx.createRadialGradient(plateX + cardW * 0.5, plateY + plateH * 0.38, 0, plateX + cardW * 0.5, plateY + plateH * 0.44, Math.max(cardW, plateH) * 0.58);
-    glow.addColorStop(0, colorWithAlpha(accent, player.teamColor ? 0.26 : state.isLeader ? 0.24 : 0.18));
+    const cardPulse = state.isCritical ? state.pulse : state.isLeader ? 0.72 + state.pulse * 0.2 : 0.45 + state.pulse * 0.14;
+    const glow = ctx.createRadialGradient(plateX + cardW * 0.5, plateY + plateH * 0.34, 0, plateX + cardW * 0.5, plateY + plateH * 0.46, Math.max(cardW, plateH) * 0.74);
+    glow.addColorStop(0, colorWithAlpha(accent, player.teamColor ? 0.34 : state.isLeader ? 0.32 : 0.22));
+    glow.addColorStop(0.52, colorWithAlpha(accent, 0.08));
     glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow;
-    roundedRectPath(ctx, plateX - cardW * 0.06, plateY - plateH * 0.18, cardW * 1.12, plateH * 1.36, radius * 1.25);
+    cutCornerPanelPath(ctx, plateX - cardW * 0.08, plateY - plateH * 0.2, cardW * 1.16, plateH * 1.42, Math.max(14 * ui, radius * 0.75), radius * 1.15);
     ctx.fill();
 
-    ctx.shadowColor = cardAccent ? cardAccent.color : colorWithAlpha(accent, player.teamColor ? 0.24 : state.isLeader ? 0.24 : 0.16);
-    ctx.shadowBlur = cardAccent ? (state.accentType === 'kill' ? 28 : 22) : 14;
-    drawGlassPanel(plateX, plateY, cardW, plateH, radius, {
-      start: state.isKO ? 'rgba(5,6,10,0.995)' : 'rgba(2,6,12,0.995)',
-      mid: state.isKO ? 'rgba(12,13,19,0.965)' : 'rgba(8,14,24,0.972)',
-      end: state.isKO ? 'rgba(1,2,6,0.995)' : 'rgba(1,4,9,0.997)',
-      stroke: state.isCritical ? colorWithAlpha(THEME.red, 0.82 + state.pulse * 0.12) : colorWithAlpha(accent, player.teamColor ? 0.76 : state.isLeader ? 0.78 : 0.62),
-      lineWidth: state.isCritical ? 2.4 : 1.95,
+    drawPremiumEsportsPanel(plateX, plateY, cardW, plateH, radius, {
+      accent: state.isCritical ? THEME.red : accent,
+      pulse: cardPulse,
+      cut: Math.max(12 * ui, Math.min(cardW, plateH) * 0.12),
+      glowAlpha: cardAccent ? 0.36 : state.isLeader ? 0.34 : 0.22,
+      glowBlur: cardAccent ? (state.accentType === 'kill' ? 34 : 26) : state.isLeader ? 24 : 16,
+      stroke: state.isCritical
+        ? colorWithAlpha(THEME.red, 0.86 + state.pulse * 0.1)
+        : colorWithAlpha(accent, player.teamColor ? 0.82 : state.isLeader ? 0.88 : 0.68),
+      lineWidth: state.isCritical ? 2.55 : state.isLeader ? 2.25 : 1.75,
+      start: state.isKO ? 'rgba(7,8,13,0.996)' : 'rgba(17,25,39,0.992)',
+      mid: state.isKO ? 'rgba(11,12,18,0.978)' : 'rgba(7,13,25,0.984)',
+      mid2: state.isKO ? 'rgba(4,5,10,0.994)' : 'rgba(4,8,16,0.992)',
+      end: 'rgba(1,3,8,0.998)',
     });
-    ctx.shadowBlur = 0;
 
     const shieldOverlayDrawn = drawPlayerCardShieldOverlay(plateX, plateY, cardW, plateH, radius, state, ui);
 
     if (state.isLeader) {
-      ctx.strokeStyle = colorWithAlpha(THEME.goldBright, 0.42 + state.pulse * 0.12);
-      ctx.lineWidth = Math.max(1.2, 1.35 * ui);
-      roundedRectPath(ctx, plateX - 2 * ui, plateY - 2 * ui, cardW + 4 * ui, plateH + 4 * ui, radius + 2 * ui);
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.strokeStyle = colorWithAlpha(THEME.goldBright, 0.62 + state.pulse * 0.18);
+      ctx.lineWidth = Math.max(1.4, 1.75 * ui);
+      cutCornerPanelPath(ctx, plateX - 3 * ui, plateY - 3 * ui, cardW + 6 * ui, plateH + 6 * ui, Math.max(13 * ui, radius * 0.76), radius + 2 * ui);
       ctx.stroke();
+      ctx.fillStyle = colorWithAlpha(THEME.goldBright, 0.9);
+      const crownY = plateY - Math.max(6 * ui, plateH * 0.035);
+      ctx.beginPath();
+      ctx.moveTo(plateX + cardW * 0.45, crownY + 8 * ui);
+      ctx.lineTo(plateX + cardW * 0.5, crownY);
+      ctx.lineTo(plateX + cardW * 0.55, crownY + 8 * ui);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
     }
     if (state.isLowHpWarning) {
       ctx.strokeStyle = colorWithAlpha(THEME.red, 0.38 + state.pulse * 0.22);
       ctx.lineWidth = Math.max(1.4, 1.5 * ui);
-      roundedRectPath(ctx, plateX + 2 * ui, plateY + 2 * ui, Math.max(1, cardW - 4 * ui), Math.max(1, plateH - 4 * ui), Math.max(1, radius - 1 * ui));
+      cutCornerPanelPath(ctx, plateX + 2 * ui, plateY + 2 * ui, Math.max(1, cardW - 4 * ui), Math.max(1, plateH - 4 * ui), Math.max(10 * ui, radius * 0.72), Math.max(1, radius - 1 * ui));
       ctx.stroke();
     }
 
-    ctx.fillStyle = colorWithAlpha(accent, player.teamColor ? 0.94 : state.isLeader ? 0.96 : 0.86);
-    roundedRectPath(ctx, plateX + cardW * 0.04, plateY + plateH * 0.064, cardW * 0.92, Math.max(5, plateH * 0.044), 5);
+    const railH = Math.max(7, plateH * 0.05);
+    const railGrad = ctx.createLinearGradient(plateX + cardW * 0.04, 0, plateX + cardW * 0.96, 0);
+    railGrad.addColorStop(0, colorWithAlpha(accent, 0.18));
+    railGrad.addColorStop(0.18, colorWithAlpha(accent, 0.92));
+    railGrad.addColorStop(0.5, state.isLeader ? THEME.goldBright : '#ffffff');
+    railGrad.addColorStop(0.82, colorWithAlpha(accent, 0.82));
+    railGrad.addColorStop(1, colorWithAlpha(accent, 0.16));
+    ctx.fillStyle = railGrad;
+    cutCornerPanelPath(ctx, plateX + cardW * 0.045, plateY + plateH * 0.055, cardW * 0.91, railH, Math.max(3, railH * 0.6), 3);
     ctx.fill();
 
-    ctx.fillStyle = 'rgba(2,6,13,0.9)';
-    roundedRectPath(ctx, slots.name.x, slots.name.y, slots.name.w, slots.name.h, Math.max(7 * ui, slots.name.h * 0.22));
+    const nameGrad = ctx.createLinearGradient(slots.name.x, slots.name.y, slots.name.x + slots.name.w, slots.name.y + slots.name.h);
+    nameGrad.addColorStop(0, 'rgba(0,0,0,0.78)');
+    nameGrad.addColorStop(0.34, 'rgba(8,16,30,0.94)');
+    nameGrad.addColorStop(1, 'rgba(0,0,0,0.7)');
+    ctx.fillStyle = nameGrad;
+    cutCornerPanelPath(ctx, slots.name.x, slots.name.y, slots.name.w, slots.name.h, Math.max(8 * ui, slots.name.h * 0.24), Math.max(6 * ui, slots.name.h * 0.18));
     ctx.fill();
-    ctx.strokeStyle = colorWithAlpha(accent, state.isLeader ? 0.82 : 0.68);
-    ctx.lineWidth = Math.max(1.2, 1.55 * ui);
-    roundedRectPath(ctx, slots.name.x + 0.5, slots.name.y + 0.5, Math.max(1, slots.name.w - 1), Math.max(1, slots.name.h - 1), Math.max(7 * ui, slots.name.h * 0.22));
+    ctx.strokeStyle = colorWithAlpha(accent, state.isLeader ? 0.92 : 0.72);
+    ctx.lineWidth = Math.max(1.35, 1.7 * ui);
+    cutCornerPanelPath(ctx, slots.name.x + 0.5, slots.name.y + 0.5, Math.max(1, slots.name.w - 1), Math.max(1, slots.name.h - 1), Math.max(8 * ui, slots.name.h * 0.24), Math.max(6 * ui, slots.name.h * 0.18));
     ctx.stroke();
 
     if (state.wasHit) {
@@ -9787,7 +9992,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     const nameCenter = rectCenter(slots.name);
     const nameLineHeight = nameFit.lines.length > 1 ? nameFit.size * 0.76 : nameFit.size * 0.86;
-    const nameTextCenterY = slots.name.y + slots.name.h * (nameFit.lines.length > 1 ? 0.53 : 0.62);
+    const nameTextCenterY = slots.name.y + slots.name.h * (nameFit.lines.length > 1 ? 0.53 : 0.68);
     const nameTextRect = drawCenteredCanvasTextLines(ctx, nameFit.lines, nameCenter.x, nameTextCenterY, {
       fontFactory: nameFontFactory,
       fontSize: nameFit.size,
@@ -9801,15 +10006,22 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     const midBandX = slots.avatar.x - Math.max(3 * ui, avatarR * 0.2);
     const midBandW = Math.max(1, slots.statusBadges.right - midBandX);
-    ctx.fillStyle = state.isKO ? 'rgba(7,8,14,0.74)' : 'rgba(3,10,20,0.76)';
-    roundedRectPath(ctx, midBandX, slots.statusBadges.y - Math.max(2 * ui, avatarR * 0.12), midBandW, slots.statusBadges.h + Math.max(4 * ui, avatarR * 0.24), Math.max(8 * ui, slots.statusBadges.h * 0.45));
+    const midBandGrad = ctx.createLinearGradient(midBandX, slots.statusBadges.y, midBandX + midBandW, slots.statusBadges.y);
+    midBandGrad.addColorStop(0, state.isKO ? 'rgba(10,10,16,0.86)' : 'rgba(3,12,24,0.9)');
+    midBandGrad.addColorStop(0.5, state.hasShield ? 'rgba(5,40,54,0.76)' : colorWithAlpha(accent, 0.13));
+    midBandGrad.addColorStop(1, 'rgba(0,0,0,0.68)');
+    ctx.fillStyle = midBandGrad;
+    cutCornerPanelPath(ctx, midBandX, slots.statusBadges.y - Math.max(2 * ui, avatarR * 0.12), midBandW, slots.statusBadges.h + Math.max(4 * ui, avatarR * 0.24), Math.max(8 * ui, slots.statusBadges.h * 0.38), Math.max(8 * ui, slots.statusBadges.h * 0.42));
     ctx.fill();
 
-    ctx.strokeStyle = state.isLeader ? 'rgba(246,201,91,0.86)' : colorWithAlpha(accent, 0.72);
-    ctx.lineWidth = Math.max(1.8, avatarR * 0.16);
+    ctx.strokeStyle = state.isLeader ? 'rgba(246,201,91,0.96)' : colorWithAlpha(accent, 0.82);
+    ctx.lineWidth = Math.max(2.2, avatarR * 0.17);
     ctx.shadowColor = accent;
-    ctx.shadowBlur = state.hasShield ? 16 : 8;
+    ctx.shadowBlur = state.hasShield ? 20 : state.isLeader ? 14 : 10;
     ctx.beginPath(); ctx.arc(avatarX, avatarY, avatarR, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.24)';
+    ctx.lineWidth = Math.max(0.8, avatarR * 0.05);
+    ctx.beginPath(); ctx.arc(avatarX - avatarR * 0.02, avatarY - avatarR * 0.02, avatarR * 0.78, Math.PI * 1.12, Math.PI * 1.88); ctx.stroke();
     if (state.hasShield) {
       ctx.strokeStyle = colorWithAlpha(THEME.cyan, 0.42 + state.pulse * 0.12);
       ctx.lineWidth = Math.max(1, avatarR * 0.16);
@@ -9851,8 +10063,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     drawPlayerSlot(
       slots.statusBadges,
       slots.statusBadges.h / 2,
-      leaderStatusBadge ? 'rgba(76,54,13,0.92)' : state.isCritical ? 'rgba(232,59,95,0.9)' : state.hasShield ? 'rgba(7,62,78,0.9)' : state.isKO ? 'rgba(38,13,20,0.88)' : 'rgba(5,12,24,0.86)',
-      leaderStatusBadge ? colorWithAlpha(THEME.goldBright, 0.94) : state.isCritical ? 'rgba(255,213,189,0.78)' : state.hasShield ? 'rgba(151,252,255,0.7)' : colorWithAlpha(accent, 0.66),
+      leaderStatusBadge ? 'rgba(82,56,10,0.96)' : state.isCritical ? 'rgba(108,9,31,0.96)' : state.hasShield ? 'rgba(4,56,75,0.96)' : state.isKO ? 'rgba(40,12,20,0.92)' : 'rgba(6,15,28,0.92)',
+      leaderStatusBadge ? colorWithAlpha(THEME.goldBright, 0.98) : state.isCritical ? 'rgba(255,213,189,0.86)' : state.hasShield ? 'rgba(151,252,255,0.82)' : colorWithAlpha(accent, 0.76),
       Math.max(1, (leaderStatusBadge ? 1.9 : 1.2) * ui)
     );
     const statusCenter = rectCenter(slots.statusBadges);
@@ -9890,16 +10102,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.shadowBlur = state.isLowHpWarning ? Math.max(9, 8 * ui) : Math.max(4, 4 * ui);
     hpCellPath(barX, barY, barW, barH, hpCut);
     const hpCellGrad = ctx.createLinearGradient(barX, barY, barX + barW, barY + barH);
-    hpCellGrad.addColorStop(0, colorWithAlpha(hpStart, state.isLowHpWarning ? 0.34 : 0.22));
-    hpCellGrad.addColorStop(0.48, 'rgba(5,10,20,0.98)');
-    hpCellGrad.addColorStop(1, 'rgba(2,5,12,0.99)');
+    hpCellGrad.addColorStop(0, colorWithAlpha(hpStart, state.isLowHpWarning ? 0.42 : 0.28));
+    hpCellGrad.addColorStop(0.4, 'rgba(8,13,22,0.99)');
+    hpCellGrad.addColorStop(1, 'rgba(1,3,9,0.995)');
     ctx.fillStyle = hpCellGrad;
     ctx.fill();
     ctx.shadowBlur = 0;
 
     hpCellPath(barX + 1, barY + 1, Math.max(1, barW - 2), Math.max(1, barH - 2), Math.max(1, hpCut - 1));
-    ctx.strokeStyle = colorWithAlpha(hpStart, state.isLowHpWarning || state.isKO ? 0.96 : 0.78);
-    ctx.lineWidth = Math.max(1.3, 1.55 * ui);
+    ctx.strokeStyle = colorWithAlpha(hpStart, state.isLowHpWarning || state.isKO ? 1 : 0.86);
+    ctx.lineWidth = Math.max(1.4, 1.7 * ui);
     ctx.stroke();
 
     const hpFillW = Math.max(barH * 0.32, (barW - hpCut * 1.8) * hpDisplayPct);
@@ -9907,8 +10119,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     hpCellPath(barX + 2, barY + 2, Math.max(1, barW - 4), Math.max(1, barH - 4), Math.max(1, hpCut - 2));
     ctx.clip();
     const hpSignalGrad = ctx.createLinearGradient(barX, 0, barX + hpFillW, 0);
-    hpSignalGrad.addColorStop(0, colorWithAlpha(hpStart, 0.22));
-    hpSignalGrad.addColorStop(1, colorWithAlpha(hpStart, 0.08));
+    hpSignalGrad.addColorStop(0, colorWithAlpha(hpStart, 0.34));
+    hpSignalGrad.addColorStop(1, colorWithAlpha(hpStart, 0.1));
     ctx.fillStyle = hpSignalGrad;
     ctx.fillRect(barX + hpCut * 0.62, barY + 2, Math.max(0, hpFillW), Math.max(1, barH - 4));
     ctx.restore();
@@ -9980,7 +10192,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         accentType: state.accentType,
         shieldActive: state.hasShield,
         shieldOverlay: shieldOverlayDrawn ? 'full-card-aegis-image' : '',
-        cardDesign: 'broadcast-identity-card',
+        cardDesign: 'premium-esports-identity-card',
       },
       slots: {
         card: cloneTelemetryRect(slots.card),
@@ -10288,16 +10500,19 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.arc(layout.x, layout.y, layout.r * 3.5, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.shadowColor = 'rgba(232,59,95,0.42)';
-    ctx.shadowBlur = 22 + nextAttackPct * 12;
-    drawGlassPanel(cardX, cardY, cardW, cardH, radius, {
-      start: 'rgba(38,6,18,0.93)',
-      mid: 'rgba(8,14,28,0.92)',
-      end: 'rgba(4,7,14,0.96)',
-      stroke: colorWithAlpha(nextAttackMs != null && nextAttackMs < 2600 ? THEME.red : THEME.ember, 0.52),
-      lineWidth: Math.max(1.2, 1.4 * ui),
+    drawPremiumEsportsPanel(cardX, cardY, cardW, cardH, radius, {
+      accent: nextAttackMs != null && nextAttackMs < 2600 ? THEME.red : THEME.ember,
+      pulse: nextAttackPct,
+      cut: Math.max(12 * ui, cardH * 0.2),
+      glowAlpha: 0.36 + nextAttackPct * 0.16,
+      glowBlur: 24 + nextAttackPct * 14,
+      stroke: colorWithAlpha(nextAttackMs != null && nextAttackMs < 2600 ? THEME.red : THEME.ember, 0.68 + nextAttackPct * 0.12),
+      lineWidth: Math.max(1.4, 1.6 * ui),
+      start: 'rgba(48,8,19,0.965)',
+      mid: 'rgba(13,17,30,0.95)',
+      mid2: 'rgba(7,10,19,0.972)',
+      end: 'rgba(3,5,12,0.99)',
     });
-    ctx.shadowBlur = 0;
 
     const railGrad = ctx.createLinearGradient(cardX, 0, cardX + cardW, 0);
     railGrad.addColorStop(0, colorWithAlpha(THEME.red, 0.98));
@@ -10512,20 +10727,23 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.save();
     ctx.globalCompositeOperation = 'source-over';
 
-    ctx.shadowColor = 'rgba(232,59,95,0.34)';
-    ctx.shadowBlur = 24 + pulse * 14;
-    const shell = ctx.createLinearGradient(barX, barY, barX + barW, barY + barH);
-    shell.addColorStop(0, 'rgba(52,12,22,0.95)');
-    shell.addColorStop(0.45, 'rgba(9,15,27,0.96)');
-    shell.addColorStop(1, 'rgba(7,10,18,0.96)');
-    ctx.fillStyle = shell;
-    roundedRectPath(ctx, barX, barY, barW, barH, radius);
-    ctx.fill();
-    ctx.shadowBlur = 0;
+    drawPremiumEsportsPanel(barX, barY, barW, barH, radius, {
+      accent: THEME.red,
+      pulse,
+      cut: Math.max(12 * ui, barH * 0.24),
+      glowAlpha: 0.26 + pulse * 0.12,
+      glowBlur: 24 + pulse * 14,
+      stroke: colorWithAlpha(THEME.red, 0.52 + pulse * 0.22),
+      lineWidth: Math.max(1.6, 1.8 * ui),
+      start: 'rgba(52,12,22,0.965)',
+      mid: 'rgba(9,15,27,0.972)',
+      mid2: 'rgba(8,12,20,0.982)',
+      end: 'rgba(4,5,11,0.992)',
+    });
 
     ctx.strokeStyle = `rgba(246,201,91,${0.28 + pulse * 0.18})`;
     ctx.lineWidth = 2;
-    roundedRectPath(ctx, barX + 1, barY + 1, barW - 2, barH - 2, radius - 1);
+    cutCornerPanelPath(ctx, barX + 1, barY + 1, barW - 2, barH - 2, Math.max(10 * ui, barH * 0.22), radius - 1);
     ctx.stroke();
 
     const hordeZone = computeOverlayLayout().zones.horde;
@@ -10817,9 +11035,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const frame = stage.frame;
     const safeFrame = stage.safe;
     const auditNow = Date.now();
+    const supportVisibleForAudit = supportUnitEl.style.visibility !== 'hidden' && auditNow < supportUnitState.visibleUntil;
     const shouldRefreshLayoutAudit = overlayVisualsFrozen
       || !window.__overlayLegacyLayout
       || auditNow - legacyLayoutAuditAt >= LEGACY_LAYOUT_AUDIT_INTERVAL_MS
+      || supportVisibleForAudit
       || attacks.length > 0
       || impactBursts.length > 0;
     if (shouldRefreshLayoutAudit) {

@@ -190,7 +190,7 @@ function assertPlayerCardSlots(layout, label, options = {}) {
     assertNoSlotOverlap(slots.name, slots.hpBar, `${cardLabel} name/hp`);
     assertNoSlotOverlap(slots.statusBadges, slots.hpBar, `${cardLabel} status/hp`);
     assertNoSlotOverlap(slots.avatar, slots.hpBar, `${cardLabel} avatar/hp`);
-    expect(player.text?.cardDesign, `${cardLabel} card design marker`).toBe('broadcast-identity-card');
+    expect(player.text?.cardDesign, `${cardLabel} card design marker`).toBe('premium-esports-identity-card');
     expect(player.text?.nameHasReplacement, `${cardLabel} name contains replacement glyph`).toBe(false);
     expect(player.text?.fittedName || '', `${cardLabel} missing fitted name`).not.toBe('');
     expect(player.text?.handle || '', `${cardLabel} handle should be hidden by default`).toBe('');
@@ -707,6 +707,26 @@ test('@visual player cards keep stats and special-character names aligned', asyn
   await freezeOverlayVisuals(page, testInfo, 'special-player-card-freeze');
   await expectNoHorizontalOverflow(page);
   await expectNoPageErrors(errors, testInfo, 'special-player-cards');
+});
+
+test('@visual premium esports overlay preview keeps the full HUD readable', async ({ page }, testInfo) => {
+  sourceProjectOnly(testInfo);
+  const errors = await watchPage(page, harness.baseUrl);
+  await openPreview(page);
+  await page.waitForFunction(() => typeof window.overlayEventEngine?.testPremiumEsportsPreview === 'function', null, { timeout: 5000 });
+  const preview = await page.evaluate(() => window.overlayEventEngine.testPremiumEsportsPreview());
+  await attachJson(testInfo, 'premium-esports-preview-result', preview);
+  expect(preview).toMatchObject({ ok: true, mode: 'premium-esports-preview' });
+  await waitForDemoLayout(page, { minPlayers: 5, horde: true, boss: true, settleMs: 700 });
+  const layout = await readLegacyLayout(page, testInfo, 'premium-esports-preview-layout');
+  assertPlayerCardSlots(layout, 'premium-esports-preview', { minPlayers: 5 });
+  assertBossHudIntegrated(layout, 'premium-esports-preview');
+  await assertBannerCombatGap(page, testInfo, 'premium-esports-preview-banner', { avoidBoss: true });
+  await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'premium-esports-preview-canvas', minLitRatio: 0.05 });
+  await freezeOverlayVisuals(page, testInfo, 'premium-esports-preview-freeze');
+  await expectStableScreenshot(page.getByTestId('overlay-source-frame'), testInfo, 'premium-esports-preview', { maxDiffPixelRatio: 0.16 });
+  await expectNoHorizontalOverflow(page);
+  await expectNoPageErrors(errors, testInfo, 'premium-esports-preview');
 });
 
 test('@visual boss wave uses one integrated boss HUD and hits all targets', async ({ page }, testInfo) => {
