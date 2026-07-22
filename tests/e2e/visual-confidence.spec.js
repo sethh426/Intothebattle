@@ -553,6 +553,27 @@ async function auditOrbitalTrackingViewport(page, testInfo) {
   await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'orbital-tracking-canvas', minLitRatio: 0.045 });
 }
 
+async function auditAttackGeometryViewport(page, testInfo) {
+  await openPreview(page);
+  await waitForDemoLayout(page, { horde: true });
+  await page.waitForFunction(() => typeof window.overlayEventEngine?.testAttackGeometry === 'function', null, { timeout: 5000 });
+  const result = await page.evaluate(() => window.overlayEventEngine.testAttackGeometry());
+  await attachJson(testInfo, 'attack-geometry-result', result);
+  expect(result?.firedCount).toBe(result?.results?.length);
+  expect(result?.droppedDuringProbe).toBe(0);
+  expect(result?.status?.unownedEffects).toBe(0);
+  for (const item of result?.results || []) {
+    expect(item.fired, `${item.name} should fire`).toBe(true);
+    const geometry = item.geometry;
+    expect(Number.isFinite(geometry?.origin?.x), `${item.name} missing origin x`).toBe(true);
+    expect(Number.isFinite(geometry?.origin?.y), `${item.name} missing origin y`).toBe(true);
+    expect(Number.isFinite(geometry?.targetPoint?.x), `${item.name} missing target x`).toBe(true);
+    expect(Number.isFinite(geometry?.targetPoint?.y), `${item.name} missing target y`).toBe(true);
+    expect(geometry?.distance, `${item.name} collapsed attack path`).toBeGreaterThan(24);
+  }
+  await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'attack-geometry-canvas', minLitRatio: 0.045 });
+}
+
 async function auditEventStormViewport(page, testInfo) {
   await openPreview(page);
   await waitForDemoLayout(page, { horde: true });
@@ -564,6 +585,27 @@ async function auditEventStormViewport(page, testInfo) {
   await expect.poll(async () => page.evaluate(() => window.overlayEventEngine?.status?.().visualQueue?.totalQueued || 0), { timeout: 12000 }).toBeLessThanOrEqual(4);
   await assertVisualQueueHealth(page, testInfo, 'event-storm-after', { maxQueued: 4, minProcessed: before.stats.processed + 12 });
   await assertBannerBacklog(page, testInfo, 'event-storm-banners', { maxQueued: 3, maxDomCount: 3 });
+}
+
+async function auditHotAttackStormViewport(page, testInfo) {
+  await openPreview(page);
+  await waitForDemoLayout(page, { horde: true });
+  await page.waitForFunction(() => typeof window.overlayEventEngine?.testHotAttackStorm === 'function', null, { timeout: 5000 });
+  const storm = await page.evaluate(() => window.overlayEventEngine.testHotAttackStorm(180));
+  await attachJson(testInfo, 'hot-attack-storm-result', storm);
+  expect(storm?.requested).toBeGreaterThanOrEqual(160);
+  expect(storm?.status?.motion?.hotMode).toBe(true);
+  expect(storm?.status?.motion?.hotReason).toContain('storm');
+  expect(storm?.status?.visualQueue?.totalQueued).toBeLessThanOrEqual(70);
+  await expect.poll(async () => page.evaluate(() => window.overlayEventEngine?.status?.().visualQueue?.totalQueued || 0), { timeout: 14000 }).toBeLessThanOrEqual(4);
+  await page.waitForTimeout(300);
+  const status = await page.evaluate(() => window.overlayEventEngine?.status?.() || null);
+  await attachJson(testInfo, 'hot-attack-storm-status', status);
+  expect(status?.motion?.hotMode).toBe(true);
+  expect(status?.motion?.activeAttacks).toBeLessThanOrEqual(8);
+  expect(status?.motion?.particles).toBeLessThanOrEqual(112);
+  expect(status?.visualQueue?.stats?.handlerErrors).toBe(0);
+  await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'hot-attack-storm-canvas', minLitRatio: 0.04 });
 }
 
 test('@visual signed live waiting state stays nonblank and secret-free', async ({ page }, testInfo) => {
@@ -846,8 +888,16 @@ test('@visual overlay diagnostic hooks emit Playwright artifacts for hard failur
     await auditOrbitalTrackingViewport(page, testInfo);
   });
 
+  await test.step('attack geometry health', async () => {
+    await auditAttackGeometryViewport(page, testInfo);
+  });
+
   await test.step('visual event storm health', async () => {
     await auditEventStormViewport(page, testInfo);
+  });
+
+  await test.step('hot attack storm smoothing', async () => {
+    await auditHotAttackStormViewport(page, testInfo);
   });
 
   await page.evaluate(() => window.overlayEventEngine?.resetFrameHealth?.());

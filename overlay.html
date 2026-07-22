@@ -2062,6 +2062,22 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const seenVisualSeqs = new Set();
   const seenVisualSeqOrder = [];
   const visualLaneReadyAt = {};
+  const HOT_MODE_DURATION_MS = 2800;
+  const HOT_MODE_QUEUE_LIMITS = Object.freeze({
+    exclusive: { budget: 1, maxQueued: 8, cooldownMs: 90 },
+    celebration: { budget: 1, maxQueued: 14, cooldownMs: 210 },
+    gameplay: { budget: 2, maxQueued: 36, cooldownMs: 105 },
+    ambient: { budget: 1, maxQueued: 10, cooldownMs: 220 },
+    sound: { budget: 1, maxQueued: 8, cooldownMs: 180 },
+  });
+  let overlayHotModeUntil = 0;
+  let overlayHotModeReason = '';
+  const overlayHotModeStats = {
+    activations: 0,
+    degraded: 0,
+    dropped: 0,
+    lastActivatedAt: 0,
+  };
   const frameDeltas = [];
   const frameHealthStats = {
     frames: 0,
@@ -2240,8 +2256,48 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return Boolean(reducedMotionMedia?.matches);
   }
 
+  function overlayHotModeActive(now = Date.now()) {
+    return now < overlayHotModeUntil;
+  }
+
+  function activateOverlayHotMode(reason = 'load', durationMs = HOT_MODE_DURATION_MS) {
+    const now = Date.now();
+    const safeDuration = Math.max(600, Math.min(7000, Number(durationMs) || HOT_MODE_DURATION_MS));
+    if (now >= overlayHotModeUntil) overlayHotModeStats.activations += 1;
+    overlayHotModeUntil = Math.max(overlayHotModeUntil, now + safeDuration);
+    overlayHotModeReason = String(reason || 'load').slice(0, 80);
+    overlayHotModeStats.lastActivatedAt = now;
+  }
+
+  function currentOverlayHotModeStatus(now = Date.now()) {
+    return {
+      active: overlayHotModeActive(now),
+      reason: overlayHotModeActive(now) ? overlayHotModeReason : '',
+      until: overlayHotModeUntil,
+      remainingMs: Math.max(0, overlayHotModeUntil - now),
+      stats: { ...overlayHotModeStats },
+    };
+  }
+
+  function checkOverlayLoad(reason = 'load') {
+    const particleCount = typeof attackParticleCount === 'function' ? attackParticleCount() : 0;
+    const queueDepth = visualEventQueue.length;
+    const activeAttacks = Array.isArray(attacks) ? attacks.length : 0;
+    const recent = frameDeltas.slice(-60);
+    const longRecent = recent.filter(value => value > 50).length;
+    const p95Recent = recent.length
+      ? recent.slice().sort((a, b) => a - b)[Math.min(recent.length - 1, Math.floor(recent.length * 0.95))]
+      : 0;
+    if (queueDepth > 48) activateOverlayHotMode(`queue:${queueDepth}`);
+    else if (activeAttacks > 9) activateOverlayHotMode(`attacks:${activeAttacks}`);
+    else if (particleCount > 150) activateOverlayHotMode(`particles:${particleCount}`);
+    else if (frameHealthStats.lastDeltaMs > 55) activateOverlayHotMode(`frame:${Math.round(frameHealthStats.lastDeltaMs)}ms`);
+    else if (recent.length >= 24 && (p95Recent > 42 || longRecent >= 4)) activateOverlayHotMode(`frame-health:${reason}`);
+  }
+
   function canvasMotionScale() {
-    return prefersReducedMotion() ? 0.36 : 1;
+    if (prefersReducedMotion()) return overlayHotModeActive() ? 0.28 : 0.36;
+    return overlayHotModeActive() ? 0.58 : 1;
   }
 
   function canvasEffectDensityScale() {
@@ -2256,6 +2312,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const safeCount = Math.max(0, Math.floor(Number(count) || 0));
     const min = Math.max(0, Math.floor(Number(options.min) || 1));
     if (!safeCount) return 0;
+    if (overlayHotModeActive()) {
+      const hotMin = Math.min(min, Math.max(1, Math.floor(min * 0.65)));
+      const hotMax = Math.max(hotMin, Math.floor(Number(options.hotMax || options.max || safeCount) * 0.55));
+      return Math.min(safeCount, Math.max(hotMin, Math.min(hotMax, Math.ceil(safeCount * canvasEffectDensityScale() * 0.48))));
+    }
     if (!prefersReducedMotion()) {
       const scaled = Math.floor(safeCount * canvasEffectDensityScale());
       return Math.max(Math.min(safeCount, min), Math.min(safeCount, scaled));
@@ -3394,6 +3455,87 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
   }
 
+  function runAttackGeometryProbe() {
+    clearTransientEffectsForProbe();
+    const top = topPlayers();
+    const ids = (top.length ? top : DEMO_PLAYERS).map(player => player.uniqueId || player.id).filter(Boolean);
+    const roster = ids.length >= 4 ? ids : ['p1', 'p2', 'p3', 'p4'];
+    handleBossWave({
+      type: 'started',
+      active: true,
+      hp: 720,
+      maxHp: 1000,
+      remainingMs: 76000,
+      durationMs: 90000,
+      nextAttackAt: Date.now() + 2600,
+      attackIntervalMs: 11000,
+    });
+
+    const beforeDropped = effectOwnershipStats.droppedEffects;
+    const cases = [
+      { name: 'playerToPlayer', attacker: roster[0], target: roster[1], effect: 'laser', meta: { attackerScope: 'top', targetScope: 'top' } },
+      { name: 'playerToHorde', attacker: roster[1], target: HORDE_ID, effect: 'pulse', meta: { attackerScope: 'top', targetScope: 'horde', special: true } },
+      { name: 'hordeToPlayer', attacker: HORDE_ID, target: roster[2], effect: 'arc', meta: { attackerScope: 'horde', targetScope: 'top' } },
+      { name: 'playerToBoss', attacker: roster[2], target: BOSS_ID, effect: 'railgun', meta: { attackerScope: 'top', targetScope: 'boss', critical: true } },
+      { name: 'bossToPlayer', attacker: BOSS_ID, target: roster[3], effect: 'comet', meta: { attackerScope: 'boss', targetScope: 'top' } },
+      { name: 'bossToHorde', attacker: BOSS_ID, target: HORDE_ID, effect: 'plasma', meta: { attackerScope: 'boss', targetScope: 'horde' } },
+    ];
+    const results = cases.map((item, index) => {
+      const fired = fireAttack(item.attacker, item.target, 12 + index * 4, false, Boolean(item.meta.special), item.effect, {
+        ...item.meta,
+        intensity: 0.42 + index * 0.04,
+        critical: Boolean(item.meta.critical),
+      });
+      return {
+        name: item.name,
+        fired,
+        geometry: window.__overlayLastAttackGeometry || null,
+      };
+    });
+    return {
+      results,
+      firedCount: results.filter(item => item.fired).length,
+      droppedDuringProbe: effectOwnershipStats.droppedEffects - beforeDropped,
+      status: currentOverlayMotionStatus(),
+    };
+  }
+
+  function runHotAttackStorm(count = 180) {
+    const requested = Math.max(80, Math.min(240, Math.round(Number(count) || 180)));
+    const top = topPlayers();
+    const ids = (top.length ? top : DEMO_PLAYERS).map(player => player.uniqueId || player.id).filter(Boolean);
+    const roster = ids.length >= 2 ? ids : ['p1', 'p2', 'p3', 'p4'];
+    clearTransientEffectsForProbe();
+    resetFrameHealth();
+    const baseSeq = Math.max(lastVisualEventSeq + 4000, Date.now());
+    const effects = ['laser', 'pulse', 'arc', 'explosion', 'plasma', 'ion'];
+    for (let i = 0; i < requested; i += 1) {
+      const attacker = roster[i % roster.length];
+      const target = roster[(i + 1) % roster.length] || attacker;
+      enqueueVisualEvent('attack', {
+        _seq: baseSeq + i + 1,
+        attacker,
+        target,
+        attackerScope: 'top',
+        targetScope: 'top',
+        damage: 8 + (i % 28),
+        effect: effects[i % effects.length],
+        intensity: 0.36 + (i % 5) * 0.08,
+        critical: i % 14 === 0,
+        special: i % 27 === 0,
+      }, handleAttackEvent);
+    }
+    activateOverlayHotMode(`storm:${requested}`);
+    return {
+      requested,
+      status: {
+        visualQueue: currentVisualQueueStatus(),
+        motion: currentOverlayMotionStatus(),
+        frame: currentFrameHealthStatus(),
+      },
+    };
+  }
+
   function freezeOverlayVisuals() {
     overlayVisualsFrozen = true;
     return {
@@ -3502,6 +3644,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     testEffectOwnership: () => runEffectOwnershipProbe(),
     testEffectCatalog: effects => runEffectCatalogProbe(effects),
     testOrbitalTracking: () => runOrbitalTrackingProbe(),
+    testAttackGeometry: () => runAttackGeometryProbe(),
+    testHotAttackStorm: (count = 180) => runHotAttackStorm(count),
     testSponsorQueue: (count = 9) => runSponsorQueueStress(count),
     testBackground: (mode = 'valid') => {
       const kind = String(mode || 'valid').toLowerCase();
@@ -4621,6 +4765,43 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     window.__overlayLegacyEffectLane = lane;
     return { from: nextFrom, to: nextTo, lane };
+  }
+
+  function finiteCanvasPoint(point) {
+    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return null;
+    return { x: point.x, y: point.y };
+  }
+
+  function resolveAttackGeometry(source, target, meta = {}) {
+    const sourceAnchor = source.kind === 'boss'
+      ? (getBossAttackOrigin(meta) || entityAnchorPoint(source, target.point))
+      : entityAnchorPoint(source, target.point);
+    const targetAnchor = entityAnchorPoint(target, source.point);
+    const rawFrom = finiteCanvasPoint(sourceAnchor);
+    const rawTo = finiteCanvasPoint(targetAnchor);
+    if (!rawFrom || !rawTo) return null;
+
+    const constrained = constrainAttackPath(rawFrom, rawTo);
+    const impactPoint = ownedPointWithinBounds(constrained.to, target);
+    const sourcePoint = ownedPointWithinBounds(constrained.from, source);
+    const geometry = {
+      source: effectOwnerRef(source),
+      target: effectOwnerRef(target),
+      origin: { ...sourcePoint },
+      targetPoint: { ...impactPoint },
+      rawOrigin: { ...rawFrom },
+      rawTarget: { ...rawTo },
+      lane: constrained.lane ? {
+        left: constrained.lane.x,
+        right: constrained.lane.right,
+        top: constrained.lane.top,
+        bottom: constrained.lane.bottom,
+      } : null,
+      distance: Math.round(Math.hypot(sourcePoint.x - impactPoint.x, sourcePoint.y - impactPoint.y) * 10) / 10,
+      at: Date.now(),
+    };
+    window.__overlayLastAttackGeometry = geometry;
+    return { from: sourcePoint, to: impactPoint, impactPoint, geometry };
   }
 
   // ═══════════════════════════════════════
@@ -5901,11 +6082,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function triggerArenaShake(magnitude = 4, duration = 220) {
-    const safeMagnitude = Math.max(0, Math.min(10, Number(magnitude) || 0));
+    let safeMagnitude = Math.max(0, Math.min(10, Number(magnitude) || 0));
     if (!safeMagnitude || prefersReducedMotion()) return;
+    let safeDuration = Math.max(80, Number(duration) || 220);
+    if (overlayHotModeActive()) {
+      safeMagnitude *= 0.42;
+      safeDuration = Math.min(150, safeDuration * 0.55);
+      overlayHotModeStats.degraded += 1;
+      if (safeMagnitude < 1.1) return;
+    }
     arenaShakeMagnitude = Math.max(arenaShakeMagnitude * 0.65, safeMagnitude);
     arenaShakeStartedAt = Date.now();
-    arenaShakeUntil = Math.max(arenaShakeUntil, arenaShakeStartedAt + Math.max(80, Number(duration) || 220));
+    arenaShakeUntil = Math.max(arenaShakeUntil, arenaShakeStartedAt + safeDuration);
   }
 
   function currentArenaShake() {
@@ -5929,9 +6117,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function trimVisualEffects() {
-    const maxEffects = prefersReducedMotion() ? 8 : 12;
-    const maxParticles = prefersReducedMotion() ? 64 : 220;
-    if (attacks.length > maxEffects) attacks.splice(0, attacks.length - maxEffects);
+    const hot = overlayHotModeActive();
+    const maxEffects = prefersReducedMotion() ? (hot ? 5 : 8) : (hot ? 8 : 12);
+    const maxParticles = prefersReducedMotion() ? (hot ? 40 : 64) : (hot ? 112 : 220);
+    if (attacks.length > maxEffects) {
+      const removeCount = attacks.length - maxEffects;
+      attacks.splice(0, removeCount);
+      if (hot) overlayHotModeStats.dropped += removeCount;
+    }
     let totalParticles = attackParticleCount();
     if (totalParticles <= maxParticles) return;
     for (const attack of attacks) {
@@ -5942,6 +6135,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         if (removeCount > 0) {
           list.splice(0, removeCount);
           totalParticles -= removeCount;
+          if (hot) overlayHotModeStats.dropped += removeCount;
         }
         if (totalParticles <= maxParticles) return;
       }
@@ -5957,6 +6151,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     effect.__effectOwnership = normalizeEffectOwnership(ownership);
     effect.__effectBounds = effectOwnershipBounds(ownership);
     attacks.push(effect);
+    checkOverlayLoad('effect');
     trimVisualEffects();
     return effect;
   }
@@ -5994,6 +6189,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       particles: particleCount,
       impactBursts: impactBursts.length,
       arenaShakeActive: now < arenaShakeUntil && arenaShakeMagnitude > 0,
+      hotMode: overlayHotModeActive(now),
+      hotReason: overlayHotModeActive(now) ? overlayHotModeReason : '',
+      hot: currentOverlayHotModeStatus(now),
     };
   }
 
@@ -6030,6 +6228,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (delta > 120) frameHealthStats.veryLongFrames += 1;
     frameDeltas.push(delta);
     if (frameDeltas.length > 180) frameDeltas.splice(0, frameDeltas.length - 180);
+    checkOverlayLoad('frame');
   }
 
   function roundedMs(value) {
@@ -6072,6 +6271,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
     const point = ownedPointWithinBounds({ x, y }, owner);
     const reducedMotion = prefersReducedMotion();
+    const hot = overlayHotModeActive();
     const baseDuration = Math.max(260, Math.min(1200, Number(options.duration) || 620));
     const baseRadius = Math.max(18, Number(options.radius) || 36);
     const baseIntensity = clamp01(options.intensity == null ? 0.55 : options.intensity);
@@ -6079,15 +6279,20 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       x: point.x,
       y: point.y,
       startedAt: Date.now(),
-      duration: reducedMotion ? Math.max(180, Math.min(420, Math.round(baseDuration * 0.42))) : baseDuration,
-      radius: reducedMotion ? Math.max(14, baseRadius * 0.62) : baseRadius,
+      duration: reducedMotion ? Math.max(180, Math.min(420, Math.round(baseDuration * 0.42))) : (hot ? Math.max(180, Math.min(520, Math.round(baseDuration * 0.62))) : baseDuration),
+      radius: reducedMotion ? Math.max(14, baseRadius * 0.62) : (hot ? Math.max(14, baseRadius * 0.68) : baseRadius),
       color: options.color || THEME.cyan,
       accent: options.accent || THEME.gold,
-      intensity: reducedMotion ? Math.min(baseIntensity, 0.38) : baseIntensity,
+      intensity: reducedMotion ? Math.min(baseIntensity, 0.38) : (hot ? Math.min(baseIntensity, 0.48) : baseIntensity),
       type: options.type || 'hit',
       __effectOwnership: normalizeEffectOwnership({ type: 'impact', owner }),
     });
-    if (impactBursts.length > 24) impactBursts.splice(0, impactBursts.length - 24);
+    const maxBursts = reducedMotion ? 10 : hot ? 14 : 24;
+    if (impactBursts.length > maxBursts) {
+      const removeCount = impactBursts.length - maxBursts;
+      impactBursts.splice(0, removeCount);
+      if (hot) overlayHotModeStats.dropped += removeCount;
+    }
   }
 
   function drawImpactBursts() {
@@ -8278,20 +8483,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const targetIsBoss = target.kind === 'boss';
     const attackerIsHorde = source.kind === 'horde';
     const targetIsHorde = target.kind === 'horde';
-    const rawFrom = attackerIsBoss
-      ? (getBossAttackOrigin(meta) || entityAnchorPoint(source, target.point))
-      : entityAnchorPoint(source, target.point);
-    const rawTo = entityAnchorPoint(target, source.point);
-    let from = rawFrom;
-    let to = rawTo;
-    if (!from || !to) return recordDroppedEffect('unresolved_attack_path', { type: 'attack' });
-    if (Math.abs(from.x - to.x) < 2 && Math.abs(from.y - to.y) < 2) {
-      from.x -= 24;
-      to.x += 24;
-    }
-    const constrainedPath = constrainAttackPath(from, to);
-    from = constrainedPath.from;
-    to = constrainedPath.to;
+    const attackPath = resolveAttackGeometry(source, target, meta);
+    if (!attackPath) return recordDroppedEffect('unresolved_attack_path', { type: 'attack' });
+    const { from, to, impactPoint } = attackPath;
 
     let type;
     if (effect)      { type = normalizeEffectType(effect, overlaySettings.shotType || DEFAULT_EFFECT); }
@@ -8311,8 +8505,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       shotSpeed:      meta.shotSpeed  || overlaySettings.shotSpeed,
     }), { type: 'attack', source, target });
     if (!attack) return false;
+    attack.__attackGeometry = attackPath.geometry;
     const impactType = meta.shielded ? 'shield' : killed ? 'kill' : meta.critical ? 'critical' : 'hit';
-    const impactPoint = ownedPointWithinBounds(rawTo, target);
     addImpactBurst(impactPoint.x, impactPoint.y, {
       owner: target,
       type: impactType,
@@ -10860,7 +11054,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function visualLaneConfig(lane) {
-    return VISUAL_EVENT_LANES[lane] || VISUAL_EVENT_LANES.gameplay;
+    const base = VISUAL_EVENT_LANES[lane] || VISUAL_EVENT_LANES.gameplay;
+    if (!overlayHotModeActive()) return base;
+    const hot = HOT_MODE_QUEUE_LIMITS[lane] || HOT_MODE_QUEUE_LIMITS.gameplay;
+    return {
+      ...base,
+      budget: hot.budget ?? base.budget,
+      cooldownMs: hot.cooldownMs ?? base.cooldownMs,
+      maxQueued: hot.maxQueued ?? base.maxQueued,
+    };
   }
 
   function visualQueueComparator(a, b) {
@@ -10984,6 +11186,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const mergeKey = options.mergeKey ? options.mergeKey(data) : '';
     const priority = options.priority != null ? Number(options.priority) : visualEventPriority(type, data);
     const lane = visualEventLane(type, data, options);
+    if (visualEventQueue.length > 42 && lane !== 'exclusive') activateOverlayHotMode(`queue:${visualEventQueue.length}`);
     if (seq && seenVisualSeqs.has(seq)) {
       visualQueueStats.duplicateSeq += 1;
       return;
@@ -11007,6 +11210,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     visualEventQueue.push({ type, data, handler, seq, queuedAt: now, mergeKey, priority, lane });
     visualQueueStats.enqueued += 1;
     visualQueueStats.maxDepth = Math.max(visualQueueStats.maxDepth, visualEventQueue.length);
+    checkOverlayLoad('queue');
     trimVisualLane(lane);
     scheduleVisualEvents();
   }
@@ -11014,9 +11218,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function processVisualEvents() {
     visualEventScheduled = false;
     const now = Date.now();
+    if (visualEventQueue.length > 16) activateOverlayHotMode(`drain:${visualEventQueue.length}`, 1200);
     pruneVisualEventQueue(now);
     let processed = 0;
-    const maxPerTick = sponsorState === 'battle' ? 10 : 2;
+    const maxPerTick = sponsorState === 'battle' ? (overlayHotModeActive(now) ? 6 : 10) : 2;
     for (const lane of VISUAL_EVENT_LANE_ORDER) {
       const config = visualLaneConfig(lane);
       let laneProcessed = 0;
