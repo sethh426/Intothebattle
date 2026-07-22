@@ -46,6 +46,10 @@ import { growthEventDiagnostics, publicGrowthConfig, recordGrowthEvent, recordSe
 import { marketingAutomationDiagnostics, publishApprovedMarketingPosts, recordMarketingVisit } from './tiktokbr/services/marketingAutomation.js';
 import { getBlogPostBySlug, listBlogPosts } from './tiktokbr/services/blogEngine.js';
 import {
+  createAccessCodeSessionToken,
+  getSessionAuthRecord,
+} from './tiktokbr/services/sessionAuth.js';
+import {
   accessTokenForAccount,
   buildTikTokAuthorizationUrl,
   createTikTokOAuthState,
@@ -123,12 +127,9 @@ function getAuthRecord(token) {
   if (e2eAuth) return e2eAuth;
 
   try {
-    const accessCode = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
-    if (accessCode) return { type: 'code', record: accessCode };
-    const user = db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
-    if (user) return { type: 'user', record: user };
+    return getSessionAuthRecord(token);
   } catch (err) {
-    logger.error({ err, token }, 'Auth lookup failed');
+    logger.error({ err, tokenLength: String(token).length }, 'Auth lookup failed');
   }
   return null;
 }
@@ -599,11 +600,16 @@ const TIKTOK_AUTO_RESUME_COOLDOWN_MS = Math.max(30000, Number(process.env.TIKTOK
 const TIKTOK_CONNECT_STALE_MS = Math.max(15000, Number(process.env.TIKTOK_CONNECT_STALE_MS || 60000));
 const TIKTOK_CONNECTED_NO_EVENT_STALE_MS = Math.max(30000, Number(process.env.TIKTOK_CONNECTED_NO_EVENT_STALE_MS || 90000));
 const TIKTOK_REPAIR_COOLDOWN_MS = Math.max(30000, Number(process.env.TIKTOK_REPAIR_COOLDOWN_MS || 120000));
-const TIKTOK_REPAIR_PLAYER_RESTORE_WINDOW_MS = Math.max(0, Number(process.env.TIKTOK_REPAIR_PLAYER_RESTORE_WINDOW_MS || 5 * 60 * 1000));
-const TIKTOK_RECENT_PLAYER_RESTORE_MS = Math.max(0, Number(process.env.TIKTOK_RECENT_PLAYER_RESTORE_MS || 24 * 60 * 60 * 1000));
+const TIKTOK_RECENT_PLAYER_RESTORE_ENABLED = process.env.TIKTOK_RECENT_PLAYER_RESTORE_ENABLED === 'true';
+const TIKTOK_REPAIR_PLAYER_RESTORE_WINDOW_MS = TIKTOK_RECENT_PLAYER_RESTORE_ENABLED
+  ? Math.max(0, Number(process.env.TIKTOK_REPAIR_PLAYER_RESTORE_WINDOW_MS || 5 * 60 * 1000))
+  : 0;
+const TIKTOK_RECENT_PLAYER_RESTORE_MS = TIKTOK_RECENT_PLAYER_RESTORE_ENABLED
+  ? Math.max(0, Number(process.env.TIKTOK_RECENT_PLAYER_RESTORE_MS || 24 * 60 * 60 * 1000))
+  : 0;
 const TIKTOK_RECENT_RESTORE_SUPPRESSION_MS = Math.max(
   0,
-  Number(process.env.TIKTOK_RECENT_RESTORE_SUPPRESSION_MS || TIKTOK_RECENT_PLAYER_RESTORE_MS)
+  Number(process.env.TIKTOK_RECENT_RESTORE_SUPPRESSION_MS || 24 * 60 * 60 * 1000)
 );
 const TIKTOK_RECENT_PLAYER_RESTORE_LIMIT = Math.max(0, Number(process.env.TIKTOK_RECENT_PLAYER_RESTORE_LIMIT || 24));
 const TIKTOK_DIRECT_PLAYER_EVENT_TYPES = new Set(['member', 'chat', 'gift', 'like', 'social', 'follow']);
@@ -1558,9 +1564,36 @@ function buildSessionRecap(room, session, reason = 'manual_end') {
   };
 }
 
+function closeSupersededLiveSessions(roomId, activeSessionId = '', reason = 'session_superseded') {
+  const safeRoomId = normalizeRoomId(roomId);
+  if (!safeRoomId) return 0;
+  const sessionId = String(activeSessionId || '').trim();
+  try {
+    const result = db.prepare(`
+      UPDATE live_sessions
+      SET status = 'ended',
+          ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP),
+          summary_json = COALESCE(summary_json, ?),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE room_id = ?
+        AND status = 'active'
+        AND (? = '' OR session_id <> ?)
+    `).run(JSON.stringify({
+      reason,
+      endedAt: Date.now(),
+      supersededBy: sessionId || null,
+    }), safeRoomId, sessionId, sessionId);
+    return Number(result?.changes ?? result?.rowCount ?? 0);
+  } catch (err) {
+    logger.warn({ err, roomId: safeRoomId, sessionId }, 'Failed to close superseded live sessions');
+    return 0;
+  }
+}
+
 function persistLiveSessionStart(room, session) {
   if (!room?.roomId || !session?.sessionId) return;
   try {
+    closeSupersededLiveSessions(room.roomId, session.sessionId, 'new_live_session_started');
     db.prepare(`
       INSERT INTO live_sessions (session_id, room_id, status, started_at, summary_json, updated_at)
       VALUES (?, ?, 'active', CURRENT_TIMESTAMP, ?, CURRENT_TIMESTAMP)
@@ -4806,7 +4839,14 @@ function isRestorableLivePlayer(player) {
 }
 
 function restoreRecentRoomPlayers(room, options = {}) {
-  if (!room?.roomId || TIKTOK_RECENT_PLAYER_RESTORE_LIMIT <= 0 || TIKTOK_RECENT_PLAYER_RESTORE_MS <= 0) return 0;
+  if (
+    !TIKTOK_RECENT_PLAYER_RESTORE_ENABLED ||
+    !room?.roomId ||
+    TIKTOK_RECENT_PLAYER_RESTORE_LIMIT <= 0 ||
+    TIKTOK_RECENT_PLAYER_RESTORE_MS <= 0
+  ) {
+    return 0;
+  }
   if (isRecentLiveRestoreSuppressed(room, options.username)) {
     room.recentLiveRestoreAllowedUntil = 0;
     return 0;
@@ -7033,7 +7073,8 @@ app.post('/auth/user/reset-password', async (req, res, next) => {
   if (!email || !newPassword || !sessionToken) return next();
 
   try {
-    const user = db.prepare('SELECT id, email, is_active FROM users WHERE session_token = ?').get(sessionToken);
+    const auth = getAuthRecord(sessionToken);
+    const user = auth?.type === 'user' ? auth.record : null;
     if (!user || !user.is_active || String(user.email || '').trim().toLowerCase() !== email) {
       return next();
     }
@@ -7305,11 +7346,7 @@ app.post('/auth/create-account', express.json(), (req, res) => {
     if (row.session_token) return res.status(400).json({ error: 'Code already used' });
 
     // Generate session token
-    const sessionToken = jwt.sign(
-      { email, code },
-      process.env.JWT_SECRET,
-      { expiresIn: '90d' }
-    );
+    const sessionToken = createAccessCodeSessionToken(row);
 
     // Create first room
     const roomId = createRoomId();
@@ -7477,15 +7514,14 @@ function socketAuth(socket, next) {
     return next(new Error('Unauthorized: no session token'));
   }
 
-  try {
-    jwt.verify(token, process.env.JWT_SECRET);
-  } catch {
+  const auth = getAuthRecord(token);
+  if (!auth) {
     logger.warn({ tokenLength: String(token).length }, 'Socket auth failed: invalid token');
     return next(new Error('Unauthorized: invalid token'));
   }
 
-  const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
-  if (row) {
+  if (auth.type === 'code') {
+    const row = auth.record;
     if (row.is_revoked || new Date(row.expires_at) < new Date()) {
       logger.warn({ rowId: row?.id, code: row?.code, isRevoked: row?.is_revoked, expiresAt: row?.expires_at }, 'Socket auth failed: expired or revoked');
       return next(new Error('Unauthorized: expired or revoked'));
@@ -7495,7 +7531,7 @@ function socketAuth(socket, next) {
     return next();
   }
 
-  const user = db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
+  const user = auth.record;
   if (!user || !user.is_active) {
     logger.warn({ userId: user?.id, isActive: user?.is_active }, 'Socket auth failed: invalid user session');
     return next(new Error('Unauthorized: invalid session'));
@@ -9258,21 +9294,8 @@ app.post('/api/connect', requireRoom, (req, res) => {
   }
   if (!API_KEY)  return res.status(500).json({ success: false, error: 'Missing TikTok API_KEY in .env for the legacy LIVE event adapter' });
   try {
-    const existingUsername = normalizeTikTokUsername(req.room.streamerUsername || req.room.tiktokConnection?.username || '');
-    const currentStreamStatus = String(req.room.tiktokConnection?.status || '').toLowerCase();
-    const sameStreamerReconnect = Boolean(
-      existingUsername &&
-      existingUsername === username &&
-      ['connecting', 'reconnecting', 'connected'].includes(currentStreamStatus)
-    );
-    const streamAlreadyActive = sameStreamerReconnect
-      && (currentStreamStatus !== 'connected' || isTikTokClientConnected(req.room));
-    if (streamAlreadyActive) {
-      const stream = buildTikTokConnectionStatus(req.room);
-      return res.json({ success: true, username: stream.username, status: stream.status, stream, reused: true });
-    }
     const stream = connectToStreamer(username, req.room, {
-      resetLiveRuntime: sameStreamerReconnect ? false : undefined,
+      resetLiveRuntime: true,
       restoreRecentPlayers: false,
     });
     res.json({ success: true, username: stream.username, status: stream.status, stream });
@@ -9316,7 +9339,7 @@ app.post('/api/admin/rooms/:roomId/reset-live', (req, res) => {
   );
   let stream;
   if (reconnect && username) {
-    stream = connectToStreamer(username, room, { repair: true, resetLiveRuntime: false, restoreRecentPlayers: true });
+    stream = connectToStreamer(username, room, { repair: true, resetLiveRuntime: true, restoreRecentPlayers: false });
   } else {
     disconnectStreamer(room);
     stream = buildTikTokConnectionStatus(room);
@@ -9706,6 +9729,7 @@ app.post('/api/test/live-restore-guard', blockInProduction, requireDevTestMode, 
     directRestore,
     degradedRestore,
     alivePlayers,
+    restoreEnabled: TIKTOK_RECENT_PLAYER_RESTORE_ENABLED,
     recentRestoreSuppressed: isRecentLiveRestoreSuppressed(room, username),
     recentLiveRestoreAllowedUntil: room.recentLiveRestoreAllowedUntil || 0,
   });
@@ -10308,7 +10332,7 @@ function repairTikTokConnection(room, decision) {
     const status = connectToStreamer(decision.username, room, {
       resetLiveRuntime: false,
       repair: true,
-      restoreRecentPlayers: true,
+      restoreRecentPlayers: false,
     });
     const clearRepairFlag = () => { room.tiktokRepairInFlight = false; };
     if (room.tiktokConnectPromise && typeof room.tiktokConnectPromise.finally === 'function') {
@@ -10452,6 +10476,7 @@ function hasDegradedTikTokPlayerEventFeed(room) {
 }
 
 function shouldRetainIdleLivePlayer(room, player, now = Date.now()) {
+  if (!TIKTOK_RECENT_PLAYER_RESTORE_ENABLED) return false;
   if (!player?.alive) return false;
   if (!isRestorableLivePlayer(player)) return false;
   if (!hasDegradedTikTokPlayerEventFeed(room)) return false;
@@ -10463,6 +10488,7 @@ function shouldRetainIdleLivePlayer(room, player, now = Date.now()) {
 }
 
 function restoreDegradedLiveRoster(room) {
+  if (!TIKTOK_RECENT_PLAYER_RESTORE_ENABLED) return 0;
   if (!hasDegradedTikTokPlayerEventFeed(room)) return 0;
   if (isRecentLiveRestoreSuppressed(room)) {
     room.recentLiveRestoreAllowedUntil = 0;

@@ -8,6 +8,7 @@ import {
 } from '../services/billingPolicy.js';
 import { recordServerGrowthEvent } from '../services/growthEvents.js';
 import { qualifyReferralForUser } from '../services/referrals.js';
+import { getSessionUserFromToken } from '../services/sessionAuth.js';
 import {
   getPayPalAccessToken,
   getPayPalSubscription,
@@ -73,13 +74,7 @@ function createOrUpdateSubscription(userId, paypalId, planType, status, startedA
 
 function getSessionUser(req) {
   const token = req.cookies?.session_token;
-  if (!token || !process.env.JWT_SECRET) return null;
-  try {
-    jwt.verify(token, process.env.JWT_SECRET);
-  } catch (_err) {
-    return null;
-  }
-  const user = db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
+  const user = getSessionUserFromToken(token);
   return user && user.is_active ? user : null;
 }
 

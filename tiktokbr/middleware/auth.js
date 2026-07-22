@@ -1,7 +1,7 @@
 import db from '../db/db.js';
-import jwt from 'jsonwebtoken';
 import { getE2EAuthRecord } from '../auth/e2eAuth.js';
 import { buildUserAccessStatus, trialDaysFromValue } from '../services/entitlements.js';
+import { getSessionAuthRecord } from '../services/sessionAuth.js';
 import { getEffectiveUserSubscription } from '../services/userSubscriptions.js';
 
 function paywallUrl(reason) {
@@ -13,11 +13,7 @@ function getAuthRecord(token) {
   const e2eAuth = getE2EAuthRecord(token);
   if (e2eAuth) return e2eAuth;
 
-  const accessCode = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
-  if (accessCode) return { type: 'code', record: accessCode };
-  const user = db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
-  if (user) return { type: 'user', record: user };
-  return null;
+  return getSessionAuthRecord(token);
 }
 
 export default function requireAccess(req, res, next) {
@@ -38,12 +34,6 @@ export default function requireAccess(req, res, next) {
       req.accessCode = e2eAuth.record;
     }
     return next();
-  }
-
-  try {
-    jwt.verify(token, process.env.JWT_SECRET);
-  } catch (_err) {
-    return res.redirect('/login?reason=invalid');
   }
 
   const auth = getAuthRecord(token);

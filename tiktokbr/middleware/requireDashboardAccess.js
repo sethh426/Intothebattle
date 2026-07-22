@@ -1,6 +1,7 @@
-import db, { getAsync, runAsync } from '../db/db.js';
+import db, { runAsync } from '../db/db.js';
 import { getE2EAuthRecord } from '../auth/e2eAuth.js';
 import { buildUserAccessStatus, trialDaysFromValue } from '../services/entitlements.js';
+import { getSessionAuthRecordAsync } from '../services/sessionAuth.js';
 import { getEffectiveUserSubscription } from '../services/userSubscriptions.js';
 
 function paywallUrl(reason) {
@@ -12,11 +13,7 @@ async function getAuthRecord(token) {
   const e2eAuth = getE2EAuthRecord(token);
   if (e2eAuth) return e2eAuth;
 
-  const accessCode = await getAsync('SELECT * FROM access_codes WHERE session_token = ?', token);
-  if (accessCode) return { type: 'code', record: accessCode };
-  const user = await getAsync('SELECT * FROM users WHERE session_token = ?', token);
-  if (user) return { type: 'user', record: user };
-  return null;
+  return getSessionAuthRecordAsync(token);
 }
 
 export default async function requireDashboardAccess(req, res, next) {

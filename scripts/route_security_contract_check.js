@@ -8,6 +8,7 @@ const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
 const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
 const admin = fs.readFileSync(path.join(root, 'tiktokbr', 'routes', 'admin.js'), 'utf8');
 const paypal = fs.readFileSync(path.join(root, 'tiktokbr', 'routes', 'paypal.js'), 'utf8');
+const sessionAuth = fs.readFileSync(path.join(root, 'tiktokbr', 'services', 'sessionAuth.js'), 'utf8');
 
 function routeLiteral(pathname) {
   return pathname.replace(/:[A-Za-z0-9_]+/g, '');
@@ -34,6 +35,17 @@ assert.match(admin, /sameSite:\s*'strict'/, 'admin session cookie must remain Sa
 assert.match(admin, /requireAdminMutationOrigin/, 'admin router must enforce explicit admin mutation origin checks');
 assert.match(paypal, /verifyPayPalWebhook/, 'PayPal webhook must verify provider signatures');
 assert.match(server, /function blockInProduction/, 'dev and test routes must have a production block helper');
+assert.match(sessionAuth, /USER_SESSION_PURPOSE = 'user_session'/, 'user sessions must carry a typed purpose claim');
+assert.match(sessionAuth, /ACCESS_CODE_SESSION_PURPOSE = 'access_code_session'/, 'legacy code sessions must carry a typed purpose claim');
+assert.match(sessionAuth, /WHERE id = \? AND session_token = \?/, 'user session lookup must bind the JWT user id and token');
+assert.match(sessionAuth, /WHERE UPPER\(code\) = \? AND session_token = \?/, 'access-code session lookup must bind the JWT code and token');
+assert.match(sessionAuth, /tokenId:/, 'session tokens must include a unique token id');
+assert.match(sessionAuth, /jti:/, 'session tokens must include a JWT id');
+assert.doesNotMatch(server, /logger\.error\(\{\s*err,\s*token\s*\}/, 'auth logs must not include raw session tokens');
+assert.match(server, /const TIKTOK_RECENT_PLAYER_RESTORE_ENABLED = process\.env\.TIKTOK_RECENT_PLAYER_RESTORE_ENABLED === 'true'/, 'recent player restore must be opt-in');
+assert.match(server, /restoreRecentPlayers:\s*false/, 'TikTok reconnects must not restore old players by default');
+assert.doesNotMatch(server, /restoreRecentPlayers:\s*true/, 'TikTok reconnects must not opt into stale player restore');
+assert.match(server, /closeSupersededLiveSessions\(room\.roomId, session\.sessionId/, 'new live sessions must close older active room sessions');
 assert.doesNotMatch(admin, /DELETE\s+FROM\s+users/i, 'admin routes must not delete user accounts');
 assert.doesNotMatch(admin, /action=["']\/admin\/users\/[^"']*delete/i, 'admin UI must not render user account delete forms');
 assert.match(admin, /function denyAccountDelete/, 'admin routes must explicitly deny user account deletion attempts');

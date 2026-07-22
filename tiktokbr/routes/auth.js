@@ -20,6 +20,11 @@ import {
   getEffectiveUserSubscription,
   publicSubscriptionView,
 } from '../services/userSubscriptions.js';
+import {
+  createAccessCodeSessionToken,
+  createUserSessionToken,
+  getSessionAuthRecord,
+} from '../services/sessionAuth.js';
 import { recordServerGrowthEvent } from '../services/growthEvents.js';
 import {
   REFERRAL_CLICK_COOKIE_MAX_AGE_MS,
@@ -743,7 +748,7 @@ function verifyRegistrationChallenge(token, answer) {
 }
 
 function createSessionToken(payload) {
-  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '90d' });
+  return createUserSessionToken(payload);
 }
 
 function setSessionCookie(res, token) {
@@ -776,13 +781,8 @@ function safeRedirectPath(value, fallback = '/dashboard') {
 }
 
 function getUserFromToken(token) {
-  if (!token) return null;
-  try {
-    jwt.verify(token, process.env.JWT_SECRET);
-  } catch (_err) {
-    return null;
-  }
-  return db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
+  const auth = getSessionAuthRecord(token);
+  return auth?.type === 'user' ? auth.record : null;
 }
 
 function getSessionUserFromRequest(req) {
@@ -1465,15 +1465,18 @@ router.get('/legacy-login', (req, res) => {
   const token = req.cookies.session_token;
   const fp = req.cookies.fp;
   if (token) {
-    const row = db.prepare('SELECT * FROM access_codes WHERE session_token = ?').get(token);
-    if (row && !row.is_revoked && new Date(row.expires_at) > new Date()) {
-      if (!row.fingerprint || (fp && row.fingerprint === fp)) {
+    const auth = getSessionAuthRecord(token);
+    if (auth?.type === 'code') {
+      const row = auth.record;
+      if (row && !row.is_revoked && new Date(row.expires_at) > new Date() && (!row.fingerprint || (fp && row.fingerprint === fp))) {
         return res.redirect('/dashboard');
       }
     }
-    const user = db.prepare('SELECT * FROM users WHERE session_token = ?').get(token);
-    if (user && user.is_active) {
-      return res.redirect(userAccessRedirect(user, getEffectiveUserSubscription(db, user.id), '/dashboard'));
+    if (auth?.type === 'user') {
+      const user = auth.record;
+      if (user && user.is_active) {
+        return res.redirect(userAccessRedirect(user, getEffectiveUserSubscription(db, user.id), '/dashboard'));
+      }
     }
   }
   res.send(renderLoginPage());
@@ -1499,7 +1502,7 @@ router.post('/login', loginLimiter, (req, res) => {
     return res.status(400).send(renderLoginPage({ error: 'This code is locked to another device — contact support' }));
   }
 
-  const sessionToken = jwt.sign({ code: row.code, tokenId: uuidv4() }, process.env.JWT_SECRET);
+  const sessionToken = createAccessCodeSessionToken(row);
   db.prepare('UPDATE access_codes SET session_token = ?, last_seen = CURRENT_TIMESTAMP, fingerprint = COALESCE(fingerprint, ?) WHERE id = ?')
     .run(sessionToken, fingerprint, row.id);
 
