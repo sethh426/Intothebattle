@@ -628,26 +628,26 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.commands.is-nano .banner-command-chip span { display:none; }
 .banner.is-nano .banner-meter { width:3px; height:20px; }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) {
-  min-height:54px; max-height:64px; padding:0 12px; gap:8px;
-  grid-template-columns:42px minmax(0,1fr) 5px;
+  min-height:66px; max-height:78px; padding:0 15px; gap:10px;
+  grid-template-columns:50px minmax(0,1fr) 6px;
 }
-.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-signal { width:42px; height:34px; }
+.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-signal { width:50px; height:40px; }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-code {
-  min-width:30px; padding:3px 5px; font-size:9.5px; letter-spacing:.7px;
+  min-width:36px; padding:5px 6px; font-size:11px; letter-spacing:.85px;
 }
-.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-pulse { width:25px; height:25px; }
+.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-pulse { width:30px; height:30px; }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-kicker {
-  font-size:9px; letter-spacing:1px;
+  font-size:10.5px; letter-spacing:1.18px;
 }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-title,
 .banner.legendary[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-title {
-  font-size:20px; line-height:1.02; letter-spacing:.08px;
+  font-size:24px; line-height:1.02; letter-spacing:.12px;
 }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-meta {
-  font-size:8.5px; letter-spacing:.38px;
+  font-size:9.5px; letter-spacing:.44px;
 }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-meter {
-  width:5px; height:30px;
+  width:6px; height:38px;
 }
 @keyframes cyberBannerIn {
   0% { opacity:0; transform:translate(-50%,0) scale(1); filter:blur(6px) brightness(1.45); box-shadow:0 10px 22px rgba(0,0,0,0.42),0 0 0 rgba(var(--banner-accent-rgb),0); }
@@ -5681,7 +5681,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     const availableGap = laneBottomLimit - laneTopLimit;
-    const cssReadableLaneH = isCommandBanner ? 54 : 62;
+    const cssReadableLaneH = isCommandBanner ? 54 : 78;
     const laneH = Math.min(availableGap, Math.max(desiredLaneH, Math.min(cssReadableLaneH, availableGap)));
     const laneY = laneTopLimit + Math.max(0, (availableGap - laneH) * (isCommandBanner ? 0.5 : 0.88));
     const combatLane = makeRect(laneX, laneY, laneW, laneH);
