@@ -645,6 +645,9 @@ const CFG = {
   GIFT_STR_PER_DIAMOND:             1,
   GIFT_MESSAGE_BOOST_MULTIPLIER:    3,
   GIFT_MESSAGE_BOOST_DURATION_MS: 45000,
+  GIFT_STREAK_WINDOW_MS:           20000,
+  GIFT_STREAK_MULTIPLIER_STEP:      0.15,
+  GIFT_STREAK_MAX_MULTIPLIER:        2.5,
   MESSAGE_LASER_MULTIPLIER:       1.5,
   PASSIVE_COMMENT_DAMAGE:            5,
   MAX_NORMAL_ATTACK_DAMAGE:          50,
@@ -4678,6 +4681,23 @@ function classifyGift(diamonds) {
     return { tier: 'uncommon',  effect: 'neon',      intensity: Math.min(diamonds / CFG.GIFT_TIER_RARE,       0.6), color: '#4D96FF', label: '✨ GIFT'           };
   }
   return   { tier: 'common',   effect: 'gift',      intensity: Math.min(diamonds / CFG.GIFT_TIER_UNCOMMON,   0.3), color: '#6BCB77', label: '🎁 GIFT'           };
+}
+
+// ────────────────────────────────
+// GIFT STREAK TRACKER
+// ────────────────────────────────
+function applyGiftStreak(room, uniqueId) {
+  const player = room?.players?.[uniqueId];
+  if (!player) return { streak: 1, multiplier: 1 };
+  const now = Date.now();
+  const withinWindow = player.lastGiftAt && (now - player.lastGiftAt) <= CFG.GIFT_STREAK_WINDOW_MS;
+  player.giftStreak = withinWindow ? (player.giftStreak || 0) + 1 : 1;
+  player.lastGiftAt = now;
+  const multiplier = Math.min(
+    1 + (player.giftStreak - 1) * CFG.GIFT_STREAK_MULTIPLIER_STEP,
+    CFG.GIFT_STREAK_MAX_MULTIPLIER
+  );
+  return { streak: player.giftStreak, multiplier };
 }
 
 // ────────────────────────────────
@@ -10031,9 +10051,10 @@ app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) =>
   const diamonds = Math.max(1, Math.round(Number(_req.body?.diamonds) || 25));
   const before = snapshotDevTestCombatants(room);
 
+  const giftStreak = applyGiftStreak(room, attackerId);
   awardStats(room, attackerId, room.players[attackerId].nickname,
-    diamonds * CFG.GIFT_HP_PER_DIAMOND,
-    diamonds * CFG.GIFT_STR_PER_DIAMOND
+    diamonds * CFG.GIFT_HP_PER_DIAMOND * giftStreak.multiplier,
+    diamonds * CFG.GIFT_STR_PER_DIAMOND * giftStreak.multiplier
   );
   if (room.players[attackerId]) {
     room.players[attackerId].messageBoostExpires = Date.now() + CFG.GIFT_MESSAGE_BOOST_DURATION_MS;
@@ -10069,6 +10090,8 @@ app.post('/api/test/gift', blockInProduction, requireDevTestMode, (_req, res) =>
     emitRoomEvent(room, 'giftCelebration', {
       attacker: attackerId, nickname: room.players[attackerId]?.nickname || 'Charlie',
       giftName: 'Test Gift', diamonds, ...giftMeta,
+      streak: giftStreak.streak,
+      streakMultiplier: giftStreak.multiplier,
     });
   }, 800);
 
@@ -10235,7 +10258,8 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
 
     ensurePlayerEnteredBattle(room, id, nickname, 'gift');
 
-    awardStats(room, id, nickname, diamonds * CFG.GIFT_HP_PER_DIAMOND, diamonds * CFG.GIFT_STR_PER_DIAMOND);
+    const giftStreak = applyGiftStreak(room, id);
+    awardStats(room, id, nickname, diamonds * CFG.GIFT_HP_PER_DIAMOND * giftStreak.multiplier, diamonds * CFG.GIFT_STR_PER_DIAMOND * giftStreak.multiplier);
     if (room.players[id]) room.players[id].messageBoostExpires = Date.now() + CFG.GIFT_MESSAGE_BOOST_DURATION_MS;
 
     emitRoomEvent(room, 'gameState', room.players);
@@ -10313,6 +10337,8 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
         giftName:  e.giftName,
         diamonds,
         ...giftMeta,
+        streak: giftStreak.streak,
+        streakMultiplier: giftStreak.multiplier,
       });
     }, 800);
 

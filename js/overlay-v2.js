@@ -1561,8 +1561,12 @@
     handleGiftCelebration(data = {}) {
       const name = data.nickname || 'Viewer';
       const gift = data.giftName || 'a gift';
-      this.showBanner(`${name} sent ${gift}`, data.tier === 'legendary' ? 'legendary' : 'gift');
-      this.spawnHeartBurst(data.uniqueId || data.userId || data.nickname, data.tier === 'legendary' ? 8 : 4, 'gift', data.tier === 'legendary' ? '#f6c95b' : '#ff8bc2');
+      const streak = Number(data.streak || 0);
+      const isStreak = streak >= 2;
+      const bannerText = isStreak ? `🔥 ${name} is on a ${streak}x GIFT STREAK!` : `${name} sent ${gift}`;
+      this.showBanner(bannerText, data.tier === 'legendary' ? 'legendary' : 'gift');
+      const heartCount = (data.tier === 'legendary' ? 8 : 4) + (isStreak ? Math.min(streak, 6) : 0);
+      this.spawnHeartBurst(data.uniqueId || data.userId || data.nickname, heartCount, 'gift', data.tier === 'legendary' ? '#f6c95b' : '#ff8bc2');
     }
 
     handleRoundEvent(data = {}) {
