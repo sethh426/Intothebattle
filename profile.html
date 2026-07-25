@@ -249,6 +249,13 @@
       text-transform: uppercase;
     }
     .referral-stat strong { display: block; margin-top: 5px; color: var(--txt, #edf0fa); font-size: 22px; line-height: 1; }
+    .referral-milestone { display: grid; gap: 6px; padding: 12px; border-radius: var(--r-sm, 12px); border: 1px solid rgba(245,200,66,0.28); background: rgba(245,200,66,0.06); }
+    .referral-milestone-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+    .referral-milestone-head span { color: #ffe99a; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em; }
+    .referral-milestone-head strong { color: var(--txt, #edf0fa); font-size: 15px; }
+    .referral-milestone-bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+    .referral-milestone-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #f5c842, #ffe99a); }
+    .referral-milestone p { margin: 0; }
     .copy-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
     .referral-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
     .referral-actions button { width: auto; }
@@ -373,6 +380,28 @@
       return `${Number.isFinite(number) ? number.toFixed(number % 1 ? 1 : 0) : '0'}%`;
     }
 
+    function renderReferralMilestone(referral = {}) {
+      const stats = referral.stats || {};
+      const threshold = Number(referral.freeForeverThreshold) || 25;
+      const qualified = Math.max(0, Number(stats.qualified) || 0);
+      const unlocked = Boolean(referral.freeForeverUnlocked) || qualified >= threshold;
+      const pct = Math.min(100, Math.round((qualified / threshold) * 100));
+      const remaining = Math.max(0, threshold - qualified);
+      const message = unlocked
+        ? "You hit it! We'll be in touch to activate your free-forever plan."
+        : `Refer ${remaining} more paid creator${remaining === 1 ? '' : 's'} to unlock it.`;
+      return `
+        <div class="referral-milestone">
+          <div class="referral-milestone-head">
+            <span>🏆 Free Pro Forever</span>
+            <strong>${escapeHtml(qualified)} / ${escapeHtml(threshold)}</strong>
+          </div>
+          <div class="referral-milestone-bar"><div class="referral-milestone-fill" style="width:${pct}%"></div></div>
+          <p class="note">${escapeHtml(message)}</p>
+        </div>
+      `;
+    }
+
     function formatReferralDate(value) {
       if (!value) return 'No date';
       const date = new Date(value);
@@ -478,7 +507,7 @@
       if (!referral.hasCode) {
         referralEl.innerHTML = `
           <div class="referral-shell">
-            <p class="note">Create one public code for streamer commissions. New accounts can use it once at signup; paid conversions become pending rewards for admin review.</p>
+            <p class="note">Create one public code and share it. Refer 25 paid creators and get Creator Pro free, forever.</p>
             <div class="form-group">
               <label for="referralCodeInput">Referral code</label>
               <input id="referralCodeInput" type="text" maxlength="24" value="${escapeHtml(suggested)}" placeholder="MR-CLOUDS" />
@@ -514,11 +543,7 @@
             <div class="referral-stat"><span>Pending</span><strong>${escapeHtml(stats.pendingReview || 0)}</strong></div>
             <div class="referral-stat"><span>Paid</span><strong>${escapeHtml(stats.paid || 0)}</strong></div>
           </div>
-          <div class="referral-meta">
-            <span class="pill">Pending ${escapeHtml(formatMoney(stats.pendingAmountCents))}</span>
-            <span class="pill">Approved ${escapeHtml(formatMoney(stats.approvedAmountCents))}</span>
-            <span class="pill">Paid ${escapeHtml(formatMoney(stats.paidAmountCents))}</span>
-          </div>
+          ${renderReferralMilestone(referral)}
           ${renderRecentReferrals(referral)}
           <div class="form-group">
             <label for="referralCodeInput">Change code</label>

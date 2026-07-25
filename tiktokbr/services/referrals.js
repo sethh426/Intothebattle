@@ -1,9 +1,13 @@
 import crypto from 'node:crypto';
+import { sendTransactionalEmail } from '../email/postmarkMailer.js';
 
 export const REFERRAL_CODE_COOLDOWN_HOURS = 234;
 export const REFERRAL_CODE_COOLDOWN_MS = REFERRAL_CODE_COOLDOWN_HOURS * 60 * 60 * 1000;
 export const REFERRAL_CLICK_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
-export const DEFAULT_REFERRAL_REWARD_CENTS = 2500;
+// Cash reward is retired in favor of the "refer 25, get Pro free forever" milestone below.
+// Historical reward rows already in the database keep their original $25 amount.
+export const DEFAULT_REFERRAL_REWARD_CENTS = 0;
+export const FREE_FOREVER_REFERRAL_THRESHOLD = 25;
 
 const RESERVED_CODES = new Set([
   'ADMIN',
@@ -261,6 +265,8 @@ export function getReferralSummary(database, user, options = {}) {
     resetCount: numberValue(codeRow?.reset_count),
     stats,
     recent,
+    freeForeverThreshold: FREE_FOREVER_REFERRAL_THRESHOLD,
+    freeForeverUnlocked: stats.qualified >= FREE_FOREVER_REFERRAL_THRESHOLD,
   };
 }
 
@@ -450,11 +456,51 @@ export function qualifyReferralForUser(database, referredUserId, options = {}) {
     notes
   );
 
+  const qualifiedCount = numberValue(database.prepare(`
+    SELECT COUNT(*) AS count
+    FROM referral_attributions
+    WHERE referrer_user_id = ? AND status = 'qualified'
+  `).get(attribution.referrer_user_id)?.count);
+
+  if (qualifiedCount >= FREE_FOREVER_REFERRAL_THRESHOLD) {
+    const claimed = firstRow(database.prepare(`
+      UPDATE streamer_referral_codes
+      SET free_forever_notified_at = CURRENT_TIMESTAMP
+      WHERE user_id = ? AND free_forever_notified_at IS NULL
+      RETURNING id
+    `).run(attribution.referrer_user_id));
+    if (claimed) {
+      notifyFreeForeverMilestone(database, attribution.referrer_user_id, qualifiedCount).catch((err) => {
+        console.error('Free Forever milestone email failed:', err?.message || err);
+      });
+    }
+  }
+
   return {
     qualified: true,
     attributionId: attribution.id,
     rewardCreated: Boolean(firstRow(result)),
   };
+}
+
+async function notifyFreeForeverMilestone(database, referrerUserId, qualifiedCount) {
+  const referrer = database.prepare('SELECT email, name, tiktok_username FROM users WHERE id = ?').get(referrerUserId);
+  const codeRow = getReferralCodeForUser(database, referrerUserId);
+  const to = String(process.env.OPERATIONS_ALERT_EMAIL || '').trim();
+  if (!to) {
+    console.warn('OPERATIONS_ALERT_EMAIL is not configured; skipping Free Forever milestone alert');
+    return;
+  }
+  const label = referrer?.name || referrer?.tiktok_username || referrer?.email || `user #${referrerUserId}`;
+  const code = codeRow?.code || '';
+  const adminLink = `${String(process.env.APP_BASE_URL || '').replace(/\/+$/, '')}/admin/referrals?search=${encodeURIComponent(code)}`;
+  await sendTransactionalEmail({
+    to,
+    subject: `🎉 ${label} hit ${qualifiedCount} paid referrals — grant Free Forever`,
+    textBody: `${label} (code ${code || 'n/a'}, ${referrer?.email || 'no email on file'}) just reached ${qualifiedCount} paid referrals.\n\nGrant them Free Forever here: ${adminLink}`,
+    htmlBody: `<p><strong>${label}</strong> (code ${code || 'n/a'}, ${referrer?.email || 'no email on file'}) just reached <strong>${qualifiedCount}</strong> paid referrals.</p><p><a href="${adminLink}">Open in admin to grant Free Forever</a></p>`,
+    tag: 'referral-free-forever-milestone',
+  });
 }
 
 export function listReferralAdminRows(database, options = {}) {

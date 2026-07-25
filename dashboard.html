@@ -361,6 +361,13 @@
     .referral-code-display { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
     .referral-code-display span { color:var(--muted); font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
     .referral-code-display strong { display:inline-flex; min-height:34px; align-items:center; padding:6px 10px; border-radius:10px; border:1px solid rgba(246,201,91,.28); color:#fff4bf; background:rgba(246,201,91,.08); font-size:18px; line-height:1; letter-spacing:.08em; overflow-wrap:anywhere; }
+    .referral-milestone { display:grid; gap:6px; padding:12px; border-radius:12px; border:1px solid rgba(246,201,91,.28); background:rgba(246,201,91,.06); }
+    .referral-milestone-head { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+    .referral-milestone-head span { color:#fff4bf; font-size:12px; font-weight:950; text-transform:uppercase; letter-spacing:.06em; }
+    .referral-milestone-head strong { color:#fff; font-size:15px; }
+    .referral-milestone-bar { height:8px; border-radius:999px; background:rgba(255,255,255,.08); overflow:hidden; }
+    .referral-milestone-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#f6c95b,#ffe08a); }
+    .referral-milestone p { color:var(--muted); font-size:12px; margin:0; }
     .referral-stats { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; }
     .referral-stat { min-width:0; padding:9px; border-radius:12px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.16); }
     .referral-stat span { display:block; color:var(--muted); font-size:9px; font-weight:950; text-transform:uppercase; letter-spacing:.06em; }
@@ -899,7 +906,7 @@
             <div class="referral-share-head">
               <div class="referral-share-title">
                 <strong>Creator promo code</strong>
-                <span>Share this with chat so new creators can sign up with your code.</span>
+                <span>Refer 25 paid creators and get Creator Pro free, forever.</span>
               </div>
               <span class="referral-share-badge" id="creatorReferralBadge">Loading</span>
             </div>
@@ -1616,6 +1623,27 @@ async function copyDashboardText(value, successMessage) {
     }
   }
 }
+function renderReferralMilestone(referral = {}) {
+  const stats = referral.stats || {};
+  const threshold = Number(referral.freeForeverThreshold) || 25;
+  const qualified = Math.max(0, Number(stats.qualified) || 0);
+  const unlocked = Boolean(referral.freeForeverUnlocked) || qualified >= threshold;
+  const pct = Math.min(100, Math.round((qualified / threshold) * 100));
+  const remaining = Math.max(0, threshold - qualified);
+  const message = unlocked
+    ? "You hit it! We'll be in touch to activate your free-forever plan."
+    : `Refer ${remaining} more paid creator${remaining === 1 ? '' : 's'} to unlock it.`;
+  return `
+    <div class="referral-milestone">
+      <div class="referral-milestone-head">
+        <span>🏆 Free Pro Forever</span>
+        <strong>${escapeHtml(qualified)} / ${escapeHtml(threshold)}</strong>
+      </div>
+      <div class="referral-milestone-bar"><div class="referral-milestone-fill" style="width:${pct}%"></div></div>
+      <p>${escapeHtml(message)}</p>
+    </div>
+  `;
+}
 function renderCreatorReferral(referral = {}) {
   dashboardState.referral = referral || {};
   const body = document.getElementById('creatorReferralBody');
@@ -1664,13 +1692,14 @@ function renderCreatorReferral(referral = {}) {
       <a class="btn btn-secondary" href="${escapeAttr(shareUrl || `/signup?ref=${encodeURIComponent(code)}`)}" target="_blank" rel="noreferrer">Open signup</a>
       <a class="btn btn-secondary" href="/profile">Rewards</a>
     </div>
+    ${renderReferralMilestone(referral)}
     <div class="referral-stats" aria-label="Creator promo code stats">
       <div class="referral-stat"><span>Clicks</span><strong>${escapeHtml(stats.clicks || 0)}</strong></div>
       <div class="referral-stat"><span>Signups</span><strong>${escapeHtml(stats.signups || 0)}</strong></div>
       <div class="referral-stat"><span>Click rate</span><strong>${escapeHtml(formatReferralPercent(stats.clickToSignupRate))}</strong></div>
       <div class="referral-stat"><span>Qualified</span><strong>${escapeHtml(stats.qualified || 0)}</strong></div>
-      <div class="referral-stat"><span>Pending</span><strong>${escapeHtml(formatReferralMoney(stats.pendingAmountCents))}</strong></div>
-      <div class="referral-stat"><span>Paid</span><strong>${escapeHtml(formatReferralMoney(stats.paidAmountCents))}</strong></div>
+      <div class="referral-stat"><span>Unique clicks</span><strong>${escapeHtml(stats.uniqueClicks || 0)}</strong></div>
+      <div class="referral-stat"><span>Converted</span><strong>${escapeHtml(stats.convertedClicks || 0)}</strong></div>
     </div>
     ${renderReferralRecent(referral)}
     <div class="referral-create-row">

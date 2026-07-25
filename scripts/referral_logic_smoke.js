@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import {
   DEFAULT_REFERRAL_REWARD_CENTS,
+  FREE_FOREVER_REFERRAL_THRESHOLD,
   REFERRAL_CODE_COOLDOWN_HOURS,
   buildReferralChatMessage,
   buildReferralShareUrl,
   canResetReferralCode,
   normalizeReferralCode,
+  qualifyReferralForUser,
   recordReferralAttribution,
   recordReferralClick,
   secondsUntilReferralReset,
@@ -14,7 +16,8 @@ import {
 } from '../tiktokbr/services/referrals.js';
 
 assert.equal(REFERRAL_CODE_COOLDOWN_HOURS, 234);
-assert.equal(DEFAULT_REFERRAL_REWARD_CENTS, 2500);
+assert.equal(DEFAULT_REFERRAL_REWARD_CENTS, 0);
+assert.equal(FREE_FOREVER_REFERRAL_THRESHOLD, 25);
 assert.equal(normalizeReferralCode('  mr_clouds-7  '), 'MR_CLOUDS-7');
 
 assert.deepEqual(validateReferralCode('clouds_7').ok, true);
@@ -39,7 +42,11 @@ function createReferralMemoryDb() {
   const state = {
     clicks: [],
     attributions: [],
-    codes: [{ id: 1, user_id: 101, code: 'NEON_777' }],
+    rewards: [],
+    subscriptions: [],
+    users: [],
+    notifyCallCount: 0,
+    codes: [{ id: 1, user_id: 101, code: 'NEON_777', free_forever_notified_at: null }],
   };
   return {
     state,
@@ -48,6 +55,72 @@ function createReferralMemoryDb() {
         return {
           get(code) {
             return state.codes.find(row => row.code.toUpperCase() === String(code || '').toUpperCase()) || null;
+          },
+        };
+      }
+      if (/SELECT \* FROM streamer_referral_codes WHERE user_id = \?/i.test(sql)) {
+        return {
+          get(userId) {
+            return state.codes.find(row => Number(row.user_id) === Number(userId)) || null;
+          },
+        };
+      }
+      if (/UPDATE streamer_referral_codes\s+SET free_forever_notified_at/i.test(sql)) {
+        return {
+          run(userId) {
+            const row = state.codes.find(r => Number(r.user_id) === Number(userId));
+            if (!row || row.free_forever_notified_at) return { rows: [] };
+            row.free_forever_notified_at = 'now';
+            return { rows: [{ id: row.id }] };
+          },
+        };
+      }
+      if (/SELECT \* FROM referral_attributions WHERE referred_user_id = \?/i.test(sql)) {
+        return {
+          get(referredUserId) {
+            return state.attributions.find(row => Number(row.referred_user_id) === Number(referredUserId)) || null;
+          },
+        };
+      }
+      if (/SELECT id\s+FROM subscriptions/i.test(sql)) {
+        return {
+          get(userId) {
+            return state.subscriptions.find(row => Number(row.user_id) === Number(userId)) || null;
+          },
+        };
+      }
+      if (/UPDATE referral_attributions\s+SET status = 'qualified'/i.test(sql)) {
+        return {
+          run(attributionId) {
+            const row = state.attributions.find(r => Number(r.id) === Number(attributionId));
+            if (row) row.status = 'qualified';
+            return { rows: [] };
+          },
+        };
+      }
+      if (/INSERT INTO referral_rewards/i.test(sql)) {
+        return {
+          run(attributionId, referrerUserId, referredUserId, amountCents, currency, notes) {
+            if (state.rewards.some(r => Number(r.attribution_id) === Number(attributionId))) return { rows: [] };
+            const id = state.rewards.length + 1;
+            state.rewards.push({ id, attribution_id: attributionId, referrer_user_id: referrerUserId, referred_user_id: referredUserId, amount_cents: amountCents, currency, notes });
+            return { rows: [{ id }] };
+          },
+        };
+      }
+      if (/SELECT COUNT\(\*\) AS count\s+FROM referral_attributions\s+WHERE referrer_user_id = \? AND status = 'qualified'/i.test(sql)) {
+        return {
+          get(referrerUserId) {
+            const count = state.attributions.filter(r => Number(r.referrer_user_id) === Number(referrerUserId) && r.status === 'qualified').length;
+            return { count };
+          },
+        };
+      }
+      if (/SELECT email, name, tiktok_username FROM users WHERE id = \?/i.test(sql)) {
+        return {
+          get(userId) {
+            state.notifyCallCount += 1;
+            return state.users.find(row => Number(row.id) === Number(userId)) || null;
           },
         };
       }
@@ -139,5 +212,31 @@ assert.equal(attribution.recorded, true);
 assert.equal(attribution.referrerUserId, 101);
 assert.equal(attribution.referralClickId, 1);
 assert.equal(memoryDb.state.clicks[0].converted_user_id, 202);
+
+// Free Forever milestone: 25 qualified referrals should notify exactly once
+// and stop accruing cash (DEFAULT_REFERRAL_REWARD_CENTS is now 0).
+const milestoneDb = createReferralMemoryDb();
+milestoneDb.state.users.push({ id: 101, email: 'creator@example.com', name: 'Creator One', tiktok_username: 'creatorone' });
+for (let i = 0; i < FREE_FOREVER_REFERRAL_THRESHOLD + 2; i += 1) {
+  const referredUserId = 900 + i;
+  milestoneDb.state.attributions.push({
+    id: i + 1,
+    referrer_user_id: 101,
+    referred_user_id: referredUserId,
+    status: 'signup_pending',
+  });
+  milestoneDb.state.subscriptions.push({
+    user_id: referredUserId,
+    status: 'active',
+    admin_granted: 0,
+    paypal_subscription_id: `sub_${referredUserId}`,
+  });
+  const result = qualifyReferralForUser(milestoneDb, referredUserId, { source: 'paid_subscription' });
+  assert.equal(result.qualified, true);
+}
+assert.equal(milestoneDb.state.rewards.length, FREE_FOREVER_REFERRAL_THRESHOLD + 2);
+assert.ok(milestoneDb.state.rewards.every(r => r.amount_cents === 0), 'new referral rewards should carry $0 (cash reward retired)');
+assert.equal(milestoneDb.state.codes[0].free_forever_notified_at, 'now', 'referrer should be flagged once threshold is crossed');
+assert.equal(milestoneDb.state.notifyCallCount, 1, 'milestone notification should fire exactly once, not on every referral past 25');
 
 console.log('Referral logic smoke checks passed');

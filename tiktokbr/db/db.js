@@ -575,6 +575,7 @@ async function initDb() {
     await safeExec('ALTER TABLE streamer_referral_codes ADD COLUMN last_reset_at TIMESTAMP');
     await safeExec('ALTER TABLE streamer_referral_codes ADD COLUMN reset_available_at TIMESTAMP');
     await safeExec('ALTER TABLE streamer_referral_codes ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+    await safeExec('ALTER TABLE streamer_referral_codes ADD COLUMN free_forever_notified_at TIMESTAMP');
     await safeExec('CREATE UNIQUE INDEX IF NOT EXISTS streamer_referral_codes_user_unique ON streamer_referral_codes(user_id)');
     await safeExec('CREATE UNIQUE INDEX IF NOT EXISTS streamer_referral_codes_code_upper_idx ON streamer_referral_codes(UPPER(code))');
 

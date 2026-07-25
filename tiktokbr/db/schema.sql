@@ -140,6 +140,7 @@ CREATE TABLE IF NOT EXISTS streamer_referral_codes (
   reset_count INTEGER DEFAULT 0,
   last_reset_at TIMESTAMP,
   reset_available_at TIMESTAMP,
+  free_forever_notified_at TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(user_id) REFERENCES users(id)
