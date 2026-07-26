@@ -164,8 +164,10 @@ test('aetheris preview (React/r3f v0.2 build) renders on WebGL', async ({ page }
   const canvas = page.locator('canvas');
   await expect(canvas).toBeVisible();
 
-  // Give the r3f render loop a moment to spin up and render at least one frame.
-  await page.waitForTimeout(800);
+  // Give the v0.3 intro dolly (camera.introDurationSeconds, ~2.8s) time to fully play
+  // out before asserting steady state, so the new async cinematic doesn't introduce
+  // flakiness into this check.
+  await page.waitForTimeout(3500);
 
   const state = await canvas.evaluate(el => {
     const rect = el.getBoundingClientRect();
@@ -185,6 +187,25 @@ test('aetheris preview (React/r3f v0.2 build) renders on WebGL', async ({ page }
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'aetheris-preview');
   expect(errors).toEqual([]);
+});
+
+test('aetheris preview skips the intro dolly under prefers-reduced-motion', async ({ browser }, testInfo) => {
+  const context = await browser.newContext({ reducedMotion: 'reduce' });
+  const page = await context.newPage();
+  const errors = await watchPage(page);
+
+  await page.goto(`${baseUrl}/aetheris-preview`, { waitUntil: 'domcontentloaded' });
+  const canvas = page.locator('canvas');
+  await expect(canvas).toBeVisible();
+  // No intro dolly to wait out under reduced motion — the camera starts at rest
+  // distance immediately, so a short settle is enough.
+  await page.waitForTimeout(500);
+
+  const hasWebgl = await canvas.evaluate(el => !!(el.getContext('webgl2') || el.getContext('webgl')));
+  expect(hasWebgl).toBe(true);
+  await capture(page, testInfo, 'aetheris-preview-reduced-motion');
+  expect(errors).toEqual([]);
+  await context.close();
 });
 
 test('profile redirects unauthenticated users to login', async ({ page }, testInfo) => {

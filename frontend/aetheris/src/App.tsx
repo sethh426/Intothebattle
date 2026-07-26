@@ -62,7 +62,7 @@ export default function App() {
     <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
       <Canvas
         frameloop={running ? 'always' : 'never'}
-        camera={{ fov: CAMERA.fov, near: CAMERA.near, far: CAMERA.far, position: [0, 0, CAMERA.distance] }}
+        camera={{ fov: CAMERA.fov, near: CAMERA.near, far: CAMERA.far }}
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
         style={{ touchAction: 'none', cursor: 'grab' }}

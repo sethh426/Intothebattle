@@ -17,7 +17,11 @@ export const CAMERA = {
   fov: 42,
   near: 0.1,
   far: 100,
-  distance: 5.4,
+  restDistance: 5.4, // where the camera settles after the intro dolly, and the default zoom level
+  introDistance: 18, // deep-space starting distance for the opening cinematic dolly-in
+  introDurationSeconds: 2.8,
+  zoomMinDistance: 2.8, // close but stays outside the atmosphere shell
+  zoomMaxDistance: 6.2, // a bit beyond restDistance, for a little zoom-out headroom
 }
 
 export const ROTATION = {
@@ -52,6 +56,25 @@ export const DAY_NIGHT = {
   orbitRadius: 6,
   orbitTiltRadians: 0.35,
   nightLiveBoost: 1.9, // color multiplier applied to a live territory's dark-side instance color
+}
+
+export const ATMOSPHERE = {
+  radiusScale: 1.08, // relative to PLANET.radius
+  color: '#5fb8ff',
+  glowPower: 2.5, // Fresnel falloff exponent
+}
+
+export const CLOUDS = {
+  radiusScale: 1.02,
+  color: '#f4f8ff',
+  baseOpacity: 0.55,
+  driftRadiansPerSecond: 0.008, // independent extra rotation on top of the shared wrapper's drag/auto-rotate
+}
+
+export const STARFIELD: Record<PerfTier, number> = {
+  high: 6000,
+  medium: 3500,
+  low: 1800,
 }
 
 export const WORLD_SEED = 918273645

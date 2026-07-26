@@ -41,7 +41,10 @@ export function useDragControls(wrapperRef: RefObject<THREE.Object3D | null>): D
     const canvas = gl.domElement
     const s = state.current
 
+    // Only the primary pointer drives rotation — a second touch point (pinch-zoom,
+    // owned by useCameraRig) must not corrupt this drag state.
     function onPointerDown(event: PointerEvent): void {
+      if (!event.isPrimary) return
       s.dragging = true
       s.lastX = event.clientX
       s.lastY = event.clientY
@@ -52,7 +55,7 @@ export function useDragControls(wrapperRef: RefObject<THREE.Object3D | null>): D
     }
 
     function onPointerMove(event: PointerEvent): void {
-      if (!s.dragging) return
+      if (!event.isPrimary || !s.dragging) return
       const dx = event.clientX - s.lastX
       const dy = event.clientY - s.lastY
       s.lastX = event.clientX
@@ -68,6 +71,7 @@ export function useDragControls(wrapperRef: RefObject<THREE.Object3D | null>): D
     }
 
     function onPointerUp(event: PointerEvent): void {
+      if (!event.isPrimary) return
       s.dragging = false
       s.idleTimer = 0
       canvas.releasePointerCapture?.(event.pointerId)

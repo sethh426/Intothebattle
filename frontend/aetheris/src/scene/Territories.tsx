@@ -37,6 +37,9 @@ interface TerritoriesProps {
   territories: Territory[]
   wrapperRef: RefObject<THREE.Object3D | null>
   sunDirectionRef: RefObject<THREE.Vector3 | null>
+  // 0-1, one-shot intro flash intensity (see useCameraRig) applied to a single
+  // designated flagship-biome territory as the opening cinematic's payoff beat.
+  flashRef?: RefObject<number>
 }
 
 interface TooltipState {
@@ -46,7 +49,7 @@ interface TooltipState {
 
 const UP = new THREE.Vector3(0, 0, 1)
 
-export default function Territories({ territories, wrapperRef, sunDirectionRef }: TerritoriesProps) {
+export default function Territories({ territories, wrapperRef, sunDirectionRef, flashRef }: TerritoriesProps) {
   const geometries = useMemo(() => {
     const map = new Map<string, THREE.ExtrudeGeometry>()
     SHAPE_IDS.forEach((shapeId) => map.set(shapeId, buildShapeGeometry(shapeId)))
@@ -65,12 +68,21 @@ export default function Territories({ territories, wrapperRef, sunDirectionRef }
 
   // territory.id -> live instance handle, for per-frame day/night color updates
   const liveInstanceRefs = useRef(new Map<string, LiveEntry>())
+  const flashInstanceRef = useRef<{ ref: InstanceHandle; baseColor: THREE.Color } | null>(null)
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
   const tmpColor = useMemo(() => new THREE.Color(), [])
+  const flashWhite = useMemo(() => new THREE.Color(1, 1, 1), [])
+
+  // One designated flagship-biome territory is the intro cinematic's one-shot flash target.
+  const flashTerritoryId = useMemo(() => {
+    const flagship = territories.find((t) => getBiomeById(t.biomeId)?.isFlagship)
+    return flagship?.id ?? null
+  }, [territories])
 
   const instanceSetup = useCallback((instance: InstanceHandle | null, territory: Territory) => {
     if (!instance) {
       liveInstanceRefs.current.delete(territory.id)
+      if (flashInstanceRef.current?.ref && territory.id === flashTerritoryId) flashInstanceRef.current = null
       return
     }
     const surfacePoint = latLonToVector3(territory.lat, territory.lon, PLANET.radius + SURFACE_OFFSET)
@@ -91,17 +103,28 @@ export default function Territories({ territories, wrapperRef, sunDirectionRef }
     if (territory.isLive) {
       liveInstanceRefs.current.set(territory.id, { ref: instance, baseColor, normal })
     }
-  }, [])
+    if (territory.id === flashTerritoryId) {
+      flashInstanceRef.current = { ref: instance, baseColor }
+    }
+  }, [flashTerritoryId])
 
   useFrame(() => {
     const sunDir = sunDirectionRef.current
-    if (!sunDir) return
-    liveInstanceRefs.current.forEach(({ ref, baseColor, normal }) => {
-      const isNightSide = normal.dot(sunDir) < 0.05
-      tmpColor.copy(baseColor)
-      if (isNightSide) tmpColor.multiplyScalar(DAY_NIGHT.nightLiveBoost)
-      ref.color.copy(tmpColor)
-    })
+    if (sunDir) {
+      liveInstanceRefs.current.forEach(({ ref, baseColor, normal }) => {
+        const isNightSide = normal.dot(sunDir) < 0.05
+        tmpColor.copy(baseColor)
+        if (isNightSide) tmpColor.multiplyScalar(DAY_NIGHT.nightLiveBoost)
+        ref.color.copy(tmpColor)
+      })
+    }
+
+    const flashIntensity = flashRef?.current ?? 0
+    const flashEntry = flashInstanceRef.current
+    if (flashEntry && flashIntensity > 0.001) {
+      tmpColor.copy(flashEntry.baseColor).lerp(flashWhite, flashIntensity)
+      flashEntry.ref.color.copy(tmpColor)
+    }
   })
 
   const handlePointerOver = useCallback((territory: Territory, event: ThreeEvent<PointerEvent>) => {
