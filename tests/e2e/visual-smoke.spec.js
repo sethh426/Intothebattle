@@ -120,51 +120,39 @@ for (const [name, pathname, selector] of [
   });
 }
 
-test('home hero video is visible and playable', async ({ page }, testInfo) => {
+test('home hero world globe renders on WebGL', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
-  const mediaResponses = [];
-  page.on('response', res => {
-    if (res.url().includes('/media/remotion/homepage-real-overlay-')) {
-      mediaResponses.push({ url: res.url(), status: res.status() });
-    }
-  });
 
   await page.goto(`${baseUrl}/`, { waitUntil: 'domcontentloaded' });
-  await expect(page.locator('.demo-shell')).toBeVisible();
-  const video = page.locator('.frame-wrap video');
-  await expect(video).toBeVisible();
+  await expect(page.locator('.globe-shell')).toBeVisible();
+  const canvas = page.locator('#world-globe-canvas');
+  await expect(canvas).toBeVisible();
 
-  const state = await video.evaluate(async el => {
-    if (el.readyState < 1) {
-      await new Promise(resolve => el.addEventListener('loadedmetadata', resolve, { once: true }));
-    }
-    await el.play().catch(() => {});
-    await new Promise(resolve => setTimeout(resolve, 800));
+  // Give the globe's RAF loop a moment to spin up and render at least one frame.
+  await page.waitForTimeout(800);
+
+  const state = await canvas.evaluate(el => {
     const rect = el.getBoundingClientRect();
+    const hasWebgl = !!(el.getContext('webgl2') || el.getContext('webgl'));
     return {
-      src: el.currentSrc || el.src,
-      currentTime: el.currentTime,
-      paused: el.paused,
-      readyState: el.readyState,
-      videoWidth: el.videoWidth,
-      videoHeight: el.videoHeight,
-      error: el.error ? { code: el.error.code, message: el.error.message } : null,
-      rect: { top: rect.top, bottom: rect.bottom, width: rect.width, height: rect.height },
+      hasWebgl,
+      width: el.width,
+      height: el.height,
+      rect: { top: rect.top, width: rect.width, height: rect.height },
       viewportHeight: window.innerHeight,
+      posterHidden: document.getElementById('world-globe-poster')?.hidden,
     };
   });
 
-  expect(state.src).toContain('/media/remotion/homepage-real-overlay-source.mp4');
-  expect(state.error).toBeNull();
-  expect(state.readyState).toBeGreaterThanOrEqual(2);
-  expect(state.videoWidth).toBeGreaterThanOrEqual(1280);
-  expect(state.videoHeight).toBeGreaterThanOrEqual(720);
-  expect(state.currentTime).toBeGreaterThan(0);
+  expect(state.hasWebgl).toBe(true);
+  expect(state.width).toBeGreaterThan(0);
+  expect(state.height).toBeGreaterThan(0);
   expect(state.rect.width).toBeGreaterThan(300);
   expect(state.rect.top).toBeLessThan(state.viewportHeight * 0.75);
-  expect(mediaResponses.some(res => [200, 206, 304].includes(res.status))).toBe(true);
+  // WebGL succeeded, so the no-WebGL text fallback should stay hidden.
+  expect(state.posterHidden).toBe(true);
   await expectNoHorizontalOverflow(page);
-  await capture(page, testInfo, 'home-video');
+  await capture(page, testInfo, 'home-globe');
   expect(errors).toEqual([]);
 });
 

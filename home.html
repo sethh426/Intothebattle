@@ -38,6 +38,10 @@
   <script type="module" src="/js/clarity-loader.js"></script>
   <script type="module" src="/js/growth-tracker.js"></script>
   <script type="module" src="/js/site-breadcrumbs.js"></script>
+  <script type="importmap">
+  { "imports": { "three": "/vendor/three/three.module.js" } }
+  </script>
+  <script type="module" src="/js/world/globe-main.js"></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -508,6 +512,154 @@
       background: #02040a;
     }
 
+    /* ── World globe (hero) ── */
+    .globe-shell {
+      position: relative;
+      width: min(100%, 860px);
+      margin-top: clamp(8px, 3vh, 24px);
+      border-radius: 24px;
+      overflow: hidden;
+      border: 1px solid rgba(0,200,255,0.22);
+      background: #02040a;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 60px rgba(0,200,255,0.10);
+      animation: shellReveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-delay: 0.2s;
+    }
+    .globe-shell::before {
+      content: "";
+      position: absolute;
+      inset: auto 6% -20% 6%;
+      height: 44%;
+      background: linear-gradient(90deg, rgba(245,200,66,0.16), rgba(0,200,255,0.20), rgba(255,42,74,0.14));
+      filter: blur(30px);
+      z-index: -1;
+      animation: glowPulse 3s ease-in-out infinite;
+    }
+    .globe-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 14px 14px 0;
+      padding: 11px 14px;
+      border-radius: 12px;
+      background: rgba(4,8,18,0.80);
+      border: 1px solid rgba(255,255,255,0.08);
+      backdrop-filter: blur(12px);
+    }
+    .globe-bar-left { line-height: 1.2; min-width: 0; }
+    .globe-bar-left strong {
+      display: block;
+      color: var(--gold-l);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .globe-bar-left span {
+      display: block;
+      color: rgba(0,200,255,0.8);
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .globe-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(0,200,255,0.10);
+      border: 1px solid rgba(0,200,255,0.22);
+      color: rgba(0,200,255,0.9);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .globe-badge::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--blue);
+      box-shadow: 0 0 8px var(--blue);
+      animation: itb-pulse 2.2s ease-in-out infinite;
+    }
+    .globe-frame {
+      position: relative;
+      margin: 10px 14px 14px;
+      border-radius: 14px;
+      overflow: hidden;
+      aspect-ratio: 1/1;
+      background: radial-gradient(circle at 50% 42%, rgba(0,200,255,0.16), rgba(2,4,10,0.9) 70%);
+    }
+    #world-globe-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      cursor: grab;
+    }
+    #world-globe-canvas:active { cursor: grabbing; }
+    .globe-poster {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      color: rgba(220,230,246,0.75);
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .globe-tooltip {
+      position: absolute;
+      transform: translate(-50%, -120%);
+      pointer-events: none;
+      background: rgba(4,8,18,0.92);
+      border: 1px solid rgba(0,200,255,0.28);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 11px;
+      line-height: 1.4;
+      color: var(--ink, #dce6f6);
+      white-space: nowrap;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+    }
+    .globe-tooltip strong {
+      display: block;
+      color: var(--gold-l);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .globe-tooltip span {
+      display: block;
+      color: rgba(220,230,246,0.75);
+    }
+    .globe-tooltip-badge {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .globe-tooltip-badge.is-live { background: rgba(0,200,255,0.16); color: var(--blue); }
+    .globe-tooltip-badge.is-offline { background: rgba(255,255,255,0.08); color: rgba(220,230,246,0.55); }
+    #world-globe-canvas[hidden],
+    .globe-poster[hidden] { display: none; }
+
     /* ── Quick panel ── */
     .quick-panel {
       display: grid;
@@ -878,6 +1030,7 @@
       .hero aside { order: -1; }
       .hero-text { order: 1; }
       .demo-shell { max-width: 720px; width: 100%; margin: 0 auto; }
+      .globe-shell { max-width: 720px; width: 100%; margin: 0 auto; }
       .quick-panel,
       .steps,
       .feature-grid,
@@ -944,10 +1097,24 @@
       .demo-bar-left span { font-size: 10px; }
       .demo-badge { font-size: 9px; letter-spacing: 0.08em; padding: 4px 7px; }
       .frame-wrap { margin: 8px 10px 10px; border-radius: 10px; }
+      .globe-shell {
+        border-radius: 18px;
+        box-shadow: 0 18px 48px rgba(0,0,0,0.56), 0 0 34px rgba(0,200,255,0.11);
+      }
+      .globe-bar {
+        margin: 10px 10px 0;
+        padding: 9px 10px;
+        gap: 8px;
+      }
+      .globe-bar-left strong { font-size: 10px; letter-spacing: 0.07em; }
+      .globe-bar-left span { font-size: 10px; }
+      .globe-badge { font-size: 9px; letter-spacing: 0.08em; padding: 4px 7px; }
+      .globe-frame { margin: 8px 10px 10px; border-radius: 10px; }
     }
     @media (max-width: 400px) {
       .flow-strip { grid-template-columns: 1fr; }
       .demo-bar-left span { display: none; }
+      .globe-bar-left span { display: none; }
     }
   </style>
   <link rel="stylesheet" href="/css/site-refresh.css" />
@@ -999,22 +1166,20 @@
       </div>
 
       <aside>
-        <div class="demo-shell" aria-label="Live overlay demo preview">
-          <div class="demo-bar">
-            <div class="demo-bar-left">
-              <strong>Watch chat become combat</strong>
-              <span>Commands &middot; effects &middot; stats &middot; video</span>
+        <div class="globe-shell" aria-label="Interactive preview of the IntoTheBattle creator world">
+          <div class="globe-bar">
+            <div class="globe-bar-left">
+              <strong>Every creator gets a world</strong>
+              <span>Drag to explore &middot; 100 territories &middot; concept preview</span>
             </div>
-            <div class="demo-badge">Live demo</div>
+            <div class="globe-badge">Vision preview</div>
           </div>
-          <div class="frame-wrap">
-            <video
-              aria-label="IntoTheBattle battle clip demo"
-              autoplay muted loop playsinline preload="auto"
-              poster="/media/remotion/homepage-real-overlay-poster.jpg?v=homepage-real-v2-20260630"
-            >
-              <source src="/media/remotion/homepage-real-overlay-source.mp4?v=homepage-real-v2-20260630" type="video/mp4">
-            </video>
+          <div class="globe-frame" id="world-globe-mount">
+            <canvas id="world-globe-canvas" aria-hidden="true"></canvas>
+            <div id="world-globe-poster" class="globe-poster" hidden>
+              <span>A living fantasy world &mdash; one territory per creator.</span>
+            </div>
+            <div id="world-globe-tooltip" class="globe-tooltip" role="status" aria-live="polite" hidden></div>
           </div>
         </div>
       </aside>

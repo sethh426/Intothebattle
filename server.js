@@ -7963,6 +7963,14 @@ app.use('/vendor/phaser', express.static(path.join(__dirname, 'node_modules', 'p
   maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
 }));
 
+app.use('/vendor/three', express.static(path.join(__dirname, 'node_modules', 'three', 'build'), {
+  dotfiles: 'deny',
+  etag: true,
+  fallthrough: false,
+  index: false,
+  maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
+}));
+
 app.get('/api/public-config', (_req, res) => {
   const clarityProjectId = String(process.env.CLARITY_PROJECT_ID || '').trim();
   res.set('Cache-Control', process.env.NODE_ENV === 'production' ? 'public, max-age=300' : 'no-store');
