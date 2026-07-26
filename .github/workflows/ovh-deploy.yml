@@ -33,6 +33,21 @@ jobs:
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
+            echo "OVH_SSH_KEY is set (${#OVH_SSH_KEY} chars)."
+          fi
+          echo "Target host: ${OVH_USER}@${OVH_HOST}"
+
+      - name: Diagnose OVH network reachability
+        if: steps.deploy_config.outputs.ready == 'true'
+        run: |
+          echo "--- host resolution ---"
+          getent hosts "$OVH_HOST" || echo "(not resolvable via getent; fine if OVH_HOST is already a raw IP)"
+          echo "--- TCP connect to ${OVH_HOST}:22 (10s timeout) ---"
+          if timeout 10 bash -c "cat < /dev/null > /dev/tcp/${OVH_HOST}/22" 2>/tmp/tcp_err.log; then
+            echo "RESULT: TCP connect to ${OVH_HOST}:22 SUCCEEDED"
+          else
+            echo "RESULT: TCP connect to ${OVH_HOST}:22 FAILED"
+            cat /tmp/tcp_err.log 2>/dev/null || true
           fi
 
       - name: Checkout
@@ -47,7 +62,22 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$OVH_SSH_KEY" > ~/.ssh/ovh_deploy_key
           chmod 600 ~/.ssh/ovh_deploy_key
-          ssh-keyscan -H "$OVH_HOST" >> ~/.ssh/known_hosts
+          echo "--- key fingerprint (not the key itself) ---"
+          ssh-keygen -lf ~/.ssh/ovh_deploy_key || echo "RESULT: ssh-keygen could not parse OVH_SSH_KEY (check for CRLF line endings / missing trailing newline / wrong format)"
+          echo "--- ssh-keyscan (10s timeout) ---"
+          if ssh-keyscan -T 10 -H "$OVH_HOST" >> ~/.ssh/known_hosts 2>/tmp/keyscan_err.log; then
+            echo "RESULT: ssh-keyscan succeeded"
+          else
+            echo "RESULT: ssh-keyscan failed (continuing anyway so later steps can surface more detail)"
+          fi
+          cat /tmp/keyscan_err.log 2>/dev/null || true
+
+      - name: Test SSH auth
+        if: steps.deploy_config.outputs.ready == 'true'
+        run: |
+          ssh -vvv -i ~/.ssh/ovh_deploy_key -o ConnectTimeout=10 -o BatchMode=yes \
+            "${OVH_USER}@${OVH_HOST}" 'echo "RESULT: SSH auth OK as $(whoami)@$(hostname)"' \
+            2>&1 | tail -c 6000
 
       - name: Package release
         if: steps.deploy_config.outputs.ready == 'true'
@@ -57,12 +87,12 @@ jobs:
       - name: Upload release
         if: steps.deploy_config.outputs.ready == 'true'
         run: |
-          scp -i ~/.ssh/ovh_deploy_key "/tmp/intothebattle-${GITHUB_SHA}.tar.gz" "${OVH_USER}@${OVH_HOST}:/tmp/intothebattle-${GITHUB_SHA}.tar.gz"
+          scp -i ~/.ssh/ovh_deploy_key -o ConnectTimeout=15 "/tmp/intothebattle-${GITHUB_SHA}.tar.gz" "${OVH_USER}@${OVH_HOST}:/tmp/intothebattle-${GITHUB_SHA}.tar.gz"
 
       - name: Deploy on OVH
         if: steps.deploy_config.outputs.ready == 'true'
         run: |
-          ssh -i ~/.ssh/ovh_deploy_key "${OVH_USER}@${OVH_HOST}" 'bash -s' -- "$GITHUB_SHA" <<'REMOTE'
+          ssh -i ~/.ssh/ovh_deploy_key -o ConnectTimeout=15 "${OVH_USER}@${OVH_HOST}" 'bash -s' -- "$GITHUB_SHA" <<'REMOTE'
           set -euo pipefail
           commit="$1"
           archive="/tmp/intothebattle-$commit.tar.gz"
