@@ -7247,6 +7247,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/home', (_req, res) => res.sendFile(path.join(__dirname, 'home.html')));
+app.get(['/aetheris-preview', '/aetheris-preview.html'], (_req, res) => res.sendFile(path.join(__dirname, 'aetheris-preview.html')));
 app.get(['/sponsors', '/sponsors.html'], (_req, res) => res.sendFile(path.join(__dirname, 'sponsors.html')));
 app.get(['/how-to-play', '/how-to-play.html', '/players', '/game-guide'], (_req, res) => res.sendFile(path.join(__dirname, 'how-to-play.html')));
 app.get(['/battlegrounds', '/battlegrounds.html', '/the-battlegrounds'], (_req, res) => res.sendFile(path.join(__dirname, 'battlegrounds.html')));
@@ -7969,6 +7970,17 @@ app.use('/vendor/three', express.static(path.join(__dirname, 'node_modules', 'th
   fallthrough: false,
   index: false,
   maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
+}));
+
+// Aetheris (React/TS/react-three-fiber) build output — v0.2 parity migration, served
+// alongside the still-live vanilla globe in home.html. Fixed filenames (aetheris.js/.css,
+// see frontend/aetheris/vite.config.ts) so no manifest-reading step is needed here.
+app.use('/aetheris-app', express.static(path.join(__dirname, 'frontend', 'aetheris', 'dist'), {
+  dotfiles: 'deny',
+  etag: true,
+  fallthrough: false,
+  index: false,
+  maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
 }));
 
 app.get('/api/public-config', (_req, res) => {

@@ -64,6 +64,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build Aetheris frontend (React/TS/react-three-fiber)
+        run: |
+          npm --prefix frontend/aetheris ci
+          npm --prefix frontend/aetheris run build
+
       - name: Install Python schema validator dependencies
         run: python -m pip install -r requirements-dev.txt
 

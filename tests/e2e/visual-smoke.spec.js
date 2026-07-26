@@ -156,6 +156,37 @@ test('home hero world globe renders on WebGL', async ({ page }, testInfo) => {
   expect(errors).toEqual([]);
 });
 
+test('aetheris preview (React/r3f v0.2 build) renders on WebGL', async ({ page }, testInfo) => {
+  const errors = await watchPage(page);
+
+  await page.goto(`${baseUrl}/aetheris-preview`, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#aetheris-root')).toBeVisible();
+  const canvas = page.locator('canvas');
+  await expect(canvas).toBeVisible();
+
+  // Give the r3f render loop a moment to spin up and render at least one frame.
+  await page.waitForTimeout(800);
+
+  const state = await canvas.evaluate(el => {
+    const rect = el.getBoundingClientRect();
+    const hasWebgl = !!(el.getContext('webgl2') || el.getContext('webgl'));
+    return {
+      hasWebgl,
+      width: el.width,
+      height: el.height,
+      rect: { width: rect.width, height: rect.height },
+    };
+  });
+
+  expect(state.hasWebgl).toBe(true);
+  expect(state.width).toBeGreaterThan(0);
+  expect(state.height).toBeGreaterThan(0);
+  expect(state.rect.width).toBeGreaterThan(300);
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'aetheris-preview');
+  expect(errors).toEqual([]);
+});
+
 test('profile redirects unauthenticated users to login', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
   await page.goto(`${baseUrl}/profile`, { waitUntil: 'domcontentloaded' });
