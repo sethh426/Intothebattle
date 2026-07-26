@@ -544,3 +544,36 @@ CREATE TABLE IF NOT EXISTS local_blog_posts (
 CREATE INDEX IF NOT EXISTS local_blog_posts_slug_idx ON local_blog_posts(slug);
 CREATE INDEX IF NOT EXISTS local_blog_posts_status_published_idx ON local_blog_posts(status, published_at);
 CREATE INDEX IF NOT EXISTS local_blog_posts_source_idx ON local_blog_posts(source, status);
+
+-- Aetheris (frontend/aetheris) v0.4: persisted world-territory plots and creator claims.
+-- A "kingdom" is a creator's existing user_rooms row, visualized differently -- not a
+-- second parallel ownership model. Schema only in this pass; no live queries wired yet.
+CREATE TABLE IF NOT EXISTS world_territories (
+  id TEXT PRIMARY KEY,
+  biome_id TEXT NOT NULL,
+  shape_id TEXT NOT NULL,
+  lat DOUBLE PRECISION NOT NULL,
+  lon DOUBLE PRECISION NOT NULL,
+  angular_radius DOUBLE PRECISION NOT NULL,
+  rotation DOUBLE PRECISION NOT NULL,
+  color_hex TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS world_territory_claims (
+  id SERIAL PRIMARY KEY,
+  territory_id TEXT NOT NULL,
+  room_id TEXT NOT NULL,
+  claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  unclaimed_at TIMESTAMP,
+  FOREIGN KEY(territory_id) REFERENCES world_territories(id),
+  FOREIGN KEY(room_id) REFERENCES user_rooms(room_id)
+);
+
+CREATE INDEX IF NOT EXISTS world_territory_claims_room_idx ON world_territory_claims(room_id, unclaimed_at);
+
+-- Only one active (unclaimed_at IS NULL) claim per territory at a time; historical rows
+-- with unclaimed_at set are kept for claim/reclaim history.
+CREATE UNIQUE INDEX IF NOT EXISTS world_territory_claims_active_territory_idx
+  ON world_territory_claims (territory_id)
+  WHERE unclaimed_at IS NULL;

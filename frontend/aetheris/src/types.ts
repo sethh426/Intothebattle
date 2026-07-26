@@ -39,6 +39,15 @@ export interface ShapeFootprint {
 
 export type PerfTier = 'high' | 'medium' | 'low'
 
+// off = not live. The other four are viewer-count buckets that drive kingdom
+// visual escalation (glow intensity, banner scale) once a territory goes live.
+export type ViewerTier = 'off' | 'low' | 'medium' | 'high' | 'packed'
+
+export interface KingdomState {
+  isLive: boolean
+  viewerTier: ViewerTier
+}
+
 export interface LatLon {
   lat: number
   lon: number

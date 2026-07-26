@@ -1,13 +1,13 @@
-import { useMemo, useRef, useState, useCallback } from 'react'
+import { useMemo, useRef, useState, useCallback, useEffect } from 'react'
 import type { RefObject } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { Instances, Instance, Html } from '@react-three/drei'
 import * as THREE from 'three'
-import { PLANET, DAY_NIGHT } from '../config'
+import { PLANET, DAY_NIGHT, KINGDOM } from '../config'
 import { buildShapeFootprint, SHAPE_IDS } from '../data/shapeLibrary'
 import { getBiomeById } from '../data/biomeData'
 import { latLonToVector3 } from './geo'
-import type { Territory } from '../types'
+import type { KingdomState, Territory } from '../types'
 
 const EXTRUDE_DEPTH = 0.05
 const SURFACE_OFFSET = 0.01 // lift footprints slightly above the base sphere to avoid z-fighting
@@ -16,10 +16,11 @@ interface InstanceHandle extends THREE.Object3D {
   color: THREE.Color
 }
 
-interface LiveEntry {
+interface InstanceEntry {
   ref: InstanceHandle
   baseColor: THREE.Color
   normal: THREE.Vector3
+  arcLength: number
 }
 
 function buildShapeGeometry(shapeId: string): THREE.ExtrudeGeometry {
@@ -40,6 +41,9 @@ interface TerritoriesProps {
   // 0-1, one-shot intro flash intensity (see useCameraRig) applied to a single
   // designated flagship-biome territory as the opening cinematic's payoff beat.
   flashRef?: RefObject<number>
+  // territory.id -> live/viewer-tier state, from useKingdomState's mock simulator
+  // (or a future real socket feed). Drives per-instance glow/scale escalation.
+  kingdomState?: Record<string, KingdomState>
 }
 
 interface TooltipState {
@@ -49,7 +53,7 @@ interface TooltipState {
 
 const UP = new THREE.Vector3(0, 0, 1)
 
-export default function Territories({ territories, wrapperRef, sunDirectionRef, flashRef }: TerritoriesProps) {
+export default function Territories({ territories, wrapperRef, sunDirectionRef, flashRef, kingdomState }: TerritoriesProps) {
   const geometries = useMemo(() => {
     const map = new Map<string, THREE.ExtrudeGeometry>()
     SHAPE_IDS.forEach((shapeId) => map.set(shapeId, buildShapeGeometry(shapeId)))
@@ -66,12 +70,19 @@ export default function Territories({ territories, wrapperRef, sunDirectionRef, 
     return map
   }, [territories])
 
-  // territory.id -> live instance handle, for per-frame day/night color updates
-  const liveInstanceRefs = useRef(new Map<string, LiveEntry>())
+  // territory.id -> instance handle, for per-frame day/night + kingdom-escalation updates
+  const instanceRefs = useRef(new Map<string, InstanceEntry>())
   const flashInstanceRef = useRef<{ ref: InstanceHandle; baseColor: THREE.Color } | null>(null)
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
   const tmpColor = useMemo(() => new THREE.Color(), [])
   const flashWhite = useMemo(() => new THREE.Color(1, 1, 1), [])
+
+  // Mirrors the kingdomState prop into a ref so useFrame reads live data every
+  // frame without depending on the prop (which would tear down/rebuild the loop).
+  const kingdomStateRef = useRef<Record<string, KingdomState>>({})
+  useEffect(() => {
+    kingdomStateRef.current = kingdomState ?? {}
+  }, [kingdomState])
 
   // One designated flagship-biome territory is the intro cinematic's one-shot flash target.
   const flashTerritoryId = useMemo(() => {
@@ -81,7 +92,7 @@ export default function Territories({ territories, wrapperRef, sunDirectionRef, 
 
   const instanceSetup = useCallback((instance: InstanceHandle | null, territory: Territory) => {
     if (!instance) {
-      liveInstanceRefs.current.delete(territory.id)
+      instanceRefs.current.delete(territory.id)
       if (flashInstanceRef.current?.ref && territory.id === flashTerritoryId) flashInstanceRef.current = null
       return
     }
@@ -100,9 +111,7 @@ export default function Territories({ territories, wrapperRef, sunDirectionRef, 
     const baseColor = new THREE.Color(territory.colorHex)
     instance.color.copy(baseColor)
 
-    if (territory.isLive) {
-      liveInstanceRefs.current.set(territory.id, { ref: instance, baseColor, normal })
-    }
+    instanceRefs.current.set(territory.id, { ref: instance, baseColor, normal, arcLength })
     if (territory.id === flashTerritoryId) {
       flashInstanceRef.current = { ref: instance, baseColor }
     }
@@ -110,14 +119,26 @@ export default function Territories({ territories, wrapperRef, sunDirectionRef, 
 
   useFrame(() => {
     const sunDir = sunDirectionRef.current
-    if (sunDir) {
-      liveInstanceRefs.current.forEach(({ ref, baseColor, normal }) => {
-        const isNightSide = normal.dot(sunDir) < 0.05
-        tmpColor.copy(baseColor)
-        if (isNightSide) tmpColor.multiplyScalar(DAY_NIGHT.nightLiveBoost)
-        ref.color.copy(tmpColor)
-      })
-    }
+    const kingdomStates = kingdomStateRef.current
+
+    instanceRefs.current.forEach(({ ref, baseColor, normal, arcLength }, territoryId) => {
+      const kingdom = kingdomStates[territoryId]
+      const isLive = kingdom?.isLive ?? false
+      const tier = kingdom?.viewerTier ?? 'off'
+
+      if (!isLive) {
+        ref.color.copy(baseColor)
+        ref.scale.z = 1
+        return
+      }
+
+      const isNightSide = sunDir ? normal.dot(sunDir) < 0.05 : false
+      tmpColor.copy(baseColor)
+      if (isNightSide) tmpColor.multiplyScalar(DAY_NIGHT.nightLiveBoost)
+      tmpColor.multiplyScalar(KINGDOM.colorBoost[tier])
+      ref.color.copy(tmpColor)
+      ref.scale.set(arcLength, arcLength, KINGDOM.scaleBoost[tier])
+    })
 
     const flashIntensity = flashRef?.current ?? 0
     const flashEntry = flashInstanceRef.current
@@ -155,7 +176,11 @@ export default function Territories({ territories, wrapperRef, sunDirectionRef, 
           </Instances>
         )
       })}
-      {tooltip && (
+      {tooltip && (() => {
+        const kingdom = kingdomState?.[tooltip.territory.id]
+        const isLive = kingdom?.isLive ?? false
+        const tier = kingdom?.viewerTier ?? 'off'
+        return (
         <Html position={tooltip.position} style={{ pointerEvents: 'none' }}>
           <div
             style={{
@@ -186,15 +211,16 @@ export default function Territories({ territories, wrapperRef, sunDirectionRef, 
                 fontWeight: 700,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                background: tooltip.territory.isLive ? 'rgba(0,200,255,0.16)' : 'rgba(255,255,255,0.08)',
-                color: tooltip.territory.isLive ? '#3fd0ff' : 'rgba(220,230,246,0.55)',
+                background: isLive ? 'rgba(0,200,255,0.16)' : 'rgba(255,255,255,0.08)',
+                color: isLive ? '#3fd0ff' : 'rgba(220,230,246,0.55)',
               }}
             >
-              {tooltip.territory.isLive ? 'Live' : 'Offline'}
+              {isLive ? `Live · ${tier}` : 'Offline'}
             </span>
           </div>
         </Html>
-      )}
+        )
+      })()}
     </group>
   )
 }

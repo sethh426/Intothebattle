@@ -1,4 +1,4 @@
-import type { PerfTier } from './types'
+import type { PerfTier, ViewerTier } from './types'
 
 function readCssVar(name: string, fallback: string): string {
   if (typeof document === 'undefined') return fallback
@@ -59,7 +59,7 @@ export const DAY_NIGHT = {
 }
 
 export const ATMOSPHERE = {
-  radiusScale: 1.08, // relative to PLANET.radius
+  radiusScale: 1.18, // relative to PLANET.radius -- must comfortably clear the tallest landmark
   color: '#5fb8ff',
   glowPower: 2.5, // Fresnel falloff exponent
 }
@@ -75,6 +75,29 @@ export const STARFIELD: Record<PerfTier, number> = {
   high: 6000,
   medium: 3500,
   low: 1800,
+}
+
+// Mock kingdom-state simulator tuning (see kingdoms/useKingdomState.ts). Real
+// viewer data replaces this simulator in a later phase without changing these
+// escalation buckets -- they describe the visual language, not the data source.
+export const KINGDOM = {
+  simTickSeconds: 4,
+  toggleLiveChance: 0.04, // per-tick chance a given territory flips live/offline
+  tierChangeChance: 0.35, // per-tick chance a live territory's viewer tier shifts
+  colorBoost: {
+    off: 1,
+    low: 1,
+    medium: 1.25,
+    high: 1.6,
+    packed: 2.1,
+  } as Record<ViewerTier, number>,
+  scaleBoost: {
+    off: 1,
+    low: 1,
+    medium: 1.15,
+    high: 1.35,
+    packed: 1.6,
+  } as Record<ViewerTier, number>,
 }
 
 export const WORLD_SEED = 918273645
