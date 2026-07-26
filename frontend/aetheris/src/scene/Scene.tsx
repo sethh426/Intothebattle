@@ -6,6 +6,7 @@ import { WORLD_SEED } from '../config'
 import Planet from './Planet'
 import Territories from './Territories'
 import Landmarks from './Landmarks'
+import KingdomSilhouettes from './KingdomSilhouettes'
 import DayNightCycle from './DayNightCycle'
 import Atmosphere from './Atmosphere'
 import Clouds from './Clouds'
@@ -46,6 +47,7 @@ export default function Scene({ reducedMotion }: SceneProps) {
           flashRef={cameraRig.flashRef}
           kingdomState={kingdomState}
         />
+        <KingdomSilhouettes territories={territories} kingdomState={kingdomState} />
         <Clouds introOpacityRef={cameraRig.introOpacityRef} />
         <Atmosphere introOpacityRef={cameraRig.introOpacityRef} />
         <Particles tier={tier} paused={reducedMotion} zoomDistanceRef={cameraRig.zoomDistanceRef} />

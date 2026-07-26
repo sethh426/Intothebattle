@@ -48,6 +48,15 @@ export interface KingdomState {
   viewerTier: ViewerTier
 }
 
+// Weather is atmospheric/regional, not viewer-driven -- calm is the "nothing happening"
+// baseline, active/storm build and dissipate through adjacent-step transitions only.
+export type WeatherMode = 'calm' | 'active' | 'storm'
+
+export interface WeatherState {
+  mode: WeatherMode
+  intensity: number // 0-1, smoothed toward WEATHER.modeIntensity[mode] each frame
+}
+
 export interface LatLon {
   lat: number
   lon: number

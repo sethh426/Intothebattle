@@ -16,6 +16,11 @@ export interface ParticleSystemHandle {
   points: THREE.Points
   update: (deltaSeconds: number) => void
   setActiveCount: (activeCount: number) => void
+  // Weather-driven levers (v0.5): cheap uniform writes, safe to call every frame
+  // unconditionally (unlike setActiveCount, which changes the draw range and is
+  // gated by callers to avoid buffer churn).
+  setSizeScale: (scale: number) => void
+  setColorBoost: (boost: number) => void
   count: number
 }
 
@@ -37,6 +42,7 @@ function getSpriteTexture(): THREE.CanvasTexture {
 }
 
 const VERTEX_SHADER = `
+  uniform float uSizeScale;
   attribute float pSize;
   attribute vec3 pColor;
   attribute float pLifeRatio;
@@ -49,20 +55,22 @@ const VERTEX_SHADER = `
     // 300.0 here was a generic example-code constant left uncalibrated for this scene's
     // scale (PLANET.radius = 2, camera ~3-5 units out) — it produced 200px+ blown-out
     // glow blobs instead of small sparkle dots. 8.0 keeps pSize's small values (~1.5-6)
-    // reading as actual few-pixel-scale particles at this camera distance.
-    gl_PointSize = pSize * (8.0 / -mvPosition.z);
+    // reading as actual few-pixel-scale particles at this camera distance. uSizeScale is
+    // a per-biome weather multiplier (storms read as bigger/denser), 1.0 outside weather.
+    gl_PointSize = pSize * uSizeScale * (8.0 / -mvPosition.z);
     gl_Position = projectionMatrix * mvPosition;
   }
 `
 
 const FRAGMENT_SHADER = `
   uniform sampler2D map;
+  uniform float uColorBoost;
   varying vec3 vColor;
   varying float vLifeRatio;
   void main() {
     vec4 tex = texture2D(map, gl_PointCoord);
     float fade = smoothstep(0.0, 0.15, vLifeRatio) * smoothstep(0.0, 0.15, 1.0 - vLifeRatio);
-    gl_FragColor = vec4(vColor, tex.a * fade);
+    gl_FragColor = vec4(vColor * uColorBoost, tex.a * fade);
   }
 `
 
@@ -94,7 +102,11 @@ export function createParticleSystem({ count, respawn, blending = THREE.Additive
   geometry.setAttribute('pLifeRatio', new THREE.BufferAttribute(new Float32Array(count), 1))
 
   const material = new THREE.ShaderMaterial({
-    uniforms: { map: { value: getSpriteTexture() } },
+    uniforms: {
+      map: { value: getSpriteTexture() },
+      uSizeScale: { value: 1 },
+      uColorBoost: { value: 1 },
+    },
     vertexShader: VERTEX_SHADER,
     fragmentShader: FRAGMENT_SHADER,
     transparent: true,
@@ -126,5 +138,13 @@ export function createParticleSystem({ count, respawn, blending = THREE.Additive
     geometry.setDrawRange(0, Math.max(0, Math.min(count, activeCount)))
   }
 
-  return { points, update, setActiveCount, count }
+  function setSizeScale(scale: number): void {
+    material.uniforms.uSizeScale.value = scale
+  }
+
+  function setColorBoost(boost: number): void {
+    material.uniforms.uColorBoost.value = boost
+  }
+
+  return { points, update, setActiveCount, setSizeScale, setColorBoost, count }
 }

@@ -1,4 +1,4 @@
-import type { PerfTier, ViewerTier } from './types'
+import type { PerfTier, ViewerTier, WeatherMode } from './types'
 
 function readCssVar(name: string, fallback: string): string {
   if (typeof document === 'undefined') return fallback
@@ -98,6 +98,32 @@ export const KINGDOM = {
     high: 1.35,
     packed: 1.6,
   } as Record<ViewerTier, number>,
+  // Kingdom silhouettes (v0.5): a small spire accent that only appears at high/packed
+  // tiers, lifted above the tallest possible escalated footprint (EXTRUDE_DEPTH=0.05 *
+  // scaleBoost.packed=1.6 / 2 ~= 0.04) so it never clips into the stretched footprint.
+  silhouetteLift: 0.06,
+  silhouetteRadiusFactor: 0.18,
+  silhouetteHeightFactor: 0.9,
+  silhouetteHeightBoost: {
+    high: 1,
+    packed: 1.4,
+  } as Record<'high' | 'packed', number>,
+}
+
+// Per-region weather state machine (v0.5) -- independent of KINGDOM's tick, since
+// weather is atmospheric/regional, not tied to whether a creator is live.
+export const WEATHER = {
+  tickSeconds: 20,
+  modeShiftChance: 0.12, // per-tick, per-biome chance to step to an adjacent mode
+  intensityLerpPerSecond: 0.15, // ~7s full transition -- builds/dissipates, never snaps
+  modeIntensity: {
+    calm: 0,
+    active: 0.55,
+    storm: 1,
+  } as Record<WeatherMode, number>,
+  densityBoostMax: 0.6,
+  sizeBoostMax: 0.5,
+  colorBoostMax: 0.25,
 }
 
 export const WORLD_SEED = 918273645
