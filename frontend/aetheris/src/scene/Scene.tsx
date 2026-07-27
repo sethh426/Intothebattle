@@ -16,16 +16,18 @@ import { useDragControls } from '../hooks/useDragControls'
 import { usePerfTier } from '../hooks/usePerfTier'
 import { useCameraRig } from '../hooks/useCameraRig'
 import { useKingdomState } from '../kingdoms/useKingdomState'
+import type { DataMode } from '../types'
 
 interface SceneProps {
   reducedMotion: boolean
+  dataMode: DataMode
 }
 
-export default function Scene({ reducedMotion }: SceneProps) {
+export default function Scene({ reducedMotion, dataMode }: SceneProps) {
   const wrapperRef = useRef<THREE.Group>(null)
   const sunDirectionRef = useRef(new THREE.Vector3(0, 0, 1))
   const territories = useMemo(() => generateTerritories(BIOMES, WORLD_SEED), [])
-  const kingdomState = useKingdomState(territories, WORLD_SEED + 1)
+  const kingdomState = useKingdomState(territories, WORLD_SEED + 1, dataMode)
   const tier = usePerfTier()
   const controls = useDragControls(wrapperRef)
   const cameraRig = useCameraRig(reducedMotion)

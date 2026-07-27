@@ -45,6 +45,7 @@ import { growthIntegrationDiagnostics, syncLeadToGrowthApis } from './tiktokbr/s
 import { growthEventDiagnostics, publicGrowthConfig, recordGrowthEvent, recordServerGrowthEvent } from './tiktokbr/services/growthEvents.js';
 import { marketingAutomationDiagnostics, publishApprovedMarketingPosts, recordMarketingVisit } from './tiktokbr/services/marketingAutomation.js';
 import { getBlogPostBySlug, listBlogPosts } from './tiktokbr/services/blogEngine.js';
+import { initWorldSocket } from './tiktokbr/services/worldSocket.js';
 import {
   createAccessCodeSessionToken,
   getSessionAuthRecord,
@@ -7008,6 +7009,10 @@ const io         = new Server(httpServer, {
     },
   },
 });
+
+// Aetheris homepage globe: a separate namespace, self-contained periodic poll, no
+// coupling to the battle overlay's hot event path below. See tiktokbr/services/worldSocket.js.
+initWorldSocket(io, { logger });
 
 function emitAttackAndSync(room, result) {
   if (!result) return;

@@ -1,11 +1,11 @@
+import { io, type Socket } from 'socket.io-client'
 import type { KingdomState } from '../types'
 
-// Placeholder client for the future `/aetheris-world` Socket.IO namespace
-// (see the Aetheris plan's §4.6 real-data-binding section). Intentionally NOT
-// connected to any real server yet -- v0.4 ships with useKingdomState's local
-// mock simulator only. This file exists so that swapping in real viewer data
-// later is a change to this module's internals, not a new integration surface
-// or a change to what Territories.tsx/useKingdomState expect to consume.
+// Real client for the `/aetheris-world` Socket.IO namespace (see the Aetheris plan's
+// §10(B) real-data-binding section and tiktokbr/services/worldSocket.js on the server
+// side). The server sends one full `kingdomStateSnapshot` on connect, then periodic
+// `kingdomStateUpdate` deltas -- this client normalizes both into the same
+// per-territory `onKingdomState(territoryId, state)` callback shape.
 
 export type KingdomStateListener = (territoryId: string, state: KingdomState) => void
 
@@ -15,15 +15,27 @@ export interface WorldSocketClient {
   onKingdomState(listener: KingdomStateListener): () => void
 }
 
-// Stub implementation: no network activity. connect()/disconnect() are no-ops,
-// and onKingdomState listeners are stored but never invoked. Replace this
-// factory's body with a real socket.io-client connection to `/aetheris-world`
-// when real data binding ships (paused pending explicit go-ahead).
 export function createWorldSocketClient(): WorldSocketClient {
   const listeners = new Set<KingdomStateListener>()
+  let socket: Socket | null = null
+
+  function emitAll(payload: Record<string, KingdomState>): void {
+    Object.entries(payload).forEach(([territoryId, state]) => {
+      listeners.forEach((listener) => listener(territoryId, state))
+    })
+  }
+
   return {
-    connect() {},
-    disconnect() {},
+    connect() {
+      if (socket) return
+      socket = io('/aetheris-world', { transports: ['websocket', 'polling'] })
+      socket.on('kingdomStateSnapshot', emitAll)
+      socket.on('kingdomStateUpdate', emitAll)
+    },
+    disconnect() {
+      socket?.disconnect()
+      socket = null
+    },
     onKingdomState(listener: KingdomStateListener) {
       listeners.add(listener)
       return () => listeners.delete(listener)

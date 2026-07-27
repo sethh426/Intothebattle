@@ -48,6 +48,10 @@ export interface KingdomState {
   viewerTier: ViewerTier
 }
 
+// 'mock' -- local deterministic simulator (dev/QA, used by /aetheris-preview).
+// 'live' -- real /aetheris-world socket namespace (production home.html).
+export type DataMode = 'mock' | 'live'
+
 // Weather is atmospheric/regional, not viewer-driven -- calm is the "nothing happening"
 // baseline, active/storm build and dissipate through adjacent-step transitions only.
 export type WeatherMode = 'calm' | 'active' | 'storm'

@@ -3,8 +3,13 @@ import { Canvas } from '@react-three/fiber'
 import { CAMERA } from './config'
 import { detectWebglSupport, useReducedMotion } from './hooks/useWebglFallback'
 import Scene from './scene/Scene'
+import type { DataMode } from './types'
 
-export default function App() {
+interface AppProps {
+  dataMode: DataMode
+}
+
+export default function App({ dataMode }: AppProps) {
   const [webglSupported] = useState(() => detectWebglSupport())
   const reducedMotion = useReducedMotion()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -67,7 +72,7 @@ export default function App() {
         gl={{ antialias: true, alpha: true }}
         style={{ touchAction: 'none', cursor: 'grab' }}
       >
-        <Scene reducedMotion={reducedMotion} />
+        <Scene reducedMotion={reducedMotion} dataMode={dataMode} />
       </Canvas>
     </div>
   )
