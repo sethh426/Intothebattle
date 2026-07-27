@@ -7969,17 +7969,10 @@ app.use('/vendor/phaser', express.static(path.join(__dirname, 'node_modules', 'p
   maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
 }));
 
-app.use('/vendor/three', express.static(path.join(__dirname, 'node_modules', 'three', 'build'), {
-  dotfiles: 'deny',
-  etag: true,
-  fallthrough: false,
-  index: false,
-  maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
-}));
-
-// Aetheris (React/TS/react-three-fiber) build output — v0.2 parity migration, served
-// alongside the still-live vanilla globe in home.html. Fixed filenames (aetheris.js/.css,
-// see frontend/aetheris/vite.config.ts) so no manifest-reading step is needed here.
+// Aetheris (React/TS/react-three-fiber) build output — the homepage hero globe in
+// home.html (the vanilla js/world/* implementation and its /vendor/three route were
+// retired on cutover). Fixed filenames (aetheris.js/.css, see
+// frontend/aetheris/vite.config.ts) so no manifest-reading step is needed here.
 app.use('/aetheris-app', express.static(path.join(__dirname, 'frontend', 'aetheris', 'dist'), {
   dotfiles: 'deny',
   etag: true,

@@ -125,11 +125,15 @@ test('home hero world globe renders on WebGL', async ({ page }, testInfo) => {
 
   await page.goto(`${baseUrl}/`, { waitUntil: 'domcontentloaded' });
   await expect(page.locator('.globe-shell')).toBeVisible();
-  const canvas = page.locator('#world-globe-canvas');
+  const root = page.locator('.globe-shell #aetheris-root');
+  await expect(root).toBeVisible();
+  const canvas = root.locator('canvas');
   await expect(canvas).toBeVisible();
 
-  // Give the globe's RAF loop a moment to spin up and render at least one frame.
-  await page.waitForTimeout(800);
+  // Give the intro dolly (camera.introDurationSeconds, ~2.8s) time to fully play out
+  // before asserting steady state — matches the aetheris-preview test's wait, since
+  // home.html now mounts the same React/r3f build.
+  await page.waitForTimeout(3500);
 
   const state = await canvas.evaluate(el => {
     const rect = el.getBoundingClientRect();
@@ -140,7 +144,6 @@ test('home hero world globe renders on WebGL', async ({ page }, testInfo) => {
       height: el.height,
       rect: { top: rect.top, width: rect.width, height: rect.height },
       viewportHeight: window.innerHeight,
-      posterHidden: document.getElementById('world-globe-poster')?.hidden,
     };
   });
 
@@ -149,8 +152,6 @@ test('home hero world globe renders on WebGL', async ({ page }, testInfo) => {
   expect(state.height).toBeGreaterThan(0);
   expect(state.rect.width).toBeGreaterThan(300);
   expect(state.rect.top).toBeLessThan(state.viewportHeight * 0.75);
-  // WebGL succeeded, so the no-WebGL text fallback should stay hidden.
-  expect(state.posterHidden).toBe(true);
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'home-globe');
   expect(errors).toEqual([]);
