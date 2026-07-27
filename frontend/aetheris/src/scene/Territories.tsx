@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useCallback, useEffect } from 'react'
+import { useMemo, useRef, useState, useCallback } from 'react'
 import type { RefObject } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import { Instances, Instance, Html } from '@react-three/drei'
@@ -7,6 +7,7 @@ import { PLANET, DAY_NIGHT, KINGDOM } from '../config'
 import { buildShapeFootprint, SHAPE_IDS } from '../data/shapeLibrary'
 import { getBiomeById } from '../data/biomeData'
 import { latLonToVector3 } from './geo'
+import { useLatestRef } from '../hooks/useLatestRef'
 import type { KingdomState, Territory } from '../types'
 
 const EXTRUDE_DEPTH = 0.05
@@ -77,12 +78,7 @@ export default function Territories({ territories, wrapperRef, sunDirectionRef, 
   const tmpColor = useMemo(() => new THREE.Color(), [])
   const flashWhite = useMemo(() => new THREE.Color(1, 1, 1), [])
 
-  // Mirrors the kingdomState prop into a ref so useFrame reads live data every
-  // frame without depending on the prop (which would tear down/rebuild the loop).
-  const kingdomStateRef = useRef<Record<string, KingdomState>>({})
-  useEffect(() => {
-    kingdomStateRef.current = kingdomState ?? {}
-  }, [kingdomState])
+  const kingdomStateRef = useLatestRef<Record<string, KingdomState>>(kingdomState ?? {})
 
   // One designated flagship-biome territory is the intro cinematic's one-shot flash target.
   const flashTerritoryId = useMemo(() => {

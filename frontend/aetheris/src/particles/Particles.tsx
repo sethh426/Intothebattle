@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { createFlagshipParticleSystems } from './flagshipBiomes'
 import { createAmbientParticleSystems } from './ambientBiomes'
+import { createAuroraParticles } from './auroraEffect'
 import { useWeatherState } from './weather/useWeatherState'
 import { PARTICLE_TIER_FACTOR } from '../hooks/usePerfTier'
 import { CAMERA, WEATHER, WORLD_SEED } from '../config'
@@ -32,7 +33,17 @@ function zoomLodFactor(distance: number): number {
 const DEFAULT_WEATHER: WeatherState = { mode: 'calm', intensity: 0 }
 
 export default function Particles({ tier, paused, zoomDistanceRef }: ParticlesProps) {
-  const systems = useMemo(() => [...createFlagshipParticleSystems(), ...createAmbientParticleSystems()], [])
+  const systems = useMemo(
+    () => [
+      ...createFlagshipParticleSystems(),
+      ...createAmbientParticleSystems(),
+      // Not a real biome id -- weatherStateRef lookups for it naturally miss and fall
+      // back to DEFAULT_WEATHER, which is correct: aurora is an always-on sky
+      // phenomenon, not a Frozen Crown storm state.
+      { biomeId: 'aurora', system: createAuroraParticles() },
+    ],
+    [],
+  )
   const pausedRef = useRef(paused)
   pausedRef.current = paused
   // territory-state-mirroring pattern used elsewhere (Territories.tsx): one entry per
@@ -65,8 +76,9 @@ export default function Particles({ tier, paused, zoomDistanceRef }: ParticlesPr
 
     systems.forEach(({ biomeId, system }) => {
       const weather = weatherStateRef.current[biomeId] ?? DEFAULT_WEATHER
+      const colorSign = WEATHER.darkensBiomeIds.includes(biomeId) ? -1 : 1
       system.setSizeScale(1 + weather.intensity * WEATHER.sizeBoostMax)
-      system.setColorBoost(1 + weather.intensity * WEATHER.colorBoostMax)
+      system.setColorBoost(1 + colorSign * weather.intensity * WEATHER.colorBoostMax)
 
       const density = globalFactor * (1 + weather.intensity * WEATHER.densityBoostMax)
       const last = lastAppliedDensityRef.current.get(biomeId) ?? 0

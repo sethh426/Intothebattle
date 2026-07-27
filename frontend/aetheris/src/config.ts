@@ -124,6 +124,21 @@ export const WEATHER = {
   densityBoostMax: 0.6,
   sizeBoostMax: 0.5,
   colorBoostMax: 0.25,
+  // Some biomes read better as a storm darkens them (murk/ash) rather than the default
+  // brighten -- flips colorFactor's sign for these biome ids only.
+  darkensBiomeIds: ['toxic-expanse', 'void-scar'] as string[],
+}
+
+// Frozen Crown's aurora: an ambient sky phenomenon, not a weather mode -- always
+// present at low density, unrelated to storm/calm state (it isn't keyed to a real
+// biome id, so the weather system's per-biome lookup naturally skips it).
+export const AURORA = {
+  count: 260,
+  radiusMinScale: 1.22, // relative to PLANET.radius -- clears the atmosphere shell (1.18)
+  radiusMaxScale: 1.42,
+  latBand: [72, 90] as [number, number], // matches Frozen Crown's own band
+  colors: ['#7bffb0', '#9a6bff', '#5fd6ff'],
+  driftRadiansPerSecond: 0.02,
 }
 
 export const WORLD_SEED = 918273645

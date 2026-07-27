@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Instances, Instance } from '@react-three/drei'
 import * as THREE from 'three'
 import { PLANET, KINGDOM } from '../config'
 import { latLonToVector3 } from './geo'
+import { useLatestRef } from '../hooks/useLatestRef'
 import type { KingdomState, Territory, ViewerTier } from '../types'
 
 // A small spire accent authored Y-up (like Landmarks.tsx), unlike Territories.tsx's
@@ -53,10 +54,7 @@ export default function KingdomSilhouettes({ territories, kingdomState }: Kingdo
   const tmpColor = useMemo(() => new THREE.Color(), [])
 
   const entries = useRef(new Map<string, SilhouetteEntry>())
-  const kingdomStateRef = useRef<Record<string, KingdomState>>({})
-  useEffect(() => {
-    kingdomStateRef.current = kingdomState ?? {}
-  }, [kingdomState])
+  const kingdomStateRef = useLatestRef<Record<string, KingdomState>>(kingdomState ?? {})
 
   const instanceSetup = useCallback((instance: InstanceHandle | null, territory: Territory) => {
     if (!instance) {
