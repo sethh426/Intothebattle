@@ -18,6 +18,11 @@ const CANONICAL_EVENTS = new Set([
   'first_real_player_seen',
   'paywall_viewed',
   'subscription_started',
+  // Aetheris world globe -- coarse engagement signals only (not per-frame/per-drag
+  // noise), gathered to evaluate the v0.6 asset-pipeline investment decision.
+  'world_globe_viewed',
+  'world_globe_intro_completed',
+  'world_globe_interacted',
 ]);
 
 const EventSchema = z.object({

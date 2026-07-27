@@ -16,14 +16,16 @@ import { useDragControls } from '../hooks/useDragControls'
 import { usePerfTier } from '../hooks/usePerfTier'
 import { useCameraRig } from '../hooks/useCameraRig'
 import { useKingdomState } from '../kingdoms/useKingdomState'
+import { useWorldAnalytics } from '../hooks/useWorldAnalytics'
 import type { DataMode } from '../types'
 
 interface SceneProps {
   reducedMotion: boolean
   dataMode: DataMode
+  isVisible: boolean
 }
 
-export default function Scene({ reducedMotion, dataMode }: SceneProps) {
+export default function Scene({ reducedMotion, dataMode, isVisible }: SceneProps) {
   const wrapperRef = useRef<THREE.Group>(null)
   const sunDirectionRef = useRef(new THREE.Vector3(0, 0, 1))
   const territories = useMemo(() => generateTerritories(BIOMES, WORLD_SEED), [])
@@ -31,6 +33,7 @@ export default function Scene({ reducedMotion, dataMode }: SceneProps) {
   const tier = usePerfTier()
   const controls = useDragControls(wrapperRef)
   const cameraRig = useCameraRig(reducedMotion)
+  useWorldAnalytics({ isVisible, introOpacityRef: cameraRig.introOpacityRef })
 
   useEffect(() => {
     controls.setMotionEnabled(!reducedMotion)

@@ -8832,6 +8832,7 @@ app.get('/debug/session-info', (req, res) => {
 });
 
 app.get('/stats', requireDashboardAccess, (_req, res) => res.sendFile(path.join(__dirname, 'stats.html')));
+app.get('/world', requireDashboardAccess, (_req, res) => res.sendFile(path.join(__dirname, 'world.html')));
 
 app.get('/state', (req, res) => {
   if (enableRoomScoped && req.query.room_id) {

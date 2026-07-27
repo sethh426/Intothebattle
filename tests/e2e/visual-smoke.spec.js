@@ -238,6 +238,39 @@ test('dashboard renders with E2E auth fixture', async ({ context, page }, testIn
   expect(errors).toEqual([]);
 });
 
+test('dashboard links to the world globe for logged-in creators', async ({ context, page }) => {
+  await context.addCookies([{ name: 'session_token', value: e2eSessionToken, url: baseUrl }]);
+  await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('a.footer-btn[href="/world"]')).toBeVisible();
+});
+
+test('world globe renders on WebGL for logged-in creators', async ({ context, page }, testInfo) => {
+  await context.addCookies([{ name: 'session_token', value: e2eSessionToken, url: baseUrl }]);
+  const errors = await watchPage(page);
+
+  await page.goto(`${baseUrl}/world`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('link', { name: /Dashboard/ })).toBeVisible();
+  const canvas = page.locator('#aetheris-root canvas');
+  await expect(canvas).toBeVisible();
+
+  // Give the intro dolly time to fully play out before asserting steady state.
+  await page.waitForTimeout(3500);
+
+  const hasWebgl = await canvas.evaluate(el => !!(el.getContext('webgl2') || el.getContext('webgl')));
+  expect(hasWebgl).toBe(true);
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'world-globe-logged-in');
+  expect(errors).toEqual([]);
+});
+
+// A logged-out visitor hitting /world directly should be redirected to login, same as
+// /dashboard and /stats -- it's gated by the same requireDashboardAccess middleware.
+test('world globe requires authentication', async ({ page }) => {
+  const response = await request('/world');
+  expect(response.status).toBeGreaterThanOrEqual(300);
+  expect(response.status).toBeLessThan(400);
+});
+
 test('conversion pages clarify proof before payment and Creator Pro scope', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
 

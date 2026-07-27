@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Your World | IntoTheBattle</title>
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <script type="module" src="/js/clarity-loader.js"></script>
+  <script type="module" src="/js/growth-tracker.js"></script>
+  <style>
+    :root {
+      --bg: #080c14;
+      --gold: #f5c842;
+      --gold-l: #ffe99a;
+      --blue: #00c8ff;
+      --txt: #edf0fa;
+      --muted: #8896ae;
+      --border: rgba(255,255,255,0.09);
+    }
+    * , *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: var(--bg); font-family: 'Inter', system-ui, sans-serif; color: var(--txt); }
+    body { display: flex; flex-direction: column; }
+    a { color: inherit; text-decoration: none; }
+    .world-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8,12,20,0.85);
+      backdrop-filter: blur(8px);
+    }
+    .world-header .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+    }
+    .world-header .back-link:hover { color: var(--txt); border-color: var(--blue); }
+    .world-header h1 { font-size: 15px; font-weight: 800; letter-spacing: 0.01em; }
+    .world-header .badge {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gold-l);
+      background: rgba(245,200,66,0.12);
+      border: 1px solid rgba(245,200,66,0.28);
+      border-radius: 999px;
+      padding: 4px 9px;
+    }
+    #aetheris-root { flex: 1; min-height: 0; width: 100%; }
+  </style>
+</head>
+<body>
+  <header class="world-header">
+    <a class="back-link" href="/dashboard">&larr; Dashboard</a>
+    <h1>Every creator gets a world</h1>
+    <span class="badge">Vision preview</span>
+  </header>
+  <div id="aetheris-root" data-mode="live"></div>
+  <script type="module" src="/aetheris-app/aetheris.js"></script>
+  <link rel="stylesheet" href="/aetheris-app/aetheris.css">
+</body>
+</html>

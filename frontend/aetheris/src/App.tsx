@@ -72,7 +72,7 @@ export default function App({ dataMode }: AppProps) {
         gl={{ antialias: true, alpha: true }}
         style={{ touchAction: 'none', cursor: 'grab' }}
       >
-        <Scene reducedMotion={reducedMotion} dataMode={dataMode} />
+        <Scene reducedMotion={reducedMotion} dataMode={dataMode} isVisible={isVisible} />
       </Canvas>
     </div>
   )
