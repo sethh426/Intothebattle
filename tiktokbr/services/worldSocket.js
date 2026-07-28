@@ -41,6 +41,11 @@ function computeViewerTier(activeCount) {
   return 'low';
 }
 
+function normalizeTikTokHandle(value = '') {
+  const handle = String(value || '').trim().replace(/^@+/, '');
+  return /^[A-Za-z0-9._]{2,64}$/.test(handle) ? `@${handle}` : '';
+}
+
 function scoreRoom(row) {
   const activeCount = Number(row.active_count) || 0;
   const kills = Number(row.kills) || 0;
@@ -97,14 +102,7 @@ function fetchTopPerformingRooms() {
   const rows = db.prepare(`
     SELECT
       ur.room_id AS room_id,
-      COALESCE(
-        NULLIF(ta.display_name, ''),
-        NULLIF(u.tiktok_username, ''),
-        NULLIF(ta.tiktok_username, ''),
-        NULLIF(u.name, ''),
-        NULLIF(ur.room_name, ''),
-        ur.room_id
-      ) AS holder_name,
+      COALESCE(NULLIF(ta.tiktok_username, ''), NULLIF(u.tiktok_username, '')) AS tiktok_handle,
       EXISTS (
         SELECT 1 FROM live_sessions ls
         WHERE ls.room_id = ur.room_id
@@ -138,8 +136,8 @@ function fetchTopPerformingRooms() {
   `).all(recentThreshold);
 
   return rows
-    .map((row) => ({ ...row, score: scoreRoom(row) }))
-    .filter((row) => row.score > 0)
+    .map((row) => ({ ...row, holder_name: normalizeTikTokHandle(row.tiktok_handle), score: scoreRoom(row) }))
+    .filter((row) => row.score > 0 && row.holder_name)
     .sort((a, b) =>
       b.score - a.score
       || Number(b.last_active || 0) - Number(a.last_active || 0)
@@ -215,14 +213,7 @@ function fetchClaimedTerritoryActivity() {
       `SELECT
          wtc.territory_id AS territory_id,
          wtc.room_id AS room_id,
-         COALESCE(
-           NULLIF(ta.display_name, ''),
-           NULLIF(u.tiktok_username, ''),
-           NULLIF(ta.tiktok_username, ''),
-           NULLIF(u.name, ''),
-           NULLIF(ur.room_name, ''),
-           wtc.room_id
-         ) AS holder_name,
+         COALESCE(NULLIF(ta.tiktok_username, ''), NULLIF(u.tiktok_username, '')) AS tiktok_handle,
          EXISTS (
            SELECT 1 FROM live_sessions ls
            WHERE ls.room_id = wtc.room_id
@@ -257,11 +248,13 @@ function computeKingdomStates() {
     const isLive = Boolean(row.is_live);
     const activeCount = Number(row.active_count) || 0;
     const kills = Number(row.kills) || 0;
+    const holderName = normalizeTikTokHandle(row.tiktok_handle);
+    if (!holderName) continue;
     states[row.territory_id] = {
       isClaimed: true,
       isLive,
       viewerTier: isLive ? computeViewerTier(activeCount) : 'off',
-      holderName: row.holder_name || row.room_id,
+      holderName,
       roomId: row.room_id,
       activeCount,
       kills,
