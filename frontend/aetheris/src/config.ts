@@ -18,10 +18,13 @@ export const CAMERA = {
   near: 0.1,
   far: 100,
   restDistance: 5.4, // where the camera settles after the intro dolly, and the default zoom level
+  wideRestDistance: 6.9, // full-page /world framing: keep the atmosphere inside the viewport
   introDistance: 18, // deep-space starting distance for the opening cinematic dolly-in
   introDurationSeconds: 2.8,
   zoomMinDistance: 2.8, // close but stays outside the atmosphere shell
   zoomMaxDistance: 6.2, // a bit beyond restDistance, for a little zoom-out headroom
+  wideZoomMinDistance: 3.2,
+  wideZoomMaxDistance: 7.6,
 }
 
 export const ROTATION = {

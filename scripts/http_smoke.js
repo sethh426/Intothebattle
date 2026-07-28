@@ -125,7 +125,7 @@ try {
   assert(blogText.includes('application/ld+json'), '/blog should include JSON-LD structured data');
   const updates = await expectStatus('/updates', 200);
   assert((await updates.text()).includes('IntoTheBattle'), '/updates should render the local blog index');
-  for (const pathname of ['/favicon.ico', '/favicon-48.png', '/apple-touch-icon.png', '/site-icon-512.png', '/site.webmanifest', '/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/clarity-loader.js', '/js/growth-tracker.js', '/js/overlay-scene.js', '/js/overlay-v2.js', '/js/overlay/stage-config.js', '/js/overlay/overlay-normalizers.js', '/js/overlay/overlay-diagnostics.js', '/js/overlay/overlay-audio.js', '/js/overlay/video-agent.js', '/vendor/phaser/phaser.min.js']) {
+  for (const pathname of ['/favicon.ico', '/favicon-48.png', '/apple-touch-icon.png', '/site-icon-512.png', '/site.webmanifest', '/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/clarity-loader.js', '/js/growth-tracker.js', '/js/overlay-scene.js', '/js/overlay-v2.js', '/js/overlay/stage-config.js', '/js/overlay/overlay-normalizers.js', '/js/overlay/overlay-diagnostics.js', '/js/overlay/overlay-audio.js', '/js/overlay/video-agent.js', '/vendor/phaser/phaser.min.js', '/aetheris-app/aetheris.js', '/aetheris-app/aetheris.css']) {
     await expectStatus(pathname, 200);
   }
   const publicConfig = await expectStatus('/api/public-config', 200);

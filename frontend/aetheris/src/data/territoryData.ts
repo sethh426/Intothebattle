@@ -32,7 +32,7 @@ function randomInRange(rng: () => number, [min, max]: [number, number]): number 
   return min + rng() * (max - min)
 }
 
-function generateCreatorName(rng: () => number): string {
+function generateTerritoryName(rng: () => number): string {
   const prefix = NAME_PREFIXES[Math.floor(rng() * NAME_PREFIXES.length)]
   const suffix = NAME_SUFFIXES[Math.floor(rng() * NAME_SUFFIXES.length)]
   return `${prefix}${suffix}`
@@ -76,7 +76,7 @@ export function generateTerritories(biomes: Biome[], seed: number = WORLD_SEED):
         lon: point.lon,
         angularRadius: randomInRange(rng, sizeClass.angularRadius),
         rotation: rng() * Math.PI * 2,
-        creatorName: generateCreatorName(rng),
+        territoryName: generateTerritoryName(rng),
         isLive,
         colorHex,
         seed: Math.floor(rng() * 0xffffffff),

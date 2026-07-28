@@ -9,6 +9,9 @@ RUN npm ci --omit=dev
 
 # Copy source
 COPY . .
+RUN npm --prefix frontend/aetheris ci \
+  && npm --prefix frontend/aetheris run build \
+  && rm -rf frontend/aetheris/node_modules
 RUN mkdir -p /usr/src/app/data \
   && chown -R node:node /usr/src/app
 

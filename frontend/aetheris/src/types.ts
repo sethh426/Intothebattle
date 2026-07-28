@@ -26,7 +26,7 @@ export interface Territory {
   lon: number
   angularRadius: number
   rotation: number
-  creatorName: string
+  territoryName: string
   isLive: boolean
   colorHex: string
   seed: number
@@ -44,13 +44,21 @@ export type PerfTier = 'high' | 'medium' | 'low'
 export type ViewerTier = 'off' | 'low' | 'medium' | 'high' | 'packed'
 
 export interface KingdomState {
+  isClaimed?: boolean
   isLive: boolean
   viewerTier: ViewerTier
+  holderName?: string
+  roomId?: string
+  activeCount?: number
+  kills?: number
+  score?: number
 }
 
 // 'mock' -- local deterministic simulator (dev/QA, used by /aetheris-preview).
 // 'live' -- real /aetheris-world socket namespace (production home.html).
 export type DataMode = 'mock' | 'live'
+
+export type WorldFraming = 'hero' | 'wide'
 
 // Weather is atmospheric/regional, not viewer-driven -- calm is the "nothing happening"
 // baseline, active/storm build and dissipate through adjacent-step transitions only.

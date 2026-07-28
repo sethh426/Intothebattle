@@ -27,6 +27,11 @@ try {
     const body = await response.text();
     assert(body.length > 1000, `${pathname} returned unexpectedly small HTML`);
   }
+  for (const asset of ['/aetheris-app/aetheris.js', '/aetheris-app/aetheris.css']) {
+    const response = await expectStatus(asset, 200);
+    const body = await response.text();
+    assert(body.length > 100, `${asset} returned unexpectedly small asset payload`);
+  }
 
   await expectStatus('/dashboard', 302);
   await expectStatus('/api/status', 401);

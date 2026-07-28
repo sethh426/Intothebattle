@@ -241,7 +241,7 @@ test('dashboard renders with E2E auth fixture', async ({ context, page }, testIn
 test('dashboard links to the world globe for logged-in creators', async ({ context, page }) => {
   await context.addCookies([{ name: 'session_token', value: e2eSessionToken, url: baseUrl }]);
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
-  await expect(page.locator('a.footer-btn[href="/world"]')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Aetheris' })).toHaveAttribute('href', '/world');
 });
 
 test('world globe renders on WebGL for logged-in creators', async ({ context, page }, testInfo) => {

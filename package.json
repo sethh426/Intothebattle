@@ -48,7 +48,8 @@
     "video:render:all": "npm run video:render:homepage && npm run video:render:growth",
     "validate:schema": "python tools/validate_schema.py",
     "validate:schema-expand": "python tools/validate_schema_expand.py",
-    "validate:schemas": "npm run validate:schema && npm run validate:schema-expand"
+    "validate:schemas": "npm run validate:schema && npm run validate:schema-expand",
+    "build:aetheris": "npm --prefix frontend/aetheris ci && npm --prefix frontend/aetheris run build"
   },
   "dependencies": {
     "@hubspot/api-client": "^13.5.0",

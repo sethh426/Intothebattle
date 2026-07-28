@@ -1,8 +1,16 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import type { RefObject } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import gsap from 'gsap'
+import * as THREE from 'three'
 import { CAMERA } from '../config'
+
+export interface CameraRigOptions {
+  restDistance?: number
+  zoomMinDistance?: number
+  zoomMaxDistance?: number
+  fitRadius?: number
+}
 
 export interface CameraRigHandle {
   // 0-1, faded in by the intro timeline (or fixed at 1 under reduced motion).
@@ -18,9 +26,21 @@ export interface CameraRigHandle {
 // then ongoing user-controlled zoom (wheel + touch pinch) for the rest of the session.
 // Camera orientation (drag-to-rotate) stays owned by useDragControls on the wrapper
 // group — this hook only ever moves the camera along its existing view direction.
-export function useCameraRig(reducedMotion: boolean): CameraRigHandle {
-  const { camera, gl } = useThree()
-  const distanceRef = useRef(reducedMotion ? CAMERA.restDistance : CAMERA.introDistance)
+export function useCameraRig(reducedMotion: boolean, options: CameraRigOptions = {}): CameraRigHandle {
+  const { camera, gl, size } = useThree()
+  const restDistance = useMemo(() => {
+    const configuredDistance = options.restDistance ?? CAMERA.restDistance
+    if (!options.fitRadius || !(camera instanceof THREE.PerspectiveCamera)) return configuredDistance
+    const aspect = Math.max(size.width / Math.max(size.height, 1), 0.1)
+    const verticalHalfFov = THREE.MathUtils.degToRad(camera.fov) / 2
+    const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * aspect)
+    const verticalFit = options.fitRadius / Math.tan(verticalHalfFov)
+    const horizontalFit = options.fitRadius / Math.tan(horizontalHalfFov)
+    return Math.max(configuredDistance, verticalFit, horizontalFit)
+  }, [camera, options.fitRadius, options.restDistance, size.height, size.width])
+  const zoomMinDistance = options.zoomMinDistance ?? CAMERA.zoomMinDistance
+  const zoomMaxDistance = Math.max(options.zoomMaxDistance ?? CAMERA.zoomMaxDistance, restDistance + 0.8)
+  const distanceRef = useRef(reducedMotion ? restDistance : CAMERA.introDistance)
   const introOpacityRef = useRef(reducedMotion ? 1 : 0)
   const flashRef = useRef(0)
   const pointersRef = useRef(new Map<number, { x: number; y: number }>())
@@ -32,7 +52,7 @@ export function useCameraRig(reducedMotion: boolean): CameraRigHandle {
 
   useEffect(() => {
     if (reducedMotion) {
-      distanceRef.current = CAMERA.restDistance
+      distanceRef.current = restDistance
       introOpacityRef.current = 1
       flashRef.current = 0
       return
@@ -46,7 +66,7 @@ export function useCameraRig(reducedMotion: boolean): CameraRigHandle {
     })
     timeline.to(
       distanceRef,
-      { current: CAMERA.restDistance, duration: CAMERA.introDurationSeconds, ease: 'power2.out' },
+      { current: restDistance, duration: CAMERA.introDurationSeconds, ease: 'power2.out' },
       0,
     )
     timeline.to(introOpacityRef, { current: 1, duration: CAMERA.introDurationSeconds, ease: 'power2.out' }, 0)
@@ -55,14 +75,14 @@ export function useCameraRig(reducedMotion: boolean): CameraRigHandle {
       timeline.kill()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reducedMotion])
+  }, [reducedMotion, restDistance])
 
   useEffect(() => {
     const canvas = gl.domElement
     const pointers = pointersRef.current
 
     function clampDistance(value: number): number {
-      return Math.max(CAMERA.zoomMinDistance, Math.min(CAMERA.zoomMaxDistance, value))
+      return Math.max(zoomMinDistance, Math.min(zoomMaxDistance, value))
     }
 
     function onWheel(event: WheelEvent): void {
@@ -116,7 +136,7 @@ export function useCameraRig(reducedMotion: boolean): CameraRigHandle {
       canvas.removeEventListener('pointerup', onPointerUp)
       canvas.removeEventListener('pointercancel', onPointerUp)
     }
-  }, [gl])
+  }, [gl, zoomMaxDistance, zoomMinDistance])
 
   useFrame(() => {
     camera.position.setLength(distanceRef.current)

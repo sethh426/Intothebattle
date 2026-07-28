@@ -11,10 +11,31 @@ function pickTier(rng: () => number): ViewerTier {
   return 'packed'
 }
 
+function toFiniteNumber(value: unknown): number {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : 0
+}
+
+function isSameKingdomState(a: KingdomState | undefined, b: KingdomState): boolean {
+  if (!a) return false
+  return (
+    Boolean(a.isClaimed) === Boolean(b.isClaimed)
+    && a.isLive === b.isLive
+    && a.viewerTier === b.viewerTier
+    && (a.holderName || '') === (b.holderName || '')
+    && (a.roomId || '') === (b.roomId || '')
+    && toFiniteNumber(a.activeCount) === toFiniteNumber(b.activeCount)
+    && toFiniteNumber(a.kills) === toFiniteNumber(b.kills)
+    && toFiniteNumber(a.score) === toFiniteNumber(b.score)
+  )
+}
+
 function buildInitialMockState(territories: Territory[], rng: () => number): Record<string, KingdomState> {
   const initial: Record<string, KingdomState> = {}
   territories.forEach((t) => {
-    initial[t.id] = t.isLive ? { isLive: true, viewerTier: pickTier(rng) } : { isLive: false, viewerTier: 'off' }
+    initial[t.id] = t.isLive
+      ? { isClaimed: true, isLive: true, viewerTier: pickTier(rng), holderName: t.territoryName }
+      : { isClaimed: false, isLive: false, viewerTier: 'off' }
   })
   return initial
 }
@@ -50,13 +71,13 @@ export function useKingdomState(
           if (rng() < KINGDOM.toggleLiveChance) {
             changed = true
             next[t.id] = current.isLive
-              ? { isLive: false, viewerTier: 'off' }
-              : { isLive: true, viewerTier: pickTier(rng) }
+              ? { isClaimed: false, isLive: false, viewerTier: 'off' }
+              : { isClaimed: true, isLive: true, viewerTier: pickTier(rng), holderName: t.territoryName }
             return
           }
           if (current.isLive && rng() < KINGDOM.tierChangeChance) {
             changed = true
-            next[t.id] = { isLive: true, viewerTier: pickTier(rng) }
+            next[t.id] = { ...current, isClaimed: true, isLive: true, viewerTier: pickTier(rng) }
           }
         })
         return changed ? next : prev
@@ -71,7 +92,7 @@ export function useKingdomState(
     const unsubscribe = client.onKingdomState((territoryId, kingdomState) => {
       setState((prev) => {
         const current = prev[territoryId]
-        if (current && current.isLive === kingdomState.isLive && current.viewerTier === kingdomState.viewerTier) {
+        if (isSameKingdomState(current, kingdomState)) {
           return prev
         }
         return { ...prev, [territoryId]: kingdomState }

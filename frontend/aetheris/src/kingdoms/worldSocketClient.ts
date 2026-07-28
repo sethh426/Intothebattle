@@ -1,9 +1,8 @@
 import { io, type Socket } from 'socket.io-client'
 import type { KingdomState } from '../types'
 
-// Real client for the `/aetheris-world` Socket.IO namespace (see the Aetheris plan's
-// §10(B) real-data-binding section and tiktokbr/services/worldSocket.js on the server
-// side). The server sends one full `kingdomStateSnapshot` on connect, then periodic
+// Real client for the `/aetheris-world` Socket.IO namespace. The server sends one
+// full `kingdomStateSnapshot` on connect, then periodic
 // `kingdomStateUpdate` deltas -- this client normalizes both into the same
 // per-territory `onKingdomState(territoryId, state)` callback shape.
 

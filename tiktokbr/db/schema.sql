@@ -545,9 +545,8 @@ CREATE INDEX IF NOT EXISTS local_blog_posts_slug_idx ON local_blog_posts(slug);
 CREATE INDEX IF NOT EXISTS local_blog_posts_status_published_idx ON local_blog_posts(status, published_at);
 CREATE INDEX IF NOT EXISTS local_blog_posts_source_idx ON local_blog_posts(source, status);
 
--- Aetheris (frontend/aetheris) v0.4: persisted world-territory plots and creator claims.
--- A "kingdom" is a creator's existing user_rooms row, visualized differently -- not a
--- second parallel ownership model. Schema only in this pass; no live queries wired yet.
+-- Aetheris (frontend/aetheris): one shared world map with global territory claims.
+-- Claims attach to creator rooms and can rotate as top-performing streamers rise or fall.
 CREATE TABLE IF NOT EXISTS world_territories (
   id TEXT PRIMARY KEY,
   biome_id TEXT NOT NULL,

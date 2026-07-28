@@ -3,13 +3,14 @@ import { Canvas } from '@react-three/fiber'
 import { CAMERA } from './config'
 import { detectWebglSupport, useReducedMotion } from './hooks/useWebglFallback'
 import Scene from './scene/Scene'
-import type { DataMode } from './types'
+import type { DataMode, WorldFraming } from './types'
 
 interface AppProps {
   dataMode: DataMode
+  framing: WorldFraming
 }
 
-export default function App({ dataMode }: AppProps) {
+export default function App({ dataMode, framing }: AppProps) {
   const [webglSupported] = useState(() => detectWebglSupport())
   const reducedMotion = useReducedMotion()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -36,7 +37,7 @@ export default function App({ dataMode }: AppProps) {
   }, [])
 
   // A homepage globe has no reason to keep rendering at 60fps while scrolled off-screen
-  // or while the tab is backgrounded — r3f's `frameloop` prop is the supported way to
+  // or while the tab is backgrounded. r3f's `frameloop` prop is the supported way to
   // pause its internal render loop entirely (not just visually hidden).
   const running = isVisible && tabVisible
 
@@ -58,7 +59,7 @@ export default function App({ dataMode }: AppProps) {
           fontWeight: 600,
         }}
       >
-        <span>A living fantasy world &mdash; one territory per creator.</span>
+        <span>Aetheris is one shared world where top streamers fight for territory.</span>
       </div>
     )
   }
@@ -72,7 +73,7 @@ export default function App({ dataMode }: AppProps) {
         gl={{ antialias: true, alpha: true }}
         style={{ touchAction: 'none', cursor: 'grab' }}
       >
-        <Scene reducedMotion={reducedMotion} dataMode={dataMode} isVisible={isVisible} />
+        <Scene reducedMotion={reducedMotion} dataMode={dataMode} framing={framing} isVisible={isVisible} />
       </Canvas>
     </div>
   )

@@ -174,8 +174,17 @@ export default function Territories({ territories, wrapperRef, sunDirectionRef, 
       })}
       {tooltip && (() => {
         const kingdom = kingdomState?.[tooltip.territory.id]
+        const isClaimed = kingdom?.isClaimed ?? kingdom?.isLive ?? false
         const isLive = kingdom?.isLive ?? false
         const tier = kingdom?.viewerTier ?? 'off'
+        const holderName = kingdom?.holderName || tooltip.territory.territoryName
+        const metricParts = [
+          Number.isFinite(kingdom?.activeCount) ? `${kingdom?.activeCount} active` : '',
+          Number.isFinite(kingdom?.kills) ? `${kingdom?.kills} kills` : '',
+        ].filter(Boolean)
+        const metricText = isClaimed
+          ? metricParts.length ? metricParts.join(' - ') : 'Claimed territory'
+          : 'Open territory'
         return (
         <Html position={tooltip.position} style={{ pointerEvents: 'none' }}>
           <div
@@ -187,15 +196,16 @@ export default function Territories({ territories, wrapperRef, sunDirectionRef, 
               fontSize: 11,
               lineHeight: 1.4,
               color: '#dce6f6',
-              whiteSpace: 'nowrap',
+              maxWidth: 220,
+              whiteSpace: 'normal',
               transform: 'translate(-50%, -120%)',
             }}
           >
             <strong style={{ display: 'block', color: '#ffe99a', fontSize: 12, fontWeight: 800 }}>
-              {tooltip.territory.creatorName}
+              {holderName}
             </strong>
             <span style={{ display: 'block', color: 'rgba(220,230,246,0.75)' }}>
-              {getBiomeById(tooltip.territory.biomeId)?.name}
+              {getBiomeById(tooltip.territory.biomeId)?.name} - {metricText}
             </span>
             <span
               style={{
@@ -207,11 +217,11 @@ export default function Territories({ territories, wrapperRef, sunDirectionRef, 
                 fontWeight: 700,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                background: isLive ? 'rgba(0,200,255,0.16)' : 'rgba(255,255,255,0.08)',
-                color: isLive ? '#3fd0ff' : 'rgba(220,230,246,0.55)',
+                background: isLive ? 'rgba(0,200,255,0.16)' : isClaimed ? 'rgba(245,200,66,0.13)' : 'rgba(255,255,255,0.08)',
+                color: isLive ? '#3fd0ff' : isClaimed ? '#ffe99a' : 'rgba(220,230,246,0.55)',
               }}
             >
-              {isLive ? `Live · ${tier}` : 'Offline'}
+              {isLive ? `Live - ${tier}` : isClaimed ? 'Claimed' : 'Open'}
             </span>
           </div>
         </Html>

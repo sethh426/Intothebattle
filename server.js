@@ -7969,7 +7969,7 @@ app.use('/vendor/phaser', express.static(path.join(__dirname, 'node_modules', 'p
   maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
 }));
 
-// Aetheris (React/TS/react-three-fiber) build output — the homepage hero globe in
+// Aetheris (React/TS/react-three-fiber) build output - the homepage hero globe in
 // home.html (the vanilla js/world/* implementation and its /vendor/three route were
 // retired on cutover). Fixed filenames (aetheris.js/.css, see
 // frontend/aetheris/vite.config.ts) so no manifest-reading step is needed here.

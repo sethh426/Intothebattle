@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { BIOMES } from '../data/biomeData'
 import { generateTerritories } from '../data/territoryData'
-import { WORLD_SEED } from '../config'
+import { ATMOSPHERE, CAMERA, PLANET, WORLD_SEED } from '../config'
 import Planet from './Planet'
 import Territories from './Territories'
 import Landmarks from './Landmarks'
@@ -17,22 +17,30 @@ import { usePerfTier } from '../hooks/usePerfTier'
 import { useCameraRig } from '../hooks/useCameraRig'
 import { useKingdomState } from '../kingdoms/useKingdomState'
 import { useWorldAnalytics } from '../hooks/useWorldAnalytics'
-import type { DataMode } from '../types'
+import type { DataMode, WorldFraming } from '../types'
 
 interface SceneProps {
   reducedMotion: boolean
   dataMode: DataMode
+  framing: WorldFraming
   isVisible: boolean
 }
 
-export default function Scene({ reducedMotion, dataMode, isVisible }: SceneProps) {
+export default function Scene({ reducedMotion, dataMode, framing, isVisible }: SceneProps) {
   const wrapperRef = useRef<THREE.Group>(null)
   const sunDirectionRef = useRef(new THREE.Vector3(0, 0, 1))
   const territories = useMemo(() => generateTerritories(BIOMES, WORLD_SEED), [])
   const kingdomState = useKingdomState(territories, WORLD_SEED + 1, dataMode)
   const tier = usePerfTier()
   const controls = useDragControls(wrapperRef)
-  const cameraRig = useCameraRig(reducedMotion)
+  const cameraRig = useCameraRig(reducedMotion, framing === 'wide'
+    ? {
+        restDistance: CAMERA.wideRestDistance,
+        zoomMinDistance: CAMERA.wideZoomMinDistance,
+        zoomMaxDistance: CAMERA.wideZoomMaxDistance,
+        fitRadius: PLANET.radius * ATMOSPHERE.radiusScale * 1.04,
+      }
+    : undefined)
   useWorldAnalytics({ isVisible, introOpacityRef: cameraRig.introOpacityRef })
 
   useEffect(() => {
