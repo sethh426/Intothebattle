@@ -3,6 +3,7 @@ import * as THREE from 'three'
 import { BIOMES } from '../data/biomeData'
 import { ATMOSPHERE, CAMERA, PLANET } from '../config'
 import Planet from './Planet'
+import BiomeContours from './BiomeContours'
 import Territories from './Territories'
 import Landmarks from './Landmarks'
 import KingdomSilhouettes from './KingdomSilhouettes'
@@ -59,6 +60,7 @@ export default function Scene({
       <Starfield tier={tier} />
       <group ref={wrapperRef}>
         <Planet biomes={BIOMES} />
+        <BiomeContours biomes={BIOMES} />
         <Landmarks />
         <Territories
           territories={territories}

@@ -42,8 +42,9 @@ export default function DayNightCycle({ wrapperRef, sunDirectionRef, paused = fa
 
   return (
     <>
-      <ambientLight color={0x8899bb} intensity={0.55} />
-      <directionalLight ref={lightRef} color={0xfff2d6} intensity={1.4} position={[4, 2, 3]} />
+      <ambientLight color={0x9ec8ff} intensity={0.7} />
+      <hemisphereLight color={0x8ee7ff} groundColor={0x2b1b5f} intensity={0.32} />
+      <directionalLight ref={lightRef} color={0xfff0c2} intensity={1.55} position={[4, 2, 3]} />
     </>
   )
 }

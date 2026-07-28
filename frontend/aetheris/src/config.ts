@@ -38,7 +38,7 @@ export const ROTATION = {
 
 export const PLANET = {
   radius: 2,
-  icosahedronDetail: 5,
+  icosahedronDetail: 6,
 }
 
 // Total live particle budget across all systems, scaled down per perf tier.
@@ -69,8 +69,8 @@ export const ATMOSPHERE = {
 
 export const CLOUDS = {
   radiusScale: 1.02,
-  color: '#f4f8ff',
-  baseOpacity: 0.55,
+  color: '#baf7ff',
+  baseOpacity: 0.3,
   driftRadiansPerSecond: 0.008, // independent extra rotation on top of the shared wrapper's drag/auto-rotate
 }
 

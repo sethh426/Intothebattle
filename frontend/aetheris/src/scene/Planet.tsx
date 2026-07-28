@@ -5,6 +5,7 @@ import type { Biome } from '../types'
 
 const DEG2RAD = Math.PI / 180
 const SHADOW = new THREE.Color('#050817')
+const HIGHLIGHT = new THREE.Color('#f8fff4')
 
 function clamp(value: number, min = 0, max = 1): number {
   return Math.min(max, Math.max(min, value))
@@ -28,6 +29,16 @@ function terrainNoise(latDegrees: number, lonDegrees: number): number {
   return continent * 0.48 + ridges * 0.34 + veins * 0.18
 }
 
+function formationWarp(latDegrees: number, lonDegrees: number): number {
+  const lat = latDegrees * DEG2RAD
+  const lon = lonDegrees * DEG2RAD
+  return (
+    Math.sin(lon * 1.25 + Math.sin(lat * 2.4) * 1.8) * 8.2
+    + Math.sin(lon * 3.6 - lat * 1.7) * 4.6
+    + terrainNoise(latDegrees, lonDegrees) * 3.4
+  )
+}
+
 function biomeEdgeBlend(biomes: Biome[], biome: Biome, latDegrees: number): THREE.Color {
   const base = new THREE.Color(biome.baseColor)
   const distanceToEdge = Math.min(latDegrees - biome.latBand[0], biome.latBand[1] - latDegrees)
@@ -43,23 +54,33 @@ function biomeEdgeBlend(biomes: Biome[], biome: Biome, latDegrees: number): THRE
 }
 
 function enrichBiomeColor(biomes: Biome[], latDegrees: number, lonDegrees: number): THREE.Color {
-  const biome = biomeAtLat(biomes, latDegrees)
-  const base = biomeEdgeBlend(biomes, biome, latDegrees)
+  const warpedLat = clamp(latDegrees + formationWarp(latDegrees, lonDegrees), -89.5, 89.5)
+  const biome = biomeAtLat(biomes, warpedLat)
+  const base = biomeEdgeBlend(biomes, biome, warpedLat)
   const accent = new THREE.Color(biome.accentColor)
   const terrain = terrainNoise(latDegrees, lonDegrees)
+  const detail = terrainNoise(latDegrees * 1.6 + 13, lonDegrees * 1.4 - 29)
+  const pocket = smoothstep(0.58, 0.94, Math.abs(detail))
   const ridge = clamp((terrain + 1) / 2)
-  const color = base.lerp(accent, 0.18 + ridge * 0.34)
+  const color = base.lerp(accent, 0.14 + ridge * 0.29 + pocket * 0.18)
+
+  const pocketBiome = biomeAtLat(biomes, clamp(latDegrees + detail * 18, -89.5, 89.5))
+  if (pocketBiome.id !== biome.id) {
+    color.lerp(new THREE.Color(pocketBiome.baseColor), pocket * 0.24)
+    color.lerp(new THREE.Color(pocketBiome.accentColor), pocket * 0.1)
+  }
 
   const latitudeLight = Math.cos(latDegrees * DEG2RAD) * 0.06
-  const valleyShade = clamp(-terrain) * 0.2
+  const valleyShade = clamp(-terrain) * 0.22 + pocket * 0.04
   color.lerp(SHADOW, valleyShade)
+  if (terrain > 0.56) color.lerp(HIGHLIGHT, (terrain - 0.56) * 0.18)
 
   const hsl = { h: 0, s: 0, l: 0 }
   color.getHSL(hsl)
   color.setHSL(
     hsl.h,
-    clamp(hsl.s * 1.32 + 0.1),
-    clamp(hsl.l + latitudeLight + terrain * 0.055, 0.08, 0.72),
+    clamp(hsl.s * 1.42 + 0.12),
+    clamp(hsl.l + latitudeLight + terrain * 0.065 + pocket * 0.025, 0.07, 0.76),
   )
 
   return color
@@ -82,7 +103,7 @@ export default function Planet({ biomes }: PlanetProps) {
       const latDegrees = (latRad * 180) / Math.PI
       const lonDegrees = (Math.atan2(vertex.z, vertex.x) * 180) / Math.PI
       const terrain = terrainNoise(latDegrees, lonDegrees)
-      const elevation = PLANET.radius * (1 + terrain * 0.012)
+      const elevation = PLANET.radius * (1 + terrain * 0.016)
       positions.setXYZ(i, vertex.x * elevation, vertex.y * elevation, vertex.z * elevation)
 
       const color = enrichBiomeColor(biomes, latDegrees, lonDegrees)
