@@ -10,9 +10,9 @@ interface SizeClassOption {
 }
 
 const SIZE_CLASSES: SizeClassOption[] = [
-  { key: 'small', weight: 0.4, angularRadius: [0.024, 0.034] },
-  { key: 'medium', weight: 0.45, angularRadius: [0.038, 0.052] },
-  { key: 'large', weight: 0.15, angularRadius: [0.058, 0.085] },
+  { key: 'small', weight: 0.28, angularRadius: [0.032, 0.044] },
+  { key: 'medium', weight: 0.48, angularRadius: [0.05, 0.068] },
+  { key: 'large', weight: 0.24, angularRadius: [0.078, 0.108] },
 ]
 
 const NAME_PREFIXES = ['Vol', 'Thal', 'Ember', 'Storm', 'Grim', 'Sylv', 'Kael', 'Fenn', 'Or', 'Wyr', 'Dus', 'Ael']

@@ -22,8 +22,9 @@ const FRAGMENT_SHADER = `
   varying vec3 vNormal;
   varying vec3 vViewDir;
   void main() {
-    float rim = pow(1.0 - max(dot(normalize(vNormal), normalize(vViewDir)), 0.0), glowPower);
-    gl_FragColor = vec4(glowColor, rim * introOpacity);
+    float viewDot = abs(dot(normalize(vNormal), normalize(vViewDir)));
+    float rim = pow(1.0 - viewDot, glowPower);
+    gl_FragColor = vec4(glowColor, rim * 0.52 * introOpacity);
   }
 `
 

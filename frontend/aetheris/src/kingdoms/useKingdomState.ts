@@ -16,6 +16,11 @@ function toFiniteNumber(value: unknown): number {
   return Number.isFinite(number) ? number : 0
 }
 
+function mockTikTokHandle(territory: Territory): string {
+  const handle = territory.territoryName.toLowerCase().replace(/[^a-z0-9._]/g, '')
+  return `@${handle || 'aetheris'}`
+}
+
 function isSameKingdomState(a: KingdomState | undefined, b: KingdomState): boolean {
   if (!a) return false
   return (
@@ -34,7 +39,7 @@ function buildInitialMockState(territories: Territory[], rng: () => number): Rec
   const initial: Record<string, KingdomState> = {}
   territories.forEach((t) => {
     initial[t.id] = t.isLive
-      ? { isClaimed: true, isLive: true, viewerTier: pickTier(rng), holderName: t.territoryName }
+      ? { isClaimed: true, isLive: true, viewerTier: pickTier(rng), holderName: mockTikTokHandle(t) }
       : { isClaimed: false, isLive: false, viewerTier: 'off' }
   })
   return initial
@@ -72,7 +77,7 @@ export function useKingdomState(
             changed = true
             next[t.id] = current.isLive
               ? { isClaimed: false, isLive: false, viewerTier: 'off' }
-              : { isClaimed: true, isLive: true, viewerTier: pickTier(rng), holderName: t.territoryName }
+              : { isClaimed: true, isLive: true, viewerTier: pickTier(rng), holderName: mockTikTokHandle(t) }
             return
           }
           if (current.isLive && rng() < KINGDOM.tierChangeChance) {

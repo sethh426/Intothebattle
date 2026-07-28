@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { BIOMES } from '../data/biomeData'
-import { generateTerritories } from '../data/territoryData'
-import { ATMOSPHERE, CAMERA, PLANET, WORLD_SEED } from '../config'
+import { ATMOSPHERE, CAMERA, PLANET } from '../config'
 import Planet from './Planet'
 import Territories from './Territories'
 import Landmarks from './Landmarks'
@@ -15,22 +14,30 @@ import Particles from '../particles/Particles'
 import { useDragControls } from '../hooks/useDragControls'
 import { usePerfTier } from '../hooks/usePerfTier'
 import { useCameraRig } from '../hooks/useCameraRig'
-import { useKingdomState } from '../kingdoms/useKingdomState'
 import { useWorldAnalytics } from '../hooks/useWorldAnalytics'
-import type { DataMode, WorldFraming } from '../types'
+import type { KingdomState, Territory, WorldFraming } from '../types'
 
 interface SceneProps {
   reducedMotion: boolean
-  dataMode: DataMode
   framing: WorldFraming
   isVisible: boolean
+  territories: Territory[]
+  kingdomState: Record<string, KingdomState>
+  selectedTerritoryId: string | null
+  onTerritorySelect: (territoryId: string) => void
 }
 
-export default function Scene({ reducedMotion, dataMode, framing, isVisible }: SceneProps) {
+export default function Scene({
+  reducedMotion,
+  framing,
+  isVisible,
+  territories,
+  kingdomState,
+  selectedTerritoryId,
+  onTerritorySelect,
+}: SceneProps) {
   const wrapperRef = useRef<THREE.Group>(null)
   const sunDirectionRef = useRef(new THREE.Vector3(0, 0, 1))
-  const territories = useMemo(() => generateTerritories(BIOMES, WORLD_SEED), [])
-  const kingdomState = useKingdomState(territories, WORLD_SEED + 1, dataMode)
   const tier = usePerfTier()
   const controls = useDragControls(wrapperRef)
   const cameraRig = useCameraRig(reducedMotion, framing === 'wide'
@@ -59,6 +66,8 @@ export default function Scene({ reducedMotion, dataMode, framing, isVisible }: S
           sunDirectionRef={sunDirectionRef}
           flashRef={cameraRig.flashRef}
           kingdomState={kingdomState}
+          selectedTerritoryId={selectedTerritoryId}
+          onTerritorySelect={onTerritorySelect}
         />
         <KingdomSilhouettes territories={territories} kingdomState={kingdomState} />
         <Clouds introOpacityRef={cameraRig.introOpacityRef} />

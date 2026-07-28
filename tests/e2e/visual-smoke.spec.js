@@ -64,6 +64,88 @@ async function capture(page, testInfo, name) {
   await page.screenshot({ path: testInfo.outputPath(`${name}.png`), fullPage: true, timeout: 30000 });
 }
 
+async function expectColorfulCanvas(page, canvas) {
+  const image = await canvas.screenshot({ timeout: 30000 });
+  const metrics = await page.evaluate(async dataUrl => {
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+
+    const probe = document.createElement('canvas');
+    probe.width = img.width;
+    probe.height = img.height;
+    const ctx = probe.getContext('2d');
+    if (!ctx) return { sampleCount: 0, avgSaturation: 0, colorfulRatio: 0 };
+    ctx.drawImage(img, 0, 0);
+
+    const width = probe.width;
+    const height = probe.height;
+    const pixels = ctx.getImageData(0, 0, width, height).data;
+
+    let sampleCount = 0;
+    let saturationSum = 0;
+    let colorfulCount = 0;
+    const x0 = Math.floor(width * 0.2);
+    const x1 = Math.floor(width * 0.8);
+    const y0 = Math.floor(height * 0.15);
+    const y1 = Math.floor(height * 0.85);
+
+    for (let y = y0; y < y1; y += 8) {
+      for (let x = x0; x < x1; x += 8) {
+        const offset = (y * width + x) * 4;
+        const r = pixels[offset];
+        const g = pixels[offset + 1];
+        const b = pixels[offset + 2];
+        const a = pixels[offset + 3];
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        if (a < 20 || max < 35) continue;
+
+        const saturation = max === 0 ? 0 : (max - min) / max;
+        sampleCount += 1;
+        saturationSum += saturation;
+        if (saturation > 0.18) colorfulCount += 1;
+      }
+    }
+
+    return {
+      sampleCount,
+      avgSaturation: sampleCount ? saturationSum / sampleCount : 0,
+      colorfulRatio: sampleCount ? colorfulCount / sampleCount : 0,
+    };
+  }, `data:image/png;base64,${image.toString('base64')}`);
+
+  expect(metrics.sampleCount).toBeGreaterThan(80);
+  expect(metrics.avgSaturation).toBeGreaterThan(0.2);
+  expect(metrics.colorfulRatio).toBeGreaterThan(0.35);
+}
+
+async function selectVisibleTerritory(page) {
+  const canvas = page.locator('#aetheris-root canvas');
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('Aetheris canvas was not measurable');
+
+  const statusText = page.getByText(/Unclaimed territory|Claimed territory|Claimed by @|Live:/).first();
+  for (const yRatio of [0.34, 0.42, 0.5, 0.58, 0.66]) {
+    for (const xRatio of [0.28, 0.36, 0.44, 0.52, 0.6, 0.68, 0.76]) {
+      const x = box.x + box.width * xRatio;
+      const y = box.y + box.height * yRatio;
+      await page.mouse.move(x, y);
+      await page.waitForTimeout(80);
+      if (await statusText.isVisible().catch(() => false)) {
+        await page.mouse.click(x, y);
+        await expect(page.getByTestId('aetheris-territory-detail')).toBeVisible();
+        return;
+      }
+    }
+  }
+
+  throw new Error('No visible Aetheris territory became hoverable');
+}
+
 async function expectHealthyPage(page, testInfo, pathname, selector, name) {
   const errors = await watchPage(page);
   await page.goto(`${baseUrl}${pathname}`, { waitUntil: 'domcontentloaded' });
@@ -185,8 +267,33 @@ test('aetheris preview (React/r3f v0.2 build) renders on WebGL', async ({ page }
   expect(state.width).toBeGreaterThan(0);
   expect(state.height).toBeGreaterThan(0);
   expect(state.rect.width).toBeGreaterThan(300);
+  await expectColorfulCanvas(page, canvas);
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'aetheris-preview');
+  expect(errors).toEqual([]);
+});
+
+test('aetheris preview opens territory details without unsafe labels', async ({ page }, testInfo) => {
+  const errors = await watchPage(page);
+
+  await page.goto(`${baseUrl}/aetheris-preview`, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#aetheris-root canvas')).toBeVisible();
+  await page.waitForTimeout(3500);
+
+  await selectVisibleTerritory(page);
+  const panel = page.getByTestId('aetheris-territory-detail');
+  const panelText = await panel.innerText();
+  expect(panelText).not.toMatch(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  expect(panelText).not.toMatch(/\broom[_-]?[a-z0-9-]{3,}\b/i);
+  expect(panelText).not.toMatch(/\bOpen\b/);
+  await capture(page, testInfo, 'aetheris-territory-detail');
+
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+
+  await selectVisibleTerritory(page);
+  await page.getByTestId('aetheris-territory-detail-close').click();
+  await expect(panel).toBeHidden();
   expect(errors).toEqual([]);
 });
 

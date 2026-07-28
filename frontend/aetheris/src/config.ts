@@ -62,9 +62,9 @@ export const DAY_NIGHT = {
 }
 
 export const ATMOSPHERE = {
-  radiusScale: 1.18, // relative to PLANET.radius -- must comfortably clear the tallest landmark
-  color: '#5fb8ff',
-  glowPower: 2.5, // Fresnel falloff exponent
+  radiusScale: 1.13, // relative to PLANET.radius -- clears landmarks without overpowering the globe
+  color: '#56c8ff',
+  glowPower: 3.8, // Fresnel falloff exponent
 }
 
 export const CLOUDS = {
