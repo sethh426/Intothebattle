@@ -16,6 +16,7 @@ interface PlacedLandmark {
   object: THREE.Object3D
   position: THREE.Vector3
   quaternion: THREE.Quaternion
+  scale: number
 }
 
 // One per-region hero landmark (10 total), anchored at the midpoint latitude of its
@@ -28,17 +29,21 @@ export default function Landmarks() {
       const biome = BIOMES.find((b) => b.id === landmark.biomeId)
       const lat = biome ? (biome.latBand[0] + biome.latBand[1]) / 2 : 0
       const lon = (index / landmarks.length) * 360 - 180 + 15 // spread out, avoid an exact seam at +/-180
-      const position = latLonToVector3(lat, lon, PLANET.radius)
+      const position = latLonToVector3(lat, lon, PLANET.radius + 0.018)
       const normal = position.clone().normalize()
       const quaternion = new THREE.Quaternion().setFromUnitVectors(LOCAL_UP, normal)
-      return { biomeId: landmark.biomeId, object: landmark.build(), position, quaternion }
+      const object = landmark.build()
+      object.traverse((child) => {
+        child.raycast = () => undefined
+      })
+      return { biomeId: landmark.biomeId, object, position, quaternion, scale: biome?.isFlagship ? 1.42 : 1.18 }
     })
   }, [])
 
   return (
     <group>
-      {placed.map(({ biomeId, object, position, quaternion }) => (
-        <group key={biomeId} position={position} quaternion={quaternion}>
+      {placed.map(({ biomeId, object, position, quaternion, scale }) => (
+        <group key={biomeId} position={position} quaternion={quaternion} scale={scale}>
           <primitive object={object} />
         </group>
       ))}

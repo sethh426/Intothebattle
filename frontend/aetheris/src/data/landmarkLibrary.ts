@@ -2,10 +2,7 @@ import * as THREE from 'three'
 import { mulberry32 } from '../config'
 import { getBiomeById } from './biomeData'
 
-// A small set of reusable procedural builders — same "parameterized generator, not
-// hand-authored geometry" philosophy as shapeLibrary.ts, just for the 10 hero landmarks
-// instead of the 100 territory footprints. Each region gets one archetype tuned with its
-// own parameters/colors rather than 10 fully bespoke code paths.
+type Vec3 = [number, number, number]
 
 function jaggedRockGeometry(rng: () => number, radius: number, jag: number, detail = 1): THREE.BufferGeometry {
   const geometry = new THREE.IcosahedronGeometry(radius, detail)
@@ -21,6 +18,49 @@ function jaggedRockGeometry(rng: () => number, radius: number, jag: number, deta
   return geometry
 }
 
+function standardMaterial(
+  colorHex: string,
+  roughness = 0.62,
+  metalness = 0.18,
+  emissiveHex = '#000000',
+  emissiveIntensity = 0,
+): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color: colorHex,
+    roughness,
+    metalness,
+    emissive: emissiveHex,
+    emissiveIntensity,
+  })
+}
+
+function glowMaterial(colorHex: string, opacity = 0.82): THREE.MeshBasicMaterial {
+  return new THREE.MeshBasicMaterial({
+    color: colorHex,
+    transparent: true,
+    opacity,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    toneMapped: false,
+  })
+}
+
+function addMesh(
+  group: THREE.Group,
+  geometry: THREE.BufferGeometry,
+  material: THREE.Material,
+  position: Vec3,
+  rotation: Vec3 = [0, 0, 0],
+  scale: Vec3 = [1, 1, 1],
+): THREE.Mesh {
+  const mesh = new THREE.Mesh(geometry, material)
+  mesh.position.set(...position)
+  mesh.rotation.set(...rotation)
+  mesh.scale.set(...scale)
+  group.add(mesh)
+  return mesh
+}
+
 interface RockClusterOptions {
   count: number
   baseRadius: number
@@ -33,13 +73,13 @@ interface RockClusterOptions {
 
 function buildRockCluster(rng: () => number, opts: RockClusterOptions): THREE.Group {
   const group = new THREE.Group()
-  const material = new THREE.MeshStandardMaterial({
-    color: opts.colorHex,
-    metalness: opts.metalness ?? 0.3,
-    roughness: opts.roughness ?? 0.5,
-    emissive: opts.emissiveHex ?? '#000000',
-    emissiveIntensity: opts.emissiveHex ? 0.5 : 0,
-  })
+  const material = standardMaterial(
+    opts.colorHex,
+    opts.roughness ?? 0.5,
+    opts.metalness ?? 0.3,
+    opts.emissiveHex ?? '#000000',
+    opts.emissiveHex ? 0.5 : 0,
+  )
   for (let i = 0; i < opts.count; i += 1) {
     const r = opts.baseRadius * (0.45 + rng() * 0.6)
     const mesh = new THREE.Mesh(jaggedRockGeometry(rng, r, 0.5), material)
@@ -56,17 +96,20 @@ interface TowerOptions {
   height: number
   radiusBottom: number
   radiusTop: number
-  colorHex: string
+  material: THREE.Material
   x?: number
   z?: number
 }
 
 function buildTower(opts: TowerOptions): THREE.Mesh {
-  const geometry = new THREE.CylinderGeometry(opts.radiusTop, opts.radiusBottom, opts.height, 8)
-  const material = new THREE.MeshStandardMaterial({ color: opts.colorHex, metalness: 0.2, roughness: 0.6 })
-  const mesh = new THREE.Mesh(geometry, material)
+  const geometry = new THREE.CylinderGeometry(opts.radiusTop, opts.radiusBottom, opts.height, 12)
+  const mesh = new THREE.Mesh(geometry, opts.material)
   mesh.position.set(opts.x ?? 0, opts.height / 2, opts.z ?? 0)
   return mesh
+}
+
+function addRing(group: THREE.Group, radius: number, tube: number, material: THREE.Material, y: number): THREE.Mesh {
+  return addMesh(group, new THREE.TorusGeometry(radius, tube, 10, 42), material, [0, y, 0], [Math.PI / 2, 0, 0])
 }
 
 interface CitadelOptions {
@@ -76,20 +119,49 @@ interface CitadelOptions {
 
 function buildCitadel(rng: () => number, opts: CitadelOptions): THREE.Group {
   const group = new THREE.Group()
-  group.add(buildRockCluster(rng, { count: 5, baseRadius: 0.09, spread: 0.1, colorHex: opts.baseColor, roughness: 0.3, metalness: 0.1 }))
-  const towerCount = 4
-  for (let i = 0; i < towerCount; i += 1) {
-    const angle = (i / towerCount) * Math.PI * 2
-    group.add(
-      buildTower({
-        height: 0.16 + rng() * 0.1,
-        radiusBottom: 0.035,
-        radiusTop: 0.012,
-        colorHex: opts.towerColor,
-        x: Math.cos(angle) * 0.08,
-        z: Math.sin(angle) * 0.08,
-      }),
-    )
+  const stone = standardMaterial('#7e8792', 0.76, 0.12)
+  const darkStone = standardMaterial(opts.baseColor, 0.68, 0.18)
+  const roof = standardMaterial(opts.towerColor, 0.42, 0.28, opts.towerColor, 0.18)
+  const windowLight = glowMaterial('#ffe7a3', 0.88)
+
+  group.add(buildRockCluster(rng, { count: 9, baseRadius: 0.075, spread: 0.22, colorHex: opts.baseColor, roughness: 0.42, metalness: 0.08 }))
+  addMesh(group, new THREE.CylinderGeometry(0.26, 0.32, 0.06, 18), darkStone, [0, 0.03, 0])
+  addRing(group, 0.22, 0.018, stone, 0.1)
+  addMesh(group, new THREE.CylinderGeometry(0.16, 0.2, 0.42, 14), stone, [0, 0.3, 0])
+  addMesh(group, new THREE.ConeGeometry(0.19, 0.16, 14), roof, [0, 0.59, 0])
+  addMesh(group, new THREE.BoxGeometry(0.034, 0.12, 0.012), windowLight, [0, 0.35, 0.205])
+  addMesh(group, new THREE.BoxGeometry(0.034, 0.1, 0.012), windowLight, [0, 0.32, -0.205])
+
+  for (let i = 0; i < 6; i += 1) {
+    const angle = (i / 6) * Math.PI * 2
+    const x = Math.cos(angle) * 0.18
+    const z = Math.sin(angle) * 0.18
+    const towerHeight = 0.2 + rng() * 0.1
+    group.add(buildTower({ height: towerHeight, radiusBottom: 0.045, radiusTop: 0.032, material: stone, x, z }))
+    addMesh(group, new THREE.ConeGeometry(0.06, 0.08, 12), roof, [x, towerHeight + 0.04, z])
+  }
+  return group
+}
+
+function buildLightningSpire(baseColor: string, accentColor: string): THREE.Group {
+  const group = new THREE.Group()
+  const stone = standardMaterial(baseColor, 0.72, 0.28)
+  const trim = standardMaterial('#8c91b7', 0.42, 0.36, accentColor, 0.1)
+  const energy = glowMaterial(accentColor, 0.86)
+
+  addMesh(group, new THREE.CylinderGeometry(0.19, 0.27, 0.08, 12), stone, [0, 0.04, 0])
+  addRing(group, 0.2, 0.012, trim, 0.1)
+  addMesh(group, new THREE.CylinderGeometry(0.05, 0.1, 0.5, 8), stone, [0, 0.34, 0])
+  addMesh(group, new THREE.ConeGeometry(0.08, 0.24, 7), trim, [0, 0.72, 0])
+  addMesh(group, new THREE.OctahedronGeometry(0.07, 0), energy, [0, 0.9, 0], [0.2, 0.4, 0], [0.72, 1.35, 0.72])
+  addRing(group, 0.13, 0.007, energy, 0.62)
+
+  for (let i = 0; i < 4; i += 1) {
+    const angle = (i / 4) * Math.PI * 2 + Math.PI / 4
+    const x = Math.cos(angle) * 0.11
+    const z = Math.sin(angle) * 0.11
+    const rotation: Vec3 = [0.28, angle, 0.18]
+    addMesh(group, new THREE.BoxGeometry(0.035, 0.36, 0.035), stone, [x, 0.22, z], rotation)
   }
   return group
 }
@@ -100,28 +172,59 @@ interface TreeOptions {
   trunkColor: string
   canopyColor: string
   canopyEmissiveHex?: string
+  templeBase?: boolean
 }
 
 function buildTree(rng: () => number, opts: TreeOptions): THREE.Group {
   const group = new THREE.Group()
-  const trunkGeometry = new THREE.CylinderGeometry(opts.canopyRadius * 0.12, opts.canopyRadius * 0.22, opts.trunkHeight, 8)
-  const trunkMaterial = new THREE.MeshStandardMaterial({ color: opts.trunkColor, roughness: 0.9 })
-  const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial)
-  trunk.position.y = opts.trunkHeight / 2
+  const trunkMaterial = standardMaterial(opts.trunkColor, 0.9, 0.04)
+  const canopyMaterial = standardMaterial(
+    opts.canopyColor,
+    0.58,
+    0.05,
+    opts.canopyEmissiveHex ?? '#000000',
+    opts.canopyEmissiveHex ? 0.38 : 0,
+  )
+  const stone = standardMaterial('#8a8271', 0.78, 0.08)
+
+  if (opts.templeBase) {
+    addMesh(group, new THREE.CylinderGeometry(0.24, 0.3, 0.055, 12), stone, [0, 0.028, 0])
+    addRing(group, 0.2, 0.014, stone, 0.075)
+    for (let i = 0; i < 5; i += 1) {
+      const angle = (i / 5) * Math.PI * 2
+      addMesh(group, new THREE.CylinderGeometry(0.018, 0.024, 0.12, 7), stone, [Math.cos(angle) * 0.2, 0.13, Math.sin(angle) * 0.2])
+    }
+  }
+
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(opts.canopyRadius * 0.12, opts.canopyRadius * 0.26, opts.trunkHeight, 10),
+    trunkMaterial,
+  )
+  trunk.position.y = opts.trunkHeight / 2 + (opts.templeBase ? 0.06 : 0)
   group.add(trunk)
 
-  const canopyMaterial = new THREE.MeshStandardMaterial({
-    color: opts.canopyColor,
-    roughness: 0.6,
-    emissive: opts.canopyEmissiveHex ?? '#000000',
-    emissiveIntensity: opts.canopyEmissiveHex ? 0.45 : 0,
-  })
-  for (let i = 0; i < 6; i += 1) {
-    const r = opts.canopyRadius * (0.5 + rng() * 0.5)
-    const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), canopyMaterial)
+  for (let i = 0; i < 5; i += 1) {
+    const angle = (i / 5) * Math.PI * 2
+    addMesh(
+      group,
+      new THREE.CylinderGeometry(opts.canopyRadius * 0.035, opts.canopyRadius * 0.07, opts.canopyRadius * 1.15, 7),
+      trunkMaterial,
+      [Math.cos(angle) * opts.canopyRadius * 0.34, opts.templeBase ? 0.08 : 0.04, Math.sin(angle) * opts.canopyRadius * 0.34],
+      [Math.PI / 2.5, 0, angle],
+    )
+  }
+
+  for (let i = 0; i < 8; i += 1) {
+    const r = opts.canopyRadius * (0.42 + rng() * 0.55)
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), canopyMaterial)
     const angle = rng() * Math.PI * 2
-    const dist = rng() * opts.canopyRadius * 0.6
-    mesh.position.set(Math.cos(angle) * dist, opts.trunkHeight + r * 0.5, Math.sin(angle) * dist)
+    const dist = rng() * opts.canopyRadius * 0.72
+    mesh.position.set(
+      Math.cos(angle) * dist,
+      (opts.templeBase ? 0.06 : 0) + opts.trunkHeight + r * 0.58,
+      Math.sin(angle) * dist,
+    )
+    mesh.scale.y = 1.08 + rng() * 0.24
     group.add(mesh)
   }
   return group
@@ -135,27 +238,47 @@ interface RingOptions {
 
 function buildFloatingRing(rng: () => number, opts: RingOptions): THREE.Group {
   const group = new THREE.Group()
-  const ringMaterial = new THREE.MeshStandardMaterial({
-    color: opts.colorHex,
-    metalness: 0.85,
-    roughness: 0.2,
-    emissive: opts.colorHex,
-    emissiveIntensity: 0.15,
-  })
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(opts.radius, opts.tube, 12, 32), ringMaterial)
-  ring.rotation.x = Math.PI / 2.4
-  ring.position.y = opts.radius * 0.6
-  group.add(ring)
+  const ringMaterial = standardMaterial(opts.colorHex, 0.22, 0.85, opts.colorHex, 0.2)
+  const stone = standardMaterial('#32475a', 0.54, 0.38)
+  const energy = glowMaterial(opts.colorHex, 0.78)
 
-  const shardMaterial = new THREE.MeshStandardMaterial({ color: opts.colorHex, metalness: 0.7, roughness: 0.3 })
+  addMesh(group, new THREE.CylinderGeometry(opts.radius * 0.54, opts.radius * 0.68, 0.055, 14), stone, [0, 0.028, 0])
   for (let i = 0; i < 3; i += 1) {
-    const shard = new THREE.Mesh(jaggedRockGeometry(rng, opts.radius * 0.09, 0.4), shardMaterial)
+    const angle = (i / 3) * Math.PI * 2
+    addMesh(group, new THREE.CylinderGeometry(opts.tube * 0.7, opts.tube * 1.05, opts.radius * 1.1, 8), stone, [
+      Math.cos(angle) * opts.radius * 0.45,
+      opts.radius * 0.32,
+      Math.sin(angle) * opts.radius * 0.45,
+    ])
+  }
+
+  const outerRing = addMesh(
+    group,
+    new THREE.TorusGeometry(opts.radius, opts.tube, 12, 40),
+    ringMaterial,
+    [0, opts.radius * 0.95, 0],
+    [Math.PI / 2.4, 0.2, 0.25],
+  )
+  outerRing.scale.set(1.14, 1.14, 1.14)
+  addMesh(
+    group,
+    new THREE.TorusGeometry(opts.radius * 0.58, opts.tube * 0.6, 8, 30),
+    ringMaterial,
+    [0, opts.radius * 0.98, 0],
+    [Math.PI / 1.9, 0, 0.85],
+  )
+  addMesh(group, new THREE.SphereGeometry(opts.radius * 0.18, 12, 8), energy, [0, opts.radius * 0.98, 0])
+
+  const shardMaterial = standardMaterial(opts.colorHex, 0.3, 0.68, opts.colorHex, 0.12)
+  for (let i = 0; i < 4; i += 1) {
     const angle = rng() * Math.PI * 2
+    const shard = new THREE.Mesh(jaggedRockGeometry(rng, opts.radius * 0.08, 0.4), shardMaterial)
     shard.position.set(
       Math.cos(angle) * opts.radius * 1.15,
-      opts.radius * 0.6 + (rng() - 0.5) * opts.radius * 0.3,
+      opts.radius * 0.8 + (rng() - 0.5) * opts.radius * 0.42,
       Math.sin(angle) * opts.radius * 1.15,
     )
+    shard.scale.y = 1.3 + rng() * 0.6
     group.add(shard)
   }
   return group
@@ -170,46 +293,57 @@ interface VolcanoOptions {
 
 function buildVolcano(opts: VolcanoOptions): THREE.Group {
   const group = new THREE.Group()
-  const cone = new THREE.Mesh(
-    new THREE.ConeGeometry(opts.baseRadius, opts.height, 10, 1, true),
-    new THREE.MeshStandardMaterial({ color: opts.colorHex, roughness: 0.85 }),
-  )
-  cone.position.y = opts.height / 2
-  group.add(cone)
+  const rock = standardMaterial(opts.colorHex, 0.88, 0.12)
+  const lava = glowMaterial(opts.emissiveHex, 0.9)
 
-  const crater = new THREE.Mesh(
-    new THREE.CircleGeometry(opts.baseRadius * 0.35, 12),
-    new THREE.MeshStandardMaterial({
-      color: opts.emissiveHex,
-      emissive: opts.emissiveHex,
-      emissiveIntensity: 1.2,
-      roughness: 0.4,
-    }),
-  )
-  crater.rotation.x = -Math.PI / 2
-  crater.position.y = opts.height * 0.98
-  group.add(crater)
+  addMesh(group, new THREE.CylinderGeometry(opts.baseRadius * 0.72, opts.baseRadius * 1.15, 0.08, 14), rock, [0, 0.04, 0])
+  addMesh(group, new THREE.ConeGeometry(opts.baseRadius, opts.height, 18, 1, true), rock, [0, opts.height / 2 + 0.04, 0])
+  addRing(group, opts.baseRadius * 0.35, opts.baseRadius * 0.055, rock, opts.height * 0.96 + 0.04)
+  addMesh(group, new THREE.CircleGeometry(opts.baseRadius * 0.32, 22), lava, [0, opts.height * 0.99 + 0.046, 0], [-Math.PI / 2, 0, 0])
+  addMesh(group, new THREE.ConeGeometry(opts.baseRadius * 0.22, opts.height * 0.95, 14, 1, true), lava, [0, opts.height * 1.34, 0])
+
+  for (let i = 0; i < 5; i += 1) {
+    const angle = (i / 5) * Math.PI * 2
+    addMesh(
+      group,
+      new THREE.BoxGeometry(opts.baseRadius * 0.08, opts.height * 0.68, opts.baseRadius * 0.035),
+      lava,
+      [Math.cos(angle) * opts.baseRadius * 0.43, opts.height * 0.42, Math.sin(angle) * opts.baseRadius * 0.43],
+      [0.38, angle, 0],
+    )
+  }
   return group
 }
 
-interface RuinsOptions {
-  colorHex: string
-}
-
-function buildRuinsCluster(rng: () => number, opts: RuinsOptions): THREE.Group {
+function buildIndustrialRuins(rng: () => number, baseColor: string, accentColor: string): THREE.Group {
   const group = new THREE.Group()
-  const material = new THREE.MeshStandardMaterial({ color: opts.colorHex, roughness: 0.8, metalness: 0.15 })
-  for (let i = 0; i < 6; i += 1) {
-    const w = 0.04 + rng() * 0.05
-    const h = 0.06 + rng() * 0.12
-    const d = 0.04 + rng() * 0.05
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material)
+  const concrete = standardMaterial(baseColor, 0.82, 0.16)
+  const metal = standardMaterial('#66726d', 0.5, 0.52)
+  const toxicGlow = glowMaterial(accentColor, 0.78)
+
+  addMesh(group, new THREE.CylinderGeometry(0.22, 0.29, 0.045, 12), concrete, [0, 0.022, 0])
+  for (let i = 0; i < 7; i += 1) {
+    const w = 0.05 + rng() * 0.07
+    const h = 0.08 + rng() * 0.15
+    const d = 0.05 + rng() * 0.07
     const angle = rng() * Math.PI * 2
-    const dist = rng() * 0.14
-    mesh.position.set(Math.cos(angle) * dist, (h / 2) * (0.5 + rng() * 0.5), Math.sin(angle) * dist)
-    mesh.rotation.set((rng() - 0.5) * 0.6, rng() * Math.PI * 2, (rng() - 0.5) * 0.6)
-    group.add(mesh)
+    const dist = 0.04 + rng() * 0.18
+    addMesh(
+      group,
+      new THREE.BoxGeometry(w, h, d),
+      i % 3 === 0 ? metal : concrete,
+      [Math.cos(angle) * dist, h / 2 + 0.035, Math.sin(angle) * dist],
+      [(rng() - 0.5) * 0.24, rng() * Math.PI * 2, (rng() - 0.5) * 0.24],
+    )
   }
+  for (let i = 0; i < 3; i += 1) {
+    const angle = (i / 3) * Math.PI * 2 + 0.2
+    const x = Math.cos(angle) * 0.13
+    const z = Math.sin(angle) * 0.13
+    addMesh(group, new THREE.CylinderGeometry(0.018, 0.026, 0.28 + rng() * 0.1, 8), metal, [x, 0.18, z])
+  }
+  addMesh(group, new THREE.CircleGeometry(0.085, 18), toxicGlow, [-0.05, 0.052, 0.09], [-Math.PI / 2, 0, 0], [1.45, 1, 1])
+  addMesh(group, new THREE.CylinderGeometry(0.012, 0.012, 0.34, 8), metal, [0.04, 0.09, -0.02], [Math.PI / 2, 0, 0.7])
   return group
 }
 
@@ -220,21 +354,77 @@ interface BuriedGiantOptions {
 
 function buildBuriedGiant(rng: () => number, opts: BuriedGiantOptions): THREE.Group {
   const group = new THREE.Group()
-  const material = new THREE.MeshStandardMaterial({ color: opts.colorHex, roughness: 0.95 })
+  const sandstone = standardMaterial(opts.colorHex, 0.9, 0.04)
+  const shadowStone = standardMaterial('#6f4a2e', 0.86, 0.05)
 
-  const head = new THREE.Mesh(jaggedRockGeometry(rng, opts.scale * 0.22, 0.35), material)
-  head.position.y = opts.scale * 0.42
-  group.add(head)
-
-  const torso = new THREE.Mesh(jaggedRockGeometry(rng, opts.scale * 0.32, 0.3), material)
-  torso.position.y = opts.scale * 0.14
-  torso.scale.set(1.3, 0.8, 1)
+  addMesh(group, new THREE.CylinderGeometry(opts.scale * 0.38, opts.scale * 0.48, opts.scale * 0.055, 14), sandstone, [0, opts.scale * 0.027, 0])
+  const torso = new THREE.Mesh(jaggedRockGeometry(rng, opts.scale * 0.26, 0.26), sandstone)
+  torso.position.y = opts.scale * 0.18
+  torso.scale.set(1.25, 0.66, 0.92)
   group.add(torso)
 
+  const head = new THREE.Mesh(jaggedRockGeometry(rng, opts.scale * 0.18, 0.3), sandstone)
+  head.position.y = opts.scale * 0.43
+  head.scale.set(0.8, 1.08, 0.78)
+  group.add(head)
+
   for (const side of [-1, 1]) {
-    const arm = new THREE.Mesh(jaggedRockGeometry(rng, opts.scale * 0.14, 0.4), material)
-    arm.position.set(side * opts.scale * 0.36, opts.scale * 0.08, 0)
-    group.add(arm)
+    addMesh(
+      group,
+      new THREE.CylinderGeometry(opts.scale * 0.07, opts.scale * 0.09, opts.scale * 0.42, 8),
+      shadowStone,
+      [side * opts.scale * 0.36, opts.scale * 0.12, 0],
+      [Math.PI / 2.25, 0, side * 0.36],
+    )
+  }
+  for (let i = 0; i < 5; i += 1) {
+    const x = (i - 2) * opts.scale * 0.08
+    addMesh(group, new THREE.BoxGeometry(opts.scale * 0.035, opts.scale * 0.12, opts.scale * 0.045), shadowStone, [x, opts.scale * 0.1, opts.scale * 0.22])
+  }
+  return group
+}
+
+function buildCrystalMountain(rng: () => number, baseColor: string, accentColor: string): THREE.Group {
+  const group = new THREE.Group()
+  const stone = standardMaterial(baseColor, 0.42, 0.24)
+  const crystal = standardMaterial(accentColor, 0.15, 0.12, accentColor, 0.58)
+
+  addMesh(group, new THREE.CylinderGeometry(0.22, 0.28, 0.055, 13), stone, [0, 0.028, 0])
+  for (let i = 0; i < 9; i += 1) {
+    const radius = 0.045 + rng() * 0.055
+    const height = 1.35 + rng() * 1.1
+    const angle = rng() * Math.PI * 2
+    const dist = rng() * 0.17
+    addMesh(
+      group,
+      new THREE.OctahedronGeometry(radius, 0),
+      crystal,
+      [Math.cos(angle) * dist, radius * height * 0.7 + 0.04, Math.sin(angle) * dist],
+      [rng() * 0.35, rng() * Math.PI, rng() * 0.35],
+      [0.75 + rng() * 0.6, height, 0.75 + rng() * 0.6],
+    )
+  }
+  return group
+}
+
+function buildVoidShard(rng: () => number, baseColor: string, accentColor: string): THREE.Group {
+  const group = new THREE.Group()
+  const obsidian = standardMaterial(baseColor, 0.32, 0.48, accentColor, 0.22)
+  const glow = glowMaterial(accentColor, 0.72)
+
+  addMesh(group, new THREE.CylinderGeometry(0.19, 0.25, 0.05, 11), obsidian, [0, 0.025, 0])
+  addRing(group, 0.16, 0.01, glow, 0.09)
+  addMesh(group, jaggedRockGeometry(rng, 0.14, 0.32), obsidian, [0, 0.3, 0], [0.14, 0.4, -0.08], [0.66, 1.85, 0.66])
+  addMesh(group, new THREE.TorusGeometry(0.18, 0.009, 8, 32), glow, [0, 0.42, 0], [Math.PI / 1.8, 0.4, 0.8])
+  for (let i = 0; i < 5; i += 1) {
+    const angle = rng() * Math.PI * 2
+    addMesh(
+      group,
+      jaggedRockGeometry(rng, 0.035 + rng() * 0.035, 0.45),
+      obsidian,
+      [Math.cos(angle) * (0.16 + rng() * 0.08), 0.18 + rng() * 0.34, Math.sin(angle) * (0.16 + rng() * 0.08)],
+      [rng() * Math.PI, rng() * Math.PI, rng() * Math.PI],
+    )
   }
   return group
 }
@@ -245,9 +435,6 @@ export interface LandmarkDef {
   build: () => THREE.Object3D
 }
 
-// One landmark per region, anchored at a fixed point within that region's biome band by
-// Landmarks.tsx. Colors are pulled from each biome's own palette so landmarks read as
-// belonging to their region rather than looking like generic assets dropped in.
 export function buildAllLandmarks(seedBase: number): LandmarkDef[] {
   const biome = (id: string) => getBiomeById(id)!
 
@@ -263,61 +450,41 @@ export function buildAllLandmarks(seedBase: number): LandmarkDef[] {
     {
       biomeId: 'thunder-highlands',
       name: 'Lightning Spire',
-      build: () => {
-        const group = new THREE.Group()
-        group.add(buildTower({ height: 0.3, radiusBottom: 0.09, radiusTop: 0.015, colorHex: biome('thunder-highlands').baseColor }))
-        const crystal = new THREE.Mesh(
-          new THREE.OctahedronGeometry(0.035, 0),
-          new THREE.MeshStandardMaterial({
-            color: biome('thunder-highlands').accentColor,
-            emissive: biome('thunder-highlands').accentColor,
-            emissiveIntensity: 1.4,
-            roughness: 0.2,
-          }),
-        )
-        crystal.position.y = 0.32
-        group.add(crystal)
-        return group
-      },
+      build: () => buildLightningSpire(biome('thunder-highlands').baseColor, biome('thunder-highlands').accentColor),
     },
     {
       biomeId: 'whispering-desert',
       name: 'Buried Stone Giant',
-      build: () => buildBuriedGiant(mulberry32(seedBase + 3), { colorHex: biome('whispering-desert').baseColor, scale: 0.5 }),
+      build: () => buildBuriedGiant(mulberry32(seedBase + 3), { colorHex: biome('whispering-desert').baseColor, scale: 0.54 }),
     },
     {
       biomeId: 'ancient-jungle',
       name: 'Temple of the Elder Tree',
-      build: () => {
-        const group = new THREE.Group()
-        group.add(
-          buildTree(mulberry32(seedBase + 4), {
-            trunkHeight: 0.18,
-            canopyRadius: 0.11,
-            trunkColor: '#4a3524',
-            canopyColor: biome('ancient-jungle').accentColor,
-          }),
-        )
-        group.add(buildRuinsCluster(mulberry32(seedBase + 44), { colorHex: '#8a8271' }))
-        return group
-      },
+      build: () => buildTree(mulberry32(seedBase + 4), {
+        trunkHeight: 0.2,
+        canopyRadius: 0.12,
+        trunkColor: '#4a3524',
+        canopyColor: biome('ancient-jungle').accentColor,
+        templeBase: true,
+      }),
     },
     {
       biomeId: 'emerald-wilds',
       name: 'The Colossal Tree',
       build: () => buildTree(mulberry32(seedBase + 5), {
-        trunkHeight: 0.2,
-        canopyRadius: 0.14,
+        trunkHeight: 0.24,
+        canopyRadius: 0.16,
         trunkColor: '#3f2a1a',
         canopyColor: biome('emerald-wilds').accentColor,
         canopyEmissiveHex: biome('emerald-wilds').accentColor,
+        templeBase: true,
       }),
     },
     {
       biomeId: 'liquid-blu-metal-sea',
       name: 'The Magnetic Ring',
       build: () => buildFloatingRing(mulberry32(seedBase + 6), {
-        radius: 0.2,
+        radius: 0.22,
         tube: 0.025,
         colorHex: biome('liquid-blu-metal-sea').accentColor,
       }),
@@ -326,8 +493,8 @@ export function buildAllLandmarks(seedBase: number): LandmarkDef[] {
       biomeId: 'molten-wastes',
       name: 'The Great Volcano',
       build: () => buildVolcano({
-        baseRadius: 0.2,
-        height: 0.3,
+        baseRadius: 0.22,
+        height: 0.34,
         colorHex: biome('molten-wastes').baseColor,
         emissiveHex: biome('molten-wastes').accentColor,
       }),
@@ -335,33 +502,25 @@ export function buildAllLandmarks(seedBase: number): LandmarkDef[] {
     {
       biomeId: 'toxic-expanse',
       name: 'Ruined Industrial Complex',
-      build: () => buildRuinsCluster(mulberry32(seedBase + 8), { colorHex: biome('toxic-expanse').baseColor }),
+      build: () => buildIndustrialRuins(
+        mulberry32(seedBase + 8),
+        biome('toxic-expanse').baseColor,
+        biome('toxic-expanse').accentColor,
+      ),
     },
     {
       biomeId: 'crystal-basin',
       name: 'Crystal Mountain',
-      build: () => buildRockCluster(mulberry32(seedBase + 9), {
-        count: 6,
-        baseRadius: 0.15,
-        spread: 0.09,
-        colorHex: biome('crystal-basin').accentColor,
-        metalness: 0.1,
-        roughness: 0.15,
-        emissiveHex: biome('crystal-basin').accentColor,
-      }),
+      build: () => buildCrystalMountain(
+        mulberry32(seedBase + 9),
+        biome('crystal-basin').baseColor,
+        biome('crystal-basin').accentColor,
+      ),
     },
     {
       biomeId: 'void-scar',
       name: 'The Black Crystal',
-      build: () => buildRockCluster(mulberry32(seedBase + 10), {
-        count: 5,
-        baseRadius: 0.17,
-        spread: 0.12,
-        colorHex: biome('void-scar').baseColor,
-        metalness: 0.4,
-        roughness: 0.35,
-        emissiveHex: biome('void-scar').accentColor,
-      }),
+      build: () => buildVoidShard(mulberry32(seedBase + 10), biome('void-scar').baseColor, biome('void-scar').accentColor),
     },
   ]
 }

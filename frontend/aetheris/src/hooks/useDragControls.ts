@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { RefObject } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
@@ -15,8 +15,8 @@ export function useDragControls(wrapperRef: RefObject<THREE.Object3D | null>): D
   const { gl } = useThree()
   const euler = useMemo(() => new THREE.Euler(0, 0, 0, 'YXZ'), [])
   const state = useRef({
-    yaw: 0,
-    pitch: 0,
+    yaw: ROTATION.initialYawRadians,
+    pitch: ROTATION.initialPitchRadians,
     yawVelocity: 0,
     pitchVelocity: 0,
     dragging: false,
@@ -26,16 +26,20 @@ export function useDragControls(wrapperRef: RefObject<THREE.Object3D | null>): D
     motionEnabled: true,
   })
 
-  function applyRotation(): void {
+  const applyRotation = useCallback((): void => {
     if (!wrapperRef.current) return
     const s = state.current
     euler.set(s.pitch, s.yaw, 0, 'YXZ')
     wrapperRef.current.quaternion.setFromEuler(euler)
-  }
+  }, [euler, wrapperRef])
 
   function clampPitch(value: number): number {
     return Math.max(-ROTATION.pitchClampRadians, Math.min(ROTATION.pitchClampRadians, value))
   }
+
+  useEffect(() => {
+    applyRotation()
+  }, [applyRotation])
 
   useEffect(() => {
     const canvas = gl.domElement
@@ -89,7 +93,7 @@ export function useDragControls(wrapperRef: RefObject<THREE.Object3D | null>): D
       canvas.removeEventListener('pointerup', onPointerUp)
       canvas.removeEventListener('pointercancel', onPointerUp)
     }
-  }, [gl])
+  }, [applyRotation, gl])
 
   useFrame((_, deltaSeconds) => {
     const s = state.current

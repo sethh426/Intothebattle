@@ -36,6 +36,7 @@ interface AtmosphereProps {
 
 export default function Atmosphere({ introOpacityRef }: AtmosphereProps) {
   const geometry = useMemo(() => new THREE.SphereGeometry(PLANET.radius * ATMOSPHERE.radiusScale, 48, 48), [])
+  const innerGeometry = useMemo(() => new THREE.SphereGeometry(PLANET.radius * ATMOSPHERE.innerRadiusScale, 48, 48), [])
   const material = useMemo(
     () =>
       new THREE.ShaderMaterial({
@@ -53,11 +54,46 @@ export default function Atmosphere({ introOpacityRef }: AtmosphereProps) {
       }),
     [],
   )
+  const innerMaterial = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        uniforms: {
+          glowColor: { value: new THREE.Color(ATMOSPHERE.innerColor) },
+          glowPower: { value: 2.2 },
+          introOpacity: { value: 1 },
+        },
+        vertexShader: VERTEX_SHADER,
+        fragmentShader: FRAGMENT_SHADER,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.FrontSide,
+        blending: THREE.AdditiveBlending,
+      }),
+    [],
+  )
 
   useFrame(() => {
     if (introOpacityRef?.current == null) return
     material.uniforms.introOpacity.value = introOpacityRef.current
+    innerMaterial.uniforms.introOpacity.value = introOpacityRef.current * 0.5
   })
 
-  return <mesh geometry={geometry} material={material} name="atmosphere" />
+  return (
+    <>
+      <mesh
+        geometry={innerGeometry}
+        material={innerMaterial}
+        renderOrder={7}
+        raycast={() => undefined}
+        name="inner-airglow"
+      />
+      <mesh
+        geometry={geometry}
+        material={material}
+        renderOrder={8}
+        raycast={() => undefined}
+        name="atmosphere"
+      />
+    </>
+  )
 }

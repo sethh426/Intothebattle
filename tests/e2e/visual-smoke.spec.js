@@ -88,6 +88,8 @@ async function expectColorfulCanvas(page, canvas) {
     let sampleCount = 0;
     let saturationSum = 0;
     let colorfulCount = 0;
+    let greenishCount = 0;
+    const hueBuckets = Array.from({ length: 12 }, () => 0);
     const x0 = Math.floor(width * 0.2);
     const x1 = Math.floor(width * 0.8);
     const y0 = Math.floor(height * 0.15);
@@ -108,19 +110,36 @@ async function expectColorfulCanvas(page, canvas) {
         sampleCount += 1;
         saturationSum += saturation;
         if (saturation > 0.18) colorfulCount += 1;
+        if (saturation > 0.2) {
+          let hue = 0;
+          if (max === r) hue = ((g - b) / (max - min) + (g < b ? 6 : 0)) / 6;
+          else if (max === g) hue = ((b - r) / (max - min) + 2) / 6;
+          else hue = ((r - g) / (max - min) + 4) / 6;
+          const degrees = hue * 360;
+          hueBuckets[Math.min(11, Math.floor(degrees / 30))] += 1;
+          if (degrees >= 70 && degrees <= 165) greenishCount += 1;
+        }
       }
     }
 
+    const saturatedSamples = hueBuckets.reduce((sum, count) => sum + count, 0);
+    const maxHueBucket = hueBuckets.reduce((maxCount, count) => Math.max(maxCount, count), 0);
     return {
       sampleCount,
       avgSaturation: sampleCount ? saturationSum / sampleCount : 0,
       colorfulRatio: sampleCount ? colorfulCount / sampleCount : 0,
+      hueBucketCount: hueBuckets.filter(count => count > saturatedSamples * 0.035).length,
+      dominantHueRatio: saturatedSamples ? maxHueBucket / saturatedSamples : 0,
+      greenishRatio: saturatedSamples ? greenishCount / saturatedSamples : 0,
     };
   }, `data:image/png;base64,${image.toString('base64')}`);
 
   expect(metrics.sampleCount).toBeGreaterThan(80);
   expect(metrics.avgSaturation).toBeGreaterThan(0.2);
   expect(metrics.colorfulRatio).toBeGreaterThan(0.35);
+  expect(metrics.hueBucketCount).toBeGreaterThanOrEqual(4);
+  expect(metrics.dominantHueRatio).toBeLessThan(0.72);
+  expect(metrics.greenishRatio).toBeLessThan(0.68);
 }
 
 async function selectVisibleTerritory(page) {

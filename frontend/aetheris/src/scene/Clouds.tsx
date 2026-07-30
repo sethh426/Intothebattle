@@ -16,12 +16,13 @@ function createCloudAlphaTexture(seed: number): THREE.CanvasTexture {
   ctx.fillRect(0, 0, canvas.width, canvas.height)
 
   const rng = mulberry32(seed)
-  const blobCount = 46
+  const blobCount = 82
   for (let i = 0; i < blobCount; i += 1) {
     const x = rng() * canvas.width
-    const y = rng() * canvas.height
-    const radius = 20 + rng() * 60
-    const alpha = 0.35 + rng() * 0.5
+    const band = Math.sin((x / canvas.width) * Math.PI * 2 + rng() * Math.PI) * 0.12
+    const y = canvas.height * (0.5 + band + (rng() - 0.5) * 0.66)
+    const radius = 14 + rng() * 54
+    const alpha = 0.24 + rng() * 0.58
     const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius)
     gradient.addColorStop(0, `rgba(255,255,255,${alpha})`)
     gradient.addColorStop(1, 'rgba(255,255,255,0)')
@@ -29,6 +30,18 @@ function createCloudAlphaTexture(seed: number): THREE.CanvasTexture {
     ctx.beginPath()
     ctx.arc(x, y, radius, 0, Math.PI * 2)
     ctx.fill()
+  }
+
+  ctx.globalCompositeOperation = 'screen'
+  for (let i = 0; i < 9; i += 1) {
+    const y = canvas.height * (0.12 + rng() * 0.76)
+    const alpha = 0.08 + rng() * 0.12
+    const gradient = ctx.createLinearGradient(0, y - 18, canvas.width, y + 18)
+    gradient.addColorStop(0, 'rgba(255,255,255,0)')
+    gradient.addColorStop(0.5, `rgba(255,255,255,${alpha})`)
+    gradient.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = gradient
+    ctx.fillRect(0, y - 16, canvas.width, 32)
   }
 
   const texture = new THREE.CanvasTexture(canvas)
@@ -57,6 +70,7 @@ export default function Clouds({ introOpacityRef }: CloudsProps) {
         alphaMap,
         transparent: true,
         depthWrite: false,
+        blending: THREE.NormalBlending,
         opacity: 0,
       }),
     [alphaMap],
@@ -70,5 +84,5 @@ export default function Clouds({ introOpacityRef }: CloudsProps) {
     material.opacity = CLOUDS.baseOpacity * introOpacity
   })
 
-  return <mesh ref={meshRef} geometry={geometry} material={material} name="clouds" />
+  return <mesh ref={meshRef} geometry={geometry} material={material} raycast={() => undefined} name="clouds" />
 }

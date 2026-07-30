@@ -6,6 +6,7 @@ import react from '@vitejs/plugin-react'
 // manifest-reading step needed in server.js or home.html. Revisit hashed
 // filenames + manifest injection once this integration pattern is proven.
 export default defineConfig({
+  base: '/aetheris-app/',
   plugins: [react()],
   build: {
     rollupOptions: {

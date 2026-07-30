@@ -28,6 +28,8 @@ export const CAMERA = {
 }
 
 export const ROTATION = {
+  initialYawRadians: -0.42,
+  initialPitchRadians: -0.24,
   autoRotateRadiansPerSecond: (Math.PI * 2) / 90, // one full turn per ~90s
   dragSensitivity: 0.0045,
   pitchClampRadians: Math.PI / 3, // +/-60deg
@@ -39,6 +41,7 @@ export const ROTATION = {
 export const PLANET = {
   radius: 2,
   icosahedronDetail: 6,
+  oceanRadiusOffset: 0.012,
 }
 
 // Total live particle budget across all systems, scaled down per perf tier.
@@ -62,22 +65,33 @@ export const DAY_NIGHT = {
 }
 
 export const ATMOSPHERE = {
-  radiusScale: 1.13, // relative to PLANET.radius -- clears landmarks without overpowering the globe
+  radiusScale: 1.16, // relative to PLANET.radius -- clears landmarks without overpowering the globe
   color: '#56c8ff',
-  glowPower: 3.8, // Fresnel falloff exponent
+  glowPower: 3.2, // Fresnel falloff exponent
+  innerRadiusScale: 1.035,
+  innerColor: '#9ff2ff',
 }
 
 export const CLOUDS = {
-  radiusScale: 1.02,
+  radiusScale: 1.026,
   color: '#baf7ff',
-  baseOpacity: 0.3,
-  driftRadiansPerSecond: 0.008, // independent extra rotation on top of the shared wrapper's drag/auto-rotate
+  baseOpacity: 0.24,
+  driftRadiansPerSecond: 0.011, // independent extra rotation on top of the shared wrapper's drag/auto-rotate
 }
 
 export const STARFIELD: Record<PerfTier, number> = {
-  high: 6000,
-  medium: 3500,
-  low: 1800,
+  high: 8500,
+  medium: 5000,
+  low: 2400,
+}
+
+export const WORLD_GRAPHICS = {
+  backdropRadius: 84,
+  terminatorRadiusOffset: 0.018,
+  settlementLightOffset: 0.105,
+  territoryHaloOffset: 0.072,
+  orbitBandRadiusScale: 1.36,
+  orbitBandTube: 0.004,
 }
 
 // Mock kingdom-state simulator tuning (see kingdoms/useKingdomState.ts). Real

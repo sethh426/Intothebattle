@@ -11,6 +11,13 @@ import DayNightCycle from './DayNightCycle'
 import Atmosphere from './Atmosphere'
 import Clouds from './Clouds'
 import Starfield from './Starfield'
+import RealmVeins from './RealmVeins'
+import TerminatorShadow from './TerminatorShadow'
+import TerritoryHalos from './TerritoryHalos'
+import SettlementLights from './SettlementLights'
+import OrbitBands from './OrbitBands'
+import TerritoryBanners from './TerritoryBanners'
+import CinematicPostProcessing from './CinematicPostProcessing'
 import Particles from '../particles/Particles'
 import { useDragControls } from '../hooks/useDragControls'
 import { usePerfTier } from '../hooks/usePerfTier'
@@ -61,6 +68,14 @@ export default function Scene({
       <group ref={wrapperRef}>
         <Planet biomes={BIOMES} />
         <BiomeContours biomes={BIOMES} />
+        <RealmVeins />
+        <TerminatorShadow sunDirectionRef={sunDirectionRef} />
+        <TerritoryHalos
+          territories={territories}
+          sunDirectionRef={sunDirectionRef}
+          kingdomState={kingdomState}
+          selectedTerritoryId={selectedTerritoryId}
+        />
         <Landmarks />
         <Territories
           territories={territories}
@@ -71,12 +86,30 @@ export default function Scene({
           selectedTerritoryId={selectedTerritoryId}
           onTerritorySelect={onTerritorySelect}
         />
-        <KingdomSilhouettes territories={territories} kingdomState={kingdomState} />
+        <KingdomSilhouettes
+          territories={territories}
+          kingdomState={kingdomState}
+          selectedTerritoryId={selectedTerritoryId}
+          sunDirectionRef={sunDirectionRef}
+        />
+        <TerritoryBanners
+          territories={territories}
+          kingdomState={kingdomState}
+          selectedTerritoryId={selectedTerritoryId}
+        />
+        <SettlementLights
+          territories={territories}
+          sunDirectionRef={sunDirectionRef}
+          kingdomState={kingdomState}
+          selectedTerritoryId={selectedTerritoryId}
+        />
+        <OrbitBands paused={reducedMotion} />
         <Clouds introOpacityRef={cameraRig.introOpacityRef} />
         <Atmosphere introOpacityRef={cameraRig.introOpacityRef} />
         <Particles tier={tier} paused={reducedMotion} zoomDistanceRef={cameraRig.zoomDistanceRef} />
         <DayNightCycle wrapperRef={wrapperRef} sunDirectionRef={sunDirectionRef} paused={reducedMotion} />
       </group>
+      <CinematicPostProcessing tier={tier} reducedMotion={reducedMotion} />
     </>
   )
 }

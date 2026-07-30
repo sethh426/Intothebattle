@@ -93,7 +93,6 @@ export default function App({ dataMode, framing }: AppProps) {
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true }}
         style={{ touchAction: 'none', cursor: 'grab' }}
-        onPointerMissed={() => setSelectedTerritoryId(null)}
       >
         <Scene
           reducedMotion={reducedMotion}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import type { RefObject } from 'react'
-import { useFrame, type ThreeEvent } from '@react-three/fiber'
+import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { Instances, Instance, Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { PLANET, DAY_NIGHT, KINGDOM } from '../config'
@@ -12,6 +12,7 @@ import type { KingdomState, Territory } from '../types'
 
 const EXTRUDE_DEPTH = 0.05
 const SURFACE_OFFSET = 0.01 // lift footprints slightly above the base sphere to avoid z-fighting
+const HIT_TARGET_OFFSET = 0.18
 
 interface InstanceHandle extends THREE.Object3D {
   color: THREE.Color
@@ -78,7 +79,16 @@ export default function Territories({
     return map
   }, [])
 
-  const material = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.35 }), [])
+  const material = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        roughness: 0.34,
+        metalness: 0.48,
+        emissive: '#061222',
+        emissiveIntensity: 0.18,
+      }),
+    [],
+  )
   const hitGeometry = useMemo(() => new THREE.CircleGeometry(1, 24), [])
   const hitMaterial = useMemo(
     () =>
@@ -101,10 +111,10 @@ export default function Territories({
   }, [territories])
 
   const hitTargets = useMemo<HitTarget[]>(() => territories.map((territory) => {
-    const surfacePoint = latLonToVector3(territory.lat, territory.lon, PLANET.radius + SURFACE_OFFSET * 2)
+    const surfacePoint = latLonToVector3(territory.lat, territory.lon, PLANET.radius + HIT_TARGET_OFFSET)
     const normal = surfacePoint.clone().normalize()
     const quaternion = new THREE.Quaternion().setFromUnitVectors(UP, normal)
-    const radius = Math.max(territory.angularRadius * PLANET.radius * 1.9, 0.15)
+    const radius = Math.max(territory.angularRadius * PLANET.radius * 2.7, 0.22)
     return { territory, position: surfacePoint, quaternion, radius }
   }), [territories])
 
@@ -112,6 +122,7 @@ export default function Territories({
   const instanceRefs = useRef(new Map<string, InstanceEntry>())
   const flashInstanceRef = useRef<{ ref: InstanceHandle; baseColor: THREE.Color } | null>(null)
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
+  const { gl } = useThree()
   const tmpColor = useMemo(() => new THREE.Color(), [])
   const flashWhite = useMemo(() => new THREE.Color(1, 1, 1), [])
   const selectedGold = useMemo(() => new THREE.Color('#ffe99a'), [])
@@ -121,10 +132,27 @@ export default function Territories({
 
   const kingdomStateRef = useLatestRef<Record<string, KingdomState>>(kingdomState ?? {})
   const selectedTerritoryIdRef = useLatestRef<string | null | undefined>(selectedTerritoryId)
+  const tooltipRef = useLatestRef<TooltipState | null>(tooltip)
+  const onTerritorySelectRef = useLatestRef<typeof onTerritorySelect>(onTerritorySelect)
 
   useEffect(() => () => {
     document.body.style.cursor = ''
   }, [])
+
+  useEffect(() => {
+    const canvas = gl.domElement
+    function onPointerDown(event: PointerEvent): void {
+      const current = tooltipRef.current
+      if (!current) return
+      event.preventDefault()
+      event.stopPropagation()
+      setTooltip(null)
+      onTerritorySelectRef.current?.(current.territory.id)
+    }
+
+    canvas.addEventListener('pointerdown', onPointerDown, { capture: true })
+    return () => canvas.removeEventListener('pointerdown', onPointerDown, { capture: true })
+  }, [gl, onTerritorySelectRef, tooltipRef])
 
   // One designated flagship-biome territory is the intro cinematic's one-shot flash target.
   const flashTerritoryId = useMemo(() => {
@@ -226,6 +254,13 @@ export default function Territories({
     onTerritorySelect?.(territory.id)
   }, [isFrontFacing, onTerritorySelect])
 
+  const handlePointerDown = useCallback((territory: Territory, event: ThreeEvent<PointerEvent>) => {
+    event.stopPropagation()
+    if (!isFrontFacing(territory, event)) return
+    setTooltip(null)
+    onTerritorySelect?.(territory.id)
+  }, [isFrontFacing, onTerritorySelect])
+
   return (
     <group>
       {SHAPE_IDS.map((shapeId) => {
@@ -240,6 +275,7 @@ export default function Territories({
                 ref={(instance: InstanceHandle | null) => instanceSetup(instance, territory)}
                 onPointerOver={(event: ThreeEvent<PointerEvent>) => handlePointerOver(territory, event)}
                 onPointerOut={handlePointerOut}
+                onPointerDown={(event: ThreeEvent<PointerEvent>) => handlePointerDown(territory, event)}
                 onClick={(event: ThreeEvent<MouseEvent>) => handleClick(territory, event)}
               />
             ))}
@@ -256,6 +292,7 @@ export default function Territories({
           scale={[radius, radius, 1]}
           onPointerOver={(event: ThreeEvent<PointerEvent>) => handlePointerOver(territory, event)}
           onPointerOut={handlePointerOut}
+          onPointerDown={(event: ThreeEvent<PointerEvent>) => handlePointerDown(territory, event)}
           onClick={(event: ThreeEvent<MouseEvent>) => handleClick(territory, event)}
         />
       ))}
