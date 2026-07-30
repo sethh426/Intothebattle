@@ -620,6 +620,9 @@ function initSocketOverlay(game) {
     if (settings.backgroundFit && scene.updateBackgroundFit) {
       scene.updateBackgroundFit(settings.backgroundFit);
     }
+    if (settings.aetherisTerritoryId && scene.setTerritory) {
+      scene.setTerritory(settings.aetherisTerritoryId);
+    }
   });
   socket.on('laserColor', (data) => {
     const color = typeof data === 'string' ? data : data && data.color;

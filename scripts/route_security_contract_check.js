@@ -10,6 +10,9 @@ const admin = fs.readFileSync(path.join(root, 'tiktokbr', 'routes', 'admin.js'),
 const paypal = fs.readFileSync(path.join(root, 'tiktokbr', 'routes', 'paypal.js'), 'utf8');
 const authRoutes = fs.readFileSync(path.join(root, 'tiktokbr', 'routes', 'auth.js'), 'utf8');
 const sessionAuth = fs.readFileSync(path.join(root, 'tiktokbr', 'services', 'sessionAuth.js'), 'utf8');
+const caddy = fs.readFileSync(path.join(root, 'devops', 'caddy', 'Caddyfile'), 'utf8');
+const composeProd = fs.readFileSync(path.join(root, 'docker-compose.prod.yml'), 'utf8');
+const dockerignore = fs.readFileSync(path.join(root, '.dockerignore'), 'utf8');
 
 function routeLiteral(pathname) {
   return pathname.replace(/:[A-Za-z0-9_]+/g, '');
@@ -30,6 +33,14 @@ function routeLiteralCandidates(pathname, sourceName) {
 assert.equal(contract.csrfEquivalent?.sameOriginMutationGuard, true, 'route contract must require same-origin mutation guard');
 assert.equal(contract.csrfEquivalent?.adminSameSiteCookie, 'strict', 'admin cookies must stay SameSite=strict');
 assert.match(server, /Blocked cross-origin state-changing request/, 'server must enforce same-origin state-changing browser requests');
+assert.match(server, /hostAllowListEnforced/, 'server must support production Host header allow-list enforcement');
+assert.match(server, /Blocked request with untrusted Host header/, 'server must log and block untrusted Host headers');
+assert.match(server, /Content-Security-Policy/, 'server must set a Content-Security-Policy header');
+assert.match(server, /Strict-Transport-Security/, 'server must set HSTS when requests are HTTPS');
+assert.match(server, /requestBodyLimit/, 'server must configure bounded JSON/form body parsing');
+assert.match(server, /publicWriteLimiter/, 'server must rate-limit public write endpoints');
+assert.match(server, /app\.post\('\/api\/signup-intent', publicWriteLimiter/, 'signup-intent writes must be rate limited');
+assert.match(server, /app\.post\('\/api\/public\/battlegrounds', publicWriteLimiter/, 'battleground writes must be rate limited');
 assert.match(server, /function verifyTikTokWebhookSignature/, 'TikTok webhooks must verify TikTok-Signature HMAC');
 assert.match(server, /crypto\.timingSafeEqual/, 'TikTok webhook signature comparison must be timing safe');
 assert.match(admin, /sameSite:\s*'strict'/, 'admin session cookie must remain SameSite=strict');
@@ -42,6 +53,13 @@ assert.match(sessionAuth, /WHERE id = \? AND session_token = \?/, 'user session 
 assert.match(sessionAuth, /WHERE UPPER\(code\) = \? AND session_token = \?/, 'access-code session lookup must bind the JWT code and token');
 assert.match(sessionAuth, /tokenId:/, 'session tokens must include a unique token id');
 assert.match(sessionAuth, /jti:/, 'session tokens must include a JWT id');
+assert.match(caddy, /Strict-Transport-Security/, 'Caddy must set HSTS at the reverse proxy');
+assert.match(caddy, /request_body\s*\{[\s\S]*max_size 110MB/, 'Caddy must cap request bodies near upload policy limits');
+assert.match(caddy, /-Server/, 'Caddy must strip proxy Server disclosure');
+assert.match(composeProd, /no-new-privileges:true/, 'production app container must run with no-new-privileges');
+assert.match(composeProd, /cap_drop:\s*\n\s*- ALL/, 'production app container must drop Linux capabilities');
+assert.match(composeProd, /SECURITY_ALLOWED_HOSTS/, 'production compose must configure allowed hostnames');
+assert.match(dockerignore, /\*\.tar\.gz/, 'Docker build context must exclude deployment archives');
 assert.match(authRoutes, /function clearCookieVariants/, 'auth routes must clear host-only and domain-scoped cookie variants');
 assert.match(authRoutes, /clearSessionCookie\(res\);\s*res\.cookie\('session_token'/, 'session cookie writers must clear old variants before setting a new token');
 assert.match(server, /clearCookieVariants\(res, 'session_token', true\)/, 'server-level auth redirects must clear old session cookie variants');
@@ -59,6 +77,9 @@ assert.match(server, /resetRoomLiveRuntime\(room, \{ reason, clearPlayers: true 
 assert.doesNotMatch(admin, /DELETE\s+FROM\s+users/i, 'admin routes must not delete user accounts');
 assert.doesNotMatch(admin, /action=["']\/admin\/users\/[^"']*delete/i, 'admin UI must not render user account delete forms');
 assert.match(admin, /function denyAccountDelete/, 'admin routes must explicitly deny user account deletion attempts');
+assert.match(admin, /\/users\/:id\/ban/, 'admin routes must support banning user accounts');
+assert.match(admin, /session_token = NULL/, 'admin user bans must clear active sessions');
+assert.match(admin, /is_revoked = 1/, 'admin user bans must revoke matching legacy access codes');
 assert.match(admin, /\/comments\/:id\/delete/, 'admin comment delete route should remain available');
 assert.match(admin, /\/blog\/:id\/delete/, 'admin blog delete route should remain available');
 assert.match(admin, /\/sponsors\/:id\/delete/, 'admin sponsor creative delete route should remain available');
@@ -79,6 +100,9 @@ for (const endpoint of endpoints) {
 
   if (endpoint.category === 'admin-mutation') {
     assert.match(endpoint.access, /same-origin-mutation/, `${endpoint.path} must name same-origin mutation protection`);
+  }
+  if (endpoint.category === 'public-mutation') {
+    assert.match(endpoint.access, /rate-limited/, `${endpoint.path} must name public write rate limiting`);
   }
   if (endpoint.category === 'development') {
     assert.equal(endpoint.production, 'disabled', `${endpoint.path} must be disabled in production`);

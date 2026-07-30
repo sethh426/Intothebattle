@@ -12,6 +12,7 @@ const baseUrl = `http://${host}:${port}`;
 const roomId = 'qa-room';
 const jwtSecret = 'qa-test-secret';
 const e2eSessionToken = 'qa-session-token';
+const e2eUserSessionToken = 'qa-user-session-token';
 const diskPath = fs.mkdtempSync(path.join(os.tmpdir(), 'intothebattle-qa-'));
 const overlayToken = jwt.sign({ purpose: 'overlay', roomId }, jwtSecret, { expiresIn: '1h' });
 
@@ -70,6 +71,10 @@ async function watchPage(page) {
 
 async function addAuthCookie(context) {
   await context.addCookies([{ name: 'session_token', value: e2eSessionToken, url: baseUrl }]);
+}
+
+async function addUserAuthCookie(context) {
+  await context.addCookies([{ name: 'session_token', value: e2eUserSessionToken, url: baseUrl }]);
 }
 
 async function expectNoHorizontalOverflow(page) {
@@ -272,6 +277,8 @@ test.beforeAll(async () => {
       APP_BASE_URL: baseUrl,
       E2E_SESSION_TOKEN: e2eSessionToken,
       E2E_ROOM_ID: roomId,
+      E2E_ACTIVE_TRIAL_SESSION_TOKEN: e2eUserSessionToken,
+      E2E_ACTIVE_TRIAL_ROOM_ID: 'qa-comments-room',
       LOG_LEVEL: 'error',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -356,6 +363,18 @@ test('dashboard creator promo code can be created and copied for chat', async ({
     resetCountdownSeconds: 0,
     cooldownHours: 234,
     stats: { clicks: 0, signups: 0, clickToSignupRate: 0, qualified: 0, pendingReview: 0, paid: 0, pendingAmountCents: 0, paidAmountCents: 0 },
+    program: {
+      name: 'Council of Aetheris',
+      monthlyRewardCents: 300,
+      monthlyRewardLabel: '$3.00',
+      activePaidReferralCount: 0,
+      currentRank: { name: 'Aspirant', summary: 'Join free, get your personal link, and start referring streamers.' },
+      nextRank: { name: 'Herald of the Aether', threshold: 3 },
+      nextRankReferralsNeeded: 3,
+      progressPercent: 0,
+      rewardChoiceText: 'Earn $3.00 every month for every active paid referral.',
+      guardrails: ['Active paid referrals only', '$25 minimum cash payout', 'FTC disclosure required'],
+    },
     recent: [],
   };
   let savedCode = '';
@@ -370,8 +389,16 @@ test('dashboard creator promo code can be created and copied for chat', async ({
       hasCode: true,
       code: savedCode,
       shareUrl: `${baseUrl}/r/${encodeURIComponent(savedCode)}`,
-      chatText: `Want your own IntoTheBattle arena? Use my code ${savedCode} when you sign up: ${baseUrl}/r/${encodeURIComponent(savedCode)}`,
-      stats: { clicks: 12, signups: 3, clickToSignupRate: 25, qualified: 1, pendingReview: 1, paid: 0, pendingAmountCents: 2500, paidAmountCents: 0 },
+      chatText: `The Council of Aetheris is forming. Use my IntoTheBattle referral link and claim your seat: ${baseUrl}/r/${encodeURIComponent(savedCode)}`,
+      stats: { clicks: 12, signups: 3, clickToSignupRate: 25, qualified: 1, pendingReview: 1, paid: 0, pendingAmountCents: 300, monthlyProjectedCents: 300, paidAmountCents: 0 },
+      program: {
+        ...referral.program,
+        activePaidReferralCount: 1,
+        currentRank: { name: 'Aspirant', summary: 'Join free, get your personal link, and start referring streamers.' },
+        nextRank: { name: 'Herald of the Aether', threshold: 3 },
+        nextRankReferralsNeeded: 2,
+        progressPercent: 33,
+      },
       recent: [{ referred_tiktok: 'neon_player', signup_method: 'email', status: 'signup_pending', reward_status: 'pending_review', signup_at: '2026-07-10T12:00:00Z' }],
     };
     await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ success: true, referral }) });
@@ -383,7 +410,7 @@ test('dashboard creator promo code can be created and copied for chat', async ({
   await page.locator('#liveWorkflow').evaluate(element => { element.open = true; });
   const panel = page.getByTestId('creator-referral-panel');
   await expect(panel).toBeVisible();
-  await expect(panel.getByText('Creator promo code')).toBeVisible();
+  await expect(panel.getByText('Council of Aetheris')).toBeVisible();
   await expect(panel.getByLabel('Choose code')).toHaveValue('NEONACE');
 
   await panel.getByLabel('Choose code').fill('NEON_777');
@@ -391,15 +418,17 @@ test('dashboard creator promo code can be created and copied for chat', async ({
   await expect.poll(() => savedCode, { timeout: 5000 }).toBe('NEON_777');
   await expect(panel.locator('.referral-code-display strong')).toHaveText('NEON_777');
   await expect(panel.getByLabel('Signup link')).toHaveValue(`${baseUrl}/r/NEON_777`);
-  await expect(panel.getByLabel('Chat promo')).toHaveValue(/Use my code NEON_777/);
+  await expect(panel.getByLabel('Chat promo')).toHaveValue(/claim your seat/);
+  await expect(panel.locator('.referral-rank-name')).toHaveText('Aspirant');
+  await expect(panel.locator('.referral-stats').getByText('Active paid', { exact: true })).toBeVisible();
   await expect(panel.getByText('Clicks')).toBeVisible();
   await expect(panel.getByText('@neon_player')).toBeVisible();
   await expect(panel.getByText('Signups')).toBeVisible();
-  await expect(panel.getByText('$25.00')).toBeVisible();
+  await expect(panel.locator('.referral-stats').getByText('$3.00', { exact: true })).toBeVisible();
 
   await panel.getByRole('button', { name: 'Copy chat promo' }).click();
   const clipboardWrites = await page.evaluate(() => window.__clipboardWrites || []);
-  expect(clipboardWrites.at(-1)).toContain('Use my code NEON_777');
+  expect(clipboardWrites.at(-1)).toContain('claim your seat');
   expect(clipboardWrites.at(-1)).toContain('/r/NEON_777');
 
   await expectNoHorizontalOverflow(page);
@@ -748,6 +777,34 @@ test('critical v1 pages pass automated accessibility checks', async ({ context, 
       }));
     expect(seriousViolations, JSON.stringify(seriousViolations, null, 2)).toEqual([]);
   }
+});
+
+test('creator comments are shared and account-gated', async ({ context, page }) => {
+  const errors = await watchPage(page);
+
+  await page.goto(`${baseUrl}/comments`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Creator comments' })).toBeVisible();
+  await expect(page.locator('[data-public-comments]')).toHaveCount(1);
+  await expect(page.locator('[data-comments-login]')).toBeVisible();
+  await expect(page.getByText('Log in with your creator account to add a comment.')).toBeVisible();
+  await expect(page.locator('[data-comments-form]')).toBeHidden();
+
+  await addUserAuthCookie(context);
+  await page.goto(`${baseUrl}/comments`, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('[data-comments-form]')).toBeVisible();
+  await expect(page.locator('[data-comments-login]')).toBeHidden();
+  await expect(page.locator('[data-comments-identity]')).toContainText('Commenting as E2E Creator');
+
+  await page.locator('[data-comments-textarea]').fill('The battle overlay made chat participation much easier to explain.');
+  await page.getByRole('button', { name: 'Post comment' }).click();
+  await expect(page.locator('[data-comments-status]')).toContainText('Comment posted.');
+
+  await page.goto(`${baseUrl}/blog`, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#blog-creator-comments')).toBeVisible();
+  await expect(page.locator('#blog-creator-comments')).toContainText('What streamers are saying');
+  await expect(page.locator('[data-public-comments]')).toHaveCount(1);
+
+  expect(errors).toEqual([]);
 });
 
 test('creator pro sponsor video upload, serving, and v1 overlay playback work together', async ({ context, page }, testInfo) => {

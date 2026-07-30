@@ -2,6 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import db from './tiktokbr/db/db.js';
+import {
+  DEFAULT_AETHERIS_TERRITORY_ID,
+  normalizeAetherisTerritoryId,
+} from './tiktokbr/services/aetherisTerritories.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Use DISK_PATH env var (Render: /var/data), fallback to local directory for development
@@ -12,6 +16,7 @@ export const DEFAULT_OVERLAY_SETTINGS = {
   shotType:   'beam',
   shotSpeed:  1,
   backgroundFit: 'contain',
+  aetherisTerritoryId: DEFAULT_AETHERIS_TERRITORY_ID,
 };
 
 export const DEFAULT_AUDIO_MASTER_VOLUME = 0.5;
@@ -66,6 +71,24 @@ export function normalizeAudioConfig(config = {}) {
     }
   }
   normalized.masterVolume = normalizeAudioVolume(incoming.masterVolume, DEFAULT_AUDIO_MASTER_VOLUME);
+  return normalized;
+}
+
+export function normalizeOverlaySettings(settings = {}) {
+  const incoming = settings && typeof settings === 'object' ? settings : {};
+  const normalized = { ...DEFAULT_OVERLAY_SETTINGS, ...incoming };
+  const shotSpeed = Number(normalized.shotSpeed);
+  normalized.laserColor = typeof normalized.laserColor === 'string' && normalized.laserColor.trim()
+    ? normalized.laserColor.trim()
+    : DEFAULT_OVERLAY_SETTINGS.laserColor;
+  normalized.shotType = typeof normalized.shotType === 'string' && normalized.shotType.trim()
+    ? normalized.shotType.trim()
+    : DEFAULT_OVERLAY_SETTINGS.shotType;
+  normalized.shotSpeed = Number.isFinite(shotSpeed)
+    ? Math.max(0.1, Math.min(3, Math.round(shotSpeed * 100) / 100))
+    : DEFAULT_OVERLAY_SETTINGS.shotSpeed;
+  normalized.backgroundFit = normalized.backgroundFit === 'cover' ? 'cover' : DEFAULT_OVERLAY_SETTINGS.backgroundFit;
+  normalized.aetherisTerritoryId = normalizeAetherisTerritoryId(normalized.aetherisTerritoryId);
   return normalized;
 }
 
@@ -138,8 +161,8 @@ export function getOrCreateRoom(roomId) {
     tiktokClient: null,
     streamerUsername: normalizeStoredStreamerUsername(saved?.streamer_username),
     overlaySettings: saved?.overlay_settings
-      ? { ...DEFAULT_OVERLAY_SETTINGS, ...JSON.parse(saved.overlay_settings) }
-      : { ...DEFAULT_OVERLAY_SETTINGS },
+      ? normalizeOverlaySettings(JSON.parse(saved.overlay_settings))
+      : normalizeOverlaySettings(),
     audioConfig: saved?.audio_config
       ? normalizeAudioConfig(JSON.parse(saved.audio_config))
       : normalizeAudioConfig(),
@@ -172,6 +195,7 @@ export function getAllRooms() {
 export function saveRoomSettings(roomId) {
   const room = rooms.get(roomId);
   if (!room) return;
+  room.overlaySettings = normalizeOverlaySettings(room.overlaySettings);
 
   db.prepare(`
     INSERT INTO room_settings

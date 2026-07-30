@@ -205,6 +205,26 @@ export function buildUserAccessStatus(user, subscription = null, options = {}) {
   const rawStatus = subscription
     ? normalizeSubscriptionStatus(subscription.status)
     : null;
+  const adminGranted = flagEnabled(subscription?.admin_granted || subscription?.adminGranted);
+  const subscriptionExpiresAt = parseDate(subscription?.expires_at || subscription?.expiresAt);
+
+  if (
+    adminGranted &&
+    subscriptionExpiresAt &&
+    subscriptionExpiresAt > now &&
+    TRIAL_SUBSCRIPTION_STATUSES.has(rawStatus)
+  ) {
+    return baseUserAccessPayload({
+      status: 'active',
+      tier: 'paid',
+      planName: subscription?.plan_type || subscription?.planType || 'Creator Pro',
+      canUseCreatorSponsors: true,
+      accessAllowed: true,
+      trialStartedAt: parseDate(subscription?.started_at || subscription?.startedAt),
+      effectiveTrialExpiresAt: subscriptionExpiresAt,
+      subscriptionStatus: rawStatus,
+    });
+  }
 
   if (isActiveSubscription(subscription)) {
     return baseUserAccessPayload({

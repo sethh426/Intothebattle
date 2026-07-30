@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import {
+  COUNCIL_YEAR_PLAN_TYPE,
   CREATOR_PRO_PLAN_TYPE,
   FREE_FOREVER_PLAN_TYPE,
   findUserForCreatorProGrant,
+  grantCouncilYearCreatorPro,
   grantPermanentCreatorPro,
   publicSubscriptionView,
   removePermanentCreatorPro,
@@ -39,6 +41,17 @@ class FakeGrantDb {
     if (sql.includes('FROM users WHERE LOWER(email) = ?')) {
       const email = String(args[0] || '').toLowerCase();
       return this.users.find(user => String(user.email || '').toLowerCase() === email) || null;
+    }
+    if (sql.includes('FROM subscriptions') && sql.includes('LOWER(TRIM(COALESCE(plan_type')) {
+      const userId = Number(args[0]);
+      const planType = String(args[1] || '').toLowerCase();
+      return selectEffectiveSubscription(
+        this.subscriptions.filter(subscription => (
+          Number(subscription.user_id) === userId &&
+          Number(subscription.admin_granted) !== 0 &&
+          String(subscription.plan_type || '').toLowerCase() === planType
+        ))
+      );
     }
     if (sql.includes('FROM subscriptions') && sql.includes('WHERE user_id = ? AND COALESCE(admin_granted, 0) <> 0')) {
       const userId = Number(args[0]);
@@ -84,6 +97,21 @@ class FakeGrantDb {
       return { changes: row ? 1 : 0 };
     }
     if (sql.startsWith('UPDATE subscriptions SET plan_type = ?')) {
+      if (sql.includes("status = 'trialing'")) {
+        const [planType, startedAt, expiresAt, id] = args;
+        const row = this.subscriptions.find(subscription => Number(subscription.id) === Number(id));
+        if (row) {
+          row.plan_type = planType;
+          row.status = 'trialing';
+          row.paypal_subscription_id = null;
+          row.started_at = startedAt;
+          row.next_billing_date = null;
+          row.expires_at = expiresAt;
+          row.admin_granted = 1;
+          row.updated_at = now;
+        }
+        return { changes: row ? 1 : 0 };
+      }
       const [planType, id] = args;
       const row = this.subscriptions.find(subscription => Number(subscription.id) === Number(id));
       if (row) {
@@ -100,15 +128,16 @@ class FakeGrantDb {
     }
     if (sql.startsWith('INSERT INTO subscriptions')) {
       const [userId, planType] = args;
+      const isCouncilYear = planType === COUNCIL_YEAR_PLAN_TYPE;
       this.subscriptions.push({
         id: this.nextSubscriptionId++,
         user_id: Number(userId),
         paypal_subscription_id: null,
         plan_type: planType,
-        status: 'active',
-        started_at: now,
+        status: isCouncilYear ? 'trialing' : 'active',
+        started_at: isCouncilYear ? args[2] : now,
         next_billing_date: null,
-        expires_at: null,
+        expires_at: isCouncilYear ? args[3] : null,
         admin_granted: 1,
         created_at: now,
         updated_at: now,
@@ -140,6 +169,14 @@ function activeGrant(db, userId) {
     Number(subscription.user_id) === Number(userId) &&
     Number(subscription.admin_granted) === 1 &&
     String(subscription.status || '').toLowerCase() === 'active'
+  ));
+}
+
+function councilYearGrant(db, userId) {
+  return db.subscriptions.find(subscription => (
+    Number(subscription.user_id) === Number(userId) &&
+    Number(subscription.admin_granted) === 1 &&
+    String(subscription.plan_type || '') === COUNCIL_YEAR_PLAN_TYPE
   ));
 }
 
@@ -226,6 +263,45 @@ async function testPayPalCancelFailureBlocksGrant() {
   assert.equal(db.subscriptions.find(subscription => subscription.id === 30).status, 'active');
 }
 
+async function testCouncilYearGrantForRecruitedCreator() {
+  const db = new FakeGrantDb({ users: [{ id: 8, email: 'council@example.com', is_active: 1 }] });
+  const result = await grantCouncilYearCreatorPro(db, db.users[0], { now });
+  assert.equal(result.cancelledPayPalSubscriptions.length, 0);
+  assert.equal(result.subscription.plan_type, COUNCIL_YEAR_PLAN_TYPE);
+  assert.equal(result.subscription.status, 'trialing');
+  assert.equal(councilYearGrant(db, 8)?.expires_at, '2027-07-04 12:00:00');
+  assert.equal(publicSubscriptionView(result.subscription).free_forever, false);
+  assert.equal(publicSubscriptionView(result.subscription).display_plan, COUNCIL_YEAR_PLAN_TYPE);
+}
+
+async function testCouncilYearGrantCancelsPayPal() {
+  const db = new FakeGrantDb({
+    users: [{ id: 9, email: 'council-paid@example.com', is_active: 1 }],
+    subscriptions: [{
+      id: 70,
+      user_id: 9,
+      paypal_subscription_id: 'I-COUNCIL',
+      plan_type: CREATOR_PRO_PLAN_TYPE,
+      status: 'active',
+      admin_granted: 0,
+      created_at: '2026-07-01T00:00:00.000Z',
+      updated_at: '2026-07-01T00:00:00.000Z',
+    }],
+  });
+  const cancelled = [];
+  const result = await grantCouncilYearCreatorPro(db, db.users[0], {
+    now,
+    cancelPayPalSubscription: async id => {
+      cancelled.push(id);
+      return { success: true };
+    },
+  });
+  assert.deepEqual(cancelled, ['I-COUNCIL']);
+  assert.equal(db.subscriptions.find(subscription => subscription.id === 70).status, 'cancelled');
+  assert.equal(result.subscription.plan_type, COUNCIL_YEAR_PLAN_TYPE);
+  assert.equal(result.subscription.status, 'trialing');
+}
+
 async function testAdminGrantBeatsLateWebhook() {
   const db = new FakeGrantDb({
     users: [{ id: 5, email: 'late@example.com', is_active: 1 }],
@@ -291,6 +367,8 @@ await testFreeUserGrant();
 await testTrialUserGrant();
 await testPayPalCancelThenGrant();
 await testPayPalCancelFailureBlocksGrant();
+await testCouncilYearGrantForRecruitedCreator();
+await testCouncilYearGrantCancelsPayPal();
 await testAdminGrantBeatsLateWebhook();
 await testRemoveGrantFallsBackToOtherActivePaidRow();
 testGrantLookup();

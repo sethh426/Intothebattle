@@ -85,6 +85,18 @@ const expiredTrial = { status: 'trialing', expires_at: pastDate };
 assert.equal(isFullAccessTrialSubscription(expiredTrial), false, 'expired trial is not full access');
 assert.equal(expectCreatorPlan('expired full-access trial', userAuth(expiredTrial), false).tier, 'free');
 
+const councilYearGrant = {
+  status: 'trialing',
+  plan_type: 'Council Year Free',
+  admin_granted: 1,
+  started_at: '2026-07-04T12:00:00.000Z',
+  expires_at: futureDate,
+};
+assert.equal(
+  expectCreatorPlan('admin-granted Council Year', userAuth(councilYearGrant, { created_at: pastDate }), true).tier,
+  'paid'
+);
+
 const fetchedSubscriptionAuth = userAuth(null);
 const fetchedPlan = buildPlanEntitlements(fetchedSubscriptionAuth, {
   getLatestUserSubscription(userId) {

@@ -219,6 +219,32 @@
       font-weight: 900;
     }
     .referral-shell { display: grid; gap: 16px; }
+    .referral-rank-card {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: var(--r-sm, 12px);
+      border: 1px solid rgba(245,200,66,0.26);
+      background: linear-gradient(135deg, rgba(245,200,66,0.1), rgba(102,219,255,0.06));
+    }
+    .referral-rank-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+    .referral-rank-name { color: var(--txt, #edf0fa); font-size: 22px; font-weight: 900; line-height: 1.1; }
+    .referral-rank-copy { margin-top: 4px; color: var(--muted, #8896ae); font-size: 13px; line-height: 1.45; }
+    .referral-rank-count {
+      min-width: 96px;
+      padding: 10px;
+      border-radius: var(--r-sm, 12px);
+      color: #07101f;
+      background: linear-gradient(135deg, #fff8e6, #aeeeff 48%, #ffe99a);
+      font-size: 11px;
+      font-weight: 900;
+      text-align: center;
+      text-transform: uppercase;
+    }
+    .referral-rank-count strong { display: block; font-size: 28px; line-height: 1; }
+    .referral-progress-track { height: 10px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.08); }
+    .referral-progress-fill { height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, #b8ffd0, #aeeeff, #ffe99a); }
+    .referral-reward-note { color: var(--txt, #edf0fa); font-size: 14px; font-weight: 800; line-height: 1.45; }
     .referral-code {
       display: inline-flex;
       width: fit-content;
@@ -266,6 +292,8 @@
       .topbar { position: static; flex-direction: column; align-items: flex-start; }
       .grid { grid-template-columns: 1fr; }
       .referral-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .referral-rank-top { grid-template-columns: 1fr; }
+      .referral-rank-count { width: 100%; }
       .copy-row { grid-template-columns: 1fr; }
       .referral-actions button { width: 100%; }
     }
@@ -307,7 +335,7 @@
     </section>
 
     <section class="card">
-      <div class="section-title">Streamer referral rewards</div>
+      <div class="section-title">Council of Aetheris</div>
       <div id="referralDetails"><p class="note">Loading referral details...</p></div>
     </section>
 
@@ -403,6 +431,32 @@
       `;
     }
 
+    function renderCouncilProgress(referral = {}) {
+      const stats = referral.stats || {};
+      const program = referral.program || {};
+      const activeCount = Number(program.activePaidReferralCount ?? stats.qualified ?? 0) || 0;
+      const currentRank = program.currentRank || { name: 'Aspirant', summary: 'Join free, get your personal link, and start referring streamers.' };
+      const nextRank = program.nextRank || null;
+      const progress = Math.max(0, Math.min(100, Number(program.progressPercent ?? 0) || 0));
+      const rewardText = program.rewardChoiceText || `Earn ${formatMoney(program.monthlyRewardCents || 300)} every month for every active paid referral.`;
+      const nextText = nextRank
+        ? `${program.nextRankReferralsNeeded || Math.max(0, Number(nextRank.threshold || 0) - activeCount)} more active paid referrals to reach ${nextRank.name}.`
+        : 'Top automatic rank reached. Council Elite is appointed manually.';
+      return `
+        <div class="referral-rank-card">
+          <div class="referral-rank-top">
+            <div>
+              <div class="referral-rank-name">${escapeHtml(currentRank.name || 'Aspirant')}</div>
+              <div class="referral-rank-copy">${escapeHtml(currentRank.summary || '')}</div>
+            </div>
+            <div class="referral-rank-count"><strong>${escapeHtml(activeCount)}</strong>active paid</div>
+          </div>
+          <div class="referral-progress-track" aria-label="Council rank progress"><div class="referral-progress-fill" style="width:${escapeHtml(progress)}%"></div></div>
+          <div class="referral-reward-note">${escapeHtml(rewardText)} ${escapeHtml(nextText)}</div>
+        </div>
+      `;
+    }
+
     async function loadProfile() {
       try {
         const res = await fetch('/auth/user/me', { credentials: 'same-origin' });
@@ -478,7 +532,7 @@
       if (!referral.hasCode) {
         referralEl.innerHTML = `
           <div class="referral-shell">
-            <p class="note">Create one public code for streamer commissions. New accounts can use it once at signup; paid conversions become pending rewards for admin review.</p>
+            <p class="note">Create one Council code. New creators can use it at signup; active paid subscriptions accrue monthly Council rewards.</p>
             <div class="form-group">
               <label for="referralCodeInput">Referral code</label>
               <input id="referralCodeInput" type="text" maxlength="24" value="${escapeHtml(suggested)}" placeholder="MR-CLOUDS" />
@@ -495,6 +549,7 @@
 
       referralEl.innerHTML = `
         <div class="referral-shell">
+          ${renderCouncilProgress(referral)}
           <div>
             <p class="note">Your public code</p>
             <div class="referral-code">${escapeHtml(code)}</div>
@@ -510,8 +565,8 @@
             <div class="referral-stat"><span>Clicks</span><strong>${escapeHtml(stats.clicks || 0)}</strong></div>
             <div class="referral-stat"><span>Signups</span><strong>${escapeHtml(stats.signups || 0)}</strong></div>
             <div class="referral-stat"><span>Click rate</span><strong>${escapeHtml(formatPercent(stats.clickToSignupRate))}</strong></div>
-            <div class="referral-stat"><span>Qualified</span><strong>${escapeHtml(stats.qualified || 0)}</strong></div>
-            <div class="referral-stat"><span>Pending</span><strong>${escapeHtml(stats.pendingReview || 0)}</strong></div>
+            <div class="referral-stat"><span>Active paid</span><strong>${escapeHtml(stats.qualified || 0)}</strong></div>
+            <div class="referral-stat"><span>Projected/mo</span><strong>${escapeHtml(formatMoney(stats.monthlyProjectedCents || 0))}</strong></div>
             <div class="referral-stat"><span>Paid</span><strong>${escapeHtml(stats.paid || 0)}</strong></div>
           </div>
           <div class="referral-meta">

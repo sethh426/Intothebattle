@@ -60,6 +60,101 @@
     return String(value || 'Player').trim().slice(0, 18) || 'Player';
   }
 
+  const DEFAULT_AETHERIS_TERRITORY_ID = 'emberfall-forge';
+  const AETHERIS_TERRITORY_THEMES = Object.freeze({
+    'emberfall-forge': Object.freeze({
+      id: 'emberfall-forge',
+      name: 'Emberfall Forge',
+      faction: 'Forgeguard',
+      subtitle: 'FORGEGUARD HOLD THE LINE',
+      pressureLabel: 'FORGE PRESSURE',
+      primary: 0xff6a3d,
+      secondary: 0xf6c95b,
+      deep: 0x140807,
+      ambient: 0x541824,
+      ambientAlt: 0x321425,
+      panel: 0x541824,
+      panelTop: 0x9d3140,
+      label: 0xa7182c,
+      badge: 0x202432,
+      text: '#fff0b9',
+      muted: '#ffd37a',
+      code: '#9d7f70',
+      structures: ['Iron gate', 'Smelter tower', 'Siege gantry'],
+    }),
+    'stormglass-coast': Object.freeze({
+      id: 'stormglass-coast',
+      name: 'Stormglass Coast',
+      faction: 'Tidecallers',
+      subtitle: 'TIDECALLERS BEND THE STORM',
+      pressureLabel: 'STORM PRESSURE',
+      primary: 0x55e7ff,
+      secondary: 0x9ff5ff,
+      deep: 0x06121b,
+      ambient: 0x12425a,
+      ambientAlt: 0x103460,
+      panel: 0x12425a,
+      panelTop: 0x1d7892,
+      label: 0x0f8fb1,
+      badge: 0x172a36,
+      text: '#e4fbff',
+      muted: '#9ff5ff',
+      code: '#78cfe0',
+      structures: ['Breaker wall', 'Glass beacon', 'Tempest spire'],
+    }),
+    'verdant-crown': Object.freeze({
+      id: 'verdant-crown',
+      name: 'Verdant Crown',
+      faction: 'Crownwardens',
+      subtitle: 'CROWNWARDENS RECLAIM THE GROVE',
+      pressureLabel: 'CROWN PRESSURE',
+      primary: 0x77f0a1,
+      secondary: 0xd6f66b,
+      deep: 0x07150c,
+      ambient: 0x214b2e,
+      ambientAlt: 0x243f1c,
+      panel: 0x214b2e,
+      panelTop: 0x3b8f54,
+      label: 0x31964a,
+      badge: 0x172a1c,
+      text: '#ecffe5',
+      muted: '#d6f66b',
+      code: '#95d8a8',
+      structures: ['Briar palisade', 'Living watchtree', 'Crownheart shrine'],
+    }),
+    'umbral-bastion': Object.freeze({
+      id: 'umbral-bastion',
+      name: 'Umbral Bastion',
+      faction: 'Night Vow',
+      subtitle: 'NIGHT VOW HOLD THE DARK',
+      pressureLabel: 'UMBRA PRESSURE',
+      primary: 0xb89cff,
+      secondary: 0xff8bc2,
+      deep: 0x0d0a17,
+      ambient: 0x332255,
+      ambientAlt: 0x3a1c3c,
+      panel: 0x332255,
+      panelTop: 0x5b3a8f,
+      label: 0x6a4fc4,
+      badge: 0x211a32,
+      text: '#f4edff',
+      muted: '#ffd9ed',
+      code: '#bca9f3',
+      structures: ['Shadow bulwark', 'Moonwell keep', 'Eclipse obelisk'],
+    }),
+  });
+
+  function normalizeAetherisTerritoryId(value) {
+    const id = String(value || '').trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(AETHERIS_TERRITORY_THEMES, id)
+      ? id
+      : DEFAULT_AETHERIS_TERRITORY_ID;
+  }
+
+  function resolveAetherisTerritory(value) {
+    return AETHERIS_TERRITORY_THEMES[normalizeAetherisTerritoryId(value)];
+  }
+
   class BattleOverlayV2Scene extends Phaser.Scene {
     constructor() {
       super({ key: 'BattleOverlayV2Scene' });
@@ -68,8 +163,10 @@
       this.laserColor = 0x7afcff;
       this.layoutConfig = { shotSpeed: 1 };
       this.backgroundFit = 'contain';
+      this.territory = resolveAetherisTerritory(DEFAULT_AETHERIS_TERRITORY_ID);
       this.withOverlayAuth = null;
       this.customBackground = null;
+      this.customBackgroundUrl = null;
       this.customBackgroundKey = null;
       this.lastDemoEvent = 0;
       this.demoAttackStartAt = 0;
@@ -123,6 +220,7 @@
       if (demoMode) this.startDemo();
       window.overlayV2Scene = this;
       window.__overlayV2Ready = true;
+      window.__overlayV2Territory = this.territory.id;
       setStatus('Ready', 'connected');
     }
 
@@ -138,28 +236,85 @@
       };
     }
 
+    drawTerritoryStructures(g, territory) {
+      const u = this.scaleUnit || 1;
+      const baseY = this.safe.y + this.safe.height * 0.72;
+      const specs = [
+        { x: this.safe.x + this.safe.width * 0.14, y: baseY + 22 * u, w: 168 * u, h: 96 * u, type: 'gate' },
+        { x: this.safe.x + this.safe.width * 0.5, y: baseY - 10 * u, w: 128 * u, h: 138 * u, type: 'tower' },
+        { x: this.safe.x + this.safe.width * 0.86, y: baseY + 18 * u, w: 154 * u, h: 112 * u, type: 'spire' },
+      ];
+      specs.forEach((spec, index) => {
+        const left = spec.x - spec.w / 2;
+        const top = spec.y - spec.h / 2;
+        g.fillStyle(0x000000, 0.28);
+        g.fillRoundedRect(left + 10 * u, top + 14 * u, spec.w, spec.h, 8 * u);
+        g.fillStyle(territory.deep, 0.68);
+        g.fillRoundedRect(left, top, spec.w, spec.h, 8 * u);
+        g.fillStyle(territory.primary, 0.12);
+        g.fillRoundedRect(left + 8 * u, top + 8 * u, spec.w - 16 * u, spec.h - 16 * u, 6 * u);
+        g.lineStyle(Math.max(1, 2 * u), territory.secondary, 0.28);
+        g.strokeRoundedRect(left, top, spec.w, spec.h, 8 * u);
+
+        if (spec.type === 'gate') {
+          g.fillStyle(territory.ambient, 0.62);
+          g.fillRoundedRect(left + 22 * u, top + 36 * u, spec.w - 44 * u, spec.h - 44 * u, 8 * u);
+          g.fillStyle(0x02040a, 0.54);
+          g.fillRect(left + spec.w * 0.47, top + 42 * u, spec.w * 0.06, spec.h - 54 * u);
+          g.lineStyle(Math.max(2, 3 * u), territory.primary, 0.32);
+          g.lineBetween(left + 30 * u, top + 30 * u, left + spec.w - 30 * u, top + 30 * u);
+        } else if (spec.type === 'tower') {
+          g.fillStyle(territory.ambient, 0.7);
+          g.fillRoundedRect(left + spec.w * 0.28, top + 22 * u, spec.w * 0.44, spec.h - 22 * u, 8 * u);
+          g.fillStyle(territory.secondary, 0.18);
+          g.fillTriangle(spec.x, top - 36 * u, left + spec.w * 0.2, top + 30 * u, left + spec.w * 0.8, top + 30 * u);
+          g.fillStyle(territory.primary, 0.25);
+          g.fillCircle(spec.x, top + 54 * u, 15 * u);
+        } else {
+          g.fillStyle(territory.ambient, 0.68);
+          g.fillTriangle(spec.x, top - 18 * u, left + spec.w * 0.16, top + spec.h, left + spec.w * 0.84, top + spec.h);
+          g.fillStyle(territory.secondary, 0.18);
+          g.fillTriangle(spec.x, top + 16 * u, left + spec.w * 0.36, top + spec.h * 0.74, left + spec.w * 0.64, top + spec.h * 0.74);
+          g.lineStyle(Math.max(1, 2 * u), territory.primary, 0.34);
+          g.lineBetween(spec.x, top, spec.x, top + spec.h * 0.84);
+        }
+
+        g.fillStyle(territory.secondary, 0.24);
+        g.fillCircle(left + 18 * u, top + spec.h - 18 * u, 5 * u);
+        g.fillCircle(left + spec.w - 18 * u, top + spec.h - 18 * u, 5 * u);
+        if (index === 1) {
+          g.lineStyle(Math.max(1, 2 * u), territory.primary, 0.16);
+          g.lineBetween(spec.x, top + spec.h, this.safe.x + this.safe.width * 0.14, baseY + 70 * u);
+          g.lineBetween(spec.x, top + spec.h, this.safe.x + this.safe.width * 0.86, baseY + 70 * u);
+        }
+      });
+    }
+
     drawBackground() {
       this.backgroundLayer.removeAll(true);
+      this.customBackground = null;
       const g = this.add.graphics();
       const u = this.scaleUnit;
+      const territory = this.territory || resolveAetherisTerritory();
 
-      g.fillStyle(0x020408, 1);
+      g.fillStyle(territory.deep, 1);
       g.fillRect(0, 0, this.W, this.H);
 
       const cx = this.W / 2;
       const cy = this.safe.y + this.safe.height * 0.48;
-      g.fillStyle(0x061023, 0.92);
+      g.fillStyle(territory.ambient, 0.86);
       g.fillEllipse(cx, cy, this.W * 0.9, this.H * 0.78);
-      g.fillStyle(0x102456, 0.5);
+      g.fillStyle(territory.primary, 0.22);
       g.fillEllipse(cx, cy, this.W * 0.55, this.H * 0.46);
-      g.fillStyle(0x321425, 0.34);
+      g.fillStyle(territory.ambientAlt, 0.34);
       g.fillEllipse(cx, cy + this.H * 0.02, this.W * 0.34, this.H * 0.27);
-      g.fillStyle(0x0f6d8f, 0.1);
+      g.fillStyle(territory.secondary, 0.1);
       g.fillEllipse(this.W * 0.22, this.H * 0.33, this.W * 0.28, this.H * 0.54);
       g.fillEllipse(this.W * 0.82, this.H * 0.36, this.W * 0.24, this.H * 0.5);
+      this.drawTerritoryStructures(g, territory);
 
       const grid = Math.max(62, 82 * u);
-      g.lineStyle(Math.max(1, 1 * u), 0x2f486d, 0.24);
+      g.lineStyle(Math.max(1, 1 * u), territory.primary, 0.18);
       for (let x = 0; x <= this.W; x += grid) g.lineBetween(x, 0, x, this.H);
       for (let y = 0; y <= this.H; y += grid) g.lineBetween(0, y, this.W, y);
 
@@ -178,16 +333,17 @@
       const codeStyle = {
         fontFamily: 'Consolas, Monaco, monospace',
         fontSize: `${Math.round(12 * u)}px`,
-        color: '#6f8398',
+        color: territory.code,
         alpha: 0.13,
         lineSpacing: Math.round(4 * u),
       };
       const codeLines = [
-        'sys.boot arena.sync',
+        `territory.bind ${territory.id}`,
+        `faction.route ${territory.faction.toLowerCase().replace(/\s+/g, '-')}`,
         'chat.parse command.queue',
-        'target.lock player.uuid',
+        'creator.allegiance locked',
         'damage.resolve horde.hp',
-        'effect.route beam.fire',
+        'structure.plan shield.tower',
         'viewer.combo surge.tick',
         'socket.live state.patch',
         'round.frame update.render',
@@ -198,8 +354,10 @@
     }
 
     drawFrame() {
+      if (this.scanLine) this.tweens.killTweensOf(this.scanLine);
       this.frameLayer.removeAll(true);
       const u = this.scaleUnit;
+      const territory = this.territory || resolveAetherisTerritory();
       const outer = this.add.graphics();
       const energy = this.add.graphics();
       const metal = this.add.graphics();
@@ -212,12 +370,12 @@
 
       outer.fillStyle(0x03060c, 0.24);
       outer.fillRect(0, 0, this.W, this.H);
-      outer.lineStyle(Math.max(3, 5 * u), 0x171e2a, 1);
+      outer.lineStyle(Math.max(3, 5 * u), territory.ambient, 1);
       outer.strokeRoundedRect(edge * 0.55, edge * 0.55, this.W - edge * 1.1, this.H - edge * 1.1, Math.max(8, 12 * u));
 
-      energy.lineStyle(Math.max(2, 3 * u), 0xf6c95b, 0.74);
+      energy.lineStyle(Math.max(2, 3 * u), territory.secondary, 0.74);
       energy.strokeRoundedRect(edge, edge, this.W - edge * 2, this.H - edge * 2, Math.max(8, 10 * u));
-      energy.lineStyle(Math.max(1, 1.5 * u), 0xfff0b9, 0.34);
+      energy.lineStyle(Math.max(1, 1.5 * u), territory.primary, 0.34);
       energy.lineBetween(edge, headerH + 8 * u, edge, this.H - edge);
       energy.lineBetween(this.W - edge, headerH + 8 * u, this.W - edge, this.H - edge);
       [
@@ -226,7 +384,7 @@
         [edge, this.H - 178 * u, 1],
         [this.W - edge, this.H - 178 * u, -1],
       ].forEach(([x, y, dir]) => {
-        energy.lineStyle(Math.max(1, 2 * u), 0xffe39a, 0.55);
+        energy.lineStyle(Math.max(1, 2 * u), territory.secondary, 0.55);
         energy.lineBetween(x, y, x + dir * 12 * u, y + 32 * u);
         energy.lineBetween(x + dir * 12 * u, y + 32 * u, x - dir * 4 * u, y + 64 * u);
         energy.lineBetween(x - dir * 4 * u, y + 64 * u, x + dir * 10 * u, y + 96 * u);
@@ -238,7 +396,7 @@
       metal.fillRoundedRect(contentX + 8 * u, contentY + 8 * u, contentW - 16 * u, contentH * 0.22, Math.max(18, 24 * u));
       metal.lineStyle(Math.max(2, 3 * u), 0x5c6d7d, 0.68);
       metal.strokeRoundedRect(contentX, contentY, contentW, contentH, Math.max(20, 28 * u));
-      metal.lineStyle(Math.max(1, 1.5 * u), 0x72d8ff, 0.2);
+      metal.lineStyle(Math.max(1, 1.5 * u), territory.primary, 0.22);
       metal.strokeRoundedRect(contentX + 14 * u, contentY + 14 * u, contentW - 28 * u, contentH - 28 * u, Math.max(16, 22 * u));
 
       const cornerSize = Math.max(82, 98 * u);
@@ -282,20 +440,20 @@
       header.fillRect(edge * 1.55, headerH - 26 * u, this.W - edge * 3.1, 28 * u);
       header.lineStyle(Math.max(2, 3 * u), 0x677684, 0.9);
       header.strokeRect(edge * 1.55, 28 * u, this.W - edge * 3.1, headerH - 26 * u);
-      header.lineStyle(Math.max(2, 3 * u), 0xf6c95b, 0.55);
+      header.lineStyle(Math.max(2, 3 * u), territory.secondary, 0.55);
       header.lineBetween(edge * 2, headerH + 2 * u, this.W - edge * 2, headerH + 2 * u);
 
       const avatarX = Math.max(108, 132 * u);
       const avatarY = Math.max(60, 75 * u);
       const avatarR = Math.max(28, 36 * u);
       const brandGfx = this.add.graphics();
-      brandGfx.fillStyle(0x17131a, 0.98);
+      brandGfx.fillStyle(territory.deep, 0.98);
       brandGfx.fillCircle(avatarX, avatarY, avatarR * 1.16);
-      brandGfx.fillStyle(0x7d251a, 0.96);
+      brandGfx.fillStyle(territory.primary, 0.88);
       brandGfx.fillCircle(avatarX, avatarY, avatarR);
       brandGfx.lineStyle(Math.max(2, 3 * u), 0xc7d1da, 0.75);
       brandGfx.strokeCircle(avatarX, avatarY, avatarR * 1.16);
-      brandGfx.lineStyle(Math.max(2, 3 * u), 0xffd27c, 0.65);
+      brandGfx.lineStyle(Math.max(2, 3 * u), territory.secondary, 0.65);
       brandGfx.strokeCircle(avatarX, avatarY, avatarR * 0.82);
       brandGfx.lineStyle(Math.max(3, 4 * u), 0xe7eef5, 0.88);
       brandGfx.lineBetween(avatarX - avatarR * 0.42, avatarY + avatarR * 0.42, avatarX + avatarR * 0.34, avatarY - avatarR * 0.5);
@@ -321,13 +479,15 @@
       plaque.fillRoundedRect(plaqueX + 8 * u, plaqueY + 8 * u, plaqueW - 16 * u, plaqueH * 0.36, Math.max(5, 7 * u));
       plaque.lineStyle(Math.max(3, 5 * u), 0x5d6570, 0.98);
       plaque.strokeRoundedRect(plaqueX, plaqueY, plaqueW, plaqueH, Math.max(8, 10 * u));
-      plaque.lineStyle(Math.max(2, 3 * u), 0xd28b54, 0.72);
+      plaque.lineStyle(Math.max(2, 3 * u), territory.primary, 0.72);
       plaque.lineBetween(plaqueX + 32 * u, plaqueY + plaqueH - 7 * u, plaqueX + plaqueW - 32 * u, plaqueY + plaqueH - 7 * u);
 
-      const titleText = this.add.text(this.W / 2, plaqueY + plaqueH * 0.52, 'INTO THE BATTLE', {
+      const titleLabel = territory.name.toUpperCase();
+      const titleFontSize = Math.round(clamp((plaqueW / Math.max(10, titleLabel.length)) * 1.35, 35 * u, 54 * u));
+      const titleText = this.add.text(this.W / 2, plaqueY + plaqueH * 0.52, titleLabel, {
         fontFamily: 'Georgia, Times New Roman, serif',
-        fontSize: `${Math.round(54 * u)}px`,
-        color: '#d7bd9f',
+        fontSize: `${titleFontSize}px`,
+        color: territory.text,
         letterSpacing: Math.round(2 * u),
         stroke: '#170d08',
         strokeThickness: Math.max(3, 5 * u),
@@ -357,16 +517,17 @@
         strokeThickness: Math.max(2, 3 * u),
       }).setOrigin(0.5);
 
-      const subtitleText = this.add.text(this.W / 2, Math.max(132, 154 * u), 'TIKTOK CHAT BECOMES THE BATTLE.', {
+      const subtitleLabel = territory.subtitle || `FIGHTING FOR ${territory.faction.toUpperCase()}`;
+      const subtitleText = this.add.text(this.W / 2, Math.max(132, 154 * u), subtitleLabel, {
         fontFamily: 'Georgia, Times New Roman, serif',
-        fontSize: `${Math.round(42 * u)}px`,
-        color: '#e3c5b4',
+        fontSize: `${Math.round(clamp((this.W * 0.64) / Math.max(18, subtitleLabel.length), 28 * u, 42 * u))}px`,
+        color: territory.muted,
         letterSpacing: Math.round(1 * u),
         stroke: '#160b08',
         strokeThickness: Math.max(3, 5 * u),
       }).setOrigin(0.5);
 
-      this.scanLine = this.add.rectangle(this.W / 2, this.safe.y + this.safe.height * 0.5, this.safe.width * 0.94, Math.max(2, 3 * u), 0x7afcff, 0.08);
+      this.scanLine = this.add.rectangle(this.W / 2, this.safe.y + this.safe.height * 0.5, this.safe.width * 0.94, Math.max(2, 3 * u), territory.primary, 0.08);
       this.frameLayer.add([outer, energy, metal, header, brandGfx, brandText, plaque, titleText, livePill, liveText, subtitleText, this.scanLine]);
     }
 
@@ -533,6 +694,7 @@
     drawHorde() {
       if (!this.hordeGraphics) return;
       const u = this.scaleUnit;
+      const territory = this.territory || resolveAetherisTerritory();
       const h = Math.max(116, this.H * 0.124);
       const w = Math.min(this.safe.width * 0.86, this.W * 0.82);
       const x = (this.W - w) / 2;
@@ -551,17 +713,17 @@
 
       this.hordeGraphics.fillStyle(0x09080b, 0.6);
       this.hordeGraphics.fillRoundedRect(x + 10 * u, y + 16 * u, w, h, Math.max(12, 16 * u));
-      this.hordeGraphics.fillStyle(0x541824, 0.98);
+      this.hordeGraphics.fillStyle(territory.panel, 0.98);
       this.hordeGraphics.fillRoundedRect(x, y, w, h, Math.max(12, 18 * u));
-      this.hordeGraphics.fillStyle(0x9d3140, 0.62);
+      this.hordeGraphics.fillStyle(territory.panelTop, 0.62);
       this.hordeGraphics.fillRoundedRect(x + 10 * u, y + 8 * u, w - 20 * u, h * 0.32, Math.max(10, 14 * u));
       this.hordeGraphics.fillStyle(0xffffff, 0.08);
       this.hordeGraphics.fillRoundedRect(x + 26 * u, y + 10 * u, w * 0.24, h * 0.2, Math.max(8, 10 * u));
       this.hordeGraphics.fillStyle(0x160b12, 0.68);
       this.hordeGraphics.fillRect(x + 24 * u, y + h * 0.58, w - 48 * u, Math.max(18, 24 * u));
-      this.hordeGraphics.lineStyle(Math.max(3, 5 * u), bossActive ? 0xf6c95b : 0x8b3a44, 0.95);
+      this.hordeGraphics.lineStyle(Math.max(3, 5 * u), bossActive ? territory.secondary : territory.primary, 0.95);
       this.hordeGraphics.strokeRoundedRect(x, y, w, h, Math.max(12, 18 * u));
-      this.hordeGraphics.lineStyle(Math.max(1, 2 * u), 0xf2b0b8, 0.28);
+      this.hordeGraphics.lineStyle(Math.max(1, 2 * u), territory.secondary, 0.28);
       this.hordeGraphics.lineBetween(x + 34 * u, y + 12 * u, x + w - 34 * u, y + 12 * u);
       this.hordeGraphics.lineStyle(Math.max(2, 3 * u), 0x2a1118, 0.9);
       this.hordeGraphics.lineBetween(x + 36 * u, y + h - 10 * u, x + w - 36 * u, y + h - 10 * u);
@@ -569,7 +731,7 @@
       const labelW = Math.max(200, 244 * u);
       const pad = Math.max(10, 14 * u);
       const labelX = x + pad * 1.8;
-      this.hordeGraphics.fillStyle(bossActive ? 0x9a6613 : 0xa7182c, 0.98);
+      this.hordeGraphics.fillStyle(bossActive ? territory.secondary : territory.label, 0.98);
       this.hordeGraphics.fillRoundedRect(labelX, y + pad * 1.45, labelW, h - pad * 2.9, Math.max(8, 12 * u));
       this.hordeGraphics.fillStyle(0xffd7dc, 0.14);
       this.hordeGraphics.fillRoundedRect(labelX + 10 * u, y + pad * 1.9, labelW - 20 * u, (h - pad * 2.9) * 0.38, Math.max(6, 9 * u));
@@ -597,22 +759,23 @@
 
       if (fillPct > 0) {
         const fillW = Math.max(barH, (barW - 5 * u) * fillPct);
-        this.hordeGraphics.fillStyle(0xd4920a, 0.9);
+        this.hordeGraphics.fillStyle(territory.primary, 0.86);
         this.hordeGraphics.fillRoundedRect(barX + 3 * u, barY + 3 * u, fillW, barH - 6 * u, (barH - 6 * u) / 2);
-        this.hordeGraphics.fillStyle(0xf6c95b, 0.68);
+        this.hordeGraphics.fillStyle(territory.secondary, 0.68);
         this.hordeGraphics.fillRoundedRect(barX + 5 * u, barY + 5 * u, Math.max(0, fillW - 4 * u), (barH - 10 * u) * 0.45, (barH - 10 * u) / 2);
-        this.hordeGraphics.fillStyle(0xfff0b9, 0.18);
+        this.hordeGraphics.fillStyle(0xffffff, 0.18);
         this.hordeGraphics.fillRoundedRect(barX + 8 * u, barY + barH * 0.22, Math.max(0, fillW - 16 * u), barH * 0.18, barH / 2);
-        this.hordeGraphics.lineStyle(Math.max(1, 2 * u), 0xfff0b9, 0.36);
+        this.hordeGraphics.lineStyle(Math.max(1, 2 * u), territory.text === '#fff0b9' ? 0xfff0b9 : territory.secondary, 0.36);
         this.hordeGraphics.lineBetween(barX + 16 * u, barY + barH * 0.55, barX + fillW - 14 * u, barY + barH * 0.38);
       }
 
-      this.hordeGraphics.fillStyle(0x202432, 0.95);
+      this.hordeGraphics.fillStyle(territory.badge, 0.95);
       this.hordeGraphics.fillRoundedRect(badgeX, y + pad * 1.45, badgeW, h - pad * 2.9, Math.max(8, 12 * u));
-      this.hordeGraphics.lineStyle(Math.max(1, 2 * u), 0xf6c95b, 0.58);
+      this.hordeGraphics.lineStyle(Math.max(1, 2 * u), territory.secondary, 0.58);
       this.hordeGraphics.strokeRoundedRect(badgeX, y + pad * 1.45, badgeW, h - pad * 2.9, Math.max(8, 12 * u));
 
       this.hordeTitle.setText(bossActive ? 'BOSS' : 'HORDE');
+      this.hordeTitle.setStyle({ color: '#ffffff' });
       this.hordeTitle.setPosition(labelX + labelW / 2, y + h / 2 + 2 * u);
       this.bossCoreBounds = bossActive
         ? { x: labelX, y: y + pad * 1.45, width: labelW, height: h - pad * 2.9 }
@@ -624,13 +787,16 @@
       const bossClock = bossActive && Number.isFinite(bossRemainingMs) ? ` ${formatClockMs(bossRemainingMs)}` : '';
       const hpMax = bossActive ? Number(this.bossState.maxHp || 1) : totalFighters * 50;
       const hpNow = bossActive ? Number(this.bossState.hp || 0) : Math.round(fillPct * hpMax);
+      const pressureLabel = territory.pressureLabel || 'HORDE PRESSURE';
       const metaStr = bossActive
-        ? `HORDE PRESSURE      ${Math.round(bossPct * 100)}% HP${bossClock}`
-        : `HORDE PRESSURE      ${hpNow} / ${hpMax} HP${reserve > 0 ? `  +${reserve} RESERVE` : ''}`;
+        ? `${pressureLabel}      ${Math.round(bossPct * 100)}% HP${bossClock}`
+        : `${pressureLabel}      ${hpNow} / ${hpMax} HP${reserve > 0 ? `  +${reserve} RESERVE` : ''}`;
       this.hordeMeta.setText(metaStr);
+      this.hordeMeta.setStyle({ color: territory.muted });
       this.hordeMeta.setPosition(barX + barW / 2, y + h * 0.35);
 
       if (this.hordeBadgeText) {
+        this.hordeBadgeText.setStyle({ color: territory.text });
         this.hordeBadgeText.setPosition(badgeX + badgeW / 2, y + h / 2);
       }
 
@@ -689,6 +855,27 @@
 
     updateLaserColor(color) {
       this.laserColor = hexToNumber(color, this.laserColor);
+    }
+
+    setTerritory(id) {
+      const territory = resolveAetherisTerritory(id);
+      if (this.territory?.id === territory.id) return;
+      this.territory = territory;
+      window.__overlayV2Territory = territory.id;
+      const backgroundUrl = this.customBackgroundUrl || null;
+      if (this.backgroundLayer) {
+        this.drawBackground();
+        if (backgroundUrl) {
+          this.customBackground = null;
+          this.setBackgroundImageUrl(backgroundUrl);
+        }
+      }
+      if (this.frameLayer) {
+        this.drawFrame();
+        this.createAmbientMotion();
+      }
+      if (this.hordeGraphics) this.drawHorde();
+      if (this.linkGraphics) this.drawPlayerLinks();
     }
 
     updateLayoutConfig(key, value) {
@@ -841,6 +1028,29 @@
         x: record.targetX || record.container.x,
         y: (record.targetY || record.container.y) - (record.cardH || 150 * this.scaleUnit) * 0.12,
       };
+    }
+
+    syncFacingTelemetry() {
+      window.__overlayV2Facing = Object.fromEntries(this.playerGroups.map(record => [
+        record.playerId,
+        record.facingDir === -1 ? 'left' : 'right',
+      ]));
+    }
+
+    facePlayerToward(playerIdOrRecord, targetPoint) {
+      const record = playerIdOrRecord?.container ? playerIdOrRecord : this.findPlayerRecord(playerIdOrRecord);
+      if (!record?.container || !targetPoint) return;
+      const originX = Number(record.targetX || record.container.x);
+      const targetX = Number(targetPoint.x);
+      if (!Number.isFinite(originX) || !Number.isFinite(targetX)) return;
+      const deadZone = Math.max(6, 10 * (this.scaleUnit || 1));
+      const nextFacing = Math.abs(targetX - originX) <= deadZone
+        ? (record.facingDir || 1)
+        : targetX > originX ? 1 : -1;
+      if (record.facingDir === nextFacing) return;
+      record.facingDir = nextFacing;
+      this.redrawPlayer(record);
+      this.syncFacingTelemetry();
     }
 
     pulseCard(playerId, color = 0x7afcff) {
@@ -1165,6 +1375,8 @@
         ? this.getBossAttackOrigin(data)
         : (this.getEntityPosition(data.attacker || data.attackerId, data.attackerScope) || this.getHordePosition());
       const to = this.getEntityPosition(data.target || data.targetId, data.targetScope) || this.getHordePosition();
+      if (!attackerIsBoss) this.facePlayerToward(data.attacker || data.attackerId, to);
+      if (data.target || data.targetId) this.facePlayerToward(data.target || data.targetId, from);
       const beamColor = data.powerColor
         ? hexToNumber(data.powerColor, this.laserColor)
         : data.laserColor ? hexToNumber(data.laserColor, this.laserColor) : undefined;
@@ -1653,6 +1865,7 @@
     }
 
     setBackgroundImageUrl(url) {
+      this.customBackgroundUrl = url || null;
       if (this.customBackground) {
         this.customBackground.destroy();
         this.customBackground = null;
@@ -1752,9 +1965,10 @@
       container.add([gfx, avatar, nameText, killsText, hpText, rankText]);
       this.playerLayer.add(container);
 
-      const record = { playerId: data.id, data, container, gfx, avatar, nameText, killsText, hpText, rankText, targetY: 0 };
+      const record = { playerId: data.id, data, container, gfx, avatar, nameText, killsText, hpText, rankText, targetY: 0, facingDir: 1 };
       this.playerGroups.push(record);
       this.playerMap.set(data.id, record);
+      this.syncFacingTelemetry();
       this.layoutPlayers(true);
       if (!this.demoModeActive) this.showBanner(`${data.name} entered the arena`, 'join');
     }
@@ -1845,6 +2059,7 @@
       this.playerGroups.forEach(record => {
         record.container.setVisible(visible.includes(record));
       });
+      this.syncFacingTelemetry();
       window.__overlayV2Layout = visible.map(record => ({
         id: record.playerId,
         x: record.targetX,
@@ -1940,6 +2155,13 @@
       record.avatar.fillStyle(0x0d1118, 0.58);
       record.avatar.fillCircle(0, iconY + 6 * u, 50 * u);
       this.drawPlayerIcon(record.avatar, this.resolvePlayerIcon(record), 0, iconY, 1, accentColor);
+      const facingDir = record.facingDir === -1 ? -1 : 1;
+      const faceTipX = facingDir * 42 * u;
+      const faceBaseX = facingDir * 18 * u;
+      record.avatar.fillStyle(accentColor, 0.84);
+      record.avatar.fillTriangle(faceTipX, iconY + 4 * u, faceBaseX, iconY - 11 * u, faceBaseX, iconY + 19 * u);
+      record.avatar.lineStyle(Math.max(1, 2 * u), 0xffffff, 0.66);
+      record.avatar.lineBetween(faceBaseX, iconY - 8 * u, faceTipX - facingDir * 6 * u, iconY + 3 * u);
 
       record.nameText.setText(record.data.name);
       record.nameText.setStyle({

@@ -5,6 +5,7 @@ import {
 
 export const CREATOR_PRO_PLAN_TYPE = 'Creator Pro';
 export const FREE_FOREVER_PLAN_TYPE = 'Free Forever';
+export const COUNCIL_YEAR_PLAN_TYPE = 'Council Year Free';
 export const ADMIN_GRANTED_SUBSCRIPTION_ORDER_SQL = `
   CASE
     WHEN COALESCE(admin_granted, 0) <> 0
@@ -36,6 +37,20 @@ function timestampValue(value) {
   if (!value) return 0;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function formatDateForSql(date = new Date()) {
+  const parsed = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function addUtcMonths(date = new Date(), months = 0) {
+  const parsed = date instanceof Date ? date : new Date(date);
+  const base = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  const next = new Date(base.getTime());
+  next.setUTCMonth(next.getUTCMonth() + Math.max(0, Math.round(Number(months) || 0)));
+  return next;
 }
 
 function truthyFlag(value) {
@@ -109,11 +124,10 @@ export function getEffectiveUserSubscription(database, userId) {
 
 export function publicSubscriptionView(subscription) {
   if (!subscription) return null;
-  const freeForever = isActiveAdminGrantedSubscription(subscription)
-    || (
-      String(subscription.plan_type || '').trim().toLowerCase() === FREE_FOREVER_PLAN_TYPE.toLowerCase()
-      && String(subscription.status || '').trim().toLowerCase() === 'active'
-    );
+  const freeForever = (
+    String(subscription.plan_type || '').trim().toLowerCase() === FREE_FOREVER_PLAN_TYPE.toLowerCase()
+    && String(subscription.status || '').trim().toLowerCase() === 'active'
+  );
   return {
     paypal_subscription_id: subscription.paypal_subscription_id || null,
     plan_type: subscription.plan_type || null,
@@ -197,6 +211,47 @@ function upsertAdminGrant(database, userId) {
   return getEffectiveUserSubscription(database, userId);
 }
 
+function findCouncilYearGrantSubscription(database, userId) {
+  return database.prepare(`
+    SELECT *
+    FROM subscriptions
+    WHERE user_id = ?
+      AND COALESCE(admin_granted, 0) <> 0
+      AND LOWER(TRIM(COALESCE(plan_type, ''))) = LOWER(TRIM(?))
+    ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST, id DESC
+    LIMIT 1
+  `).get(userId, COUNCIL_YEAR_PLAN_TYPE) || null;
+}
+
+function upsertCouncilYearGrant(database, userId, months = 12, options = {}) {
+  const now = options.now ? new Date(options.now) : new Date();
+  const startedAt = formatDateForSql(now);
+  const expiresAt = formatDateForSql(addUtcMonths(now, months));
+  const existing = findCouncilYearGrantSubscription(database, userId);
+  if (existing) {
+    database.prepare(`
+      UPDATE subscriptions
+      SET plan_type = ?,
+          status = 'trialing',
+          paypal_subscription_id = NULL,
+          started_at = ?,
+          next_billing_date = NULL,
+          expires_at = ?,
+          admin_granted = 1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(COUNCIL_YEAR_PLAN_TYPE, startedAt, expiresAt, existing.id);
+  } else {
+    database.prepare(`
+      INSERT INTO subscriptions (
+        user_id, paypal_subscription_id, plan_type, status, started_at,
+        next_billing_date, expires_at, admin_granted, created_at, updated_at
+      ) VALUES (?, NULL, ?, 'trialing', ?, NULL, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `).run(userId, COUNCIL_YEAR_PLAN_TYPE, startedAt, expiresAt);
+  }
+  return getEffectiveUserSubscription(database, userId);
+}
+
 export async function grantPermanentCreatorPro(database, user, options = {}) {
   const userId = normalizeUserId(user?.id);
   if (!userId) throw new Error('User not found');
@@ -226,6 +281,40 @@ export async function grantPermanentCreatorPro(database, user, options = {}) {
     user,
     subscription: applyGrant(),
     cancelledPayPalSubscriptions: cancelledPayPalSubscriptions.map(subscription => subscription.paypal_subscription_id),
+  };
+}
+
+export async function grantCouncilYearCreatorPro(database, user, options = {}) {
+  const userId = normalizeUserId(user?.id);
+  if (!userId) throw new Error('User not found');
+  if (Number(user.is_active) === 0) throw new Error('Disabled users cannot receive Council Year grants');
+
+  const months = Math.max(1, Math.min(36, Math.round(Number(options.months || 12) || 12)));
+  const activePayPalSubscriptions = listActivePayPalSubscriptions(database, userId);
+  if (activePayPalSubscriptions.length && typeof options.cancelPayPalSubscription !== 'function') {
+    throw new Error('PayPal cancellation is required before granting a Council Year');
+  }
+
+  const cancelledPayPalSubscriptions = [];
+  for (const subscription of activePayPalSubscriptions) {
+    await options.cancelPayPalSubscription(subscription.paypal_subscription_id, {
+      reason: options.reason || 'Council of Aetheris one-year bonus granted by admin',
+    });
+    cancelledPayPalSubscriptions.push(subscription);
+  }
+
+  const applyGrant = database.transaction(() => {
+    cancelledPayPalSubscriptions.forEach(subscription => {
+      markPayPalSubscriptionCancelled(database, subscription.id);
+    });
+    return upsertCouncilYearGrant(database, userId, months, options);
+  });
+
+  return {
+    user,
+    subscription: applyGrant(),
+    cancelledPayPalSubscriptions: cancelledPayPalSubscriptions.map(subscription => subscription.paypal_subscription_id),
+    grantMonths: months,
   };
 }
 

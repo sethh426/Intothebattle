@@ -6,6 +6,7 @@ import {
   buildReferralShareUrl,
   canResetReferralCode,
   normalizeReferralCode,
+  qualifyReferralForUser,
   recordReferralAttribution,
   recordReferralClick,
   secondsUntilReferralReset,
@@ -14,7 +15,7 @@ import {
 } from '../tiktokbr/services/referrals.js';
 
 assert.equal(REFERRAL_CODE_COOLDOWN_HOURS, 234);
-assert.equal(DEFAULT_REFERRAL_REWARD_CENTS, 2500);
+assert.equal(DEFAULT_REFERRAL_REWARD_CENTS, 300);
 assert.equal(normalizeReferralCode('  mr_clouds-7  '), 'MR_CLOUDS-7');
 
 assert.deepEqual(validateReferralCode('clouds_7').ok, true);
@@ -31,7 +32,7 @@ assert.equal(buildReferralShareUrl('https://intothebattle.com/', 'SF_CLOUDS'), '
 assert.equal(buildReferralShareUrl('', 'SF_CLOUDS'), '/r/SF_CLOUDS');
 assert.equal(
   buildReferralChatMessage('https://intothebattle.com/', 'SF_CLOUDS'),
-  'Want your own IntoTheBattle arena? Use my code SF_CLOUDS when you sign up: https://intothebattle.com/r/SF_CLOUDS'
+  'The Council of Aetheris is forming. Use my IntoTheBattle referral link and claim your seat: https://intothebattle.com/r/SF_CLOUDS'
 );
 assert.equal(suggestedReferralCode({ id: 42, tiktok_username: '@Mr.Clouds' }), 'MRCLOUDS');
 
@@ -39,6 +40,9 @@ function createReferralMemoryDb() {
   const state = {
     clicks: [],
     attributions: [],
+    rewards: [],
+    recurringRewards: [],
+    subscriptions: [],
     codes: [{ id: 1, user_id: 101, code: 'NEON_777' }],
   };
   return {
@@ -82,7 +86,7 @@ function createReferralMemoryDb() {
       }
       if (/INSERT INTO referral_attributions/i.test(sql)) {
         return {
-          run(referralCodeId, referrerUserId, referredUserId, referralClickId, codeSnapshot, signupMethod) {
+          run(referralCodeId, referrerUserId, referredUserId, referralClickId, codeSnapshot, signupMethod, recurringRewardCents, foundingRateLockedAt) {
             if (state.attributions.some(row => Number(row.referred_user_id) === Number(referredUserId))) return { rows: [] };
             const id = state.attributions.length + 1;
             state.attributions.push({
@@ -93,6 +97,88 @@ function createReferralMemoryDb() {
               referral_click_id: referralClickId,
               code_snapshot: codeSnapshot,
               signup_method: signupMethod,
+              status: 'signup_pending',
+              qualified_at: null,
+              recurring_reward_cents: recurringRewardCents,
+              founding_rate_locked_at: foundingRateLockedAt,
+            });
+            return { rows: [{ id }] };
+          },
+        };
+      }
+      if (/SELECT \* FROM referral_attributions WHERE referred_user_id/i.test(sql)) {
+        return {
+          get(referredUserId) {
+            return state.attributions.find(row => Number(row.referred_user_id) === Number(referredUserId)) || null;
+          },
+        };
+      }
+      if (/SELECT id, paypal_subscription_id, started_at, created_at, updated_at\s+FROM subscriptions/i.test(sql)) {
+        return {
+          get(userId) {
+            return state.subscriptions.find(row =>
+              Number(row.user_id) === Number(userId) &&
+              String(row.status || '').toLowerCase() === 'active' &&
+              !Number(row.admin_granted || 0) &&
+              row.paypal_subscription_id
+            ) || null;
+          },
+        };
+      }
+      if (/UPDATE referral_attributions/i.test(sql)) {
+        return {
+          run(monthlyRateCents, foundingLockedAt, id) {
+            const attribution = state.attributions.find(row => Number(row.id) === Number(id));
+            if (attribution) {
+              attribution.status = 'qualified';
+              attribution.qualified_at = attribution.qualified_at || 'now';
+              attribution.recurring_reward_cents = attribution.recurring_reward_cents || monthlyRateCents;
+              attribution.founding_rate_locked_at = attribution.founding_rate_locked_at || foundingLockedAt;
+            }
+            return { rows: [] };
+          },
+        };
+      }
+      if (/INSERT INTO referral_rewards/i.test(sql)) {
+        return {
+          run(attributionId, referrerUserId, referredUserId, amountCents, currency, notes) {
+            if (state.rewards.some(row => Number(row.attribution_id) === Number(attributionId))) return { rows: [] };
+            const id = state.rewards.length + 1;
+            state.rewards.push({
+              id,
+              attribution_id: attributionId,
+              referrer_user_id: referrerUserId,
+              referred_user_id: referredUserId,
+              status: 'pending_review',
+              amount_cents: amountCents,
+              currency,
+              notes,
+            });
+            return { rows: [{ id }] };
+          },
+        };
+      }
+      if (/INSERT INTO referral_recurring_rewards/i.test(sql)) {
+        return {
+          run(attributionId, referrerUserId, referredUserId, subscriptionId, periodStart, periodEnd, amountCents, currency, foundingRateLocked, notes) {
+            if (state.recurringRewards.some(row => (
+              Number(row.attribution_id) === Number(attributionId) &&
+              row.period_start === periodStart
+            ))) return { rows: [] };
+            const id = state.recurringRewards.length + 1;
+            state.recurringRewards.push({
+              id,
+              attribution_id: attributionId,
+              referrer_user_id: referrerUserId,
+              referred_user_id: referredUserId,
+              subscription_id: subscriptionId,
+              period_start: periodStart,
+              period_end: periodEnd,
+              status: 'pending_review',
+              amount_cents: amountCents,
+              currency,
+              founding_rate_locked: foundingRateLocked,
+              notes,
             });
             return { rows: [{ id }] };
           },
@@ -139,5 +225,29 @@ assert.equal(attribution.recorded, true);
 assert.equal(attribution.referrerUserId, 101);
 assert.equal(attribution.referralClickId, 1);
 assert.equal(memoryDb.state.clicks[0].converted_user_id, 202);
+
+memoryDb.state.subscriptions.push({
+  id: 1,
+  user_id: 202,
+  status: 'active',
+  admin_granted: 0,
+  paypal_subscription_id: 'I-TEST',
+  started_at: '2026-07-01 00:00:00',
+  created_at: '2026-07-01 00:00:00',
+  updated_at: '2026-07-01 00:00:00',
+});
+const clearedGate = qualifyReferralForUser(memoryDb, 202, { now: new Date('2026-07-20T00:00:00Z') });
+assert.equal(clearedGate.qualified, true);
+assert.equal(clearedGate.rewardCreated, true);
+assert.equal(clearedGate.monthlyRewardCreated, true);
+assert.equal(memoryDb.state.attributions[0].status, 'qualified');
+assert.equal(memoryDb.state.rewards[0].amount_cents, 300);
+assert.equal(memoryDb.state.recurringRewards[0].amount_cents, 300);
+assert.equal(memoryDb.state.recurringRewards[0].period_start, '2026-07-01 00:00:00');
+
+const duplicateMonth = qualifyReferralForUser(memoryDb, 202, { now: new Date('2026-07-25T00:00:00Z') });
+assert.equal(duplicateMonth.qualified, true);
+assert.equal(duplicateMonth.monthlyRewardCreated, false);
+assert.equal(memoryDb.state.recurringRewards.length, 1);
 
 console.log('Referral logic smoke checks passed');

@@ -191,6 +191,38 @@
       "production": "enabled"
     },
     {
+      "method": "POST",
+      "path": "/admin/users/ban",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users/unban",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users/:id/ban",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/admin/users/:id/unban",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 302,
+      "production": "enabled"
+    },
+    {
       "method": "GET",
       "path": "/admin/email",
       "category": "admin",
@@ -276,6 +308,30 @@
       "category": "public-growth",
       "access": "same-origin-consent-gated-rate-limited",
       "unauthenticated": 200,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/api/signup-intent",
+      "category": "public-mutation",
+      "access": "same-origin-browser-guard-rate-limited-security-moderated",
+      "unauthenticated": 200,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/api/public/battlegrounds",
+      "category": "public-mutation",
+      "access": "same-origin-browser-guard-rate-limited-security-moderated",
+      "unauthenticated": 200,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
+      "path": "/api/public/comments",
+      "category": "public-mutation",
+      "access": "creator-session-and-same-origin-browser-guard-rate-limited-security-moderated",
+      "unauthenticated": 401,
       "production": "enabled"
     },
     {

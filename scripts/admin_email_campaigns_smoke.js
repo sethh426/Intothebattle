@@ -173,6 +173,13 @@ const validation = validateAdminAnnouncementPayload({
 assert.equal(validation.ok, true);
 assert.equal(validateAdminAnnouncementPayload({ subject: 'Bad', message: 'Too short' }).ok, false);
 assert.equal(validateAdminAnnouncementPayload({ subject: 'Valid subject', message: 'This is long enough to validate.', ctaUrl: 'http://bad.example' }).ok, false);
+const securityBlocked = validateAdminAnnouncementPayload({
+  subject: 'I hacked the system',
+  message: 'This account announcement is long enough, but it contains a compromise claim.',
+});
+assert.equal(securityBlocked.ok, false);
+assert.equal(securityBlocked.securityDetection.flagged, true);
+assert.match(securityBlocked.errors.join(' '), /hacking, compromise, or exploit/);
 
 const db = new FakeAdminEmailDb({
   users: [

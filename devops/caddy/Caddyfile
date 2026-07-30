@@ -2,12 +2,29 @@
 	email {$ACME_EMAIL}
 }
 
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Permitted-Cross-Domain-Policies "none"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), usb=()"
+		-Server
+	}
+}
+
 www.intothebattle.com {
+	import security_headers
 	redir https://intothebattle.com{uri} permanent
 }
 
 intothebattle.com {
 	encode zstd gzip
+	request_body {
+		max_size 110MB
+	}
+
+	import security_headers
 
 	reverse_proxy app:3000 {
 		header_up X-Forwarded-Proto {scheme}

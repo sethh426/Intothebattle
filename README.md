@@ -138,7 +138,7 @@ EMAIL_REPLY_TO=support@example.com
 POSTMARK_TEST_EMAIL=
 ```
 
-`PAYPAL_PLAN_ID` (or `PAYPAL_SUBSCRIPTION_PLAN_ID`) is required for the in-app Creator Pro subscription button. `PAYPAL_PAYMENT_LINK` is only a hosted-link fallback.
+`PAYPAL_PAYMENT_LINK` is the hosted PayPal subscription checkout used for paid Creator Pro accounts. `PAYPAL_PLAN_ID` (or `PAYPAL_SUBSCRIPTION_PLAN_ID`) enables the in-app PayPal button when you want that flow available too.
 
 Production observability/diagnostic variables:
 

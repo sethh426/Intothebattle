@@ -20,6 +20,7 @@ const baseUrl = `http://${host}:${port}`;
 const width = Number(process.env.HERO_CAPTURE_WIDTH || 1920);
 const height = Number(process.env.HERO_CAPTURE_HEIGHT || 1080);
 const durationMs = Number(process.env.HERO_CAPTURE_DURATION_MS || 34000);
+const trimStartSeconds = Math.max(0, Number(process.env.HERO_CAPTURE_TRIM_START_SECONDS || 0.85) || 0);
 const diskPath = fs.mkdtempSync(path.join(os.tmpdir(), 'itb-hero-capture-'));
 const webmDir = path.join(diskPath, 'webm');
 const mp4Path = process.env.HERO_MP4_PATH
@@ -85,9 +86,11 @@ function runFfmpeg(args, label) {
 
 async function transcodeToMp4(webmPath) {
   fs.mkdirSync(path.dirname(mp4Path), { recursive: true });
+  const trimArgs = trimStartSeconds > 0 ? ['-ss', String(trimStartSeconds)] : [];
   await runFfmpeg([
     '-y',
     '-i', webmPath,
+    ...trimArgs,
     '-vf', `scale=${width}:${height}:flags=lanczos`,
     '-r', '30',
     '-c:v', 'libx264',
