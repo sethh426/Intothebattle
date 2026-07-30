@@ -43,6 +43,7 @@ import {
   currentAetherisStructureStatus,
   damageAetherisStructure,
   normalizeAetherisStructures,
+  repairAetherisStructures,
 } from '../tiktokbr/services/aetherisStructures.js';
 
 function testEntitlements() {
@@ -448,6 +449,12 @@ function testAetherisStructureState() {
   assert.equal(damaged.target.type, 'frontline');
   assert.equal(damaged.target.hp, damaged.beforeHp - 120);
   assert.equal(damaged.aggregate.hp, status.aggregate.hp - 120);
+
+  const repaired = repairAetherisStructures(damaged.state, { amount: 75 });
+  assert.equal(repaired.repaired, true, 'structure repair should apply to a damaged objective');
+  assert.equal(repaired.target.type, 'frontline');
+  assert.equal(repaired.target.hp, damaged.target.hp + 75);
+  assert.equal(repaired.aggregate.hp, damaged.aggregate.hp + 75);
 
   const switched = normalizeAetherisStructures(damaged.state, 'stormglass-coast');
   assert.equal(switched.territoryId, 'stormglass-coast', 'territory changes should reset structure state');

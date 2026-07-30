@@ -61,6 +61,7 @@ import {
   currentAetherisStructureStatus,
   damageAetherisStructure,
   normalizeAetherisStructures,
+  repairAetherisStructures,
 } from './tiktokbr/services/aetherisStructures.js';
 import {
   createAccessCodeSessionToken,
@@ -9458,6 +9459,43 @@ app.post('/api/dashboard/rules/acknowledge', requireRoom, (req, res) => {
 
 app.get('/api/session/status', requireRoom, (req, res) => {
   res.json(buildSessionStatus(req.room));
+});
+
+app.get('/api/aetheris/structures', requireRoom, (req, res) => {
+  res.json({ success: true, aetherisStructures: aetherisStructuresPayload(req.room) });
+});
+
+app.post('/api/aetheris/structures/reset', requireRoom, (req, res) => {
+  const territoryId = selectedAetherisTerritoryIdForRoom(req.room);
+  resetAetherisStructures(req.room, territoryId);
+  const aetherisStructures = emitAetherisStructures(req.room, 'reset', { reason: 'creator_reset' })
+    || aetherisStructuresPayload(req.room);
+  emitSessionStatus(req.room);
+  res.json({ success: true, aetherisStructures });
+});
+
+app.post('/api/aetheris/structures/repair', requireRoom, (req, res) => {
+  const amount = clampSessionNumber(req.body?.amount, 150, 25, 1000);
+  const result = repairAetherisStructures(ensureAetherisStructures(req.room), {
+    amount,
+    structureId: req.body?.structureId,
+    structureType: req.body?.structureType,
+    source: 'creator',
+  });
+  req.room.aetherisStructures = result.state;
+  const aetherisStructures = emitAetherisStructures(req.room, result.repaired ? 'repaired' : 'status', {
+    reason: result.reason || 'creator_repair',
+    repair: result.repairApplied || 0,
+    target: result.target?.id || null,
+    targetNick: result.target?.name || null,
+  }) || aetherisStructuresPayload(req.room);
+  emitSessionStatus(req.room);
+  res.json({
+    success: true,
+    repaired: Boolean(result.repaired),
+    reason: result.reason || '',
+    aetherisStructures,
+  });
 });
 
 app.post('/api/session/start', requireRoom, (req, res) => {
