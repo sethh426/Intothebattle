@@ -32,8 +32,8 @@ if (-not (Test-Path $writeFreelyStarter)) {
 }
 
 & $writeFreelyStarter
-if (-not (Wait-ForUrl "http://localhost:$blogPort/" 20)) {
-    throw "WriteFreely did not respond at http://localhost:$blogPort/"
+if (-not (Wait-ForUrl "http://127.0.0.1:$blogPort/" 20)) {
+    throw "WriteFreely did not respond at http://127.0.0.1:$blogPort/"
 }
 
 $writeFreelyCredentialsPath = Join-Path $workspace 'writefreely\ADMIN_CREDENTIALS.txt'
