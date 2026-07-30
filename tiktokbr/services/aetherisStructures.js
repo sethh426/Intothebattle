@@ -219,3 +219,46 @@ export function damageAetherisStructure(state, options = {}) {
     aggregate: normalized.aggregate,
   };
 }
+
+export function repairAetherisStructures(state, options = {}) {
+  const normalized = normalizeAetherisStructures(state, state?.territoryId || options.territoryId);
+  const amount = Math.max(1, Math.round(Number(options.amount) || 1));
+  const requestedTarget = String(options.targetId || options.structureId || '').trim();
+  const requestedType = String(options.type || options.structureType || '').trim();
+  const damaged = normalized.structures
+    .filter(structure => Number(structure.hp) < Number(structure.maxHp))
+    .sort((a, b) => a.order - b.order);
+  const target = damaged.find(structure => structure.id === requestedTarget)
+    || damaged.find(structure => structure.type === requestedType)
+    || damaged[0]
+    || null;
+
+  if (!target) {
+    normalized.aggregate = aggregateForStructures(normalized.structures);
+    return {
+      repaired: false,
+      reason: 'all_structures_full',
+      state: normalized,
+      aggregate: normalized.aggregate,
+    };
+  }
+
+  const beforeHp = Math.max(0, Math.round(Number(target.hp) || 0));
+  const maxHp = Math.max(1, Math.round(Number(target.maxHp) || 1));
+  target.hp = Math.min(maxHp, beforeHp + amount);
+  target.status = structureStatus(target.hp, target.maxHp);
+  target.alive = target.hp > 0;
+  target.lastRepairedAt = Date.now();
+  normalized.updatedAt = target.lastRepairedAt;
+  normalized.aggregate = aggregateForStructures(normalized.structures);
+
+  return {
+    repaired: true,
+    state: normalized,
+    target: publicStructure(target),
+    beforeHp,
+    repairApplied: target.hp - beforeHp,
+    requestedRepair: amount,
+    aggregate: normalized.aggregate,
+  };
+}
