@@ -1744,11 +1744,23 @@ function renderCreatorReferral(referral = {}) {
   const badge = document.getElementById('creatorReferralBadge');
   if (!body) return;
   const hasCode = Boolean(referral.hasCode && referral.code);
+  const accountRequired = Boolean(referral.accountRequired);
   if (badge) {
-    badge.textContent = hasCode ? (referral.program?.currentRank?.name || 'Aspirant') : 'Create code';
+    badge.textContent = accountRequired ? 'Account needed' : hasCode ? (referral.program?.currentRank?.name || 'Aspirant') : 'Create code';
     badge.className = `referral-share-badge ${hasCode ? 'ready' : 'warn'}`;
   }
   const suggestedCode = String(referral.suggestedCode || '').trim();
+  if (accountRequired) {
+    body.innerHTML = `
+      ${renderCouncilProgress(referral)}
+      <p class="muted">Council referral codes are tied to creator accounts. Create or log in to a creator account to claim your code and track monthly rewards.</p>
+      <div class="referral-actions">
+        <a class="btn btn-primary" href="/signup">Create account</a>
+        <a class="btn btn-secondary" href="/login?next=/dashboard">Log in</a>
+      </div>
+    `;
+    return;
+  }
   if (!hasCode) {
     body.innerHTML = `
       <div class="referral-create-row">

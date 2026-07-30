@@ -616,15 +616,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.is-nano .banner-title,
 .banner.legendary.is-nano .banner-title { font-size:13px; line-height:1; letter-spacing:.1px; }
 .banner.is-nano .banner-command-grid { display:none; }
-.banner.commands.is-nano .banner-command-strip { min-height:25px; grid-template-columns:minmax(46px,0.15fr) minmax(0,1fr); }
+.banner.commands.is-nano .banner-command-strip { min-height:25px; grid-template-columns:minmax(42px,0.12fr) minmax(0,1fr); }
 .banner.commands.is-nano .banner-command-label,
 .banner.commands.is-nano .banner-command-run span { font-size:8px; }
-.banner.commands.is-nano .banner-command-label { justify-content:center; padding:0 4px; white-space:normal; text-align:center; line-height:1; }
+.banner.commands.is-nano .banner-command-label { justify-content:center; padding:0 3px; white-space:normal; text-align:center; line-height:1; }
 .banner.commands.is-nano .banner-command-run { height:25px; padding:0 8px; gap:8px; }
-.banner.commands.is-nano .banner-command-rail { grid-template-columns:.9fr 1.35fr .82fr 1.25fr; gap:2px; padding:1px; }
+.banner.commands.is-nano .banner-command-rail { grid-template-columns:.98fr 1.05fr 1.12fr 1.42fr; gap:1px; padding:1px; }
 .banner.commands.is-nano .banner-command-chip:not(.banner-command-primary) { display:none; }
-.banner.commands.is-nano .banner-command-chip { min-height:20px; padding:0 3px; border-color:rgba(var(--banner-accent-rgb),0.22); background:rgba(var(--banner-accent-rgb),0.08); }
-.banner.commands.is-nano .banner-command-chip strong { font-size:10.5px; line-height:1; letter-spacing:0; white-space:nowrap; overflow:visible; text-overflow:clip; }
+.banner.commands.is-nano .banner-command-chip { min-height:21px; padding:0 2px; border-color:rgba(var(--banner-accent-rgb),0.22); background:rgba(var(--banner-accent-rgb),0.08); }
+.banner.commands.is-nano .banner-command-chip strong { font-size:9px; line-height:1.08; letter-spacing:0; white-space:nowrap; overflow:visible; text-overflow:clip; }
 .banner.commands.is-nano .banner-command-chip span { display:none; }
 .banner.is-nano .banner-meter { width:3px; height:20px; }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) {
@@ -5819,9 +5819,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const forceNano = stage.frame.h < 260 || stage.frame.w < 430 || placementZone.h < 36;
     const availableWidth = Math.max(1, placementZone.w);
     const largeMomentBanner = el.classList.contains('legendary') || el.classList.contains('kill') || el.classList.contains('streak');
-    const frameWidthRatio = isCommandBanner ? 0.88 : largeMomentBanner ? 0.68 : 0.62;
+    const frameWidthRatio = isCommandBanner ? 0.96 : largeMomentBanner ? 0.88 : 0.7;
     const frameMaxWidth = Math.min(availableWidth, Math.max(220, frame.w * frameWidthRatio));
-    const readableMinWidth = Math.min(frameMaxWidth, Math.max(isCommandBanner ? 440 : 280, frame.w * (isCommandBanner ? 0.58 : 0.36)));
+    const readableMinWidth = Math.min(frameMaxWidth, Math.max(isCommandBanner ? 460 : largeMomentBanner ? 340 : 280, frame.w * (isCommandBanner ? 0.68 : largeMomentBanner ? 0.5 : 0.38)));
     const maxWidth = Math.min(availableWidth, Math.max(readableMinWidth, frameMaxWidth));
     const preferredWidth = isCommandBanner
       ? maxWidth

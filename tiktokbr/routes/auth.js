@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import db, { getAsync, runAsync } from '../db/db.js';
+import { getE2EAuthRecord } from '../auth/e2eAuth.js';
 import {
   buildEmailUrl,
   sendPasswordResetEmail,
@@ -33,6 +34,7 @@ import {
   summarizeSecurityPayload,
 } from '../services/securityModeration.js';
 import {
+  REFERRAL_CODE_COOLDOWN_HOURS,
   REFERRAL_CLICK_COOKIE_MAX_AGE_MS,
   claimOrResetReferralCode,
   getReferralSummary,
@@ -41,6 +43,7 @@ import {
   recordReferralAttribution,
   validateReferralCode,
 } from '../services/referrals.js';
+import { buildCouncilProgramSummary } from '../services/councilOfAetheris.js';
 
 function getGoogleClientId() {
   return process.env.GOOGLE_CLIENT_ID;
@@ -62,6 +65,46 @@ function requestOrigin(req) {
 
 function referralBaseUrl(req) {
   return process.env.APP_BASE_URL || requestOrigin(req) || '';
+}
+
+function emptyReferralStats() {
+  return {
+    clicks: 0,
+    uniqueClicks: 0,
+    convertedClicks: 0,
+    signups: 0,
+    qualified: 0,
+    pendingReview: 0,
+    approved: 0,
+    paid: 0,
+    rejected: 0,
+    pendingAmountCents: 0,
+    approvedAmountCents: 0,
+    paidAmountCents: 0,
+    monthlyProjectedCents: 0,
+    clickToSignupRate: 0,
+    signupToQualifiedRate: 0,
+  };
+}
+
+function accountRequiredReferralSummary() {
+  const stats = emptyReferralStats();
+  return {
+    code: '',
+    hasCode: false,
+    suggestedCode: '',
+    shareUrl: '',
+    chatText: '',
+    cooldownHours: REFERRAL_CODE_COOLDOWN_HOURS,
+    resetAvailableAt: null,
+    resetCountdownSeconds: 0,
+    canReset: false,
+    resetCount: 0,
+    accountRequired: true,
+    stats,
+    program: buildCouncilProgramSummary(stats),
+    recent: [],
+  };
 }
 
 function referralCodeFromRequest(req, fallback = '') {
@@ -799,8 +842,12 @@ function safeRedirectPath(value, fallback = '/dashboard') {
   return clean.slice(0, 300);
 }
 
+function getAuthRecordFromToken(token) {
+  return getE2EAuthRecord(token) || getSessionAuthRecord(token);
+}
+
 function getUserFromToken(token) {
-  const auth = getSessionAuthRecord(token);
+  const auth = getAuthRecordFromToken(token);
   return auth?.type === 'user' ? auth.record : null;
 }
 
@@ -1469,8 +1516,13 @@ router.get('/auth/user/me', (req, res) => {
 });
 
 router.get('/api/referrals/me', (req, res) => {
-  const user = getSessionUserFromRequest(req);
-  if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  const auth = getAuthRecordFromToken(req.cookies?.session_token);
+  if (!auth) return res.status(401).json({ success: false, error: 'Unauthorized' });
+  if (auth.type !== 'user') {
+    return res.json({ success: true, referral: accountRequiredReferralSummary() });
+  }
+  const user = auth.record;
+  if (!user?.is_active) return res.status(401).json({ success: false, error: 'Unauthorized' });
 
   try {
     return res.json({
