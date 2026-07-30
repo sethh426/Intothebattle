@@ -38,6 +38,12 @@ import {
   listAetherisTerritories,
   normalizeAetherisTerritoryId,
 } from '../tiktokbr/services/aetherisTerritories.js';
+import {
+  buildAetherisStructures,
+  currentAetherisStructureStatus,
+  damageAetherisStructure,
+  normalizeAetherisStructures,
+} from '../tiktokbr/services/aetherisStructures.js';
 
 function testEntitlements() {
   assert.equal(
@@ -429,6 +435,26 @@ function testAetherisTerritoryCatalog() {
   assert.equal(getAetherisTerritory('verdant-crown').palette.primary, '#77f0a1', 'territory payloads should be cloned before mutation');
 }
 
+function testAetherisStructureState() {
+  const state = buildAetherisStructures('emberfall-forge');
+  const status = currentAetherisStructureStatus(state, 'emberfall-forge');
+  assert.equal(status.territoryId, 'emberfall-forge');
+  assert.equal(status.structures.length, 3, 'Aetheris should expose three live structure objectives');
+  assert.equal(status.aggregate.standing, 3, 'new structure state should start fully standing');
+  assert.ok(status.structures.some(structure => structure.name === 'Iron gate'), 'structure state should use territory structure names');
+
+  const damaged = damageAetherisStructure(state, { damage: 120, attackerId: 'alpha', attackerNick: 'Alpha' });
+  assert.equal(damaged.damaged, true, 'structure damage should apply to the first standing objective');
+  assert.equal(damaged.target.type, 'frontline');
+  assert.equal(damaged.target.hp, damaged.beforeHp - 120);
+  assert.equal(damaged.aggregate.hp, status.aggregate.hp - 120);
+
+  const switched = normalizeAetherisStructures(damaged.state, 'stormglass-coast');
+  assert.equal(switched.territoryId, 'stormglass-coast', 'territory changes should reset structure state');
+  assert.ok(switched.structures.some(structure => structure.name === 'Breaker wall'), 'reset structures should follow the new territory plan');
+  assert.equal(switched.aggregate.hp, switched.aggregate.maxHp, 'new territory structures should reset to full HP');
+}
+
 function testLaunchReadinessSponsorMediaGate() {
   const report = buildLaunchReadinessReport({
     env: {
@@ -454,5 +480,6 @@ testPlayerCommandCatalog();
 testArenaPowerUpRules();
 testSponsorMediaQualityGate();
 testAetherisTerritoryCatalog();
+testAetherisStructureState();
 testLaunchReadinessSponsorMediaGate();
 console.log('Business logic smoke checks passed');

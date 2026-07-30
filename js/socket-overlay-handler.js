@@ -313,12 +313,13 @@ function initSocketOverlay(game) {
 
   const SCENE_EVENT_LANES = Object.freeze({
     exclusive: { cooldownMs: 110, ttlMs: 120000, maxQueued: 8, sponsorPolicy: 'allow' },
+    state: { cooldownMs: 45, ttlMs: 22000, maxQueued: 36, sponsorPolicy: 'hold' },
     celebration: { cooldownMs: 190, ttlMs: 15000, maxQueued: 28, sponsorPolicy: 'hold' },
     gameplay: { cooldownMs: 70, ttlMs: 9000, maxQueued: 72, sponsorPolicy: 'hold' },
     ambient: { cooldownMs: 130, ttlMs: 4500, maxQueued: 36, sponsorPolicy: 'drop' },
     sound: { cooldownMs: 120, ttlMs: 3500, maxQueued: 16, sponsorPolicy: 'drop' },
   });
-  const SCENE_EVENT_LANE_ORDER = ['exclusive', 'celebration', 'gameplay', 'ambient', 'sound'];
+  const SCENE_EVENT_LANE_ORDER = ['exclusive', 'state', 'celebration', 'gameplay', 'ambient', 'sound'];
   const sceneEventQueue = [];
   const seenSceneSeqs = new Set();
   const seenSceneSeqOrder = [];
@@ -374,6 +375,7 @@ function initSocketOverlay(game) {
     if (type === 'sponsorScene') return data.action === 'hide' ? 118 : 112;
     if (type === 'sponsorPrepare') return 108;
     if (type === 'arenaPowerUp') return data.type === 'started' ? 106 : data.type === 'poweredAttack' ? 96 : data.type === 'barrage' ? 94 : data.type === 'ended' ? 90 : 84;
+    if (type === 'aetherisStructures') return data.type === 'destroyed' ? 92 : data.type === 'reset' ? 76 : 70;
     if (type === 'bossWave') return data.type === 'defeated' ? 98 : data.type === 'started' ? 92 : 84;
     if (type === 'killEvent' || type === 'streakEvent') return 95;
     if (type === 'engagementSurge') return data.tier === 'takeover' ? 99 : data.tier === 'viral' ? 92 : 84;
@@ -393,6 +395,7 @@ function initSocketOverlay(game) {
     if (data._lane && SCENE_EVENT_LANES[data._lane]) return data._lane;
     if (type === 'sponsorPrepare' || type === 'sponsorScene') return 'exclusive';
     if (type === 'soundEvent') return 'sound';
+    if (type === 'aetherisStructures') return 'state';
     if (type === 'like' && data.milestone) return 'celebration';
     if (type === 'engagementSurge' || type === 'arenaPowerUp' || type === 'killEvent' || type === 'streakEvent' || type === 'giftCelebration' || type === 'follow' || type === 'roundEvent' || type === 'bossWave') return 'celebration';
     if (type === 'like' || type === 'heal' || type === 'socialBoost') return 'ambient';
@@ -422,6 +425,7 @@ function initSocketOverlay(game) {
     if (type === 'like') return data.milestone ? `like:${data.milestone}` : `like:${queueTextPart(data.uniqueId || data.userId || data.nickname || 'crowd')}`;
     if (type === 'bossWave' && data.type !== 'attack') return `boss:${queueTextPart(data.type || 'status')}`;
     if (type === 'arenaPowerUp' && data.type === 'leaderboard') return 'arena-power-up:leaderboard';
+    if (type === 'aetherisStructures') return 'aetheris-structures';
     if (type === 'playerCommand') return `cmd:${queueTextPart(data.type || 'command')}:${queueTextPart(data.uniqueId || data.nickname)}`;
     if (type === 'sponsorPrepare' || type === 'sponsorScene') return `${type}:${queueTextPart(data.breakId || data.filename || data.action || 'active')}`;
     return '';
@@ -753,6 +757,11 @@ function initSocketOverlay(game) {
     enqueueSceneEvent('arenaPowerUp', data || {}, payload => {
       if (scene.handleArenaPowerUp) scene.handleArenaPowerUp(payload || {});
     });
+  });
+  socket.on('aetherisStructures', (data) => {
+    enqueueSceneEvent('aetherisStructures', data || {}, payload => {
+      if (scene.updateAetherisStructures) scene.updateAetherisStructures(payload || {});
+    }, { lane: 'state', mergeKey: 'aetheris-structures' });
   });
   socket.on('killEvent', (data) => {
     enqueueSceneEvent('killEvent', data || {}, payload => {

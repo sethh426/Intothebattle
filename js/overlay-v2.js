@@ -155,11 +155,20 @@
     return AETHERIS_TERRITORY_THEMES[normalizeAetherisTerritoryId(value)];
   }
 
+  const AETHERIS_STRUCTURE_TYPES = Object.freeze(['frontline', 'anchor', 'ultimate']);
+  const AETHERIS_STRUCTURE_HP = Object.freeze({
+    frontline: 420,
+    anchor: 620,
+    ultimate: 840,
+  });
+
   class BattleOverlayV2Scene extends Phaser.Scene {
     constructor() {
       super({ key: 'BattleOverlayV2Scene' });
       this.playerGroups = [];
       this.playerMap = new Map();
+      this.structureState = null;
+      this.structureRecords = new Map();
       this.laserColor = 0x7afcff;
       this.layoutConfig = { shotSpeed: 1 };
       this.backgroundFit = 'contain';
@@ -202,6 +211,7 @@
 
       this.backgroundLayer = this.add.container(0, 0).setDepth(0);
       this.frameLayer = this.add.container(0, 0).setDepth(10);
+      this.structureLayer = this.add.container(0, 0).setDepth(18);
       this.worldLayer = this.add.container(0, 0).setDepth(20);
       this.powerLayer = this.add.container(0, 0).setDepth(24);
       this.playerLayer = this.add.container(0, 0).setDepth(30);
@@ -214,6 +224,8 @@
       this.linkGraphics = this.add.graphics();
       this.worldLayer.add(this.linkGraphics);
       this.createHorde();
+      this.structureState = this.defaultAetherisStructureState(this.territory.id);
+      this.drawAetherisStructures();
       this.createChatDisplay();
       this.createAmbientMotion();
 
@@ -221,6 +233,7 @@
       window.overlayV2Scene = this;
       window.__overlayV2Ready = true;
       window.__overlayV2Territory = this.territory.id;
+      window.__overlayV2Structures = this.structureState;
       setStatus('Ready', 'connected');
     }
 
@@ -288,6 +301,221 @@
           g.lineBetween(spec.x, top + spec.h, this.safe.x + this.safe.width * 0.86, baseY + 70 * u);
         }
       });
+    }
+
+    structureSpecs() {
+      const u = this.scaleUnit || 1;
+      const baseY = this.H - Math.max(246, 270 * u);
+      return [
+        { type: 'frontline', x: this.safe.x + this.safe.width * 0.16, y: baseY + 8 * u, w: 238 * u, h: 132 * u, shape: 'gate' },
+        { type: 'anchor', x: this.safe.x + this.safe.width * 0.5, y: baseY - 2 * u, w: 218 * u, h: 146 * u, shape: 'tower' },
+        { type: 'ultimate', x: this.safe.x + this.safe.width * 0.84, y: baseY + 6 * u, w: 238 * u, h: 138 * u, shape: 'spire' },
+      ];
+    }
+
+    defaultAetherisStructureState(territoryId = this.territory?.id) {
+      const territory = resolveAetherisTerritory(territoryId);
+      const structures = AETHERIS_STRUCTURE_TYPES.map((type, index) => {
+        const maxHp = AETHERIS_STRUCTURE_HP[type] || 500;
+        return {
+          id: `aetheris:${territory.id}:${type}`,
+          type,
+          name: territory.structures[index] || type,
+          label: type === 'frontline' ? 'Frontline' : type === 'anchor' ? 'Anchor' : 'Ultimate',
+          role: '',
+          order: index + 1,
+          territoryId: territory.id,
+          hp: maxHp,
+          maxHp,
+          hpPct: 1,
+          status: 'standing',
+          alive: true,
+        };
+      });
+      const aggregate = this.aggregateStructureState(structures);
+      return {
+        territoryId: territory.id,
+        version: 1,
+        resetAt: Date.now(),
+        updatedAt: Date.now(),
+        structures,
+        aggregate,
+      };
+    }
+
+    aggregateStructureState(structures = []) {
+      const hp = structures.reduce((sum, structure) => sum + Math.max(0, Number(structure.hp) || 0), 0);
+      const maxHp = structures.reduce((sum, structure) => sum + Math.max(1, Number(structure.maxHp) || 1), 0);
+      const standing = structures.filter(structure => Number(structure.hp) > 0).length;
+      const destroyed = Math.max(0, structures.length - standing);
+      const critical = structures.filter(structure => {
+        const pct = Math.max(0, Number(structure.hp) || 0) / Math.max(1, Number(structure.maxHp) || 1);
+        return pct > 0 && pct <= 0.33;
+      }).length;
+      const hpPct = maxHp > 0 ? clamp(hp / maxHp, 0, 1) : 0;
+      return {
+        hp: Math.round(hp),
+        maxHp: Math.round(maxHp),
+        hpPct,
+        standing,
+        destroyed,
+        critical,
+        total: structures.length,
+        status: standing <= 0 ? 'destroyed' : critical > 0 ? 'critical' : hpPct <= 0.66 ? 'damaged' : 'standing',
+      };
+    }
+
+    normalizeAetherisStructurePayload(payload = {}) {
+      const territoryId = normalizeAetherisTerritoryId(payload.territoryId || this.territory?.id);
+      const territory = resolveAetherisTerritory(territoryId);
+      const incoming = Array.isArray(payload.structures) ? payload.structures : [];
+      const byType = new Map(incoming.map(structure => [String(structure?.type || ''), structure]));
+      const structures = AETHERIS_STRUCTURE_TYPES.map((type, index) => {
+        const incomingStructure = byType.get(type) || {};
+        const maxHp = Math.max(1, Number(incomingStructure.maxHp) || AETHERIS_STRUCTURE_HP[type] || 500);
+        const hp = clamp(Number(incomingStructure.hp ?? maxHp), 0, maxHp);
+        const hpPct = clamp(Number(incomingStructure.hpPct ?? (hp / maxHp)), 0, 1);
+        const status = incomingStructure.status || (hp <= 0 ? 'destroyed' : hpPct <= 0.33 ? 'critical' : hpPct <= 0.66 ? 'damaged' : 'standing');
+        return {
+          id: incomingStructure.id || `aetheris:${territory.id}:${type}`,
+          type,
+          name: incomingStructure.name || territory.structures[index] || type,
+          label: incomingStructure.label || (type === 'frontline' ? 'Frontline' : type === 'anchor' ? 'Anchor' : 'Ultimate'),
+          role: incomingStructure.role || '',
+          order: Number(incomingStructure.order) || index + 1,
+          territoryId,
+          hp: Math.round(hp),
+          maxHp: Math.round(maxHp),
+          hpPct,
+          status,
+          alive: hp > 0,
+          lastDamagedAt: Number(incomingStructure.lastDamagedAt) || 0,
+          lastHitBy: incomingStructure.lastHitBy || null,
+        };
+      }).sort((a, b) => a.order - b.order);
+      return {
+        territoryId,
+        version: Number(payload.version) || 1,
+        resetAt: Number(payload.resetAt) || Date.now(),
+        updatedAt: Number(payload.updatedAt) || Date.now(),
+        type: payload.type || 'status',
+        structures,
+        aggregate: payload.aggregate || this.aggregateStructureState(structures),
+      };
+    }
+
+    drawStructureShape(g, spec, structure, territory) {
+      const u = this.scaleUnit || 1;
+      const w = spec.w;
+      const h = spec.h;
+      const left = -w / 2;
+      const top = -h / 2;
+      const destroyed = structure.status === 'destroyed' || Number(structure.hp) <= 0;
+      const critical = structure.status === 'critical';
+      const alpha = destroyed ? 0.42 : critical ? 0.88 : 1;
+
+      g.fillStyle(0x000000, 0.38);
+      g.fillRoundedRect(left + 10 * u, top + 14 * u, w, h, 8 * u);
+      g.fillStyle(territory.panel, 0.94 * alpha);
+      g.fillRoundedRect(left, top, w, h, 8 * u);
+      g.fillStyle(territory.panelTop, 0.34 * alpha);
+      g.fillRoundedRect(left + 8 * u, top + 8 * u, w - 16 * u, h * 0.34, 6 * u);
+      g.lineStyle(Math.max(2, 3 * u), destroyed ? 0x5d6268 : critical ? 0xff5566 : territory.primary, destroyed ? 0.5 : 0.9);
+      g.strokeRoundedRect(left, top, w, h, 8 * u);
+
+      if (spec.shape === 'gate') {
+        g.fillStyle(territory.ambient, 0.76 * alpha);
+        g.fillRoundedRect(left + 32 * u, top + 48 * u, w - 64 * u, h - 68 * u, 8 * u);
+        g.fillStyle(0x02040a, 0.5);
+        g.fillRect(-7 * u, top + 54 * u, 14 * u, h - 80 * u);
+        g.lineStyle(Math.max(2, 3 * u), territory.secondary, 0.4 * alpha);
+        g.lineBetween(left + 42 * u, top + 42 * u, left + w - 42 * u, top + 42 * u);
+      } else if (spec.shape === 'tower') {
+        g.fillStyle(territory.ambient, 0.82 * alpha);
+        g.fillRoundedRect(left + w * 0.28, top + 34 * u, w * 0.44, h - 48 * u, 8 * u);
+        g.fillStyle(territory.secondary, 0.26 * alpha);
+        g.fillTriangle(0, top - 42 * u, left + w * 0.22, top + 42 * u, left + w * 0.78, top + 42 * u);
+        g.fillStyle(territory.primary, 0.36 * alpha);
+        g.fillCircle(0, top + 70 * u, 17 * u);
+      } else {
+        g.fillStyle(territory.ambient, 0.8 * alpha);
+        g.fillTriangle(0, top - 24 * u, left + w * 0.17, top + h - 10 * u, left + w * 0.83, top + h - 10 * u);
+        g.fillStyle(territory.secondary, 0.28 * alpha);
+        g.fillTriangle(0, top + 20 * u, left + w * 0.36, top + h * 0.74, left + w * 0.64, top + h * 0.74);
+        g.lineStyle(Math.max(2, 3 * u), territory.primary, 0.42 * alpha);
+        g.lineBetween(0, top + 2 * u, 0, top + h * 0.84);
+      }
+
+      if (destroyed) {
+        g.lineStyle(Math.max(4, 6 * u), 0xff5566, 0.62);
+        g.lineBetween(left + 38 * u, top + 34 * u, left + w - 38 * u, top + h - 34 * u);
+        g.lineBetween(left + w - 38 * u, top + 34 * u, left + 38 * u, top + h - 34 * u);
+      }
+    }
+
+    drawAetherisStructures() {
+      if (!this.structureLayer) return;
+      this.structureLayer.removeAll(true);
+      this.structureRecords.clear();
+      this.structureState = this.normalizeAetherisStructurePayload(this.structureState || this.defaultAetherisStructureState(this.territory.id));
+      const territory = this.territory || resolveAetherisTerritory(this.structureState.territoryId);
+      const specs = this.structureSpecs();
+      const byType = new Map(this.structureState.structures.map(structure => [structure.type, structure]));
+
+      specs.forEach(spec => {
+        const structure = byType.get(spec.type);
+        if (!structure) return;
+        const u = this.scaleUnit || 1;
+        const group = this.add.container(spec.x, spec.y);
+        const g = this.add.graphics();
+        const hpPct = clamp(Number(structure.hpPct ?? (structure.hp / Math.max(1, structure.maxHp))), 0, 1);
+        const destroyed = structure.status === 'destroyed' || hpPct <= 0;
+        const critical = structure.status === 'critical';
+
+        this.drawStructureShape(g, spec, structure, territory);
+        const barW = spec.w * 0.76;
+        const barH = Math.max(13, 16 * u);
+        const barY = spec.h / 2 - 32 * u;
+        g.fillStyle(0x05070b, 0.9);
+        g.fillRoundedRect(-barW / 2, barY, barW, barH, barH / 2);
+        if (hpPct > 0) {
+          const fillColor = critical ? 0xff5566 : territory.primary;
+          g.fillStyle(fillColor, 0.92);
+          g.fillRoundedRect(-barW / 2 + 3 * u, barY + 3 * u, Math.max(barH, (barW - 6 * u) * hpPct), barH - 6 * u, (barH - 6 * u) / 2);
+          g.fillStyle(territory.secondary, 0.54);
+          g.fillRoundedRect(-barW / 2 + 5 * u, barY + 5 * u, Math.max(0, (barW - 10 * u) * hpPct), (barH - 9 * u) * 0.45, (barH - 9 * u) / 2);
+        }
+
+        const name = this.add.text(0, -spec.h / 2 + 14 * u, String(structure.name || '').toUpperCase(), {
+          fontFamily: 'Arial Black, Impact, sans-serif',
+          fontSize: `${Math.round(15 * u)}px`,
+          color: destroyed ? '#9ba3ab' : territory.text,
+          stroke: '#02040a',
+          strokeThickness: Math.max(3, 4 * u),
+          align: 'center',
+          fixedWidth: spec.w - 22 * u,
+        }).setOrigin(0.5, 0);
+        const hpLabel = this.add.text(0, barY + barH + 8 * u, destroyed ? 'DOWN' : `${Math.round(hpPct * 100)}%`, {
+          fontFamily: 'Arial Black, Impact, sans-serif',
+          fontSize: `${Math.round(14 * u)}px`,
+          color: destroyed ? '#ff8898' : critical ? '#ffbd70' : territory.muted,
+          stroke: '#02040a',
+          strokeThickness: Math.max(2, 3 * u),
+          align: 'center',
+        }).setOrigin(0.5, 0);
+        group.add([g, name, hpLabel]);
+        group.setAlpha(destroyed ? 0.72 : 1);
+        this.structureLayer.add(group);
+        this.structureRecords.set(structure.id, {
+          structure,
+          container: group,
+          bounds: { x: spec.x - spec.w / 2, y: spec.y - spec.h / 2, width: spec.w, height: spec.h },
+        });
+        this.structureRecords.set(structure.type, this.structureRecords.get(structure.id));
+      });
+
+      window.__overlayV2Structures = this.structureState;
+      if (this.hordeGraphics) this.drawHorde();
     }
 
     drawBackground() {
@@ -705,9 +933,14 @@
       const bossPct = bossActive
         ? clamp(Number(this.bossState.hp || 0) / Math.max(1, Number(this.bossState.maxHp || 1)), 0, 1)
         : 0;
+      const structureAggregate = this.structureState?.aggregate || null;
+      const hasStructureHp = Boolean(structureAggregate && Number(structureAggregate.maxHp) > 0);
+      const structurePct = hasStructureHp
+        ? clamp(Number(structureAggregate.hpPct ?? (Number(structureAggregate.hp || 0) / Math.max(1, Number(structureAggregate.maxHp || 1)))), 0, 1)
+        : 0;
       const totalFighters = Math.max(1, this.playerGroups.length);
       const teamPct = clamp(healthTotal / (totalFighters * 100), 0, 1);
-      const fillPct = bossActive ? bossPct : teamPct;
+      const fillPct = bossActive ? bossPct : hasStructureHp ? structurePct : teamPct;
 
       this.hordeGraphics.clear();
 
@@ -785,11 +1018,13 @@
         ? (Number.isFinite(Number(this.bossState?.endsAt)) ? Math.max(0, Number(this.bossState.endsAt) - Date.now()) : Number(this.bossState?.remainingMs))
         : 0;
       const bossClock = bossActive && Number.isFinite(bossRemainingMs) ? ` ${formatClockMs(bossRemainingMs)}` : '';
-      const hpMax = bossActive ? Number(this.bossState.maxHp || 1) : totalFighters * 50;
-      const hpNow = bossActive ? Number(this.bossState.hp || 0) : Math.round(fillPct * hpMax);
+      const hpMax = bossActive ? Number(this.bossState.maxHp || 1) : hasStructureHp ? Number(structureAggregate.maxHp || 1) : totalFighters * 50;
+      const hpNow = bossActive ? Number(this.bossState.hp || 0) : hasStructureHp ? Number(structureAggregate.hp || 0) : Math.round(fillPct * hpMax);
       const pressureLabel = territory.pressureLabel || 'HORDE PRESSURE';
       const metaStr = bossActive
         ? `${pressureLabel}      ${Math.round(bossPct * 100)}% HP${bossClock}`
+        : hasStructureHp
+          ? `${pressureLabel}      ${hpNow} / ${hpMax} HP  ${structureAggregate.standing}/${structureAggregate.total} STRUCTURES`
         : `${pressureLabel}      ${hpNow} / ${hpMax} HP${reserve > 0 ? `  +${reserve} RESERVE` : ''}`;
       this.hordeMeta.setText(metaStr);
       this.hordeMeta.setStyle({ color: territory.muted });
@@ -862,6 +1097,7 @@
       if (this.territory?.id === territory.id) return;
       this.territory = territory;
       window.__overlayV2Territory = territory.id;
+      this.structureState = this.defaultAetherisStructureState(territory.id);
       const backgroundUrl = this.customBackgroundUrl || null;
       if (this.backgroundLayer) {
         this.drawBackground();
@@ -874,8 +1110,22 @@
         this.drawFrame();
         this.createAmbientMotion();
       }
+      if (this.structureLayer) this.drawAetherisStructures();
       if (this.hordeGraphics) this.drawHorde();
       if (this.linkGraphics) this.drawPlayerLinks();
+    }
+
+    updateAetherisStructures(payload = {}) {
+      const normalized = this.normalizeAetherisStructurePayload(payload);
+      if (this.territory?.id !== normalized.territoryId) this.setTerritory(normalized.territoryId);
+      this.structureState = normalized;
+      this.drawAetherisStructures();
+      if (payload.type === 'destroyed' && payload.targetNick) {
+        this.showBanner(`${payload.targetNick} destroyed`, 'kill');
+      } else if (payload.type === 'reset') {
+        const territory = resolveAetherisTerritory(normalized.territoryId);
+        this.updateChatDisplay(territory.name, 'STRUCTURES RESET', territory.primary);
+      }
     }
 
     updateLayoutConfig(key, value) {
@@ -970,6 +1220,32 @@
       };
     }
 
+    getStructurePosition(idOrType) {
+      const key = String(idOrType || '').trim();
+      if (!key || !this.structureRecords) return null;
+      const direct = this.structureRecords.get(key);
+      if (direct?.bounds) {
+        return {
+          x: direct.bounds.x + direct.bounds.width / 2,
+          y: direct.bounds.y + direct.bounds.height * 0.42,
+        };
+      }
+      const lowered = key.toLowerCase();
+      for (const [recordKey, record] of this.structureRecords.entries()) {
+        if (
+          String(recordKey).toLowerCase() === lowered ||
+          String(record?.structure?.name || '').toLowerCase() === lowered ||
+          String(record?.structure?.type || '').toLowerCase() === lowered
+        ) {
+          return {
+            x: record.bounds.x + record.bounds.width / 2,
+            y: record.bounds.y + record.bounds.height * 0.42,
+          };
+        }
+      }
+      return null;
+    }
+
     bossAnchorTtlMs() {
       return 4200;
     }
@@ -1018,6 +1294,9 @@
       const normalizedScope = String(scope || '').toLowerCase();
       if (normalizedScope === 'boss' || normalized === 'boss' || normalized === '@boss' || normalized === '__boss__') {
         return this.getBossCorePosition() || this.getHordePosition();
+      }
+      if (normalizedScope === 'structure' || normalized.startsWith('aetheris:')) {
+        return this.getStructurePosition(id) || this.getHordePosition();
       }
       if (normalizedScope === 'horde' || normalized === 'horde' || normalized === '@horde' || normalized === '__horde__') {
         return this.getHordePosition();
@@ -1094,6 +1373,35 @@
         scaleX: 1.04,
         scaleY: 1.18,
         duration: 620,
+        ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy(),
+      });
+    }
+
+    pulseStructure(idOrType, color = 0xff6a3d) {
+      const key = String(idOrType || '').trim();
+      const record = this.structureRecords?.get(key)
+        || this.structureRecords?.get(key.toLowerCase())
+        || null;
+      if (!record?.bounds) return;
+      const ring = this.add.graphics();
+      const u = this.scaleUnit || 1;
+      ring.lineStyle(Math.max(3, 5 * u), color, 0.82);
+      ring.strokeRoundedRect(
+        -record.bounds.width / 2 - 8 * u,
+        -record.bounds.height / 2 - 8 * u,
+        record.bounds.width + 16 * u,
+        record.bounds.height + 16 * u,
+        12 * u
+      );
+      ring.setPosition(record.bounds.x + record.bounds.width / 2, record.bounds.y + record.bounds.height / 2);
+      this.effectLayer.add(ring);
+      this.tweens.add({
+        targets: ring,
+        alpha: 0,
+        scaleX: 1.12,
+        scaleY: 1.12,
+        duration: 680,
         ease: 'Cubic.easeOut',
         onComplete: () => ring.destroy(),
       });
@@ -1370,6 +1678,7 @@
       const type = data.killed || data.killingBlow ? 'kill' : data.critical ? 'critical' : 'normal';
       const attackerToken = String(data.attacker || data.attackerId || '').toLowerCase();
       const attackerScope = String(data.attackerScope || '').toLowerCase();
+      const targetScope = String(data.targetScope || '').toLowerCase();
       const attackerIsBoss = attackerScope === 'boss' || attackerToken === 'boss' || attackerToken === '@boss' || attackerToken === '__boss__';
       const from = attackerIsBoss
         ? this.getBossAttackOrigin(data)
@@ -1391,8 +1700,9 @@
       if (attackerIsBoss) this.pulseHorde(type === 'kill' ? 0xf6c95b : this.laserColor);
       if (data.poweredAttack && data.attacker) this.pulseCard(data.attacker, data.powerColor ? hexToNumber(data.powerColor, 0xf6c95b) : 0xf6c95b);
       else if (data.attacker || data.attackerId) this.pulseCard(data.attacker || data.attackerId, type === 'kill' ? 0xf6c95b : this.laserColor);
-      if (data.target || data.targetId) this.pulseCard(data.target || data.targetId, type === 'kill' ? 0xff5566 : 0xff6a3d);
-      if (String(data.target || '').toLowerCase().includes('boss') || String(data.targetScope || '').toLowerCase() === 'horde') this.pulseHorde(type === 'kill' ? 0xf6c95b : 0xff6a3d);
+      if (targetScope === 'structure') this.pulseStructure(data.target || data.targetId || data.aetherisStructureId, type === 'kill' ? 0xf6c95b : 0xff6a3d);
+      else if (data.target || data.targetId) this.pulseCard(data.target || data.targetId, type === 'kill' ? 0xff5566 : 0xff6a3d);
+      if (String(data.target || '').toLowerCase().includes('boss') || targetScope === 'horde') this.pulseHorde(type === 'kill' ? 0xf6c95b : 0xff6a3d);
       if (data.shielded) this.showBanner(`Shield absorbed ${Math.round(Number(data.shieldAbsorbed) || 0)} damage`, 'heal');
       const attackerName = data.attacker || data.attackerId || '';
       const cmd = data.effect || data.commandDescription || data.shotType || (type === 'kill' ? 'KILLING BLOW' : type === 'critical' ? 'CRITICAL HIT' : 'ATTACK');
