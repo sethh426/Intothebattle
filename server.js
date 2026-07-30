@@ -57,6 +57,12 @@ import {
   normalizeAetherisTerritoryId,
 } from './tiktokbr/services/aetherisTerritories.js';
 import {
+  buildAetherisStructures,
+  currentAetherisStructureStatus,
+  damageAetherisStructure,
+  normalizeAetherisStructures,
+} from './tiktokbr/services/aetherisStructures.js';
+import {
   createAccessCodeSessionToken,
   getSessionAuthRecord,
 } from './tiktokbr/services/sessionAuth.js';
@@ -129,6 +135,39 @@ function overlaySettingsPayload(room) {
     ...settings,
     aetherisTerritory: getAetherisTerritory(settings.aetherisTerritoryId),
   };
+}
+
+function selectedAetherisTerritoryIdForRoom(room) {
+  return normalizeOverlaySettings(room?.overlaySettings || {}).aetherisTerritoryId;
+}
+
+function ensureAetherisStructures(room) {
+  if (!room) return buildAetherisStructures();
+  const territoryId = selectedAetherisTerritoryIdForRoom(room);
+  room.aetherisStructures = normalizeAetherisStructures(room.aetherisStructures, territoryId);
+  return room.aetherisStructures;
+}
+
+function resetAetherisStructures(room, territoryId = selectedAetherisTerritoryIdForRoom(room)) {
+  if (!room) return buildAetherisStructures(territoryId);
+  room.aetherisStructures = buildAetherisStructures(territoryId);
+  return room.aetherisStructures;
+}
+
+function aetherisStructuresPayload(room) {
+  const state = ensureAetherisStructures(room);
+  return currentAetherisStructureStatus(state, state.territoryId);
+}
+
+function emitAetherisStructures(room, type = 'updated', detail = {}, options = {}) {
+  if (!room?.roomId) return null;
+  const payload = {
+    type,
+    ...aetherisStructuresPayload(room),
+    ...detail,
+  };
+  emitRoomEvent(room, 'aetherisStructures', payload, options);
+  return payload;
 }
 
 // Feature gate for room-scoped behavior. Production defaults to signed,
@@ -408,6 +447,7 @@ const ROOM_EVENT_QUEUE_TYPES = new Set([
   'socialBoost',
   'engagementSurge',
   'arenaPowerUp',
+  'aetherisStructures',
   'bossWave',
   'respawn',
   'sponsorPrepare',
@@ -843,6 +883,7 @@ function schedulePlayerRespawn(room, targetId, nickname, deathSeq, payload = {})
 function roomEventLane(type, payload = {}) {
   if (type === 'sponsorPrepare' || type === 'sponsorScene') return 'exclusive';
   if (type === 'soundEvent') return 'sound';
+  if (type === 'aetherisStructures') return 'state';
   if (type === 'like' || type === 'giftEffect') return 'ambient';
   if (type === 'killEvent' || type === 'streakEvent' || type === 'giftCelebration' || type === 'follow' || type === 'engagementSurge' || type === 'arenaPowerUp' || type === 'commandBannerShowcase') return 'celebration';
   if (type === 'bossWave') return ['started', 'defeated', 'expired', 'ended'].includes(payload?.type) ? 'celebration' : 'gameplay';
@@ -854,6 +895,7 @@ function roomEventPriority(type, payload = {}) {
   if (type === 'sponsorPrepare') return 112;
   if (type === 'bossWave') return payload.type === 'defeated' ? 104 : payload.type === 'started' ? 98 : 86;
   if (type === 'arenaPowerUp') return payload.type === 'started' ? 106 : payload.type === 'poweredAttack' ? 96 : payload.type === 'barrage' ? 94 : payload.type === 'ended' ? 90 : 84;
+  if (type === 'aetherisStructures') return payload.type === 'destroyed' ? 92 : payload.type === 'reset' ? 76 : 70;
   if (type === 'killEvent' || type === 'streakEvent') return 94;
   if (type === 'giftCelebration' || type === 'engagementSurge') return 88;
   if (type === 'commandBannerShowcase') return 80;
@@ -870,6 +912,7 @@ function roomEventTtl(type) {
   if (type === 'sponsorPrepare' || type === 'sponsorScene') return 120000;
   if (type === 'bossWave') return 30000;
   if (type === 'arenaPowerUp') return 35000;
+  if (type === 'aetherisStructures') return 22000;
   if (type === 'commandBannerShowcase') return 22000;
   if (type === 'attack' || type === 'commentDamage' || type === 'giftAttack') return 9000;
   if (type === 'like' || type === 'soundEvent') return 3500;
@@ -882,6 +925,7 @@ function roomEventMergeKey(type, payload = {}) {
   if (type === 'sponsorPrepare' || type === 'sponsorScene') return `${type}:${payload.breakId || payload.filename || payload.action || 'active'}`;
   if (type === 'bossWave' && payload.type !== 'attack') return `boss:${payload.type || 'status'}`;
   if (type === 'arenaPowerUp' && payload.type === 'leaderboard') return 'arena-power-up:leaderboard';
+  if (type === 'aetherisStructures') return 'aetheris-structures';
   if (type === 'commandBannerShowcase') return 'command-banner-showcase';
   if (type === 'playerCommand') return `cmd:${payload.type || 'command'}:${payload.uniqueId || payload.nickname || ''}`;
   return '';
@@ -3510,6 +3554,7 @@ function buildSessionStatus(room) {
     round: currentRoundStatus(room),
     bossWave: currentBossStatus(room),
     arenaPowerUp: currentArenaPowerUpStatus(room),
+    aetherisStructures: aetherisStructuresPayload(room),
     recap,
     commandText: viewerCommandText(),
     metrics: {
@@ -3549,8 +3594,10 @@ function ensureLiveSession(room, source = 'dashboard', options = {}) {
     bossDefeats: 0,
   };
   room.liveSession = session;
+  resetAetherisStructures(room);
   setRoomMatchPhase(room, options.phase || MATCH_PHASES.LIVE, 'session_started', { sessionId, detail: { source } });
   persistLiveSessionStart(room, session);
+  emitAetherisStructures(room, 'reset', { reason: 'session_started' });
   emitRoomEvent(room, 'roundEvent', {
     type: 'session_started',
     sessionId,
@@ -6608,6 +6655,122 @@ function textTargetsHorde(text, mentions = []) {
   return false;
 }
 
+function structureAttackDamageForPlayer(room, attackerId, multiplier = 1, options = {}) {
+  const attacker = room?.players?.[attackerId];
+  if (!attacker?.alive) return 0;
+  const fixedDamage = Number.isFinite(Number(options.fixedDamage))
+    ? Math.max(1, Math.round(Number(options.fixedDamage)))
+    : null;
+  const poweredDamage = Boolean(options.poweredDamage || options.poweredAttack || options.giftBoosted);
+  if (fixedDamage != null) return fixedDamage;
+  if (poweredDamage) {
+    return Math.max(1, Math.round(Number(options.poweredDamageAmount || CFG.POWERED_ATTACK_DAMAGE) || CFG.POWERED_ATTACK_DAMAGE));
+  }
+  const variance = 1 - CFG.ATTACK_VARIANCE / 2 + Math.random() * CFG.ATTACK_VARIANCE;
+  return Math.max(1, Math.min(
+    CFG.MAX_NORMAL_ATTACK_DAMAGE,
+    Math.floor((Number(attacker.strength) || CFG.BASE_STRENGTH) * multiplier * variance)
+  ));
+}
+
+function buildAetherisStructureAttackPayload(room, base, structure, beforeHp) {
+  const maxHp = Math.max(1, Math.round(Number(structure?.maxHp) || 1));
+  const hp = Math.max(0, Math.round(Number(structure?.hp) || 0));
+  const damage = Math.max(0, Math.round(Number(base.damage) || 0));
+  const preDamageHp = Math.max(0, Math.round(Number(beforeHp) || 0));
+  return {
+    ...base,
+    intensity: Math.min(1, damage / maxHp),
+    critical: preDamageHp > 0 && damage / preDamageHp >= CFG.CRITICAL_HIT_THRESHOLD,
+    remainingHpPct: Math.max(0, Math.min(1, hp / maxHp)),
+    shotSpeed: room.overlaySettings?.shotSpeed || DEFAULT_OVERLAY_SETTINGS.shotSpeed,
+    shotType: room.overlaySettings?.shotType || DEFAULT_OVERLAY_SETTINGS.shotType,
+    laserColor: room.overlaySettings?.laserColor || DEFAULT_OVERLAY_SETTINGS.laserColor,
+  };
+}
+
+function dealAetherisStructureDamage(room, attackerId, attackerNick, multiplier = 1, effect = 'laser', comment = '', options = {}) {
+  const attacker = room?.players?.[attackerId];
+  if (!attacker?.alive) return { handled: false, reason: 'Attacker is not active' };
+
+  const damage = structureAttackDamageForPlayer(room, attackerId, multiplier, options);
+  if (damage <= 0) return { handled: false, reason: 'No structure damage calculated' };
+
+  const state = ensureAetherisStructures(room);
+  const damageResult = damageAetherisStructure(state, {
+    damage,
+    attackerId,
+    attackerNick: attackerNick || attacker.nickname || attackerId,
+    targetId: options.structureId,
+    structureType: options.structureType,
+  });
+  room.aetherisStructures = damageResult.state;
+  if (!damageResult.damaged) return { handled: false, reason: 'All Aetheris structures are destroyed' };
+
+  attacker.lastActive = Date.now();
+  const snapshot = options.snapshot || getBattleSideSnapshot(room);
+  const attackerScope = battleScopeForPlayer(room, attackerId, snapshot);
+  const target = damageResult.target;
+  const specialAttackVisual = Boolean(options.special || options.poweredDamage || options.powerAttack || options.giftBoosted || multiplier > 1.5);
+  const commandDescription = options.commandDescription || effect || 'HORDE STRIKE';
+  const attackPayload = buildAetherisStructureAttackPayload(room, {
+    attacker: attackerId,
+    attackerNick: attackerNick || attacker.nickname || attackerId,
+    target: target.id,
+    targetNick: target.name,
+    actualTarget: target.id,
+    actualTargetNick: target.name,
+    damage: damageResult.damageApplied,
+    killed: damageResult.destroyed,
+    special: specialAttackVisual,
+    poweredDamage: Boolean(options.poweredDamage || options.powerAttack),
+    giftBoosted: Boolean(options.giftBoosted),
+    effect,
+    commandDescription,
+    comment,
+    attackerScope,
+    targetScope: 'structure',
+    structureDamage: true,
+    aetherisStructureId: target.id,
+    aetherisStructureType: target.type,
+    aetherisStructure: target,
+  }, target, damageResult.beforeHp);
+
+  if (options.powerAttack) applyArenaPowerAttackMeta(attackPayload, options.powerAttack);
+
+  emitRoomEvent(room, 'attack', attackPayload);
+  emitRoomEvent(room, 'commentDamage', {
+    ...attackPayload,
+    target: target.id,
+    targetNick: target.name,
+    targetScope: 'structure',
+  });
+  if (options.powerAttack) emitArenaPoweredAttack(room, attackPayload, options.powerAttack);
+  emitAetherisStructures(room, damageResult.destroyed ? 'destroyed' : 'damaged', {
+    damage: damageResult.damageApplied,
+    target: target.id,
+    targetNick: target.name,
+    lastHitBy: target.lastHitBy,
+  });
+  emitSoundAndSync(room, soundEventForAttackResult(attackPayload, specialAttackVisual ? 'gift' : 'attack'), {
+    intensity: attackPayload.intensity,
+    tier: specialAttackVisual ? 'rare' : 'common',
+  });
+  emitSessionStatus(room);
+  setRoomRuntimeTimeout(room, () => emitRoomEvent(room, 'gameState', room.players), 40);
+
+  const cmdLabel = commandDescription || 'STRUCTURE';
+  console.log(`Structure attack: ${attackerNick || attackerId} ${cmdLabel} -> ${target.name} for ${damageResult.damageApplied} hp`);
+  return {
+    handled: true,
+    result: attackPayload,
+    target: target.id,
+    actualTarget: target.id,
+    structure: target,
+    aetherisStructures: aetherisStructuresPayload(room),
+  };
+}
+
 function normalizeTeamName(value = '') {
   return cleanPublicText(value, 28)
     .replace(/^@+/, '')
@@ -7070,6 +7233,15 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
 
   if (!mentions.length) {
     if (hordeRequested) {
+      const structureResult = dealAetherisStructureDamage(room, attackerId, attackerNick, multiplier, requestedEffect || 'laser', text, {
+        snapshot: baseSnapshot,
+        special: isSpecialCommand || Boolean(powerAttack) || boostActive,
+        poweredDamage: isSpecialCommand || Boolean(powerAttack) || boostActive,
+        giftBoosted: boostActive,
+        commandDescription: commandDescription || requestedEffect,
+        powerAttack,
+      });
+      if (structureResult.handled) return structureResult;
       const target = chooseHordeDamageTarget(room, attackerId, baseSnapshot);
       const result = emitResolvedAttack(target, { id: SERVER_HORDE_ID, nickname: 'The Horde', scope: 'horde' }, baseSnapshot);
       return result || { handled: false, reason: 'No horde target available' };
@@ -7096,6 +7268,15 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
     let visualTarget = null;
 
     if (mentionTargetsHorde(mention)) {
+      const structureResult = dealAetherisStructureDamage(room, attackerId, attackerNick, multiplier, requestedEffect || 'laser', text, {
+        snapshot,
+        special: isSpecialCommand || Boolean(powerAttack) || boostActive,
+        poweredDamage: isSpecialCommand || Boolean(powerAttack) || boostActive,
+        giftBoosted: boostActive,
+        commandDescription: commandDescription || requestedEffect,
+        powerAttack,
+      });
+      if (structureResult.handled) return structureResult;
       target = chooseHordeDamageTarget(room, attackerId, snapshot);
       visualTarget = { id: SERVER_HORDE_ID, nickname: 'The Horde', scope: 'horde' };
     } else if (currentAttackerScope === 'horde') {
@@ -8889,6 +9070,7 @@ io.on('connection', (socket) => {
     gameStateCount: Object.values(room.players).filter(p => p.alive).length,
     stream: buildTikTokConnectionStatus(room),
     streamMode: buildStreamModeStatus(room),
+    aetherisStructures: aetherisStructuresPayload(room),
   });
 
   socket.on('register', ({ type } = {}, ack) => {
@@ -8906,6 +9088,7 @@ io.on('connection', (socket) => {
       socket.emit('gameState',        buildOverlayGameState(room, room.players));
       socket.emit('audioConfig',      room.audioConfig);
       socket.emit('overlaySettings',  overlaySettingsPayload(room));
+      socket.emit('aetherisStructures', aetherisStructuresPayload(room));
       socket.emit('laserColor',       room.overlaySettings.laserColor);
       socket.emit('sessionStatus',    buildSessionStatus(room));
       socket.emit('tiktokConnection',  buildTikTokConnectionStatus(room));
@@ -8927,6 +9110,7 @@ io.on('connection', (socket) => {
       if (clientType === 'dashboard') maybeAutoResumeSavedTikTokStream(room, 'dashboard_registered');
       socket.emit('overlayCount',    { count: room.overlayCount });
       socket.emit('overlaySettings', overlaySettingsPayload(room));
+      socket.emit('aetherisStructures', aetherisStructuresPayload(room));
       socket.emit('laserColor',      room.overlaySettings.laserColor);
       socket.emit('gameState',       buildOverlayGameState(room, room.players));
       socket.emit('sessionStatus',   buildSessionStatus(room));
@@ -9245,6 +9429,7 @@ app.get('/api/status', requireRoom, (req, res) => {
     blockingReasons:  streamMode.blockingReasons,
     background:       buildBackgroundPayload(req.room, { v: Date.now() }),
     overlaySettings:  overlaySettingsPayload(req.room),
+    aetherisStructures: aetherisStructuresPayload(req.room),
     aetherisTerritories: listAetherisTerritories(),
     aetherisTerritory: selectedAetherisTerritoryForRoom(req.room),
     devTestMode:      DEV_TEST_MODE,
@@ -9714,6 +9899,8 @@ app.post('/api/dev/laser-color', requireRoom, (req, res) => {
 app.post('/api/dev/overlay-settings', requireRoom, (req, res) => {
   const { shotType, shotSpeed, color, backgroundFit, aetherisTerritoryId } = req.body || {};
   req.room.overlaySettings = normalizeOverlaySettings(req.room.overlaySettings);
+  const previousTerritoryId = req.room.overlaySettings.aetherisTerritoryId;
+  let territoryChanged = false;
   const validTypes = [
     'beam', 'pulse', 'wave', 'burst', 'laser', 'fire', 'sphere', 'projectile', 'bullet', 'railgun', 'comet', 'arc', 'explosion',
     'prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard',
@@ -9739,11 +9926,14 @@ app.post('/api/dev/overlay-settings', requireRoom, (req, res) => {
       return res.status(400).json({ success: false, error: 'Invalid Aetheris territory.' });
     }
     req.room.overlaySettings.aetherisTerritoryId = normalizedTerritoryId;
+    territoryChanged = previousTerritoryId !== normalizedTerritoryId;
+    if (territoryChanged) resetAetherisStructures(req.room, normalizedTerritoryId);
   }
   saveRoomAudioConfig(req.room);
   const settings = overlaySettingsPayload(req.room);
   emitRoomEvent(req.room, 'overlaySettings', settings);
-  res.json({ success: true, settings });
+  if (territoryChanged) emitAetherisStructures(req.room, 'reset', { reason: 'territory_changed' });
+  res.json({ success: true, settings, aetherisStructures: aetherisStructuresPayload(req.room) });
 });
 
 app.post('/api/connect', requireRoom, (req, res) => {
