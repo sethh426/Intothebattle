@@ -5,7 +5,7 @@ It is built around the official founding offer: creators earn $3 every month for
 
 ## Official Offer
 
-- Referred plan: paid IntoTheBattle subscription at $8.50/month.
+- Referred plan: paid IntoTheBattle Creator Pro subscription at $12/month plus applicable tax.
 - Referrer reward: $3/month per active paid subscription.
 - Founding-window lock: referrals made while the Council is open keep the $3/month reward rate forever while their payments stay active.
 - Example monthly earnings: 10 paid referrals = $30/month, 50 = $150/month, 100 = $300/month.

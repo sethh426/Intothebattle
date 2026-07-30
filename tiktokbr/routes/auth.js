@@ -528,7 +528,7 @@ function renderLoginPage({ error = '', message = '' } = {}) {
     <div class="links">
       <a href="${PAYPAL_LINK}" target="_blank" rel="noopener" class="link-item highlight">
         <span class="link-icon">💳</span>
-        Purchase for only $8.50/month
+        Purchase Creator Pro for $12/mo + applicable tax
         <span class="link-arrow">↗</span>
       </a>
       <a href="/my-code" class="link-item">
