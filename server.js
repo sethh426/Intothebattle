@@ -47,6 +47,17 @@ import { marketingAutomationDiagnostics, publishApprovedMarketingPosts, recordMa
 import { getBlogPostBySlug, listBlogPosts } from './tiktokbr/services/blogEngine.js';
 import { initWorldSocket } from './tiktokbr/services/worldSocket.js';
 import {
+  detectSecurityAbuse,
+  publicSecurityRejectionMessage,
+  recordSecurityEvent,
+  summarizeSecurityPayload,
+} from './tiktokbr/services/securityModeration.js';
+import {
+  getAetherisTerritory,
+  listAetherisTerritories,
+  normalizeAetherisTerritoryId,
+} from './tiktokbr/services/aetherisTerritories.js';
+import {
   createAccessCodeSessionToken,
   getSessionAuthRecord,
 } from './tiktokbr/services/sessionAuth.js';
@@ -98,12 +109,27 @@ import {
   defaultAudioAssignmentsForLibrary,
   normalizeAudioConfig,
   normalizeAudioVolume,
+  normalizeOverlaySettings,
   DEFAULT_OVERLAY_SETTINGS,
 } from './roomManager.js';
 
 const DEFAULT_ROOM_ID = 'default';
 function getDefaultRoom() {
   return getOrCreateRoom(DEFAULT_ROOM_ID);
+}
+
+function selectedAetherisTerritoryForRoom(room) {
+  const settings = normalizeOverlaySettings(room?.overlaySettings || {});
+  return getAetherisTerritory(settings.aetherisTerritoryId);
+}
+
+function overlaySettingsPayload(room) {
+  const settings = normalizeOverlaySettings(room?.overlaySettings || {});
+  if (room) room.overlaySettings = settings;
+  return {
+    ...settings,
+    aetherisTerritory: getAetherisTerritory(settings.aetherisTerritoryId),
+  };
 }
 
 // Feature gate for room-scoped behavior. Production defaults to signed,
@@ -510,6 +536,13 @@ function cleanPublicText(value, maxLength = 140) {
 function cleanEmail(value) {
   const email = String(value || '').trim().toLowerCase();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email.slice(0, 254) : '';
+}
+
+function activeAccountUserFromRequest(req) {
+  const auth = getAuthRecord(req?.cookies?.session_token);
+  if (auth?.type !== 'user') return null;
+  const user = auth.record;
+  return user?.is_active ? user : null;
 }
 
 function validateRuntimeConfiguration() {
@@ -1777,6 +1810,7 @@ function renderSitemapXml(req = null) {
     { loc: absolute('/battlegrounds'), lastmod: '2026-07-02', changefreq: 'daily', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'The Battlegrounds public live battle board' }] },
     { loc: absolute('/sponsors'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle sponsor game key art' }] },
     { loc: absolute('/blog'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle updates and release notes' }] },
+    { loc: absolute('/comments'), lastmod: '2026-07-13', changefreq: 'weekly', priority: '0.7', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle creator comments' }] },
     { loc: absolute('/paywall'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle Creator Pro game key art' }] },
     { loc: absolute('/privacy'), lastmod: '2026-07-07', changefreq: 'monthly', priority: '0.6' },
     { loc: absolute('/terms'), lastmod: '2026-07-07', changefreq: 'monthly', priority: '0.6' },
@@ -2339,6 +2373,12 @@ function renderBlogListPage(posts = []) {
           ${cards || (!featured ? '<p class="blog-empty">No published posts yet. Check again soon while the first SEO-ready updates are prepared.</p>' : '')}
         </div>
       </section>
+      ${renderCreatorCommentsBlock({
+        id: 'blog-creator-comments',
+        kicker: 'Creator comments',
+        title: 'What streamers are saying',
+        copy: 'The same creator comment block appears here, on the homepage, and on the comments page.',
+      })}
     </main>
     <footer class="blog-footer">
       <span>&copy; 2026 IntoTheBattle</span>
@@ -2699,6 +2739,12 @@ function renderBlogPostPage(post) {
         </section>
       </aside>
     </main>
+    ${renderCreatorCommentsBlock({
+      id: 'blog-post-creator-comments',
+      kicker: 'Creator comments',
+      title: 'What streamers are saying',
+      copy: 'Logged-in creators can add a comment for the shared public comments block.',
+    })}
     <footer class="blog-footer">
       <span>&copy; 2026 IntoTheBattle</span>
       <span><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a> &middot; <a href="/site-map">Site map</a></span>
@@ -2729,6 +2775,163 @@ function listPublicCreatorComments(limit = 12) {
     logger.warn({ err }, 'Failed to load public creator comments');
     return [];
   }
+}
+
+function renderCreatorCommentCards(comments = []) {
+  if (!comments.length) {
+    return '<p class="creator-comments-empty">No creator comments yet. Be the first streamer to leave one.</p>';
+  }
+  return comments.map(comment => `<article class="creator-comment-card">
+    <p>${escapeHtml(comment.comment || '')}</p>
+    <footer><strong>${escapeHtml(comment.name || 'Creator')}</strong><span>${escapeHtml(comment.role || 'TikTok LIVE creator')}</span></footer>
+  </article>`).join('');
+}
+
+function renderCreatorCommentsBlock({
+  id = 'creator-comments',
+  kicker = 'Creator comments',
+  title = 'What streamers are saying',
+  copy = 'Comments from creators testing IntoTheBattle on real TikTok LIVE streams.',
+  linkToCommentsPage = true,
+} = {}) {
+  const initialComments = listPublicCreatorComments(6);
+  return `
+    <style>
+      .creator-comments-block{margin:clamp(42px,7vw,78px) 0;padding:clamp(22px,4vw,34px);border:1px solid rgba(255,255,255,.12);border-radius:8px;background:linear-gradient(180deg,rgba(7,12,20,.78),rgba(7,12,20,.52));box-shadow:0 26px 80px rgba(0,0,0,.28)}
+      .creator-comments-head{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:end;margin-bottom:18px}
+      .creator-comments-kicker{margin:0;color:var(--cyan,#9ff5ff);font-size:12px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+      .creator-comments-head h2{margin:5px 0 8px;font-size:clamp(28px,4vw,46px);line-height:1.02}
+      .creator-comments-head p{margin:0;max-width:720px;color:var(--muted,#abb8c7);line-height:1.55;font-weight:750}
+      .creator-comments-link,.creator-comments-login a,.creator-comments-form button{min-height:42px;display:inline-flex;align-items:center;justify-content:center;padding:0 14px;border-radius:8px;text-decoration:none;font-weight:950}
+      .creator-comments-link{color:#170c02;background:linear-gradient(135deg,var(--gold,#f6c95b),#fff0b9 52%,var(--ember,#ff6a3d));white-space:nowrap}
+      .creator-comments-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+      .creator-comment-card{min-width:0;padding:15px;border:1px solid rgba(255,255,255,.1);border-radius:8px;background:rgba(0,0,0,.18)}
+      .creator-comment-card p{margin:0;color:#edf3ff;line-height:1.55;font-weight:750}
+      .creator-comment-card footer{display:grid;gap:2px;margin-top:14px;color:var(--muted,#abb8c7);font-size:12px}
+      .creator-comment-card strong{color:#fff8e6;font-size:14px}
+      .creator-comments-empty,.creator-comments-status{margin:0;color:var(--muted,#abb8c7);line-height:1.5}
+      .creator-comments-auth{margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.1)}
+      .creator-comments-login{display:flex;gap:10px;flex-wrap:wrap;align-items:center;color:var(--muted,#abb8c7);font-weight:800}
+      .creator-comments-login a{border:1px solid rgba(255,255,255,.12);color:#fff8e6;background:rgba(255,255,255,.06)}
+      .creator-comments-form{display:grid;gap:10px}
+      .creator-comments-login[hidden],.creator-comments-form[hidden]{display:none!important}
+      .creator-comments-form label{display:grid;gap:7px;color:var(--muted,#abb8c7);font-size:12px;font-weight:950;text-transform:uppercase;letter-spacing:.08em}
+      .creator-comments-form textarea{width:100%;min-height:92px;resize:vertical;padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:#0b1019;color:#fff8e6;font:inherit;line-height:1.45}
+      .creator-comments-form button{width:fit-content;border:0;color:#170c02;background:linear-gradient(135deg,var(--gold,#f6c95b),#fff0b9 52%,var(--ember,#ff6a3d));cursor:pointer}
+      .creator-comments-form button:disabled{opacity:.58;cursor:wait}
+      .creator-comments-identity{margin:0;color:#c8d2df;font-size:13px;font-weight:850}
+      @media(max-width:700px){.creator-comments-head{grid-template-columns:1fr}.creator-comments-link,.creator-comments-form button{width:100%}}
+    </style>
+    <section id="${escapeHtml(id)}" class="creator-comments-block" data-public-comments aria-labelledby="${escapeHtml(id)}-title">
+      <div class="creator-comments-head">
+        <div>
+          <p class="creator-comments-kicker">${escapeHtml(kicker)}</p>
+          <h2 id="${escapeHtml(id)}-title">${escapeHtml(title)}</h2>
+          <p>${escapeHtml(copy)}</p>
+        </div>
+        ${linkToCommentsPage ? '<a class="creator-comments-link" href="/comments">Open comments</a>' : ''}
+      </div>
+      <div class="creator-comments-list" data-comments-list>${renderCreatorCommentCards(initialComments)}</div>
+      <div class="creator-comments-auth">
+        <div class="creator-comments-login" data-comments-login>
+          <span>Log in with your creator account to add a comment.</span>
+          <a data-comments-login-link href="/login">Login</a>
+          <a data-comments-signup-link href="/signup">Create account</a>
+        </div>
+        <form class="creator-comments-form" data-comments-form hidden>
+          <p class="creator-comments-identity" data-comments-identity></p>
+          <label>Comment
+            <textarea data-comments-textarea maxlength="260" placeholder="Tell other creators what the game was like on your stream."></textarea>
+          </label>
+          <button type="submit">Post comment</button>
+        </form>
+        <p class="creator-comments-status" data-comments-status aria-live="polite"></p>
+      </div>
+    </section>
+    <script src="/js/public-comments.js" defer></script>`;
+}
+
+function renderCommentsPage(req) {
+  const baseUrl = publicBaseUrl(req);
+  const pageUrl = new URL('/comments', `${baseUrl}/`).toString();
+  const description = 'Read and add IntoTheBattle creator comments from streamers using the TikTok LIVE battle overlay.';
+  const commentsSchema = jsonLdScript({
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    url: pageUrl,
+    name: 'IntoTheBattle Creator Comments',
+    description,
+    isPartOf: { '@id': `${baseUrl}/#website` },
+  });
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Creator Comments | IntoTheBattle</title>
+  <meta name="description" content="${escapeHtml(description)}" />
+  <link rel="canonical" href="${escapeHtml(pageUrl)}" />
+  <meta property="og:title" content="IntoTheBattle Creator Comments" />
+  <meta property="og:description" content="${escapeHtml(description)}" />
+  <meta property="og:url" content="${escapeHtml(pageUrl)}" />
+  <meta property="og:image" content="${escapeHtml(new URL('/og-intothebattle.png', `${baseUrl}/`).toString())}" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+  <link rel="stylesheet" href="/css/site-refresh.css" />
+  ${commentsSchema}
+  <style>
+    *{box-sizing:border-box}
+    :root{--paper:#fff8e6;--muted:#abb8c7;--gold:#f6c95b;--cyan:#9ff5ff;--ember:#ff6a3d;--line:rgba(255,255,255,.13)}
+    body{margin:0;min-height:100vh;font-family:Inter,Arial,sans-serif;color:var(--paper);background:linear-gradient(130deg,rgba(246,201,91,.13),transparent 36%),linear-gradient(320deg,rgba(159,245,255,.11),transparent 42%),linear-gradient(180deg,#151b26 0%,#060911 54%,#020204 100%)}
+    .wrap{width:min(1120px,calc(100% - 32px));margin:0 auto;padding:24px 0 72px}
+    .nav{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:28px}
+    .nav a{min-height:42px;display:inline-flex;align-items:center;justify-content:center;padding:0 14px;border-radius:8px;color:var(--cyan);border:1px solid var(--line);background:rgba(255,255,255,.055);text-decoration:none;font-weight:900}
+    .hero{padding:clamp(28px,6vw,70px) 0 12px}
+    .eyebrow{margin:0;color:var(--cyan);font-size:12px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+    h1{margin:10px 0 14px;font-size:clamp(44px,7vw,84px);line-height:.94}
+    .hero p{max-width:760px;margin:0;color:#d8e1ee;font-size:clamp(18px,2vw,23px);line-height:1.48;font-weight:760}
+    footer{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:38px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;font-weight:800}
+    footer a{color:var(--muted);text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav" aria-label="Comments navigation">
+      <a href="/">Homepage</a>
+      <a href="/blog">Blog</a>
+      <a href="/signup">Create account</a>
+    </nav>
+    <main>
+      <section class="hero" aria-labelledby="comments-title">
+        <p class="eyebrow">Creator feedback</p>
+        <h1 id="comments-title">Creator comments</h1>
+        <p>Read what streamers are saying about IntoTheBattle, then log in with your creator account to add your own comment about the game.</p>
+      </section>
+      ${renderCreatorCommentsBlock({
+        id: 'comments-page-block',
+        kicker: 'Community notes',
+        title: 'Comments about the game',
+        copy: 'One shared comment block powers this page, the homepage, and the blog.',
+        linkToCommentsPage: false,
+      })}
+    </main>
+    <footer><span>&copy; 2026 IntoTheBattle</span><span><a href="/privacy">Privacy</a> &middot; <a href="/terms">Terms</a></span></footer>
+  </div>
+</body>
+</html>`;
+}
+
+function renderHomePage(req) {
+  const homePath = path.join(__dirname, 'home.html');
+  const html = fs.readFileSync(homePath, 'utf8');
+  const block = renderCreatorCommentsBlock({
+    id: 'home-creator-comments',
+    kicker: 'Creator comments',
+    title: 'Streamers talking about the battle',
+    copy: 'Real creator comments live in one shared block across the homepage, comments page, and blog.',
+  });
+  if (html.includes('    <!-- FAQ -->')) return html.replace('    <!-- FAQ -->', `${block}\n\n    <!-- FAQ -->`);
+  return html.replace('</main>', `${block}\n</main>`);
 }
 
 function listPublicBattlegroundPosts(limit = 18) {
@@ -5213,14 +5416,14 @@ function loadRoomAudioConfig(room) {
       const saved = JSON.parse(fs.readFileSync(audioConfigFile, 'utf8'));
       room.audioConfig = normalizeAudioConfig(saved.config || {});
       room.audioLibrary = Array.isArray(saved.library) ? saved.library : [];
-      room.overlaySettings = { ...DEFAULT_OVERLAY_SETTINGS, ...(saved.settings || {}) };
+      room.overlaySettings = normalizeOverlaySettings(saved.settings || {});
       saveRoomSettings(room.roomId);
       console.log(`🔊 Migrated legacy room audio settings into DB for room ${room.roomId}`);
     } else if (!room.audioLibrary.length && repoConfig) {
       const saved = JSON.parse(fs.readFileSync(repoConfig, 'utf8'));
       room.audioConfig = normalizeAudioConfig(saved.config || {});
       room.audioLibrary = Array.isArray(saved.library) ? saved.library : [];
-      room.overlaySettings = { ...DEFAULT_OVERLAY_SETTINGS, ...(saved.settings || {}) };
+      room.overlaySettings = normalizeOverlaySettings(saved.settings || {});
       saveRoomSettings(room.roomId);
       console.log(`🔊 Seeded room audio settings from repo into DB for room ${room.roomId}`);
     }
@@ -6936,15 +7139,74 @@ function handleBattleAttack(room, attackerId, attackerNick, comment) {
 const app        = express();
 const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS || 1);
 app.set('trust proxy', trustProxyHops);
+const requestBodyLimit = process.env.REQUEST_BODY_LIMIT || process.env.EXPRESS_BODY_LIMIT || '256kb';
 const growthEventLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 90,
   standardHeaders: true,
   legacyHeaders: false,
 });
+const publicWriteLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Math.max(5, Number(process.env.PUBLIC_WRITE_RATE_LIMIT_PER_MINUTE || 24) || 24),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests. Try again shortly.' },
+});
+const hostAllowListEnforced = process.env.SECURITY_ENFORCE_HOSTS == null
+  ? process.env.NODE_ENV === 'production'
+  : String(process.env.SECURITY_ENFORCE_HOSTS).toLowerCase() !== 'false';
 
 app.get('/healthz', (_req, res) => {
   res.status(200).send('ok');
+});
+
+function hostnameFromValue(value = '') {
+  const raw = String(value || '').split(',')[0].trim().toLowerCase();
+  if (!raw) return '';
+  if (raw.startsWith('[')) return raw.slice(1, raw.indexOf(']'));
+  return raw.split(':')[0];
+}
+
+function hostnameFromUrl(value = '') {
+  try {
+    return new URL(String(value || '')).hostname.toLowerCase();
+  } catch (_err) {
+    return '';
+  }
+}
+
+function configuredAllowedHosts() {
+  const hosts = new Set();
+  const add = value => {
+    const text = String(value || '').trim();
+    const host = text.includes('://')
+      ? hostnameFromUrl(text)
+      : (hostnameFromValue(text) || hostnameFromUrl(text));
+    if (host) hosts.add(host);
+  };
+  [process.env.SECURITY_ALLOWED_HOSTS, process.env.ALLOWED_HOSTS, process.env.APP_DOMAIN]
+    .filter(Boolean)
+    .flatMap(value => String(value).split(','))
+    .forEach(add);
+  add(process.env.APP_BASE_URL);
+  add(process.env.GOOGLE_OAUTH_REDIRECT_URI);
+  add(process.env.TIKTOK_REDIRECT_URI);
+  return hosts;
+}
+
+function isAllowedHostHeader(req) {
+  if (!hostAllowListEnforced) return true;
+  const allowedHosts = configuredAllowedHosts();
+  if (!allowedHosts.size) return true;
+  const host = hostnameFromValue(req.get('host'));
+  return Boolean(host && allowedHosts.has(host));
+}
+
+app.use((req, res, next) => {
+  if (isAllowedHostHeader(req)) return next();
+  logger.warn({ host: req.get('host') || null, path: req.path }, 'Blocked request with untrusted Host header');
+  return res.status(421).send('Misdirected request');
 });
 
 app.use((req, res, next) => {
@@ -7062,18 +7324,46 @@ if (process.env.REDIS_URL && enableRedisAdapter) {
 }
 
 app.use(cookieParser());
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: requestBodyLimit, parameterLimit: 100 }));
 app.use(express.json({
+  limit: requestBodyLimit,
   verify(req, _res, buf) {
     if (req.path === '/api/tiktok/webhook') req.rawBody = buf.toString('utf8');
   },
 }));
 
+function securityCspForRequest(req) {
+  const directives = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.paypal.com https://www.paypalobjects.com https://www.clarity.ms https://scripts.clarity.ms https://www.googletagmanager.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "img-src 'self' data: blob: https:",
+    "media-src 'self' data: blob: https:",
+    "connect-src 'self' https: wss:",
+    "worker-src 'self' blob:",
+    "frame-src 'self' https://www.paypal.com https://www.sandbox.paypal.com",
+    "form-action 'self' https://www.paypal.com https://www.sandbox.paypal.com",
+  ];
+  if (!req.path.startsWith('/overlay')) directives.push("frame-ancestors 'self'");
+  return directives.join('; ');
+}
+
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  res.setHeader('X-Download-Options', 'noopen');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), usb=()');
+  res.setHeader('Origin-Agent-Cluster', '?1');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader('Content-Security-Policy', securityCspForRequest(req));
+  if (req.secure || req.get('x-forwarded-proto') === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
   if (!req.path.startsWith('/overlay')) {
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   }
@@ -7241,18 +7531,25 @@ app.get('/', (req, res) => {
       clearCookieVariants(res, 'session_token', true);
     }
   }
-  // If not authenticated, serve the public homepage instead of forcing login
-  const homePath = path.join(__dirname, 'home.html');
-  res.sendFile(homePath, (err) => {
-    if (err) {
-      logger.error({ err, path: homePath }, 'Failed to serve homepage');
-      res.status(500).send('Internal Server Error');
-    }
-  });
+  // If not authenticated, serve the public homepage instead of forcing login.
+  try {
+    res.send(renderHomePage(req));
+  } catch (err) {
+    logger.error({ err, path: path.join(__dirname, 'home.html') }, 'Failed to render homepage');
+    res.status(500).send('Internal Server Error');
+  }
 });
 
-app.get('/home', (_req, res) => res.sendFile(path.join(__dirname, 'home.html')));
+app.get('/home', (req, res) => {
+  try {
+    res.send(renderHomePage(req));
+  } catch (err) {
+    logger.error({ err, path: path.join(__dirname, 'home.html') }, 'Failed to render homepage');
+    res.status(500).send('Internal Server Error');
+  }
+});
 app.get(['/aetheris-preview', '/aetheris-preview.html'], (_req, res) => res.sendFile(path.join(__dirname, 'aetheris-preview.html')));
+app.get('/comments', (req, res) => res.send(renderCommentsPage(req)));
 app.get(['/sponsors', '/sponsors.html'], (_req, res) => res.sendFile(path.join(__dirname, 'sponsors.html')));
 app.get(['/how-to-play', '/how-to-play.html', '/players', '/game-guide'], (_req, res) => res.sendFile(path.join(__dirname, 'how-to-play.html')));
 app.get(['/battlegrounds', '/battlegrounds.html', '/the-battlegrounds'], (_req, res) => res.sendFile(path.join(__dirname, 'battlegrounds.html')));
@@ -7262,7 +7559,13 @@ app.get(['/terms', '/terms.html', '/terms-of-service'], (_req, res) => res.sendF
 app.get(['/incident-runbook', '/incident-runbook.html', '/runbook'], (_req, res) => res.sendFile(path.join(__dirname, 'incident-runbook.html')));
 app.get('/verify-email', (_req, res) => res.sendFile(path.join(__dirname, 'verify-email.html')));
 app.get('/signup', (_req, res) => res.sendFile(path.join(__dirname, 'signup.html')));
-app.get(['/battle-clip', '/battle-clip.html'], (_req, res) => res.sendFile(path.join(__dirname, 'battle-clip.html')));
+app.get(['/battle-clip', '/battle-clip.html'], (req, res) => {
+  if (req.query?.asset) {
+    res.sendFile(path.join(__dirname, 'battle-clip.html'));
+    return;
+  }
+  res.redirect(302, '/overlay-preview?demo=1&controls=0&debug=0&banner_preview=1');
+});
 app.get(['/overlay-preview', '/overlay-preview.html', '/overlay-demo', '/overlay-demo.html'], (_req, res) => res.sendFile(path.join(__dirname, 'overlay.html')));
 app.get(['/overlay/mobile-preview', '/overlay-mobile-preview', '/overlay-mobile-demo'], (_req, res) => res.sendFile(path.join(__dirname, 'overlay-mobile.html')));
 app.get(['/overlay-v2-preview', '/overlay-v2-preview.html', '/overlay-v2-demo', '/overlay-v2-demo.html'], (_req, res) => res.sendFile(path.join(__dirname, 'overlay-v2.html')));
@@ -7300,6 +7603,11 @@ app.get('/request-password-reset', (_req, res) => res.sendFile(path.join(__dirna
 app.get('/reset-password', (_req, res) => res.sendFile(path.join(__dirname, 'reset-password.html')));
 app.get('/paywall', (_req, res) => res.sendFile(path.join(__dirname, 'paywall.html')));
 app.get('/paywall-link', (req, res) => {
+  const url = process.env.PAYPAL_PAYMENT_LINK;
+  if (url) {
+    return res.redirect(302, url);
+  }
+
   const inAppCheckoutConfigured = Boolean(
     process.env.PAYPAL_CLIENT_ID &&
     (process.env.PAYPAL_PLAN_ID || process.env.PAYPAL_SUBSCRIPTION_PLAN_ID)
@@ -7308,11 +7616,7 @@ app.get('/paywall-link', (req, res) => {
     return res.redirect(302, '/paywall?checkout=paypal');
   }
 
-  const url = process.env.PAYPAL_PAYMENT_LINK;
-  if (!url) {
-    return res.redirect(302, '/billing/error?reason=paypal_not_configured');
-  }
-  res.redirect(302, url);
+  return res.redirect(302, '/billing/error?reason=paypal_not_configured');
 });
 
 app.get('/battle-recap/:sessionId', (req, res) => {
@@ -7348,6 +7652,18 @@ app.get('/api/public/comments', (_req, res) => {
   res.json({ success: true, comments: listPublicCreatorComments(18) });
 });
 
+app.get('/api/public/comment-session', (req, res) => {
+  const user = activeAccountUserFromRequest(req);
+  res.set('Cache-Control', 'no-store');
+  res.json({
+    success: true,
+    user: user ? {
+      name: user.name || '',
+      tiktokUsername: user.tiktok_username || '',
+    } : null,
+  });
+});
+
 app.get('/api/public/blog-posts', (req, res) => {
   const limit = Math.max(1, Math.min(50, Number(req.query.limit) || 12));
   const posts = listBlogPosts({
@@ -7366,14 +7682,41 @@ app.get('/api/public/blog-posts/:slug', (req, res) => {
   res.json({ success: true, post });
 });
 
-app.post('/api/public/comments', (req, res) => {
-  const name = cleanPublicText(req.body?.name, 70) || 'Creator';
-  const email = cleanEmail(req.body?.email) || null;
-  const role = cleanPublicText(req.body?.role, 80) || 'TikTok LIVE creator';
+app.post('/api/public/comments', publicWriteLimiter, (req, res) => {
+  const user = activeAccountUserFromRequest(req);
+  if (!user) {
+    return res.status(401).json({
+      success: false,
+      error: 'Log in with your creator account to comment.',
+      loginUrl: '/login?next=/comments',
+      signupUrl: '/signup',
+    });
+  }
+
   const comment = cleanPublicText(req.body?.comment, 260);
   if (comment.length < 8) {
     return res.status(400).json({ success: false, error: 'Write a slightly longer comment.' });
   }
+
+  const name = cleanPublicText(user.name || user.tiktok_username || 'Creator', 70) || 'Creator';
+  const email = cleanEmail(user.email) || null;
+  const tiktokUsername = cleanPublicText(user.tiktok_username, 60).replace(/^@+/, '');
+  const securityDetection = detectSecurityAbuse({ comment, name, tiktokUsername });
+  if (securityDetection.flagged) {
+    recordSecurityEvent(db, {
+      req,
+      eventType: 'public_comment_security_block',
+      actorUserId: user.id,
+      actorEmail: email || user.email || '',
+      endpoint: req.originalUrl,
+      actionTaken: 'comment_blocked',
+      detection: securityDetection,
+      payloadSummary: summarizeSecurityPayload({ comment, name, tiktokUsername }),
+    });
+    return res.status(400).json({ success: false, error: publicSecurityRejectionMessage() });
+  }
+  const role = tiktokUsername ? `@${tiktokUsername}` : 'IntoTheBattle creator';
+
   try {
     db.prepare(`
       INSERT INTO creator_comments (name, email, role, comment, status, created_at)
@@ -7391,13 +7734,55 @@ app.get('/api/public/battlegrounds', (_req, res) => {
   res.json({ success: true, posts: listPublicBattlegroundPosts(18) });
 });
 
-app.post('/api/public/battlegrounds', (req, res) => {
+app.post('/api/public/battlegrounds', publicWriteLimiter, (req, res) => {
+  const securityDetection = detectSecurityAbuse({
+    creatorName: req.body?.creatorName || req.body?.creator_name || req.body?.name,
+    tiktokUsername: req.body?.tiktokUsername || req.body?.tiktok_username || req.body?.username,
+    battleTitle: req.body?.battleTitle || req.body?.battle_title || req.body?.title,
+    description: req.body?.description,
+    battleUrl: req.body?.battleUrl || req.body?.battle_url || req.body?.url,
+  });
+  if (securityDetection.flagged) {
+    recordSecurityEvent(db, {
+      req,
+      eventType: 'battleground_post_security_block',
+      endpoint: req.originalUrl,
+      actionTaken: 'battleground_post_blocked',
+      detection: securityDetection,
+      payloadSummary: summarizeSecurityPayload(req.body || {}),
+    });
+    return res.status(400).json({ success: false, error: publicSecurityRejectionMessage() });
+  }
   const result = createBattlegroundPost(req.body || {});
   if (!result.ok) return res.status(result.status || 400).json({ success: false, error: result.error });
   return res.json({ success: true, posts: result.posts });
 });
 
-app.post('/api/signup-intent', async (req, res) => {
+app.post('/api/signup-intent', publicWriteLimiter, async (req, res) => {
+  const securityDetection = detectSecurityAbuse({
+    name: req.body?.name,
+    tiktokUsername: req.body?.tiktokUsername,
+    source: req.body?.source,
+    lastPath: req.body?.lastPath,
+  });
+  if (securityDetection.flagged) {
+    recordSecurityEvent(db, {
+      req,
+      eventType: 'signup_intent_security_block',
+      actorEmail: req.body?.email || '',
+      endpoint: req.originalUrl,
+      actionTaken: 'signup_intent_blocked',
+      detection: securityDetection,
+      payloadSummary: summarizeSecurityPayload({
+        email: req.body?.email,
+        name: req.body?.name,
+        tiktokUsername: req.body?.tiktokUsername,
+        source: req.body?.source,
+        lastPath: req.body?.lastPath,
+      }),
+    });
+    return res.status(400).json({ success: false, error: publicSecurityRejectionMessage() });
+  }
   const result = upsertSignupIntent({
     email: req.body?.email,
     name: req.body?.name,
@@ -8532,12 +8917,13 @@ io.on('connection', (socket) => {
     room.initialized = true;
   }
 
+  const initialOverlaySettings = overlaySettingsPayload(room);
   socket.emit('serverReady', {
     socketId: socket.id,
     roomId: room.roomId,
     overlayCount: room.overlayCount,
-    overlaySettings: room.overlaySettings,
-    laserColor: room.overlaySettings.laserColor,
+    overlaySettings: initialOverlaySettings,
+    laserColor: initialOverlaySettings.laserColor,
     gameStateCount: Object.values(room.players).filter(p => p.alive).length,
     stream: buildTikTokConnectionStatus(room),
     streamMode: buildStreamModeStatus(room),
@@ -8557,7 +8943,7 @@ io.on('connection', (socket) => {
 
       socket.emit('gameState',        buildOverlayGameState(room, room.players));
       socket.emit('audioConfig',      room.audioConfig);
-      socket.emit('overlaySettings',  room.overlaySettings);
+      socket.emit('overlaySettings',  overlaySettingsPayload(room));
       socket.emit('laserColor',       room.overlaySettings.laserColor);
       socket.emit('sessionStatus',    buildSessionStatus(room));
       socket.emit('tiktokConnection',  buildTikTokConnectionStatus(room));
@@ -8578,7 +8964,7 @@ io.on('connection', (socket) => {
       }
       if (clientType === 'dashboard') maybeAutoResumeSavedTikTokStream(room, 'dashboard_registered');
       socket.emit('overlayCount',    { count: room.overlayCount });
-      socket.emit('overlaySettings', room.overlaySettings);
+      socket.emit('overlaySettings', overlaySettingsPayload(room));
       socket.emit('laserColor',      room.overlaySettings.laserColor);
       socket.emit('gameState',       buildOverlayGameState(room, room.players));
       socket.emit('sessionStatus',   buildSessionStatus(room));
@@ -8897,7 +9283,9 @@ app.get('/api/status', requireRoom, (req, res) => {
     lastStreamEventAt: req.room.lastStreamEventAt || null,
     blockingReasons:  streamMode.blockingReasons,
     background:       buildBackgroundPayload(req.room, { v: Date.now() }),
-    overlaySettings:  req.room.overlaySettings,
+    overlaySettings:  overlaySettingsPayload(req.room),
+    aetherisTerritories: listAetherisTerritories(),
+    aetherisTerritory: selectedAetherisTerritoryForRoom(req.room),
     devTestMode:      DEV_TEST_MODE,
     setupRehearsal:   req.room.setupRehearsal || { active: false },
     session:          buildSessionStatus(req.room),
@@ -9357,13 +9745,14 @@ app.post('/api/dev/laser-color', requireRoom, (req, res) => {
   if (typeof color !== 'string' || !color.trim()) return res.status(400).json({ success: false, error: 'Invalid color' });
   req.room.overlaySettings.laserColor = color.trim();
   saveRoomAudioConfig(req.room);
-  emitRoomEvent(req.room, 'overlaySettings', req.room.overlaySettings);
+  emitRoomEvent(req.room, 'overlaySettings', overlaySettingsPayload(req.room));
   emitRoomEvent(req.room, 'laserColor', { color: req.room.overlaySettings.laserColor });
   res.json({ success: true, color: req.room.overlaySettings.laserColor });
 });
 
 app.post('/api/dev/overlay-settings', requireRoom, (req, res) => {
-  const { shotType, shotSpeed, color, backgroundFit } = req.body || {};
+  const { shotType, shotSpeed, color, backgroundFit, aetherisTerritoryId } = req.body || {};
+  req.room.overlaySettings = normalizeOverlaySettings(req.room.overlaySettings);
   const validTypes = [
     'beam', 'pulse', 'wave', 'burst', 'laser', 'fire', 'sphere', 'projectile', 'bullet', 'railgun', 'comet', 'arc', 'explosion',
     'prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard',
@@ -9383,9 +9772,17 @@ app.post('/api/dev/overlay-settings', requireRoom, (req, res) => {
     if (!validBackgroundFits.includes(backgroundFit)) return res.status(400).json({ success: false, error: `Invalid background fit. Must be one of: ${validBackgroundFits.join(', ')}` });
     req.room.overlaySettings.backgroundFit = backgroundFit;
   }
+  if (typeof aetherisTerritoryId === 'string' && aetherisTerritoryId) {
+    const normalizedTerritoryId = normalizeAetherisTerritoryId(aetherisTerritoryId, '');
+    if (normalizedTerritoryId !== aetherisTerritoryId.trim().toLowerCase()) {
+      return res.status(400).json({ success: false, error: 'Invalid Aetheris territory.' });
+    }
+    req.room.overlaySettings.aetherisTerritoryId = normalizedTerritoryId;
+  }
   saveRoomAudioConfig(req.room);
-  emitRoomEvent(req.room, 'overlaySettings', req.room.overlaySettings);
-  res.json({ success: true, settings: req.room.overlaySettings });
+  const settings = overlaySettingsPayload(req.room);
+  emitRoomEvent(req.room, 'overlaySettings', settings);
+  res.json({ success: true, settings });
 });
 
 app.post('/api/connect', requireRoom, (req, res) => {
@@ -9568,7 +9965,7 @@ app.get('/background/:filename', (req, res) => {
 
 app.get('/api/audio', requireRoom, (req, res) => {
   req.room.audioConfig = normalizeAudioConfig(req.room.audioConfig);
-  res.json({ success: true, library: req.room.audioLibrary, config: req.room.audioConfig, settings: req.room.overlaySettings });
+  res.json({ success: true, library: req.room.audioLibrary, config: req.room.audioConfig, settings: overlaySettingsPayload(req.room) });
 });
 
 app.post('/api/audio/upload', requireRoom, (req, res) => {

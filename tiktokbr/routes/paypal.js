@@ -132,7 +132,7 @@ function activateUserSubscription(user, subscription) {
     try {
       qualifyReferralForUser(db, user.id, {
         source: 'paypal_activation',
-        notes: `Qualified by PayPal subscription ${subscriptionId}`,
+        notes: 'Council monthly referral reward accrued for an active paid subscriber.',
       });
     } catch (err) {
       console.warn('Referral qualification failed:', err?.message || err);
@@ -264,6 +264,14 @@ router.post('/api/paypal/webhook', express.json(), async (req, res) => {
           const nextBilling = formatDateForSql(req.body.resource?.billing_agreement?.next_billing_time || req.body.resource?.billing_agreement?.next_billing_date || userSub.next_billing_date);
           db.prepare('UPDATE subscriptions SET status = ?, next_billing_date = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
             .run('active', nextBilling || userSub.next_billing_date, userSub.id);
+          try {
+            qualifyReferralForUser(db, userSub.user_id, {
+              source: 'paypal_payment_completed',
+              notes: 'Council monthly referral reward accrued for an active paid subscriber.',
+            });
+          } catch (err) {
+            console.warn('Referral qualification failed after PayPal payment:', err?.message || err);
+          }
           console.log(`🔄 Renewed user subscription ${subId}`);
         }
 
@@ -305,16 +313,19 @@ router.get('/api/paypal/config', (req, res) => {
   const clientId = paypalClientId();
   const planId = paypalPlanId();
   const configured = Boolean(clientId && planId);
+  const hostedCheckoutUrl = process.env.PAYPAL_PAYMENT_LINK ? '/paywall-link?fallback=1' : null;
   return res.json({
     success: true,
     authenticated: true,
     configured,
+    hostedCheckoutConfigured: Boolean(hostedCheckoutUrl),
     mode: paypalMode(),
     sdkUrl: paypalSdkBaseUrl(),
     currency: process.env.PAYPAL_CURRENCY || 'USD',
     clientId: configured ? clientId : null,
     planId: configured ? planId : null,
-    fallbackUrl: process.env.PAYPAL_PAYMENT_LINK ? '/paywall-link?fallback=1' : null,
+    hostedCheckoutUrl,
+    fallbackUrl: hostedCheckoutUrl,
     user: {
       id: user.id,
       email: user.email,

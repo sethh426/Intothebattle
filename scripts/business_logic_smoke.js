@@ -32,6 +32,12 @@ import {
 } from '../tiktokbr/services/arenaPowerUp.js';
 import { buildLaunchReadinessReport } from '../tiktokbr/services/launchReadiness.js';
 import { evaluateSponsorMediaQuality } from '../tiktokbr/sponsorMediaProcessor.js';
+import {
+  DEFAULT_AETHERIS_TERRITORY_ID,
+  getAetherisTerritory,
+  listAetherisTerritories,
+  normalizeAetherisTerritoryId,
+} from '../tiktokbr/services/aetherisTerritories.js';
 
 function testEntitlements() {
   assert.equal(
@@ -410,6 +416,19 @@ function testSponsorMediaQualityGate() {
   assert.equal(warningOnly.status, 'warn', 'non-ideal but playable creative should warn instead of block');
 }
 
+function testAetherisTerritoryCatalog() {
+  const territories = listAetherisTerritories();
+  assert.ok(territories.length >= 4, 'Aetheris should expose enough creator territory choices');
+  assert.equal(normalizeAetherisTerritoryId('STORMGLASS-COAST'), 'stormglass-coast');
+  assert.equal(normalizeAetherisTerritoryId('unknown'), DEFAULT_AETHERIS_TERRITORY_ID);
+  assert.deepEqual(new Set(territories.map(territory => territory.id)).size, territories.length, 'territory ids should be unique');
+  assert.ok(territories.every(territory => territory.palette?.primary && territory.structurePlan?.frontline), 'territories should include render palette and structure hooks');
+
+  const selected = getAetherisTerritory('verdant-crown');
+  selected.palette.primary = '#000000';
+  assert.equal(getAetherisTerritory('verdant-crown').palette.primary, '#77f0a1', 'territory payloads should be cloned before mutation');
+}
+
 function testLaunchReadinessSponsorMediaGate() {
   const report = buildLaunchReadinessReport({
     env: {
@@ -434,5 +453,6 @@ testLiveCommentTextExtraction();
 testPlayerCommandCatalog();
 testArenaPowerUpRules();
 testSponsorMediaQualityGate();
+testAetherisTerritoryCatalog();
 testLaunchReadinessSponsorMediaGate();
 console.log('Business logic smoke checks passed');

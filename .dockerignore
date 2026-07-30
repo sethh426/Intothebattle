@@ -6,6 +6,9 @@ node_modules
 .git
 upstream
 *.log
+*.tar
+*.tar.gz
+*.zip
 coverage
 dist
 build

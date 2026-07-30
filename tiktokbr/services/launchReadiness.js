@@ -71,6 +71,30 @@ export function buildLaunchReadinessReport({
     'warn'
   );
   addCheck(checks, 'runtime', 'app-base-url', 'APP_BASE_URL is HTTPS', httpsUrl(env.APP_BASE_URL), env.APP_BASE_URL || 'unset', 'Set APP_BASE_URL=https://intothebattle.com.');
+  const hostAllowList = env.SECURITY_ALLOWED_HOSTS || env.ALLOWED_HOSTS || env.APP_DOMAIN;
+  const hostEnforcement = env.SECURITY_ENFORCE_HOSTS == null
+    ? production
+    : String(env.SECURITY_ENFORCE_HOSTS).toLowerCase() !== 'false';
+  addCheck(
+    checks,
+    'security',
+    'host-allowlist',
+    'Host allow-list is enforced in production',
+    !production || (hostEnforcement && present(hostAllowList)),
+    `SECURITY_ENFORCE_HOSTS=${env.SECURITY_ENFORCE_HOSTS || 'default'}, allowed=${hostAllowList || 'unset'}`,
+    'Set SECURITY_ENFORCE_HOSTS=true and SECURITY_ALLOWED_HOSTS=intothebattle.com,www.intothebattle.com.',
+    production ? 'fail' : 'warn'
+  );
+  addCheck(
+    checks,
+    'security',
+    'request-body-limit',
+    'Request body limit is explicit',
+    !production || envPresent(env, 'REQUEST_BODY_LIMIT'),
+    env.REQUEST_BODY_LIMIT || 'default 256kb',
+    'Set REQUEST_BODY_LIMIT=256kb so non-upload request parsing stays bounded.',
+    production ? 'fail' : 'warn'
+  );
   addCheck(checks, 'runtime', 'jwt-secret', 'JWT_SECRET is configured', envPresent(env, 'JWT_SECRET'), 'Required for sessions, OAuth state, and secure claims.', 'Set a long random JWT_SECRET.');
   addCheck(checks, 'runtime', 'api-key', 'TikTok API_KEY is configured', envPresent(env, 'API_KEY'), 'Required for live TikTok connection.', 'Set API_KEY in production.');
   addCheck(checks, 'runtime', 'diagnostics-token', 'DIAGNOSTICS_TOKEN is configured', envPresent(env, 'DIAGNOSTICS_TOKEN'), 'Protects launch diagnostics in production.', 'Set DIAGNOSTICS_TOKEN to a long random value.');

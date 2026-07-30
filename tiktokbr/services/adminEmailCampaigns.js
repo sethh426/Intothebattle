@@ -1,4 +1,5 @@
 import { sendTransactionalEmail } from '../email/postmarkMailer.js';
+import { detectSecurityAbuse } from './securityModeration.js';
 
 const ADMIN_EMAIL_TAG = 'admin-account-announcement';
 const MAX_SUBJECT_LENGTH = 140;
@@ -50,6 +51,7 @@ export function validateAdminAnnouncementPayload(body = {}) {
   const rawCtaUrl = String(body.ctaUrl || '').trim();
   const ctaUrl = normalizeAdminAnnouncementCtaUrl(rawCtaUrl);
   const errors = [];
+  const securityDetection = detectSecurityAbuse({ subject, message });
 
   if (subject.length < 4 || subject.length > MAX_SUBJECT_LENGTH) {
     errors.push(`Subject must be 4-${MAX_SUBJECT_LENGTH} characters.`);
@@ -66,10 +68,14 @@ export function validateAdminAnnouncementPayload(body = {}) {
   if (ctaUrl === null) {
     errors.push('CTA URL must be https:// or a same-site relative path.');
   }
+  if (securityDetection.flagged) {
+    errors.push('Account announcements cannot include hacking, compromise, or exploit threats/claims.');
+  }
 
   return {
     ok: errors.length === 0,
     errors,
+    securityDetection,
     payload: {
       subject,
       message,

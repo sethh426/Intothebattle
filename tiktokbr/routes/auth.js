@@ -27,6 +27,12 @@ import {
 } from '../services/sessionAuth.js';
 import { recordServerGrowthEvent } from '../services/growthEvents.js';
 import {
+  detectSecurityAbuse,
+  publicSecurityRejectionMessage,
+  recordSecurityEvent,
+  summarizeSecurityPayload,
+} from '../services/securityModeration.js';
+import {
   REFERRAL_CLICK_COOKIE_MAX_AGE_MS,
   claimOrResetReferralCode,
   getReferralSummary,
@@ -1072,12 +1078,34 @@ router.post('/auth/user/register', registrationLimiter, express.json(), async (r
     return res.status(400).json({ success: false, error: 'Email, password, name, and TikTok username are required.' });
   }
 
+  const securityDetection = detectSecurityAbuse({ name, tiktokUsername });
+  if (securityDetection.flagged) {
+    recordSecurityEvent(db, {
+      req,
+      eventType: 'registration_security_block',
+      actorEmail: email,
+      endpoint: req.originalUrl,
+      actionTaken: 'registration_blocked',
+      detection: securityDetection,
+      payloadSummary: summarizeSecurityPayload({ email, name, tiktokUsername }),
+    });
+    return res.status(400).json({ success: false, error: publicSecurityRejectionMessage() });
+  }
+
   const existing = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
   if (existing) {
     const nextQuery = encodeURIComponent(redirectUrl);
     const loginUrl = `/login?next=${nextQuery}&email=${encodeURIComponent(email)}`;
     const resetUrl = `/request-password-reset?email=${encodeURIComponent(email)}`;
     const resendUrl = `/verify-email?email=${encodeURIComponent(email)}`;
+
+    if (!existing.is_active) {
+      return res.status(403).json({
+        success: false,
+        code: 'account_disabled',
+        error: 'This account is disabled.',
+      });
+    }
 
     if (existing.email_verified) {
       return res.status(409).json({

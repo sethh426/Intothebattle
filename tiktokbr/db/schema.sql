@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS users (
   tiktok_username TEXT,
   session_token TEXT,
   is_active INTEGER DEFAULT 1,
+  banned_at TIMESTAMP,
+  ban_reason TEXT,
   email_verified INTEGER DEFAULT 0,
   email_verification_token TEXT,
   email_verification_expires TIMESTAMP,
@@ -70,6 +72,25 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   last_login TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS security_events (
+  id SERIAL PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  actor_user_id INTEGER,
+  actor_email TEXT,
+  ip_hash TEXT,
+  user_agent_hash TEXT,
+  endpoint TEXT,
+  action_taken TEXT DEFAULT 'blocked',
+  matched_terms TEXT,
+  payload_summary TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(actor_user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS security_events_created_at_idx ON security_events(created_at);
+CREATE INDEX IF NOT EXISTS security_events_event_type_idx ON security_events(event_type, created_at);
+CREATE INDEX IF NOT EXISTS security_events_actor_email_idx ON security_events(actor_email, created_at);
 
 CREATE TABLE IF NOT EXISTS user_rooms (
   id SERIAL PRIMARY KEY,
@@ -189,6 +210,8 @@ CREATE TABLE IF NOT EXISTS referral_attributions (
   status TEXT DEFAULT 'signup_pending',
   signup_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   qualified_at TIMESTAMP,
+  recurring_reward_cents INTEGER DEFAULT 300,
+  founding_rate_locked_at TIMESTAMP,
   disqualified_at TIMESTAMP,
   disqualification_reason TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -201,6 +224,8 @@ CREATE TABLE IF NOT EXISTS referral_attributions (
 
 ALTER TABLE referral_attributions ADD COLUMN IF NOT EXISTS referral_click_id INTEGER;
 ALTER TABLE referral_attributions ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'signup_pending';
+ALTER TABLE referral_attributions ADD COLUMN IF NOT EXISTS recurring_reward_cents INTEGER DEFAULT 300;
+ALTER TABLE referral_attributions ADD COLUMN IF NOT EXISTS founding_rate_locked_at TIMESTAMP;
 CREATE INDEX IF NOT EXISTS referral_attributions_referrer_status_idx ON referral_attributions(referrer_user_id, status);
 CREATE INDEX IF NOT EXISTS referral_attributions_code_idx ON referral_attributions(referral_code_id);
 CREATE INDEX IF NOT EXISTS referral_attributions_click_idx ON referral_attributions(referral_click_id);
@@ -226,6 +251,55 @@ CREATE TABLE IF NOT EXISTS referral_rewards (
 
 CREATE INDEX IF NOT EXISTS referral_rewards_referrer_status_idx ON referral_rewards(referrer_user_id, status);
 CREATE INDEX IF NOT EXISTS referral_rewards_status_idx ON referral_rewards(status, created_at);
+
+CREATE TABLE IF NOT EXISTS referral_recurring_rewards (
+  id SERIAL PRIMARY KEY,
+  attribution_id INTEGER NOT NULL,
+  referrer_user_id INTEGER NOT NULL,
+  referred_user_id INTEGER NOT NULL,
+  subscription_id INTEGER,
+  period_start TIMESTAMP NOT NULL,
+  period_end TIMESTAMP NOT NULL,
+  status TEXT DEFAULT 'pending_review',
+  amount_cents INTEGER DEFAULT 300,
+  currency TEXT DEFAULT 'USD',
+  founding_rate_locked INTEGER DEFAULT 1,
+  notes TEXT,
+  approved_at TIMESTAMP,
+  rejected_at TIMESTAMP,
+  paid_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(attribution_id) REFERENCES referral_attributions(id),
+  FOREIGN KEY(referrer_user_id) REFERENCES users(id),
+  FOREIGN KEY(referred_user_id) REFERENCES users(id),
+  FOREIGN KEY(subscription_id) REFERENCES subscriptions(id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS referral_recurring_rewards_attr_period_unique ON referral_recurring_rewards(attribution_id, period_start);
+CREATE INDEX IF NOT EXISTS referral_recurring_rewards_referrer_status_idx ON referral_recurring_rewards(referrer_user_id, status);
+CREATE INDEX IF NOT EXISTS referral_recurring_rewards_period_idx ON referral_recurring_rewards(period_start, period_end);
+
+CREATE TABLE IF NOT EXISTS council_year_bonus_claims (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL UNIQUE,
+  originating_referrer_user_id INTEGER,
+  originating_attribution_id INTEGER,
+  trigger_referral_count INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'pending_review',
+  grant_months INTEGER DEFAULT 12,
+  notes TEXT,
+  approved_at TIMESTAMP,
+  granted_at TIMESTAMP,
+  rejected_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id),
+  FOREIGN KEY(originating_referrer_user_id) REFERENCES users(id),
+  FOREIGN KEY(originating_attribution_id) REFERENCES referral_attributions(id)
+);
+
+CREATE INDEX IF NOT EXISTS council_year_bonus_claims_status_idx ON council_year_bonus_claims(status, created_at);
 
 CREATE TABLE IF NOT EXISTS admin_email_campaigns (
   id SERIAL PRIMARY KEY,

@@ -20,6 +20,12 @@ services:
   app:
     build: .
     restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 512
     env_file:
       - .env.production
     environment:
@@ -32,11 +38,15 @@ services:
       REDIS_URL: ""
       TRUST_PROXY_HOPS: "1"
       PRODUCTION_INSTANCE_COUNT: "1"
+      SECURITY_ENFORCE_HOSTS: "true"
+      SECURITY_ALLOWED_HOSTS: "intothebattle.com,www.intothebattle.com"
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - app-data:/usr/src/app/data
+    tmpfs:
+      - /tmp
 
   postgres:
     image: postgres:18-alpine

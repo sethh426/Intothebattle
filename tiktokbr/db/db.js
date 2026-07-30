@@ -308,6 +308,8 @@ async function initDb() {
         tiktok_username TEXT,
         session_token TEXT,
         is_active INTEGER DEFAULT 1,
+        banned_at TIMESTAMP,
+        ban_reason TEXT,
         email_verified INTEGER DEFAULT 0,
         email_verification_token TEXT,
         email_verification_expires TIMESTAMP,
@@ -321,11 +323,33 @@ async function initDb() {
     `);
 
     await safeExec('ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0');
+    await safeExec('ALTER TABLE users ADD COLUMN banned_at TIMESTAMP');
+    await safeExec('ALTER TABLE users ADD COLUMN ban_reason TEXT');
     await safeExec('ALTER TABLE users ADD COLUMN email_verification_token TEXT');
     await safeExec('ALTER TABLE users ADD COLUMN email_verification_expires TIMESTAMP');
     await safeExec('ALTER TABLE users ADD COLUMN password_reset_token TEXT');
     await safeExec('ALTER TABLE users ADD COLUMN password_reset_expires TIMESTAMP');
     await safeExec('ALTER TABLE users ADD COLUMN dashboard_rules_acknowledged_at TIMESTAMP');
+
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS security_events (
+        id SERIAL PRIMARY KEY,
+        event_type TEXT NOT NULL,
+        actor_user_id INTEGER,
+        actor_email TEXT,
+        ip_hash TEXT,
+        user_agent_hash TEXT,
+        endpoint TEXT,
+        action_taken TEXT DEFAULT 'blocked',
+        matched_terms TEXT,
+        payload_summary TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(actor_user_id) REFERENCES users(id)
+      )
+    `);
+    await safeExec('CREATE INDEX IF NOT EXISTS security_events_created_at_idx ON security_events(created_at)');
+    await safeExec('CREATE INDEX IF NOT EXISTS security_events_event_type_idx ON security_events(event_type, created_at)');
+    await safeExec('CREATE INDEX IF NOT EXISTS security_events_actor_email_idx ON security_events(actor_email, created_at)');
 
     await safeExec(`
       CREATE TABLE IF NOT EXISTS admin_email_campaigns (
@@ -633,6 +657,8 @@ async function initDb() {
         status TEXT DEFAULT 'signup_pending',
         signup_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         qualified_at TIMESTAMP,
+        recurring_reward_cents INTEGER DEFAULT 300,
+        founding_rate_locked_at TIMESTAMP,
         disqualified_at TIMESTAMP,
         disqualification_reason TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -647,6 +673,8 @@ async function initDb() {
     await safeExec("ALTER TABLE referral_attributions ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'signup_pending'");
     await safeExec('ALTER TABLE referral_attributions ADD COLUMN signup_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
     await safeExec('ALTER TABLE referral_attributions ADD COLUMN qualified_at TIMESTAMP');
+    await safeExec('ALTER TABLE referral_attributions ADD COLUMN recurring_reward_cents INTEGER DEFAULT 300');
+    await safeExec('ALTER TABLE referral_attributions ADD COLUMN founding_rate_locked_at TIMESTAMP');
     await safeExec('ALTER TABLE referral_attributions ADD COLUMN disqualified_at TIMESTAMP');
     await safeExec('ALTER TABLE referral_attributions ADD COLUMN disqualification_reason TEXT');
     await safeExec('ALTER TABLE referral_attributions ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
@@ -686,6 +714,74 @@ async function initDb() {
     await safeExec('CREATE UNIQUE INDEX IF NOT EXISTS referral_rewards_attribution_unique ON referral_rewards(attribution_id)');
     await safeExec('CREATE INDEX IF NOT EXISTS referral_rewards_referrer_status_idx ON referral_rewards(referrer_user_id, status)');
     await safeExec('CREATE INDEX IF NOT EXISTS referral_rewards_status_idx ON referral_rewards(status, created_at)');
+
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS referral_recurring_rewards (
+        id SERIAL PRIMARY KEY,
+        attribution_id INTEGER NOT NULL,
+        referrer_user_id INTEGER NOT NULL,
+        referred_user_id INTEGER NOT NULL,
+        subscription_id INTEGER,
+        period_start TIMESTAMP NOT NULL,
+        period_end TIMESTAMP NOT NULL,
+        status TEXT DEFAULT 'pending_review',
+        amount_cents INTEGER DEFAULT 300,
+        currency TEXT DEFAULT 'USD',
+        founding_rate_locked INTEGER DEFAULT 1,
+        notes TEXT,
+        approved_at TIMESTAMP,
+        rejected_at TIMESTAMP,
+        paid_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(attribution_id) REFERENCES referral_attributions(id),
+        FOREIGN KEY(referrer_user_id) REFERENCES users(id),
+        FOREIGN KEY(referred_user_id) REFERENCES users(id),
+        FOREIGN KEY(subscription_id) REFERENCES subscriptions(id)
+      )
+    `);
+    await safeExec('ALTER TABLE referral_recurring_rewards ADD COLUMN subscription_id INTEGER');
+    await safeExec('ALTER TABLE referral_recurring_rewards ADD COLUMN founding_rate_locked INTEGER DEFAULT 1');
+    await safeExec('ALTER TABLE referral_recurring_rewards ADD COLUMN notes TEXT');
+    await safeExec('ALTER TABLE referral_recurring_rewards ADD COLUMN approved_at TIMESTAMP');
+    await safeExec('ALTER TABLE referral_recurring_rewards ADD COLUMN rejected_at TIMESTAMP');
+    await safeExec('ALTER TABLE referral_recurring_rewards ADD COLUMN paid_at TIMESTAMP');
+    await safeExec('ALTER TABLE referral_recurring_rewards ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+    await safeExec('CREATE UNIQUE INDEX IF NOT EXISTS referral_recurring_rewards_attr_period_unique ON referral_recurring_rewards(attribution_id, period_start)');
+    await safeExec('CREATE INDEX IF NOT EXISTS referral_recurring_rewards_referrer_status_idx ON referral_recurring_rewards(referrer_user_id, status)');
+    await safeExec('CREATE INDEX IF NOT EXISTS referral_recurring_rewards_period_idx ON referral_recurring_rewards(period_start, period_end)');
+
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS council_year_bonus_claims (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL UNIQUE,
+        originating_referrer_user_id INTEGER,
+        originating_attribution_id INTEGER,
+        trigger_referral_count INTEGER DEFAULT 0,
+        status TEXT DEFAULT 'pending_review',
+        grant_months INTEGER DEFAULT 12,
+        notes TEXT,
+        approved_at TIMESTAMP,
+        granted_at TIMESTAMP,
+        rejected_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id),
+        FOREIGN KEY(originating_referrer_user_id) REFERENCES users(id),
+        FOREIGN KEY(originating_attribution_id) REFERENCES referral_attributions(id)
+      )
+    `);
+    await safeExec('ALTER TABLE council_year_bonus_claims ADD COLUMN originating_referrer_user_id INTEGER');
+    await safeExec('ALTER TABLE council_year_bonus_claims ADD COLUMN originating_attribution_id INTEGER');
+    await safeExec('ALTER TABLE council_year_bonus_claims ADD COLUMN trigger_referral_count INTEGER DEFAULT 0');
+    await safeExec("ALTER TABLE council_year_bonus_claims ADD COLUMN status TEXT DEFAULT 'pending_review'");
+    await safeExec('ALTER TABLE council_year_bonus_claims ADD COLUMN grant_months INTEGER DEFAULT 12');
+    await safeExec('ALTER TABLE council_year_bonus_claims ADD COLUMN notes TEXT');
+    await safeExec('ALTER TABLE council_year_bonus_claims ADD COLUMN approved_at TIMESTAMP');
+    await safeExec('ALTER TABLE council_year_bonus_claims ADD COLUMN granted_at TIMESTAMP');
+    await safeExec('ALTER TABLE council_year_bonus_claims ADD COLUMN rejected_at TIMESTAMP');
+    await safeExec('ALTER TABLE council_year_bonus_claims ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+    await safeExec('CREATE INDEX IF NOT EXISTS council_year_bonus_claims_status_idx ON council_year_bonus_claims(status, created_at)');
 
     await safeExec(`
       CREATE TABLE IF NOT EXISTS creator_comments (

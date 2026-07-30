@@ -409,7 +409,7 @@
       <p class="sub">The battle overlay can be tested before you pay. Creator Pro is for creators who want their own video moments, premium stream polish, and advanced room presentation.</p>
 
       <div class="clip-frame" aria-label="IntoTheBattle battle clip preview">
-        <iframe src="/battle-clip" title="IntoTheBattle battle clip" loading="eager"></iframe>
+        <iframe src="/overlay-preview?demo=1&amp;controls=0&amp;debug=0&amp;banner_preview=1" title="IntoTheBattle live battle overlay preview" loading="eager"></iframe>
       </div>
 
       <div class="features">
@@ -434,7 +434,7 @@
         <span class="price-amount">$12</span>
         <span class="price-period">/mo<br>+ applicable tax</span>
       </div>
-      <div class="billing-note">Billed through PayPal. Cancel anytime - no long-term contract.</div>
+      <div class="billing-note">Billed through PayPal. Use the same email as your IntoTheBattle account so paid access activates automatically. Cancel anytime - no long-term contract.</div>
 
       <div id="trialExpiredNotice" class="reason-notice hidden" role="status">
         <strong>Trial ended</strong>
@@ -447,10 +447,10 @@
         <li>Creator-controlled video moments after the unlocked trial</li>
         <li>Overlay support for OBS and TikTok Studio</li>
         <li>Advanced timing, transition, and presentation tooling</li>
-      </ul>
+        </ul>
 
       <div class="payment-box" aria-label="PayPal checkout">
-        <div id="paymentStatus" class="payment-status">Loading secure PayPal checkout...</div>
+        <div id="paymentStatus" class="payment-status">Loading secure PayPal subscription checkout...</div>
         <div id="paypalButtons" class="paypal-shell"></div>
         <button id="fallbackPayPal" class="btn btn-primary hidden" type="button" onclick="upgradeToPaid()">
           Continue to PayPal
@@ -516,9 +516,19 @@
           return;
         }
 
-        if (config.fallbackUrl) fallbackPayPalUrl = config.fallbackUrl;
+        if (config.hostedCheckoutUrl || config.fallbackUrl) fallbackPayPalUrl = config.hostedCheckoutUrl || config.fallbackUrl;
+        const forceEmbeddedCheckout = new URLSearchParams(window.location.search).get('checkout') === 'paypal';
+        if ((config.hostedCheckoutConfigured || config.hostedCheckoutUrl) && !forceEmbeddedCheckout) {
+          showFallback('Continue to PayPal to start your Creator Pro subscription. Your account unlocks after PayPal confirms the subscription.');
+          return;
+        }
+
         if (!config.configured) {
-          showFallback('PayPal checkout is temporarily using the hosted payment link. Your account will unlock after PayPal confirms the subscription.', 'error');
+          if (config.hostedCheckoutConfigured || config.hostedCheckoutUrl) {
+            showFallback('Continue to PayPal to start your Creator Pro subscription. Your account unlocks after PayPal confirms the subscription.');
+          } else {
+            showFallback('PayPal checkout is not configured yet. Contact support before subscribing.', 'error');
+          }
           return;
         }
 
@@ -567,12 +577,12 @@
           },
           onError(err) {
             console.error('PayPal checkout error:', err);
-            showFallback(err?.message || 'PayPal checkout failed to load. You can try the hosted PayPal link instead.', 'error');
+            showFallback(err?.message || 'PayPal checkout failed to load. Continue with the hosted PayPal subscription link instead.', config.hostedCheckoutUrl ? '' : 'error');
           },
         }).render('#paypalButtons');
       } catch (err) {
         console.error('PayPal checkout setup failed:', err);
-        showFallback(err.message || 'PayPal checkout is temporarily unavailable. Try the hosted PayPal link instead.', 'error');
+        showFallback(err.message || 'PayPal checkout is unavailable in this browser. Continue with the hosted PayPal subscription link instead.', 'error');
       }
     }
 

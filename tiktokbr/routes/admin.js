@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcryptjs';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
-import db from '../db/db.js';
+import db, { getDbHealthSnapshot } from '../db/db.js';
 import { triggerPlatformSponsorTest } from '../platformSponsorTestBus.js';
 import { processSponsorUpload, getSponsorMediaToolStatus } from '../sponsorMediaProcessor.js';
 import { buildUploadDecision, storageRiskSummary, uploadLimitBytes } from '../services/storagePolicy.js';
@@ -21,6 +21,7 @@ import { cancelPayPalSubscription } from '../services/paypalSubscriptions.js';
 import {
   ADMIN_GRANTED_SUBSCRIPTION_ORDER_SQL,
   findUserForCreatorProGrant,
+  grantCouncilYearCreatorPro,
   grantPermanentCreatorPro,
   isActiveAdminGrantedSubscription,
   latestSubscriptionByUser,
@@ -72,13 +73,26 @@ import {
   writefreelyPublishConfig,
 } from '../services/blogEngine.js';
 import {
+  listCouncilYearBonusClaims,
   listReferralAdminRows,
-  updateReferralRewardStatus,
+  getCouncilYearBonusClaim,
+  updateCouncilYearBonusClaimStatus,
+  updateRecurringReferralRewardStatus,
 } from '../services/referrals.js';
+import {
+  COUNCIL_CASH_PAYOUT_MINIMUM_CENTS,
+  COUNCIL_FOUNDING_RATE_MONTHLY_CENTS,
+  COUNCIL_MONTHLY_REWARD_CENTS,
+  COUNCIL_PROGRAM_NAME,
+  COUNCIL_RANKS,
+  COUNCIL_RECRUIT_YEAR_BONUS_THRESHOLD,
+  centsToUsd,
+} from '../services/councilOfAetheris.js';
 import {
   getActiveUserCounts,
   injectActiveUserMetrics,
 } from '../services/adminUserCounts.js';
+import { buildAdminOpsSummary } from '../services/adminOpsSummary.js';
 import {
   createAdminEmailCampaign,
   listAdminAnnouncementRecipients,
@@ -88,6 +102,11 @@ import {
   scheduleAdminEmailQueue,
   validateAdminAnnouncementPayload,
 } from '../services/adminEmailCampaigns.js';
+import {
+  recordSecurityEvent,
+  summarizeSecurityPayload,
+} from '../services/securityModeration.js';
+import { renderAdminNav } from './adminLayout.js';
 import { getAllRooms } from '../../roomManager.js';
 
 const router = express.Router();
@@ -483,12 +502,147 @@ function buildAdminUserMetrics() {
   return metrics;
 }
 
-function adminMetricCard(label, key, value, note = '') {
-  return `<div class="metric-card">
+function adminMetricCard(label, key, value, note = '', tone = '') {
+  const toneClass = tone ? ` metric-card-${escapeAttr(tone)}` : '';
+  return `<div class="metric-card${toneClass}">
     <span>${escapeHtml(label)}</span>
     <strong data-count-key="${escapeAttr(key)}">${escapeHtml(String(value))}</strong>
     ${note ? `<small>${escapeHtml(note)}</small>` : ''}
   </div>`;
+}
+
+function buildCurrentAdminOpsSummary({ userMetrics = buildAdminUserMetrics(), liveActivity = buildAdminLiveActivity() } = {}) {
+  let storageRisk = null;
+  try {
+    storageRisk = storageRiskSummary(PLATFORM_SPONSOR_DIR);
+  } catch (err) {
+    storageRisk = { ok: false, message: err?.message || 'Storage scan failed', warnings: [err?.message || 'Storage scan failed'] };
+  }
+  return buildAdminOpsSummary({
+    db,
+    dbHealth: getDbHealthSnapshot(),
+    userMetrics,
+    liveActivity,
+    storageRisk,
+    writefreelyConfig: writefreelyPublishConfig(),
+    marketingDiagnostics: marketingAutomationDiagnostics(),
+  });
+}
+
+function adminStatusPill(label, status = '') {
+  const normalized = String(status || '').toLowerCase();
+  const tone = ['ok', 'warn', 'danger'].includes(normalized) ? normalized : '';
+  return `<span class="status-pill${tone ? ` ${tone}` : ''}">${escapeHtml(label)}</span>`;
+}
+
+function renderOpsAlerts(alerts = []) {
+  return `<ul class="alert-list" id="opsAlertList">${alerts.map(alert => `
+    <li>
+      ${adminStatusPill(alert.level || 'info', alert.level)}
+      <strong>${escapeHtml(alert.title || 'Admin notice')}</strong>
+      <div class="muted">${escapeHtml(alert.detail || '')}</div>
+    </li>
+  `).join('')}</ul>`;
+}
+
+function renderOpsQuickLinks() {
+  return `<div class="section-toolbar" aria-label="Admin quick links">
+    <a class="button-link" href="#live-health">Live Health</a>
+    <a class="button-link" href="#accounts-access">Accounts & Access</a>
+    <a class="button-link" href="/admin/blog">Blog</a>
+    <a class="button-link" href="/admin/sponsors">Sponsors</a>
+    <a class="button-link" href="/admin/marketing">Growth</a>
+    <a class="button-link" href="/admin/referrals/export.csv">Referral CSV</a>
+    <a class="button-link" href="/admin/email">Email</a>
+  </div>`;
+}
+
+function renderOpsSummary(summary = {}) {
+  const counts = summary.counts || {};
+  const live = summary.live || {};
+  const integrations = summary.integrations || {};
+  const health = summary.health || {};
+  const dbHealth = health.database || {};
+  const storage = summary.storage || {};
+  const content = summary.content || {};
+  const dbTone = dbHealth.initialized === false ? 'danger' : 'ok';
+  const storageTone = storage.status === 'warn' ? 'warn' : storage.status === 'ok' ? 'ok' : '';
+  const liveTone = live.disconnectedWithPlayers > 0 ? 'danger' : live.staleRooms > 0 ? 'warn' : 'ok';
+  const growthTone = integrations.marketingFailed > 0 || integrations.emailFailed > 0 ? 'warn' : 'ok';
+  const blogTone = content.writefreelyReady ? 'ok' : 'warn';
+  return `
+    <section class="metrics-grid" aria-label="Admin operations summary">
+      ${adminMetricCard('DB Health', 'ops.health.database', dbHealth.initialized === false ? 'Down' : 'Ready', dbHealth.lastError || dbHealth.mode || 'Database connection state', dbTone)}
+      ${adminMetricCard('Live Rooms', 'ops.live.rooms', live.rooms || 0, `${live.connected || 0} connected, ${live.overlays || 0} overlay source(s)`, liveTone)}
+      ${adminMetricCard('Players Now', 'ops.live.players', live.players || 0, `${live.disconnectedWithPlayers || 0} disconnected room(s) still holding players`, liveTone)}
+      ${adminMetricCard('Active Users', 'ops.counts.activeUsers', counts.activeUsers || 0, `${counts.users || 0} total registered accounts`)}
+      ${adminMetricCard('Access Codes', 'ops.counts.activeAccessCodes', counts.activeAccessCodes || 0, `${counts.accessCodes || 0} total codes on file`)}
+      ${adminMetricCard('Storage', 'ops.storage.status', storage.status || 'unknown', storage.message || 'Sponsor media storage status', storageTone)}
+      ${adminMetricCard('Growth Queue', 'ops.integrations.marketingDueApproved', integrations.marketingDueApproved || 0, `${integrations.marketingFailed || 0} failed marketing post(s)`, growthTone)}
+      ${adminMetricCard('Blog Bridge', 'ops.content.writefreelyReady', content.writefreelyReady ? 'Ready' : 'Review', `${counts.blogDrafts || 0} local draft(s)`, blogTone)}
+    </section>
+    <div class="metrics-footnote">Ops summary refreshes every 30 seconds. Last updated <span data-ops-updated>${escapeHtml(formatSponsorDate(summary.generatedAt))}</span>.</div>
+    <section class="card">
+      <h2>Operations alerts</h2>
+      ${renderOpsAlerts(summary.alerts || [])}
+    </section>
+    ${renderOpsQuickLinks()}
+  `;
+}
+
+function renderSectionToolbar({ searchLabel = 'Search section', exportHref = '', countLabel = '' } = {}) {
+  return `<div class="section-toolbar">
+    <input type="search" data-admin-filter placeholder="${escapeAttr(searchLabel)}" aria-label="${escapeAttr(searchLabel)}" />
+    <div class="button-row">
+      ${countLabel ? `<span class="status-pill">${escapeHtml(countLabel)}</span>` : ''}
+      ${exportHref ? `<a class="button-link" href="${escapeAttr(exportHref)}">Export CSV</a>` : ''}
+    </div>
+  </div>`;
+}
+
+function csvCell(value) {
+  const text = String(value ?? '');
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function csvDocument(headers = [], rows = []) {
+  return [
+    headers.map(csvCell).join(','),
+    ...rows.map(row => headers.map(header => csvCell(row[header])).join(',')),
+  ].join('\n');
+}
+
+function buildAccessCodesCsv(rows = []) {
+  const headers = ['id', 'code', 'email', 'owner_name', 'room_id', 'tiktok_username', 'code_type', 'subscription_status', 'status', 'expires_at', 'last_seen', 'created_at'];
+  return csvDocument(headers, rows.map(row => ({
+    ...row,
+    status: adminAccessCodeStatus(row),
+  })));
+}
+
+function buildUsersCsv(rows = []) {
+  const headers = ['id', 'email', 'name', 'tiktok_username', 'plan', 'subscription_status', 'access_code', 'email_verified', 'is_active', 'created_at', 'last_login'];
+  return csvDocument(headers, rows.map(row => ({
+    ...row,
+    plan: row.plan_type || row.subscription_status || row.access_code_type || 'Free / pending',
+  })));
+}
+
+function buildLiveActivityCsv(rows = []) {
+  const headers = ['roomId', 'owner', 'streamerUsername', 'connected', 'streamStatus', 'overlayCount', 'playerCount', 'lastEventType', 'lastEventAt', 'staleEventsDropped', 'topPlayers'];
+  return csvDocument(headers, rows.map(row => ({
+    roomId: row.roomId,
+    owner: row.owner?.email || row.owner?.name || 'Unknown owner',
+    streamerUsername: row.streamerUsername,
+    connected: row.connected ? 'yes' : 'no',
+    streamStatus: row.streamStatus,
+    overlayCount: row.overlayCount,
+    playerCount: row.playerCount,
+    lastEventType: row.lastEventType,
+    lastEventAt: row.lastEventAt,
+    staleEventsDropped: row.staleEventsDropped,
+    topPlayers: (row.topPlayers || []).map(player => player.name || player.id || 'Player').join('; '),
+  })));
 }
 
 function listRecentAdminUsers(limit = 80) {
@@ -501,6 +655,8 @@ function listRecentAdminUsers(limit = 80) {
         u.tiktok_username,
         u.email_verified,
         u.is_active,
+        u.banned_at,
+        u.ban_reason,
         u.created_at,
         u.last_login,
         s.paypal_subscription_id,
@@ -550,6 +706,20 @@ function listAdminCreatorComments(limit = 80) {
     `).all(Math.max(1, Math.min(200, Number(limit) || 80)));
   } catch (err) {
     console.warn('Failed to list creator comments:', err?.message || err);
+    return [];
+  }
+}
+
+function listRecentSecurityEvents(limit = 30) {
+  try {
+    return db.prepare(`
+      SELECT id, event_type, actor_user_id, actor_email, endpoint, action_taken, matched_terms, payload_summary, created_at
+      FROM security_events
+      ORDER BY created_at DESC, id DESC
+      LIMIT ?
+    `).all(Math.max(1, Math.min(100, Number(limit) || 30)));
+  } catch (err) {
+    console.warn('Failed to list security events:', err?.message || err);
     return [];
   }
 }
@@ -717,7 +887,8 @@ function renderAccessCodeRows(codes = [], emptyMessage = 'No access codes found.
 function renderUserRows(users = [], emptyMessage = 'No users found yet.') {
   return users.map((user) => {
     const verified = Number(user.email_verified) === 1 ? 'Verified' : 'Unverified';
-    const active = Number(user.is_active) === 0 ? 'Disabled' : 'Active';
+    const disabled = Number(user.is_active) === 0;
+    const active = disabled ? 'Banned' : 'Active';
     const adminGrantActive = isActiveAdminGrantedSubscription({
       admin_granted: user.admin_granted,
       status: user.subscription_status,
@@ -728,8 +899,8 @@ function renderUserRows(users = [], emptyMessage = 'No users found yet.') {
       : escapeHtml(plan);
     const tiktokUsername = accountTikTokUsername(user);
     const beta = isAdminBetaUser(user);
-    const grantAction = active === 'Disabled'
-      ? '<span class="muted">Disabled account</span>'
+    const grantAction = disabled
+      ? '<span class="muted">Banned account</span>'
       : adminGrantActive
         ? `<form method="POST" action="/admin/users/${escapeAttr(user.id)}/free-forever/remove" onsubmit="return confirm('Remove this Free Forever grant?')">
             <button type="submit" class="secondary-button">Remove Free Forever</button>
@@ -737,20 +908,31 @@ function renderUserRows(users = [], emptyMessage = 'No users found yet.') {
         : `<form method="POST" action="/admin/users/${escapeAttr(user.id)}/free-forever/grant" onsubmit="return confirm('Switch this account to Free Forever? This grants permanent full access and cancels active PayPal billing first.')">
             <button type="submit">Free Forever</button>
           </form>`;
+    const banAction = disabled
+      ? `<form method="POST" action="/admin/users/${escapeAttr(user.id)}/unban" onsubmit="return confirm('Unban this account?')">
+          <button type="submit" class="secondary-button">Unban</button>
+        </form>`
+      : `<form method="POST" action="/admin/users/${escapeAttr(user.id)}/ban" onsubmit="return confirm('Ban this account and clear its active session?')">
+          <input name="reason" value="" placeholder="Reason" />
+          <button type="submit" class="danger-button">Ban</button>
+        </form>`;
+    const statusNote = disabled && user.ban_reason
+      ? `<br><span class="muted">${escapeHtml(user.ban_reason)}</span>`
+      : '';
     return `<tr>
       <td data-label="ID">${escapeHtml(String(user.id))}<br><span class="muted">${beta ? 'Beta tester' : 'Standard'}</span></td>
       <td data-label="Email / Name"><strong>${escapeHtml(user.email || '')}</strong><br><span class="muted">${escapeHtml(user.name || '')}</span></td>
       <td data-label="TikTok">${escapeHtml(tiktokUsername ? `@${tiktokUsername}` : '')}</td>
       <td data-label="Plan">${planMarkup}${user.access_code ? `<br><span class="muted">Code ${escapeHtml(user.access_code)}</span>` : ''}</td>
-      <td data-label="Status">${escapeHtml(`${active} / ${verified}`)}</td>
+      <td data-label="Status">${escapeHtml(`${active} / ${verified}`)}${statusNote}</td>
       <td data-label="Created">${escapeHtml(formatSponsorDate(user.created_at))}</td>
       <td data-label="Last Login">${escapeHtml(formatSponsorDate(user.last_login))}</td>
-      <td data-label="Actions">${grantAction}</td>
+      <td data-label="Actions"><div class="stacked-actions">${grantAction}${banAction}</div></td>
     </tr>`;
   }).join('') || `<tr><td colspan="8">${escapeHtml(emptyMessage)}</td></tr>`;
 }
 
-function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [], roomRequirementEnabled = true, userMetrics = buildAdminUserMetrics(), users = [], comments = [], liveActivity = buildAdminLiveActivity() } = {}) {
+function renderAdminPage({ message = '', error = '', createdCode = '', codes = [], promos = [], roomRequirementEnabled = true, userMetrics = buildAdminUserMetrics(), users = [], comments = [], securityEvents = [], liveActivity = buildAdminLiveActivity(), opsSummary = null } = {}) {
   const betaCodes = codes.filter(code => isBetaTesterAccessCode(code));
   const standardCodes = codes.filter(code => !isBetaTesterAccessCode(code));
   const betaUsers = users.filter(isAdminBetaUser);
@@ -774,6 +956,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       <td data-label="Created">${escapeHtml(formatSponsorDate(comment.created_at))}</td>
       <td data-label="Name"><strong>${escapeHtml(comment.name || 'Creator')}</strong><br><span class="muted">${escapeHtml(comment.role || 'TikTok LIVE creator')}</span></td>
       <td data-label="Email">${escapeHtml(comment.email || '')}</td>
+      <td data-label="Status">${escapeHtml(comment.status || 'approved')}</td>
       <td data-label="Comment">${escapeHtml(comment.comment || '')}</td>
       <td data-label="Action">
         <form method="POST" action="/admin/comments/${escapeAttr(comment.id)}/delete" onsubmit="return confirm('Delete this public comment?')">
@@ -781,7 +964,17 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         </form>
       </td>
     </tr>`;
-  }).join('') || '<tr><td colspan="5">No comments yet.</td></tr>';
+  }).join('') || '<tr><td colspan="6">No comments yet.</td></tr>';
+  const securityEventRows = securityEvents.map((event) => {
+    return `<tr>
+      <td data-label="Created">${escapeHtml(formatSponsorDate(event.created_at))}</td>
+      <td data-label="Type">${escapeHtml(event.event_type || '')}<br><span class="muted">${escapeHtml(event.action_taken || '')}</span></td>
+      <td data-label="Actor">${escapeHtml(event.actor_email || event.actor_user_id || '')}</td>
+      <td data-label="Endpoint">${escapeHtml(event.endpoint || '')}</td>
+      <td data-label="Matched">${escapeHtml(event.matched_terms || '')}</td>
+      <td data-label="Summary">${escapeHtml(event.payload_summary || '')}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6">No blocked security events recorded yet.</td></tr>';
   const liveActivityRows = liveActivity.map((item) => {
     const owner = item.owner || {};
     const topPlayers = (item.topPlayers || [])
@@ -810,13 +1003,14 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     adminMetricCard('Live paid rooms', 'live.paid', metrics.live.paid, 'Connected overlay rooms on paid access'),
     adminMetricCard('Live overlays', 'live.overlays', metrics.live.overlays, 'Total connected overlay browser sources'),
   ].join('');
+  const opsSummaryData = opsSummary || buildCurrentAdminOpsSummary({ userMetrics: metrics, liveActivity });
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Panel - TIKTOKBR</title>
+  <title>Admin Command Center - IntoTheBattle</title>
   <style>
     * { box-sizing: border-box; }
     body { min-height:100vh; font-family: Inter, Arial, sans-serif; background:radial-gradient(circle at 16% 0,rgba(246,201,91,.18),transparent 30%),radial-gradient(circle at 88% 12%,rgba(232,59,95,.14),transparent 28%),linear-gradient(180deg,#050608,#030406); color:#fff8e6; margin:0; padding:24px; }
@@ -834,6 +1028,9 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
     .metrics-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; }
     .metric-card { min-width:0; padding:16px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.22); box-shadow:inset 0 1px 0 rgba(255,255,255,.05); }
+    .metric-card-warn { border-color:rgba(255,186,73,.34); background:rgba(255,186,73,.08); }
+    .metric-card-danger { border-color:rgba(232,59,95,.36); background:rgba(232,59,95,.1); }
+    .metric-card-ok { border-color:rgba(82,196,134,.3); background:rgba(82,196,134,.08); }
     .metric-card span { display:block; color:#a8afbf; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
     .metric-card strong { display:block; margin-top:7px; color:#fff8e6; font-size:clamp(25px,3.2vw,40px); line-height:1; }
     .metric-card small { display:block; min-height:32px; margin-top:8px; color:#8590a4; font-size:11px; line-height:1.4; }
@@ -851,6 +1048,15 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     .admin-section summary::after { content:"Open"; min-width:58px; min-height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:999px; color:#ffdf8a; background:rgba(246,201,91,.08); border:1px solid rgba(246,201,91,.22); font-size:11px; font-weight:900; text-transform:uppercase; }
     .admin-section[open] summary::after { content:"Hide"; }
     .section-body { padding:0 20px 20px; }
+    .section-toolbar { display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:space-between; margin:0 0 10px; }
+    .section-toolbar input { max-width:340px; }
+    .button-link { display:inline-flex; align-items:center; justify-content:center; min-height:38px; padding:0 12px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:#fff8e6; font-size:12px; font-weight:900; }
+    .status-pill { display:inline-flex; align-items:center; min-height:24px; padding:0 9px; border-radius:999px; font-size:11px; font-weight:900; text-transform:uppercase; border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06); color:#fff8e6; }
+    .status-pill.warn { border-color:rgba(255,186,73,.35); color:#ffd27a; background:rgba(255,186,73,.08); }
+    .status-pill.danger { border-color:rgba(232,59,95,.38); color:#ffb7c1; background:rgba(232,59,95,.1); }
+    .status-pill.ok { border-color:rgba(82,196,134,.34); color:#baf7d2; background:rgba(82,196,134,.08); }
+    .alert-list { display:grid; gap:10px; margin:0; padding:0; list-style:none; }
+    .alert-list li { padding:12px 14px; border-radius:14px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.18); }
     label { display: block; margin: 10px 0 6px; color: #a8afbf; font-size: 12px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; }
     input, select { width: 100%; min-height:46px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.12); background: #111827; color: #fff8e6; }
     select option, select optgroup { background:#111827; color:#fff8e6; }
@@ -862,6 +1068,10 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     .mini-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; min-width:260px; }
     .mini-form input { min-height:38px; padding:8px 10px; border-radius:10px; font-size:12px; }
     .mini-form button { grid-column:1 / -1; min-height:36px; margin-top:0; }
+    .stacked-actions { display:grid; gap:8px; min-width:180px; }
+    .stacked-actions form { display:grid; gap:8px; }
+    .stacked-actions input { min-height:36px; padding:8px 10px; border-radius:10px; font-size:12px; }
+    .stacked-actions button { margin-top:0; }
     .table-shell { width:100%; overflow-x:auto; }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; overflow:hidden; border-radius:16px; }
     th, td { border-bottom: 1px solid rgba(255,255,255,0.08); padding: 12px; font-size: 13px; vertical-align:top; }
@@ -872,8 +1082,9 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     a { color: #ffdf8a; text-decoration: none; font-weight:800; }
     .admin-nav { display:flex; gap:10px; flex-wrap:wrap; }
     .admin-nav a { display:inline-flex; align-items:center; justify-content:center; min-height:40px; padding:0 14px; border-radius:999px; border:1px solid rgba(255,255,255,.1); color:#fff8e6; background:rgba(255,255,255,.055); }
+    .admin-nav a[aria-current="page"] { border-color:rgba(246,201,91,.42); color:#ffdf8a; background:rgba(246,201,91,.1); }
     @media(max-width:1100px){ .metrics-grid{grid-template-columns:repeat(3,minmax(0,1fr));} }
-    @media(max-width:720px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-brand img{width:46px;height:46px}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.admin-nav a{padding:0 10px}.metrics-grid{grid-template-columns:1fr 1fr}.metrics-footnote{text-align:left}.mini-form{grid-template-columns:1fr;min-width:0}.admin-section summary{align-items:flex-start;flex-direction:column}.admin-section summary small{text-align:left}.admin-section summary::after{align-self:flex-start}.section-body{padding:0 12px 14px}.grid{grid-template-columns:1fr} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
+    @media(max-width:720px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-brand img{width:46px;height:46px}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.admin-nav a{padding:0 10px}.metrics-grid{grid-template-columns:1fr 1fr}.metrics-footnote{text-align:left}.mini-form{grid-template-columns:1fr;min-width:0}.admin-section summary{align-items:flex-start;flex-direction:column}.admin-section summary small{text-align:left}.admin-section summary::after{align-self:flex-start}.section-body{padding:0 12px 14px}.section-toolbar{align-items:stretch;flex-direction:column}.section-toolbar input{max-width:none}.grid{grid-template-columns:1fr} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td{border-bottom:1px solid rgba(255,255,255,.06)} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
     @media(max-width:420px){ .metrics-grid{grid-template-columns:1fr}.admin-nav{grid-template-columns:1fr} }
   </style>
 </head>
@@ -882,13 +1093,14 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     <header class="admin-hero">
       <div class="admin-brand">
         <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
-        <div><h1>Admin Panel</h1><p>Access, promos, and room controls</p></div>
+        <div><h1>Admin Command Center</h1><p>Live health, access, content, growth, referrals, and system status</p></div>
       </div>
-      <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/referrals">Referrals</a><a href="/admin/logout">Logout</a></div>
+      ${renderAdminNav('dashboard')}
     </header>
     ${message ? `<div class="notice success">${escapeHtml(message)}</div>` : ''}
     ${createdCode ? `<div class="notice success">New access code created: <strong>${escapeHtml(createdCode)}</strong> <button type="button" onclick="navigator.clipboard.writeText('${escapeHtml(createdCode)}')">Copy</button></div>` : ''}
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
+    ${renderOpsSummary(opsSummaryData)}
     <section class="metrics-grid" aria-label="User and live room counts">
       ${metricCards}
     </section>
@@ -950,6 +1162,22 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         </form>
           </div>
           <div class="control-panel">
+        <h2>Ban account</h2>
+        <p class="muted">Disable an account by email or user ID, clear its active session, and revoke matching legacy access codes.</p>
+        <form method="POST" action="/admin/users/ban">
+          <label>Email or user ID</label>
+          <input name="account" type="text" placeholder="creator@example.com or 42" required />
+          <label>Reason</label>
+          <input name="reason" type="text" maxlength="300" placeholder="Security abuse, chargeback, ToS violation" />
+          <button type="submit" class="danger-button">Ban Account</button>
+        </form>
+        <form method="POST" action="/admin/users/unban" style="margin-top: 14px;" onsubmit="return confirm('Unban this account? Legacy access codes remain revoked until manually enabled.')">
+          <label>Email or user ID</label>
+          <input name="account" type="text" placeholder="creator@example.com or 42" required />
+          <button type="submit" class="secondary-button">Unban Account</button>
+        </form>
+          </div>
+          <div class="control-panel">
         <h2>Room ID requirement</h2>
         <p>Current behavior: <strong>${roomRequirementEnabled ? 'Room ID required' : 'Room ID not required'}</strong></p>
         <form method="POST" action="/admin/toggle-room-requirement">
@@ -974,19 +1202,21 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       </div>
     </details>
     <section class="section-grid" aria-label="Admin data sections">
-      <details class="card admin-section" open>
+      <details class="card admin-section" id="live-health" open>
         <summary><span>Live room activity</span><small>Fast room-scoped audit for active overlays and player leakage.</small></summary>
         <div class="section-body table-shell">
-          <table>
+          ${renderSectionToolbar({ searchLabel: 'Search live rooms, owners, streamers, or players', exportHref: '/admin/live-activity/export.csv', countLabel: `${liveActivity.length} room(s)` })}
+          <table data-admin-table>
             <thead><tr><th>Room</th><th>Owner</th><th>Stream</th><th>Overlays</th><th>Players</th><th>Top players</th></tr></thead>
             <tbody id="liveActivityRows">${liveActivityRows}</tbody>
           </table>
         </div>
       </details>
-      <details class="card admin-section">
+      <details class="card admin-section" id="accounts-access">
         <summary><span>Standard access codes</span><small>Paid, trial, promo, and standard creator access.</small></summary>
         <div class="section-body table-shell">
-          <table>
+          ${renderSectionToolbar({ searchLabel: 'Search standard access codes', exportHref: '/admin/access-codes/export.csv', countLabel: `${standardCodes.length} standard code(s)` })}
+          <table data-admin-table>
             <thead><tr><th>Code / Room</th><th>Owner / Email</th><th>TikTok</th><th>Type</th><th>Status</th><th>Expires</th><th>Last Seen</th><th>Profile</th><th>Actions</th></tr></thead>
             <tbody>${codeRows}</tbody>
           </table>
@@ -995,7 +1225,8 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       <details class="card admin-section">
         <summary><span>Beta tester access codes</span><small>Dedicated beta access separated from paid operations.</small></summary>
         <div class="section-body table-shell">
-          <table>
+          ${renderSectionToolbar({ searchLabel: 'Search beta access codes', exportHref: '/admin/access-codes/export.csv?type=beta', countLabel: `${betaCodes.length} beta code(s)` })}
+          <table data-admin-table>
             <thead><tr><th>Code / Room</th><th>Owner / Email</th><th>TikTok</th><th>Type</th><th>Status</th><th>Expires</th><th>Last Seen</th><th>Profile</th><th>Actions</th></tr></thead>
             <tbody>${betaCodeRows}</tbody>
           </table>
@@ -1004,7 +1235,8 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       <details class="card admin-section">
         <summary><span>Creator accounts</span><small>Newest non-beta accounts with email, TikTok handle, plan, and login status.</small></summary>
         <div class="section-body table-shell">
-          <table>
+          ${renderSectionToolbar({ searchLabel: 'Search creator accounts', exportHref: '/admin/users/export.csv', countLabel: `${standardUsers.length} creator account(s)` })}
+          <table data-admin-table>
             <thead><tr><th>ID</th><th>Email / Name</th><th>TikTok</th><th>Plan</th><th>Status</th><th>Created</th><th>Last Login</th><th>Actions</th></tr></thead>
             <tbody>${userRows}</tbody>
           </table>
@@ -1013,7 +1245,8 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       <details class="card admin-section">
         <summary><span>Beta tester accounts</span><small>Registered users linked to beta tester codes or beta status.</small></summary>
         <div class="section-body table-shell">
-          <table>
+          ${renderSectionToolbar({ searchLabel: 'Search beta tester accounts', exportHref: '/admin/users/export.csv?type=beta', countLabel: `${betaUsers.length} beta account(s)` })}
+          <table data-admin-table>
             <thead><tr><th>ID</th><th>Email / Name</th><th>TikTok</th><th>Plan</th><th>Status</th><th>Created</th><th>Last Login</th><th>Actions</th></tr></thead>
             <tbody>${betaUserRows}</tbody>
           </table>
@@ -1022,17 +1255,29 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       <details class="card admin-section">
         <summary><span>Promo codes</span><small>Reusable offer codes and remaining redemptions.</small></summary>
         <div class="section-body table-shell">
-          <table>
+          ${renderSectionToolbar({ searchLabel: 'Search promo codes', countLabel: `${promos.length} promo(s)` })}
+          <table data-admin-table>
             <thead><tr><th>Promo</th><th>Uses</th><th>Days</th><th>Expires</th><th>Created</th></tr></thead>
             <tbody>${promoRows}</tbody>
           </table>
         </div>
       </details>
       <details class="card admin-section">
-        <summary><span>Homepage comments</span><small>Public comments shown in the homepage scroll.</small></summary>
+        <summary><span>Security events</span><small>Blocked hacking, compromise, exploit, and credential-abuse attempts.</small></summary>
         <div class="section-body table-shell">
-          <table>
-            <thead><tr><th>Created</th><th>Name</th><th>Email</th><th>Comment</th><th>Action</th></tr></thead>
+          ${renderSectionToolbar({ searchLabel: 'Search security events', countLabel: `${securityEvents.length} event(s)` })}
+          <table data-admin-table>
+            <thead><tr><th>Created</th><th>Type</th><th>Actor</th><th>Endpoint</th><th>Matched</th><th>Summary</th></tr></thead>
+            <tbody>${securityEventRows}</tbody>
+          </table>
+        </div>
+      </details>
+      <details class="card admin-section">
+        <summary><span>Creator comments</span><small>Public comments shown across homepage, comments, and blog.</small></summary>
+        <div class="section-body table-shell">
+          ${renderSectionToolbar({ searchLabel: 'Search creator comments', countLabel: `${comments.length} comment(s)` })}
+          <table data-admin-table>
+            <thead><tr><th>Created</th><th>Name</th><th>Email</th><th>Status</th><th>Comment</th><th>Action</th></tr></thead>
             <tbody>${commentRows}</tbody>
           </table>
         </div>
@@ -1106,8 +1351,53 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         renderLiveActivityRows(data.rooms || []);
       } catch (_err) {}
     }
+    function renderOpsAlerts(alerts) {
+      const list = document.getElementById('opsAlertList');
+      if (!list || !Array.isArray(alerts)) return;
+      list.innerHTML = alerts.map(alert => {
+        const level = String(alert.level || 'info');
+        const tone = ['ok', 'warn', 'danger'].includes(level) ? ' ' + level : '';
+        return '<li><span class="status-pill' + tone + '">' + escapeCell(level) + '</span> <strong>' + escapeCell(alert.title || 'Admin notice') + '</strong><div class="muted">' + escapeCell(alert.detail || '') + '</div></li>';
+      }).join('');
+    }
+    async function refreshOpsSummary() {
+      try {
+        const res = await fetch('/admin/ops-summary.json', { credentials: 'same-origin' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const map = {
+          'ops.health.database': data.health && data.health.database && data.health.database.initialized === false ? 'Down' : 'Ready',
+          'ops.live.rooms': data.live && data.live.rooms,
+          'ops.live.players': data.live && data.live.players,
+          'ops.counts.activeUsers': data.counts && data.counts.activeUsers,
+          'ops.counts.activeAccessCodes': data.counts && data.counts.activeAccessCodes,
+          'ops.storage.status': data.storage && data.storage.status,
+          'ops.integrations.marketingDueApproved': data.integrations && data.integrations.marketingDueApproved,
+          'ops.content.writefreelyReady': data.content && data.content.writefreelyReady ? 'Ready' : 'Review',
+        };
+        Object.entries(map).forEach(([key, value]) => {
+          const el = document.querySelector('[data-count-key="' + key + '"]');
+          if (el && value !== undefined && value !== null) el.textContent = String(value);
+        });
+        const updated = document.querySelector('[data-ops-updated]');
+        if (updated && data.generatedAt) updated.textContent = new Date(data.generatedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+        renderOpsAlerts(data.alerts || []);
+      } catch (_err) {}
+    }
+    document.querySelectorAll('[data-admin-filter]').forEach(input => {
+      input.addEventListener('input', () => {
+        const section = input.closest('.section-body');
+        const table = section && section.querySelector('[data-admin-table]');
+        const query = input.value.trim().toLowerCase();
+        if (!table) return;
+        table.querySelectorAll('tbody tr').forEach(row => {
+          row.hidden = query && !row.textContent.toLowerCase().includes(query);
+        });
+      });
+    });
     setInterval(refreshAdminCounts, 15000);
     setInterval(refreshLiveActivity, 10000);
+    setInterval(refreshOpsSummary, 30000);
   </script>
 </body>
 </html>`;
@@ -1323,6 +1613,39 @@ router.get('/live-activity.json', requireAdminAuth, (_req, res) => {
   res.json({ rooms: buildAdminLiveActivity(), updatedAt: new Date().toISOString() });
 });
 
+router.get('/ops-summary.json', requireAdminAuth, (_req, res) => {
+  const userMetrics = buildAdminUserMetrics();
+  const liveActivity = buildAdminLiveActivity();
+  res.set('Cache-Control', 'no-store');
+  res.json(buildCurrentAdminOpsSummary({ userMetrics, liveActivity }));
+});
+
+router.get('/access-codes/export.csv', requireAdminAuth, (req, res) => {
+  const type = String(req.query.type || '').trim().toLowerCase();
+  let rows = db.prepare('SELECT * FROM access_codes ORDER BY expires_at DESC, id DESC').all();
+  if (type === 'beta') rows = rows.filter(code => isBetaTesterAccessCode(code));
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="intothebattle-access-codes${type === 'beta' ? '-beta' : ''}.csv"`);
+  res.send(buildAccessCodesCsv(rows));
+});
+
+router.get('/users/export.csv', requireAdminAuth, (req, res) => {
+  const type = String(req.query.type || '').trim().toLowerCase();
+  let rows = listRecentAdminUsers(200);
+  if (type === 'beta') rows = rows.filter(isAdminBetaUser);
+  else rows = rows.filter(user => !isAdminBetaUser(user));
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="intothebattle-users${type === 'beta' ? '-beta' : ''}.csv"`);
+  res.send(buildUsersCsv(rows));
+});
+
+router.get('/live-activity/export.csv', requireAdminAuth, (_req, res) => {
+  const rows = buildAdminLiveActivity();
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="intothebattle-live-activity.csv"');
+  res.send(buildLiveActivityCsv(rows));
+});
+
 router.get('/', requireAdminAuth, (req, res) => {
   const codes = db.prepare('SELECT * FROM access_codes ORDER BY expires_at DESC').all();
   const promos = db.prepare('SELECT * FROM promo_codes ORDER BY created_at DESC').all();
@@ -1332,6 +1655,8 @@ router.get('/', requireAdminAuth, (req, res) => {
   const liveActivity = buildAdminLiveActivity();
   const users = listRecentAdminUsers();
   const comments = listAdminCreatorComments();
+  const securityEvents = listRecentSecurityEvents();
+  const opsSummary = buildCurrentAdminOpsSummary({ userMetrics, liveActivity });
   res.send(renderAdminPage({
     createdCode: String(req.query.createdCode || '').trim(),
     message: String(req.query.message || ''),
@@ -1343,6 +1668,8 @@ router.get('/', requireAdminAuth, (req, res) => {
     liveActivity,
     users,
     comments,
+    securityEvents,
+    opsSummary,
   }));
 });
 
@@ -1358,6 +1685,7 @@ router.get('/referrals', requireAdminAuth, (req, res) => {
       message: String(req.query.message || ''),
       error: String(req.query.error || ''),
       rows: listReferralAdminRows(db, filters),
+      bonusClaims: listCouncilYearBonusClaims(db),
       filters,
     }));
   } catch (err) {
@@ -1381,13 +1709,41 @@ router.get('/referrals/export.csv', requireAdminAuth, (req, res) => {
 
 router.post('/referrals/rewards/:id/status', requireAdminAuth, (req, res) => {
   try {
-    updateReferralRewardStatus(db, req.params.id, req.body.status, {
+    updateRecurringReferralRewardStatus(db, req.params.id, req.body.status, {
       amountCents: req.body.amountCents,
       notes: req.body.notes,
     });
-    return res.redirect('/admin/referrals?message=Reward%20updated');
+    return res.redirect('/admin/referrals?message=Monthly%20reward%20updated');
   } catch (err) {
-    return res.redirect(`/admin/referrals?error=${encodeURIComponent(err.message || 'Unable to update reward')}`);
+    return res.redirect(`/admin/referrals?error=${encodeURIComponent(err.message || 'Unable to update monthly reward')}`);
+  }
+});
+
+router.post('/referrals/year-bonus/:id/status', requireAdminAuth, async (req, res) => {
+  const status = String(req.body?.status || '').trim().toLowerCase();
+  const notes = String(req.body?.notes || '').trim();
+  try {
+    const claim = getCouncilYearBonusClaim(db, req.params.id);
+    if (status === 'granted') {
+      const user = db.prepare('SELECT * FROM users WHERE id = ? LIMIT 1').get(claim.user_id);
+      if (!user) throw new Error('Creator account not found for this one-year bonus claim.');
+      const result = await grantCouncilYearCreatorPro(db, user, {
+        months: claim.grant_months || 12,
+        cancelPayPalSubscription,
+        reason: 'Council of Aetheris 25-referral one-year bonus',
+      });
+      const cancelledCount = result.cancelledPayPalSubscriptions.length;
+      const grantNote = [
+        notes || claim.notes || 'Council one-year bonus granted.',
+        cancelledCount ? `Cancelled ${cancelledCount} active PayPal subscription${cancelledCount === 1 ? '' : 's'} before grant.` : '',
+      ].filter(Boolean).join(' ');
+      updateCouncilYearBonusClaimStatus(db, claim.id, 'granted', { notes: grantNote });
+      return res.redirect(`/admin/referrals?message=${encodeURIComponent('One-year Council grant applied')}`);
+    }
+    updateCouncilYearBonusClaimStatus(db, claim.id, status, { notes });
+    return res.redirect(`/admin/referrals?message=${encodeURIComponent('One-year bonus claim updated')}`);
+  } catch (err) {
+    return res.redirect(`/admin/referrals?error=${encodeURIComponent(err.message || 'Unable to update one-year bonus claim')}`);
   }
 });
 
@@ -1395,6 +1751,19 @@ router.post('/email/preview', requireAdminAuth, (req, res) => {
   const validation = validateAdminAnnouncementPayload(req.body || {});
   const recipients = listAdminAnnouncementRecipients(db);
   if (!validation.ok) {
+    if (validation.securityDetection?.flagged) {
+      recordSecurityEvent(db, {
+        req,
+        eventType: 'admin_email_security_block',
+        endpoint: req.originalUrl,
+        actionTaken: 'email_preview_blocked',
+        detection: validation.securityDetection,
+        payloadSummary: summarizeSecurityPayload({
+          subject: req.body?.subject,
+          message: req.body?.message,
+        }),
+      });
+    }
     return res.status(400).send(renderAdminEmailPage({
       error: validation.errors.join(' '),
       form: req.body || {},
@@ -1421,6 +1790,19 @@ router.post('/email/send', requireAdminAuth, (req, res) => {
   const validation = validateAdminAnnouncementPayload(req.body || {});
   const recipients = listAdminAnnouncementRecipients(db);
   if (!validation.ok) {
+    if (validation.securityDetection?.flagged) {
+      recordSecurityEvent(db, {
+        req,
+        eventType: 'admin_email_security_block',
+        endpoint: req.originalUrl,
+        actionTaken: 'email_send_blocked',
+        detection: validation.securityDetection,
+        payloadSummary: summarizeSecurityPayload({
+          subject: req.body?.subject,
+          message: req.body?.message,
+        }),
+      });
+    }
     return res.status(400).send(renderAdminEmailPage({
       error: validation.errors.join(' '),
       form: req.body || {},
@@ -1466,7 +1848,7 @@ function redirectAdmin(res, type, message) {
   return res.redirect(`/admin?${key}=${encodeURIComponent(message)}`);
 }
 
-function findGrantUserFromRequest(req) {
+function findAdminUserFromRequest(req) {
   const id = Number(req.params?.id);
   if (Number.isFinite(id) && id > 0) {
     return db.prepare('SELECT * FROM users WHERE id = ?').get(Math.floor(id)) || null;
@@ -1479,7 +1861,7 @@ function creatorLabel(user) {
 }
 
 async function grantCreatorProFromRequest(req, res) {
-  const user = findGrantUserFromRequest(req);
+  const user = findAdminUserFromRequest(req);
   if (!user) return redirectAdmin(res, 'error', 'Account not found');
 
   try {
@@ -1498,7 +1880,7 @@ async function grantCreatorProFromRequest(req, res) {
 }
 
 function removeCreatorProFromRequest(req, res) {
-  const user = findGrantUserFromRequest(req);
+  const user = findAdminUserFromRequest(req);
   if (!user) return redirectAdmin(res, 'error', 'Account not found');
 
   try {
@@ -1506,6 +1888,80 @@ function removeCreatorProFromRequest(req, res) {
     return redirectAdmin(res, 'message', `Removed Free Forever grant from ${creatorLabel(user)}`);
   } catch (err) {
     return redirectAdmin(res, 'error', err?.message || 'Failed to remove Free Forever grant');
+  }
+}
+
+function normalizeBanReason(value) {
+  return String(value || '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 300) || 'Admin ban';
+}
+
+function banUserFromRequest(req, res) {
+  const user = findAdminUserFromRequest(req);
+  if (!user) return redirectAdmin(res, 'error', 'Account not found');
+
+  const reason = normalizeBanReason(req.body?.reason);
+  try {
+    db.prepare(`
+      UPDATE users
+      SET is_active = 0,
+          session_token = NULL,
+          banned_at = CURRENT_TIMESTAMP,
+          ban_reason = ?,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(reason, user.id);
+    db.prepare(`
+      UPDATE access_codes
+      SET is_revoked = 1,
+          session_token = NULL,
+          fingerprint = NULL
+      WHERE user_id = ?
+         OR (email IS NOT NULL AND LOWER(email) = LOWER(?))
+    `).run(user.id, user.email || '');
+    recordSecurityEvent(db, {
+      req,
+      eventType: 'admin_user_ban',
+      actorUserId: user.id,
+      actorEmail: user.email || '',
+      endpoint: req.originalUrl,
+      actionTaken: 'account_banned',
+      payloadSummary: `Admin banned ${creatorLabel(user)}: ${reason}`,
+    });
+    return redirectAdmin(res, 'message', `Banned ${creatorLabel(user)} and cleared active sessions.`);
+  } catch (err) {
+    return redirectAdmin(res, 'error', err?.message || 'Failed to ban account');
+  }
+}
+
+function unbanUserFromRequest(req, res) {
+  const user = findAdminUserFromRequest(req);
+  if (!user) return redirectAdmin(res, 'error', 'Account not found');
+
+  try {
+    db.prepare(`
+      UPDATE users
+      SET is_active = 1,
+          banned_at = NULL,
+          ban_reason = NULL,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(user.id);
+    recordSecurityEvent(db, {
+      req,
+      eventType: 'admin_user_unban',
+      actorUserId: user.id,
+      actorEmail: user.email || '',
+      endpoint: req.originalUrl,
+      actionTaken: 'account_unbanned',
+      payloadSummary: `Admin unbanned ${creatorLabel(user)}`,
+    });
+    return redirectAdmin(res, 'message', `Unbanned ${creatorLabel(user)}. Legacy access codes remain disabled until manually enabled.`);
+  } catch (err) {
+    return redirectAdmin(res, 'error', err?.message || 'Failed to unban account');
   }
 }
 
@@ -1521,6 +1977,10 @@ router.post('/users/free-forever/grant', requireAdminAuth, grantCreatorProFromRe
 router.post('/users/free-forever/remove', requireAdminAuth, removeCreatorProFromRequest);
 router.post('/users/:id/free-forever/grant', requireAdminAuth, grantCreatorProFromRequest);
 router.post('/users/:id/free-forever/remove', requireAdminAuth, removeCreatorProFromRequest);
+router.post('/users/ban', requireAdminAuth, banUserFromRequest);
+router.post('/users/unban', requireAdminAuth, unbanUserFromRequest);
+router.post('/users/:id/ban', requireAdminAuth, banUserFromRequest);
+router.post('/users/:id/unban', requireAdminAuth, unbanUserFromRequest);
 router.post('/users/:id/delete', requireAdminAuth, denyAccountDelete);
 router.delete('/users/:id', requireAdminAuth, denyAccountDelete);
 router.post('/accounts/:id/delete', requireAdminAuth, denyAccountDelete);
@@ -1623,7 +2083,7 @@ router.post('/comments/:id/delete', requireAdminAuth, (req, res) => {
     return res.redirect(`/admin?error=${encodeURIComponent('Comment not found')}`);
   }
   db.prepare("UPDATE creator_comments SET status = 'deleted', deleted_at = CURRENT_TIMESTAMP WHERE id = ?").run(id);
-  res.redirect(`/admin?message=${encodeURIComponent('Comment removed from homepage')}`);
+  res.redirect(`/admin?message=${encodeURIComponent('Comment removed from public comments')}`);
 });
 
 router.post('/create-promo', requireAdminAuth, (req, res) => {
@@ -1974,7 +2434,7 @@ function referralFilterStatusOptions(selected = '') {
   return [
     ['', 'All statuses'],
     ['signup_pending', 'Signup pending'],
-    ['qualified', 'Qualified'],
+    ['qualified', 'Active paid'],
     ['waiting_for_paid_conversion', 'Waiting for paid conversion'],
     ['pending_review', 'Pending review'],
     ['approved', 'Approved'],
@@ -2010,8 +2470,10 @@ function buildReferralAdminCsv(rows = []) {
     'Click At',
     'Traffic Source',
     'Qualified At',
-    'Reward Status',
-    'Reward Amount Cents',
+    'Monthly Period Start',
+    'Monthly Period End',
+    'Monthly Reward Status',
+    'Monthly Reward Amount Cents',
     'Currency',
     'Approved At',
     'Paid At',
@@ -2031,6 +2493,8 @@ function buildReferralAdminCsv(rows = []) {
     row.click_at,
     referralTrafficLabel(row),
     row.qualified_at,
+    row.monthly_period_start,
+    row.monthly_period_end,
     row.reward_status || 'waiting_for_paid_conversion',
     row.amount_cents || 0,
     row.currency || 'USD',
@@ -2050,8 +2514,11 @@ function renderReferralAdminRows(rows = []) {
   return rows.map((row) => {
     const rewardStatus = row.reward_status || '';
     const trafficLabel = referralTrafficLabel(row);
-    const rewardAction = row.reward_id
-      ? `<form method="POST" action="/admin/referrals/rewards/${escapeAttr(row.reward_id)}/status" class="mini-form">
+    const waitingLabel = row.active_paypal_subscription_id
+      ? 'Waiting for monthly ledger'
+      : 'Waiting for paid conversion';
+    const rewardAction = row.monthly_reward_id
+      ? `<form method="POST" action="/admin/referrals/rewards/${escapeAttr(row.monthly_reward_id)}/status" class="mini-form">
           <select name="status">
             ${['pending_review', 'approved', 'paid', 'rejected'].map(status => `<option value="${status}" ${status === rewardStatus ? 'selected' : ''}>${escapeHtml(referralRewardStatusLabel(status))}</option>`).join('')}
           </select>
@@ -2059,15 +2526,15 @@ function renderReferralAdminRows(rows = []) {
           <input name="notes" type="text" value="${escapeAttr(row.notes || '')}" placeholder="Admin note" />
           <button type="submit">Update reward</button>
         </form>`
-      : '<span class="muted">Waiting for paid conversion</span>';
+      : `<span class="muted">${escapeHtml(waitingLabel)}</span>`;
     return `<tr>
       <td data-label="Code"><strong>${escapeHtml(row.code_snapshot || '')}</strong><br><span class="muted">${escapeHtml(referralRewardStatusLabel(row.attribution_status))}</span></td>
       <td data-label="Referrer"><strong>${escapeHtml(row.referrer_name || 'Creator')}</strong><br><span class="muted">${escapeHtml(row.referrer_email || '')}</span><br><span class="muted">${escapeHtml(row.referrer_tiktok ? `@${row.referrer_tiktok}` : '')}</span></td>
       <td data-label="Referred"><strong>${escapeHtml(row.referred_name || 'New account')}</strong><br><span class="muted">${escapeHtml(row.referred_email || '')}</span><br><span class="muted">${escapeHtml(row.referred_tiktok ? `@${row.referred_tiktok}` : '')}</span></td>
       <td data-label="Signup">${escapeHtml(row.signup_method || 'unknown')}<br><span class="muted">${escapeHtml(formatSponsorDate(row.signup_at || row.created_at))}</span></td>
       <td data-label="Click">${row.click_at ? `${escapeHtml(formatSponsorDate(row.click_at))}<br><span class="muted">${escapeHtml(trafficLabel || 'Tracked referral link')}</span>` : '<span class="muted">Direct code signup</span>'}</td>
-      <td data-label="Qualified">${escapeHtml(formatSponsorDate(row.qualified_at))}</td>
-      <td data-label="Reward">${escapeHtml(referralRewardStatusLabel(rewardStatus))}<br><span class="muted">${escapeHtml(row.reward_id ? formatRewardAmount(row.amount_cents, row.currency) : '')}</span></td>
+      <td data-label="Active paid">${row.qualified_at ? escapeHtml(formatSponsorDate(row.qualified_at)) : `<span class="muted">${escapeHtml(waitingLabel)}</span>`}</td>
+      <td data-label="Monthly reward">${escapeHtml(referralRewardStatusLabel(rewardStatus))}<br><span class="muted">${escapeHtml(row.monthly_reward_id ? `${formatRewardAmount(row.amount_cents, row.currency)} / ${formatSponsorDate(row.monthly_period_start)}` : '')}</span></td>
       <td data-label="Approved">${escapeHtml(formatSponsorDate(row.approved_at))}</td>
       <td data-label="Paid">${escapeHtml(formatSponsorDate(row.paid_at))}</td>
       <td data-label="Action">${rewardAction}</td>
@@ -2075,25 +2542,62 @@ function renderReferralAdminRows(rows = []) {
   }).join('');
 }
 
-function renderReferralAdminPage({ message = '', error = '', rows = [], filters = {} } = {}) {
+function renderReferralAdminPage({ message = '', error = '', rows = [], bonusClaims = [], filters = {} } = {}) {
   const totals = rows.reduce((acc, row) => {
     acc.signups += 1;
-    if (row.attribution_status === 'qualified') acc.qualified += 1;
-    if (row.reward_status === 'pending_review') acc.pending += 1;
-    if (row.reward_status === 'approved') acc.approved += 1;
-    if (row.reward_status === 'paid') acc.paid += 1;
+    if (row.attribution_status === 'qualified' && row.active_paypal_subscription_id) acc.qualified += 1;
+    if (row.reward_status === 'pending_review') {
+      acc.pending += 1;
+      acc.pendingCashCents += Number(row.amount_cents || 0);
+    }
+    if (row.reward_status === 'approved') {
+      acc.approved += 1;
+      acc.approvedCashCents += Number(row.amount_cents || 0);
+    }
+    if (row.reward_status === 'paid') {
+      acc.paid += 1;
+      acc.paidCashCents += Number(row.amount_cents || 0);
+    }
     return acc;
-  }, { signups: 0, qualified: 0, pending: 0, approved: 0, paid: 0 });
+  }, { signups: 0, qualified: 0, pending: 0, approved: 0, paid: 0, pendingCashCents: 0, approvedCashCents: 0, paidCashCents: 0 });
 
   const exportQuery = referralAdminQueryString(filters);
   const exportHref = `/admin/referrals/export.csv${exportQuery ? `?${exportQuery}` : ''}`;
+  const rankCards = COUNCIL_RANKS.map(rank => `<div class="rank-card"><strong>${escapeHtml(rank.name)}</strong><span>${escapeHtml(rank.threshold)} active paid referrals - ${escapeHtml(rank.summary)}</span></div>`).join('');
+  const programRules = [
+    `${centsToUsd(COUNCIL_MONTHLY_REWARD_CENTS)} per month for every active paid referral.`,
+    `Founding-window referrals lock ${centsToUsd(COUNCIL_FOUNDING_RATE_MONTHLY_CENTS)} per month forever while their payments stay active.`,
+    `Recruited creators can claim one full year free after they refer ${COUNCIL_RECRUIT_YEAR_BONUS_THRESHOLD} paid subscribers of their own.`,
+    `${centsToUsd(COUNCIL_CASH_PAYOUT_MINIMUM_CENTS)} minimum cash payout. Collect a W-9 before the first cash payment.`,
+    'No self-referrals, no income claims, and ambassadors must disclose that they can earn a reward.',
+  ].map(item => `<li>${escapeHtml(item)}</li>`).join('');
+  const bonusRows = bonusClaims.length
+    ? bonusClaims.map(claim => {
+      const claimStatus = String(claim.status || 'pending_review');
+      const claimAction = `<form method="POST" action="/admin/referrals/year-bonus/${escapeAttr(claim.id)}/status" class="mini-form">
+        <select name="status">
+          ${['pending_review', 'approved', 'granted', 'rejected'].map(status => `<option value="${status}" ${status === claimStatus ? 'selected' : ''}>${escapeHtml(referralRewardStatusLabel(status))}</option>`).join('')}
+        </select>
+        <input name="notes" type="text" value="${escapeAttr(claim.notes || '')}" placeholder="Review note" />
+        <button type="submit">Update claim</button>
+      </form>`;
+      return `<tr>
+        <td data-label="Creator"><strong>${escapeHtml(claim.user_tiktok ? `@${claim.user_tiktok}` : claim.user_name || 'Creator')}</strong><br><span class="muted">${escapeHtml(claim.user_email || '')}</span></td>
+        <td data-label="Original code">${escapeHtml(claim.originating_code || '')}<br><span class="muted">${escapeHtml(claim.originating_referrer_tiktok ? `@${claim.originating_referrer_tiktok}` : claim.originating_referrer_email || '')}</span></td>
+        <td data-label="Trigger">${escapeHtml(String(claim.trigger_referral_count || 0))} active paid referrals</td>
+        <td data-label="Status">${escapeHtml(referralRewardStatusLabel(claimStatus))}<br><span class="muted">${escapeHtml(claim.granted_at ? `Granted ${formatSponsorDate(claim.granted_at)}` : '')}</span></td>
+        <td data-label="Notes">${escapeHtml(claim.notes || '')}</td>
+        <td data-label="Action">${claimAction}</td>
+      </tr>`;
+    }).join('')
+    : '<tr><td colspan="6">No one-year bonus claims yet.</td></tr>';
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Referral Rewards - Admin</title>
+  <title>Council of Aetheris - Admin</title>
   <style>
     * { box-sizing: border-box; }
     body { min-height:100vh; font-family:Inter,Arial,sans-serif; background:radial-gradient(circle at 16% 0,rgba(246,201,91,.18),transparent 30%),radial-gradient(circle at 88% 12%,rgba(232,59,95,.14),transparent 28%),linear-gradient(180deg,#050608,#030406); color:#fff8e6; margin:0; padding:24px; }
@@ -2110,10 +2614,17 @@ function renderReferralAdminPage({ message = '', error = '', rows = [], filters 
     .success { color:#c6ffc3; }
     .muted { color:#a8afbf; line-height:1.5; }
     .card { background:linear-gradient(180deg,rgba(255,255,255,.065),rgba(255,255,255,.025)); border:1px solid rgba(255,255,255,.1); border-radius:24px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.24); }
-    .metrics-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; }
+    .metrics-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; }
     .metric-card { min-width:0; padding:16px; border-radius:18px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.22); }
     .metric-card span { display:block; color:#a8afbf; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
-    .metric-card strong { display:block; margin-top:7px; color:#fff8e6; font-size:34px; line-height:1; }
+    .metric-card strong { display:block; margin-top:7px; color:#fff8e6; font-size:clamp(24px,3vw,34px); line-height:1; overflow-wrap:anywhere; }
+    .program-grid { display:grid; grid-template-columns:1.1fr .9fr; gap:14px; }
+    .program-list { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+    .program-list li { padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.16); color:#d9e3f6; font-size:13px; font-weight:800; line-height:1.45; }
+    .rank-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+    .rank-card { padding:10px; border-radius:14px; border:1px solid rgba(246,201,91,.14); background:rgba(246,201,91,.055); }
+    .rank-card strong { display:block; color:#fff8e6; font-size:14px; }
+    .rank-card span { display:block; margin-top:4px; color:#a8afbf; font-size:12px; line-height:1.35; }
     .table-shell { overflow-x:auto; }
     table { width:100%; border-collapse:collapse; margin-top:12px; }
     th, td { border-bottom:1px solid rgba(255,255,255,.08); padding:12px; font-size:13px; text-align:left; vertical-align:top; }
@@ -2126,8 +2637,8 @@ function renderReferralAdminPage({ message = '', error = '', rows = [], filters 
     button { width:100%; min-height:36px; margin-top:0; border:0; border-radius:10px; background:linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color:#170c02; cursor:pointer; font-weight:900; }
     .mini-form { display:grid; grid-template-columns:minmax(100px,.8fr) minmax(90px,.7fr) minmax(140px,1fr); gap:8px; min-width:360px; }
     .mini-form button { grid-column:1 / -1; }
-    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.metrics-grid,.filter-grid{grid-template-columns:1fr 1fr}.mini-form{grid-template-columns:1fr;min-width:0} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
-    @media(max-width:420px){ .admin-nav,.metrics-grid{grid-template-columns:1fr} }
+    @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.metrics-grid,.filter-grid,.program-grid,.rank-grid{grid-template-columns:1fr 1fr}.mini-form{grid-template-columns:1fr;min-width:0} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
+    @media(max-width:420px){ .admin-nav,.metrics-grid,.program-grid,.rank-grid{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
@@ -2135,7 +2646,7 @@ function renderReferralAdminPage({ message = '', error = '', rows = [], filters 
     <header class="admin-hero">
       <div class="admin-brand">
         <img src="/intothebattlelogo_logo_only.svg" alt="IntoTheBattle logo" />
-        <div><h1>Referrals</h1><p>Streamer rewards and signup attribution</p></div>
+        <div><h1>${escapeHtml(COUNCIL_PROGRAM_NAME)}</h1><p>Founding-rate referrals, monthly payouts, and rank review</p></div>
       </div>
       <div class="admin-nav"><a href="/admin">Access Codes</a><a href="/admin/email">Email Accounts</a><a href="/admin/sponsors">Video Platform</a><a href="/admin/marketing">Company Growth</a><a href="/admin/blog">Blog Posts</a><a href="/admin/referrals">Referrals</a><a href="/admin/logout">Logout</a></div>
     </header>
@@ -2143,14 +2654,26 @@ function renderReferralAdminPage({ message = '', error = '', rows = [], filters 
     ${error ? `<div class="notice error">${escapeHtml(error)}</div>` : ''}
     <section class="metrics-grid">
       <div class="metric-card"><span>Signups</span><strong>${escapeHtml(String(totals.signups))}</strong></div>
-      <div class="metric-card"><span>Qualified</span><strong>${escapeHtml(String(totals.qualified))}</strong></div>
+      <div class="metric-card"><span>Active paid</span><strong>${escapeHtml(String(totals.qualified))}</strong></div>
       <div class="metric-card"><span>Pending review</span><strong>${escapeHtml(String(totals.pending))}</strong></div>
       <div class="metric-card"><span>Approved</span><strong>${escapeHtml(String(totals.approved))}</strong></div>
       <div class="metric-card"><span>Paid</span><strong>${escapeHtml(String(totals.paid))}</strong></div>
+      <div class="metric-card"><span>Pending cash</span><strong>${escapeHtml(centsToUsd(totals.pendingCashCents))}</strong></div>
+    </section>
+    <section class="card program-grid">
+      <div>
+        <h2>Program Rules</h2>
+        <p class="muted">Tracking and monthly reward accrual are automatic. Cash transfer, W-9 collection, Discord roles, cosmetics, and Aetherarch appointments are operator tasks until a payout provider is connected.</p>
+        <ul class="program-list">${programRules}</ul>
+      </div>
+      <div>
+        <h2>Ranks</h2>
+        <div class="rank-grid">${rankCards}</div>
+      </div>
     </section>
     <section class="card table-shell">
       <h2>Referral Activity</h2>
-      <p class="muted">Signup attribution is automatic. A reward appears when the referred account becomes an active paid PayPal subscriber. Payouts stay admin-reviewed in v1.</p>
+      <p class="muted">Every active paid referral accrues a ${escapeHtml(centsToUsd(COUNCIL_MONTHLY_REWARD_CENTS))} monthly reward row. If the subscriber cancels, future monthly rows stop.</p>
       <form class="filter-grid" method="GET" action="/admin/referrals">
         <label>Status<select name="status">${referralFilterStatusOptions(filters.status || '')}</select></label>
         <label>Code<input name="code" value="${escapeAttr(filters.code || '')}" placeholder="CREATORCODE" /></label>
@@ -2160,8 +2683,16 @@ function renderReferralAdminPage({ message = '', error = '', rows = [], filters 
         <a class="button-link secondary" href="${escapeAttr(exportHref)}">Export CSV</a>
       </form>
       <table>
-        <thead><tr><th>Code</th><th>Referrer</th><th>Referred</th><th>Signup</th><th>Click</th><th>Qualified</th><th>Reward</th><th>Approved</th><th>Paid</th><th>Action</th></tr></thead>
+        <thead><tr><th>Code</th><th>Referrer</th><th>Referred</th><th>Signup</th><th>Click</th><th>Active paid</th><th>Monthly reward</th><th>Approved</th><th>Paid</th><th>Action</th></tr></thead>
         <tbody>${renderReferralAdminRows(rows)}</tbody>
+      </table>
+    </section>
+    <section class="card table-shell">
+      <h2>One-Year Bonus Claims</h2>
+      <p class="muted">These are recruited creators who reached ${escapeHtml(String(COUNCIL_RECRUIT_YEAR_BONUS_THRESHOLD))} active paid referrals of their own. Review billing before applying the one-year free grant.</p>
+      <table>
+        <thead><tr><th>Creator</th><th>Original code</th><th>Trigger</th><th>Status</th><th>Notes</th><th>Action</th></tr></thead>
+        <tbody>${bonusRows}</tbody>
       </table>
     </section>
   </div>
@@ -4740,7 +5271,7 @@ router.post('/marketing/recover-failed', requireAdminAuth, (req, res) => {
 });
 
 router.get('/codes', requireAdminAuth, (req, res) => {
-  res.redirect('/admin');
+  res.redirect('/admin#accounts-access');
 });
 
 export default router;

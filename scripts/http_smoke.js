@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import jwt from 'jsonwebtoken';
@@ -21,6 +22,8 @@ const server = spawn(process.execPath, ['server.js'], {
     PORT: String(port),
     HOST: host,
     NODE_ENV: 'production',
+    SECURITY_ENFORCE_HOSTS: 'true',
+    SECURITY_ALLOWED_HOSTS: '127.0.0.1,localhost,intothebattle.test',
     API_KEY: 'test',
     TIKTOK_CLIENT_KEY: 'tiktok-smoke-client-key',
     TIKTOK_CLIENT_SECRET: 'tiktok-smoke-client-secret',
@@ -101,6 +104,17 @@ async function expectStatus(pathname, expectedStatus, options = {}) {
   return res;
 }
 
+function rawHttpStatus(pathname, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const req = http.request({ host, port, path: pathname, method: 'GET', headers }, res => {
+      res.resume();
+      res.on('end', () => resolve(res.statusCode));
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
 function signedTikTokWebhookBody(payload) {
   const body = JSON.stringify(payload);
   const timestamp = Math.floor(Date.now() / 1000);
@@ -115,7 +129,14 @@ try {
   await waitForHealth();
 
   await expectStatus('/healthz', 200);
-  for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/how-to-play', '/battlegrounds', '/site-map', '/overlay-preview', '/overlay/mobile-preview', '/overlay-v2-preview', '/overlay-phaser.html']) {
+  const hardenedHome = await expectStatus('/', 200, { headers: { 'x-forwarded-proto': 'https' } });
+  assert(hardenedHome.headers.get('content-security-policy')?.includes("object-src 'none'"), 'HTML responses should include the security CSP');
+  assert(hardenedHome.headers.get('strict-transport-security')?.includes('max-age=31536000'), 'HTTPS requests should include HSTS');
+  assert(hardenedHome.headers.get('x-content-type-options') === 'nosniff', 'responses should set X-Content-Type-Options');
+  assert(hardenedHome.headers.get('x-frame-options') === 'SAMEORIGIN', 'non-overlay pages should set X-Frame-Options');
+  assert(hardenedHome.headers.get('permissions-policy')?.includes('geolocation=()'), 'responses should set Permissions-Policy');
+  assert(await rawHttpStatus('/', { Host: 'evil.example' }) === 421, 'untrusted Host header should be blocked');
+  for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/how-to-play', '/battlegrounds', '/comments', '/site-map', '/overlay-preview', '/overlay/mobile-preview', '/overlay-v2-preview', '/overlay-phaser.html']) {
     await expectStatus(pathname, 200);
   }
   const blog = await expectStatus('/blog', 200);
@@ -125,9 +146,21 @@ try {
   assert(blogText.includes('application/ld+json'), '/blog should include JSON-LD structured data');
   const updates = await expectStatus('/updates', 200);
   assert((await updates.text()).includes('IntoTheBattle'), '/updates should render the local blog index');
-  for (const pathname of ['/favicon.ico', '/favicon-48.png', '/apple-touch-icon.png', '/site-icon-512.png', '/site.webmanifest', '/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/clarity-loader.js', '/js/growth-tracker.js', '/js/overlay-scene.js', '/js/overlay-v2.js', '/js/overlay/stage-config.js', '/js/overlay/overlay-normalizers.js', '/js/overlay/overlay-diagnostics.js', '/js/overlay/overlay-audio.js', '/js/overlay/video-agent.js', '/vendor/phaser/phaser.min.js', '/aetheris-app/aetheris.js', '/aetheris-app/aetheris.css']) {
+  for (const pathname of ['/favicon.ico', '/favicon-48.png', '/apple-touch-icon.png', '/site-icon-512.png', '/site.webmanifest', '/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/clarity-loader.js', '/js/growth-tracker.js', '/js/public-comments.js', '/js/overlay-scene.js', '/js/overlay-v2.js', '/js/overlay/stage-config.js', '/js/overlay/overlay-normalizers.js', '/js/overlay/overlay-diagnostics.js', '/js/overlay/overlay-audio.js', '/js/overlay/video-agent.js', '/vendor/phaser/phaser.min.js', '/aetheris-app/aetheris.js', '/aetheris-app/aetheris.css']) {
     await expectStatus(pathname, 200);
   }
+  const publicComments = await expectStatus('/api/public/comments', 200);
+  const publicCommentsBody = await publicComments.json();
+  assert(Array.isArray(publicCommentsBody.comments), '/api/public/comments should return a comments array');
+  const publicCommentSession = await expectStatus('/api/public/comment-session', 200);
+  const publicCommentSessionBody = await publicCommentSession.json();
+  assert(publicCommentSessionBody.success === true, '/api/public/comment-session should return a success envelope');
+  assert(publicCommentSessionBody.user === null, '/api/public/comment-session should not report a user when signed out');
+  await expectStatus('/api/public/comments', 401, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', Origin: baseUrl },
+    body: JSON.stringify({ comment: 'This needs a creator account before it can post.' }),
+  });
   const publicConfig = await expectStatus('/api/public-config', 200);
   const publicConfigBody = await publicConfig.json();
   assert(publicConfigBody.growth?.enabled === false, 'public growth config should default disabled in smoke');
@@ -138,6 +171,7 @@ try {
   const sitemapText = await sitemapXml.text();
   assert(sitemapXml.headers.get('content-type')?.includes('application/xml'), '/sitemap.xml should be served as XML');
   assert(sitemapText.includes('xmlns:video'), '/sitemap.xml should expose the video sitemap namespace');
+  assert(sitemapText.includes('/comments'), '/sitemap.xml should include the creator comments page');
   assert(sitemapText.includes('homepage-real-overlay-source.mp4'), '/sitemap.xml should include the homepage demo video');
   await expectStatus('/growth-assets/missing-growth-asset.png', 404);
 
@@ -230,12 +264,11 @@ try {
     body: JSON.stringify(unsignedTikTokWebhook),
   });
   const signedTikTokWebhook = signedTikTokWebhookBody(unsignedTikTokWebhook);
-  const tiktokWebhook = await expectStatus('/api/tiktok/webhook', 200, {
+  await expectStatus('/api/tiktok/webhook', 401, {
     method: 'POST',
     headers: { 'content-type': 'application/json', 'TikTok-Signature': signedTikTokWebhook.signature },
     body: signedTikTokWebhook.body,
   });
-  assert((await tiktokWebhook.json()).success === true, 'TikTok webhook should accept matching client_key');
   await expectStatus('/api/signup-intent', 403, {
     method: 'POST',
     headers: { 'content-type': 'application/json', Origin: 'https://evil.example' },
