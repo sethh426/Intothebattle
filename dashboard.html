@@ -271,9 +271,10 @@
     .drop-icon { font-size:34px; margin-bottom:8px; }.drop-title { font-weight:900; }.drop-sub { color:var(--muted); font-size:12px; margin-top:5px; }
     .background-preview { display:grid; place-items:center; aspect-ratio:16/9; margin-top:14px; border-radius:20px; border:1px solid rgba(85,231,255,.18); background:linear-gradient(135deg,rgba(85,231,255,.08),rgba(246,201,91,.055)),#050810; overflow:hidden; }
     .background-preview img { width:100%; height:100%; object-fit:contain; background:#02040a; display:block; }
+    .background-preview video { width:100%; height:100%; object-fit:cover; background:#02040a; display:block; }
     .background-preview.fit-cover img { object-fit:cover; }
     .background-preview.fit-contain img { object-fit:contain; }
-    .background-preview.empty img { display:none; }
+    .background-preview.empty img,.background-preview.empty video { display:none; }
     .background-preview span { color:var(--muted); font-size:13px; font-weight:800; text-align:center; padding:20px; }
     .audio-layout,.sponsor-layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
     #audioManagerCard .audio-layout { grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; }
@@ -829,6 +830,19 @@
         <span id="backgroundPreviewEmpty">No background preview loaded</span>
       </div>
     </article>
+    <article class="card col-4" id="audiencePromptCard">
+      <div class="card-head"><div><div class="card-title">Audience prompts</div><h3>Popup media</h3></div><span class="card-badge">Stream CTA</span></div>
+      <p class="muted">Rotates simple viewer prompts like tap for HP, share to refill health, gift power, attack targets, and shield duration.</p>
+      <div class="form-group"><label class="input-label">Popup image or video</label><input type="file" id="audiencePromptUpload" accept="image/jpeg,image/png,image/gif,image/webp,video/mp4,video/webm,video/quicktime,video/x-m4v"></div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="uploadAudiencePromptMedia()">Upload Popup Media</button><button class="btn btn-warning" onclick="clearAudiencePromptMedia()">Clear Media</button></div>
+      <div class="btn-row" style="margin-top:10px;"><button class="btn btn-secondary" id="audiencePromptToggleBtn" onclick="toggleAudiencePrompts()">Disable Prompts</button></div>
+      <p id="audiencePromptStatus" class="muted" style="margin-top:12px;">Default blue prompt style active</p>
+      <div class="background-preview empty" id="audiencePromptPreview">
+        <img id="audiencePromptPreviewImage" alt="Audience prompt image preview">
+        <video id="audiencePromptPreviewVideo" muted playsinline loop></video>
+        <span id="audiencePromptPreviewEmpty">Default blue popup style</span>
+      </div>
+    </article>
       </div>
     </details>
 
@@ -1137,6 +1151,8 @@ const dashboardState = {
   welcomeMode: initialWelcomeMode,
   eventStarted: false,
   backgroundFit: 'contain',
+  audiencePromptEnabled: true,
+  audiencePromptMedia: null,
   growth: {
     overlayUrlCopiedTracked: false,
     tiktokConnectedTracked: false,
@@ -2357,7 +2373,7 @@ async function startBossWaveFromDashboard(successMessage = 'Boss wave started') 
   return result;
 }
 function copyViewerCommands() {
-  const value = document.getElementById('viewerCommandText')?.value || 'PLAY BY ENGAGING:\nAny comment, like, follow, share, or gift enters you\nTargets: @name | @horde | @boss\nRegular chat: enters you and sends a random 5-damage attack\nAttacks: @name | @horde | @boss | !laser @name | !fire @name\nIcon: !emoji <emoji> or !<emoji>\nTeams/help: !team red / !team leave / !commands';
+  const value = document.getElementById('viewerCommandText')?.value || 'PLAY BY ENGAGING:\nAny comment, like, follow, share, or gift enters you\nTap likes = gain HP\nShare or repost = refill health\nGift = unstoppable power and breaks shields\nTargets: !laser @name | !laser @boss | !laser @horde\nShield: shield 5 through shield 100\nIcon: !emoji <emoji> or !<emoji>\nTeams/help: !team red / !team leave / !commands';
   navigator.clipboard?.writeText(value).then(() => toast('Viewer commands copied')).catch(() => toast('Copy failed', true));
 }
 async function showCommandBanners() {
@@ -2627,6 +2643,37 @@ function updateBackgroundPreview(filename, label = filename, url = '') {
   text('bgStatus', `Background set: ${label || filename}`);
   updateReadinessChecklist();
 }
+function updateAudiencePromptPreview(media = null, enabled = dashboardState.audiencePromptEnabled) {
+  const wrap = document.getElementById('audiencePromptPreview');
+  const image = document.getElementById('audiencePromptPreviewImage');
+  const video = document.getElementById('audiencePromptPreviewVideo');
+  const empty = document.getElementById('audiencePromptPreviewEmpty');
+  const toggle = document.getElementById('audiencePromptToggleBtn');
+  if (!wrap || !image || !video || !empty) return;
+  dashboardState.audiencePromptEnabled = enabled !== false;
+  dashboardState.audiencePromptMedia = media || null;
+  if (toggle) toggle.textContent = dashboardState.audiencePromptEnabled ? 'Disable Prompts' : 'Enable Prompts';
+  image.removeAttribute('src');
+  video.pause?.();
+  video.removeAttribute('src');
+  video.load?.();
+  if (!media?.url) {
+    wrap.classList.add('empty');
+    empty.textContent = dashboardState.audiencePromptEnabled ? 'Default blue popup style' : 'Audience prompts disabled';
+    text('audiencePromptStatus', dashboardState.audiencePromptEnabled ? 'Default blue prompt style active' : 'Audience prompts disabled');
+    return;
+  }
+  wrap.classList.remove('empty');
+  empty.textContent = '';
+  const src = cacheBustAssetUrl(media.url);
+  if (media.type === 'video') {
+    video.src = src;
+    video.play?.().catch(() => {});
+  } else {
+    image.src = src;
+  }
+  text('audiencePromptStatus', `${dashboardState.audiencePromptEnabled ? 'Popup media active' : 'Popup media saved, prompts disabled'}: ${media.originalName || media.filename || 'media'}`);
+}
 async function fetchStatus() {
   try {
     const res = await fetch('/api/status', { credentials: 'same-origin' });
@@ -2679,6 +2726,7 @@ async function fetchStatus() {
     dashboardState.devTestMode = !!data.devTestMode;
     text('player-count', dashboardState.playerCount);
     applyBackgroundFit(data.overlaySettings?.backgroundFit || dashboardState.backgroundFit);
+    updateAudiencePromptPreview(data.overlaySettings?.audiencePromptMedia || null, data.overlaySettings?.audiencePromptEnabled);
     updateBackgroundPreview(data.background?.filename || '', data.background?.originalName || data.background?.filename || '', data.background?.url || '');
     const stream = data.stream || {};
     setTikTokStatus(stream.status || (data.connected ? 'connected' : 'disconnected'), stream.username || data.username);
@@ -2909,6 +2957,37 @@ function toggleDevMode(){
 }
 function uploadBackground(){ const file = document.getElementById('bgUpload').files[0]; if(!file) return toast('Choose an image first', true); const fd = new FormData(); fd.append('background', file); fetch('/api/background/upload', { method:'POST', credentials:'same-origin', body:fd }).then(r=>r.json()).then(d=>{ if(d.success){ updateBackgroundPreview(d.filename, file.name, d.background?.url || d.url || ''); toast(`Background uploaded using ${dashboardState.backgroundFit === 'cover' ? 'fill frame' : 'show full image'} fit`); } else toast(d.error || 'Upload failed', true); }).catch(()=>toast('Background upload failed', true)); }
 function clearBackground(){ if(!confirm('Clear the current overlay background for this room?')) return; apiCall('/api/background/clear').then(()=>{ updateBackgroundPreview(''); toast('Background cleared'); }); }
+function uploadAudiencePromptMedia(){
+  const file = document.getElementById('audiencePromptUpload')?.files?.[0];
+  if(!file) return toast('Choose an image or video first', true);
+  const fd = new FormData();
+  fd.append('audiencePromptMedia', file);
+  fetch('/api/audience-prompt/upload', { method:'POST', credentials:'same-origin', body:fd })
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.success){
+        updateAudiencePromptPreview(d.media || d.settings?.audiencePromptMedia || null, d.settings?.audiencePromptEnabled);
+        toast('Audience popup media uploaded');
+      } else toast(d.error || 'Audience popup upload failed', true);
+    })
+    .catch(()=>toast('Audience popup upload failed', true));
+}
+function clearAudiencePromptMedia(){
+  if(!confirm('Clear the audience popup media and use the default blue style?')) return;
+  apiCall('/api/audience-prompt/clear').then(d=>{
+    if(!d.success) return;
+    updateAudiencePromptPreview(null, d.settings?.audiencePromptEnabled);
+    toast('Audience popup media cleared');
+  });
+}
+function toggleAudiencePrompts(){
+  const nextEnabled = !dashboardState.audiencePromptEnabled;
+  apiCall('/api/dev/overlay-settings','POST',{ audiencePromptEnabled: nextEnabled }).then(d=>{
+    if(!d.success) return;
+    updateAudiencePromptPreview(d.settings?.audiencePromptMedia || dashboardState.audiencePromptMedia, d.settings?.audiencePromptEnabled);
+    toast(nextEnabled ? 'Audience prompts enabled' : 'Audience prompts disabled');
+  });
+}
 function saveBackgroundFit(){
   const fit = normalizeBackgroundFit(document.getElementById('backgroundFitInput')?.value);
   applyBackgroundFit(fit);

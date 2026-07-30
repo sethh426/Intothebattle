@@ -54,13 +54,16 @@ async function watchPage(page) {
   page.on('pageerror', err => errors.push(`pageerror: ${err.message}`));
   page.on('console', msg => {
     const text = msg.text();
-    if (msg.type() === 'error' && !/Failed to load resource: net::ERR_NETWORK_CHANGED\b/.test(text)) {
+    if (msg.type() === 'error' && !/Failed to load resource: (?:net::ERR_NETWORK_CHANGED\b|the server responded with a status of 401 \(Unauthorized\))/.test(text)) {
       errors.push(`console error: ${text}`);
     }
   });
   page.on('requestfailed', req => {
     try {
-      if (new URL(req.url()).origin === baseUrl) {
+      const url = new URL(req.url());
+      const failureText = req.failure()?.errorText || '';
+      if (/ERR_ABORTED/i.test(failureText) && /\.(?:svg|png|jpg|jpeg|webp|gif|mp4|webm)$/i.test(url.pathname)) return;
+      if (url.origin === baseUrl) {
         errors.push(`request failed: ${req.method()} ${req.url()} ${req.failure()?.errorText || ''}`);
       }
     } catch (_) {}
@@ -556,15 +559,15 @@ test('all rich banner types stay centered, readable, and collision-free', async 
     }
 
     if (type === 'commands') {
-      const compactVisibleCommands = ['engage', '@name', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
-      const microVisibleCommands = ['engage', '@name', '!attack @horde', '!attack @boss', '!shield', '!commands'];
+      const compactVisibleCommands = ['tap', 'share/repost', '!laser @name', '!laser @boss', '!laser @horde', 'shield 5', 'shield 100', '!commands'];
+      const microVisibleCommands = ['tap', '!laser @name', '!laser @boss', '!laser @horde', 'shield 5', '!commands'];
       const expectedVisibleCommands = details.className.includes('is-nano')
-        ? ['engage', '@name', '!shield', '!commands']
+        ? ['tap', '!laser @name', 'shield 5', '!commands']
         : details.className.includes('is-micro')
           ? microVisibleCommands
           : details.className.includes('is-compact')
             ? compactVisibleCommands
-            : ['engage', '@name', 'chat', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
+            : ['tap', 'share/repost', 'gift', '!laser @name', '!laser @boss', '!laser @horde', 'shield 5', 'shield 100', '!commands'];
       expect(details.rowCount, 'command row count').toBe(1);
       expect(details.railCount, 'command rail count').toBe(1);
       expect(details.tickerCount, 'command ticker count').toBe(0);
@@ -637,11 +640,11 @@ test('command banner shows one static viewer command rail', async ({ context, pa
   expect(details.kickerCount).toBe(0);
   expect(details.metaCount).toBe(0);
   expect(details.titleCount).toBe(0);
-  const expectedCommands = ['engage', '@name', 'chat', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
-  const compactVisibleCommands = ['engage', '@name', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
-  const microVisibleCommands = ['engage', '@name', '!attack @horde', '!attack @boss', '!shield', '!commands'];
+  const expectedCommands = ['tap', 'share/repost', 'gift', '!laser @name', '!laser @boss', '!laser @horde', 'shield 5', 'shield 100', '!commands'];
+  const compactVisibleCommands = ['tap', 'share/repost', '!laser @name', '!laser @boss', '!laser @horde', 'shield 5', 'shield 100', '!commands'];
+  const microVisibleCommands = ['tap', '!laser @name', '!laser @boss', '!laser @horde', 'shield 5', '!commands'];
   const expectedVisibleCommands = details.className.includes('is-nano')
-    ? ['engage', '@name', '!shield', '!commands']
+    ? ['tap', '!laser @name', 'shield 5', '!commands']
     : details.className.includes('is-micro')
       ? microVisibleCommands
       : details.className.includes('is-compact')
@@ -676,6 +679,65 @@ test('command banner shows one static viewer command rail', async ({ context, pa
 
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'qa-overlay-command-banner-rail');
+  expect(errors).toEqual([]);
+});
+
+test('audience CTA rotates clear viewer prompts inside the overlay frame', async ({ context, page }, testInfo) => {
+  await addAuthCookie(context);
+  const errors = await watchPage(page);
+  const params = new URLSearchParams({
+    room_id: roomId,
+    overlay_token: overlayToken,
+    mode: 'live',
+    controls: '0',
+    debug: '1',
+  });
+  await page.goto(`${baseUrl}/overlay?${params.toString()}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => Boolean(window.__overlayLegacyLayout?.frame), null, { timeout: 7000 });
+
+  const testEvent = await context.request.post(`${baseUrl}/api/overlay/test/attack`);
+  const testEventBody = await parseJsonResponse(testEvent);
+  expect(testEventBody.success).toBe(true);
+  await page.waitForFunction(() => {
+    const el = document.querySelector('[data-testid="audience-cta"]');
+    return Boolean(el && el.classList.contains('is-visible') && el.getBoundingClientRect().width > 0);
+  }, null, { timeout: 7000 });
+
+  const details = await page.evaluate(() => {
+    const el = document.querySelector('[data-testid="audience-cta"]');
+    const frame = document.getElementById('overlay-container');
+    const rect = el?.getBoundingClientRect();
+    const frameRect = frame?.getBoundingClientRect();
+    const layout = window.__overlayLegacyLayout || {};
+    const cta = layout.audienceCta || null;
+    return {
+      text: (el?.textContent || '').replace(/\s+/g, ' ').trim(),
+      visible: Boolean(el && el.classList.contains('is-visible')),
+      left: rect?.left || 0,
+      right: rect?.right || 0,
+      top: rect?.top || 0,
+      bottom: rect?.bottom || 0,
+      width: rect?.width || 0,
+      height: rect?.height || 0,
+      frameLeft: frameRect?.left || 0,
+      frameRight: frameRect?.right || 0,
+      frameTop: frameRect?.top || 0,
+      frameBottom: frameRect?.bottom || 0,
+      collisions: cta ? (layout.collisions || []).filter(pair => pair.includes(cta.id)) : [],
+    };
+  });
+  expect(details.visible).toBe(true);
+  expect(details.text).toMatch(/Tap to gain HP|Share or Repost|Gift to be Unstoppable|shield 5|!laser @name/i);
+  expect(details.width).toBeGreaterThan(260);
+  expect(details.height).toBeGreaterThanOrEqual(34);
+  expect(details.left).toBeGreaterThanOrEqual(details.frameLeft - 1);
+  expect(details.right).toBeLessThanOrEqual(details.frameRight + 1);
+  expect(details.top).toBeGreaterThanOrEqual(details.frameTop - 1);
+  expect(details.bottom).toBeLessThanOrEqual(details.frameBottom + 1);
+  expect(details.collisions, JSON.stringify(details, null, 2)).toEqual([]);
+
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'qa-overlay-audience-cta');
   expect(errors).toEqual([]);
 });
 

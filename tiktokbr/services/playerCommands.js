@@ -58,6 +58,10 @@ export const PLAYER_UTILITY_COMMAND_ALIASES = Object.freeze({
   shield: Object.freeze(['shield', 'guard', 'block', 'defend', 'protect']),
 });
 
+export const PLAYER_ATTACK_COMMAND_WORDS = Object.freeze(Object.keys(PLAYER_ATTACK_COMMANDS));
+export const PLAYER_SHIELD_DEFAULT_SECONDS = 10;
+export const PLAYER_SHIELD_MAX_SECONDS = 100;
+
 const PLAYER_UTILITY_COMMAND_LOOKUP = Object.freeze(
   Object.entries(PLAYER_UTILITY_COMMAND_ALIASES).reduce((lookup, [canonical, aliases]) => {
     aliases.forEach(alias => { lookup[alias] = canonical; });
@@ -65,15 +69,19 @@ const PLAYER_UTILITY_COMMAND_LOOKUP = Object.freeze(
   }, {})
 );
 
+const ALL_ATTACK_COMMAND_TEXT = PLAYER_ATTACK_COMMAND_WORDS
+  .map(command => `!${command} @name`)
+  .join(' | ');
+
 export const VIEWER_COMMAND_TICKER_ITEMS = Object.freeze([
   'Any comment, like, follow, share, or gift enters you',
-  'Targets: @name | @horde | @boss',
-  'Regular chat: enters you and sends a random 5-damage attack',
-  'Attacks: @name | @horde | @boss | !laser @name | !fire @name',
+  'Tap likes = gain HP',
+  'Share or repost = refill health',
+  'Gift = unstoppable power and breaks shields',
+  'Targets: !laser @name | !laser @boss | !laser @horde',
+  'Shield: shield 5 through shield 100',
   'Icon: !emoji <emoji> or !<emoji>',
-  'Basic attacks: !attack @name / !hit @name / !strike @name / !fight @name',
-  'Effects: !laser @name | !fire @name | !prism @name | !plasma @name | !orbital @name',
-  'Defense: !shield / !guard / !block',
+  `All attacks: ${ALL_ATTACK_COMMAND_TEXT}`,
   'Support: !heal or !heal @name',
   'Teams/help: !team red / !team leave / !commands or !comments',
 ]);
@@ -88,17 +96,36 @@ export const VIEWER_COMMAND_SHOWCASE = Object.freeze({
   priority: 88,
   tickerItems: VIEWER_COMMAND_TICKER_ITEMS,
   commands: Object.freeze([
-    { command: 'engage', detail: 'enter arena' },
-    { command: '@name', detail: 'hit a player' },
-    { command: 'chat', detail: 'weak random attack' },
-    { command: '!attack @name', detail: 'stronger player hit' },
-    { command: '!attack @horde', detail: 'hit The Horde' },
-    { command: '!attack @boss', detail: 'hit the boss' },
-    { command: '!shield', detail: 'block damage' },
-    { command: '!heal @name', detail: 'heal self or ally' },
-    { command: '!commands', detail: 'show help' },
+    { command: 'tap', detail: 'gain HP' },
+    { command: 'share/repost', detail: 'refill health' },
+    { command: 'gift', detail: 'unstoppable' },
+    { command: '!laser @name', detail: 'attack player' },
+    { command: '!laser @boss', detail: 'attack boss' },
+    { command: '!laser @horde', detail: 'attack horde' },
+    { command: 'shield 5', detail: '5s shield' },
+    { command: 'shield 100', detail: 'max shield' },
+    { command: '!commands', detail: 'all attacks' },
   ]),
 });
+
+function splitCompactUtilityToken(token) {
+  const value = String(token || '').toLowerCase();
+  const compact = value.match(/^([a-z]+)(\d{1,4})$/);
+  if (!compact) return { token: value, suffix: '' };
+  const base = compact[1];
+  if (!PLAYER_UTILITY_COMMAND_LOOKUP[base]) return { token: value, suffix: '' };
+  return { token: base, suffix: compact[2] };
+}
+
+export function parseShieldDurationMs(text = '', fallbackMs = PLAYER_SHIELD_DEFAULT_SECONDS * 1000) {
+  const raw = String(text || '').trim();
+  const fallback = Math.max(1000, Math.min(PLAYER_SHIELD_MAX_SECONDS * 1000, Math.round(Number(fallbackMs) || PLAYER_SHIELD_DEFAULT_SECONDS * 1000)));
+  const aliases = PLAYER_UTILITY_COMMAND_ALIASES.shield.join('|');
+  const match = raw.match(new RegExp(`(?:^|\\s)[!/]?\\s*(?:${aliases})(?![a-z])\\s*[:=-]?\\s*(\\d{1,4})?\\s*(?:s|sec|secs|second|seconds)?\\b`, 'i'));
+  if (!match || !match[1]) return fallback;
+  const seconds = Math.max(1, Math.min(PLAYER_SHIELD_MAX_SECONDS, Math.round(Number(match[1]) || PLAYER_SHIELD_DEFAULT_SECONDS)));
+  return seconds * 1000;
+}
 
 export function parseAttackCommand(text = '', options = {}) {
   const value = String(text || '');
@@ -125,20 +152,22 @@ export function parseUtilityCommand(text = '') {
   let prefixed = false;
 
   if (explicit) {
-    token = String(explicit[2] || '').toLowerCase();
+    const split = splitCompactUtilityToken(explicit[2]);
+    token = split.token;
     canonical = PLAYER_UTILITY_COMMAND_LOOKUP[token];
     if (!canonical) return null;
     prefixed = true;
     const commandStart = explicit.index + explicit[0].search(/[!/]/);
     const commandEnd = explicit.index + explicit[0].length;
-    rest = `${raw.slice(0, commandStart)} ${raw.slice(commandEnd)}`.trim();
+    rest = `${raw.slice(0, commandStart)} ${split.suffix} ${raw.slice(commandEnd)}`.trim();
   } else {
     const match = raw.match(/^([a-z][a-z0-9_-]*)([\s\S]*)$/i);
     if (!match) return null;
-    token = String(match[1] || '').toLowerCase();
+    const split = splitCompactUtilityToken(match[1]);
+    token = split.token;
     canonical = PLAYER_UTILITY_COMMAND_LOOKUP[token];
     if (!canonical) return null;
-    rest = String(match[2] || '').trim();
+    rest = `${split.suffix} ${String(match[2] || '')}`.trim();
   }
 
   return {

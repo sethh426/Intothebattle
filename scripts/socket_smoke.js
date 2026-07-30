@@ -688,6 +688,32 @@ try {
     `plain comment rotation should include every new effect, missing ${missingPassiveEffects.join(', ') || 'none'}`
   );
 
+  const timedShieldRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ reset: true, comment: 'shield 5' }),
+  });
+  assert(timedShieldRes.status === 200, `timed shield test should return 200, got ${timedShieldRes.status}`);
+  const timedShield = await timedShieldRes.json();
+  assert(
+    Number(timedShield.after?.test_alpha?.shieldRemainingMs) > 4500 &&
+      Number(timedShield.after?.test_alpha?.shieldRemainingMs) <= 5000,
+    `shield 5 should last about 5 seconds, got ${timedShield.after?.test_alpha?.shieldRemainingMs}`
+  );
+
+  const cappedShieldRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ reset: true, comment: '!shield500' }),
+  });
+  assert(cappedShieldRes.status === 200, `capped shield test should return 200, got ${cappedShieldRes.status}`);
+  const cappedShield = await cappedShieldRes.json();
+  assert(
+    Number(cappedShield.after?.test_alpha?.shieldRemainingMs) > 99000 &&
+      Number(cappedShield.after?.test_alpha?.shieldRemainingMs) <= 100000,
+    `shield cap should last about 100 seconds, got ${cappedShield.after?.test_alpha?.shieldRemainingMs}`
+  );
+
   const utilityCommentRes = await request('/api/test/comment', {
     method: 'POST',
     headers: authedHeaders,

@@ -83,6 +83,7 @@ import { extractLiveCommentText } from './tiktokbr/services/liveEventText.js';
 import {
   commandBannerShowcasePayload,
   parseAttackCommand,
+  parseShieldDurationMs,
   parseUtilityCommand,
   viewerCommandText,
 } from './tiktokbr/services/playerCommands.js';
@@ -323,6 +324,7 @@ const BOSS_WAVE_ATTACK_INTERVAL_MS = Number(process.env.BOSS_WAVE_ATTACK_INTERVA
 const BOSS_WAVE_ATTACK_DAMAGE = Number(process.env.BOSS_WAVE_ATTACK_DAMAGE || 18);
 const BOSS_WAVE_ATTACK_EFFECTS = Object.freeze(['railgun', 'comet', 'arc', 'bullet']);
 const PLAYER_SHIELD_DURATION_MS = 10000;
+const PLAYER_SHIELD_MAX_DURATION_MS = 100000;
 const PLAYER_SHIELD_COOLDOWN_MS = 45000;
 const configuredFreeTrialDays = Number(process.env.FREE_TRIAL_DAYS || 7);
 const FREE_TRIAL_DAYS = Number.isFinite(configuredFreeTrialDays) && configuredFreeTrialDays > 0
@@ -4750,7 +4752,7 @@ function grantPlayerShield(player, durationMs = PLAYER_SHIELD_DURATION_MS, now =
   if (status.shieldActive) return { granted: false, reason: 'shield_active', ...status };
   if (status.cooldownActive) return { granted: false, reason: 'shield_cooldown', ...status };
 
-  const duration = Math.max(1000, Math.round(Number(durationMs) || PLAYER_SHIELD_DURATION_MS));
+  const duration = Math.max(1000, Math.min(PLAYER_SHIELD_MAX_DURATION_MS, Math.round(Number(durationMs) || PLAYER_SHIELD_DURATION_MS)));
   player.shieldUntil = now + duration;
   player.shieldCooldownUntil = 0;
   return {
@@ -5075,6 +5077,64 @@ function buildBackgroundPayload(room, extraParams = {}) {
   return { ...room.currentBackground, filename, url };
 }
 
+function roomStoredMediaExists(room, filename) {
+  if (!room || !filename) return false;
+  try {
+    const { backgroundDir } = getRoomPaths(room.roomId);
+    const filepath = path.join(backgroundDir, filename);
+    return isSafePath(backgroundDir, filepath) && fs.existsSync(filepath);
+  } catch (_err) {
+    return false;
+  }
+}
+
+function buildStoredMediaUrl(room, filename, extraParams = {}) {
+  if (!room || !filename || !roomStoredMediaExists(room, filename)) return '';
+  const urlPath = `/background/${encodeURIComponent(filename)}`;
+  const token = createOverlayToken(room.roomId);
+  if (enableRoomScoped && token) return appendOverlayAuth(urlPath, room.roomId, token, extraParams);
+  const parsed = new URL(urlPath, 'http://localhost');
+  for (const [key, value] of Object.entries(extraParams)) {
+    if (value != null && value !== '') parsed.searchParams.set(key, String(value));
+  }
+  return `${parsed.pathname}${parsed.search}`;
+}
+
+function normalizeAudiencePromptMedia(room, media = room?.overlaySettings?.audiencePromptMedia, extraParams = {}) {
+  const filename = typeof media?.filename === 'string' ? media.filename.trim() : '';
+  if (!room || !filename || !roomStoredMediaExists(room, filename)) return null;
+  const type = media.type === 'video' ? 'video' : 'image';
+  return {
+    filename,
+    type,
+    originalName: typeof media.originalName === 'string' && media.originalName.trim() ? media.originalName.trim().slice(0, 160) : filename,
+    url: buildStoredMediaUrl(room, filename, extraParams),
+  };
+}
+
+function deleteAudiencePromptMedia(room) {
+  const filename = room?.overlaySettings?.audiencePromptMedia?.filename;
+  if (!room || !filename) return;
+  const { backgroundDir } = getRoomPaths(room.roomId);
+  const filepath = path.join(backgroundDir, filename);
+  if (isSafePath(backgroundDir, filepath) && fs.existsSync(filepath)) fs.unlinkSync(filepath);
+}
+
+function overlaySettingsPayload(room) {
+  if (!room) return { ...DEFAULT_OVERLAY_SETTINGS };
+  room.overlaySettings = { ...DEFAULT_OVERLAY_SETTINGS, ...(room.overlaySettings || {}) };
+  const media = normalizeAudiencePromptMedia(room, room.overlaySettings.audiencePromptMedia, { v: Date.now() });
+  room.overlaySettings.audiencePromptMedia = media ? {
+    filename: media.filename,
+    type: media.type,
+    originalName: media.originalName,
+  } : null;
+  return {
+    ...room.overlaySettings,
+    audiencePromptMedia: media,
+  };
+}
+
 function deleteRoomBackgroundFile(room, filename = room?.currentBackground?.filename) {
   if (!room || !filename) return;
   const { backgroundDir, backgroundMetaFile } = getRoomPaths(room.roomId);
@@ -5394,6 +5454,35 @@ const upload = multer({
     const ext = path.extname(file.originalname || '').toLowerCase();
     const ok  = ALLOWED_BACKGROUND_EXTS.has(ext) && ALLOWED_BACKGROUND_MIMES.has(file.mimetype);
     ok ? cb(null, true) : cb(new Error('Invalid background type. Please upload JPG, PNG, GIF, or WEBP only.'));
+  },
+});
+
+const ALLOWED_AUDIENCE_PROMPT_EXTS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.mp4', '.webm', '.m4v', '.mov']);
+const ALLOWED_AUDIENCE_PROMPT_MIMES = new Set([
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  'video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v',
+]);
+const AUDIENCE_PROMPT_UPLOAD_MAX_BYTES = uploadLimitBytes('AUDIENCE_PROMPT_UPLOAD_MAX_MB', 50 * 1024 * 1024);
+
+const audiencePromptUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const fallbackDir = path.join(process.env.DISK_PATH || __dirname, 'backgrounds');
+      const bgDir = req?.room ? getRoomPaths(req.room.roomId).backgroundDir : fallbackDir;
+      ensureDir(bgDir);
+      cb(null, bgDir);
+    },
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname || '').toLowerCase();
+      const safeExt = ALLOWED_AUDIENCE_PROMPT_EXTS.has(ext) ? ext : '.png';
+      cb(null, `audience-prompt-${Date.now()}-${Math.random().toString(36).slice(2)}${safeExt}`);
+    },
+  }),
+  limits: { fileSize: AUDIENCE_PROMPT_UPLOAD_MAX_BYTES },
+  fileFilter: (_req, file, cb) => {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const ok = ALLOWED_AUDIENCE_PROMPT_EXTS.has(ext) && ALLOWED_AUDIENCE_PROMPT_MIMES.has(file.mimetype);
+    ok ? cb(null, true) : cb(new Error('Invalid audience popup media type. Upload JPG, PNG, GIF, WEBP, MP4, WEBM, M4V, or MOV.'));
   },
 });
 
@@ -6558,7 +6647,8 @@ function handlePlayerUtilityCommand(room, playerId, nickname, comment) {
     const player = room.players[playerId];
     if (!player) return { handled: true, stop: true, reason: 'Shield player not found' };
 
-    const shieldGrant = grantPlayerShield(player, PLAYER_SHIELD_DURATION_MS);
+    const requestedShieldMs = parseShieldDurationMs(text, PLAYER_SHIELD_DURATION_MS);
+    const shieldGrant = grantPlayerShield(player, requestedShieldMs);
     player.lastActive = Date.now();
     player.forceSpawn = true;
 
@@ -6584,8 +6674,10 @@ function handlePlayerUtilityCommand(room, playerId, nickname, comment) {
       type: 'shield',
       uniqueId: playerId,
       nickname,
-      message: `${nickname} raised a shield`,
-      durationMs: PLAYER_SHIELD_DURATION_MS,
+      message: `${nickname} raised a ${Math.round(shieldGrant.durationMs / 1000)}s shield`,
+      durationMs: shieldGrant.durationMs,
+      requestedDurationMs: requestedShieldMs,
+      maxDurationMs: PLAYER_SHIELD_MAX_DURATION_MS,
       shieldUntil: shieldGrant.shieldUntil,
       cooldownMs: PLAYER_SHIELD_COOLDOWN_MS,
     });
@@ -8498,7 +8590,7 @@ io.on('connection', (socket) => {
     socketId: socket.id,
     roomId: room.roomId,
     overlayCount: room.overlayCount,
-    overlaySettings: room.overlaySettings,
+    overlaySettings: overlaySettingsPayload(room),
     laserColor: room.overlaySettings.laserColor,
     gameStateCount: Object.values(room.players).filter(p => p.alive).length,
     stream: buildTikTokConnectionStatus(room),
@@ -8519,7 +8611,7 @@ io.on('connection', (socket) => {
 
       socket.emit('gameState',        buildOverlayGameState(room, room.players));
       socket.emit('audioConfig',      room.audioConfig);
-      socket.emit('overlaySettings',  room.overlaySettings);
+      socket.emit('overlaySettings',  overlaySettingsPayload(room));
       socket.emit('laserColor',       room.overlaySettings.laserColor);
       socket.emit('sessionStatus',    buildSessionStatus(room));
       socket.emit('tiktokConnection',  buildTikTokConnectionStatus(room));
@@ -8540,7 +8632,7 @@ io.on('connection', (socket) => {
       }
       if (clientType === 'dashboard') maybeAutoResumeSavedTikTokStream(room, 'dashboard_registered');
       socket.emit('overlayCount',    { count: room.overlayCount });
-      socket.emit('overlaySettings', room.overlaySettings);
+      socket.emit('overlaySettings', overlaySettingsPayload(room));
       socket.emit('laserColor',      room.overlaySettings.laserColor);
       socket.emit('gameState',       buildOverlayGameState(room, room.players));
       socket.emit('sessionStatus',   buildSessionStatus(room));
@@ -8858,7 +8950,7 @@ app.get('/api/status', requireRoom, (req, res) => {
     lastStreamEventAt: req.room.lastStreamEventAt || null,
     blockingReasons:  streamMode.blockingReasons,
     background:       buildBackgroundPayload(req.room, { v: Date.now() }),
-    overlaySettings:  req.room.overlaySettings,
+    overlaySettings:  overlaySettingsPayload(req.room),
     devTestMode:      DEV_TEST_MODE,
     setupRehearsal:   req.room.setupRehearsal || { active: false },
     session:          buildSessionStatus(req.room),
@@ -9318,13 +9410,13 @@ app.post('/api/dev/laser-color', requireRoom, (req, res) => {
   if (typeof color !== 'string' || !color.trim()) return res.status(400).json({ success: false, error: 'Invalid color' });
   req.room.overlaySettings.laserColor = color.trim();
   saveRoomAudioConfig(req.room);
-  emitRoomEvent(req.room, 'overlaySettings', req.room.overlaySettings);
+  emitRoomEvent(req.room, 'overlaySettings', overlaySettingsPayload(req.room));
   emitRoomEvent(req.room, 'laserColor', { color: req.room.overlaySettings.laserColor });
   res.json({ success: true, color: req.room.overlaySettings.laserColor });
 });
 
 app.post('/api/dev/overlay-settings', requireRoom, (req, res) => {
-  const { shotType, shotSpeed, color, backgroundFit } = req.body || {};
+  const { shotType, shotSpeed, color, backgroundFit, audiencePromptEnabled } = req.body || {};
   const validTypes = [
     'beam', 'pulse', 'wave', 'burst', 'laser', 'fire', 'sphere', 'projectile', 'bullet', 'railgun', 'comet', 'arc', 'explosion',
     'prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard',
@@ -9344,9 +9436,13 @@ app.post('/api/dev/overlay-settings', requireRoom, (req, res) => {
     if (!validBackgroundFits.includes(backgroundFit)) return res.status(400).json({ success: false, error: `Invalid background fit. Must be one of: ${validBackgroundFits.join(', ')}` });
     req.room.overlaySettings.backgroundFit = backgroundFit;
   }
+  if (typeof audiencePromptEnabled === 'boolean') {
+    req.room.overlaySettings.audiencePromptEnabled = audiencePromptEnabled;
+  }
   saveRoomAudioConfig(req.room);
-  emitRoomEvent(req.room, 'overlaySettings', req.room.overlaySettings);
-  res.json({ success: true, settings: req.room.overlaySettings });
+  const settings = overlaySettingsPayload(req.room);
+  emitRoomEvent(req.room, 'overlaySettings', settings);
+  res.json({ success: true, settings });
 });
 
 app.post('/api/connect', requireRoom, (req, res) => {
@@ -9496,6 +9592,48 @@ app.post('/api/background/clear', requireRoom, (req, res) => {
   } catch (err) {
     console.error('Background clear error:', err);
     res.json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/audience-prompt/upload', requireRoom, (req, res) => {
+  res.type('application/json');
+  if (rejectUploadRequestIfStorageLow(req, res, 'background')) return;
+  audiencePromptUpload.single('audiencePromptMedia')(req, res, (err) => {
+    try {
+      if (err) return res.status(err?.code === 'LIMIT_FILE_SIZE' ? 413 : 400).json({ success: false, error: uploadErrorMessage(err, 'Audience popup media') });
+      if (!req.file) return res.status(400).json({ success: false, error: 'No audience popup media was uploaded.' });
+      if (rejectUploadedFileIfStorageLow(req, res, req.file, 'background')) return;
+      deleteAudiencePromptMedia(req.room);
+      req.room.overlaySettings = { ...DEFAULT_OVERLAY_SETTINGS, ...(req.room.overlaySettings || {}) };
+      req.room.overlaySettings.audiencePromptEnabled = true;
+      req.room.overlaySettings.audiencePromptMedia = {
+        filename: req.file.filename,
+        type: String(req.file.mimetype || '').startsWith('video/') ? 'video' : 'image',
+        originalName: String(req.file.originalname || req.file.filename).slice(0, 160),
+      };
+      saveRoomAudioConfig(req.room);
+      const settings = overlaySettingsPayload(req.room);
+      emitRoomEvent(req.room, 'overlaySettings', settings);
+      return res.json({ success: true, settings, media: settings.audiencePromptMedia });
+    } catch (uploadErr) {
+      console.error('Audience popup media upload error:', uploadErr);
+      return res.status(500).json({ success: false, error: uploadErr.message || 'Server error during audience popup media upload' });
+    }
+  });
+});
+
+app.post('/api/audience-prompt/clear', requireRoom, (req, res) => {
+  try {
+    deleteAudiencePromptMedia(req.room);
+    req.room.overlaySettings = { ...DEFAULT_OVERLAY_SETTINGS, ...(req.room.overlaySettings || {}) };
+    req.room.overlaySettings.audiencePromptMedia = null;
+    saveRoomAudioConfig(req.room);
+    const settings = overlaySettingsPayload(req.room);
+    emitRoomEvent(req.room, 'overlaySettings', settings);
+    res.json({ success: true, settings });
+  } catch (err) {
+    console.error('Audience popup media clear error:', err);
+    res.status(500).json({ success: false, error: err.message || 'Audience popup media clear failed' });
   }
 });
 

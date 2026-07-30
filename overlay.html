@@ -364,6 +364,72 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   100% { transform:translateX(118%); }
 }
 
+.audience-cta {
+  position:absolute; left:50%; top:50%; z-index:24; pointer-events:none;
+  width:min(760px, calc(100% - 56px)); min-height:50px; max-height:62px;
+  display:grid; grid-template-columns:minmax(0,1fr); align-items:center;
+  overflow:hidden; opacity:0; visibility:hidden; box-sizing:border-box;
+  font-family:'Rajdhani','Segoe UI',sans-serif; color:#f8fdff;
+  background:
+    linear-gradient(100deg, rgba(2,7,18,0.94), rgba(5,31,62,0.9) 48%, rgba(2,8,20,0.95)),
+    radial-gradient(circle at 18% 50%, rgba(85,231,255,0.34), transparent 42%),
+    radial-gradient(circle at 82% 50%, rgba(122,252,255,0.18), transparent 44%);
+  border:1px solid rgba(122,252,255,0.62);
+  border-radius:5px;
+  clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
+  box-shadow:0 18px 46px rgba(0,0,0,0.58),0 0 34px rgba(85,231,255,0.2),inset 0 1px 0 rgba(255,255,255,0.18);
+  text-shadow:0 3px 10px rgba(0,0,0,0.95),0 0 18px rgba(85,231,255,0.4);
+  transform:translate(-50%,0) scale(.985);
+  transition:opacity 180ms ease, transform 180ms ease, visibility 180ms ease;
+}
+.audience-cta.is-visible { opacity:1; visibility:visible; transform:translate(-50%,0) scale(1); }
+.audience-cta.is-muted { opacity:.24; transform:translate(-50%,0) scale(.96); }
+.audience-cta__media,
+.audience-cta__media video,
+.audience-cta__media img {
+  position:absolute; inset:0; width:100%; height:100%; object-fit:cover; pointer-events:none;
+}
+.audience-cta__media { opacity:.48; filter:saturate(1.12) contrast(1.08) brightness(.76); }
+.audience-cta__media::after {
+  content:""; position:absolute; inset:0;
+  background:linear-gradient(90deg, rgba(1,6,16,.88), rgba(0,22,48,.72), rgba(1,6,16,.86));
+}
+.audience-cta__scan {
+  position:absolute; inset:0; opacity:.24; pointer-events:none;
+  background:
+    linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.08) 0 1px, transparent 1px 6px);
+  transform:translateX(-115%);
+  animation:audienceCtaSweep 1800ms ease-in-out infinite;
+}
+.audience-cta__inner {
+  position:relative; z-index:1; display:flex; align-items:center; gap:14px;
+  min-width:0; padding:8px 18px;
+}
+.audience-cta__tag {
+  flex:0 0 auto; min-height:34px; display:inline-flex; align-items:center; justify-content:center;
+  padding:0 12px; color:#04101a; background:linear-gradient(135deg,#55e7ff,#f4fdff 58%,#8fffd2);
+  border-radius:3px; font-size:15px; font-weight:950; letter-spacing:.08em; text-transform:uppercase;
+  box-shadow:0 0 22px rgba(85,231,255,.24);
+}
+.audience-cta__text {
+  min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  color:#fff; font-size:clamp(25px, 2.45vw, 42px); line-height:.98; font-weight:950; letter-spacing:.2px; text-transform:uppercase;
+}
+.audience-cta__text strong { color:#8fffd2; font-weight:950; }
+.audience-cta.is-compact { min-height:42px; max-height:48px; }
+.audience-cta.is-compact .audience-cta__inner { padding:6px 14px; gap:10px; }
+.audience-cta.is-compact .audience-cta__tag { min-height:24px; padding:0 9px; font-size:11px; }
+.audience-cta.is-compact .audience-cta__text { font-size:clamp(18px, 1.8vw, 26px); }
+.audience-cta.is-micro { min-height:34px; max-height:38px; }
+.audience-cta.is-micro .audience-cta__inner { padding:4px 10px; }
+.audience-cta.is-micro .audience-cta__tag { display:none; }
+.audience-cta.is-micro .audience-cta__text { font-size:clamp(15px, 1.55vw, 21px); text-align:center; }
+@keyframes audienceCtaSweep {
+  0% { transform:translateX(-115%); }
+  52%,100% { transform:translateX(118%); }
+}
+
 .banner {
   --banner-accent:#7afcff;
   --banner-accent-rgb:122,252,255;
@@ -624,7 +690,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.commands.is-nano .banner-command-rail { grid-template-columns:.9fr 1.35fr .82fr 1.25fr; gap:2px; padding:1px; }
 .banner.commands.is-nano .banner-command-chip:not(.banner-command-primary) { display:none; }
 .banner.commands.is-nano .banner-command-chip { min-height:20px; padding:0 3px; border-color:rgba(var(--banner-accent-rgb),0.22); background:rgba(var(--banner-accent-rgb),0.08); }
-.banner.commands.is-nano .banner-command-chip strong { font-size:10.5px; line-height:1; letter-spacing:0; white-space:nowrap; overflow:visible; text-overflow:clip; }
+.banner.commands.is-nano .banner-command-chip strong { font-size:6.8px; line-height:1.02; letter-spacing:0; white-space:normal; overflow:visible; text-overflow:clip; overflow-wrap:anywhere; }
 .banner.commands.is-nano .banner-command-chip span { display:none; }
 .banner.is-nano .banner-meter { width:3px; height:20px; }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) {
@@ -1928,6 +1994,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   supportUnitEl.setAttribute('aria-hidden', 'true');
   supportUnitEl.style.visibility = 'hidden';
   container.appendChild(supportUnitEl);
+  const audienceCtaEl = document.createElement('div');
+  audienceCtaEl.className = 'audience-cta';
+  audienceCtaEl.dataset.testid = 'audience-cta';
+  audienceCtaEl.setAttribute('aria-hidden', 'true');
+  container.appendChild(audienceCtaEl);
   const sponsorScene = document.getElementById('sponsorScene');
   const sponsorVideo = document.getElementById('sponsorVideo');
   const sponsorPoster = document.getElementById('sponsorPoster');
@@ -2033,7 +2104,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const DEFAULT_OVERLAY_MASTER_VOLUME = Math.max(0, Math.min(1, Math.round((Number(overlayAudio.defaultMasterVolume) || 0.5) * 100) / 100));
   let audioConfig     = { ...DEFAULT_OVERLAY_AUDIO_CONFIG, masterVolume: DEFAULT_OVERLAY_MASTER_VOLUME };
   let audioCache      = {};
-  let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1, backgroundFit: 'contain' };
+  let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1, backgroundFit: 'contain', audiencePromptEnabled: true, audiencePromptMedia: null };
   const APPROVED_EFFECTS = overlayNormalizers.approvedEffects;
   const DEFAULT_EFFECT = overlayNormalizers.defaultEffect;
   const NEW_ATTACK_EFFECTS = Object.freeze(['prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard']);
@@ -2155,6 +2226,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     lastName: '',
     updatedAt: 0,
     visibleUntil: 0,
+  };
+  const AUDIENCE_CTA_ITEMS = Object.freeze([
+    { tag: 'HP', text: 'Tap to gain HP' },
+    { tag: 'REFILL', text: 'Share or Repost to refill health' },
+    { tag: 'POWER', text: 'Gift to be Unstoppable' },
+    { tag: 'SHIELD', text: 'Shield: comment shield 5 through shield 100' },
+    { tag: 'ATTACK', text: 'Attack: !laser @name, @boss, or @horde' },
+  ]);
+  const audienceCtaState = {
+    index: 0,
+    visibleUntil: 0,
+    lastChangedAt: 0,
+    mediaUrl: '',
+    mediaType: '',
+    mediaSignature: '',
   };
   let arenaShakeUntil = 0;
   let arenaShakeStartedAt = 0;
@@ -5195,6 +5281,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       closing.el.classList.add('closing');
       setTimeout(() => closing.el && closing.el.remove(), 240);
     }
+    requestAnimationFrame(() => {
+      if (audienceCtaEl?.classList.contains('is-visible')) placeAudienceCta();
+    });
     if (renderNext) setTimeout(renderNextBanner, 280);
   }
 
@@ -5214,9 +5303,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function bannerCommandRailHtml(commands) {
     if (!Array.isArray(commands) || !commands.length) return '';
-    const nanoPrimaryCommands = new Set(['engage', '@name', '!shield', '!commands']);
-    const compactHiddenCommands = new Set(['chat']);
-    const microHiddenCommands = new Set(['chat', '!attack @name', '!heal @name']);
+    const nanoPrimaryCommands = new Set(['tap', '!laser @name', 'shield 5', '!commands']);
+    const compactHiddenCommands = new Set(['gift']);
+    const microHiddenCommands = new Set(['share/repost', 'gift', 'shield 100']);
     return `
         <span class="banner-command-rail" data-testid="command-banner-rail">
           ${commands.map(entry => {
@@ -5316,6 +5405,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     placeBannerAbovePlayers(el);
     requestAnimationFrame(() => {
       if (activeBanner?.el === el) placeBannerAbovePlayers(el);
+      if (audienceCtaEl?.classList.contains('is-visible')) placeAudienceCta();
     });
     el.style.visibility = '';
     activeBannerTimer = setTimeout(() => closeActiveBanner(true), item.duration);
@@ -5431,6 +5521,125 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
   }
 
+  function audienceCtaMediaHtml(media) {
+    const url = media?.url || '';
+    if (!url) return '';
+    if (media.type === 'video') {
+      return `<span class="audience-cta__media"><video src="${escapeHtml(url)}" autoplay muted loop playsinline preload="metadata"></video></span>`;
+    }
+    return `<span class="audience-cta__media"><img src="${escapeHtml(url)}" alt=""></span>`;
+  }
+
+  function renderAudienceCta(force = false) {
+    const now = Date.now();
+    const enabled = overlaySettings.audiencePromptEnabled !== false;
+    const supportVisible = supportUnitEl.style.visibility !== 'hidden' && now < supportUnitState.visibleUntil;
+    if (!enabled || supportVisible || sponsorState !== 'battle' || !AUDIENCE_CTA_ITEMS.length) {
+      audienceCtaEl.classList.remove('is-visible');
+      audienceCtaEl.style.visibility = 'hidden';
+      return;
+    }
+    const interval = prefersReducedMotion() ? 9000 : 6200;
+    if (force || !audienceCtaState.lastChangedAt || now - audienceCtaState.lastChangedAt > interval) {
+      audienceCtaState.index = force ? audienceCtaState.index : (audienceCtaState.index + 1) % AUDIENCE_CTA_ITEMS.length;
+      audienceCtaState.lastChangedAt = now;
+      audienceCtaState.visibleUntil = now + interval - 700;
+    }
+    const item = AUDIENCE_CTA_ITEMS[audienceCtaState.index] || AUDIENCE_CTA_ITEMS[0];
+    const media = overlaySettings.audiencePromptMedia && typeof overlaySettings.audiencePromptMedia === 'object'
+      ? overlaySettings.audiencePromptMedia
+      : null;
+    const mediaSignature = media?.url ? `${media.type || 'image'}:${media.url}` : '';
+    const contentSignature = `${item.tag}:${item.text}:${mediaSignature}`;
+    if (force || audienceCtaState.mediaSignature !== contentSignature) {
+      audienceCtaState.mediaSignature = contentSignature;
+      audienceCtaEl.innerHTML = `
+        ${audienceCtaMediaHtml(media)}
+        <span class="audience-cta__scan" aria-hidden="true"></span>
+        <span class="audience-cta__inner">
+          <span class="audience-cta__tag">${escapeHtml(item.tag)}</span>
+          <span class="audience-cta__text">${escapeHtml(item.text)}</span>
+        </span>
+      `;
+    }
+    const quietForBanner = activeBanner?.el && Date.now() - richBannerLastShown < 2800;
+    audienceCtaEl.classList.toggle('is-muted', Boolean(quietForBanner));
+    audienceCtaEl.classList.add('is-visible');
+    audienceCtaEl.style.visibility = '';
+    placeAudienceCta();
+  }
+
+  function placeAudienceCta() {
+    if (!audienceCtaEl.classList.contains('is-visible')) return;
+    const stage = computeOverlayLayout();
+    const scale = overlayScale();
+    const frame = canvasRectToOverlay(stage.frame);
+    const playersZone = canvasRectToOverlay(stage.zones.players);
+    const gapX = Math.max(16, stage.gap * scale.x);
+    const gapY = Math.max(14, stage.gap * scale.y);
+    let playerTopLimit = playersZone.y;
+    let playerBottomLimit = playersZone.y;
+    try {
+      const visiblePlayers = topPlayers();
+      if (visiblePlayers.length) {
+        const playerMetrics = visiblePlayers.map((player, index) => {
+          const pos = getPlayerPosition(index, visiblePlayers.length);
+          return getPlayerCardDrawMetrics(pos, visiblePlayers.length);
+        });
+        const playerCardTop = Math.min(...playerMetrics.map(metrics => metrics.top));
+        const playerCardBottom = Math.max(...playerMetrics.map(metrics => metrics.bottom || (metrics.top + metrics.height) || metrics.top));
+        playerTopLimit = Math.min(playerTopLimit, canvasRectToOverlay(makeRect(0, playerCardTop, 1, 1)).y);
+        playerBottomLimit = canvasRectToOverlay(makeRect(0, playerCardBottom, 1, 1)).y;
+      }
+    } catch (_err) {}
+
+    const maxWidth = Math.min(frame.w - gapX * 2, Math.max(280, frame.w * 0.78));
+    audienceCtaEl.classList.remove('is-compact', 'is-micro');
+    audienceCtaEl.style.width = `${maxWidth}px`;
+    let rect = audienceCtaEl.getBoundingClientRect();
+    if (rect.height > 72 || maxWidth < 560) {
+      audienceCtaEl.classList.add('is-compact');
+      rect = audienceCtaEl.getBoundingClientRect();
+    }
+    if (rect.height > 62 || maxWidth < 360) {
+      audienceCtaEl.classList.add('is-micro');
+      rect = audienceCtaEl.getBoundingClientRect();
+    }
+
+    const parentRect = container.getBoundingClientRect();
+    const bannerRect = activeBanner?.el ? activeBanner.el.getBoundingClientRect() : null;
+    const supportRect = supportUnitEl?.style.visibility !== 'hidden' ? supportUnitEl.getBoundingClientRect() : null;
+    const occupied = [];
+    if (bannerRect?.width && bannerRect?.height) occupied.push({ top: bannerRect.top - parentRect.top, bottom: bannerRect.bottom - parentRect.top });
+    if (supportRect?.width && supportRect?.height) occupied.push({ top: supportRect.top - parentRect.top, bottom: supportRect.bottom - parentRect.top });
+
+    const aboveFrameTop = frame.y - rect.height - Math.max(190, gapY * 8);
+    const bottomLaneTop = playerBottomLimit + gapY * 0.9;
+    const bottomLaneMax = frame.bottom - gapY - rect.height;
+    const hasBottomLane = playerBottomLimit > playersZone.y && bottomLaneTop <= bottomLaneMax;
+    const minTop = hasBottomLane ? bottomLaneTop : (aboveFrameTop >= 8 ? aboveFrameTop : frame.y + gapY);
+    const maxTop = hasBottomLane ? bottomLaneMax : Math.max(minTop, playerTopLimit - gapY - rect.height);
+    if (!hasBottomLane && playerTopLimit - minTop < rect.height + gapY * 0.8) {
+      audienceCtaEl.classList.add('is-micro');
+      rect = audienceCtaEl.getBoundingClientRect();
+    }
+    let top = minTop;
+    for (const box of occupied) {
+      const wouldOverlap = top < box.bottom + gapY * 0.5 && top + rect.height > box.top - gapY * 0.5;
+      if (wouldOverlap) top = clampNumber(box.bottom + gapY * 0.65, minTop, maxTop);
+    }
+    if (top + rect.height > playerTopLimit - gapY * 0.25) {
+      top = clampNumber(minTop, minTop, maxTop);
+    }
+    audienceCtaEl.style.left = `${frame.x + frame.w / 2}px`;
+    audienceCtaEl.style.top = `${top}px`;
+    audienceCtaEl.style.maxWidth = `${frame.w - gapX * 2}px`;
+  }
+
+  function tickAudienceCta() {
+    renderAudienceCta(false);
+  }
+
   function placeSupportUnit() {
     const now = Date.now();
     if (sponsorState !== 'battle' || now >= supportUnitState.visibleUntil) {
@@ -5526,24 +5735,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       base.commands = Array.isArray(options.commands) && options.commands.length
         ? options.commands
         : [
-          { command: 'engage', detail: 'enter arena' },
-          { command: '@name', detail: 'hit a player' },
-          { command: 'chat', detail: 'weak random attack' },
-          { command: '!attack @name', detail: 'stronger player hit' },
-          { command: '!attack @horde', detail: 'hit The Horde' },
-          { command: '!attack @boss', detail: 'hit the boss' },
-          { command: '!shield', detail: 'block damage' },
-          { command: '!heal @name', detail: 'heal ally' },
-          { command: '!commands', detail: 'show help' },
+          { command: 'tap', detail: 'gain HP' },
+          { command: 'share/repost', detail: 'refill health' },
+          { command: 'gift', detail: 'unstoppable' },
+          { command: '!laser @name', detail: 'attack player' },
+          { command: '!laser @boss', detail: 'attack boss' },
+          { command: '!laser @horde', detail: 'attack horde' },
+          { command: 'shield 5', detail: '5s shield' },
+          { command: 'shield 100', detail: 'max shield' },
+          { command: '!commands', detail: 'all attacks' },
         ];
       base.tickerItems = Array.isArray(options.tickerItems) && options.tickerItems.length
         ? options.tickerItems
         : [
           'Any comment, like, follow, share, or gift enters you',
-          'Targets: @name | @horde | @boss',
-          'Regular chat: enters you and sends a random 5-damage attack',
-          'Attacks: @name | @horde | @boss | !laser @name | !fire @name',
-          'Icon: !emoji <emoji> or !<emoji>',
+          'Tap likes = gain HP',
+          'Share or repost = refill health',
+          'Gift = unstoppable power and breaks shields',
+          'Targets: !laser @name | !laser @boss | !laser @horde',
+          'Shield: shield 5 through shield 100',
           'Effects: !laser @name | !fire @name | !prism @name | !plasma @name',
           'Teams/help: !team red / !commands or !comments',
         ];
@@ -5787,6 +5997,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     requestAnimationFrame(() => {
       if (activeBanner?.el) placeBannerAbovePlayers(activeBanner.el);
       if (supportUnitEl?.style.visibility !== 'hidden') placeSupportUnit();
+      if (audienceCtaEl?.classList.contains('is-visible')) placeAudienceCta();
     });
   });
 
@@ -11032,6 +11243,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const stage = computeOverlayLayout();
     placeStatusBadge();
     placeSupportUnit();
+    tickAudienceCta();
     const frame = stage.frame;
     const safeFrame = stage.safe;
     const auditNow = Date.now();
@@ -11044,16 +11256,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       || impactBursts.length > 0;
     if (shouldRefreshLayoutAudit) {
       legacyLayoutAuditAt = auditNow;
-      const domObjects = Array.from(container.querySelectorAll('.banner,.damage,#status-badge,.support-unit'))
+      const domObjects = Array.from(container.querySelectorAll('.banner,.damage,#status-badge,.support-unit,.audience-cta'))
         .map((el, index) => {
-          const type = el.id === 'status-badge' ? 'status' : el.classList.contains('banner') ? 'banner' : el.classList.contains('support-unit') ? 'support' : 'damage';
+          const type = el.id === 'status-badge' ? 'status' : el.classList.contains('banner') ? 'banner' : el.classList.contains('support-unit') ? 'support' : el.classList.contains('audience-cta') ? 'audienceCta' : 'damage';
           return domElementToCanvasRect(el, `${type}-${index}`, type);
         })
         .filter(Boolean);
       const domLayerLeaks = overlayDiagnostics.domLayerLeakLabels(domObjects);
       const damageObjects = domObjects.filter(item => item.type === 'damage');
-      const collisionDomObjects = domObjects.filter(item => item.type === 'status' || item.type === 'support');
+      const collisionDomObjects = domObjects.filter(item => item.type === 'status' || item.type === 'support' || item.type === 'audienceCta');
       const supportChip = domObjects.find(item => item.type === 'support') || null;
+      const audienceCta = domObjects.find(item => item.type === 'audienceCta') || null;
       const containedObjects = legacyLayoutPlayers
         .concat(legacyLayoutHorde ? [legacyLayoutHorde] : [])
         .concat(legacyLayoutBoss ? [legacyLayoutBoss] : [])
@@ -11070,6 +11283,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         horde: legacyLayoutHorde,
         boss: legacyLayoutBoss,
         supportChip,
+        audienceCta,
         domObjects,
         domLayerLeaks,
         objects: audit.objects.concat(damageAudit.objects),
@@ -11709,11 +11923,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       return;
     }
     if (data.type === 'shield') {
+      const shieldDuration = Math.max(1000, Math.min(100000, Number(data.durationMs) || 10000));
       showSupportUnit({
         type: 'shield',
         name,
       });
-      setCardAccent(data.uniqueId || data.userId || data.nickname, 'shield', THEME.cyan, 10000, { label: 'DEF' });
+      setCardAccent(data.uniqueId || data.userId || data.nickname, 'shield', THEME.cyan, shieldDuration, { label: 'DEF' });
       return;
     }
     if (data.type === 'shieldBreak') {
@@ -11988,7 +12203,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       });
 
       socket.on('audioConfig',     cfg      => applyAudioConfig(cfg));
-      socket.on('overlaySettings', settings => { if (settings && typeof settings === 'object') overlaySettings = Object.assign({}, overlaySettings, settings); });
+      socket.on('overlaySettings', settings => {
+        if (settings && typeof settings === 'object') {
+          overlaySettings = Object.assign({}, overlaySettings, settings);
+          renderAudienceCta(true);
+        }
+      });
       socket.on('sponsorPrepare', payload => {
         enqueueVisualEvent('sponsorPrepare', payload || {}, handleSponsorPrepareEvent, {
           lane: 'exclusive',

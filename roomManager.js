@@ -12,6 +12,8 @@ export const DEFAULT_OVERLAY_SETTINGS = {
   shotType:   'beam',
   shotSpeed:  1,
   backgroundFit: 'contain',
+  audiencePromptEnabled: true,
+  audiencePromptMedia: null,
 };
 
 export const DEFAULT_AUDIO_MASTER_VOLUME = 0.5;

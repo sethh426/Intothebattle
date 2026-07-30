@@ -19,6 +19,7 @@ import {
   PLAYER_ATTACK_COMMANDS,
   commandBannerShowcasePayload,
   parseAttackCommand,
+  parseShieldDurationMs,
   parseUtilityCommand,
   viewerCommandText,
 } from '../tiktokbr/services/playerCommands.js';
@@ -301,6 +302,14 @@ function testPlayerCommandCatalog() {
   assert.equal(parseUtilityCommand('!shield')?.canonical, 'shield');
   assert.equal(parseUtilityCommand('! guard')?.canonical, 'shield');
   assert.equal(parseUtilityCommand('!protect')?.canonical, 'shield');
+  assert.deepEqual(parseUtilityCommand('shield5'), { canonical: 'shield', command: 'shield', rest: '5', prefixed: false });
+  assert.deepEqual(parseUtilityCommand('!shield100'), { canonical: 'shield', command: 'shield', rest: '100', prefixed: true });
+  assert.equal(parseShieldDurationMs('shield'), 10000);
+  assert.equal(parseShieldDurationMs('shield 5'), 5000);
+  assert.equal(parseShieldDurationMs('!shield 5'), 5000);
+  assert.equal(parseShieldDurationMs('shield5'), 5000);
+  assert.equal(parseShieldDurationMs('!shield100'), 100000);
+  assert.equal(parseShieldDurationMs('shield 500'), 100000);
   assert.equal(parseUtilityCommand('!laser@nova'), null, 'attack commands should not parse as utility commands');
 
   for (const command of DEPRECATED_ATTACK_COMMANDS) {
@@ -309,11 +318,11 @@ function testPlayerCommandCatalog() {
   }
 
   const commandText = viewerCommandText();
-  for (const expected of ['Any comment, like, follow, share, or gift enters you', '!attack @name', '@horde', '@boss', '!shield', '!heal @name', '!commands', '!comments']) {
+  for (const expected of ['Any comment, like, follow, share, or gift enters you', 'Tap likes = gain HP', '!laser @name', '!laser @boss', '!laser @horde', 'shield 5', 'shield 100', '!heal', '!commands', '!comments']) {
     assert.ok(commandText.includes(expected), `viewer command text should include ${expected}`);
   }
   assert.equal(commandText.includes('!join'), false, 'viewer command text should not tell viewers to type !join to enter');
-  for (const expected of ['@name', 'enters you and sends a random 5-damage attack', '!prism @name', '!plasma @name', '!orbital @name']) {
+  for (const expected of ['@name', 'Gift = unstoppable power and breaks shields', '!prism @name', '!plasma @name', '!orbital @name']) {
     assert.ok(commandText.includes(expected), `viewer command text should include ${expected}`);
   }
 
