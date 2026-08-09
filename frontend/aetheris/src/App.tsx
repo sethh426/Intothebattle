@@ -5,23 +5,27 @@ import { BIOMES, getBiomeById } from './data/biomeData'
 import { generateTerritories } from './data/territoryData'
 import { detectWebglSupport, useReducedMotion } from './hooks/useWebglFallback'
 import { useKingdomState } from './kingdoms/useKingdomState'
+import { useCreatorWar } from './hooks/useCreatorWar'
 import Scene from './scene/Scene'
 import TerritoryDetailPanel from './ui/TerritoryDetailPanel'
+import WarRoom from './ui/WarRoom'
 import type { DataMode, WorldFraming } from './types'
 
 interface AppProps {
   dataMode: DataMode
   framing: WorldFraming
+  warRoom: boolean
 }
 
-export default function App({ dataMode, framing }: AppProps) {
+export default function App({ dataMode, framing, warRoom }: AppProps) {
   const [webglSupported] = useState(() => detectWebglSupport())
   const reducedMotion = useReducedMotion()
   const containerRef = useRef<HTMLDivElement>(null)
   const [isVisible, setIsVisible] = useState(true)
   const [tabVisible, setTabVisible] = useState(() => document.visibilityState === 'visible')
   const territories = useMemo(() => generateTerritories(BIOMES, WORLD_SEED), [])
-  const kingdomState = useKingdomState(territories, WORLD_SEED + 1, dataMode)
+  const { kingdomState, worldState } = useKingdomState(territories, WORLD_SEED + 1, dataMode)
+  const creatorWar = useCreatorWar(warRoom && dataMode === 'live')
   const [selectedTerritoryId, setSelectedTerritoryId] = useState<string | null>(null)
 
   const selectedTerritory = useMemo(
@@ -86,7 +90,7 @@ export default function App({ dataMode, framing }: AppProps) {
   }
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+    <div ref={containerRef} className={warRoom ? 'aetheris-app has-war-room' : 'aetheris-app'} style={{ width: '100%', height: '100%' }}>
       <Canvas
         frameloop={running ? 'always' : 'never'}
         camera={{ fov: CAMERA.fov, near: CAMERA.near, far: CAMERA.far }}
@@ -100,16 +104,42 @@ export default function App({ dataMode, framing }: AppProps) {
           isVisible={isVisible}
           territories={territories}
           kingdomState={kingdomState}
+          worldState={worldState}
           selectedTerritoryId={selectedTerritoryId}
           onTerritorySelect={setSelectedTerritoryId}
         />
       </Canvas>
+      {warRoom && (
+        <WarRoom
+          territories={territories}
+          worldState={worldState}
+          status={creatorWar.status}
+          loading={creatorWar.loading}
+          busyAction={creatorWar.busyAction}
+          error={creatorWar.error}
+          onSelectTerritory={setSelectedTerritoryId}
+          onOptIn={(enabled) => { void creatorWar.optIn(enabled) }}
+          onStartRound={(campaignId) => { void creatorWar.startRound(campaignId) }}
+          onWithdraw={(campaignId) => { void creatorWar.withdraw(campaignId) }}
+        />
+      )}
       {selectedTerritory && (
         <TerritoryDetailPanel
           territory={selectedTerritory}
           kingdomState={kingdomState[selectedTerritory.id]}
           biomeName={getBiomeById(selectedTerritory.biomeId)?.name ?? 'Unknown realm'}
           framing={framing}
+          worldState={worldState}
+          creatorStatus={creatorWar.status}
+          warEnabled={warRoom}
+          busyAction={creatorWar.busyAction}
+          warError={creatorWar.error}
+          onOptIn={() => { void creatorWar.optIn(true) }}
+          onSelectHome={(territoryId) => { void creatorWar.selectHome(territoryId) }}
+          onMobilize={(territoryId, neutral) => { void creatorWar.mobilize(territoryId, neutral) }}
+          onAbandon={(territoryId) => {
+            if (window.confirm('Abandon this conquered territory? This cannot be undone.')) void creatorWar.abandon(territoryId)
+          }}
           onClose={() => setSelectedTerritoryId(null)}
         />
       )}

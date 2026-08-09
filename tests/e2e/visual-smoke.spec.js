@@ -193,6 +193,8 @@ test.beforeAll(async () => {
       APP_BASE_URL: baseUrl,
       E2E_SESSION_TOKEN: e2eSessionToken,
       E2E_ROOM_ID: roomId,
+      E2E_PAID_USER_SESSION_TOKEN: e2eSessionToken,
+      E2E_PAID_USER_ROOM_ID: roomId,
       LOG_LEVEL: 'error',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -495,6 +497,26 @@ test('world globe renders on WebGL for logged-in creators', async ({ context, pa
   expect(hasWebgl).toBe(true);
   await expectNoHorizontalOverflow(page);
   await capture(page, testInfo, 'world-globe-logged-in');
+  expect(errors).toEqual([]);
+});
+
+test('world War Room supports creator opt-in and home selection', async ({ context, page }, testInfo) => {
+  await context.addCookies([{ name: 'session_token', value: e2eSessionToken, url: baseUrl }]);
+  const errors = await watchPage(page);
+  await page.goto(`${baseUrl}/world`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('aetheris-war-room')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Join land wars' })).toBeVisible();
+  await page.getByRole('button', { name: 'Join land wars' }).click();
+  await expect(page.getByText('Enlisted')).toBeVisible();
+  await selectVisibleTerritory(page);
+  await expect(page.getByRole('button', { name: 'Establish protected home' })).toBeVisible();
+  await page.getByRole('button', { name: 'Establish protected home' }).click();
+  await expect.poll(async () => page.evaluate(async () => {
+    const response = await fetch('/api/aetheris/war/status');
+    const payload = await response.json();
+    return payload.holdings?.length || 0;
+  })).toBe(1);
+  await capture(page, testInfo, 'world-war-room-home-selected');
   expect(errors).toEqual([]);
 });
 

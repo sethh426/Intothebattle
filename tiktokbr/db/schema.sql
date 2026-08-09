@@ -625,23 +625,83 @@ CREATE TABLE IF NOT EXISTS world_territories (
   id TEXT PRIMARY KEY,
   biome_id TEXT NOT NULL,
   shape_id TEXT NOT NULL,
+  territory_name TEXT,
+  size_class TEXT,
   lat DOUBLE PRECISION NOT NULL,
   lon DOUBLE PRECISION NOT NULL,
   angular_radius DOUBLE PRECISION NOT NULL,
   rotation DOUBLE PRECISION NOT NULL,
   color_hex TEXT NOT NULL,
+  seed BIGINT,
+  neighbors JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE world_territories ADD COLUMN IF NOT EXISTS territory_name TEXT;
+ALTER TABLE world_territories ADD COLUMN IF NOT EXISTS size_class TEXT;
+ALTER TABLE world_territories ADD COLUMN IF NOT EXISTS seed BIGINT;
+ALTER TABLE world_territories ADD COLUMN IF NOT EXISTS neighbors JSONB DEFAULT '[]'::jsonb;
+
+CREATE TABLE IF NOT EXISTS aetheris_seasons (
+  id SERIAL PRIMARY KEY,
+  season_key TEXT UNIQUE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  starts_at TIMESTAMP NOT NULL,
+  ends_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  closed_at TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS aetheris_seasons_one_active_idx
+  ON aetheris_seasons (status)
+  WHERE status = 'active';
+
+CREATE TABLE IF NOT EXISTS aetheris_creator_profiles (
+  id SERIAL PRIMARY KEY,
+  season_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  room_id TEXT NOT NULL,
+  opted_in INTEGER NOT NULL DEFAULT 0,
+  opted_in_at TIMESTAMP,
+  opted_out_at TIMESTAMP,
+  reentry_allowed_at TIMESTAMP,
+  home_territory_id TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(season_id, user_id),
+  FOREIGN KEY(season_id) REFERENCES aetheris_seasons(id),
+  FOREIGN KEY(user_id) REFERENCES users(id),
+  FOREIGN KEY(room_id) REFERENCES user_rooms(room_id),
+  FOREIGN KEY(home_territory_id) REFERENCES world_territories(id)
+);
+
+CREATE INDEX IF NOT EXISTS aetheris_creator_profiles_room_idx
+  ON aetheris_creator_profiles (season_id, room_id);
 
 CREATE TABLE IF NOT EXISTS world_territory_claims (
   id SERIAL PRIMARY KEY,
   territory_id TEXT NOT NULL,
   room_id TEXT NOT NULL,
+  user_id INTEGER,
+  season_id INTEGER,
+  claim_type TEXT DEFAULT 'conquest',
+  source_campaign_id INTEGER,
+  shield_until TIMESTAMP,
+  release_reason TEXT,
   claimed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   unclaimed_at TIMESTAMP,
   FOREIGN KEY(territory_id) REFERENCES world_territories(id),
-  FOREIGN KEY(room_id) REFERENCES user_rooms(room_id)
+  FOREIGN KEY(room_id) REFERENCES user_rooms(room_id),
+  FOREIGN KEY(user_id) REFERENCES users(id),
+  FOREIGN KEY(season_id) REFERENCES aetheris_seasons(id)
 );
+
+ALTER TABLE world_territory_claims ADD COLUMN IF NOT EXISTS user_id INTEGER;
+ALTER TABLE world_territory_claims ADD COLUMN IF NOT EXISTS season_id INTEGER;
+ALTER TABLE world_territory_claims ADD COLUMN IF NOT EXISTS claim_type TEXT DEFAULT 'conquest';
+ALTER TABLE world_territory_claims ADD COLUMN IF NOT EXISTS source_campaign_id INTEGER;
+ALTER TABLE world_territory_claims ADD COLUMN IF NOT EXISTS shield_until TIMESTAMP;
+ALTER TABLE world_territory_claims ADD COLUMN IF NOT EXISTS release_reason TEXT;
 
 CREATE INDEX IF NOT EXISTS world_territory_claims_room_idx ON world_territory_claims(room_id, unclaimed_at);
 
@@ -650,3 +710,87 @@ CREATE INDEX IF NOT EXISTS world_territory_claims_room_idx ON world_territory_cl
 CREATE UNIQUE INDEX IF NOT EXISTS world_territory_claims_active_territory_idx
   ON world_territory_claims (territory_id)
   WHERE unclaimed_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS world_territory_claims_active_home_idx
+  ON world_territory_claims (season_id, user_id)
+  WHERE unclaimed_at IS NULL AND claim_type = 'home';
+
+CREATE TABLE IF NOT EXISTS aetheris_campaigns (
+  id SERIAL PRIMARY KEY,
+  season_id INTEGER NOT NULL,
+  territory_id TEXT NOT NULL,
+  origin_territory_id TEXT NOT NULL,
+  mode TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'mobilizing',
+  attacker_user_id INTEGER NOT NULL,
+  attacker_room_id TEXT NOT NULL,
+  defender_user_id INTEGER,
+  defender_room_id TEXT,
+  declared_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  scoring_starts_at TIMESTAMP NOT NULL,
+  ends_at TIMESTAMP NOT NULL,
+  resolved_at TIMESTAMP,
+  winner_user_id INTEGER,
+  attacker_wins INTEGER NOT NULL DEFAULT 0,
+  defender_wins INTEGER NOT NULL DEFAULT 0,
+  result_reason TEXT,
+  FOREIGN KEY(season_id) REFERENCES aetheris_seasons(id),
+  FOREIGN KEY(territory_id) REFERENCES world_territories(id),
+  FOREIGN KEY(origin_territory_id) REFERENCES world_territories(id),
+  FOREIGN KEY(attacker_user_id) REFERENCES users(id),
+  FOREIGN KEY(defender_user_id) REFERENCES users(id),
+  FOREIGN KEY(attacker_room_id) REFERENCES user_rooms(room_id),
+  FOREIGN KEY(defender_room_id) REFERENCES user_rooms(room_id),
+  FOREIGN KEY(winner_user_id) REFERENCES users(id)
+);
+
+ALTER TABLE aetheris_campaigns ADD COLUMN IF NOT EXISTS origin_territory_id TEXT;
+
+CREATE UNIQUE INDEX IF NOT EXISTS aetheris_campaigns_active_territory_idx
+  ON aetheris_campaigns (territory_id)
+  WHERE status IN ('mobilizing', 'scoring');
+CREATE UNIQUE INDEX IF NOT EXISTS aetheris_campaigns_active_attacker_idx
+  ON aetheris_campaigns (attacker_user_id)
+  WHERE status IN ('mobilizing', 'scoring');
+CREATE UNIQUE INDEX IF NOT EXISTS aetheris_campaigns_active_defender_idx
+  ON aetheris_campaigns (defender_user_id)
+  WHERE status IN ('mobilizing', 'scoring') AND defender_user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS aetheris_campaigns_active_creators_idx
+  ON aetheris_campaigns (season_id, status, attacker_user_id, defender_user_id);
+
+CREATE TABLE IF NOT EXISTS aetheris_campaign_rounds (
+  id SERIAL PRIMARY KEY,
+  campaign_id INTEGER NOT NULL,
+  round_number INTEGER NOT NULL,
+  side TEXT NOT NULL,
+  room_id TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  started_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ends_at TIMESTAMP NOT NULL,
+  ended_at TIMESTAMP,
+  valid INTEGER NOT NULL DEFAULT 0,
+  score INTEGER NOT NULL DEFAULT 0,
+  participant_count INTEGER NOT NULL DEFAULT 0,
+  average_contribution DOUBLE PRECISION NOT NULL DEFAULT 0,
+  contributions JSONB DEFAULT '{}'::jsonb,
+  UNIQUE(campaign_id, round_number, side),
+  FOREIGN KEY(campaign_id) REFERENCES aetheris_campaigns(id),
+  FOREIGN KEY(room_id) REFERENCES user_rooms(room_id)
+);
+
+CREATE INDEX IF NOT EXISTS aetheris_campaign_rounds_room_active_idx
+  ON aetheris_campaign_rounds (room_id, status);
+
+CREATE TABLE IF NOT EXISTS aetheris_campaign_events (
+  id BIGSERIAL PRIMARY KEY,
+  campaign_id INTEGER NOT NULL,
+  event_type TEXT NOT NULL,
+  actor_user_id INTEGER,
+  detail JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(campaign_id) REFERENCES aetheris_campaigns(id),
+  FOREIGN KEY(actor_user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS aetheris_campaign_events_campaign_idx
+  ON aetheris_campaign_events (campaign_id, created_at);

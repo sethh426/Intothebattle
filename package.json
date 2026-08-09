@@ -51,7 +51,8 @@
     "validate:schema-expand": "python tools/validate_schema_expand.py",
     "validate:schemas": "npm run validate:schema && npm run validate:schema-expand",
     "build:aetheris": "npm --prefix frontend/aetheris ci && npm --prefix frontend/aetheris run build",
-    "test:aetheris-assets": "node scripts/aetheris_asset_contract.js"
+    "test:aetheris-assets": "node scripts/aetheris_asset_contract.js",
+    "test:aetheris-war": "node scripts/aetheris_war_logic_smoke.js && node scripts/aetheris_war_http_smoke.js"
   },
   "dependencies": {
     "@hubspot/api-client": "^13.5.0",

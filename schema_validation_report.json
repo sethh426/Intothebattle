@@ -5,6 +5,22 @@
       "blocks": []
     },
     {
+      "path": "aetheris-preview.html",
+      "blocks": []
+    },
+    {
+      "path": "aetheris.html",
+      "blocks": [
+        {
+          "index": 1,
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@type\": \"WebPage\",\n    \"@id\": \"https://intothebattle.com/aetheris#webpage\",\n    \"url\": \"https://intothebattle.com/aetheris\",\n    \"name\": \"Aetheris World Map\",\n    \"description\": \"The shared IntoTheBattle fantasy world where creators choose territories and live battles shape the map.\",\n    \"isPartOf\": { \"@id\": \"https://intothebattle.com/#website\" },\n    \"inLanguage\": \"en-US\"\n  }",
+          "ok": true,
+          "errors": [],
+          "warnings": []
+        }
+      ]
+    },
+    {
       "path": "battle-clip.html",
       "blocks": []
     },
@@ -169,7 +185,7 @@
       "blocks": [
         {
           "index": 1,
-          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/site-map#webpage\",\n        \"url\": \"https://intothebattle.com/site-map\",\n        \"name\": \"IntoTheBattle Site Map\",\n        \"description\": \"Find IntoTheBattle creator, player, sponsor, account, and support pages from one site map.\",\n        \"inLanguage\": \"en-US\",\n        \"isPartOf\": {\n          \"@id\": \"https://intothebattle.com/#website\"\n        },\n        \"primaryI",
+          "raw": "{\n    \"@context\": \"https://schema.org\",\n    \"@graph\": [\n      {\n        \"@type\": \"WebPage\",\n        \"@id\": \"https://intothebattle.com/site-map#webpage\",\n        \"url\": \"https://intothebattle.com/site-map\",\n        \"name\": \"IntoTheBattle Site Map\",\n        \"description\": \"Find Aetheris, IntoTheBattle creator, player, sponsor, account, and support pages from one site map.\",\n        \"inLanguage\": \"en-US\",\n        \"isPartOf\": {\n          \"@id\": \"https://intothebattle.com/#website\"\n        },\n       ",
           "ok": true,
           "errors": [],
           "warnings": []
@@ -219,12 +235,16 @@
     {
       "path": "verify-email.html",
       "blocks": []
+    },
+    {
+      "path": "world.html",
+      "blocks": []
     }
   ],
   "summary": {
-    "total_files": 27,
-    "files_with_jsonld": 14,
-    "total_blocks": 14,
+    "total_files": 30,
+    "files_with_jsonld": 15,
+    "total_blocks": 15,
     "errors": 0,
     "warnings": 0
   }

@@ -13,6 +13,252 @@ body {
   overflow: hidden;
 }
 
+.aetheris-app {
+  position: relative;
+}
+
+.aetheris-war-room {
+  position: absolute;
+  z-index: 14;
+  top: 16px;
+  left: 16px;
+  width: min(306px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  overflow: auto;
+  box-sizing: border-box;
+  padding: 15px;
+  color: #f4f0e4;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: rgba(7, 9, 13, 0.94);
+  border: 1px solid rgba(255, 200, 87, 0.28);
+  border-radius: 8px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.46), inset 0 1px rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(14px);
+  pointer-events: auto;
+}
+
+.aetheris-war-room__head,
+.aetheris-war-room__section-title,
+.aetheris-war-room__score,
+.aetheris-war-room__holding,
+.aetheris-war-room__targets button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.aetheris-war-room__head {
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.aetheris-war-room__head span,
+.aetheris-war-room__section label,
+.aetheris-war-room__section-title span {
+  color: rgba(244, 240, 228, 0.56);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.aetheris-war-room__head h2 {
+  margin: 2px 0 0;
+  color: #fff;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.aetheris-war-room__signal {
+  padding: 5px 7px;
+  color: #b8c1cd !important;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.aetheris-war-room__signal.is-ready {
+  color: #151005 !important;
+  background: #ffc857;
+  border-color: #ffe6a5;
+}
+
+.aetheris-war-room__head-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.aetheris-war-room__toggle {
+  display: none;
+}
+
+.aetheris-war-room__section,
+.aetheris-war-room__campaign {
+  margin-top: 13px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.aetheris-war-room__section:first-of-type {
+  border-top: 0;
+}
+
+.aetheris-war-room__section label {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.aetheris-war-room__section input {
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 5px;
+  outline: none;
+}
+
+.aetheris-war-room__section input:focus {
+  border-color: rgba(85, 231, 255, 0.72);
+  box-shadow: 0 0 0 2px rgba(85, 231, 255, 0.13);
+}
+
+.aetheris-war-room button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.aetheris-war-room button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.aetheris-war-room__primary,
+.aetheris-war-room__quiet,
+.aetheris-war-room__campaign-target {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 10px;
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  border-radius: 5px;
+}
+
+.aetheris-war-room__primary {
+  color: #171005;
+  background: #ffc857;
+  border: 1px solid #ffe5a0;
+}
+
+.aetheris-war-room__primary:hover:not(:disabled) {
+  background: #ffe08b;
+}
+
+.aetheris-war-room__quiet {
+  color: #c9d0da;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+}
+
+.aetheris-war-room__targets {
+  margin-top: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.aetheris-war-room__targets button,
+.aetheris-war-room__holding {
+  width: 100%;
+  min-height: 40px;
+  padding: 7px 8px;
+  color: #e9edf2;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.035);
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.aetheris-war-room__targets button:last-child,
+.aetheris-war-room__holding:last-child {
+  border-bottom: 0;
+}
+
+.aetheris-war-room__targets button:hover,
+.aetheris-war-room__holding:hover {
+  background: rgba(85, 231, 255, 0.1);
+}
+
+.aetheris-war-room__targets span,
+.aetheris-war-room__holding span {
+  color: #55e7ff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.aetheris-war-room__targets strong,
+.aetheris-war-room__holding strong {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aetheris-war-room__section-title strong {
+  color: #ffc857;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.aetheris-war-room__campaign-target {
+  color: #fff;
+  text-align: left;
+  background: rgba(255, 84, 77, 0.12);
+  border: 1px solid rgba(255, 84, 77, 0.34);
+}
+
+.aetheris-war-room__score {
+  margin-top: 10px;
+  color: #e8ecf1;
+  font-size: 10px;
+}
+
+.aetheris-war-room__score span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.aetheris-war-room__score b {
+  color: #ffc857;
+  font-size: 15px;
+}
+
+.aetheris-war-room__score i {
+  color: rgba(255, 255, 255, 0.35);
+  font-style: normal;
+}
+
+.aetheris-war-room__muted,
+.aetheris-war-room__error,
+.aetheris-war-room__live {
+  margin: 9px 0 0;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.aetheris-war-room__muted { color: rgba(233, 237, 242, 0.58); }
+.aetheris-war-room__error { color: #ff928c; }
+.aetheris-war-room__live { color: #83f6a6; font-weight: 850; }
+
 .aetheris-detail-panel {
   position: absolute;
   z-index: 12;
@@ -23,7 +269,7 @@ body {
     linear-gradient(145deg, rgba(5, 11, 28, 0.96), rgba(9, 21, 43, 0.9)),
     radial-gradient(circle at top left, rgba(85, 216, 255, 0.16), transparent 44%);
   border: 1px solid rgba(85, 216, 255, 0.38);
-  border-radius: 14px;
+  border-radius: 8px;
   box-shadow:
     0 22px 48px rgba(0, 0, 0, 0.42),
     0 0 28px rgba(57, 228, 255, 0.12),
@@ -175,6 +421,79 @@ body {
   margin: 0;
 }
 
+.aetheris-detail-protection {
+  margin: 0 0 10px;
+  padding: 7px 9px;
+  color: #ffe99a;
+  font-size: 10px;
+  font-weight: 800;
+  background: rgba(245, 200, 66, 0.09);
+  border-left: 2px solid #f5c842;
+}
+
+.aetheris-detail-campaign {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 9px;
+  background: rgba(255, 84, 77, 0.11);
+  border: 1px solid rgba(255, 84, 77, 0.26);
+  border-radius: 5px;
+}
+
+.aetheris-detail-campaign span,
+.aetheris-detail-campaign small {
+  color: #ffaaa5;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.aetheris-detail-campaign strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+
+.aetheris-detail-war-action {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.aetheris-detail-war-action button {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  color: #171005;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+  background: #ffc857;
+  border: 1px solid #ffe5a0;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.aetheris-detail-war-action button:disabled {
+  color: rgba(238, 248, 255, 0.55);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.13);
+  cursor: not-allowed;
+}
+
+.aetheris-detail-war-action p {
+  margin: 7px 0 0;
+  color: rgba(238, 248, 255, 0.6);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.aetheris-detail-war-action p.is-error { color: #ff928c; }
+
 .aetheris-detail-stats dd {
   margin-top: 4px;
   color: #ffffff;
@@ -184,6 +503,46 @@ body {
 }
 
 @media (max-width: 700px) {
+  .aetheris-war-room {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    max-height: 35%;
+    padding: 12px;
+  }
+
+  .aetheris-war-room__toggle {
+    display: grid;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    place-items: center;
+    color: #f4f0e4;
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 5px;
+  }
+
+  .aetheris-war-room.is-collapsed {
+    right: auto;
+    width: min(250px, calc(100% - 20px));
+    max-height: 72px;
+    overflow: hidden;
+  }
+
+  .aetheris-war-room.is-collapsed .aetheris-war-room__head {
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .aetheris-war-room.is-collapsed > :not(.aetheris-war-room__head) {
+    display: none;
+  }
+
   .aetheris-detail-panel.is-wide {
     top: auto;
     right: 12px;
@@ -192,6 +551,11 @@ body {
     width: auto;
     max-height: min(48%, 290px);
     transform: none;
+  }
+
+  body:has(#itb-growth-consent) .aetheris-detail-panel.is-wide {
+    bottom: 92px;
+    max-height: min(38%, 250px);
   }
 
   .aetheris-detail-panel {

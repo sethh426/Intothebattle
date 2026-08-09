@@ -10,9 +10,10 @@ const mountEl = document.getElementById('aetheris-root')!
 // misconfigured mount never accidentally opens a real socket connection).
 const dataMode: DataMode = mountEl.dataset.mode === 'live' ? 'live' : 'mock'
 const framing: WorldFraming = mountEl.dataset.framing === 'wide' ? 'wide' : 'hero'
+const warRoom = mountEl.dataset.warRoom === 'true'
 
 createRoot(mountEl).render(
   <StrictMode>
-    <App dataMode={dataMode} framing={framing} />
+    <App dataMode={dataMode} framing={framing} warRoom={warRoom} />
   </StrictMode>,
 )

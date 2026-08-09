@@ -1,4 +1,5 @@
-import type { KingdomState, Territory, WorldFraming } from '../types'
+import { territoryWarDecision } from './warEligibility'
+import type { AetherisWorldState, CreatorWarStatus, KingdomState, Territory, WorldFraming } from '../types'
 
 interface TerritoryDetailPanelProps {
   territory: Territory
@@ -6,6 +7,15 @@ interface TerritoryDetailPanelProps {
   biomeName: string
   framing: WorldFraming
   onClose: () => void
+  worldState: AetherisWorldState
+  creatorStatus?: CreatorWarStatus | null
+  warEnabled?: boolean
+  busyAction?: string
+  warError?: string
+  onOptIn?: () => void
+  onSelectHome?: (territoryId: string) => void
+  onMobilize?: (territoryId: string, neutral: boolean) => void
+  onAbandon?: (territoryId: string) => void
 }
 
 function formatNumber(value: unknown): string {
@@ -32,6 +42,15 @@ export default function TerritoryDetailPanel({
   biomeName,
   framing,
   onClose,
+  worldState,
+  creatorStatus = null,
+  warEnabled = false,
+  busyAction = '',
+  warError = '',
+  onOptIn,
+  onSelectHome,
+  onMobilize,
+  onAbandon,
 }: TerritoryDetailPanelProps) {
   const tiktokHolder = safeTikTokHandle(kingdomState?.holderName)
   const isLive = Boolean(kingdomState?.isLive)
@@ -43,6 +62,17 @@ export default function TerritoryDetailPanel({
       : isClaimed
         ? 'Claimed territory'
         : 'Unclaimed territory'
+  const campaign = worldState.campaigns.find(entry => entry.territoryId === territory.id)
+  const decision = warEnabled ? territoryWarDecision(territory, worldState, creatorStatus) : null
+
+  function runWarAction(): void {
+    if (!decision?.enabled) return
+    if (decision.action === 'opt-in') onOptIn?.()
+    else if (decision.action === 'home') onSelectHome?.(territory.id)
+    else if (decision.action === 'expedition') onMobilize?.(territory.id, true)
+    else if (decision.action === 'attack') onMobilize?.(territory.id, false)
+    else if (decision.action === 'abandon') onAbandon?.(territory.id)
+  }
 
   return (
     <section
@@ -71,6 +101,17 @@ export default function TerritoryDetailPanel({
           <strong>{tiktokHolder}</strong>
         </div>
       )}
+      {kingdomState?.claimType === 'home' && <p className="aetheris-detail-protection">Protected seasonal home</p>}
+      {kingdomState?.shieldUntil && new Date(kingdomState.shieldUntil).getTime() > Date.now() && (
+        <p className="aetheris-detail-protection">Shielded until {new Date(kingdomState.shieldUntil).toLocaleString()}</p>
+      )}
+      {campaign && (
+        <div className="aetheris-detail-campaign">
+          <span>{campaign.phase === 'mobilizing' ? 'Mobilizing' : 'Live siege'}</span>
+          <strong>{campaign.attackerHandle || 'Expedition'} {campaign.mode === 'pvp' ? `vs ${campaign.defenderHandle}` : ''}</strong>
+          <small>{campaign.attackerWins}-{campaign.defenderWins}</small>
+        </div>
+      )}
       <dl className="aetheris-detail-stats">
         <div>
           <dt>Active</dt>
@@ -85,6 +126,15 @@ export default function TerritoryDetailPanel({
           <dd>{formatNumber(kingdomState?.score)}</dd>
         </div>
       </dl>
+      {decision && (
+        <div className="aetheris-detail-war-action">
+          <button type="button" disabled={!decision.enabled || Boolean(busyAction)} onClick={runWarAction}>
+            {busyAction ? 'Updating...' : decision.label}
+          </button>
+          {decision.reason && <p>{decision.reason}</p>}
+          {warError && <p className="is-error">{warError}</p>}
+        </div>
+      )}
     </section>
   )
 }

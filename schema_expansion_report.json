@@ -5,6 +5,54 @@
       "blocks": []
     },
     {
+      "path": "aetheris-preview.html",
+      "blocks": []
+    },
+    {
+      "path": "aetheris.html",
+      "blocks": [
+        {
+          "index": 1,
+          "ok": true,
+          "error": null,
+          "mode": "pyld",
+          "expanded_sample": [
+            {
+              "@id": "https://intothebattle.com/aetheris#webpage",
+              "@type": [
+                "https://schema.org/WebPage"
+              ],
+              "https://schema.org/description": [
+                {
+                  "@value": "The shared IntoTheBattle fantasy world where creators choose territories and live battles shape the map."
+                }
+              ],
+              "https://schema.org/inLanguage": [
+                {
+                  "@value": "en-US"
+                }
+              ],
+              "https://schema.org/isPartOf": [
+                {
+                  "@id": "https://intothebattle.com/#website"
+                }
+              ],
+              "https://schema.org/name": [
+                {
+                  "@value": "Aetheris World Map"
+                }
+              ],
+              "https://schema.org/url": [
+                {
+                  "@value": "https://intothebattle.com/aetheris"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
       "path": "battle-clip.html",
       "blocks": []
     },
@@ -1115,7 +1163,7 @@
               ],
               "https://schema.org/description": [
                 {
-                  "@value": "Find IntoTheBattle creator, player, sponsor, account, and support pages from one site map."
+                  "@value": "Find Aetheris, IntoTheBattle creator, player, sponsor, account, and support pages from one site map."
                 }
               ],
               "https://schema.org/inLanguage": [
@@ -1501,11 +1549,15 @@
     {
       "path": "verify-email.html",
       "blocks": []
+    },
+    {
+      "path": "world.html",
+      "blocks": []
     }
   ],
   "summary": {
-    "total_files": 27,
-    "expanded": 14,
+    "total_files": 30,
+    "expanded": 15,
     "errors": 0
   }
 }

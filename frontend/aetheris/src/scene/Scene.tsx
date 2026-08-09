@@ -22,13 +22,14 @@ import TerminatorShadow from './TerminatorShadow'
 import TerritoryHalos from './TerritoryHalos'
 import SettlementLights from './SettlementLights'
 import TerritoryBanners from './TerritoryBanners'
+import MobilizationRoutes from './MobilizationRoutes'
 import CinematicPostProcessing from './CinematicPostProcessing'
 import Particles from '../particles/Particles'
 import { useDragControls } from '../hooks/useDragControls'
 import { usePerfTier } from '../hooks/usePerfTier'
 import { useCameraRig } from '../hooks/useCameraRig'
 import { useWorldAnalytics } from '../hooks/useWorldAnalytics'
-import type { KingdomState, StructureStage, Territory, WorldFraming } from '../types'
+import type { AetherisWorldState, KingdomState, StructureStage, Territory, WorldFraming } from '../types'
 
 interface SceneProps {
   reducedMotion: boolean
@@ -36,6 +37,7 @@ interface SceneProps {
   isVisible: boolean
   territories: Territory[]
   kingdomState: Record<string, KingdomState>
+  worldState: AetherisWorldState
   selectedTerritoryId: string | null
   onTerritorySelect: (territoryId: string) => void
 }
@@ -46,6 +48,7 @@ export default function Scene({
   isVisible,
   territories,
   kingdomState,
+  worldState,
   selectedTerritoryId,
   onTerritorySelect,
 }: SceneProps) {
@@ -140,6 +143,7 @@ export default function Scene({
           kingdomState={kingdomState}
           selectedTerritoryId={selectedTerritoryId}
         />
+        <MobilizationRoutes campaigns={worldState.campaigns} territories={territories} reducedMotion={reducedMotion} />
         <SettlementLights
           territories={territories}
           sunDirectionRef={sunDirectionRef}

@@ -46,6 +46,7 @@ import { growthEventDiagnostics, publicGrowthConfig, recordGrowthEvent, recordSe
 import { marketingAutomationDiagnostics, publishApprovedMarketingPosts, recordMarketingVisit } from './tiktokbr/services/marketingAutomation.js';
 import { getBlogPostBySlug, listBlogPosts } from './tiktokbr/services/blogEngine.js';
 import { initWorldSocket } from './tiktokbr/services/worldSocket.js';
+import { aetherisWar } from './tiktokbr/services/aetherisWarService.js';
 import {
   detectSecurityAbuse,
   publicSecurityRejectionMessage,
@@ -1014,6 +1015,7 @@ function dispatchRoomEvent(room, type, payload = {}, meta = {}) {
       return;
     }
     const streamEvent = recordRecentStreamEvent(room, type, payload);
+    aetherisWar.recordRoomEvent(room.roomId, type, payload, streamEvent?.source || inferRoomEventSource(room, type, payload));
     const priority = meta.priority == null ? roomEventPriority(type, payload) : meta.priority;
     const lane = meta.lane || roomEventLane(type, payload);
     io.to(room.roomId).emit(type, roomEventEnvelope(room, type, payload, {
@@ -3645,7 +3647,11 @@ function endBattleRound(room, reason = 'manual') {
   });
   emitSessionStatus(room);
   maybeTriggerMilestoneSponsorBreak(room, 'round_end');
-  return { ok: true, round: { ...round, timer: undefined } };
+  const aetherisWarResult = round.aetherisCampaignId
+    ? aetherisWar.finishRoundForRoom(room.roomId, reason)
+    : null;
+  if (aetherisWarResult?.ok) worldSocket.broadcastNow();
+  return { ok: true, round: { ...round, timer: undefined }, aetherisWar: aetherisWarResult };
 }
 
 function startBattleRound(room, options = {}) {
@@ -3663,6 +3669,9 @@ function startBattleRound(room, options = {}) {
     startedAt: Date.now(),
     durationMs,
     endsAt: Date.now() + durationMs,
+    aetherisCampaignId: options.aetherisCampaignId || null,
+    aetherisRoundId: options.aetherisRoundId || null,
+    aetherisSide: options.aetherisSide || null,
     timer: null,
   };
   room.roundState.timer = setRoomRuntimeTimeout(room, () => endBattleRound(room, 'timer'), durationMs);
@@ -7457,7 +7466,7 @@ const io         = new Server(httpServer, {
 
 // Aetheris homepage globe: a separate namespace, self-contained periodic poll, no
 // coupling to the battle overlay's hot event path below. See tiktokbr/services/worldSocket.js.
-initWorldSocket(io, { logger });
+const worldSocket = initWorldSocket(io, { logger });
 
 function emitAttackAndSync(room, result) {
   if (!result) return;
@@ -8292,6 +8301,34 @@ function requireRoom(req, res, next) {
   loadRoomAudioConfig(req.room);
   req.planEntitlements = buildPlanEntitlements(auth);
   updatePlatformSponsorSchedule(req.room, req.planEntitlements);
+  next();
+}
+
+function requireAetherisCreator(req, res, next) {
+  if (process.env.AETHERIS_WAR_ENABLED === 'false') {
+    return res.status(503).json({ success: false, error: 'Aetheris land wars are temporarily paused.' });
+  }
+  if (req.auth?.type !== 'user' || !req.user?.id) {
+    return res.status(403).json({ success: false, error: 'A verified creator account is required for Aetheris land wars.' });
+  }
+  if (!req.user.email_verified) {
+    return res.status(403).json({ success: false, error: 'Verify your creator email before opting into land wars.' });
+  }
+  let account = null;
+  try {
+    account = getLinkedTikTokAccount(db, req.user.id);
+  } catch (error) {
+    logger.warn({ err: error, userId: req.user.id }, 'Aetheris TikTok eligibility lookup failed');
+  }
+  const e2eEligible = DEV_TEST_MODE && String(req.user.tiktok_username || '').trim();
+  if ((!account || String(account.status || 'connected') !== 'connected') && !e2eEligible) {
+    return res.status(403).json({
+      success: false,
+      error: 'Connect your TikTok creator account before opting into land wars.',
+      connectUrl: '/profile',
+    });
+  }
+  req.aetherisHandle = normalizeTikTokUsername(account?.tiktok_username || req.user.tiktok_username || '') || '';
   next();
 }
 
@@ -9406,6 +9443,127 @@ app.get('/debug/session-info', (req, res) => {
 
 app.get('/stats', requireDashboardAccess, (_req, res) => res.sendFile(path.join(__dirname, 'stats.html')));
 app.get('/world', requireDashboardAccess, (_req, res) => res.sendFile(path.join(__dirname, 'world.html')));
+
+app.get('/api/aetheris/world-state', (_req, res) => {
+  try {
+    res.set('Cache-Control', 'public, max-age=5, stale-while-revalidate=15');
+    return res.json(aetherisWar.publicWorldState());
+  } catch (error) {
+    logger.error({ err: error }, 'Failed to build public Aetheris world state');
+    return res.status(503).json({ success: false, error: 'Aetheris world state is temporarily unavailable.' });
+  }
+});
+
+function aetherisWarHttpStatus(result) {
+  if (result?.ok) return 200;
+  if (['UNKNOWN_TERRITORY', 'OPT_IN_REQUIRED', 'HOME_REQUIRED', 'HOME_ALREADY_SELECTED', 'NOT_ADJACENT', 'HOLDING_CAP', 'NOT_ATTACKER', 'NOT_OWNER'].includes(result?.code)) return 400;
+  if (['TERRITORY_CLAIMED', 'CAMPAIGN_CONFLICT', 'ATTACKER_BUSY', 'DEFENDER_BUSY', 'ACTIVE_CAMPAIGN', 'ROUND_ACTIVE', 'ROUND_LIMIT', 'SCORING_STARTED', 'MOBILIZING', 'SHIELDED', 'REMATCH_COOLDOWN', 'REENTRY_COOLDOWN'].includes(result?.code)) return 409;
+  return 403;
+}
+
+function sendAetherisWarResult(res, result) {
+  return res.status(aetherisWarHttpStatus(result)).json({
+    success: Boolean(result?.ok),
+    ...result,
+    ok: undefined,
+    notificationEmail: undefined,
+  });
+}
+
+app.get('/api/aetheris/war/status', requireRoom, requireAetherisCreator, (req, res) => {
+  try {
+    return res.json(aetherisWar.creatorStatus({
+      userId: req.user.id,
+      roomId: req.room.roomId,
+      handle: req.aetherisHandle,
+    }));
+  } catch (error) {
+    logger.error({ err: error, userId: req.user.id }, 'Failed to build creator Aetheris war status');
+    return res.status(500).json({ success: false, error: 'Unable to load your Aetheris war status.' });
+  }
+});
+
+app.post('/api/aetheris/war/opt-in', publicWriteLimiter, requireRoom, requireAetherisCreator, (req, res) => {
+  const enabled = req.body?.enabled !== false;
+  const result = enabled
+    ? aetherisWar.optIn({ userId: req.user.id, roomId: req.room.roomId, handle: req.aetherisHandle })
+    : aetherisWar.optOut({ userId: req.user.id });
+  if (result.ok) worldSocket.broadcastNow();
+  return sendAetherisWarResult(res, result);
+});
+
+app.post('/api/aetheris/war/home', publicWriteLimiter, requireRoom, requireAetherisCreator, (req, res) => {
+  const result = aetherisWar.selectHome({
+    userId: req.user.id,
+    roomId: req.room.roomId,
+    territoryId: String(req.body?.territoryId || ''),
+  });
+  if (result.ok) worldSocket.broadcastNow();
+  return sendAetherisWarResult(res, result);
+});
+
+async function declareAetherisCampaign(req, res, options = {}) {
+  if (options.requireNeutral && aetherisWar.activeClaim(String(req.body?.territoryId || ''))) {
+    return res.status(409).json({ success: false, error: 'Expeditions can only target unclaimed territory.' });
+  }
+  const result = aetherisWar.declareCampaign({
+    userId: req.user.id,
+    roomId: req.room.roomId,
+    territoryId: String(req.body?.territoryId || ''),
+    handle: req.aetherisHandle,
+  });
+  if (!result.ok) return sendAetherisWarResult(res, result);
+  worldSocket.broadcastNow();
+  if (result.notificationEmail) {
+    const campaignUrl = `${requestOrigin(req)}/world`;
+    sendTransactionalEmail({
+      to: result.notificationEmail,
+      subject: 'A creator is mobilizing against your Aetheris territory',
+      textBody: `A land campaign has been declared against ${result.campaign.territoryId}. Mobilization is visible now and scoring opens in six hours. Open ${campaignUrl} to defend it.`,
+      htmlBody: `<p>A land campaign has been declared against <strong>${escapeHtml(result.campaign.territoryId)}</strong>.</p><p>Mobilization is visible now and scoring opens in six hours.</p><p><a href="${escapeHtml(campaignUrl)}">Open Aetheris to defend it</a></p>`,
+      tag: 'aetheris-mobilization',
+      metadata: { campaignId: result.campaign.id, territoryId: result.campaign.territoryId },
+    }).catch(error => logger.warn({ err: error, campaignId: result.campaign.id }, 'Aetheris defender email failed'));
+  }
+  return sendAetherisWarResult(res, result);
+}
+
+app.post('/api/aetheris/war/expeditions', publicWriteLimiter, requireRoom, requireAetherisCreator, (req, res) => declareAetherisCampaign(req, res, { requireNeutral: true }));
+app.post('/api/aetheris/war/campaigns', publicWriteLimiter, requireRoom, requireAetherisCreator, (req, res) => declareAetherisCampaign(req, res));
+
+app.post('/api/aetheris/war/rounds/start', publicWriteLimiter, requireRoom, requireAetherisCreator, (req, res) => {
+  const liveConnected = req.room.tiktokConnection?.status === 'connected';
+  if (!liveConnected && !(DEV_TEST_MODE && req.body?.devForceLive === true)) {
+    return res.status(409).json({ success: false, error: 'Connect to a real TikTok LIVE before starting a land-war round.' });
+  }
+  const result = aetherisWar.startRound({
+    campaignId: Number(req.body?.campaignId),
+    userId: req.user.id,
+    roomId: req.room.roomId,
+  });
+  if (!result.ok) return sendAetherisWarResult(res, result);
+  const round = startBattleRound(req.room, {
+    source: 'aetheris_war',
+    durationMs: result.durationMs,
+    aetherisCampaignId: result.round.campaignId,
+    aetherisRoundId: result.round.id,
+    aetherisSide: result.round.side,
+  });
+  worldSocket.broadcastNow();
+  return res.json({ success: true, warRound: result.round, round: currentRoundStatus(req.room) || round });
+});
+
+app.post('/api/aetheris/war/campaigns/:id/withdraw', publicWriteLimiter, requireRoom, requireAetherisCreator, (req, res) => {
+  const result = aetherisWar.withdrawCampaign({ campaignId: Number(req.params.id), userId: req.user.id });
+  if (result.ok) worldSocket.broadcastNow();
+  return sendAetherisWarResult(res, result);
+});
+
+app.post('/api/aetheris/war/holdings/:territoryId/abandon', publicWriteLimiter, requireRoom, requireAetherisCreator, (req, res) => {
+  const result = aetherisWar.abandonHolding({ userId: req.user.id, territoryId: String(req.params.territoryId || '') });
+  if (result.ok) worldSocket.broadcastNow();
+  return sendAetherisWarResult(res, result);
+});
 
 app.get('/state', (req, res) => {
   if (enableRoomScoped && req.query.room_id) {
@@ -10790,6 +10948,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
   });
 
   onTikTok('connected', () => {
+    aetherisWar.markRoomReconnected(room.roomId);
     startLiveSession(room, 'tiktok', { sessionId: connectionSessionId, phase: MATCH_PHASES.LIVE });
     emitTikTokConnectionStatus(room, {
       status: 'connected',
@@ -10817,6 +10976,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
   });
 
   onTikTok('disconnected', (code, reason) => {
+    aetherisWar.markRoomDisconnected(room.roomId);
     if (tiktokClient.liveEndedHandled) {
       if (room.tiktokClient === tiktokClient) room.tiktokClient = null;
       if (tiktokClient === client) client = null;

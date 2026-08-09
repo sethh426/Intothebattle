@@ -1,0 +1,1938 @@
+{
+  "version": 1,
+  "seed": 918273645,
+  "territories": [
+    {
+      "id": "terr-frozen-crown-0",
+      "biomeId": "frozen-crown",
+      "shapeId": "ring",
+      "sizeClass": "small",
+      "lat": 82.12852272063591,
+      "lon": -4.251799075864255,
+      "angularRadius": 0.0347238753605634,
+      "rotation": 5.6592695170740175,
+      "territoryName": "Stormgard",
+      "isLive": false,
+      "colorHex": "#58d9ff",
+      "seed": 233503319,
+      "neighbors": [
+        "terr-frozen-crown-2",
+        "terr-frozen-crown-4",
+        "terr-frozen-crown-9"
+      ]
+    },
+    {
+      "id": "terr-frozen-crown-1",
+      "biomeId": "frozen-crown",
+      "shapeId": "shard",
+      "sizeClass": "large",
+      "lat": 74.85637952298549,
+      "lon": 89.41796118719503,
+      "angularRadius": 0.10366010005306453,
+      "rotation": 6.09769709774256,
+      "territoryName": "Stormdor",
+      "isLive": false,
+      "colorHex": "#55d8ff",
+      "seed": 2118078664,
+      "neighbors": [
+        "terr-frozen-crown-3",
+        "terr-frozen-crown-5",
+        "terr-frozen-crown-6"
+      ]
+    },
+    {
+      "id": "terr-frozen-crown-2",
+      "biomeId": "frozen-crown",
+      "shapeId": "ring",
+      "sizeClass": "medium",
+      "lat": 87.18681886946302,
+      "lon": -21.951433036884907,
+      "angularRadius": 0.05375897009344772,
+      "rotation": 0.2545173478177167,
+      "territoryName": "Dusholt",
+      "isLive": false,
+      "colorHex": "#5ad9ff",
+      "seed": 3822007930,
+      "neighbors": [
+        "terr-frozen-crown-0",
+        "terr-frozen-crown-4",
+        "terr-frozen-crown-7",
+        "terr-frozen-crown-8"
+      ]
+    },
+    {
+      "id": "terr-frozen-crown-3",
+      "biomeId": "frozen-crown",
+      "shapeId": "crescent",
+      "sizeClass": "large",
+      "lat": 73.08,
+      "lon": 50.4386028931524,
+      "angularRadius": 0.10164637643331662,
+      "rotation": 0.39847742817290566,
+      "territoryName": "Emberholt",
+      "isLive": false,
+      "colorHex": "#68dcff",
+      "seed": 2528862108,
+      "neighbors": [
+        "terr-frozen-crown-1",
+        "terr-frozen-crown-9",
+        "terr-whispering-desert-10"
+      ]
+    },
+    {
+      "id": "terr-frozen-crown-4",
+      "biomeId": "frozen-crown",
+      "shapeId": "shard",
+      "sizeClass": "large",
+      "lat": 80.31582602514635,
+      "lon": -52.894961972109755,
+      "angularRadius": 0.10556971774622798,
+      "rotation": 1.9196033325324782,
+      "territoryName": "Kaelvane",
+      "isLive": true,
+      "colorHex": "#6fdeff",
+      "seed": 2155972521,
+      "neighbors": [
+        "terr-frozen-crown-0",
+        "terr-frozen-crown-2",
+        "terr-thunder-highlands-4"
+      ]
+    },
+    {
+      "id": "terr-frozen-crown-5",
+      "biomeId": "frozen-crown",
+      "shapeId": "star",
+      "sizeClass": "medium",
+      "lat": 73.08,
+      "lon": 124.62670231364022,
+      "angularRadius": 0.05991019964125008,
+      "rotation": 4.222652472459092,
+      "territoryName": "Stormthorn",
+      "isLive": true,
+      "colorHex": "#66dcff",
+      "seed": 98171341,
+      "neighbors": [
+        "terr-frozen-crown-1",
+        "terr-frozen-crown-8",
+        "terr-whispering-desert-1",
+        "terr-whispering-desert-7"
+      ]
+    },
+    {
+      "id": "terr-frozen-crown-6",
+      "biomeId": "frozen-crown",
+      "shapeId": "shard",
+      "sizeClass": "large",
+      "lat": 81.76824781166322,
+      "lon": 62.260677171576866,
+      "angularRadius": 0.1015964156105183,
+      "rotation": 1.8569217210889064,
+      "territoryName": "Kaelvane",
+      "isLive": false,
+      "colorHex": "#67dcff",
+      "seed": 227669138,
+      "neighbors": [
+        "terr-frozen-crown-1",
+        "terr-frozen-crown-7",
+        "terr-frozen-crown-9"
+      ]
+    },
+    {
+      "id": "terr-frozen-crown-7",
+      "biomeId": "frozen-crown",
+      "shapeId": "blob-2",
+      "sizeClass": "small",
+      "lat": 83.91285589929149,
+      "lon": 96.25200089307985,
+      "angularRadius": 0.043467834993265564,
+      "rotation": 4.547193536679952,
+      "territoryName": "Embertari",
+      "isLive": false,
+      "colorHex": "#62dbff",
+      "seed": 3898378202,
+      "neighbors": [
+        "terr-frozen-crown-2",
+        "terr-frozen-crown-6",
+        "terr-frozen-crown-8"
+      ]
+    },
+    {
+      "id": "terr-frozen-crown-8",
+      "biomeId": "frozen-crown",
+      "shapeId": "spit",
+      "sizeClass": "small",
+      "lat": 83.06559526663567,
+      "lon": 141.06403646777272,
+      "angularRadius": 0.03703267740085721,
+      "rotation": 5.348379447620456,
+      "territoryName": "Wyrash",
+      "isLive": false,
+      "colorHex": "#5cdaff",
+      "seed": 3814990224,
+      "neighbors": [
+        "terr-frozen-crown-2",
+        "terr-frozen-crown-5",
+        "terr-frozen-crown-7"
+      ]
+    },
+    {
+      "id": "terr-frozen-crown-9",
+      "biomeId": "frozen-crown",
+      "shapeId": "ring",
+      "sizeClass": "small",
+      "lat": 78.16337080487337,
+      "lon": 16.440824410637294,
+      "angularRadius": 0.039231536990031596,
+      "rotation": 2.035142803043761,
+      "territoryName": "Embertari",
+      "isLive": false,
+      "colorHex": "#65dcff",
+      "seed": 942702608,
+      "neighbors": [
+        "terr-frozen-crown-0",
+        "terr-frozen-crown-3",
+        "terr-frozen-crown-6"
+      ]
+    },
+    {
+      "id": "terr-thunder-highlands-0",
+      "biomeId": "thunder-highlands",
+      "shapeId": "hex",
+      "sizeClass": "small",
+      "lat": 61.281658751286756,
+      "lon": -99.87938088364899,
+      "angularRadius": 0.03740663100406527,
+      "rotation": 6.2190688656838695,
+      "territoryName": "Orsera",
+      "isLive": false,
+      "colorHex": "#9ca8ec",
+      "seed": 3602834455,
+      "neighbors": [
+        "terr-thunder-highlands-1",
+        "terr-thunder-highlands-2",
+        "terr-thunder-highlands-3"
+      ]
+    },
+    {
+      "id": "terr-thunder-highlands-1",
+      "biomeId": "thunder-highlands",
+      "shapeId": "spit",
+      "sizeClass": "large",
+      "lat": 60.96439200539619,
+      "lon": -124.26493328768282,
+      "angularRadius": 0.1018419511495158,
+      "rotation": 0.7459035357962525,
+      "territoryName": "Grimvane",
+      "isLive": false,
+      "colorHex": "#abb9f7",
+      "seed": 748709095,
+      "neighbors": [
+        "terr-thunder-highlands-0",
+        "terr-thunder-highlands-2",
+        "terr-whispering-desert-8"
+      ]
+    },
+    {
+      "id": "terr-thunder-highlands-2",
+      "biomeId": "thunder-highlands",
+      "shapeId": "blob-2",
+      "sizeClass": "medium",
+      "lat": 68.09789768838625,
+      "lon": -93.59573264503462,
+      "angularRadius": 0.050366959108971064,
+      "rotation": 1.5513570508767414,
+      "territoryName": "Grimthorn",
+      "isLive": false,
+      "colorHex": "#939de6",
+      "seed": 277659084,
+      "neighbors": [
+        "terr-thunder-highlands-0",
+        "terr-thunder-highlands-1",
+        "terr-thunder-highlands-3",
+        "terr-thunder-highlands-4"
+      ]
+    },
+    {
+      "id": "terr-thunder-highlands-3",
+      "biomeId": "thunder-highlands",
+      "shapeId": "hex",
+      "sizeClass": "small",
+      "lat": 60.72,
+      "lon": -72.65573310511206,
+      "angularRadius": 0.037691843920387325,
+      "rotation": 1.3970707131000537,
+      "territoryName": "Fennthorn",
+      "isLive": false,
+      "colorHex": "#909be4",
+      "seed": 1494907182,
+      "neighbors": [
+        "terr-thunder-highlands-0",
+        "terr-thunder-highlands-2",
+        "terr-thunder-highlands-4"
+      ]
+    },
+    {
+      "id": "terr-thunder-highlands-4",
+      "biomeId": "thunder-highlands",
+      "shapeId": "blob-1",
+      "sizeClass": "small",
+      "lat": 67.95044778141752,
+      "lon": -72.73059305319377,
+      "angularRadius": 0.03957765754219145,
+      "rotation": 4.546820855373422,
+      "territoryName": "Grimmeer",
+      "isLive": false,
+      "colorHex": "#97a2e9",
+      "seed": 3605124908,
+      "neighbors": [
+        "terr-frozen-crown-4",
+        "terr-thunder-highlands-2",
+        "terr-thunder-highlands-3"
+      ]
+    },
+    {
+      "id": "terr-whispering-desert-0",
+      "biomeId": "whispering-desert",
+      "shapeId": "shard",
+      "sizeClass": "large",
+      "lat": 53.84716147214135,
+      "lon": 164.89852735237218,
+      "angularRadius": 0.10344703105464578,
+      "rotation": 2.8844351116831093,
+      "territoryName": "Grimwick",
+      "isLive": true,
+      "colorHex": "#ffd05c",
+      "seed": 2647947119,
+      "neighbors": [
+        "terr-whispering-desert-10",
+        "terr-whispering-desert-2",
+        "terr-whispering-desert-8",
+        "terr-whispering-desert-9"
+      ]
+    },
+    {
+      "id": "terr-whispering-desert-1",
+      "biomeId": "whispering-desert",
+      "shapeId": "hex",
+      "sizeClass": "medium",
+      "lat": 54.432722057778314,
+      "lon": 129.57685425435193,
+      "angularRadius": 0.054058297364972537,
+      "rotation": 4.888078883442926,
+      "territoryName": "Wyrash",
+      "isLive": false,
+      "colorHex": "#e5ae4a",
+      "seed": 3345973671,
+      "neighbors": [
+        "terr-frozen-crown-5",
+        "terr-whispering-desert-3",
+        "terr-whispering-desert-4",
+        "terr-whispering-desert-5",
+        "terr-whispering-desert-7"
+      ]
+    },
+    {
+      "id": "terr-whispering-desert-2",
+      "biomeId": "whispering-desert",
+      "shapeId": "shard",
+      "sizeClass": "medium",
+      "lat": 58.92,
+      "lon": 160.90357947504236,
+      "angularRadius": 0.05064919018559158,
+      "rotation": 5.106945928545295,
+      "territoryName": "Sylvsera",
+      "isLive": false,
+      "colorHex": "#faca58",
+      "seed": 1765646365,
+      "neighbors": [
+        "terr-whispering-desert-0",
+        "terr-whispering-desert-4",
+        "terr-whispering-desert-8",
+        "terr-whispering-desert-9"
+      ]
+    },
+    {
+      "id": "terr-whispering-desert-3",
+      "biomeId": "whispering-desert",
+      "shapeId": "cluster",
+      "sizeClass": "small",
+      "lat": 53.71860270311163,
+      "lon": 110.80708593482925,
+      "angularRadius": 0.03637898077443242,
+      "rotation": 5.166385062526666,
+      "territoryName": "Sylvholt",
+      "isLive": false,
+      "colorHex": "#eab44d",
+      "seed": 2783988764,
+      "neighbors": [
+        "terr-ancient-jungle-8",
+        "terr-whispering-desert-1",
+        "terr-whispering-desert-7"
+      ]
+    },
+    {
+      "id": "terr-whispering-desert-4",
+      "biomeId": "whispering-desert",
+      "shapeId": "spit",
+      "sizeClass": "large",
+      "lat": 57.53293612569036,
+      "lon": 145.15497353489752,
+      "angularRadius": 0.07883744524978101,
+      "rotation": 3.723786812976261,
+      "territoryName": "Thalmeer",
+      "isLive": false,
+      "colorHex": "#fbcb59",
+      "seed": 1182438570,
+      "neighbors": [
+        "terr-whispering-desert-1",
+        "terr-whispering-desert-2",
+        "terr-whispering-desert-9"
+      ]
+    },
+    {
+      "id": "terr-whispering-desert-5",
+      "biomeId": "whispering-desert",
+      "shapeId": "cluster",
+      "sizeClass": "small",
+      "lat": 46.02904717682998,
+      "lon": 127.21449281138817,
+      "angularRadius": 0.038670516577549274,
+      "rotation": 0.010225298519012415,
+      "territoryName": "Aelwyn",
+      "isLive": false,
+      "colorHex": "#f0bd52",
+      "seed": 2320092860,
+      "neighbors": [
+        "terr-ancient-jungle-1",
+        "terr-ancient-jungle-10",
+        "terr-ancient-jungle-9",
+        "terr-whispering-desert-1"
+      ]
+    },
+    {
+      "id": "terr-whispering-desert-6",
+      "biomeId": "whispering-desert",
+      "shapeId": "shard",
+      "sizeClass": "large",
+      "lat": 45.447236279825724,
+      "lon": 153.712702811029,
+      "angularRadius": 0.10557643718272447,
+      "rotation": 5.247332042979029,
+      "territoryName": "Kaelholt",
+      "isLive": false,
+      "colorHex": "#f4c355",
+      "seed": 2308464964,
+      "neighbors": [
+        "terr-ancient-jungle-3",
+        "terr-ancient-jungle-5",
+        "terr-whispering-desert-9"
+      ]
+    },
+    {
+      "id": "terr-whispering-desert-7",
+      "biomeId": "whispering-desert",
+      "shapeId": "spit",
+      "sizeClass": "large",
+      "lat": 58.92,
+      "lon": 113.91733172593221,
+      "angularRadius": 0.09713832248887047,
+      "rotation": 3.9576702557318666,
+      "territoryName": "Wyrmeer",
+      "isLive": false,
+      "colorHex": "#f7c656",
+      "seed": 3504659113,
+      "neighbors": [
+        "terr-frozen-crown-5",
+        "terr-whispering-desert-1",
+        "terr-whispering-desert-3"
+      ]
+    },
+    {
+      "id": "terr-whispering-desert-8",
+      "biomeId": "whispering-desert",
+      "shapeId": "star",
+      "sizeClass": "medium",
+      "lat": 58.92,
+      "lon": -174.9428177049111,
+      "angularRadius": 0.05492905836645514,
+      "rotation": 0.13528352785623626,
+      "territoryName": "Fennwyn",
+      "isLive": false,
+      "colorHex": "#eeba50",
+      "seed": 3884122093,
+      "neighbors": [
+        "terr-thunder-highlands-1",
+        "terr-whispering-desert-0",
+        "terr-whispering-desert-2"
+      ]
+    },
+    {
+      "id": "terr-whispering-desert-9",
+      "biomeId": "whispering-desert",
+      "shapeId": "hex",
+      "sizeClass": "small",
+      "lat": 52.557997342954245,
+      "lon": 149.81294730578165,
+      "angularRadius": 0.0386507758712396,
+      "rotation": 0.5114710935326138,
+      "territoryName": "Kaelwick",
+      "isLive": false,
+      "colorHex": "#f5c455",
+      "seed": 1589143492,
+      "neighbors": [
+        "terr-whispering-desert-0",
+        "terr-whispering-desert-2",
+        "terr-whispering-desert-4",
+        "terr-whispering-desert-6"
+      ]
+    },
+    {
+      "id": "terr-whispering-desert-10",
+      "biomeId": "whispering-desert",
+      "shapeId": "shard",
+      "sizeClass": "medium",
+      "lat": 44.931933092648265,
+      "lon": 173.03718676881277,
+      "angularRadius": 0.06295119368704036,
+      "rotation": 2.529809745736042,
+      "territoryName": "Volric",
+      "isLive": false,
+      "colorHex": "#e9b44d",
+      "seed": 3224208135,
+      "neighbors": [
+        "terr-emerald-wilds-12",
+        "terr-frozen-crown-3",
+        "terr-whispering-desert-0"
+      ]
+    },
+    {
+      "id": "terr-ancient-jungle-0",
+      "biomeId": "ancient-jungle",
+      "shapeId": "ring",
+      "sizeClass": "medium",
+      "lat": 23.2,
+      "lon": 116.28542406018823,
+      "angularRadius": 0.05273411001078785,
+      "rotation": 2.463747386202171,
+      "territoryName": "Volholt",
+      "isLive": false,
+      "colorHex": "#58e77f",
+      "seed": 1874931950,
+      "neighbors": [
+        "terr-ancient-jungle-2",
+        "terr-ancient-jungle-4",
+        "terr-ancient-jungle-7"
+      ]
+    },
+    {
+      "id": "terr-ancient-jungle-1",
+      "biomeId": "ancient-jungle",
+      "shapeId": "cluster",
+      "sizeClass": "large",
+      "lat": 40.8,
+      "lon": 137.34444933501072,
+      "angularRadius": 0.0806648761681281,
+      "rotation": 4.056144732720529,
+      "territoryName": "Stormric",
+      "isLive": false,
+      "colorHex": "#53df7a",
+      "seed": 2231767519,
+      "neighbors": [
+        "terr-ancient-jungle-10",
+        "terr-ancient-jungle-3",
+        "terr-ancient-jungle-5",
+        "terr-whispering-desert-5"
+      ]
+    },
+    {
+      "id": "terr-ancient-jungle-2",
+      "biomeId": "ancient-jungle",
+      "shapeId": "hex",
+      "sizeClass": "large",
+      "lat": 28.185682656752874,
+      "lon": 115.99796219892374,
+      "angularRadius": 0.10652108704391866,
+      "rotation": 4.967855290976229,
+      "territoryName": "Sylvwyn",
+      "isLive": true,
+      "colorHex": "#5aeb81",
+      "seed": 3883189046,
+      "neighbors": [
+        "terr-ancient-jungle-0",
+        "terr-ancient-jungle-4",
+        "terr-ancient-jungle-7"
+      ]
+    },
+    {
+      "id": "terr-ancient-jungle-3",
+      "biomeId": "ancient-jungle",
+      "shapeId": "shard",
+      "sizeClass": "medium",
+      "lat": 40.8,
+      "lon": 153.65537292217,
+      "angularRadius": 0.05449186089541763,
+      "rotation": 0.24277853766058374,
+      "territoryName": "Sylvsera",
+      "isLive": false,
+      "colorHex": "#61f788",
+      "seed": 3448448410,
+      "neighbors": [
+        "terr-ancient-jungle-1",
+        "terr-ancient-jungle-5",
+        "terr-whispering-desert-6"
+      ]
+    },
+    {
+      "id": "terr-ancient-jungle-4",
+      "biomeId": "ancient-jungle",
+      "shapeId": "crescent",
+      "sizeClass": "large",
+      "lat": 23.2,
+      "lon": 122.21959245093127,
+      "angularRadius": 0.08543518865201623,
+      "rotation": 3.4528070139456584,
+      "territoryName": "Duswyn",
+      "isLive": false,
+      "colorHex": "#55e37d",
+      "seed": 2867009744,
+      "neighbors": [
+        "terr-ancient-jungle-0",
+        "terr-ancient-jungle-11",
+        "terr-ancient-jungle-2"
+      ]
+    },
+    {
+      "id": "terr-ancient-jungle-5",
+      "biomeId": "ancient-jungle",
+      "shapeId": "shard",
+      "sizeClass": "large",
+      "lat": 39.060117805953496,
+      "lon": 148.04921214143016,
+      "angularRadius": 0.10031329096946864,
+      "rotation": 5.243451778584728,
+      "territoryName": "Grimdor",
+      "isLive": false,
+      "colorHex": "#5cee83",
+      "seed": 817790236,
+      "neighbors": [
+        "terr-ancient-jungle-1",
+        "terr-ancient-jungle-11",
+        "terr-ancient-jungle-12",
+        "terr-ancient-jungle-3",
+        "terr-whispering-desert-6"
+      ]
+    },
+    {
+      "id": "terr-ancient-jungle-6",
+      "biomeId": "ancient-jungle",
+      "shapeId": "blob-2",
+      "sizeClass": "medium",
+      "lat": 36.880079788546155,
+      "lon": 121.47861184947315,
+      "angularRadius": 0.06372854842757807,
+      "rotation": 0.7005312676191628,
+      "territoryName": "Sylvash",
+      "isLive": false,
+      "colorHex": "#51dc79",
+      "seed": 1492552992,
+      "neighbors": [
+        "terr-ancient-jungle-10",
+        "terr-ancient-jungle-7",
+        "terr-ancient-jungle-9"
+      ]
+    },
+    {
+      "id": "terr-ancient-jungle-7",
+      "biomeId": "ancient-jungle",
+      "shapeId": "ring",
+      "sizeClass": "medium",
+      "lat": 33.769904847050746,
+      "lon": 116.66773161058785,
+      "angularRadius": 0.06650459733698517,
+      "rotation": 6.128638242291139,
+      "territoryName": "Fennric",
+      "isLive": false,
+      "colorHex": "#5ff486",
+      "seed": 4042646237,
+      "neighbors": [
+        "terr-ancient-jungle-0",
+        "terr-ancient-jungle-2",
+        "terr-ancient-jungle-6",
+        "terr-ancient-jungle-9"
+      ]
+    },
+    {
+      "id": "terr-ancient-jungle-8",
+      "biomeId": "ancient-jungle",
+      "shapeId": "crescent",
+      "sizeClass": "medium",
+      "lat": 24.46810682978951,
+      "lon": 93.63554731709961,
+      "angularRadius": 0.050255737733095884,
+      "rotation": 3.0570408133119766,
+      "territoryName": "Orthorn",
+      "isLive": false,
+      "colorHex": "#63f98a",
+      "seed": 3127723157,
+      "neighbors": [
+        "terr-emerald-wilds-1",
+        "terr-emerald-wilds-16",
+        "terr-whispering-desert-3"
+      ]
+    },
+    {
+      "id": "terr-ancient-jungle-9",
+      "biomeId": "ancient-jungle",
+      "shapeId": "spit",
+      "sizeClass": "medium",
+      "lat": 40.8,
+      "lon": 118.44972954256575,
+      "angularRadius": 0.059457611332181845,
+      "rotation": 4.533991766018928,
+      "territoryName": "Ordor",
+      "isLive": false,
+      "colorHex": "#63f98a",
+      "seed": 3632550015,
+      "neighbors": [
+        "terr-ancient-jungle-6",
+        "terr-ancient-jungle-7",
+        "terr-whispering-desert-5"
+      ]
+    },
+    {
+      "id": "terr-ancient-jungle-10",
+      "biomeId": "ancient-jungle",
+      "shapeId": "spit",
+      "sizeClass": "small",
+      "lat": 40.8,
+      "lon": 129.15442157316392,
+      "angularRadius": 0.03787431513611227,
+      "rotation": 1.6346108834416122,
+      "territoryName": "Fennsera",
+      "isLive": false,
+      "colorHex": "#59e980",
+      "seed": 2201034087,
+      "neighbors": [
+        "terr-ancient-jungle-1",
+        "terr-ancient-jungle-6",
+        "terr-whispering-desert-5"
+      ]
+    },
+    {
+      "id": "terr-ancient-jungle-11",
+      "biomeId": "ancient-jungle",
+      "shapeId": "hex",
+      "sizeClass": "large",
+      "lat": 29.58486813242267,
+      "lon": 141.19409308686696,
+      "angularRadius": 0.08740406700829044,
+      "rotation": 3.9896305099761697,
+      "territoryName": "Thaldor",
+      "isLive": false,
+      "colorHex": "#64fb8b",
+      "seed": 3351786120,
+      "neighbors": [
+        "terr-ancient-jungle-12",
+        "terr-ancient-jungle-4",
+        "terr-ancient-jungle-5"
+      ]
+    },
+    {
+      "id": "terr-ancient-jungle-12",
+      "biomeId": "ancient-jungle",
+      "shapeId": "ring",
+      "sizeClass": "large",
+      "lat": 23.2,
+      "lon": 144.03968568982413,
+      "angularRadius": 0.09646161659108475,
+      "rotation": 2.295436817905704,
+      "territoryName": "Volwyn",
+      "isLive": false,
+      "colorHex": "#5df084",
+      "seed": 1162895213,
+      "neighbors": [
+        "terr-ancient-jungle-11",
+        "terr-ancient-jungle-5",
+        "terr-emerald-wilds-7"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-0",
+      "biomeId": "emerald-wilds",
+      "shapeId": "hex",
+      "sizeClass": "medium",
+      "lat": -0.8,
+      "lon": -76.27779838442802,
+      "angularRadius": 0.05885198975540698,
+      "rotation": 2.964135715190299,
+      "territoryName": "Embergard",
+      "isLive": false,
+      "colorHex": "#aaf67d",
+      "seed": 2053022025,
+      "neighbors": [
+        "terr-emerald-wilds-15",
+        "terr-emerald-wilds-3",
+        "terr-emerald-wilds-6",
+        "terr-emerald-wilds-9"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-1",
+      "biomeId": "emerald-wilds",
+      "shapeId": "hex",
+      "sizeClass": "small",
+      "lat": 18.056744464241625,
+      "lon": 88.31749294884503,
+      "angularRadius": 0.037731847645714876,
+      "rotation": 3.9589867196193005,
+      "territoryName": "Aelsera",
+      "isLive": false,
+      "colorHex": "#9dec78",
+      "seed": 184071548,
+      "neighbors": [
+        "terr-ancient-jungle-8",
+        "terr-emerald-wilds-16",
+        "terr-emerald-wilds-4"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-2",
+      "biomeId": "emerald-wilds",
+      "shapeId": "star",
+      "sizeClass": "small",
+      "lat": 2.9381769726492784,
+      "lon": 156.50970322452486,
+      "angularRadius": 0.03270415969286114,
+      "rotation": 0.5403648330271262,
+      "territoryName": "Kaelgard",
+      "isLive": false,
+      "colorHex": "#a1ee79",
+      "seed": 2531792719,
+      "neighbors": [
+        "terr-emerald-wilds-11",
+        "terr-emerald-wilds-5",
+        "terr-emerald-wilds-7",
+        "terr-liquid-blu-metal-sea-7"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-3",
+      "biomeId": "emerald-wilds",
+      "shapeId": "star",
+      "sizeClass": "medium",
+      "lat": -0.4853368891351003,
+      "lon": -82.57826079054149,
+      "angularRadius": 0.060868303824681794,
+      "rotation": 0.5183246891838109,
+      "territoryName": "Sylvwick",
+      "isLive": false,
+      "colorHex": "#b5fd81",
+      "seed": 3405589339,
+      "neighbors": [
+        "terr-emerald-wilds-0",
+        "terr-emerald-wilds-12",
+        "terr-emerald-wilds-15"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-4",
+      "biomeId": "emerald-wilds",
+      "shapeId": "ring",
+      "sizeClass": "large",
+      "lat": 17.051489896141288,
+      "lon": 79.93237696512023,
+      "angularRadius": 0.10644193057157099,
+      "rotation": 3.635958817399141,
+      "territoryName": "Sylvvane",
+      "isLive": false,
+      "colorHex": "#b2fb80",
+      "seed": 2639091324,
+      "neighbors": [
+        "terr-emerald-wilds-1",
+        "terr-emerald-wilds-10",
+        "terr-emerald-wilds-16"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-5",
+      "biomeId": "emerald-wilds",
+      "shapeId": "blob-2",
+      "sizeClass": "small",
+      "lat": 7.1789836912168905,
+      "lon": 163.54892279207738,
+      "angularRadius": 0.04328523145522922,
+      "rotation": 0.6836690316164927,
+      "territoryName": "Grimholt",
+      "isLive": true,
+      "colorHex": "#9aea77",
+      "seed": 3932018574,
+      "neighbors": [
+        "terr-emerald-wilds-14",
+        "terr-emerald-wilds-2",
+        "terr-emerald-wilds-7"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-6",
+      "biomeId": "emerald-wilds",
+      "shapeId": "star",
+      "sizeClass": "small",
+      "lat": -0.8,
+      "lon": -62.34501784437171,
+      "angularRadius": 0.03518478325754404,
+      "rotation": 6.123549186242957,
+      "territoryName": "Orthorn",
+      "isLive": false,
+      "colorHex": "#a9f47c",
+      "seed": 869176869,
+      "neighbors": [
+        "terr-emerald-wilds-0",
+        "terr-emerald-wilds-9",
+        "terr-liquid-blu-metal-sea-0",
+        "terr-liquid-blu-metal-sea-4"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-7",
+      "biomeId": "emerald-wilds",
+      "shapeId": "crescent",
+      "sizeClass": "large",
+      "lat": 10.646525125895147,
+      "lon": 159.87501041961244,
+      "angularRadius": 0.08836094341892749,
+      "rotation": 0.8114817001671659,
+      "territoryName": "Dussera",
+      "isLive": false,
+      "colorHex": "#a4f17a",
+      "seed": 3202015380,
+      "neighbors": [
+        "terr-ancient-jungle-12",
+        "terr-emerald-wilds-2",
+        "terr-emerald-wilds-5"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-8",
+      "biomeId": "emerald-wilds",
+      "shapeId": "star",
+      "sizeClass": "medium",
+      "lat": 0.7897163154796426,
+      "lon": 169.4018524915606,
+      "angularRadius": 0.05068265326181427,
+      "rotation": 4.41148180099857,
+      "territoryName": "Embervane",
+      "isLive": false,
+      "colorHex": "#8fe272",
+      "seed": 2836808823,
+      "neighbors": [
+        "terr-emerald-wilds-11",
+        "terr-emerald-wilds-14",
+        "terr-emerald-wilds-17"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-9",
+      "biomeId": "emerald-wilds",
+      "shapeId": "shard",
+      "sizeClass": "medium",
+      "lat": 1.0281132998808786,
+      "lon": -67.55541790410355,
+      "angularRadius": 0.06399364904407412,
+      "rotation": 0.5764442930014537,
+      "territoryName": "Kaelgard",
+      "isLive": true,
+      "colorHex": "#b5fe81",
+      "seed": 245344362,
+      "neighbors": [
+        "terr-emerald-wilds-0",
+        "terr-emerald-wilds-6",
+        "terr-liquid-blu-metal-sea-0"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-10",
+      "biomeId": "emerald-wilds",
+      "shapeId": "ring",
+      "sizeClass": "small",
+      "lat": 20.56118825483666,
+      "lon": 69.9281128286411,
+      "angularRadius": 0.04348542749881744,
+      "rotation": 4.424058715460396,
+      "territoryName": "Aeltari",
+      "isLive": false,
+      "colorHex": "#a9f57d",
+      "seed": 3391223666,
+      "neighbors": [
+        "terr-emerald-wilds-16",
+        "terr-emerald-wilds-4",
+        "terr-molten-wastes-4"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-11",
+      "biomeId": "emerald-wilds",
+      "shapeId": "cluster",
+      "sizeClass": "large",
+      "lat": -0.8,
+      "lon": 160.54819384798284,
+      "angularRadius": 0.090627663819585,
+      "rotation": 3.5944404620729906,
+      "territoryName": "Orwyn",
+      "isLive": false,
+      "colorHex": "#a8f47c",
+      "seed": 2392581116,
+      "neighbors": [
+        "terr-emerald-wilds-14",
+        "terr-emerald-wilds-17",
+        "terr-emerald-wilds-2",
+        "terr-emerald-wilds-8"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-12",
+      "biomeId": "emerald-wilds",
+      "shapeId": "blob-2",
+      "sizeClass": "large",
+      "lat": 5.2593493282446335,
+      "lon": -88.01275689574334,
+      "angularRadius": 0.08173688138555735,
+      "rotation": 3.144489172870019,
+      "territoryName": "Volholt",
+      "isLive": true,
+      "colorHex": "#aaf67d",
+      "seed": 1859217232,
+      "neighbors": [
+        "terr-emerald-wilds-15",
+        "terr-emerald-wilds-3",
+        "terr-whispering-desert-10"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-13",
+      "biomeId": "emerald-wilds",
+      "shapeId": "blob-1",
+      "sizeClass": "small",
+      "lat": -0.8,
+      "lon": 138.47336268354545,
+      "angularRadius": 0.03267155349999666,
+      "rotation": 2.664996394768315,
+      "territoryName": "Fennholt",
+      "isLive": false,
+      "colorHex": "#a1ef79",
+      "seed": 2161695959,
+      "neighbors": [
+        "terr-liquid-blu-metal-sea-1",
+        "terr-liquid-blu-metal-sea-3",
+        "terr-liquid-blu-metal-sea-7"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-14",
+      "biomeId": "emerald-wilds",
+      "shapeId": "cluster",
+      "sizeClass": "small",
+      "lat": -0.8,
+      "lon": 165.33191529237408,
+      "angularRadius": 0.042301874093711375,
+      "rotation": 0.48308916616855957,
+      "territoryName": "Orwick",
+      "isLive": false,
+      "colorHex": "#95e675",
+      "seed": 18106408,
+      "neighbors": [
+        "terr-emerald-wilds-11",
+        "terr-emerald-wilds-17",
+        "terr-emerald-wilds-5",
+        "terr-emerald-wilds-8"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-15",
+      "biomeId": "emerald-wilds",
+      "shapeId": "star",
+      "sizeClass": "medium",
+      "lat": 10.62681683251653,
+      "lon": -76.52944626471289,
+      "angularRadius": 0.05418383606243879,
+      "rotation": 1.09876577531917,
+      "territoryName": "Aeldor",
+      "isLive": false,
+      "colorHex": "#a5f27b",
+      "seed": 3329955413,
+      "neighbors": [
+        "terr-emerald-wilds-0",
+        "terr-emerald-wilds-12",
+        "terr-emerald-wilds-3",
+        "terr-liquid-blu-metal-sea-2"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-16",
+      "biomeId": "emerald-wilds",
+      "shapeId": "star",
+      "sizeClass": "large",
+      "lat": 20.8,
+      "lon": 83.11775277784838,
+      "angularRadius": 0.0792878000875935,
+      "rotation": 4.369897827944892,
+      "territoryName": "Grimdor",
+      "isLive": false,
+      "colorHex": "#93e474",
+      "seed": 3567524904,
+      "neighbors": [
+        "terr-ancient-jungle-8",
+        "terr-emerald-wilds-1",
+        "terr-emerald-wilds-10",
+        "terr-emerald-wilds-4"
+      ]
+    },
+    {
+      "id": "terr-emerald-wilds-17",
+      "biomeId": "emerald-wilds",
+      "shapeId": "cluster",
+      "sizeClass": "medium",
+      "lat": -0.8,
+      "lon": 173.98005469086146,
+      "angularRadius": 0.05466554793110118,
+      "rotation": 5.9492612180609346,
+      "territoryName": "Wyrgard",
+      "isLive": false,
+      "colorHex": "#94e574",
+      "seed": 1598409678,
+      "neighbors": [
+        "terr-emerald-wilds-11",
+        "terr-emerald-wilds-14",
+        "terr-emerald-wilds-8"
+      ]
+    },
+    {
+      "id": "terr-liquid-blu-metal-sea-0",
+      "biomeId": "liquid-blu-metal-sea",
+      "shapeId": "cluster",
+      "sizeClass": "small",
+      "lat": -8.443305965495181,
+      "lon": -58.276165758725256,
+      "angularRadius": 0.03245602484606207,
+      "rotation": 4.093751959006742,
+      "territoryName": "Grimsera",
+      "isLive": true,
+      "colorHex": "#2ec8e8",
+      "seed": 2866255498,
+      "neighbors": [
+        "terr-emerald-wilds-6",
+        "terr-emerald-wilds-9",
+        "terr-liquid-blu-metal-sea-2",
+        "terr-liquid-blu-metal-sea-4"
+      ]
+    },
+    {
+      "id": "terr-liquid-blu-metal-sea-1",
+      "biomeId": "liquid-blu-metal-sea",
+      "shapeId": "cluster",
+      "sizeClass": "medium",
+      "lat": -9.545367555681404,
+      "lon": 129.15070011257194,
+      "angularRadius": 0.06342721003154293,
+      "rotation": 3.188378306902904,
+      "territoryName": "Fenntari",
+      "isLive": false,
+      "colorHex": "#33d6f3",
+      "seed": 2482338962,
+      "neighbors": [
+        "terr-emerald-wilds-13",
+        "terr-liquid-blu-metal-sea-5",
+        "terr-liquid-blu-metal-sea-6",
+        "terr-liquid-blu-metal-sea-8"
+      ]
+    },
+    {
+      "id": "terr-liquid-blu-metal-sea-2",
+      "biomeId": "liquid-blu-metal-sea",
+      "shapeId": "blob-2",
+      "sizeClass": "large",
+      "lat": -8.550021092987496,
+      "lon": -46.305496753056595,
+      "angularRadius": 0.08562923105852678,
+      "rotation": 2.5839511705894203,
+      "territoryName": "Fennholt",
+      "isLive": false,
+      "colorHex": "#2ec9e9",
+      "seed": 1501788741,
+      "neighbors": [
+        "terr-emerald-wilds-15",
+        "terr-liquid-blu-metal-sea-0",
+        "terr-liquid-blu-metal-sea-4"
+      ]
+    },
+    {
+      "id": "terr-liquid-blu-metal-sea-3",
+      "biomeId": "liquid-blu-metal-sea",
+      "shapeId": "cluster",
+      "sizeClass": "medium",
+      "lat": -11.10672927507092,
+      "lon": 140.42546720957532,
+      "angularRadius": 0.05616788414632902,
+      "rotation": 2.292985511410378,
+      "territoryName": "Orgard",
+      "isLive": true,
+      "colorHex": "#33d6f4",
+      "seed": 1247083039,
+      "neighbors": [
+        "terr-emerald-wilds-13",
+        "terr-liquid-blu-metal-sea-6",
+        "terr-liquid-blu-metal-sea-7"
+      ]
+    },
+    {
+      "id": "terr-liquid-blu-metal-sea-4",
+      "biomeId": "liquid-blu-metal-sea",
+      "shapeId": "ring",
+      "sizeClass": "small",
+      "lat": -14.912085365420364,
+      "lon": -53.321212464842944,
+      "angularRadius": 0.039933838308788834,
+      "rotation": 4.49977601540129,
+      "territoryName": "Grimric",
+      "isLive": false,
+      "colorHex": "#2fcaea",
+      "seed": 2813396872,
+      "neighbors": [
+        "terr-emerald-wilds-6",
+        "terr-liquid-blu-metal-sea-0",
+        "terr-liquid-blu-metal-sea-2"
+      ]
+    },
+    {
+      "id": "terr-liquid-blu-metal-sea-5",
+      "biomeId": "liquid-blu-metal-sea",
+      "shapeId": "ring",
+      "sizeClass": "medium",
+      "lat": -7.4808314496895605,
+      "lon": 119.35756716515276,
+      "angularRadius": 0.05115242452267558,
+      "rotation": 5.899972427064949,
+      "territoryName": "Orwick",
+      "isLive": false,
+      "colorHex": "#35dbf8",
+      "seed": 3474071611,
+      "neighbors": [
+        "terr-liquid-blu-metal-sea-1",
+        "terr-liquid-blu-metal-sea-6",
+        "terr-liquid-blu-metal-sea-8"
+      ]
+    },
+    {
+      "id": "terr-liquid-blu-metal-sea-6",
+      "biomeId": "liquid-blu-metal-sea",
+      "shapeId": "cluster",
+      "sizeClass": "large",
+      "lat": -15.16,
+      "lon": 130.3338001866218,
+      "angularRadius": 0.09362742319889367,
+      "rotation": 3.095603351436476,
+      "territoryName": "Wyrgard",
+      "isLive": false,
+      "colorHex": "#37e0fc",
+      "seed": 3992346670,
+      "neighbors": [
+        "terr-liquid-blu-metal-sea-1",
+        "terr-liquid-blu-metal-sea-3",
+        "terr-liquid-blu-metal-sea-5"
+      ]
+    },
+    {
+      "id": "terr-liquid-blu-metal-sea-7",
+      "biomeId": "liquid-blu-metal-sea",
+      "shapeId": "cluster",
+      "sizeClass": "medium",
+      "lat": -4.956552829198464,
+      "lon": 143.48211853253343,
+      "angularRadius": 0.05398426273837686,
+      "rotation": 3.08063569089905,
+      "territoryName": "Voldor",
+      "isLive": false,
+      "colorHex": "#33d4f2",
+      "seed": 4280652470,
+      "neighbors": [
+        "terr-emerald-wilds-13",
+        "terr-emerald-wilds-2",
+        "terr-liquid-blu-metal-sea-3"
+      ]
+    },
+    {
+      "id": "terr-liquid-blu-metal-sea-8",
+      "biomeId": "liquid-blu-metal-sea",
+      "shapeId": "blob-2",
+      "sizeClass": "medium",
+      "lat": -11.788764467349019,
+      "lon": 109.87491468751757,
+      "angularRadius": 0.06442511240486057,
+      "rotation": 5.7749000849570145,
+      "territoryName": "Emberdor",
+      "isLive": false,
+      "colorHex": "#33d4f2",
+      "seed": 3765314488,
+      "neighbors": [
+        "terr-crystal-basin-5",
+        "terr-liquid-blu-metal-sea-1",
+        "terr-liquid-blu-metal-sea-5"
+      ]
+    },
+    {
+      "id": "terr-molten-wastes-0",
+      "biomeId": "molten-wastes",
+      "shapeId": "cluster",
+      "sizeClass": "medium",
+      "lat": -26.523631349967033,
+      "lon": 16.385125033557415,
+      "angularRadius": 0.060681878374889496,
+      "rotation": 3.25566723985991,
+      "territoryName": "Dusmeer",
+      "isLive": false,
+      "colorHex": "#fc7823",
+      "seed": 237300758,
+      "neighbors": [
+        "terr-molten-wastes-1",
+        "terr-molten-wastes-2",
+        "terr-molten-wastes-3",
+        "terr-molten-wastes-4"
+      ]
+    },
+    {
+      "id": "terr-molten-wastes-1",
+      "biomeId": "molten-wastes",
+      "shapeId": "hex",
+      "sizeClass": "large",
+      "lat": -22.45419274445684,
+      "lon": 10.591886012594722,
+      "angularRadius": 0.08666615358274429,
+      "rotation": 5.654373983143951,
+      "territoryName": "Grimwyn",
+      "isLive": false,
+      "colorHex": "#fb7723",
+      "seed": 1648679446,
+      "neighbors": [
+        "terr-molten-wastes-0",
+        "terr-molten-wastes-2",
+        "terr-molten-wastes-3",
+        "terr-molten-wastes-5"
+      ]
+    },
+    {
+      "id": "terr-molten-wastes-2",
+      "biomeId": "molten-wastes",
+      "shapeId": "blob-2",
+      "sizeClass": "medium",
+      "lat": -27.28,
+      "lon": 3.839143912239702,
+      "angularRadius": 0.06054008842026815,
+      "rotation": 5.662570986707766,
+      "territoryName": "Sylvric",
+      "isLive": false,
+      "colorHex": "#f17021",
+      "seed": 149511137,
+      "neighbors": [
+        "terr-molten-wastes-0",
+        "terr-molten-wastes-1",
+        "terr-molten-wastes-5"
+      ]
+    },
+    {
+      "id": "terr-molten-wastes-3",
+      "biomeId": "molten-wastes",
+      "shapeId": "crescent",
+      "sizeClass": "medium",
+      "lat": -23.993530147179513,
+      "lon": 26.894819197989868,
+      "angularRadius": 0.0667461379156448,
+      "rotation": 2.594389658697206,
+      "territoryName": "Thalmeer",
+      "isLive": false,
+      "colorHex": "#dd621d",
+      "seed": 2658356306,
+      "neighbors": [
+        "terr-molten-wastes-0",
+        "terr-molten-wastes-1",
+        "terr-molten-wastes-4"
+      ]
+    },
+    {
+      "id": "terr-molten-wastes-4",
+      "biomeId": "molten-wastes",
+      "shapeId": "ring",
+      "sizeClass": "medium",
+      "lat": -27.28,
+      "lon": 30.695123246713482,
+      "angularRadius": 0.0547642695424147,
+      "rotation": 1.5342576319658798,
+      "territoryName": "Kaelvane",
+      "isLive": false,
+      "colorHex": "#e5681f",
+      "seed": 4085872782,
+      "neighbors": [
+        "terr-emerald-wilds-10",
+        "terr-molten-wastes-0",
+        "terr-molten-wastes-3"
+      ]
+    },
+    {
+      "id": "terr-molten-wastes-5",
+      "biomeId": "molten-wastes",
+      "shapeId": "spit",
+      "sizeClass": "medium",
+      "lat": -27.28,
+      "lon": -6.208767597904226,
+      "angularRadius": 0.061333807229995735,
+      "rotation": 4.316005491227035,
+      "territoryName": "Dusholt",
+      "isLive": false,
+      "colorHex": "#eb6c20",
+      "seed": 3072848658,
+      "neighbors": [
+        "terr-molten-wastes-1",
+        "terr-molten-wastes-2",
+        "terr-void-scar-5"
+      ]
+    },
+    {
+      "id": "terr-toxic-expanse-0",
+      "biomeId": "toxic-expanse",
+      "shapeId": "ring",
+      "sizeClass": "large",
+      "lat": -36.66655836918403,
+      "lon": 160.74418779462576,
+      "angularRadius": 0.10242202125443145,
+      "rotation": 1.8867533066427573,
+      "territoryName": "Fennash",
+      "isLive": false,
+      "colorHex": "#9edf2e",
+      "seed": 3873045478,
+      "neighbors": [
+        "terr-toxic-expanse-1",
+        "terr-toxic-expanse-2",
+        "terr-toxic-expanse-4",
+        "terr-toxic-expanse-6"
+      ]
+    },
+    {
+      "id": "terr-toxic-expanse-1",
+      "biomeId": "toxic-expanse",
+      "shapeId": "cluster",
+      "sizeClass": "small",
+      "lat": -36.18615499826992,
+      "lon": 177.5458061663039,
+      "angularRadius": 0.03422483545355499,
+      "rotation": 2.4732177092734253,
+      "territoryName": "Orwick",
+      "isLive": false,
+      "colorHex": "#a4e730",
+      "seed": 1514447658,
+      "neighbors": [
+        "terr-toxic-expanse-0",
+        "terr-toxic-expanse-4",
+        "terr-toxic-expanse-6"
+      ]
+    },
+    {
+      "id": "terr-toxic-expanse-2",
+      "biomeId": "toxic-expanse",
+      "shapeId": "ring",
+      "sizeClass": "medium",
+      "lat": -38.66689473673456,
+      "lon": 148.8237789176254,
+      "angularRadius": 0.05647491821739823,
+      "rotation": 1.656514501918098,
+      "territoryName": "Embervane",
+      "isLive": false,
+      "colorHex": "#a5e930",
+      "seed": 3487437788,
+      "neighbors": [
+        "terr-toxic-expanse-0",
+        "terr-toxic-expanse-3",
+        "terr-toxic-expanse-5"
+      ]
+    },
+    {
+      "id": "terr-toxic-expanse-3",
+      "biomeId": "toxic-expanse",
+      "shapeId": "hex",
+      "sizeClass": "large",
+      "lat": -39.28,
+      "lon": 141.17111365850326,
+      "angularRadius": 0.0965343076963909,
+      "rotation": 3.890822126324669,
+      "territoryName": "Orric",
+      "isLive": false,
+      "colorHex": "#a6ea31",
+      "seed": 1200713018,
+      "neighbors": [
+        "terr-crystal-basin-6",
+        "terr-toxic-expanse-2",
+        "terr-toxic-expanse-5"
+      ]
+    },
+    {
+      "id": "terr-toxic-expanse-4",
+      "biomeId": "toxic-expanse",
+      "shapeId": "hex",
+      "sizeClass": "medium",
+      "lat": -30.798229407860067,
+      "lon": 170.7589008273299,
+      "angularRadius": 0.055549704064615076,
+      "rotation": 3.561393764402529,
+      "territoryName": "Ordor",
+      "isLive": false,
+      "colorHex": "#9ee02e",
+      "seed": 1622180194,
+      "neighbors": [
+        "terr-toxic-expanse-0",
+        "terr-toxic-expanse-1",
+        "terr-toxic-expanse-5",
+        "terr-toxic-expanse-6"
+      ]
+    },
+    {
+      "id": "terr-toxic-expanse-5",
+      "biomeId": "toxic-expanse",
+      "shapeId": "crescent",
+      "sizeClass": "large",
+      "lat": -34.21624038754495,
+      "lon": 132.86875038197397,
+      "angularRadius": 0.08535181979136541,
+      "rotation": 3.782249447676803,
+      "territoryName": "Kaelgard",
+      "isLive": true,
+      "colorHex": "#b2f935",
+      "seed": 2056590410,
+      "neighbors": [
+        "terr-toxic-expanse-2",
+        "terr-toxic-expanse-3",
+        "terr-toxic-expanse-4",
+        "terr-void-scar-12"
+      ]
+    },
+    {
+      "id": "terr-toxic-expanse-6",
+      "biomeId": "toxic-expanse",
+      "shapeId": "crescent",
+      "sizeClass": "large",
+      "lat": -39.28,
+      "lon": 168.2551241138413,
+      "angularRadius": 0.09942553959041833,
+      "rotation": 4.903405451913165,
+      "territoryName": "Orric",
+      "isLive": false,
+      "colorHex": "#a7eb31",
+      "seed": 2076738641,
+      "neighbors": [
+        "terr-toxic-expanse-0",
+        "terr-toxic-expanse-1",
+        "terr-toxic-expanse-4"
+      ]
+    },
+    {
+      "id": "terr-crystal-basin-0",
+      "biomeId": "crystal-basin",
+      "shapeId": "blob-2",
+      "sizeClass": "small",
+      "lat": -42.972598995451634,
+      "lon": 113.11369450762868,
+      "angularRadius": 0.0405337179787457,
+      "rotation": 6.029291003005567,
+      "territoryName": "Kaelvane",
+      "isLive": true,
+      "colorHex": "#7be7f4",
+      "seed": 1343400417,
+      "neighbors": [
+        "terr-crystal-basin-4",
+        "terr-crystal-basin-5",
+        "terr-crystal-basin-6"
+      ]
+    },
+    {
+      "id": "terr-crystal-basin-1",
+      "biomeId": "crystal-basin",
+      "shapeId": "hex",
+      "sizeClass": "small",
+      "lat": -42.90794033569662,
+      "lon": -123.4306000394281,
+      "angularRadius": 0.03792983568925411,
+      "rotation": 2.645497010472119,
+      "territoryName": "Wyrric",
+      "isLive": false,
+      "colorHex": "#88f4fe",
+      "seed": 1829377653,
+      "neighbors": [
+        "terr-crystal-basin-2",
+        "terr-crystal-basin-3",
+        "terr-crystal-basin-7"
+      ]
+    },
+    {
+      "id": "terr-crystal-basin-2",
+      "biomeId": "crystal-basin",
+      "shapeId": "crescent",
+      "sizeClass": "medium",
+      "lat": -42.05003055849752,
+      "lon": -107.46869080943299,
+      "angularRadius": 0.055066316540353,
+      "rotation": 0.3090214315258631,
+      "territoryName": "Kaeltari",
+      "isLive": true,
+      "colorHex": "#76e2f1",
+      "seed": 4095693074,
+      "neighbors": [
+        "terr-crystal-basin-1",
+        "terr-crystal-basin-3",
+        "terr-void-scar-7"
+      ]
+    },
+    {
+      "id": "terr-crystal-basin-3",
+      "biomeId": "crystal-basin",
+      "shapeId": "hex",
+      "sizeClass": "medium",
+      "lat": -43.51066745953513,
+      "lon": -136.89857139899013,
+      "angularRadius": 0.055299946924205874,
+      "rotation": 5.468127850479236,
+      "territoryName": "Aeldor",
+      "isLive": false,
+      "colorHex": "#6ad6e8",
+      "seed": 583461965,
+      "neighbors": [
+        "terr-crystal-basin-1",
+        "terr-crystal-basin-2",
+        "terr-void-scar-10"
+      ]
+    },
+    {
+      "id": "terr-crystal-basin-4",
+      "biomeId": "crystal-basin",
+      "shapeId": "hex",
+      "sizeClass": "medium",
+      "lat": -49.618922807016496,
+      "lon": 111.74876917402086,
+      "angularRadius": 0.06340586335258559,
+      "rotation": 3.634871232896881,
+      "territoryName": "Stormdor",
+      "isLive": false,
+      "colorHex": "#76e2f1",
+      "seed": 993869409,
+      "neighbors": [
+        "terr-crystal-basin-0",
+        "terr-crystal-basin-5",
+        "terr-crystal-basin-6"
+      ]
+    },
+    {
+      "id": "terr-crystal-basin-5",
+      "biomeId": "crystal-basin",
+      "shapeId": "cluster",
+      "sizeClass": "large",
+      "lat": -40.84,
+      "lon": 102.88258711125917,
+      "angularRadius": 0.10543904651608318,
+      "rotation": 5.16015857450559,
+      "territoryName": "Aelgard",
+      "isLive": false,
+      "colorHex": "#6fdbec",
+      "seed": 3846201347,
+      "neighbors": [
+        "terr-crystal-basin-0",
+        "terr-crystal-basin-4",
+        "terr-liquid-blu-metal-sea-8"
+      ]
+    },
+    {
+      "id": "terr-crystal-basin-6",
+      "biomeId": "crystal-basin",
+      "shapeId": "cluster",
+      "sizeClass": "large",
+      "lat": -50.16825103165853,
+      "lon": 123.10518783076105,
+      "angularRadius": 0.10334084670245647,
+      "rotation": 2.6745731860915427,
+      "territoryName": "Wyrthorn",
+      "isLive": false,
+      "colorHex": "#82eefa",
+      "seed": 293835879,
+      "neighbors": [
+        "terr-crystal-basin-0",
+        "terr-crystal-basin-4",
+        "terr-toxic-expanse-3"
+      ]
+    },
+    {
+      "id": "terr-crystal-basin-7",
+      "biomeId": "crystal-basin",
+      "shapeId": "blob-2",
+      "sizeClass": "medium",
+      "lat": -53.16,
+      "lon": -124.18672872897687,
+      "angularRadius": 0.05293620213866234,
+      "rotation": 3.950432148155633,
+      "territoryName": "Stormmeer",
+      "isLive": false,
+      "colorHex": "#6bd7e9",
+      "seed": 4148478415,
+      "neighbors": [
+        "terr-crystal-basin-1",
+        "terr-void-scar-0",
+        "terr-void-scar-2",
+        "terr-void-scar-7"
+      ]
+    },
+    {
+      "id": "terr-void-scar-0",
+      "biomeId": "void-scar",
+      "shapeId": "blob-1",
+      "sizeClass": "medium",
+      "lat": -61.1082845531271,
+      "lon": -127.01259794994257,
+      "angularRadius": 0.06356100079230964,
+      "rotation": 5.477655075212103,
+      "territoryName": "Sylvric",
+      "isLive": false,
+      "colorHex": "#9a4fd2",
+      "seed": 734536807,
+      "neighbors": [
+        "terr-crystal-basin-7",
+        "terr-void-scar-10",
+        "terr-void-scar-2"
+      ]
+    },
+    {
+      "id": "terr-void-scar-1",
+      "biomeId": "void-scar",
+      "shapeId": "cluster",
+      "sizeClass": "small",
+      "lat": -61.02483888682847,
+      "lon": -38.33762773638591,
+      "angularRadius": 0.03279801790043712,
+      "rotation": 5.433729221935428,
+      "territoryName": "Aelwyn",
+      "isLive": false,
+      "colorHex": "#994fd1",
+      "seed": 1501155578,
+      "neighbors": [
+        "terr-void-scar-11",
+        "terr-void-scar-3",
+        "terr-void-scar-5",
+        "terr-void-scar-9"
+      ]
+    },
+    {
+      "id": "terr-void-scar-2",
+      "biomeId": "void-scar",
+      "shapeId": "blob-1",
+      "sizeClass": "medium",
+      "lat": -58.66866631086075,
+      "lon": -135.1247769877262,
+      "angularRadius": 0.053768881279043855,
+      "rotation": 2.7726087686384897,
+      "territoryName": "Stormholt",
+      "isLive": false,
+      "colorHex": "#bd66f8",
+      "seed": 2857468292,
+      "neighbors": [
+        "terr-crystal-basin-7",
+        "terr-void-scar-0",
+        "terr-void-scar-10",
+        "terr-void-scar-6"
+      ]
+    },
+    {
+      "id": "terr-void-scar-3",
+      "biomeId": "void-scar",
+      "shapeId": "blob-2",
+      "sizeClass": "medium",
+      "lat": -55.683424629672416,
+      "lon": -37.22107878156215,
+      "angularRadius": 0.06586330554867163,
+      "rotation": 3.0456722794240507,
+      "territoryName": "Wyrvane",
+      "isLive": false,
+      "colorHex": "#a859e2",
+      "seed": 96908829,
+      "neighbors": [
+        "terr-void-scar-1",
+        "terr-void-scar-5",
+        "terr-void-scar-9"
+      ]
+    },
+    {
+      "id": "terr-void-scar-4",
+      "biomeId": "void-scar",
+      "shapeId": "crescent",
+      "sizeClass": "large",
+      "lat": -65.10530735658534,
+      "lon": -149.8331817418948,
+      "angularRadius": 0.10598629018245265,
+      "rotation": 3.741760966197604,
+      "territoryName": "Emberthorn",
+      "isLive": false,
+      "colorHex": "#c169fb",
+      "seed": 2751156650,
+      "neighbors": [
+        "terr-void-scar-12",
+        "terr-void-scar-6",
+        "terr-void-scar-8"
+      ]
+    },
+    {
+      "id": "terr-void-scar-5",
+      "biomeId": "void-scar",
+      "shapeId": "cluster",
+      "sizeClass": "large",
+      "lat": -67.58877143101432,
+      "lon": -25.633007498689775,
+      "angularRadius": 0.09850696745049209,
+      "rotation": 5.778254057257709,
+      "territoryName": "Dusthorn",
+      "isLive": false,
+      "colorHex": "#a356dd",
+      "seed": 3553198815,
+      "neighbors": [
+        "terr-molten-wastes-5",
+        "terr-void-scar-1",
+        "terr-void-scar-3"
+      ]
+    },
+    {
+      "id": "terr-void-scar-6",
+      "biomeId": "void-scar",
+      "shapeId": "cluster",
+      "sizeClass": "medium",
+      "lat": -55.76352852619508,
+      "lon": -149.48368734127862,
+      "angularRadius": 0.0662172999153845,
+      "rotation": 5.467007811139388,
+      "territoryName": "Stormgard",
+      "isLive": false,
+      "colorHex": "#ac5be6",
+      "seed": 3377943762,
+      "neighbors": [
+        "terr-void-scar-10",
+        "terr-void-scar-2",
+        "terr-void-scar-4",
+        "terr-void-scar-8"
+      ]
+    },
+    {
+      "id": "terr-void-scar-7",
+      "biomeId": "void-scar",
+      "shapeId": "blob-1",
+      "sizeClass": "large",
+      "lat": -56.06467245909865,
+      "lon": -101.97940187249303,
+      "angularRadius": 0.1017598649575375,
+      "rotation": 5.0657512804171345,
+      "territoryName": "Thaltari",
+      "isLive": false,
+      "colorHex": "#b863f3",
+      "seed": 1383145548,
+      "neighbors": [
+        "terr-crystal-basin-2",
+        "terr-crystal-basin-7",
+        "terr-void-scar-11"
+      ]
+    },
+    {
+      "id": "terr-void-scar-8",
+      "biomeId": "void-scar",
+      "shapeId": "cluster",
+      "sizeClass": "large",
+      "lat": -67.1084920260918,
+      "lon": -159.95144345055613,
+      "angularRadius": 0.08237024027807638,
+      "rotation": 1.3421814942637689,
+      "territoryName": "Sylvwyn",
+      "isLive": true,
+      "colorHex": "#9e52d8",
+      "seed": 1107732766,
+      "neighbors": [
+        "terr-void-scar-12",
+        "terr-void-scar-4",
+        "terr-void-scar-6"
+      ]
+    },
+    {
+      "id": "terr-void-scar-9",
+      "biomeId": "void-scar",
+      "shapeId": "spit",
+      "sizeClass": "large",
+      "lat": -55.2,
+      "lon": -73.02318649124201,
+      "angularRadius": 0.08852185508888215,
+      "rotation": 0.566350594204098,
+      "territoryName": "Sylvvane",
+      "isLive": false,
+      "colorHex": "#a959e2",
+      "seed": 2945245349,
+      "neighbors": [
+        "terr-void-scar-1",
+        "terr-void-scar-11",
+        "terr-void-scar-3"
+      ]
+    },
+    {
+      "id": "terr-void-scar-10",
+      "biomeId": "void-scar",
+      "shapeId": "ring",
+      "sizeClass": "medium",
+      "lat": -55.2,
+      "lon": -139.87197614361176,
+      "angularRadius": 0.06540450145490467,
+      "rotation": 5.084159067426779,
+      "territoryName": "Grimsera",
+      "isLive": false,
+      "colorHex": "#be67f9",
+      "seed": 3612196707,
+      "neighbors": [
+        "terr-crystal-basin-3",
+        "terr-void-scar-0",
+        "terr-void-scar-2",
+        "terr-void-scar-6"
+      ]
+    },
+    {
+      "id": "terr-void-scar-11",
+      "biomeId": "void-scar",
+      "shapeId": "spit",
+      "sizeClass": "large",
+      "lat": -61.691916872483425,
+      "lon": -78.10996514251441,
+      "angularRadius": 0.09743316960940138,
+      "rotation": 1.2284044728455652,
+      "territoryName": "Embervane",
+      "isLive": false,
+      "colorHex": "#b360ed",
+      "seed": 1995170525,
+      "neighbors": [
+        "terr-void-scar-1",
+        "terr-void-scar-7",
+        "terr-void-scar-9"
+      ]
+    },
+    {
+      "id": "terr-void-scar-12",
+      "biomeId": "void-scar",
+      "shapeId": "star",
+      "sizeClass": "medium",
+      "lat": -65.55371337288182,
+      "lon": -173.336668039173,
+      "angularRadius": 0.05143924061348662,
+      "rotation": 1.5105695869780102,
+      "territoryName": "Kaelash",
+      "isLive": false,
+      "colorHex": "#ac5be6",
+      "seed": 2246274067,
+      "neighbors": [
+        "terr-toxic-expanse-5",
+        "terr-void-scar-4",
+        "terr-void-scar-8"
+      ]
+    }
+  ]
+}

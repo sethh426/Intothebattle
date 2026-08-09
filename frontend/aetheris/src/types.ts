@@ -30,6 +30,7 @@ export interface Territory {
   isLive: boolean
   colorHex: string
   seed: number
+  neighbors: string[]
 }
 
 export interface ShapeFootprint {
@@ -76,6 +77,92 @@ export interface KingdomState {
   activeCount?: number
   kills?: number
   score?: number
+  claimType?: 'home' | 'conquest'
+  shieldUntil?: string | null
+}
+
+export interface WarClaim {
+  territoryId: string
+  claimType: 'home' | 'conquest'
+  holderName: string
+  isLive: boolean
+  viewerTier: ViewerTier
+  activeCount: number
+  kills: number
+  score: number
+  shieldUntil: string | null
+  claimedAt: string
+}
+
+export type WarCampaignPhase = 'mobilizing' | 'scoring' | 'deadline' | 'resolved' | 'withdrawn' | 'cancelled'
+
+export interface WarCampaign {
+  id: number
+  territoryId: string
+  originTerritoryId: string
+  mode: 'pvp' | 'expedition'
+  phase: WarCampaignPhase
+  status: string
+  attackerHandle: string
+  defenderHandle: string
+  declaredAt: string
+  scoringStartsAt: string
+  endsAt: string
+  attackerWins: number
+  defenderWins: number
+}
+
+export interface AetherisSeason {
+  id: number
+  key: string
+  startsAt: string
+  endsAt: string
+  status: string
+}
+
+export interface AetherisWorldState {
+  success: boolean
+  serverTime: string
+  season: AetherisSeason | null
+  claims: Record<string, WarClaim>
+  campaigns: WarCampaign[]
+}
+
+export interface CreatorHolding {
+  territoryId: string
+  claimType: 'home' | 'conquest'
+  shieldUntil: string | null
+  claimedAt: string
+}
+
+export interface CreatorWarRound {
+  id: number
+  roundNumber: number
+  side: 'attacker' | 'defender'
+  status: string
+  score: number
+  participantCount: number
+  startedAt: string
+  endsAt: string
+}
+
+export interface CreatorWarStatus {
+  success: boolean
+  season: AetherisSeason | null
+  profile: {
+    optedIn: boolean
+    homeTerritoryId: string | null
+    reentryAllowedAt: string | null
+  }
+  holdings: CreatorHolding[]
+  activeCampaign: WarCampaign | null
+  rounds: CreatorWarRound[]
+  activeRound: {
+    campaignId: number
+    roundNumber: number
+    side: 'attacker' | 'defender'
+    endsAt: string
+  } | null
 }
 
 // 'mock' -- local deterministic simulator (dev/QA, used by /aetheris-preview).

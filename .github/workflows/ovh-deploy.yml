@@ -98,8 +98,17 @@ jobs:
           archive="/tmp/intothebattle-$commit.tar.gz"
           app_dir=/opt/intothebattle
           backup_dir="/opt/intothebattle.previous-$(date +%Y%m%d%H%M%S)"
+          db_backup_dir=/opt/intothebattle-db-backups
+          db_backup="$db_backup_dir/intothebattle-before-$commit-$(date +%Y%m%d%H%M%S).dump"
 
           test -f "$archive"
+          if docker inspect intothebattle-postgres-1 >/dev/null 2>&1; then
+            sudo mkdir -p "$db_backup_dir"
+            docker exec intothebattle-postgres-1 pg_dump -U intothebattle -d intothebattle -Fc | sudo tee "$db_backup" >/dev/null
+            sudo test -s "$db_backup"
+            sudo find "$db_backup_dir" -type f -name 'intothebattle-before-*.dump' -mtime +14 -delete
+            echo "Database backup created: $db_backup"
+          fi
           sudo mv "$app_dir" "$backup_dir"
           sudo mkdir -p "$app_dir"
           sudo tar -xzf "$archive" -C "$app_dir"

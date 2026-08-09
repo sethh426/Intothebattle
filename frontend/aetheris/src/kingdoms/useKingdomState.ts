@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { KINGDOM, mulberry32 } from '../config'
 import { createWorldSocketClient } from './worldSocketClient'
-import type { DataMode, KingdomState, Territory, ViewerTier } from '../types'
+import type { AetherisWorldState, DataMode, KingdomState, Territory, ViewerTier } from '../types'
 
 function pickTier(rng: () => number): ViewerTier {
   const r = rng()
@@ -32,7 +32,42 @@ function isSameKingdomState(a: KingdomState | undefined, b: KingdomState): boole
     && toFiniteNumber(a.activeCount) === toFiniteNumber(b.activeCount)
     && toFiniteNumber(a.kills) === toFiniteNumber(b.kills)
     && toFiniteNumber(a.score) === toFiniteNumber(b.score)
+    && (a.claimType || '') === (b.claimType || '')
+    && (a.shieldUntil || '') === (b.shieldUntil || '')
   )
+}
+
+const EMPTY_WORLD_STATE: AetherisWorldState = {
+  success: true,
+  serverTime: new Date(0).toISOString(),
+  season: null,
+  claims: {},
+  campaigns: [],
+}
+
+function buildMockWorldState(territories: Territory[]): AetherisWorldState {
+  const origin = territories.find(territory => territory.id === 'terr-emerald-wilds-6') || territories[0]
+  const target = territories.find(territory => territory.id === 'terr-liquid-blu-metal-sea-0') || territories[1]
+  if (!origin || !target) return EMPTY_WORLD_STATE
+  return {
+    ...EMPTY_WORLD_STATE,
+    serverTime: new Date().toISOString(),
+    campaigns: [{
+      id: 1,
+      territoryId: target.id,
+      originTerritoryId: origin.id,
+      mode: 'pvp',
+      phase: 'mobilizing',
+      status: 'mobilizing',
+      attackerHandle: '@stormwarden',
+      defenderHandle: '@embercourt',
+      declaredAt: new Date().toISOString(),
+      scoringStartsAt: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(),
+      endsAt: new Date(Date.now() + 21 * 60 * 60 * 1000).toISOString(),
+      attackerWins: 0,
+      defenderWins: 0,
+    }],
+  }
 }
 
 function buildInitialMockState(territories: Territory[], rng: () => number): Record<string, KingdomState> {
@@ -57,11 +92,12 @@ export function useKingdomState(
   territories: Territory[],
   seed: number,
   dataMode: DataMode,
-): Record<string, KingdomState> {
+): { kingdomState: Record<string, KingdomState>; worldState: AetherisWorldState } {
   const rngRef = useRef(mulberry32(seed))
   const [state, setState] = useState<Record<string, KingdomState>>(() =>
     dataMode === 'mock' ? buildInitialMockState(territories, rngRef.current) : {},
   )
+  const [worldState, setWorldState] = useState<AetherisWorldState>(() => dataMode === 'mock' ? buildMockWorldState(territories) : EMPTY_WORLD_STATE)
 
   useEffect(() => {
     if (dataMode !== 'mock') return
@@ -103,12 +139,27 @@ export function useKingdomState(
         return { ...prev, [territoryId]: kingdomState }
       })
     })
+    const unsubscribeWorld = client.onWorldState((nextWorldState) => {
+      setWorldState(nextWorldState)
+      setState(Object.fromEntries(Object.entries(nextWorldState.claims || {}).map(([territoryId, claim]) => [territoryId, {
+        isClaimed: true,
+        isLive: claim.isLive,
+        viewerTier: claim.viewerTier,
+        holderName: claim.holderName,
+        activeCount: claim.activeCount,
+        kills: claim.kills,
+        score: claim.score,
+        claimType: claim.claimType,
+        shieldUntil: claim.shieldUntil,
+      } satisfies KingdomState])))
+    })
     client.connect()
     return () => {
       unsubscribe()
+      unsubscribeWorld()
       client.disconnect()
     }
   }, [dataMode])
 
-  return state
+  return { kingdomState: state, worldState }
 }

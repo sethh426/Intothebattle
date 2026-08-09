@@ -1,5 +1,8 @@
-JSON-LD expansion summary: files scanned: 27, expanded blocks: 14, errors: 0
+JSON-LD expansion summary: files scanned: 30, expanded blocks: 15, errors: 0
 - 404.html: no JSON-LD blocks
+- aetheris-preview.html: no JSON-LD blocks
+- aetheris.html: 1 block(s)
+  - block #1: expanded OK (pyld)
 - battle-clip.html: no JSON-LD blocks
 - battlegrounds.html: 1 block(s)
   - block #1: expanded OK (pyld)
@@ -40,3 +43,4 @@ JSON-LD expansion summary: files scanned: 27, expanded blocks: 14, errors: 0
   - block #1: expanded OK (pyld)
 - theme-samples.html: no JSON-LD blocks
 - verify-email.html: no JSON-LD blocks
+- world.html: no JSON-LD blocks

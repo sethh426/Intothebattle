@@ -247,9 +247,19 @@ function renderConsentBanner() {
       background: linear-gradient(135deg,#55e7ff,#fff0b9 60%,#ff6a3d);
     }
     @media (max-width: 620px) {
-      #itb-growth-consent { align-items: stretch; flex-direction: column; }
-      .itb-growth-consent-actions { width: 100%; }
-      .itb-growth-consent-actions button { flex: 1; }
+      #itb-growth-consent {
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        width: calc(100% - 16px);
+        gap: 8px;
+        padding: 9px;
+        border-radius: 8px;
+      }
+      .itb-growth-consent-copy strong { font-size: 11px; }
+      .itb-growth-consent-copy span { font-size: 9px; }
+      .itb-growth-consent-actions { gap: 5px; }
+      .itb-growth-consent-actions button { min-height: 34px; padding: 0 8px; border-radius: 6px; font-size: 10px; }
     }
   `;
   document.head.appendChild(style);
