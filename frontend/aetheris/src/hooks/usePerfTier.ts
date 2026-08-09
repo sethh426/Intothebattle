@@ -36,11 +36,17 @@ function tierFromFps(fps: number): PerfTier {
   return 'low'
 }
 
+function forcedPerfTier(): PerfTier | null {
+  const value = new URLSearchParams(window.location.search).get('perf')
+  return value === 'high' || value === 'medium' || value === 'low' ? value : null
+}
+
 // Samples real frame rate over the first ~1s of rendering and downgrades the quick
 // heuristic's tier if it was too optimistic (never upgrades, to avoid oscillation).
 export function usePerfTier(): PerfTier {
-  const [tier, setTier] = useState<PerfTier>(() => quickPerfTier())
-  const sample = useRef({ frames: 0, elapsed: 0, settled: false })
+  const forcedTier = useRef(forcedPerfTier())
+  const [tier, setTier] = useState<PerfTier>(() => forcedTier.current ?? quickPerfTier())
+  const sample = useRef({ frames: 0, elapsed: 0, settled: Boolean(forcedTier.current) })
 
   useFrame((_, delta) => {
     const s = sample.current

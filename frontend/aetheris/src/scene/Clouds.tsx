@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { PLANET, CLOUDS, WORLD_SEED, mulberry32 } from '../config'
+import type { PerfTier } from '../types'
 
 // Procedurally-generated soft-blotch alpha map (Canvas 2D, no image asset) — same
 // philosophy as the particle sprite texture in particleSystemBase.ts. Three.js reads
@@ -53,15 +54,20 @@ function createCloudAlphaTexture(seed: number): THREE.CanvasTexture {
 interface CloudsProps {
   // 0-1, imperatively driven by the intro sequence. Defaults to fully visible.
   introOpacityRef?: RefObject<number>
+  perfTier: PerfTier
 }
 
 // Rendered as a child of the same rotating wrapper group as Planet/Territories (so it
 // moves with user drag/auto-rotate like a real cloud layer over the planet), plus a
 // small independent extra rotation each frame for a parallax "clouds drift on their
 // own" feel on top of that shared rotation.
-export default function Clouds({ introOpacityRef }: CloudsProps) {
+export default function Clouds({ introOpacityRef, perfTier }: CloudsProps) {
   const meshRef = useRef<THREE.Mesh>(null)
-  const geometry = useMemo(() => new THREE.SphereGeometry(PLANET.radius * CLOUDS.radiusScale, 48, 48), [])
+  const segments = perfTier === 'high' ? 48 : perfTier === 'medium' ? 36 : 28
+  const geometry = useMemo(
+    () => new THREE.SphereGeometry(PLANET.radius * CLOUDS.radiusScale, segments, segments),
+    [segments],
+  )
   const alphaMap = useMemo(() => createCloudAlphaTexture(WORLD_SEED + 7), [])
   const material = useMemo(
     () =>

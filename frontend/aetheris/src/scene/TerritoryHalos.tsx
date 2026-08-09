@@ -29,10 +29,10 @@ interface TerritoryHalosProps {
 }
 
 function tierFactor(tier: ViewerTier | undefined): number {
-  if (tier === 'packed') return 1.55
-  if (tier === 'high') return 1.3
-  if (tier === 'medium') return 1.08
-  if (tier === 'low') return 0.88
+  if (tier === 'packed') return 1.18
+  if (tier === 'high') return 1.05
+  if (tier === 'medium') return 0.92
+  if (tier === 'low') return 0.82
   return 0.72
 }
 
@@ -42,16 +42,16 @@ export default function TerritoryHalos({
   selectedTerritoryId,
   sunDirectionRef,
 }: TerritoryHalosProps) {
-  const geometry = useMemo(() => new THREE.RingGeometry(0.72, 1, 56), [])
+  const geometry = useMemo(() => new THREE.RingGeometry(0.9, 1, 56, 1, 0.38, Math.PI * 1.48), [])
   const material = useMemo(
     () =>
       new THREE.MeshBasicMaterial({
         transparent: true,
-        opacity: 0.58,
+        opacity: 0.2,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         side: THREE.DoubleSide,
-        toneMapped: false,
+        toneMapped: true,
       }),
     [],
   )
@@ -87,7 +87,7 @@ export default function TerritoryHalos({
     entries.current.forEach(({ ref, baseColor, radius }, territoryId) => {
       const state = states[territoryId]
       const selected = selectedId === territoryId
-      const active = selected || state?.isLive || state?.isClaimed
+      const active = selected || state?.isLive
       if (!active) {
         ref.scale.set(HIDDEN_SCALE, HIDDEN_SCALE, HIDDEN_SCALE)
         return
@@ -97,7 +97,7 @@ export default function TerritoryHalos({
         ? Math.max(0, ref.position.clone().normalize().dot(sunDirectionRef.current))
         : 0.4
       const nightBoost = 1.15 - daylight * 0.28
-      const scale = radius * (selected ? 1.48 : tierFactor(state?.viewerTier)) * (state?.isLive ? pulse : 0.86) * nightBoost
+      const scale = radius * (selected ? 1.22 : tierFactor(state?.viewerTier)) * (state?.isLive ? pulse : 0.86) * nightBoost
       ref.scale.set(scale, scale, 1)
       tmpColor.copy(baseColor)
       if (selected) tmpColor.lerp(selectedColor, 0.62)

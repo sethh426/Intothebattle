@@ -1,12 +1,18 @@
-import { useEffect, useRef } from 'react'
+import { Suspense, useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { BIOMES } from '../data/biomeData'
+import { deriveStructureStage } from '../data/landmarkCatalog'
 import { ATMOSPHERE, CAMERA, PLANET } from '../config'
 import Planet from './Planet'
 import BiomeContours from './BiomeContours'
 import Territories from './Territories'
-import Landmarks from './Landmarks'
+import HeroLandmarks from './HeroLandmarks'
+import RegionalMonuments from './RegionalMonuments'
+import AmbientStructureClusters from './AmbientStructureClusters'
 import KingdomSilhouettes from './KingdomSilhouettes'
+import ProceduralKingdomSilhouettes from './ProceduralKingdomSilhouettes'
+import StructureAssetBoundary from './StructureAssetBoundary'
+import AetherisDiagnostics from './AetherisDiagnostics'
 import DayNightCycle from './DayNightCycle'
 import Atmosphere from './Atmosphere'
 import Clouds from './Clouds'
@@ -15,7 +21,6 @@ import RealmVeins from './RealmVeins'
 import TerminatorShadow from './TerminatorShadow'
 import TerritoryHalos from './TerritoryHalos'
 import SettlementLights from './SettlementLights'
-import OrbitBands from './OrbitBands'
 import TerritoryBanners from './TerritoryBanners'
 import CinematicPostProcessing from './CinematicPostProcessing'
 import Particles from '../particles/Particles'
@@ -23,7 +28,7 @@ import { useDragControls } from '../hooks/useDragControls'
 import { usePerfTier } from '../hooks/usePerfTier'
 import { useCameraRig } from '../hooks/useCameraRig'
 import { useWorldAnalytics } from '../hooks/useWorldAnalytics'
-import type { KingdomState, Territory, WorldFraming } from '../types'
+import type { KingdomState, StructureStage, Territory, WorldFraming } from '../types'
 
 interface SceneProps {
   reducedMotion: boolean
@@ -56,6 +61,13 @@ export default function Scene({
         fitRadius: PLANET.radius * ATMOSPHERE.radiusScale * 1.04,
       }
     : undefined)
+  const structureStages = useMemo<Record<StructureStage, number>>(() => {
+    const counts: Record<StructureStage, number> = { ruin: 0, claimed: 0, live: 0, high: 0, packed: 0 }
+    territories.forEach((territory) => {
+      counts[deriveStructureStage(kingdomState[territory.id])] += 1
+    })
+    return counts
+  }, [kingdomState, territories])
   useWorldAnalytics({ isVisible, introOpacityRef: cameraRig.introOpacityRef })
 
   useEffect(() => {
@@ -65,18 +77,32 @@ export default function Scene({
   return (
     <>
       <Starfield tier={tier} />
-      <group ref={wrapperRef}>
-        <Planet biomes={BIOMES} />
-        <BiomeContours biomes={BIOMES} />
-        <RealmVeins />
-        <TerminatorShadow sunDirectionRef={sunDirectionRef} />
+      <group ref={wrapperRef} name="aetheris-world-root">
+        <Planet biomes={BIOMES} perfTier={tier} />
+        {tier !== 'low' && <BiomeContours biomes={BIOMES} />}
+        {tier !== 'low' && <RealmVeins />}
+        <TerminatorShadow sunDirectionRef={sunDirectionRef} perfTier={tier} />
         <TerritoryHalos
           territories={territories}
           sunDirectionRef={sunDirectionRef}
           kingdomState={kingdomState}
           selectedTerritoryId={selectedTerritoryId}
         />
-        <Landmarks />
+        <HeroLandmarks
+          perfTier={tier}
+          reducedMotion={reducedMotion}
+          cameraDistanceRef={cameraRig.zoomDistanceRef}
+        />
+        <StructureAssetBoundary assetId="regional-monuments" fallback={null}>
+          <Suspense fallback={null}>
+            <RegionalMonuments territories={territories} perfTier={tier} reducedMotion={reducedMotion} />
+          </Suspense>
+        </StructureAssetBoundary>
+        <StructureAssetBoundary assetId="ambient-clusters" fallback={null}>
+          <Suspense fallback={null}>
+            <AmbientStructureClusters territories={territories} perfTier={tier} />
+          </Suspense>
+        </StructureAssetBoundary>
         <Territories
           territories={territories}
           wrapperRef={wrapperRef}
@@ -86,12 +112,29 @@ export default function Scene({
           selectedTerritoryId={selectedTerritoryId}
           onTerritorySelect={onTerritorySelect}
         />
-        <KingdomSilhouettes
-          territories={territories}
-          kingdomState={kingdomState}
-          selectedTerritoryId={selectedTerritoryId}
-          sunDirectionRef={sunDirectionRef}
-        />
+        <StructureAssetBoundary
+          assetId="stronghold-kit"
+          fallback={(
+            <ProceduralKingdomSilhouettes
+              territories={territories}
+              kingdomState={kingdomState}
+              selectedTerritoryId={selectedTerritoryId}
+              sunDirectionRef={sunDirectionRef}
+            />
+          )}
+        >
+          <Suspense fallback={null}>
+            <KingdomSilhouettes
+              territories={territories}
+              kingdomState={kingdomState}
+              selectedTerritoryId={selectedTerritoryId}
+              sunDirectionRef={sunDirectionRef}
+              perfTier={tier}
+              reducedMotion={reducedMotion}
+              cameraDistanceRef={cameraRig.zoomDistanceRef}
+            />
+          </Suspense>
+        </StructureAssetBoundary>
         <TerritoryBanners
           territories={territories}
           kingdomState={kingdomState}
@@ -103,13 +146,13 @@ export default function Scene({
           kingdomState={kingdomState}
           selectedTerritoryId={selectedTerritoryId}
         />
-        <OrbitBands paused={reducedMotion} />
-        <Clouds introOpacityRef={cameraRig.introOpacityRef} />
-        <Atmosphere introOpacityRef={cameraRig.introOpacityRef} />
+        <Clouds introOpacityRef={cameraRig.introOpacityRef} perfTier={tier} />
+        <Atmosphere introOpacityRef={cameraRig.introOpacityRef} perfTier={tier} />
         <Particles tier={tier} paused={reducedMotion} zoomDistanceRef={cameraRig.zoomDistanceRef} />
         <DayNightCycle wrapperRef={wrapperRef} sunDirectionRef={sunDirectionRef} paused={reducedMotion} />
       </group>
       <CinematicPostProcessing tier={tier} reducedMotion={reducedMotion} />
+      <AetherisDiagnostics perfTier={tier} structureStages={structureStages} />
     </>
   )
 }

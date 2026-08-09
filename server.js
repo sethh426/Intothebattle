@@ -1851,6 +1851,7 @@ function renderSitemapXml(req = null) {
       ],
     },
     { loc: absolute('/signup'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.9', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle signup game key art' }] },
+    { loc: absolute('/aetheris'), lastmod: '2026-08-09', changefreq: 'daily', priority: '0.9', images: [{ loc: absolute('/og-intothebattle.png'), title: 'Aetheris shared fantasy world map' }] },
     { loc: absolute('/how-to-play'), lastmod: '2026-07-04', changefreq: 'weekly', priority: '0.9', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle player command game key art' }] },
     { loc: absolute('/battlegrounds'), lastmod: '2026-07-02', changefreq: 'daily', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'The Battlegrounds public live battle board' }] },
     { loc: absolute('/sponsors'), lastmod: '2026-07-02', changefreq: 'weekly', priority: '0.8', images: [{ loc: absolute('/og-intothebattle.png'), title: 'IntoTheBattle sponsor game key art' }] },
@@ -7731,6 +7732,7 @@ app.get('/home', (req, res) => {
   }
 });
 app.get(['/aetheris-preview', '/aetheris-preview.html'], (_req, res) => res.sendFile(path.join(__dirname, 'aetheris-preview.html')));
+app.get(['/aetheris', '/aetheris.html', '/world-map'], (_req, res) => res.sendFile(path.join(__dirname, 'aetheris.html')));
 app.get('/comments', (req, res) => res.send(renderCommentsPage(req)));
 app.get(['/sponsors', '/sponsors.html'], (_req, res) => res.sendFile(path.join(__dirname, 'sponsors.html')));
 app.get(['/how-to-play', '/how-to-play.html', '/players', '/game-guide'], (_req, res) => res.sendFile(path.join(__dirname, 'how-to-play.html')));

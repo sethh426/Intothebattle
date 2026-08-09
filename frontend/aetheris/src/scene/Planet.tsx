@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useFrame, useLoader } from '@react-three/fiber'
 import * as THREE from 'three'
 import { PLANET } from '../config'
-import type { Biome } from '../types'
+import type { Biome, PerfTier } from '../types'
 import worldAlbedoUrl from '../assets/aetheris/world-albedo.png'
 import worldEmissiveUrl from '../assets/aetheris/world-emissive.png'
 
@@ -218,9 +218,16 @@ function elevationAt(biomes: Biome[], latDegrees: number, lonDegrees: number): n
 
 interface PlanetProps {
   biomes: Biome[]
+  perfTier: PerfTier
 }
 
-export default function Planet({ biomes }: PlanetProps) {
+const PLANET_SEGMENTS: Record<PerfTier, [number, number]> = {
+  high: [160, 96],
+  medium: [112, 72],
+  low: [64, 40],
+}
+
+export default function Planet({ biomes, perfTier }: PlanetProps) {
   const albedoMap = useLoader(THREE.TextureLoader, worldAlbedoUrl)
   const emissiveMap = useLoader(THREE.TextureLoader, worldEmissiveUrl)
   useEffect(() => {
@@ -238,7 +245,8 @@ export default function Planet({ biomes }: PlanetProps) {
   }, [albedoMap, emissiveMap])
 
   const geometry = useMemo(() => {
-    const geom = new THREE.SphereGeometry(PLANET.radius, 160, 96)
+    const [widthSegments, heightSegments] = PLANET_SEGMENTS[perfTier]
+    const geom = new THREE.SphereGeometry(PLANET.radius, widthSegments, heightSegments)
     const positions = geom.attributes.position
     const colors = new Float32Array(positions.count * 3)
     const vertex = new THREE.Vector3()
@@ -260,11 +268,14 @@ export default function Planet({ biomes }: PlanetProps) {
     geom.setAttribute('color', new THREE.BufferAttribute(colors, 3))
     geom.computeVertexNormals()
     return geom
-  }, [biomes])
+  }, [biomes, perfTier])
 
   const oceanGeometry = useMemo(
-    () => new THREE.SphereGeometry(PLANET.radius + PLANET.oceanRadiusOffset, 96, 96),
-    [],
+    () => {
+      const oceanSegments = perfTier === 'high' ? 96 : perfTier === 'medium' ? 72 : 40
+      return new THREE.SphereGeometry(PLANET.radius + PLANET.oceanRadiusOffset, oceanSegments, oceanSegments)
+    },
+    [perfTier],
   )
   const oceanMaterial = useMemo(
     () =>

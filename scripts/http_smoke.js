@@ -136,9 +136,14 @@ try {
   assert(hardenedHome.headers.get('x-frame-options') === 'SAMEORIGIN', 'non-overlay pages should set X-Frame-Options');
   assert(hardenedHome.headers.get('permissions-policy')?.includes('geolocation=()'), 'responses should set Permissions-Policy');
   assert(await rawHttpStatus('/', { Host: 'evil.example' }) === 421, 'untrusted Host header should be blocked');
-  for (const pathname of ['/', '/home', '/login', '/signup', '/paywall', '/how-to-play', '/battlegrounds', '/comments', '/site-map', '/overlay-preview', '/overlay/mobile-preview', '/overlay-v2-preview', '/overlay-phaser.html']) {
+  for (const pathname of ['/', '/home', '/aetheris', '/world-map', '/login', '/signup', '/paywall', '/how-to-play', '/battlegrounds', '/comments', '/site-map', '/overlay-preview', '/overlay/mobile-preview', '/overlay-v2-preview', '/overlay-phaser.html']) {
     await expectStatus(pathname, 200);
   }
+  const aetheris = await expectStatus('/aetheris', 200);
+  const aetherisText = await aetheris.text();
+  assert(aetherisText.includes('rel="canonical" href="https://intothebattle.com/aetheris"'), '/aetheris should expose its canonical URL');
+  assert(aetherisText.includes('content="index, follow'), '/aetheris should remain indexable');
+  assert(aetherisText.includes('id="aetheris-root" data-mode="live"'), '/aetheris should mount the live shared world');
   const blog = await expectStatus('/blog', 200);
   const blogText = await blog.text();
   assert(blogText.includes('IntoTheBattle'), '/blog should render the local blog index');
@@ -171,12 +176,16 @@ try {
   const sitemapText = await sitemapXml.text();
   assert(sitemapXml.headers.get('content-type')?.includes('application/xml'), '/sitemap.xml should be served as XML');
   assert(sitemapText.includes('xmlns:video'), '/sitemap.xml should expose the video sitemap namespace');
+  assert(sitemapText.includes('/aetheris'), '/sitemap.xml should include the public Aetheris world');
   assert(sitemapText.includes('/comments'), '/sitemap.xml should include the creator comments page');
   assert(sitemapText.includes('homepage-real-overlay-source.mp4'), '/sitemap.xml should include the homepage demo video');
   await expectStatus('/growth-assets/missing-growth-asset.png', 404);
 
   const dashboard = await expectStatus('/dashboard', 302);
   assert((dashboard.headers.get('location') || '').startsWith('/login'), '/dashboard should redirect to /login');
+
+  const creatorWorld = await expectStatus('/world', 302);
+  assert((creatorWorld.headers.get('location') || '').startsWith('/login'), '/world should stay protected for signed-out visitors');
 
   const dashboardWelcome = await expectStatus('/dashboard/welcome', 302);
   assert((dashboardWelcome.headers.get('location') || '').startsWith('/login'), '/dashboard/welcome should redirect to /login when signed out');

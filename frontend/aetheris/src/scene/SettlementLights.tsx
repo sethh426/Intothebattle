@@ -29,11 +29,11 @@ interface SettlementLightsProps {
 }
 
 function tierScale(tier: ViewerTier | undefined): number {
-  if (tier === 'packed') return 3.1
-  if (tier === 'high') return 2.35
-  if (tier === 'medium') return 1.75
-  if (tier === 'low') return 1.2
-  return 0.72
+  if (tier === 'packed') return 1.85
+  if (tier === 'high') return 1.5
+  if (tier === 'medium') return 1.2
+  if (tier === 'low') return 0.9
+  return 0.68
 }
 
 export default function SettlementLights({
@@ -47,7 +47,7 @@ export default function SettlementLights({
     () =>
       new THREE.MeshBasicMaterial({
         transparent: true,
-        opacity: 0.9,
+        opacity: 0.68,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
         toneMapped: false,
@@ -90,12 +90,10 @@ export default function SettlementLights({
         : 0.35
       const nightFactor = 1.35 - daylight * 0.78
       const livePulse = 0.88 + Math.sin(clock.elapsedTime * (3.4 + seedOffset) + seedOffset * 9.0) * 0.12
-      const activeScale = baseScale * (selected ? 3.25 : tierScale(state?.viewerTier)) * nightFactor * (state?.isLive ? livePulse : 0.72)
+      const activeScale = baseScale * (selected ? 2.2 : tierScale(state?.viewerTier)) * nightFactor * (state?.isLive ? livePulse : 0.72)
 
       if (!selected && !state?.isLive && !state?.isClaimed) {
-        ref.scale.setScalar(baseScale * 0.42 * nightFactor)
-        tmpColor.copy(baseColor).multiplyScalar(0.5 + nightFactor * 0.18)
-        ref.color.copy(tmpColor)
+        ref.scale.setScalar(HIDDEN_SCALE)
         return
       }
 

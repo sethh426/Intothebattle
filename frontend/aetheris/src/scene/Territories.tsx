@@ -10,8 +10,8 @@ import { latLonToVector3 } from './geo'
 import { useLatestRef } from '../hooks/useLatestRef'
 import type { KingdomState, Territory } from '../types'
 
-const EXTRUDE_DEPTH = 0.05
-const SURFACE_OFFSET = 0.01 // lift footprints slightly above the base sphere to avoid z-fighting
+const EXTRUDE_DEPTH = 0.018
+const SURFACE_OFFSET = 0.008 // thin claim inlays sit close to the terrain instead of reading as floating game pieces
 const HIT_TARGET_OFFSET = 0.18
 
 interface InstanceHandle extends THREE.Object3D {
@@ -82,10 +82,15 @@ export default function Territories({
   const material = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        roughness: 0.34,
-        metalness: 0.48,
-        emissive: '#061222',
-        emissiveIntensity: 0.18,
+        roughness: 0.76,
+        metalness: 0.1,
+        emissive: '#02050a',
+        emissiveIntensity: 0.06,
+        transparent: true,
+        opacity: 0.28,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
       }),
     [],
   )
@@ -199,20 +204,20 @@ export default function Territories({
       const widthScale = selected ? 1.12 : 1
 
       if (!isLive) {
-        tmpColor.copy(baseColor)
-        if (selected) tmpColor.lerp(selectedGold, 0.38).multiplyScalar(1.14)
+        tmpColor.copy(baseColor).multiplyScalar(selected ? 0.9 : 0.68)
+        if (selected) tmpColor.lerp(selectedGold, 0.3)
         ref.color.copy(tmpColor)
-        ref.scale.set(arcLength * widthScale, arcLength * widthScale, selected ? 1.38 : 1)
+        ref.scale.set(arcLength * widthScale, arcLength * widthScale, selected ? 1.18 : 1)
         return
       }
 
       const isNightSide = sunDir ? normal.dot(sunDir) < 0.05 : false
-      tmpColor.copy(baseColor)
+      tmpColor.copy(baseColor).multiplyScalar(0.82)
       if (isNightSide) tmpColor.multiplyScalar(DAY_NIGHT.nightLiveBoost)
-      tmpColor.multiplyScalar(KINGDOM.colorBoost[tier])
+      tmpColor.multiplyScalar(Math.min(KINGDOM.colorBoost[tier], 1.65))
       if (selected) tmpColor.lerp(selectedGold, 0.32).multiplyScalar(1.12)
       ref.color.copy(tmpColor)
-      ref.scale.set(arcLength * widthScale, arcLength * widthScale, selected ? Math.max(KINGDOM.scaleBoost[tier], 1.45) : KINGDOM.scaleBoost[tier])
+      ref.scale.set(arcLength * widthScale, arcLength * widthScale, selected ? Math.max(KINGDOM.scaleBoost[tier], 1.25) : KINGDOM.scaleBoost[tier])
     })
 
     const flashIntensity = flashRef?.current ?? 0
@@ -282,20 +287,20 @@ export default function Territories({
           </Instances>
         )
       })}
-      {hitTargets.map(({ territory, position, quaternion, radius }) => (
-        <mesh
-          key={`${territory.id}-hit-target`}
-          geometry={hitGeometry}
-          material={hitMaterial}
-          position={position}
-          quaternion={quaternion}
-          scale={[radius, radius, 1]}
-          onPointerOver={(event: ThreeEvent<PointerEvent>) => handlePointerOver(territory, event)}
-          onPointerOut={handlePointerOut}
-          onPointerDown={(event: ThreeEvent<PointerEvent>) => handlePointerDown(territory, event)}
-          onClick={(event: ThreeEvent<MouseEvent>) => handleClick(territory, event)}
-        />
-      ))}
+      <Instances geometry={hitGeometry} material={hitMaterial} limit={hitTargets.length} range={hitTargets.length}>
+        {hitTargets.map(({ territory, position, quaternion, radius }) => (
+          <Instance
+            key={`${territory.id}-hit-target`}
+            position={position}
+            quaternion={quaternion}
+            scale={[radius, radius, 1]}
+            onPointerOver={(event: ThreeEvent<PointerEvent>) => handlePointerOver(territory, event)}
+            onPointerOut={handlePointerOut}
+            onPointerDown={(event: ThreeEvent<PointerEvent>) => handlePointerDown(territory, event)}
+            onClick={(event: ThreeEvent<MouseEvent>) => handleClick(territory, event)}
+          />
+        ))}
+      </Instances>
       {tooltip && (() => {
         const kingdom = kingdomState?.[tooltip.territory.id]
         const isClaimed = kingdom?.isClaimed ?? kingdom?.isLive ?? false

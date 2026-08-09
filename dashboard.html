@@ -673,6 +673,7 @@
     <div class="top-actions">
       <div class="chip idle" id="socket-chip"><span class="dot"></span><span id="socket-label">Connecting</span></div>
       <button type="button" class="subscription-chip" id="subscription-chip" onclick="openBillingStatus()">Checking plan</button>
+      <a class="btn btn-secondary" data-testid="dashboard-aetheris-link" href="/world">Aetheris World</a>
       <button class="btn btn-secondary" onclick="window.location.href='/profile'">Account</button>
     </div>
   </header>
@@ -872,6 +873,7 @@
         </div>
         <div class="aetheris-territory-options" id="aetherisTerritoryOptions" role="listbox" aria-label="Aetheris territory"></div>
         <p class="aetheris-territory-meta" id="aetherisTerritoryMeta">Loading territory map.</p>
+        <a class="btn btn-secondary" data-lock-exempt data-testid="territory-aetheris-link" href="/world">Open Aetheris World</a>
       </div>
       <div class="aetheris-war-room" id="aetherisWarRoom">
         <div class="aetheris-structure-head">
@@ -2421,6 +2423,7 @@ function setPanelLocked(id, locked, message) {
   el.classList.toggle('setup-locked', locked);
   el.dataset.lockMessage = locked ? message : '';
   el.querySelectorAll('button,input,select,textarea,a').forEach((control) => {
+    if (control.hasAttribute('data-lock-exempt')) return;
     if (locked) {
       if (control.tagName === 'A') {
         control.dataset.lockedHref = control.getAttribute('href') || '';

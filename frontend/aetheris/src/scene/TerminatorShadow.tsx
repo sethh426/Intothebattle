@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { PLANET, WORLD_GRAPHICS } from '../config'
+import type { PerfTier } from '../types'
 
 const VERTEX_SHADER = `
   varying vec3 vNormal;
@@ -33,12 +34,16 @@ const FRAGMENT_SHADER = `
 
 interface TerminatorShadowProps {
   sunDirectionRef: RefObject<THREE.Vector3 | null>
+  perfTier: PerfTier
 }
 
-export default function TerminatorShadow({ sunDirectionRef }: TerminatorShadowProps) {
+export default function TerminatorShadow({ sunDirectionRef, perfTier }: TerminatorShadowProps) {
   const geometry = useMemo(
-    () => new THREE.SphereGeometry(PLANET.radius + WORLD_GRAPHICS.terminatorRadiusOffset, 64, 64),
-    [],
+    () => {
+      const segments = perfTier === 'high' ? 64 : perfTier === 'medium' ? 48 : 32
+      return new THREE.SphereGeometry(PLANET.radius + WORLD_GRAPHICS.terminatorRadiusOffset, segments, segments)
+    },
+    [perfTier],
   )
   const material = useMemo(
     () =>

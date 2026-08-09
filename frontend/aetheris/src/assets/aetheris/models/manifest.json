@@ -1,0 +1,902 @@
+{
+  "schemaVersion": 1,
+  "generator": "Blender 4.5 LTS",
+  "heroes": [
+    {
+      "biomeId": "frozen-crown",
+      "lod": 0,
+      "file": "heroes/frozen-crown-lod0.glb"
+    },
+    {
+      "biomeId": "frozen-crown",
+      "lod": 1,
+      "file": "heroes/frozen-crown-lod1.glb"
+    },
+    {
+      "biomeId": "frozen-crown",
+      "lod": 2,
+      "file": "heroes/frozen-crown-lod2.glb"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "lod": 0,
+      "file": "heroes/thunder-highlands-lod0.glb"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "lod": 1,
+      "file": "heroes/thunder-highlands-lod1.glb"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "lod": 2,
+      "file": "heroes/thunder-highlands-lod2.glb"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "lod": 0,
+      "file": "heroes/whispering-desert-lod0.glb"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "lod": 1,
+      "file": "heroes/whispering-desert-lod1.glb"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "lod": 2,
+      "file": "heroes/whispering-desert-lod2.glb"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "lod": 0,
+      "file": "heroes/ancient-jungle-lod0.glb"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "lod": 1,
+      "file": "heroes/ancient-jungle-lod1.glb"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "lod": 2,
+      "file": "heroes/ancient-jungle-lod2.glb"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "lod": 0,
+      "file": "heroes/emerald-wilds-lod0.glb"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "lod": 1,
+      "file": "heroes/emerald-wilds-lod1.glb"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "lod": 2,
+      "file": "heroes/emerald-wilds-lod2.glb"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "lod": 0,
+      "file": "heroes/liquid-blu-metal-sea-lod0.glb"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "lod": 1,
+      "file": "heroes/liquid-blu-metal-sea-lod1.glb"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "lod": 2,
+      "file": "heroes/liquid-blu-metal-sea-lod2.glb"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "lod": 0,
+      "file": "heroes/molten-wastes-lod0.glb"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "lod": 1,
+      "file": "heroes/molten-wastes-lod1.glb"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "lod": 2,
+      "file": "heroes/molten-wastes-lod2.glb"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "lod": 0,
+      "file": "heroes/toxic-expanse-lod0.glb"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "lod": 1,
+      "file": "heroes/toxic-expanse-lod1.glb"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "lod": 2,
+      "file": "heroes/toxic-expanse-lod2.glb"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "lod": 0,
+      "file": "heroes/crystal-basin-lod0.glb"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "lod": 1,
+      "file": "heroes/crystal-basin-lod1.glb"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "lod": 2,
+      "file": "heroes/crystal-basin-lod2.glb"
+    },
+    {
+      "biomeId": "void-scar",
+      "lod": 0,
+      "file": "heroes/void-scar-lod0.glb"
+    },
+    {
+      "biomeId": "void-scar",
+      "lod": 1,
+      "file": "heroes/void-scar-lod1.glb"
+    },
+    {
+      "biomeId": "void-scar",
+      "lod": 2,
+      "file": "heroes/void-scar-lod2.glb"
+    }
+  ],
+  "regional": [
+    {
+      "biomeId": "frozen-crown",
+      "archetype": "gate",
+      "node": "REGION_FROZEN_CROWN_GATE"
+    },
+    {
+      "biomeId": "frozen-crown",
+      "archetype": "shrine",
+      "node": "REGION_FROZEN_CROWN_SHRINE"
+    },
+    {
+      "biomeId": "frozen-crown",
+      "archetype": "ruin",
+      "node": "REGION_FROZEN_CROWN_RUIN"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "archetype": "gate",
+      "node": "REGION_THUNDER_HIGHLANDS_GATE"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "archetype": "shrine",
+      "node": "REGION_THUNDER_HIGHLANDS_SHRINE"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "archetype": "ruin",
+      "node": "REGION_THUNDER_HIGHLANDS_RUIN"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "archetype": "gate",
+      "node": "REGION_WHISPERING_DESERT_GATE"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "archetype": "shrine",
+      "node": "REGION_WHISPERING_DESERT_SHRINE"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "archetype": "ruin",
+      "node": "REGION_WHISPERING_DESERT_RUIN"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "archetype": "gate",
+      "node": "REGION_ANCIENT_JUNGLE_GATE"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "archetype": "shrine",
+      "node": "REGION_ANCIENT_JUNGLE_SHRINE"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "archetype": "ruin",
+      "node": "REGION_ANCIENT_JUNGLE_RUIN"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "archetype": "gate",
+      "node": "REGION_EMERALD_WILDS_GATE"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "archetype": "shrine",
+      "node": "REGION_EMERALD_WILDS_SHRINE"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "archetype": "ruin",
+      "node": "REGION_EMERALD_WILDS_RUIN"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "archetype": "gate",
+      "node": "REGION_LIQUID_BLU_METAL_SEA_GATE"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "archetype": "shrine",
+      "node": "REGION_LIQUID_BLU_METAL_SEA_SHRINE"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "archetype": "ruin",
+      "node": "REGION_LIQUID_BLU_METAL_SEA_RUIN"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "archetype": "gate",
+      "node": "REGION_MOLTEN_WASTES_GATE"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "archetype": "shrine",
+      "node": "REGION_MOLTEN_WASTES_SHRINE"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "archetype": "ruin",
+      "node": "REGION_MOLTEN_WASTES_RUIN"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "archetype": "gate",
+      "node": "REGION_TOXIC_EXPANSE_GATE"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "archetype": "shrine",
+      "node": "REGION_TOXIC_EXPANSE_SHRINE"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "archetype": "ruin",
+      "node": "REGION_TOXIC_EXPANSE_RUIN"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "archetype": "gate",
+      "node": "REGION_CRYSTAL_BASIN_GATE"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "archetype": "shrine",
+      "node": "REGION_CRYSTAL_BASIN_SHRINE"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "archetype": "ruin",
+      "node": "REGION_CRYSTAL_BASIN_RUIN"
+    },
+    {
+      "biomeId": "void-scar",
+      "archetype": "gate",
+      "node": "REGION_VOID_SCAR_GATE"
+    },
+    {
+      "biomeId": "void-scar",
+      "archetype": "shrine",
+      "node": "REGION_VOID_SCAR_SHRINE"
+    },
+    {
+      "biomeId": "void-scar",
+      "archetype": "ruin",
+      "node": "REGION_VOID_SCAR_RUIN"
+    }
+  ],
+  "strongholds": [
+    {
+      "biomeId": "frozen-crown",
+      "variant": 0,
+      "module": "base",
+      "node": "STRONGHOLD_FROZEN_CROWN_V0_BASE"
+    },
+    {
+      "biomeId": "frozen-crown",
+      "variant": 0,
+      "module": "live",
+      "node": "STRONGHOLD_FROZEN_CROWN_V0_LIVE"
+    },
+    {
+      "biomeId": "frozen-crown",
+      "variant": 0,
+      "module": "apex",
+      "node": "STRONGHOLD_FROZEN_CROWN_V0_APEX"
+    },
+    {
+      "biomeId": "frozen-crown",
+      "variant": 1,
+      "module": "base",
+      "node": "STRONGHOLD_FROZEN_CROWN_V1_BASE"
+    },
+    {
+      "biomeId": "frozen-crown",
+      "variant": 1,
+      "module": "live",
+      "node": "STRONGHOLD_FROZEN_CROWN_V1_LIVE"
+    },
+    {
+      "biomeId": "frozen-crown",
+      "variant": 1,
+      "module": "apex",
+      "node": "STRONGHOLD_FROZEN_CROWN_V1_APEX"
+    },
+    {
+      "biomeId": "frozen-crown",
+      "variant": 2,
+      "module": "base",
+      "node": "STRONGHOLD_FROZEN_CROWN_V2_BASE"
+    },
+    {
+      "biomeId": "frozen-crown",
+      "variant": 2,
+      "module": "live",
+      "node": "STRONGHOLD_FROZEN_CROWN_V2_LIVE"
+    },
+    {
+      "biomeId": "frozen-crown",
+      "variant": 2,
+      "module": "apex",
+      "node": "STRONGHOLD_FROZEN_CROWN_V2_APEX"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "variant": 0,
+      "module": "base",
+      "node": "STRONGHOLD_THUNDER_HIGHLANDS_V0_BASE"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "variant": 0,
+      "module": "live",
+      "node": "STRONGHOLD_THUNDER_HIGHLANDS_V0_LIVE"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "variant": 0,
+      "module": "apex",
+      "node": "STRONGHOLD_THUNDER_HIGHLANDS_V0_APEX"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "variant": 1,
+      "module": "base",
+      "node": "STRONGHOLD_THUNDER_HIGHLANDS_V1_BASE"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "variant": 1,
+      "module": "live",
+      "node": "STRONGHOLD_THUNDER_HIGHLANDS_V1_LIVE"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "variant": 1,
+      "module": "apex",
+      "node": "STRONGHOLD_THUNDER_HIGHLANDS_V1_APEX"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "variant": 2,
+      "module": "base",
+      "node": "STRONGHOLD_THUNDER_HIGHLANDS_V2_BASE"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "variant": 2,
+      "module": "live",
+      "node": "STRONGHOLD_THUNDER_HIGHLANDS_V2_LIVE"
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "variant": 2,
+      "module": "apex",
+      "node": "STRONGHOLD_THUNDER_HIGHLANDS_V2_APEX"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "variant": 0,
+      "module": "base",
+      "node": "STRONGHOLD_WHISPERING_DESERT_V0_BASE"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "variant": 0,
+      "module": "live",
+      "node": "STRONGHOLD_WHISPERING_DESERT_V0_LIVE"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "variant": 0,
+      "module": "apex",
+      "node": "STRONGHOLD_WHISPERING_DESERT_V0_APEX"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "variant": 1,
+      "module": "base",
+      "node": "STRONGHOLD_WHISPERING_DESERT_V1_BASE"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "variant": 1,
+      "module": "live",
+      "node": "STRONGHOLD_WHISPERING_DESERT_V1_LIVE"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "variant": 1,
+      "module": "apex",
+      "node": "STRONGHOLD_WHISPERING_DESERT_V1_APEX"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "variant": 2,
+      "module": "base",
+      "node": "STRONGHOLD_WHISPERING_DESERT_V2_BASE"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "variant": 2,
+      "module": "live",
+      "node": "STRONGHOLD_WHISPERING_DESERT_V2_LIVE"
+    },
+    {
+      "biomeId": "whispering-desert",
+      "variant": 2,
+      "module": "apex",
+      "node": "STRONGHOLD_WHISPERING_DESERT_V2_APEX"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "variant": 0,
+      "module": "base",
+      "node": "STRONGHOLD_ANCIENT_JUNGLE_V0_BASE"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "variant": 0,
+      "module": "live",
+      "node": "STRONGHOLD_ANCIENT_JUNGLE_V0_LIVE"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "variant": 0,
+      "module": "apex",
+      "node": "STRONGHOLD_ANCIENT_JUNGLE_V0_APEX"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "variant": 1,
+      "module": "base",
+      "node": "STRONGHOLD_ANCIENT_JUNGLE_V1_BASE"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "variant": 1,
+      "module": "live",
+      "node": "STRONGHOLD_ANCIENT_JUNGLE_V1_LIVE"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "variant": 1,
+      "module": "apex",
+      "node": "STRONGHOLD_ANCIENT_JUNGLE_V1_APEX"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "variant": 2,
+      "module": "base",
+      "node": "STRONGHOLD_ANCIENT_JUNGLE_V2_BASE"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "variant": 2,
+      "module": "live",
+      "node": "STRONGHOLD_ANCIENT_JUNGLE_V2_LIVE"
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "variant": 2,
+      "module": "apex",
+      "node": "STRONGHOLD_ANCIENT_JUNGLE_V2_APEX"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "variant": 0,
+      "module": "base",
+      "node": "STRONGHOLD_EMERALD_WILDS_V0_BASE"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "variant": 0,
+      "module": "live",
+      "node": "STRONGHOLD_EMERALD_WILDS_V0_LIVE"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "variant": 0,
+      "module": "apex",
+      "node": "STRONGHOLD_EMERALD_WILDS_V0_APEX"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "variant": 1,
+      "module": "base",
+      "node": "STRONGHOLD_EMERALD_WILDS_V1_BASE"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "variant": 1,
+      "module": "live",
+      "node": "STRONGHOLD_EMERALD_WILDS_V1_LIVE"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "variant": 1,
+      "module": "apex",
+      "node": "STRONGHOLD_EMERALD_WILDS_V1_APEX"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "variant": 2,
+      "module": "base",
+      "node": "STRONGHOLD_EMERALD_WILDS_V2_BASE"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "variant": 2,
+      "module": "live",
+      "node": "STRONGHOLD_EMERALD_WILDS_V2_LIVE"
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "variant": 2,
+      "module": "apex",
+      "node": "STRONGHOLD_EMERALD_WILDS_V2_APEX"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "variant": 0,
+      "module": "base",
+      "node": "STRONGHOLD_LIQUID_BLU_METAL_SEA_V0_BASE"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "variant": 0,
+      "module": "live",
+      "node": "STRONGHOLD_LIQUID_BLU_METAL_SEA_V0_LIVE"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "variant": 0,
+      "module": "apex",
+      "node": "STRONGHOLD_LIQUID_BLU_METAL_SEA_V0_APEX"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "variant": 1,
+      "module": "base",
+      "node": "STRONGHOLD_LIQUID_BLU_METAL_SEA_V1_BASE"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "variant": 1,
+      "module": "live",
+      "node": "STRONGHOLD_LIQUID_BLU_METAL_SEA_V1_LIVE"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "variant": 1,
+      "module": "apex",
+      "node": "STRONGHOLD_LIQUID_BLU_METAL_SEA_V1_APEX"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "variant": 2,
+      "module": "base",
+      "node": "STRONGHOLD_LIQUID_BLU_METAL_SEA_V2_BASE"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "variant": 2,
+      "module": "live",
+      "node": "STRONGHOLD_LIQUID_BLU_METAL_SEA_V2_LIVE"
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "variant": 2,
+      "module": "apex",
+      "node": "STRONGHOLD_LIQUID_BLU_METAL_SEA_V2_APEX"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "variant": 0,
+      "module": "base",
+      "node": "STRONGHOLD_MOLTEN_WASTES_V0_BASE"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "variant": 0,
+      "module": "live",
+      "node": "STRONGHOLD_MOLTEN_WASTES_V0_LIVE"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "variant": 0,
+      "module": "apex",
+      "node": "STRONGHOLD_MOLTEN_WASTES_V0_APEX"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "variant": 1,
+      "module": "base",
+      "node": "STRONGHOLD_MOLTEN_WASTES_V1_BASE"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "variant": 1,
+      "module": "live",
+      "node": "STRONGHOLD_MOLTEN_WASTES_V1_LIVE"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "variant": 1,
+      "module": "apex",
+      "node": "STRONGHOLD_MOLTEN_WASTES_V1_APEX"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "variant": 2,
+      "module": "base",
+      "node": "STRONGHOLD_MOLTEN_WASTES_V2_BASE"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "variant": 2,
+      "module": "live",
+      "node": "STRONGHOLD_MOLTEN_WASTES_V2_LIVE"
+    },
+    {
+      "biomeId": "molten-wastes",
+      "variant": 2,
+      "module": "apex",
+      "node": "STRONGHOLD_MOLTEN_WASTES_V2_APEX"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "variant": 0,
+      "module": "base",
+      "node": "STRONGHOLD_TOXIC_EXPANSE_V0_BASE"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "variant": 0,
+      "module": "live",
+      "node": "STRONGHOLD_TOXIC_EXPANSE_V0_LIVE"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "variant": 0,
+      "module": "apex",
+      "node": "STRONGHOLD_TOXIC_EXPANSE_V0_APEX"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "variant": 1,
+      "module": "base",
+      "node": "STRONGHOLD_TOXIC_EXPANSE_V1_BASE"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "variant": 1,
+      "module": "live",
+      "node": "STRONGHOLD_TOXIC_EXPANSE_V1_LIVE"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "variant": 1,
+      "module": "apex",
+      "node": "STRONGHOLD_TOXIC_EXPANSE_V1_APEX"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "variant": 2,
+      "module": "base",
+      "node": "STRONGHOLD_TOXIC_EXPANSE_V2_BASE"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "variant": 2,
+      "module": "live",
+      "node": "STRONGHOLD_TOXIC_EXPANSE_V2_LIVE"
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "variant": 2,
+      "module": "apex",
+      "node": "STRONGHOLD_TOXIC_EXPANSE_V2_APEX"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "variant": 0,
+      "module": "base",
+      "node": "STRONGHOLD_CRYSTAL_BASIN_V0_BASE"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "variant": 0,
+      "module": "live",
+      "node": "STRONGHOLD_CRYSTAL_BASIN_V0_LIVE"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "variant": 0,
+      "module": "apex",
+      "node": "STRONGHOLD_CRYSTAL_BASIN_V0_APEX"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "variant": 1,
+      "module": "base",
+      "node": "STRONGHOLD_CRYSTAL_BASIN_V1_BASE"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "variant": 1,
+      "module": "live",
+      "node": "STRONGHOLD_CRYSTAL_BASIN_V1_LIVE"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "variant": 1,
+      "module": "apex",
+      "node": "STRONGHOLD_CRYSTAL_BASIN_V1_APEX"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "variant": 2,
+      "module": "base",
+      "node": "STRONGHOLD_CRYSTAL_BASIN_V2_BASE"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "variant": 2,
+      "module": "live",
+      "node": "STRONGHOLD_CRYSTAL_BASIN_V2_LIVE"
+    },
+    {
+      "biomeId": "crystal-basin",
+      "variant": 2,
+      "module": "apex",
+      "node": "STRONGHOLD_CRYSTAL_BASIN_V2_APEX"
+    },
+    {
+      "biomeId": "void-scar",
+      "variant": 0,
+      "module": "base",
+      "node": "STRONGHOLD_VOID_SCAR_V0_BASE"
+    },
+    {
+      "biomeId": "void-scar",
+      "variant": 0,
+      "module": "live",
+      "node": "STRONGHOLD_VOID_SCAR_V0_LIVE"
+    },
+    {
+      "biomeId": "void-scar",
+      "variant": 0,
+      "module": "apex",
+      "node": "STRONGHOLD_VOID_SCAR_V0_APEX"
+    },
+    {
+      "biomeId": "void-scar",
+      "variant": 1,
+      "module": "base",
+      "node": "STRONGHOLD_VOID_SCAR_V1_BASE"
+    },
+    {
+      "biomeId": "void-scar",
+      "variant": 1,
+      "module": "live",
+      "node": "STRONGHOLD_VOID_SCAR_V1_LIVE"
+    },
+    {
+      "biomeId": "void-scar",
+      "variant": 1,
+      "module": "apex",
+      "node": "STRONGHOLD_VOID_SCAR_V1_APEX"
+    },
+    {
+      "biomeId": "void-scar",
+      "variant": 2,
+      "module": "base",
+      "node": "STRONGHOLD_VOID_SCAR_V2_BASE"
+    },
+    {
+      "biomeId": "void-scar",
+      "variant": 2,
+      "module": "live",
+      "node": "STRONGHOLD_VOID_SCAR_V2_LIVE"
+    },
+    {
+      "biomeId": "void-scar",
+      "variant": 2,
+      "module": "apex",
+      "node": "STRONGHOLD_VOID_SCAR_V2_APEX"
+    }
+  ],
+  "ambient": [
+    {
+      "biomeId": "frozen-crown",
+      "node": "PROP_FROZEN_CROWN",
+      "instances": 6
+    },
+    {
+      "biomeId": "thunder-highlands",
+      "node": "PROP_THUNDER_HIGHLANDS",
+      "instances": 6
+    },
+    {
+      "biomeId": "whispering-desert",
+      "node": "PROP_WHISPERING_DESERT",
+      "instances": 6
+    },
+    {
+      "biomeId": "ancient-jungle",
+      "node": "PROP_ANCIENT_JUNGLE",
+      "instances": 6
+    },
+    {
+      "biomeId": "emerald-wilds",
+      "node": "PROP_EMERALD_WILDS",
+      "instances": 6
+    },
+    {
+      "biomeId": "liquid-blu-metal-sea",
+      "node": "PROP_LIQUID_BLU_METAL_SEA",
+      "instances": 6
+    },
+    {
+      "biomeId": "molten-wastes",
+      "node": "PROP_MOLTEN_WASTES",
+      "instances": 6
+    },
+    {
+      "biomeId": "toxic-expanse",
+      "node": "PROP_TOXIC_EXPANSE",
+      "instances": 6
+    },
+    {
+      "biomeId": "crystal-basin",
+      "node": "PROP_CRYSTAL_BASIN",
+      "instances": 6
+    },
+    {
+      "biomeId": "void-scar",
+      "node": "PROP_VOID_SCAR",
+      "instances": 6
+    }
+  ]
+}

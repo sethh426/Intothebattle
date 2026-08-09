@@ -292,6 +292,113 @@ test('aetheris preview (React/r3f v0.2 build) renders on WebGL', async ({ page }
   expect(errors).toEqual([]);
 });
 
+test('public Aetheris world is discoverable and renders on WebGL', async ({ page }, testInfo) => {
+  const errors = await watchPage(page);
+
+  await page.goto(`${baseUrl}/aetheris`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Aetheris World' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Claim territory' })).toHaveAttribute('href', '/signup');
+  const canvas = page.locator('#aetheris-root canvas');
+  await expect(canvas).toBeVisible();
+  await page.waitForTimeout(3500);
+  const hasWebgl = await canvas.evaluate(el => !!(el.getContext('webgl2') || el.getContext('webgl')));
+  expect(hasWebgl).toBe(true);
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'aetheris-public');
+  expect(errors).toEqual([]);
+});
+
+test('public navigation and site map expose Aetheris', async ({ page }) => {
+  await page.goto(`${baseUrl}/`, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('.nav-links a[href="/aetheris"]')).toHaveAttribute('href', '/aetheris');
+  await expect(page.getByRole('link', { name: 'Open the Aetheris world map' })).toHaveAttribute('href', '/aetheris');
+
+  await page.goto(`${baseUrl}/site-map`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('heading', { name: 'Aetheris World' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Explore Aetheris/ })).toHaveAttribute('href', '/aetheris');
+});
+
+test('aetheris monumental structures stay inside runtime budgets across four rotations', async ({ page }, testInfo) => {
+  test.setTimeout(240000);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto(`${baseUrl}/aetheris-preview?diagnostics=1&perf=high`, { waitUntil: 'domcontentloaded' });
+  const canvas = page.locator('#aetheris-root canvas');
+  await expect(canvas).toBeVisible();
+  await page.waitForTimeout(1200);
+
+  const captureCanvas = async name => {
+    await canvas.screenshot({
+      path: testInfo.outputPath(`${name}.png`),
+      timeout: 30000,
+    });
+  };
+
+  await expect.poll(async () => page.evaluate(() => window.__aetherisDiagnostics?.loadedAssets.length || 0)).toBeGreaterThan(25);
+  const diagnostics = await page.evaluate(() => window.__aetherisDiagnostics);
+  expect(diagnostics).toBeTruthy();
+  expect(diagnostics.failedAssets).toEqual({});
+  expect(Object.keys(diagnostics.activeLods)).toHaveLength(10);
+  expect(diagnostics.structureStages.ruin + diagnostics.structureStages.claimed
+    + diagnostics.structureStages.live + diagnostics.structureStages.high
+    + diagnostics.structureStages.packed).toBe(100);
+  await testInfo.attach('aetheris-diagnostics.json', {
+    body: JSON.stringify(diagnostics, null, 2),
+    contentType: 'application/json',
+  });
+  // CI uses a software WebGL renderer, so FPS is reported for review but cannot be
+  // compared to hardware targets. Draw calls and visible triangles are deterministic.
+  expect(diagnostics.fps).toBeGreaterThan(0);
+
+  const budgets = {
+    high: { drawCalls: 220, triangles: 300000 },
+    medium: { drawCalls: 150, triangles: 170000 },
+    low: { drawCalls: 100, triangles: 90000 },
+  };
+  expect(
+    diagnostics.drawCalls,
+    JSON.stringify(diagnostics, null, 2),
+  ).toBeLessThanOrEqual(budgets[diagnostics.perfTier].drawCalls);
+  expect(diagnostics.triangles).toBeLessThanOrEqual(budgets[diagnostics.perfTier].triangles);
+
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('Aetheris canvas was not measurable');
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5);
+  await page.mouse.wheel(0, -180);
+  await page.waitForTimeout(500);
+  await captureCanvas('aetheris-structures-close');
+  await page.mouse.wheel(0, 180);
+  await page.waitForTimeout(350);
+
+  for (let index = 0; index < 4; index += 1) {
+    const centerX = box.x + box.width * 0.5;
+    const centerY = box.y + box.height * 0.5;
+    await page.mouse.move(centerX, centerY);
+    await page.mouse.down();
+    await page.mouse.move(centerX + box.width * 0.16, centerY, { steps: 4 });
+    await page.mouse.up();
+    const territoryPanel = page.getByTestId('aetheris-territory-detail');
+    if (await territoryPanel.isVisible().catch(() => false)) {
+      await page.keyboard.press('Escape');
+      await expect(territoryPanel).toBeHidden();
+    }
+    await page.waitForTimeout(250);
+    await captureCanvas(`aetheris-structures-rotation-${index + 1}`);
+  }
+});
+
+test('aetheris falls back when a hero GLB is unavailable', async ({ page }, testInfo) => {
+  await page.route('**/frozen-crown-lod1.glb', route => route.abort('failed'));
+  await page.goto(`${baseUrl}/aetheris-preview?diagnostics=1`, { waitUntil: 'domcontentloaded' });
+  const canvas = page.locator('#aetheris-root canvas');
+  await expect(canvas).toBeVisible();
+  await expect.poll(async () => page.evaluate(() =>
+    window.__aetherisDiagnostics?.failedAssets?.['hero:frozen-crown'] || '',
+  )).not.toBe('');
+  const hasWebgl = await canvas.evaluate(el => !!(el.getContext('webgl2') || el.getContext('webgl')));
+  expect(hasWebgl).toBe(true);
+  await capture(page, testInfo, 'aetheris-hero-fallback');
+});
+
 test('aetheris preview opens territory details without unsafe labels', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
 
@@ -367,7 +474,9 @@ test('dashboard renders with E2E auth fixture', async ({ context, page }, testIn
 test('dashboard links to the world globe for logged-in creators', async ({ context, page }) => {
   await context.addCookies([{ name: 'session_token', value: e2eSessionToken, url: baseUrl }]);
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('link', { name: 'Aetheris' })).toHaveAttribute('href', '/world');
+  await expect(page.getByRole('link', { name: 'Aetheris', exact: true })).toHaveAttribute('href', '/world');
+  await expect(page.getByTestId('dashboard-aetheris-link')).toHaveAttribute('href', '/world');
+  await expect(page.getByTestId('territory-aetheris-link')).toHaveAttribute('href', '/world');
 });
 
 test('world globe renders on WebGL for logged-in creators', async ({ context, page }, testInfo) => {

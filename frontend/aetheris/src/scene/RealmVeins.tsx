@@ -20,8 +20,8 @@ const VEINS: VeinDef[] = [
   {
     id: 'emerald-river-spine',
     color: '#74ffb3',
-    opacity: 0.58,
-    radius: 0.008,
+    opacity: 0.18,
+    radius: 0.0032,
     points: [
       { lat: 43, lon: -112 },
       { lat: 26, lon: -91 },
@@ -33,8 +33,8 @@ const VEINS: VeinDef[] = [
   {
     id: 'molten-fault',
     color: '#ff6a35',
-    opacity: 0.72,
-    radius: 0.011,
+    opacity: 0.24,
+    radius: 0.0042,
     points: [
       { lat: -18, lon: -132 },
       { lat: -22, lon: -102 },
@@ -46,8 +46,8 @@ const VEINS: VeinDef[] = [
   {
     id: 'stormglass-front',
     color: '#8af6ff',
-    opacity: 0.56,
-    radius: 0.007,
+    opacity: 0.17,
+    radius: 0.003,
     points: [
       { lat: 61, lon: -154 },
       { lat: 48, lon: -124 },
@@ -59,8 +59,8 @@ const VEINS: VeinDef[] = [
   {
     id: 'void-meridian',
     color: '#c46bff',
-    opacity: 0.62,
-    radius: 0.009,
+    opacity: 0.2,
+    radius: 0.0036,
     points: [
       { lat: -8, lon: -28 },
       { lat: -31, lon: -30 },
@@ -71,8 +71,8 @@ const VEINS: VeinDef[] = [
   {
     id: 'crystal-current',
     color: '#39e4ff',
-    opacity: 0.5,
-    radius: 0.007,
+    opacity: 0.16,
+    radius: 0.003,
     points: [
       { lat: -45, lon: -138 },
       { lat: -50, lon: -100 },
@@ -84,7 +84,7 @@ const VEINS: VeinDef[] = [
 ]
 
 function buildVeinGeometry(vein: VeinDef): THREE.TubeGeometry {
-  const points = vein.points.map((point) => latLonToVector3(point.lat, point.lon, PLANET.radius + 0.078))
+  const points = vein.points.map((point) => latLonToVector3(point.lat, point.lon, PLANET.radius + 0.028))
   const curve = new THREE.CatmullRomCurve3(points)
   return new THREE.TubeGeometry(curve, Math.max(36, points.length * 18), vein.radius, 8, false)
 }
@@ -101,7 +101,7 @@ export default function RealmVeins() {
           opacity: vein.opacity,
           blending: THREE.AdditiveBlending,
           depthWrite: false,
-          toneMapped: false,
+          toneMapped: true,
         }),
       })),
     [],
@@ -115,7 +115,7 @@ export default function RealmVeins() {
           geometry={geometry}
           material={material}
           raycast={() => undefined}
-          renderOrder={4}
+          renderOrder={2}
         />
       ))}
     </group>

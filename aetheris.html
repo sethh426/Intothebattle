@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aetheris World Map | IntoTheBattle</title>
+  <meta name="description" content="Explore Aetheris, the shared IntoTheBattle fantasy world where creators choose territories and live battles shape the map." />
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <meta name="googlebot" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+  <link rel="canonical" href="https://intothebattle.com/aetheris" />
+  <meta name="theme-color" content="#05070b" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:site_name" content="IntoTheBattle" />
+  <meta property="og:title" content="Aetheris World Map | IntoTheBattle" />
+  <meta property="og:description" content="Explore the shared fantasy world where IntoTheBattle creators fight for territory." />
+  <meta property="og:url" content="https://intothebattle.com/aetheris" />
+  <meta property="og:image" content="https://intothebattle.com/og-intothebattle.png" />
+  <meta property="og:image:alt" content="IntoTheBattle live battle world key art" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Aetheris World Map | IntoTheBattle" />
+  <meta name="twitter:description" content="Explore the shared fantasy world where IntoTheBattle creators fight for territory." />
+  <meta name="twitter:image" content="https://intothebattle.com/og-intothebattle.png" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": "https://intothebattle.com/aetheris#webpage",
+    "url": "https://intothebattle.com/aetheris",
+    "name": "Aetheris World Map",
+    "description": "The shared IntoTheBattle fantasy world where creators choose territories and live battles shape the map.",
+    "isPartOf": { "@id": "https://intothebattle.com/#website" },
+    "inLanguage": "en-US"
+  }
+  </script>
+  <style>
+    :root {
+      --bg: #05070b;
+      --panel: rgba(8, 11, 17, 0.94);
+      --line: rgba(255,255,255,0.12);
+      --text: #f4f0e4;
+      --muted: #9ba6b8;
+      --gold: #f5c842;
+      --cyan: #55e7ff;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; background: var(--bg); color: var(--text); }
+    body { display: flex; flex-direction: column; overflow: hidden; font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    a { color: inherit; text-decoration: none; }
+    .world-nav {
+      z-index: 20;
+      min-height: 64px;
+      display: grid;
+      grid-template-columns: minmax(160px, 1fr) auto minmax(160px, 1fr);
+      align-items: center;
+      gap: 18px;
+      padding: 9px clamp(12px, 2.5vw, 30px);
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+    .brand, .world-actions, .world-title { display: flex; align-items: center; }
+    .brand { min-width: 0; gap: 10px; color: var(--muted); }
+    .brand:hover { color: var(--text); }
+    .brand img { width: 38px; height: 38px; display: block; }
+    .brand-copy { min-width: 0; display: grid; gap: 2px; }
+    .brand-copy strong { overflow: hidden; text-overflow: ellipsis; font-size: 13px; white-space: nowrap; }
+    .brand-copy span { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+    .world-title { justify-content: center; gap: 9px; white-space: nowrap; }
+    .world-title h1 { margin: 0; font-size: 16px; letter-spacing: 0; }
+    .world-state { width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 12px rgba(85,231,255,0.72); }
+    .world-actions { justify-content: flex-end; gap: 8px; }
+    .world-link {
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 13px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .world-link:hover { color: var(--text); border-color: rgba(85,231,255,0.42); }
+    .world-link.primary { border-color: rgba(245,200,66,0.42); background: var(--gold); color: #100d05; }
+    .world-link.primary:hover { border-color: #fff1a8; background: #ffe173; color: #100d05; }
+    .world-stage { position: relative; flex: 1; min-height: 0; }
+    #aetheris-root { position: absolute; inset: 0; width: 100%; height: 100%; }
+    @media (max-width: 760px) {
+      .world-nav { min-height: 58px; grid-template-columns: auto 1fr auto; gap: 8px; padding: 8px 10px; }
+      .brand-copy, .world-link.secondary { display: none; }
+      .brand img { width: 36px; height: 36px; }
+      .world-title { justify-content: flex-start; }
+      .world-title h1 { font-size: 14px; }
+      .world-link { min-height: 36px; padding: 0 10px; font-size: 11px; }
+    }
+  </style>
+  <script type="module" src="/js/clarity-loader.js"></script>
+  <script type="module" src="/js/growth-tracker.js"></script>
+</head>
+<body>
+  <header class="world-nav">
+    <a class="brand" href="/" aria-label="IntoTheBattle home">
+      <img src="/intothebattlelogo_logo_only.svg" alt="" />
+      <span class="brand-copy"><strong>IntoTheBattle</strong><span>Shared world</span></span>
+    </a>
+    <div class="world-title"><span class="world-state" aria-hidden="true"></span><h1>Aetheris World</h1></div>
+    <nav class="world-actions" aria-label="Aetheris actions">
+      <a class="world-link secondary" href="/how-to-play">How to play</a>
+      <a class="world-link primary" href="/signup">Claim territory</a>
+    </nav>
+  </header>
+  <main class="world-stage" aria-label="Interactive Aetheris world map">
+    <div id="aetheris-root" data-mode="live" data-framing="wide"></div>
+  </main>
+  <script type="module" src="/aetheris-app/aetheris.js"></script>
+  <link rel="stylesheet" href="/aetheris-app/aetheris.css" />
+</body>
+</html>

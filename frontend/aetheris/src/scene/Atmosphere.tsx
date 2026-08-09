@@ -3,6 +3,7 @@ import type { RefObject } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { PLANET, ATMOSPHERE } from '../config'
+import type { PerfTier } from '../types'
 
 const VERTEX_SHADER = `
   varying vec3 vNormal;
@@ -32,11 +33,19 @@ interface AtmosphereProps {
   // 0-1, imperatively driven by the intro sequence (ref, not state, so the fade doesn't
   // trigger React re-renders every frame). Defaults to fully visible for reduced-motion.
   introOpacityRef?: RefObject<number>
+  perfTier: PerfTier
 }
 
-export default function Atmosphere({ introOpacityRef }: AtmosphereProps) {
-  const geometry = useMemo(() => new THREE.SphereGeometry(PLANET.radius * ATMOSPHERE.radiusScale, 48, 48), [])
-  const innerGeometry = useMemo(() => new THREE.SphereGeometry(PLANET.radius * ATMOSPHERE.innerRadiusScale, 48, 48), [])
+export default function Atmosphere({ introOpacityRef, perfTier }: AtmosphereProps) {
+  const segments = perfTier === 'high' ? 48 : perfTier === 'medium' ? 36 : 24
+  const geometry = useMemo(
+    () => new THREE.SphereGeometry(PLANET.radius * ATMOSPHERE.radiusScale, segments, segments),
+    [segments],
+  )
+  const innerGeometry = useMemo(
+    () => new THREE.SphereGeometry(PLANET.radius * ATMOSPHERE.innerRadiusScale, segments, segments),
+    [segments],
+  )
   const material = useMemo(
     () =>
       new THREE.ShaderMaterial({

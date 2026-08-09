@@ -2,7 +2,9 @@ import { useCallback, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Instance, Instances } from '@react-three/drei'
 import * as THREE from 'three'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { KINGDOM, PLANET } from '../config'
+import { deriveStructureStage, STRUCTURE_STAGE_RANK } from '../data/landmarkCatalog'
 import { latLonToVector3 } from './geo'
 import { useLatestRef } from '../hooks/useLatestRef'
 import type { KingdomState, Territory } from '../types'
@@ -29,14 +31,20 @@ interface TerritoryBannersProps {
 
 function buildBannerGeometry(): THREE.BufferGeometry {
   const shape = new THREE.Shape([
-    new THREE.Vector2(-0.16, 0),
-    new THREE.Vector2(0.12, 0),
-    new THREE.Vector2(0.2, 0.16),
-    new THREE.Vector2(0.04, 0.32),
-    new THREE.Vector2(-0.16, 0.28),
+    new THREE.Vector2(0, 0),
+    new THREE.Vector2(0.34, 0),
+    new THREE.Vector2(0.27, 0.13),
+    new THREE.Vector2(0.34, 0.27),
+    new THREE.Vector2(0, 0.27),
   ])
-  const geometry = new THREE.ExtrudeGeometry(shape, { depth: 0.02, bevelEnabled: false })
-  geometry.translate(0.05, 0.18, -0.01)
+  const flag = new THREE.ExtrudeGeometry(shape, { depth: 0.022, bevelEnabled: false })
+  flag.translate(0.02, 0.32, -0.011)
+  const pole = new THREE.CylinderGeometry(0.018, 0.025, 0.68, 7).toNonIndexed()
+  pole.translate(0, 0.34, 0)
+  const finial = new THREE.ConeGeometry(0.045, 0.11, 7).toNonIndexed()
+  finial.translate(0, 0.735, 0)
+  const geometry = mergeGeometries([pole, finial, flag], false)
+  if (!geometry) throw new Error('Territory banner geometry could not be merged.')
   return geometry
 }
 
@@ -63,7 +71,7 @@ export default function TerritoryBanners({ territories, kingdomState, selectedTe
       entries.current.delete(territory.id)
       return
     }
-    const position = latLonToVector3(territory.lat, territory.lon, PLANET.radius + 0.2)
+    const position = latLonToVector3(territory.lat, territory.lon, PLANET.radius + 0.07)
     const normal = position.clone().normalize()
     instance.position.copy(position)
     instance.quaternion.setFromUnitVectors(LOCAL_UP, normal)
@@ -74,7 +82,7 @@ export default function TerritoryBanners({ territories, kingdomState, selectedTe
     entries.current.set(territory.id, {
       ref: instance,
       baseColor,
-      size: Math.max(territory.angularRadius * PLANET.radius * 1.2, 0.1),
+      size: Math.min(Math.max(territory.angularRadius * PLANET.radius * 0.92, 0.075), 0.11),
       seed: (territory.seed % 1000) / 997,
     })
   }, [])
@@ -89,13 +97,16 @@ export default function TerritoryBanners({ territories, kingdomState, selectedTe
         ref.scale.setScalar(HIDDEN_SCALE)
         return
       }
+      const stage = deriveStructureStage(state)
+      const stageRank = STRUCTURE_STAGE_RANK[stage]
       const pulse = state?.isLive ? 1 + Math.sin(clock.elapsedTime * 3.0 + seed * 8.0) * 0.08 : 1
       const liveBoost = state?.isLive ? KINGDOM.colorBoost[state.viewerTier] : 1
-      const scale = size * (selected ? 1.65 : state?.isLive ? 1.35 : 0.92) * pulse
-      ref.scale.set(scale, scale * 1.12, scale)
+      const progressionScale = stage === 'packed' ? 1.42 : stage === 'high' ? 1.3 : stage === 'live' ? 1.18 : 1
+      const scale = size * (selected ? 1.58 : progressionScale) * pulse
+      ref.scale.setScalar(scale)
       tmpColor.copy(baseColor)
       if (selected) tmpColor.lerp(selectedGold, 0.62)
-      tmpColor.multiplyScalar(liveBoost)
+      tmpColor.multiplyScalar(liveBoost * (1 + stageRank * 0.035))
       ref.color.copy(tmpColor)
     })
   })

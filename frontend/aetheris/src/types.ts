@@ -39,6 +39,30 @@ export interface ShapeFootprint {
 
 export type PerfTier = 'high' | 'medium' | 'low'
 
+export type StructureStage = 'ruin' | 'claimed' | 'live' | 'high' | 'packed'
+
+export interface LandmarkAssetSpec {
+  biomeId: string
+  lodUrls: readonly [string, string, string]
+  lat: number
+  lon: number
+  scale: number
+  yaw: number
+  animationProfile: 'beacon' | 'storm' | 'sand' | 'foliage' | 'magnetic' | 'molten' | 'toxic' | 'crystal' | 'void'
+  materialProfile: 'ice' | 'storm' | 'desert' | 'jungle' | 'wilds' | 'metal' | 'molten' | 'toxic' | 'crystal' | 'void'
+}
+
+export interface BiomeStructureKit {
+  biomeId: string
+  regionalNodes: readonly [string, string, string]
+  strongholdNodes: readonly [
+    readonly [string, string, string],
+    readonly [string, string, string],
+    readonly [string, string, string],
+  ]
+  ambientNode: string
+}
+
 // off = not live. The other four are viewer-count buckets that drive kingdom
 // visual escalation (glow intensity, banner scale) once a territory goes live.
 export type ViewerTier = 'off' | 'low' | 'medium' | 'high' | 'packed'

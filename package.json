@@ -50,7 +50,8 @@
     "validate:schema": "python tools/validate_schema.py",
     "validate:schema-expand": "python tools/validate_schema_expand.py",
     "validate:schemas": "npm run validate:schema && npm run validate:schema-expand",
-    "build:aetheris": "npm --prefix frontend/aetheris ci && npm --prefix frontend/aetheris run build"
+    "build:aetheris": "npm --prefix frontend/aetheris ci && npm --prefix frontend/aetheris run build",
+    "test:aetheris-assets": "node scripts/aetheris_asset_contract.js"
   },
   "dependencies": {
     "@hubspot/api-client": "^13.5.0",
@@ -85,6 +86,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
+    "@gltf-transform/cli": "4.4.2",
     "@playwright/test": "^1.60.0",
     "@remotion/cli": "4.0.484",
     "cross-env": "^10.1.0",
