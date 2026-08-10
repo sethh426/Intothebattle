@@ -278,6 +278,14 @@
     .copy-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
     .referral-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
     .referral-actions button { width: auto; }
+    .referral-payout-card { display: grid; gap: 10px; padding: 14px; border-radius: var(--r-sm, 12px); border: 1px solid rgba(245,200,66,0.24); background: linear-gradient(135deg, rgba(245,200,66,0.09), rgba(57,216,117,0.045)); }
+    .referral-payout-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; }
+    .referral-payout-head strong { color: var(--txt, #edf0fa); font-size: 16px; }
+    .referral-payout-head span { display: block; margin-top: 4px; color: var(--muted, #8896ae); font-size: 13px; line-height: 1.45; }
+    .referral-payout-amount { color: #07101f; background: linear-gradient(135deg, #fff8e6, #ffe99a, #b8ffd0); border-radius: var(--r-sm, 12px); padding: 9px 11px; font-size: 11px; font-weight: 900; text-transform: uppercase; text-align: center; white-space: nowrap; }
+    .referral-payout-amount b { display: block; font-size: 22px; line-height: 1; }
+    .referral-payout-track { height: 10px; border-radius: 999px; overflow: hidden; border: 1px solid rgba(255,255,255,0.09); background: rgba(0,0,0,0.2); }
+    .referral-payout-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #ffe99a, #b8ffd0); border-radius: 999px; }
     .referral-meta { display: flex; gap: 10px; flex-wrap: wrap; }
     .referral-meta .pill { color: #b8ffd0; border-color: rgba(57,216,117,0.28); background: rgba(57,216,117,0.08); }
     .referral-recent { display: grid; gap: 8px; }
@@ -294,7 +302,8 @@
       .referral-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .referral-rank-top { grid-template-columns: 1fr; }
       .referral-rank-count { width: 100%; }
-      .copy-row { grid-template-columns: 1fr; }
+      .copy-row, .referral-payout-head { grid-template-columns: 1fr; }
+      .referral-payout-amount { width: 100%; }
       .referral-actions button { width: 100%; }
     }
     @media (max-width: 460px) {
@@ -422,9 +431,9 @@
           <div class="referral-recent-title">Recent referrals</div>
           <div class="referral-recent-list">
             ${rows.map(row => {
-              const name = row.referred_tiktok ? `@${row.referred_tiktok}` : (row.referred_name || 'New creator');
+              const name = row.referred_tiktok ? `@${row.referred_tiktok}` : 'Creator pending TikTok';
               const detail = `${referralStatusLabel(row.reward_status || row.status)} • ${formatReferralDate(row.signup_at || row.created_at)}`;
-              return `<div class="referral-recent-row"><span><strong>${escapeHtml(name)}</strong>${escapeHtml(detail)}</span><em class="referral-status-chip">${escapeHtml(row.signup_method || 'signup')}</em></div>`;
+              return `<div class="referral-recent-row"><span><strong>${escapeHtml(name)}</strong><span>${escapeHtml(detail)}</span></span><em class="referral-status-chip">${escapeHtml(row.signup_method || 'signup')}</em></div>`;
             }).join('')}
           </div>
         </div>
@@ -498,17 +507,19 @@
 
     async function loadReferral() {
       try {
-        const res = await fetch('/api/referrals/me', { credentials: 'same-origin' });
+        const res = await fetch('/api/council/me', { credentials: 'same-origin' });
         const json = await res.json();
-        if (!res.ok) throw new Error(json.error || 'Unable to load referral details');
-        renderReferral(json.referral || {});
+        if (!res.ok) throw new Error(json.error || 'Unable to load Council details');
+        renderReferral(json.council?.referral || {}, json.council || {});
       } catch (err) {
-        referralEl.innerHTML = `<p class="note">${escapeHtml(err.message || 'Unable to load referral details.')}</p>`;
+        referralEl.innerHTML = `<p class="note">${escapeHtml(err.message || 'Unable to load Council details.')}</p>`;
       }
     }
 
     function bindReferralControls() {
       document.getElementById('saveReferralCode')?.addEventListener('click', saveReferralCode);
+      document.getElementById('joinCouncil')?.addEventListener('click', joinCouncilFromProfile);
+      document.getElementById('saveCouncilPayout')?.addEventListener('click', saveCouncilPayoutProfile);
       document.getElementById('copyReferralLink')?.addEventListener('click', async () => {
         const input = document.getElementById('referralShareLink');
         if (!input?.value) return;
@@ -522,16 +533,63 @@
       });
     }
 
-    function renderReferral(referral) {
+    function renderCouncilPayout(council = {}) {
+      const member = council.member || {};
+      const payout = council.payout || {};
+      const percent = Math.max(0, Math.min(100, Number(payout.progressPercent || 0) || 0));
+      return `
+        <div class="referral-payout-card">
+          <div class="referral-payout-head">
+            <div>
+              <strong>PayPal payout progress</strong>
+              <span>${escapeHtml(payout.blockedReason || (payout.eligible ? 'Eligible for the next payout batch.' : 'Approved rewards roll over until the minimum is reached.'))}</span>
+            </div>
+            <div class="referral-payout-amount"><b>${escapeHtml(payout.approvedUnpaidLabel || '$0.00')}</b>of ${escapeHtml(payout.minimumLabel || '$25.00')}</div>
+          </div>
+          <div class="referral-payout-track" aria-label="Council payout progress"><div class="referral-payout-fill" style="width:${escapeHtml(percent)}%"></div></div>
+          <div class="copy-row">
+            <div class="form-group" style="margin-bottom:0;">
+              <label for="councilPayPalEmail">PayPal payout email</label>
+              <input id="councilPayPalEmail" type="email" value="${escapeHtml(member.payoutEmail || '')}" placeholder="payout@example.com" />
+            </div>
+            <button id="saveCouncilPayout" type="button">Save payout</button>
+          </div>
+          <div class="referral-meta">
+            <span class="pill">${escapeHtml(member.payoutProfileComplete ? 'PayPal saved' : 'PayPal needed')}</span>
+            <span class="pill">W-9 ${escapeHtml(referralStatusLabel(member.w9Status || 'needed'))}</span>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderReferral(referral, council = {}) {
       const stats = referral.stats || {};
       const code = referral.code || '';
       const suggested = referral.suggestedCode || '';
       const shareUrl = referral.shareUrl || '';
       const resetLabel = referral.canReset ? 'Reset referral code' : `Reset available in ${formatCooldown(referral.resetCountdownSeconds)}`;
+      const member = council.member || {};
+      const program = council.program || referral.program || {};
+
+      if (!member.isMember) {
+        referralEl.innerHTML = `
+          <div class="referral-shell">
+            ${renderCouncilProgress({ ...referral, program })}
+            <p class="note">Join the Council to activate official referral tracking, payout profile setup, rank progress, and PayPal payout review.</p>
+            <div class="referral-actions">
+              <button id="joinCouncil" type="button">Join Council and create code</button>
+              <a class="small-button" href="/council-of-aetheris">View Council page</a>
+            </div>
+          </div>
+        `;
+        bindReferralControls();
+        return;
+      }
 
       if (!referral.hasCode) {
         referralEl.innerHTML = `
           <div class="referral-shell">
+            ${renderCouncilProgress({ ...referral, program })}
             <p class="note">Create one Council code. New creators can use it at signup; active paid subscriptions accrue monthly Council rewards.</p>
             <div class="form-group">
               <label for="referralCodeInput">Referral code</label>
@@ -549,7 +607,7 @@
 
       referralEl.innerHTML = `
         <div class="referral-shell">
-          ${renderCouncilProgress(referral)}
+          ${renderCouncilProgress({ ...referral, program })}
           <div>
             <p class="note">Your public code</p>
             <div class="referral-code">${escapeHtml(code)}</div>
@@ -574,6 +632,7 @@
             <span class="pill">Approved ${escapeHtml(formatMoney(stats.approvedAmountCents))}</span>
             <span class="pill">Paid ${escapeHtml(formatMoney(stats.paidAmountCents))}</span>
           </div>
+          ${renderCouncilPayout(council)}
           ${renderRecentReferrals(referral)}
           <div class="form-group">
             <label for="referralCodeInput">Change code</label>
@@ -601,10 +660,45 @@
         });
         const json = await res.json();
         if (!res.ok) throw new Error(json.error || 'Unable to save referral code');
-        renderReferral(json.referral || {});
+        await loadReferral();
         showStatus('Referral code saved.');
       } catch (err) {
         showStatus(escapeHtml(err.message || 'Unable to save referral code.'), true);
+      }
+    }
+
+    async function joinCouncilFromProfile() {
+      try {
+        const res = await fetch('/api/council/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ source: 'profile', acknowledge: true }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Unable to join the Council');
+        renderReferral(json.council?.referral || {}, json.council || {});
+        showStatus('Council membership active.');
+      } catch (err) {
+        showStatus(escapeHtml(err.message || 'Unable to join the Council.'), true);
+      }
+    }
+
+    async function saveCouncilPayoutProfile() {
+      const input = document.getElementById('councilPayPalEmail');
+      try {
+        const res = await fetch('/api/council/payout-profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ paypalPayoutEmail: input?.value.trim() || '', acknowledge: true }),
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Unable to update payout profile');
+        renderReferral(json.council?.referral || {}, json.council || {});
+        showStatus('Council payout profile saved.');
+      } catch (err) {
+        showStatus(escapeHtml(err.message || 'Unable to update payout profile.'), true);
       }
     }
 

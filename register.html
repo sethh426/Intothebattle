@@ -791,6 +791,7 @@
       return value.startsWith('/') && !value.startsWith('//') && !value.includes('\\') ? value : DEFAULT_ONBOARDING_PATH;
     })();
     const referralCode = String(pageParams.get('ref') || pageParams.get('referralCode') || '').trim();
+    const councilSignup = pageParams.get('council') === '1' || pageParams.get('councilSignup') === '1';
     if (referralCode && creatorCodeNotice && creatorCodeValue) {
       creatorCodeValue.textContent = referralCode.toUpperCase();
       creatorCodeNotice.hidden = false;
@@ -799,6 +800,7 @@
     if (googleBtn) {
       const googleParams = new URLSearchParams({ next: nextPath });
       if (referralCode) googleParams.set('ref', referralCode);
+      if (councilSignup) googleParams.set('council', '1');
       googleBtn.href = `/auth/google?${googleParams.toString()}`;
     }
 
@@ -905,6 +907,7 @@
             captchaAnswer,
             next: nextPath,
             referralCode,
+            council: councilSignup,
           }),
         });
         const json = await res.json();

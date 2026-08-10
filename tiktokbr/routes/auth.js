@@ -41,6 +41,11 @@ import {
   recordReferralAttribution,
   validateReferralCode,
 } from '../services/referrals.js';
+import {
+  getCouncilMemberSummary,
+  joinCouncilMember,
+  updateCouncilPayoutProfile,
+} from '../services/councilMembers.js';
 
 function getGoogleClientId() {
   return process.env.GOOGLE_CLIENT_ID;
@@ -102,7 +107,18 @@ export function getGoogleUserInfoUrl(env = process.env) {
 
 const DEFAULT_ONBOARDING_REDIRECT = '/dashboard?welcome=1';
 
-export function createOAuthState(nextPath = DEFAULT_ONBOARDING_REDIRECT, referralCode = '') {
+function councilIntentFromRequest(req, fallback = false) {
+  const candidates = [
+    req?.body?.council,
+    req?.body?.councilSignup,
+    req?.query?.council,
+    req?.query?.councilSignup,
+    fallback,
+  ];
+  return candidates.some(value => value === true || value === 1 || value === '1' || String(value || '').toLowerCase() === 'true');
+}
+
+export function createOAuthState(nextPath = DEFAULT_ONBOARDING_REDIRECT, referralCode = '', councilSignup = false) {
   const normalizedReferralCode = normalizeReferralCode(referralCode);
   return jwt.sign(
     {
@@ -110,6 +126,7 @@ export function createOAuthState(nextPath = DEFAULT_ONBOARDING_REDIRECT, referra
       nonce: crypto.randomBytes(16).toString('hex'),
       next: safeRedirectPath(nextPath, DEFAULT_ONBOARDING_REDIRECT),
       ...(normalizedReferralCode ? { referralCode: normalizedReferralCode } : {}),
+      ...(councilSignup ? { councilSignup: true } : {}),
     },
     process.env.JWT_SECRET,
     { expiresIn: '10m' }
@@ -1065,6 +1082,7 @@ router.post('/auth/user/register', registrationLimiter, express.json(), async (r
   const captchaAnswer = String(req.body.captchaAnswer || '').trim();
   const redirectUrl = safeRedirectPath(req.body.next, DEFAULT_ONBOARDING_REDIRECT);
   const referralCode = referralCodeFromRequest(req);
+  const councilSignup = councilIntentFromRequest(req);
   if (!verifyRegistrationChallenge(captchaToken, captchaAnswer)) {
     return res.status(400).json({ success: false, error: 'Please complete the registration security check correctly.' });
   }
@@ -1149,6 +1167,16 @@ router.post('/auth/user/register', registrationLimiter, express.json(), async (r
     setSessionCookie(res, sessionToken);
     const room = ensureUserRoom(existing.id, name);
     createFullAccessTrial(existing.id);
+    if (councilSignup) {
+      try {
+        joinCouncilMember(db, { ...existing, name, tiktok_username: tiktokUsername }, {
+          source: 'email_recovered_signup',
+          acknowledge: true,
+        });
+      } catch (err) {
+        console.warn('Council join failed for recovered email signup:', err?.message || err);
+      }
+    }
     const subscription = getEffectiveUserSubscription(db, existing.id);
     const finalRedirectUrl = userAccessRedirect(
       { ...existing, name, tiktok_username: tiktokUsername, is_active: 1 },
@@ -1217,6 +1245,16 @@ router.post('/auth/user/register', registrationLimiter, express.json(), async (r
   } catch (err) {
     console.warn('Referral attribution failed for email signup:', err?.message || err);
   }
+  if (councilSignup) {
+    try {
+      joinCouncilMember(db, { id: userId, email, name, tiktok_username: tiktokUsername }, {
+        source: 'email_signup',
+        acknowledge: true,
+      });
+    } catch (err) {
+      console.warn('Council join failed for email signup:', err?.message || err);
+    }
+  }
   createFullAccessTrial(userId);
   const subscription = getEffectiveUserSubscription(db, userId);
   const finalRedirectUrl = userAccessRedirect(
@@ -1268,7 +1306,7 @@ router.get('/auth/google', (req, res) => {
     return res.status(501).send('Google OAuth is not configured.');
   }
 
-  const state = createOAuthState(req.query.next, referralCodeFromRequest(req));
+  const state = createOAuthState(req.query.next, referralCodeFromRequest(req), councilIntentFromRequest(req));
   res.cookie('google_oauth_state', state, { ...getCookieOptions(true), maxAge: 10 * 60 * 1000 });
 
   const params = new URLSearchParams({
@@ -1358,6 +1396,16 @@ router.get('/auth/google/callback', async (req, res) => {
       } catch (err) {
         console.warn('Referral attribution failed for Google signup:', err?.message || err);
       }
+      if (councilIntentFromRequest(req, statePayload?.councilSignup)) {
+        try {
+          joinCouncilMember(db, { id: userId, email, name, tiktok_username: tiktokUsername }, {
+            source: 'google_signup',
+            acknowledge: true,
+          });
+        } catch (err) {
+          console.warn('Council join failed for Google signup:', err?.message || err);
+        }
+      }
       await createFullAccessTrialAsync(userId);
       await markSignupIntentConvertedAsync(email);
       user = await getAsync('SELECT * FROM users WHERE id = ?', userId);
@@ -1377,6 +1425,16 @@ router.get('/auth/google/callback', async (req, res) => {
         await runAsync('UPDATE users SET email_verified = 1 WHERE id = ?', user.id);
       }
       await ensureUserRoomAsync(user.id, user.name);
+      if (councilIntentFromRequest(req, statePayload?.councilSignup)) {
+        try {
+          joinCouncilMember(db, user, {
+            source: 'google_existing_signup',
+            acknowledge: true,
+          });
+        } catch (err) {
+          console.warn('Council join failed for existing Google user:', err?.message || err);
+        }
+      }
       await createFullAccessTrialAsync(user.id);
       await markSignupIntentConvertedAsync(email);
       trackAuthGrowthEvent(req, 'trial_started', user, {
@@ -1499,6 +1557,55 @@ router.post('/api/referrals/code', express.json(), (req, res) => {
       error: err.message || 'Unable to update referral code.',
       retryAfterSeconds: err.retryAfterSeconds || 0,
     });
+  }
+});
+
+router.get('/api/council/me', (req, res) => {
+  const user = getSessionUserFromRequest(req);
+  if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+  try {
+    return res.json({
+      success: true,
+      council: getCouncilMemberSummary(db, user, { baseUrl: referralBaseUrl(req) }),
+    });
+  } catch (err) {
+    console.error('Council summary failed:', err);
+    return res.status(err.statusCode || 500).json({ success: false, error: err.message || 'Unable to load Council details.' });
+  }
+});
+
+router.post('/api/council/join', express.json(), (req, res) => {
+  const user = getSessionUserFromRequest(req);
+  if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+  try {
+    joinCouncilMember(db, user, {
+      source: req.body?.source || 'dashboard',
+      acknowledge: req.body?.acknowledge !== false,
+      code: req.body?.code,
+    });
+    return res.json({
+      success: true,
+      council: getCouncilMemberSummary(db, user, { baseUrl: referralBaseUrl(req) }),
+    });
+  } catch (err) {
+    return res.status(err.statusCode || 500).json({ success: false, error: err.message || 'Unable to join the Council.' });
+  }
+});
+
+router.put('/api/council/payout-profile', express.json(), (req, res) => {
+  const user = getSessionUserFromRequest(req);
+  if (!user) return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+  try {
+    updateCouncilPayoutProfile(db, user, req.body || {});
+    return res.json({
+      success: true,
+      council: getCouncilMemberSummary(db, user, { baseUrl: referralBaseUrl(req) }),
+    });
+  } catch (err) {
+    return res.status(err.statusCode || 500).json({ success: false, error: err.message || 'Unable to update payout profile.' });
   }
 });
 

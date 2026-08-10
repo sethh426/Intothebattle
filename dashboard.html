@@ -94,6 +94,17 @@
     .blocker-item::before { content:'!'; flex:0 0 18px; width:18px; height:18px; display:grid; place-items:center; border-radius:999px; color:#071018; background:#ffd666; font-size:11px; font-weight:950; }
     .blocker-item.ready { border-color:rgba(128,255,210,.22); background:rgba(128,255,210,.08); color:#bfffe9; }
     .blocker-item.ready::before { content:'OK'; background:var(--green); font-size:9px; }
+    .connection-monitor { display:grid; gap:10px; padding:12px; border-radius:16px; border:1px solid rgba(255,255,255,.11); background:rgba(0,0,0,.18); }
+    .connection-monitor-head { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .connection-monitor-title { color:#fff; font-size:12px; font-weight:950; text-transform:uppercase; letter-spacing:.08em; }
+    .connection-monitor-action { color:#b9f2ff; font-size:12px; font-weight:850; line-height:1.35; }
+    .connection-check-grid { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; }
+    .connection-check { min-width:0; padding:9px; border-radius:13px; border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.045); }
+    .connection-check strong { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#fff; font-size:11px; font-weight:950; }
+    .connection-check span { display:block; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:11px; font-weight:800; }
+    .connection-check.pass { border-color:rgba(119,240,161,.28); background:rgba(119,240,161,.075); }
+    .connection-check.warn,.connection-check.pending { border-color:rgba(246,201,91,.28); background:rgba(246,201,91,.075); }
+    .connection-check.fail { border-color:rgba(255,79,140,.38); background:rgba(255,79,140,.09); }
     .live-grid { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr); gap:16px; margin-top:16px; }
     .live-panel { min-width:0; padding:16px; border-radius:20px; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.18); }
     .live-panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
@@ -300,6 +311,17 @@
     .aetheris-structure-row[data-status="destroyed"] .aetheris-structure-meter i { background:#5d6268; box-shadow:none; }
     .aetheris-structure-hp { color:#fff8e6; font-size:11px; font-weight:950; white-space:nowrap; }
     .aetheris-structure-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .aetheris-world-command { display:grid; gap:10px; margin-top:10px; padding:12px; border-radius:14px; border:1px solid rgba(184,156,255,.18); background:radial-gradient(circle at 90% 0,rgba(184,156,255,.1),transparent 42%),rgba(5,9,16,.58); }
+    .aetheris-world-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+    .aetheris-world-node { padding:9px; border-radius:10px; border:1px solid rgba(255,255,255,.09); background:rgba(255,255,255,.035); }
+    .aetheris-world-node[data-active="true"] { border-color:var(--territory-primary,#55e7ff); box-shadow:inset 0 0 18px var(--territory-glow,rgba(85,231,255,.1)); }
+    .aetheris-world-node-head { display:flex; justify-content:space-between; gap:8px; color:#fff; font-size:11px; font-weight:950; }
+    .aetheris-world-meter { height:6px; overflow:hidden; margin-top:7px; border-radius:99px; background:#070b10; }
+    .aetheris-world-meter i { display:block; height:100%; width:var(--control,50%); background:linear-gradient(90deg,var(--territory-primary,#55e7ff),var(--territory-secondary,#f6c95b)); }
+    .aetheris-world-node small { display:block; margin-top:5px; color:var(--muted); font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:.05em; }
+    .aetheris-world-feed { display:grid; gap:5px; max-height:116px; overflow:auto; }
+    .aetheris-world-event { display:flex; justify-content:space-between; gap:8px; padding:7px 8px; border-radius:8px; background:rgba(0,0,0,.2); color:var(--muted); font-size:10px; font-weight:800; }
+    .aetheris-world-event strong { color:#fff8e6; }
     .audio-layout,.sponsor-layout { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
     #audioManagerCard .audio-layout { grid-template-columns:repeat(3,minmax(0,1fr)); align-items:start; }
     #audioManagerCard .audio-volume-tool { grid-column:1 / -1; }
@@ -411,6 +433,15 @@
     .referral-chat-copy { min-height:86px; resize:vertical; font-size:12px; line-height:1.45; }
     .referral-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
     .referral-actions .btn { min-height:38px; padding:0 12px; font-size:12px; }
+    .referral-payout-card { display:grid; gap:10px; padding:13px; border-radius:14px; border:1px solid rgba(246,201,91,.22); background:linear-gradient(135deg,rgba(246,201,91,.09),rgba(128,255,210,.045)); }
+    .referral-payout-top { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; align-items:start; }
+    .referral-payout-top strong { display:block; color:#fff; font-size:15px; line-height:1.15; }
+    .referral-payout-top span { display:block; margin-top:3px; color:var(--muted); font-size:11px; font-weight:850; line-height:1.35; }
+    .referral-payout-amount { color:#07101f; background:linear-gradient(135deg,#ffffff,#fff0b9,#80ffd2); border-radius:12px; padding:8px 10px; font-size:11px; font-weight:950; text-transform:uppercase; text-align:center; white-space:nowrap; }
+    .referral-payout-amount b { display:block; font-size:21px; line-height:1; }
+    .referral-payout-track { height:10px; border-radius:999px; overflow:hidden; border:1px solid rgba(255,255,255,.1); background:rgba(0,0,0,.22); }
+    .referral-payout-fill { height:100%; width:0%; border-radius:999px; background:linear-gradient(90deg,#f6c95b,#fff0b9,#80ffd2); box-shadow:0 0 18px rgba(246,201,91,.2); }
+    .referral-payout-form { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px; align-items:end; }
     .command-panel { display:grid; gap:12px; }
     .command-panel textarea { min-height:214px; }
     .recap-list { display:grid; gap:10px; margin-top:12px; }
@@ -632,7 +663,7 @@
 
     @media(max-width:1100px){.hero{grid-template-columns:1fr}.col-8,.col-6,.col-4,.col-3{grid-column:span 12}.audio-layout,#audioManagerCard .audio-layout,.sponsor-layout,.sponsor-upgrade,.ops-strip,.session-layout,.launch-checklist,.quick-setup-panel,.live-grid{grid-template-columns:1fr}#audioManagerCard,#toolsRail,#creatorSponsorCard{order:initial}}
     @media(max-width:860px){.session-status-grid,.session-control-grid,.boss-setup{grid-template-columns:1fr}}
-    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.dashboard-nav{position:relative;top:auto}.dashboard-nav a{flex:1 1 120px}.workflow-summary{grid-template-columns:1fr;align-items:start}.workflow-status{width:fit-content}.workflow-toggle{position:absolute;right:18px;top:18px}.workflow-body{padding:14px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.welcome-setup-panel strong{font-size:20px}.stream-coach,.stream-health-head{grid-template-columns:1fr}.stream-health-head{display:grid}.mode-pill{width:fit-content}.coach-actions{justify-content:stretch}.coach-actions .btn,.secondary-launch-actions .btn{width:100%}.launch-action-grid{grid-template-columns:1fr}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}.setup-steps,.next-action-panel{grid-template-columns:1fr}.next-action-actions{justify-content:stretch}.referral-share-head,.referral-rank-top,.referral-create-row,.referral-link-row{grid-template-columns:1fr;display:grid}.referral-rank-count{width:100%}.referral-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.referral-actions .btn{width:100%}.footer{position:sticky;bottom:10px;z-index:35;padding:10px;border:1px solid rgba(246,201,91,.24);border-radius:20px;background:rgba(5,7,11,.9);backdrop-filter:blur(16px);box-shadow:0 18px 60px rgba(0,0,0,.38)}.footer-btn{flex:1 1 130px}}
+    @media(max-width:700px){body{padding:12px}.topbar{position:relative;top:auto;align-items:flex-start;flex-direction:column}.top-actions{justify-content:flex-start}.brand h1{font-size:20px}.dashboard-nav{position:relative;top:auto}.dashboard-nav a{flex:1 1 120px}.workflow-summary{grid-template-columns:1fr;align-items:start}.workflow-status{width:fit-content}.workflow-toggle{position:absolute;right:18px;top:18px}.workflow-body{padding:14px}.hero-card,.card{padding:20px}.hero h2{font-size:34px}.welcome-setup-panel strong{font-size:20px}.stream-coach,.stream-health-head{grid-template-columns:1fr}.stream-health-head{display:grid}.connection-monitor-head{display:grid}.connection-check-grid{grid-template-columns:1fr}.mode-pill{width:fit-content}.coach-actions{justify-content:stretch}.coach-actions .btn,.secondary-launch-actions .btn{width:100%}.launch-action-grid{grid-template-columns:1fr}.btn,.copy-field{width:100%}.copy-field{grid-template-columns:1fr}.readiness-head{flex-direction:column}.readiness-score{width:100%}.setup-steps,.next-action-panel{grid-template-columns:1fr}.next-action-actions{justify-content:stretch}.referral-share-head,.referral-rank-top,.referral-create-row,.referral-link-row,.referral-payout-top,.referral-payout-form{grid-template-columns:1fr;display:grid}.referral-rank-count,.referral-payout-amount{width:100%}.referral-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.referral-actions .btn{width:100%}.footer{position:sticky;bottom:10px;z-index:35;padding:10px;border:1px solid rgba(246,201,91,.24);border-radius:20px;background:rgba(5,7,11,.9);backdrop-filter:blur(16px);box-shadow:0 18px 60px rgba(0,0,0,.38)}.footer-btn{flex:1 1 130px}}
     @media(max-width:700px){.launch-action{grid-template-columns:32px minmax(0,1fr); gap:3px 10px; padding:12px}.launch-action b{grid-row:1 / span 2}.launch-action strong{font-size:14px}.launch-action span{font-size:11px}.secondary-launch-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.secondary-launch-actions .btn:last-child{grid-column:1 / -1}}
     @media(max-width:700px){.quick-step-track{grid-template-columns:1fr}.quick-setup-primary{justify-content:stretch}.quick-setup-primary .btn{width:100%}.quick-setup-tip{text-align:left}.aetheris-territory-options{grid-template-columns:1fr}.aetheris-territory-badge{max-width:100%}.aetheris-structure-row{grid-template-columns:1fr}.aetheris-structure-actions{grid-template-columns:1fr}}
     @media(max-width:700px){.audio-row{display:grid;grid-template-columns:minmax(0,1fr);align-items:start}.audio-name{white-space:normal;overflow-wrap:anywhere}.audio-size{font-size:12px}.audio-actions,.assign-actions,.sponsor-row-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;padding-left:0;justify-content:stretch}.audio-actions .btn,.assign-actions .btn,.sponsor-row-actions .btn{width:100%}.assign-table,.assign-table tbody,.assign-table tr,.assign-table td{display:block;width:100%}.assign-table tr{padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)}.assign-table td{padding:6px 0;border-bottom:0}.assign-select-cell{padding-left:0}.event-pill{width:100%;justify-content:center}.sponsor-row{display:grid;grid-template-columns:1fr}.sponsor-thumb{width:100%;max-width:260px}.sponsor-selected,.sponsor-upgrade,.sponsor-readiness-head,.sponsor-step-track{grid-template-columns:1fr}.sponsor-step-track{display:grid}}
@@ -712,6 +743,14 @@
           <span class="mode-pill waiting" id="streamModePill">Loading</span>
         </div>
         <div class="blocker-list" id="streamBlockers"></div>
+        <div class="connection-monitor" id="connectionMonitor">
+          <div class="connection-monitor-head">
+            <div class="connection-monitor-title" id="connectionMonitorTitle">Connection Monitor</div>
+            <span class="mode-pill waiting" id="connectionMonitorPill">Checking</span>
+          </div>
+          <div class="connection-monitor-action" id="connectionMonitorAction">Checking TikTok LIVE, overlay, viewer events, and real players.</div>
+          <div class="connection-check-grid" id="connectionMonitorChecks"></div>
+        </div>
       </div>
     </div>
     <aside class="hero-card readiness-panel">
@@ -876,6 +915,14 @@
           <button class="btn btn-secondary" id="aetherisRepairButton" type="button" onclick="repairAetherisStructureState()">Repair Weakest</button>
           <button class="btn btn-warning" id="aetherisResetButton" type="button" onclick="resetAetherisStructureState()">Reset Structures</button>
         </div>
+        <div class="aetheris-world-command">
+          <div class="aetheris-structure-head">
+            <label class="input-label" style="margin-bottom:0;">World Command</label>
+            <span class="aetheris-structure-badge" id="aetherisWorldBadge">Synchronizing</span>
+          </div>
+          <div class="aetheris-world-grid" id="aetherisWorldGrid"></div>
+          <div class="aetheris-world-feed" id="aetherisWorldFeed"></div>
+        </div>
       </div>
       <div class="btn-row"><button class="btn btn-primary" onclick="uploadBackground()">Upload</button><button class="btn btn-warning" onclick="clearBackground()">Clear</button></div>
       <p id="bgStatus" class="muted" style="margin-top:12px;">No background set</p>
@@ -909,7 +956,17 @@
           <div class="session-status-grid">
             <div class="session-stat"><span>Session</span><strong id="sessionElapsed">Idle</strong></div>
             <div class="session-stat"><span>Round</span><strong id="sessionRound">None</strong></div>
+            <div class="session-stat"><span>Mode</span><strong id="sessionMode">Horde Survival</strong></div>
             <div class="session-stat"><span>Players</span><strong id="sessionPlayers">0</strong></div>
+          </div>
+          <div class="form-group" style="margin-top:14px;">
+            <label class="input-label" for="battleModeInput">Battle mode</label>
+            <select id="battleModeInput" onchange="saveBattleMode()">
+              <option value="horde_survival">Horde Survival</option>
+              <option value="free_for_all">Free-for-All</option>
+              <option value="boss_raid">Boss Raid</option>
+            </select>
+            <p class="muted" style="margin-top:8px;">Default: Horde Survival. The selected mode is used when the next live round starts.</p>
           </div>
           <div class="boss-meter">
             <div class="stat-box"><span class="stat-label">Boss wave</span><span class="stat-value" id="bossWaveLabel">Inactive</span></div>
@@ -925,7 +982,7 @@
           <div class="power-meter">
             <div class="stat-box"><span class="stat-label">Arena Power-Up</span><span class="stat-value" id="arenaPowerLabel">Ready</span></div>
             <div class="power-track" aria-label="Arena Power-Up countdown"><div class="power-fill" id="arenaPowerFill"></div></div>
-            <div class="power-leaders" id="arenaPowerLeaders">Top 3 unlock boosted !nova and !overdrive attacks.</div>
+            <div class="power-leaders" id="arenaPowerLeaders">Top 3 contributors become champions for the next Power Phase.</div>
           </div>
           <div class="session-control-grid">
             <button class="btn btn-success" onclick="sessionAction('/api/session/start','Session started')">Start Session</button>
@@ -1174,6 +1231,7 @@ const dashboardState = {
   devTestMode: false,
   setupRehearsalActive: false,
   streamMode: { mode: 'loading', label: 'Checking stream mode', detail: 'The dashboard is loading stream status.', blockingReasons: [] },
+  connectionMonitor: null,
   playerSource: 'test',
   playerRoster: [],
   recentEvents: [],
@@ -1192,9 +1250,11 @@ const dashboardState = {
   welcomeMode: initialWelcomeMode,
   eventStarted: false,
   backgroundFit: 'contain',
+  battleMode: 'horde_survival',
   aetherisTerritories: [],
   aetherisTerritoryId: 'emberfall-forge',
   aetherisStructures: null,
+  aetherisWorld: null,
   growth: {
     overlayUrlCopiedTracked: false,
     tiktokConnectedTracked: false,
@@ -1644,7 +1704,7 @@ function renderReferralRecent(referral = {}) {
       <div class="referral-recent-title">Recent referrals</div>
       <div class="referral-recent-list">
         ${rows.map(row => {
-          const name = row.referred_tiktok ? `@${row.referred_tiktok}` : (row.referred_name || 'New creator');
+          const name = row.referred_tiktok ? `@${row.referred_tiktok}` : 'Creator pending TikTok';
           const detail = `${referralStatusLabel(row.reward_status || row.status)} • ${formatReferralDate(row.signup_at || row.created_at)}`;
           return `<div class="referral-recent-row"><span><strong>${escapeHtml(name)}</strong><span>${escapeHtml(detail)}</span></span><em class="referral-status-chip">${escapeHtml(row.signup_method || 'signup')}</em></div>`;
         }).join('')}
@@ -1710,19 +1770,64 @@ async function copyDashboardText(value, successMessage) {
     }
   }
 }
-function renderCreatorReferral(referral = {}) {
+function renderCouncilPayout(council = {}) {
+  const member = council.member || {};
+  const payout = council.payout || {};
+  const percent = Math.max(0, Math.min(100, Number(payout.progressPercent || 0) || 0));
+  const payoutEmail = String(member.payoutEmail || '').trim();
+  return `
+    <div class="referral-payout-card">
+      <div class="referral-payout-top">
+        <div>
+          <strong>PayPal payout progress</strong>
+          <span>${escapeHtml(payout.blockedReason || (payout.eligible ? 'Eligible for the next manual PayPal payout batch.' : 'Approved rewards roll over until the minimum is reached.'))}</span>
+        </div>
+        <div class="referral-payout-amount"><b>${escapeHtml(payout.approvedUnpaidLabel || '$0.00')}</b>of ${escapeHtml(payout.minimumLabel || '$25.00')}</div>
+      </div>
+      <div class="referral-payout-track" aria-label="Council payout minimum progress"><div class="referral-payout-fill" style="width:${escapeAttr(percent)}%"></div></div>
+      <div class="referral-payout-form">
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="input-label" for="councilPayPalEmailInput">PayPal payout email</label>
+          <input id="councilPayPalEmailInput" type="email" value="${escapeAttr(payoutEmail)}" placeholder="payout@example.com" autocomplete="email">
+        </div>
+        <button class="btn btn-secondary" type="button" id="saveCouncilPayoutButton" onclick="saveCouncilPayoutProfile()">Save payout</button>
+      </div>
+      <div class="referral-guardrails">
+        <span>${escapeHtml(member.payoutProfileComplete ? 'PayPal email saved' : 'PayPal email needed')}</span>
+        <span>W-9 ${escapeHtml(referralStatusLabel(member.w9Status || 'needed'))}</span>
+        <span>${escapeHtml(member.finePrintAcknowledged ? 'Fine print accepted' : 'Fine print accepted on save')}</span>
+      </div>
+    </div>
+  `;
+}
+function renderCreatorReferral(referral = {}, council = {}) {
   dashboardState.referral = referral || {};
+  dashboardState.council = council || {};
   const body = document.getElementById('creatorReferralBody');
   const badge = document.getElementById('creatorReferralBadge');
   if (!body) return;
+  const member = council.member || {};
+  const program = council.program || referral.program || {};
   const hasCode = Boolean(referral.hasCode && referral.code);
   if (badge) {
-    badge.textContent = hasCode ? (referral.program?.currentRank?.name || 'Aspirant') : 'Create code';
-    badge.className = `referral-share-badge ${hasCode ? 'ready' : 'warn'}`;
+    badge.textContent = member.isMember ? (program.currentRank?.name || 'Aspirant') : 'Join Council';
+    badge.className = `referral-share-badge ${member.isMember && hasCode ? 'ready' : 'warn'}`;
+  }
+  if (!member.isMember) {
+    body.innerHTML = `
+      ${renderCouncilProgress({ ...referral, program })}
+      <p class="muted">Join the Council to activate official referral tracking, payout profile setup, rank progress, and PayPal payout review.</p>
+      <div class="referral-actions">
+        <button class="btn btn-primary" type="button" id="joinCouncilButton" onclick="joinCouncilFromDashboard()">Join Council and create code</button>
+        <a class="btn btn-secondary" href="/council-of-aetheris" target="_blank" rel="noreferrer">View Council page</a>
+      </div>
+    `;
+    return;
   }
   const suggestedCode = String(referral.suggestedCode || '').trim();
   if (!hasCode) {
     body.innerHTML = `
+      ${renderCouncilProgress({ ...referral, program })}
       <div class="referral-create-row">
         <div class="form-group" style="margin-bottom:0;">
           <label class="input-label" for="creatorReferralCodeInput">Choose code</label>
@@ -1741,7 +1846,7 @@ function renderCreatorReferral(referral = {}) {
   const chatText = referralChatText(referral);
   const resetLabel = referral.canReset ? 'Save changed code' : `Reset in ${formatReferralCooldown(referral.resetCountdownSeconds)}`;
   body.innerHTML = `
-    ${renderCouncilProgress(referral)}
+    ${renderCouncilProgress({ ...referral, program })}
     <div class="referral-code-display"><span>Your code</span><strong>${escapeHtml(code)}</strong></div>
     <div class="referral-link-row">
       <div class="form-group" style="margin-bottom:0;">
@@ -1767,6 +1872,7 @@ function renderCreatorReferral(referral = {}) {
       <div class="referral-stat"><span>Projected/mo</span><strong>${escapeHtml(formatReferralMoney(stats.monthlyProjectedCents || 0))}</strong></div>
       <div class="referral-stat"><span>Paid</span><strong>${escapeHtml(formatReferralMoney(stats.paidAmountCents))}</strong></div>
     </div>
+    ${renderCouncilPayout(council)}
     ${renderReferralRecent(referral)}
     <div class="referral-create-row">
       <div class="form-group" style="margin-bottom:0;">
@@ -1781,14 +1887,67 @@ async function loadCreatorReferral() {
   const badge = document.getElementById('creatorReferralBadge');
   if (badge) badge.textContent = 'Loading';
   try {
-    const res = await fetch('/api/referrals/me', { credentials: 'same-origin' });
+    const res = await fetch('/api/council/me', { credentials: 'same-origin' });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load creator promo code');
-    renderCreatorReferral(data.referral || {});
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to load Council details');
+    renderCreatorReferral(data.council?.referral || {}, data.council || {});
   } catch (err) {
     const body = document.getElementById('creatorReferralBody');
-    if (body) body.innerHTML = `<p class="muted">${escapeHtml(err.message || 'Unable to load creator promo code.')}</p>`;
+    if (body) body.innerHTML = `<p class="muted">${escapeHtml(err.message || 'Unable to load Council details.')}</p>`;
     if (badge) badge.textContent = 'Unavailable';
+  }
+}
+async function joinCouncilFromDashboard() {
+  const button = document.getElementById('joinCouncilButton');
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Joining...';
+  }
+  try {
+    const res = await fetch('/api/council/join', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: 'dashboard', acknowledge: true }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to join the Council');
+    renderCreatorReferral(data.council?.referral || {}, data.council || {});
+    toast('Council membership active');
+  } catch (err) {
+    toast(err.message || 'Unable to join the Council', true);
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Join Council and create code';
+    }
+  }
+}
+async function saveCouncilPayoutProfile() {
+  const input = document.getElementById('councilPayPalEmailInput');
+  const button = document.getElementById('saveCouncilPayoutButton');
+  const paypalPayoutEmail = String(input?.value || '').trim();
+  if (!paypalPayoutEmail) return toast('Enter a PayPal payout email first', true);
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Saving...';
+  }
+  try {
+    const res = await fetch('/api/council/payout-profile', {
+      method: 'PUT',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paypalPayoutEmail, acknowledge: true }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.error || 'Unable to save payout profile');
+    renderCreatorReferral(data.council?.referral || {}, data.council || {});
+    toast('Council payout profile saved');
+  } catch (err) {
+    toast(err.message || 'Unable to save payout profile', true);
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Save payout';
+    }
   }
 }
 async function saveCreatorReferralCode() {
@@ -1809,7 +1968,7 @@ async function saveCreatorReferralCode() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.success) throw new Error(data.error || 'Unable to save creator promo code');
-    renderCreatorReferral(data.referral || {});
+    renderCreatorReferral(data.referral || {}, { ...(dashboardState.council || {}), referral: data.referral || {} });
     toast('Council code ready');
   } catch (err) {
     toast(err.message || 'Unable to save creator promo code', true);
@@ -1968,6 +2127,29 @@ function renderStreamBlockers(blockers = []) {
     return `<div class="blocker-item">${escapeHtml(message)}</div>`;
   }).join('');
 }
+function connectionMonitorPillClass(status) {
+  const value = String(status || '').toLowerCase();
+  if (value === 'pass') return 'mode-pill live';
+  if (value === 'fail' || value === 'error') return 'mode-pill error';
+  return 'mode-pill waiting';
+}
+function renderConnectionMonitor(monitor = {}) {
+  const title = document.getElementById('connectionMonitorTitle');
+  const pill = document.getElementById('connectionMonitorPill');
+  const action = document.getElementById('connectionMonitorAction');
+  const checksEl = document.getElementById('connectionMonitorChecks');
+  if (!title || !pill || !action || !checksEl) return;
+  const status = String(monitor.status || 'pending').toLowerCase();
+  title.textContent = monitor.label || 'Connection Monitor';
+  pill.className = connectionMonitorPillClass(status);
+  pill.textContent = status === 'pass' ? 'Healthy' : status === 'fail' ? 'Error' : 'Watch';
+  action.textContent = monitor.recommendedAction || 'Monitor the LIVE connection and viewer events.';
+  const checks = Array.isArray(monitor.checks) ? monitor.checks : [];
+  checksEl.innerHTML = checks.map(check => {
+    const checkStatus = String(check?.status || 'pending').toLowerCase();
+    return `<div class="connection-check ${escapeHtml(checkStatus)}"><strong>${escapeHtml(check?.label || 'Check')}</strong><span title="${escapeHtml(check?.detail || '')}">${escapeHtml(check?.detail || 'Waiting')}</span></div>`;
+  }).join('') || '<div class="connection-check pending"><strong>Waiting</strong><span>No monitor data yet.</span></div>';
+}
 function applyStreamModeStatus(data = {}) {
   const mode = data.mode || 'loading';
   dashboardState.streamMode = data;
@@ -1984,6 +2166,7 @@ function applyStreamModeStatus(data = {}) {
     pill.textContent = data.label || mode;
   }
   renderStreamBlockers(data.blockingReasons || []);
+  renderConnectionMonitor(data.connectionMonitor || dashboardState.connectionMonitor || {});
   updatePlayerSourceCounts({ real: dashboardState.realPlayerCount, demo: dashboardState.demoPlayerCount, test: dashboardState.testPlayerCount });
   updateReadinessChecklist();
 }
@@ -2240,8 +2423,9 @@ function renderAetherisTerritoryOptions() {
 function applyAetherisTerritory(id, territories = null) {
   if (Array.isArray(territories) && territories.length) dashboardState.aetherisTerritories = territories;
   dashboardState.aetherisTerritoryId = normalizeAetherisTerritoryId(id);
-  renderAetherisTerritoryOptions();
-  renderAetherisStructureStatus();
+renderAetherisTerritoryOptions();
+renderAetherisStructureStatus();
+renderAetherisWorld();
 }
 async function saveAetherisTerritory(id) {
   const territoryId = normalizeAetherisTerritoryId(id);
@@ -2350,6 +2534,41 @@ function applyAetherisStructures(payload = null) {
   if (normalized.territoryId) dashboardState.aetherisTerritoryId = normalizeAetherisTerritoryId(normalized.territoryId);
   renderAetherisTerritoryOptions();
   renderAetherisStructureStatus();
+}
+function renderAetherisWorld() {
+  const grid = document.getElementById('aetherisWorldGrid');
+  const feed = document.getElementById('aetherisWorldFeed');
+  const badge = document.getElementById('aetherisWorldBadge');
+  if (!grid || !feed || !badge) return;
+  const world = dashboardState.aetherisWorld;
+  if (!world?.territories?.length) {
+    grid.innerHTML = '<div class="aetheris-world-node"><strong>World state loading</strong></div>';
+    feed.innerHTML = '';
+    badge.textContent = 'Synchronizing';
+    return;
+  }
+  grid.innerHTML = world.territories.map(node => {
+    const territory = aetherisTerritoryById(node.id);
+    const palette = territory?.palette || {};
+    const control = Math.max(0, Math.min(100, Number(node.control) || 0));
+    return `<div class="aetheris-world-node" data-active="${node.id === world.activeTerritoryId ? 'true' : 'false'}" style="--territory-primary:${escapeAttr(palette.primary || '#55e7ff')};--territory-secondary:${escapeAttr(palette.secondary || '#f6c95b')};--territory-glow:${escapeAttr(cssHexToRgba(palette.primary || '#55e7ff', .18))}">
+      <div class="aetheris-world-node-head"><span>${escapeHtml(node.name || node.id)}</span><span>${Math.round(control)}%</span></div>
+      <div class="aetheris-world-meter"><i style="--control:${Math.round(control)}%"></i></div>
+      <small>${escapeHtml(node.status || 'held')} · ${escapeHtml(node.faction || 'Aetheris')}</small>
+    </div>`;
+  }).join('');
+  const active = world.activeTerritory || world.territories.find(node => node.id === world.activeTerritoryId);
+  badge.textContent = active ? `${active.status} · ${Math.round(Number(active.pressure) || 0)}% pressure` : 'Online';
+  const events = Array.isArray(world.events) ? world.events.slice(0, 4) : [];
+  feed.innerHTML = events.length
+    ? events.map(event => `<div class="aetheris-world-event"><span><strong>${escapeHtml(event.territoryName || event.territoryId)}</strong> ${escapeHtml(event.message || event.type || 'updated')}</span><span>${Number(event.delta) > 0 ? '+' : ''}${Math.round(Number(event.delta) || 0)}</span></div>`).join('')
+    : '<div class="aetheris-world-event"><span>Strategic feed ready. Battle damage will shift territory control.</span></div>';
+}
+function applyAetherisWorld(payload = null) {
+  const world = payload?.aetherisWorld || payload;
+  if (!world || !Array.isArray(world.territories)) return;
+  dashboardState.aetherisWorld = world;
+  renderAetherisWorld();
 }
 async function resetAetherisStructureState() {
   if (!confirm('Reset territory structures to full HP?')) return;
@@ -2549,12 +2768,32 @@ function renderArenaPowerStatus(power = sessionStatusData?.arenaPowerUp) {
   const leaders = Array.isArray(data.topContributors) ? data.topContributors.slice(0, 3) : [];
   const label = leaders.length
     ? leaders.map(item => `#${item.rank || '?'} ${item.nickname || item.uniqueId || 'Viewer'} ${Math.round(Number(item.score) || 0)}pts`).join('  |  ')
-    : 'Top 3 unlock boosted !nova and !overdrive attacks.';
+    : 'Top 3 contributors become champions for the next Power Phase.';
   text('arenaPowerLeaders', label);
+}
+function normalizeBattleMode(value) {
+  const raw = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  if (raw === 'ffa' || raw === 'freeforall' || raw === 'free_for_all') return 'free_for_all';
+  if (raw === 'boss' || raw === 'bossraid' || raw === 'boss_raid') return 'boss_raid';
+  return 'horde_survival';
+}
+function battleModeLabel(value) {
+  const mode = normalizeBattleMode(value);
+  if (mode === 'free_for_all') return 'Free-for-All';
+  if (mode === 'boss_raid') return 'Boss Raid';
+  return 'Horde Survival';
+}
+function applyBattleMode(value) {
+  const mode = normalizeBattleMode(value);
+  dashboardState.battleMode = mode;
+  const input = document.getElementById('battleModeInput');
+  if (input && input.value !== mode) input.value = mode;
+  text('sessionMode', battleModeLabel(mode));
 }
 function renderSessionStatus(data = {}) {
   sessionStatusData = data || {};
   if (sessionStatusData.aetherisStructures) applyAetherisStructures(sessionStatusData.aetherisStructures);
+  applyBattleMode(sessionStatusData.round?.mode || sessionStatusData.v1Game?.mode || dashboardState.battleMode);
   const active = !!sessionStatusData.active;
   const badge = document.getElementById('sessionStateBadge');
   if (badge) badge.textContent = active ? 'Live' : 'Idle';
@@ -2602,7 +2841,10 @@ async function sessionAction(endpoint, successMessage) {
     if (!dashboardState.tiktokConnected && !confirm('TikTok is not connected. Start a practice session anyway?')) return;
     if (dashboardState.tiktokConnected && dashboardState.realPlayerCount <= 0 && !confirm('TikTok is connected, but no real players are visible yet. Start the live battle anyway?')) return;
   }
-  const result = await apiCall(endpoint, 'POST');
+  const body = /\/session\/(?:round\/)?start$/.test(endpoint)
+    ? { mode: dashboardState.battleMode || normalizeBattleMode(document.getElementById('battleModeInput')?.value) }
+    : {};
+  const result = await apiCall(endpoint, 'POST', body);
   if (result.success && /\/start$/.test(endpoint)) dashboardState.eventStarted = true;
   if (result.session) renderSessionStatus(result.session);
   if (result.success) toast(successMessage || 'Session updated');
@@ -2632,7 +2874,7 @@ async function startBossWaveFromDashboard(successMessage = 'Boss wave started') 
   return result;
 }
 function copyViewerCommands() {
-  const value = document.getElementById('viewerCommandText')?.value || 'PLAY BY ENGAGING:\nAny comment, like, follow, share, or gift enters you\nTargets: @name | @horde | @boss\nRegular chat: enters you and sends a random 5-damage attack\nAttacks: @name | @horde | @boss | !laser @name | !fire @name\nIcon: !emoji <emoji> or !<emoji>\nTeams/help: !team red / !team leave / !commands';
+  const value = document.getElementById('viewerCommandText')?.value || 'PLAY BY ENGAGING:\nAny comment, like, follow, share, or gift enters you\nRegular chat charges energy; attacks require commands\nTargets: @name | @horde | @boss\nAttacks: !attack @name | !laser @name | !plasma @name | !fire @name | !nova\nSupport: !shield | !heal @name | !team red | !commands';
   navigator.clipboard?.writeText(value).then(() => toast('Viewer commands copied')).catch(() => toast('Copy failed', true));
 }
 async function showCommandBanners() {
@@ -2729,6 +2971,7 @@ socket.on('audioConfig', cfg => { mergeAudioConfig(cfg); renderAudioVolumeContro
 socket.on('overlaySettings', settings => {
   if (!settings || typeof settings !== 'object') return;
   if (settings.backgroundFit) applyBackgroundFit(settings.backgroundFit);
+  if (settings.battleMode) applyBattleMode(settings.battleMode);
   if (settings.aetherisTerritoryId) applyAetherisTerritory(settings.aetherisTerritoryId);
 });
 socket.on('sponsorBreakStatus', data => updateSponsorBreakStatus(data || {}));
@@ -2764,6 +3007,9 @@ socket.on('aetherisStructures', data => {
   applyAetherisStructures(data || {});
   if (data?.type === 'destroyed' && data.targetNick) toast(`${data.targetNick} destroyed`);
   if (data?.type === 'repaired' && data.targetNick) toast(`${data.targetNick} repaired`);
+});
+socket.on('aetherisWorld', data => {
+  applyAetherisWorld(data || {});
 });
 socket.on('connect', () => { setSocketStatus('connected'); socket.emit('register', { type: 'dashboard' }); });
 socket.on('disconnect', () => setSocketStatus('connecting'));
@@ -2942,6 +3188,8 @@ async function fetchStatus() {
       blockingReasons: data.blockingReasons || [],
       lastStreamEventAt: data.lastStreamEventAt || null,
     });
+    dashboardState.connectionMonitor = data.connectionMonitor || null;
+    renderConnectionMonitor(dashboardState.connectionMonitor || {});
     renderPlayerRoster({
       players: data.recentPlayers || [],
       count: data.playerCount || 0,
@@ -2964,8 +3212,10 @@ async function fetchStatus() {
     dashboardState.devTestMode = !!data.devTestMode;
     text('player-count', dashboardState.playerCount);
     applyBackgroundFit(data.overlaySettings?.backgroundFit || dashboardState.backgroundFit);
+    applyBattleMode(data.overlaySettings?.battleMode || data.session?.round?.mode || dashboardState.battleMode);
     applyAetherisTerritory(data.overlaySettings?.aetherisTerritoryId || data.aetherisTerritory?.id || dashboardState.aetherisTerritoryId, data.aetherisTerritories || null);
     if (data.aetherisStructures) applyAetherisStructures(data.aetherisStructures);
+    if (data.aetherisWorld) applyAetherisWorld(data.aetherisWorld);
     updateBackgroundPreview(data.background?.filename || '', data.background?.originalName || data.background?.filename || '', data.background?.url || '');
     const stream = data.stream || {};
     setTikTokStatus(stream.status || (data.connected ? 'connected' : 'disconnected'), stream.username || data.username);
@@ -3202,6 +3452,15 @@ function saveBackgroundFit(){
   apiCall('/api/dev/overlay-settings','POST',{ backgroundFit: fit }).then(d => {
     if (d.success) toast(`Background fit saved: ${fit === 'cover' ? 'fill overlay frame' : 'show full image'}`);
   });
+}
+function saveBattleMode(){
+  const mode = normalizeBattleMode(document.getElementById('battleModeInput')?.value);
+  applyBattleMode(mode);
+  apiCall('/api/dev/overlay-settings','POST',{ battleMode: mode }).then(d => {
+    if (!d.success) return toast(d.error || 'Battle mode failed', true);
+    applyBattleMode(d.settings?.battleMode || mode);
+    toast(`${battleModeLabel(mode)} selected`);
+  }).catch(() => toast('Battle mode failed', true));
 }
 async function runOverlayTest(action){
   if (overlayCount <= 0 && !dashboardState.setupRehearsalActive) {

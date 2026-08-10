@@ -239,10 +239,16 @@ router.post('/api/paypal/webhook', express.json(), async (req, res) => {
 
     if (
       eventType === 'BILLING.SUBSCRIPTION.CANCELLED' ||
+      eventType === 'BILLING.SUBSCRIPTION.CANCELED' ||
       eventType === 'BILLING.SUBSCRIPTION.SUSPENDED' ||
-      eventType === 'BILLING.SUBSCRIPTION.EXPIRED'
+      eventType === 'BILLING.SUBSCRIPTION.EXPIRED' ||
+      eventType === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED' ||
+      eventType === 'PAYMENT.SALE.DENIED'
     ) {
-      const subId = req.body.resource?.id;
+      const subId = req.body.resource?.id ||
+        req.body.resource?.billing_agreement_id ||
+        req.body.resource?.billing_agreement?.id ||
+        req.body.resource?.subscription_id;
       if (subId) {
         const localStatus = localStatusForPayPalWebhookEvent(eventType, req.body.resource?.status);
         const subscription = db.prepare('SELECT * FROM subscriptions WHERE paypal_subscription_id = ?').get(subId);

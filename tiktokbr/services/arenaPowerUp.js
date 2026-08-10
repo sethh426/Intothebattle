@@ -1,13 +1,13 @@
-export const ARENA_POWER_UP_DURATION_MS = 30_000;
+export const ARENA_POWER_UP_DURATION_MS = 20_000;
 export const ARENA_POWER_UP_COOLDOWN_MS = 90_000;
-export const ARENA_POWER_UP_BARRAGE_INITIAL_DELAY_MS = 3_000;
+export const ARENA_POWER_UP_BARRAGE_INITIAL_DELAY_MS = 10_000;
 export const ARENA_POWER_UP_BARRAGE_INTERVAL_MS = 6_000;
 export const ARENA_POWER_UP_BARRAGE_STAGGER_MS = 250;
 
-export const ARENA_POWER_UP_RANK_MULTIPLIERS = Object.freeze([4.25, 3.55, 3.0]);
+export const ARENA_POWER_UP_RANK_MULTIPLIERS = Object.freeze([1.5, 1.35, 1.2]);
 
 export const ARENA_POWER_UP_ATTACK_ROTATION = Object.freeze([
-  { label: 'NOVA', effect: 'pulse', color: '#7afcff' },
+  { label: 'NOVA', effect: 'nova', color: '#ffe08f' },
   { label: 'OVERDRIVE', effect: 'railgun', color: '#f6c95b' },
   { label: 'COMET DRIVE', effect: 'comet', color: '#ff8f45' },
   { label: 'ARC STORM', effect: 'arc', color: '#99ffda' },
@@ -20,22 +20,28 @@ export function arenaContributionPoints(type = '', amount = 1) {
     case 'chat':
       return 1;
     case 'like':
-      return Math.min(5, value * 0.5);
+      return Math.min(5, Math.floor(value / 20) || 1);
     case 'follow':
-      return 12;
-    case 'share':
       return 10;
+    case 'share':
+      return 12;
     case 'repost':
-      return 20;
+      return 12;
     case 'gift':
-      return Math.min(500, value);
+      return Math.min(60, value >= 1000 ? 60 : value >= 100 ? 35 : value >= 20 ? 20 : 10);
+    case 'combat':
+    case 'assist':
+    case 'heal':
+    case 'shield':
+    case 'objective':
+      return Math.min(10, Math.max(1, value));
     default:
       return 0;
   }
 }
 
 export function parseArenaPowerCommand(text = '') {
-  const match = String(text || '').match(/(?:^|\s)!(nova|overdrive)\b/i);
+  const match = String(text || '').match(/(?:^|\s)!(overdrive)\b/i);
   return match ? match[1].toLowerCase() : null;
 }
 

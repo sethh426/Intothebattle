@@ -4,6 +4,7 @@
   const approvedEffects = Object.freeze([
     'beam', 'laser', 'arc', 'sphere', 'railgun', 'comet', 'pulse', 'void',
     'prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard',
+    'nova', 'tempest', 'rift',
   ]);
   const defaultEffect = 'beam';
   const effectAliases = Object.freeze({
@@ -39,7 +40,17 @@
     shard: 'shard',
     shards: 'shard',
     pulse: 'pulse',
-    nova: 'pulse',
+    nova: 'nova',
+    starburst: 'nova',
+    flare: 'nova',
+    tempest: 'tempest',
+    storm: 'tempest',
+    thunder: 'tempest',
+    cyclone: 'tempest',
+    rift: 'rift',
+    portal: 'rift',
+    slash: 'rift',
+    phase: 'rift',
     ripple: 'pulse',
     wave: 'pulse',
     bubble: 'pulse',

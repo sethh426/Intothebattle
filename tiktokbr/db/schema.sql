@@ -300,6 +300,77 @@ CREATE TABLE IF NOT EXISTS council_year_bonus_claims (
 
 CREATE INDEX IF NOT EXISTS council_year_bonus_claims_status_idx ON council_year_bonus_claims(status, created_at);
 
+CREATE TABLE IF NOT EXISTS council_members (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL UNIQUE,
+  status TEXT DEFAULT 'active',
+  joined_source TEXT DEFAULT 'dashboard',
+  paypal_payout_email TEXT,
+  w9_status TEXT DEFAULT 'needed',
+  ftc_acknowledged_at TIMESTAMP,
+  fine_print_acknowledged_at TIMESTAMP,
+  elite INTEGER DEFAULT 0,
+  payout_hold_reason TEXT,
+  suspended_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS council_members_status_idx ON council_members(status, created_at);
+CREATE INDEX IF NOT EXISTS council_members_payout_idx ON council_members(status, w9_status, paypal_payout_email);
+
+CREATE TABLE IF NOT EXISTS council_payout_batches (
+  id SERIAL PRIMARY KEY,
+  batch_key TEXT UNIQUE NOT NULL,
+  status TEXT DEFAULT 'created',
+  payout_method TEXT DEFAULT 'paypal_csv',
+  period_start TIMESTAMP,
+  period_end TIMESTAMP,
+  total_amount_cents INTEGER DEFAULT 0,
+  member_count INTEGER DEFAULT 0,
+  item_count INTEGER DEFAULT 0,
+  created_by_admin_session_id TEXT,
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  paid_at TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS council_payout_batches_status_idx ON council_payout_batches(status, created_at);
+
+CREATE TABLE IF NOT EXISTS council_payout_items (
+  id SERIAL PRIMARY KEY,
+  batch_id INTEGER NOT NULL,
+  member_user_id INTEGER NOT NULL,
+  reward_id INTEGER NOT NULL UNIQUE,
+  paypal_payout_email TEXT NOT NULL,
+  amount_cents INTEGER DEFAULT 0,
+  currency TEXT DEFAULT 'USD',
+  status TEXT DEFAULT 'included',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  paid_at TIMESTAMP,
+  FOREIGN KEY(batch_id) REFERENCES council_payout_batches(id),
+  FOREIGN KEY(member_user_id) REFERENCES users(id),
+  FOREIGN KEY(reward_id) REFERENCES referral_recurring_rewards(id)
+);
+
+CREATE INDEX IF NOT EXISTS council_payout_items_batch_idx ON council_payout_items(batch_id, status);
+CREATE INDEX IF NOT EXISTS council_payout_items_member_idx ON council_payout_items(member_user_id, status);
+
+CREATE TABLE IF NOT EXISTS council_audit_events (
+  id SERIAL PRIMARY KEY,
+  action TEXT NOT NULL,
+  target_user_id INTEGER,
+  actor_admin_session_id TEXT,
+  details TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(target_user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS council_audit_events_action_idx ON council_audit_events(action, created_at);
+CREATE INDEX IF NOT EXISTS council_audit_events_target_idx ON council_audit_events(target_user_id, created_at);
+
 CREATE TABLE IF NOT EXISTS admin_email_campaigns (
   id SERIAL PRIMARY KEY,
   subject TEXT NOT NULL,
@@ -556,6 +627,62 @@ CREATE TABLE IF NOT EXISTS live_sessions (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS combat_rounds (
+  id SERIAL PRIMARY KEY,
+  round_id TEXT UNIQUE NOT NULL,
+  session_id TEXT,
+  room_id TEXT NOT NULL,
+  rules_version INTEGER DEFAULT 1,
+  mode TEXT DEFAULT 'horde_survival',
+  phase TEXT DEFAULT 'lobby',
+  started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  ended_at TIMESTAMP,
+  result_json TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS combat_rounds_room_started_idx ON combat_rounds(room_id, started_at);
+CREATE INDEX IF NOT EXISTS combat_rounds_session_idx ON combat_rounds(session_id);
+
+CREATE TABLE IF NOT EXISTS combat_events (
+  id SERIAL PRIMARY KEY,
+  event_id TEXT UNIQUE NOT NULL,
+  round_id TEXT,
+  session_id TEXT,
+  room_id TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  actor_id TEXT,
+  target_id TEXT,
+  payload_json TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS combat_events_round_created_idx ON combat_events(round_id, created_at);
+CREATE INDEX IF NOT EXISTS combat_events_room_created_idx ON combat_events(room_id, created_at);
+
+CREATE TABLE IF NOT EXISTS combat_player_round_stats (
+  id SERIAL PRIMARY KEY,
+  round_id TEXT NOT NULL,
+  room_id TEXT NOT NULL,
+  unique_id TEXT NOT NULL,
+  tiktok_handle TEXT,
+  score INTEGER DEFAULT 0,
+  kills INTEGER DEFAULT 0,
+  assists INTEGER DEFAULT 0,
+  deaths INTEGER DEFAULT 0,
+  damage_dealt INTEGER DEFAULT 0,
+  healing_done INTEGER DEFAULT 0,
+  shielding_done INTEGER DEFAULT 0,
+  objective_score INTEGER DEFAULT 0,
+  engagement_score INTEGER DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(round_id, unique_id)
+);
+
+CREATE INDEX IF NOT EXISTS combat_player_round_stats_room_idx ON combat_player_round_stats(room_id, score);
+
 CREATE TABLE IF NOT EXISTS admin_sessions (
   id SERIAL PRIMARY KEY,
   session_token TEXT UNIQUE NOT NULL,
@@ -569,7 +696,7 @@ CREATE TABLE IF NOT EXISTS room_player_stats (
   nickname TEXT,
   hp INTEGER DEFAULT 300,
   max_hp INTEGER DEFAULT 300,
-  strength INTEGER DEFAULT 15,
+  strength INTEGER DEFAULT 10,
   kills INTEGER DEFAULT 0,
   kill_streak INTEGER DEFAULT 0,
   last_kill_time BIGINT DEFAULT 0,
@@ -586,7 +713,7 @@ CREATE TABLE IF NOT EXISTS global_player_stats (
   nickname TEXT,
   hp INTEGER DEFAULT 300,
   max_hp INTEGER DEFAULT 300,
-  strength INTEGER DEFAULT 15,
+  strength INTEGER DEFAULT 10,
   kills INTEGER DEFAULT 0,
   last_active BIGINT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

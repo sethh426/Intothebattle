@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import jwt from 'jsonwebtoken';
 import { io as createSocket } from 'socket.io-client';
+import { V1_RULES } from '../tiktokbr/game/v1Rules.js';
 
 const port = Number(process.env.SOCKET_SMOKE_PORT || 3527);
 const host = '127.0.0.1';
@@ -355,7 +356,7 @@ try {
   assert(Array.isArray(dashboardStatus.recentEvents), 'status should expose recentEvents');
 
   const sessionStartedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.active === true && payload.sessionId, 10000);
-  const overlaySessionStartedPromise = waitForEvent(primaryOverlay, 'roundEvent', payload => payload.type === 'session_started', 10000);
+  const overlaySessionStartedPromise = waitForEvent(primaryOverlay, 'roundEvent', payload => payload.type === 'session_started' || payload.type === 'lobby', 10000);
   const sessionStartRes = await request('/api/session/start', {
     method: 'POST',
     headers: authedHeaders,
@@ -369,7 +370,7 @@ try {
   assert(overlaySessionStarted._sessionId === sessionStartedStatus.sessionId, 'roundEvent should carry active session id');
 
   const roundStartedStatusPromise = waitForEvent(dashboard, 'sessionStatus', payload => payload.round?.active === true, 10000);
-  const overlayRoundStartedPromise = waitForEvent(primaryOverlay, 'roundEvent', payload => payload.type === 'round_started', 10000);
+  const overlayRoundStartedPromise = waitForEvent(primaryOverlay, 'roundEvent', payload => payload.type === 'round_started' || payload.type === 'lobby', 10000);
   const roundStartRes = await request('/api/session/round/start', {
     method: 'POST',
     headers: authedHeaders,
@@ -553,16 +554,10 @@ try {
   const dashboardTestRoster = await dashboardTestRosterPromise;
   assert(dashboardTestRoster.bySource?.test > 0, 'overlay test players should be tagged as test source');
 
-  const passiveCommentAttackPromise = waitForEvent(
+  const commentOverlayStatePromise = waitForEvent(
     primaryOverlay,
-    'attack',
-    payload => payload?.passiveCommentAttack === true && payload?.damage === 5 && payload?.targetScope === 'horde',
-    10000
-  );
-  const passiveCommentDamagePromise = waitForEvent(
-    primaryOverlay,
-    'commentDamage',
-    payload => payload?.passiveCommentAttack === true && payload?.damage === 5 && payload?.commandDescription === 'CHAT POKE',
+    'gameState',
+    payload => payload?.arena_orion?.alive && Number(payload?.arena_orion?.battleCharges) >= 1,
     10000
   );
   const commentOverlayTestRes = await request('/api/overlay/test/comment', {
@@ -571,11 +566,9 @@ try {
   });
   assert(commentOverlayTestRes.status === 200, `overlay comment test should return 200, got ${commentOverlayTestRes.status}`);
   const commentOverlayTest = await commentOverlayTestRes.json();
-  const passiveCommentResult = commentOverlayTest.result?.result || commentOverlayTest.result;
-  assert(passiveCommentResult?.passiveCommentAttack === true, 'plain comment overlay test should mark passiveCommentAttack');
-  assert(passiveCommentResult?.damage === 5, `plain comment overlay test should deal 5 damage, got ${passiveCommentResult?.damage}`);
-  await passiveCommentAttackPromise;
-  await passiveCommentDamagePromise;
+  assert(commentOverlayTest.result?.engagementOnly === true, 'plain comment overlay test should be engagement-only');
+  assert(commentOverlayTest.result?.reason === 'comment_engagement_only', `plain comment overlay test should not attack, got ${commentOverlayTest.result?.reason}`);
+  await commentOverlayStatePromise;
 
   const devModeOnRes = await request('/api/dev/test-mode', {
     method: 'POST',
@@ -590,9 +583,10 @@ try {
   });
   assert(restoreAllowedRes.status === 200, `unsuppressed live restore guard should return 200, got ${restoreAllowedRes.status}`);
   const restoreAllowed = await restoreAllowedRes.json();
-  assert(Number(restoreAllowed.directRestore) === 0, `recent player restore should be disabled by default, got ${restoreAllowed.directRestore}`);
-  assert(Number(restoreAllowed.degradedRestore) === 0, `degraded live restore should be disabled by default, got ${restoreAllowed.degradedRestore}`);
-  assert(Number(restoreAllowed.alivePlayers) === 0, `disabled restore should leave no stale alive players, got ${restoreAllowed.alivePlayers}`);
+  assert(restoreAllowed.restoreEnabled === true, 'recent player restore should be enabled for active live overlays by default');
+  assert(Number(restoreAllowed.directRestore) === 1, `recent player restore should revive one recent visible player, got ${restoreAllowed.directRestore}`);
+  assert(Number(restoreAllowed.degradedRestore) === 0, `degraded live restore should not duplicate already restored players, got ${restoreAllowed.degradedRestore}`);
+  assert(Number(restoreAllowed.alivePlayers) === 1, `enabled restore should leave one visible live player, got ${restoreAllowed.alivePlayers}`);
 
   const restoreSuppressedRes = await request('/api/test/live-restore-guard?suppress=1', {
     method: 'POST',
@@ -628,35 +622,47 @@ try {
   });
   assert(mentionCommentRes.status === 200, `plain mention comment test should return 200, got ${mentionCommentRes.status}`);
   const mentionComment = await mentionCommentRes.json();
-  assert(mentionComment.attackResult?.handled === true, 'plain @target comment should create an attack');
-  assert(mentionComment.attackResult?.target === 'test_bravo', 'plain @target comment should attack the mentioned player');
-  assert(mentionComment.attackResult?.result?.passiveCommentAttack !== true, 'plain @target comment should use normal mention damage');
-  assert(Number(mentionComment.attackResult?.result?.damage) > 0, 'plain @target comment should deal positive damage');
-  assert(Number(mentionComment.attackResult?.result?.damage) <= 50, `high-strength regular attack should cap at 50 damage, got ${mentionComment.attackResult?.result?.damage}`);
+  assert(mentionComment.attackResult?.engagementOnly === true, 'plain @target comment should not create an attack');
+  assert(mentionComment.attackResult?.reason === 'comment_engagement_only', `plain @target comment should only engage, got ${mentionComment.attackResult?.reason}`);
+  assert(mentionComment.after?.test_bravo?.hp === mentionComment.before?.test_bravo?.hp, 'plain @target comment should not damage the mentioned player');
+
+  const basicDamageRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ reset: true, attackerStrength: 1000, comment: '!attack @test_bravo' }),
+  });
+  assert(basicDamageRes.status === 200, `basic attack test should return 200, got ${basicDamageRes.status}`);
+  const basicDamage = await basicDamageRes.json();
+  assert(basicDamage.attackResult?.handled === true, 'basic command should create an attack');
+  assert(basicDamage.attackResult?.target === 'test_bravo', 'basic command should target the mentioned player');
+  assert(basicDamage.attackResult?.result?.abilityKey === 'basic', 'basic command should use the V1 basic ability');
+  assert(basicDamage.attackResult?.result?.damage === 10, `basic command should deal exact V1 damage, got ${basicDamage.attackResult?.result?.damage}`);
+  assert(basicDamage.attackResult?.result?.poweredDamage !== true, 'basic command should not be marked poweredDamage');
 
   const specialDamageRes = await request('/api/test/comment', {
     method: 'POST',
     headers: authedHeaders,
-    body: JSON.stringify({ reset: true, attackerStrength: 1000, comment: '!orbital @test_bravo' }),
+    body: JSON.stringify({ reset: true, attackerStrength: 1000, comment: '!laser @test_bravo' }),
   });
-  assert(specialDamageRes.status === 200, `special damage cap test should return 200, got ${specialDamageRes.status}`);
+  assert(specialDamageRes.status === 200, `laser damage test should return 200, got ${specialDamageRes.status}`);
   const specialDamage = await specialDamageRes.json();
-  assert(specialDamage.attackResult?.handled === true, 'special command should create an attack');
-  assert(specialDamage.attackResult?.result?.damage === 150, `special command should deal fixed 150 damage, got ${specialDamage.attackResult?.result?.damage}`);
-  assert(specialDamage.attackResult?.result?.special === true, 'special command should be marked special');
-  assert(specialDamage.attackResult?.result?.poweredDamage === true, 'special command should be marked poweredDamage');
+  assert(specialDamage.attackResult?.handled === true, 'laser command should create an attack');
+  assert(specialDamage.attackResult?.result?.abilityKey === 'laser', 'laser command should use the V1 laser ability');
+  assert(specialDamage.attackResult?.result?.damage === 18, `laser command should deal exact V1 damage, got ${specialDamage.attackResult?.result?.damage}`);
+  assert(specialDamage.attackResult?.result?.special === true, 'laser command should be marked special for visuals');
+  assert(specialDamage.attackResult?.result?.poweredDamage !== true, 'laser command should not use old poweredDamage');
 
   const boostedDamageRes = await request('/api/test/comment', {
     method: 'POST',
     headers: authedHeaders,
-    body: JSON.stringify({ reset: true, messageBoost: true, comment: '@test_bravo' }),
+    body: JSON.stringify({ reset: true, messageBoost: true, comment: '!attack @test_bravo' }),
   });
-  assert(boostedDamageRes.status === 200, `gift-boost damage test should return 200, got ${boostedDamageRes.status}`);
+  assert(boostedDamageRes.status === 200, `message boost attack test should return 200, got ${boostedDamageRes.status}`);
   const boostedDamage = await boostedDamageRes.json();
-  assert(boostedDamage.attackResult?.handled === true, 'gift-boosted message should create an attack');
-  assert(boostedDamage.attackResult?.result?.damage === 150, `gift-boosted message attack should deal fixed 150 damage, got ${boostedDamage.attackResult?.result?.damage}`);
-  assert(boostedDamage.attackResult?.result?.giftBoosted === true, 'gift-boosted message should be marked giftBoosted');
-  assert(boostedDamage.attackResult?.result?.poweredDamage === true, 'gift-boosted message should be marked poweredDamage');
+  assert(boostedDamage.attackResult?.handled === true, 'message boost should still allow the explicit command');
+  assert(boostedDamage.attackResult?.result?.damage === 10, `message boost must not create old fixed 150 damage, got ${boostedDamage.attackResult?.result?.damage}`);
+  assert(boostedDamage.attackResult?.result?.giftBoosted !== true, 'message boost should not be marked giftBoosted');
+  assert(boostedDamage.attackResult?.result?.poweredDamage !== true, 'message boost should not be marked poweredDamage');
 
   const plainCommentRes = await request('/api/test/comment', {
     method: 'POST',
@@ -665,28 +671,40 @@ try {
   });
   assert(plainCommentRes.status === 200, `plain passive comment test should return 200, got ${plainCommentRes.status}`);
   const plainComment = await plainCommentRes.json();
-  assert(plainComment.attackResult?.handled === true, 'plain no-target comment should create a weak attack');
-  assert(plainComment.attackResult?.result?.passiveCommentAttack === true, 'plain no-target comment should mark passiveCommentAttack');
-  assert(plainComment.attackResult?.result?.damage === 5, `plain no-target comment should deal 5 raw damage, got ${plainComment.attackResult?.result?.damage}`);
+  assert(plainComment.attackResult?.engagementOnly === true, 'plain no-target comment should be engagement-only');
+  assert(plainComment.attackResult?.reason === 'comment_engagement_only', `plain no-target comment should not attack, got ${plainComment.attackResult?.reason}`);
+  assert(Number(plainComment.after?.test_alpha?.battleCharges) >= 1, 'plain no-target comment should add a battle charge');
 
-  const newAttackEffects = new Set(['prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard']);
-  const observedPassiveEffects = new Set();
-  for (let i = 0; i < 24; i += 1) {
-    const effectCycleRes = await request('/api/test/comment', {
-      method: 'POST',
-      headers: authedHeaders,
-      body: JSON.stringify({ reset: i === 0, comment: `effect cycle ${i}` }),
-    });
-    assert(effectCycleRes.status === 200, `effect cycle comment ${i} should return 200, got ${effectCycleRes.status}`);
-    const effectCycle = await effectCycleRes.json();
-    const effect = effectCycle.attackResult?.result?.effect;
-    if (newAttackEffects.has(effect)) observedPassiveEffects.add(effect);
-  }
-  const missingPassiveEffects = [...newAttackEffects].filter(effect => !observedPassiveEffects.has(effect));
-  assert(
-    missingPassiveEffects.length === 0,
-    `plain comment rotation should include every new effect, missing ${missingPassiveEffects.join(', ') || 'none'}`
-  );
+  const plasmaRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ reset: true, comment: '!plasma @test_bravo' }),
+  });
+  assert(plasmaRes.status === 200, `plasma command test should return 200, got ${plasmaRes.status}`);
+  const plasma = await plasmaRes.json();
+  assert(plasma.attackResult?.result?.abilityKey === 'plasma', 'plasma command should resolve through V1');
+  assert(plasma.attackResult?.result?.damage === 15, `plasma command should deal exact V1 damage, got ${plasma.attackResult?.result?.damage}`);
+
+  const fireRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ reset: true, comment: '!fire @test_bravo' }),
+  });
+  assert(fireRes.status === 200, `fire command test should return 200, got ${fireRes.status}`);
+  const fire = await fireRes.json();
+  assert(fire.attackResult?.result?.abilityKey === 'fire', 'fire command should resolve through V1');
+  assert(fire.attackResult?.result?.damage === 12, `fire command should deal exact V1 damage, got ${fire.attackResult?.result?.damage}`);
+
+  const novaRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ reset: true, comment: '!nova' }),
+  });
+  assert(novaRes.status === 200, `nova command test should return 200, got ${novaRes.status}`);
+  const nova = await novaRes.json();
+  assert(nova.attackResult?.multi === true, 'nova should resolve as a multi-target V1 attack');
+  assert(nova.attackResult?.attacks?.length >= 5, `nova should hit up to five valid targets, got ${nova.attackResult?.attacks?.length}`);
+  assert(nova.attackResult?.attacks?.[0]?.result?.damage === 12, `nova hits should deal exact V1 damage, got ${nova.attackResult?.attacks?.[0]?.result?.damage}`);
 
   const utilityCommentRes = await request('/api/test/comment', {
     method: 'POST',
@@ -695,13 +713,15 @@ try {
   });
   assert(utilityCommentRes.status === 200, `utility comment test should return 200, got ${utilityCommentRes.status}`);
   const utilityComment = await utilityCommentRes.json();
-  assert(utilityComment.utilityCommand?.stop === true, 'utility command should stop attack routing');
-  assert(utilityComment.attackResult?.skipped === true, 'utility command should not create passive attack result');
-  assert(utilityComment.after?.test_alpha?.shieldActive === true, 'shield command should activate shield on the caster');
+  assert(utilityComment.utilityCommand?.stop !== true, 'shield should not use the old utility command path');
+  assert(utilityComment.attackResult?.handled === true, 'shield command should resolve through V1');
+  assert(utilityComment.attackResult?.event?.type === 'shield', 'shield command should return a V1 shield event');
+  assert(utilityComment.after?.test_alpha?.shieldActive === true, 'shield command should activate barrier on the caster');
+  assert(Number(utilityComment.after?.test_alpha?.shield) === 25, `shield command should add 25 shield, got ${utilityComment.after?.test_alpha?.shield}`);
   assert(
-    Number(utilityComment.after?.test_alpha?.shieldRemainingMs) > 9000 &&
-      Number(utilityComment.after?.test_alpha?.shieldRemainingMs) <= 10000,
-    `shield command should last about 10 seconds, got ${utilityComment.after?.test_alpha?.shieldRemainingMs}`
+    Number(utilityComment.after?.test_alpha?.shieldRemainingMs) > 7000 &&
+      Number(utilityComment.after?.test_alpha?.shieldRemainingMs) <= 8500,
+    `shield command should last about 8 seconds, got ${utilityComment.after?.test_alpha?.shieldRemainingMs}`
   );
   assert(
     utilityComment.after?.test_bravo?.hp === utilityComment.before?.test_bravo?.hp,
@@ -711,18 +731,19 @@ try {
   const shieldedAttackRes = await request('/api/test/comment', {
     method: 'POST',
     headers: authedHeaders,
-    body: JSON.stringify({ attackerId: 'test_bravo', nickname: 'Bravo', comment: '@test_alpha' }),
+    body: JSON.stringify({ attackerId: 'test_bravo', nickname: 'Bravo', comment: '!attack @test_alpha' }),
   });
   assert(shieldedAttackRes.status === 200, `shielded attack test should return 200, got ${shieldedAttackRes.status}`);
   const shieldedAttack = await shieldedAttackRes.json();
-  assert(shieldedAttack.attackResult?.result?.damage === 0, `shielded regular attack should deal 0 damage, got ${shieldedAttack.attackResult?.result?.damage}`);
-  assert(shieldedAttack.attackResult?.result?.shielded === true, 'shielded regular attack should mark shielded');
-  assert(Number(shieldedAttack.attackResult?.result?.shieldAbsorbed) > 0, 'shielded regular attack should report absorbed damage');
+  assert(shieldedAttack.attackResult?.result?.damage === 0, `shielded basic attack should deal 0 health damage, got ${shieldedAttack.attackResult?.result?.damage}`);
+  assert(shieldedAttack.attackResult?.result?.shielded === true, 'shielded basic attack should mark shielded');
+  assert(Number(shieldedAttack.attackResult?.result?.shieldAbsorbed) === 10, `shielded basic attack should absorb 10 damage, got ${shieldedAttack.attackResult?.result?.shieldAbsorbed}`);
   assert(
     shieldedAttack.after?.test_alpha?.hp === shieldedAttack.before?.test_alpha?.hp,
-    'shielded regular attack should not reduce HP'
+    'shielded basic attack should not reduce HP'
   );
 
+  await new Promise(resolve => setTimeout(resolve, 1100));
   const activeShieldRefreshRes = await request('/api/test/comment', {
     method: 'POST',
     headers: authedHeaders,
@@ -730,21 +751,20 @@ try {
   });
   assert(activeShieldRefreshRes.status === 200, `active shield refresh test should return 200, got ${activeShieldRefreshRes.status}`);
   const activeShieldRefresh = await activeShieldRefreshRes.json();
-  assert(activeShieldRefresh.utilityCommand?.reason === 'shield_active', `active shield refresh should be rejected, got ${activeShieldRefresh.utilityCommand?.reason}`);
+  assert(activeShieldRefresh.attackResult?.reason === 'ability_cooldown', `active shield refresh should be rejected by V1 cooldown, got ${activeShieldRefresh.attackResult?.reason}`);
 
   const giftBreakRes = await request('/api/test/gift', {
     method: 'POST',
     headers: authedHeaders,
     body: JSON.stringify({ attackerId: 'test_charlie', targetId: 'test_alpha', diamonds: 25 }),
   });
-  assert(giftBreakRes.status === 200, `gift shield break test should return 200, got ${giftBreakRes.status}`);
+  assert(giftBreakRes.status === 200, `gift opportunity test should return 200, got ${giftBreakRes.status}`);
   const giftBreak = await giftBreakRes.json();
-  assert(giftBreak.attacks?.[0]?.shieldBroken === true, 'gift should break an active shield');
-  assert(giftBreak.attacks?.[0]?.damage === 150, `direct gift strike should deal fixed 150 damage, got ${giftBreak.attacks?.[0]?.damage}`);
-  assert(giftBreak.attacks?.[0]?.poweredDamage === true, 'direct gift strike should be marked poweredDamage');
-  assert(giftBreak.after?.test_alpha?.shieldActive === false, 'gift break should clear active shield');
-  assert(Number(giftBreak.after?.test_alpha?.shieldCooldownMs) > 40000, `gift break should start shield cooldown, got ${giftBreak.after?.test_alpha?.shieldCooldownMs}`);
+  assert(giftBreak.giftOpportunity === true, 'gift should be recorded as a V1 opportunity');
+  assert(Array.isArray(giftBreak.attacks) && giftBreak.attacks.length === 0, 'gift should not directly create attacks');
+  assert(giftBreak.after?.test_alpha?.shieldActive === true, 'gift should not break an active shield');
 
+  await new Promise(resolve => setTimeout(resolve, 1100));
   const cooldownShieldRes = await request('/api/test/comment', {
     method: 'POST',
     headers: authedHeaders,
@@ -752,8 +772,8 @@ try {
   });
   assert(cooldownShieldRes.status === 200, `shield cooldown test should return 200, got ${cooldownShieldRes.status}`);
   const cooldownShield = await cooldownShieldRes.json();
-  assert(cooldownShield.utilityCommand?.reason === 'shield_cooldown', `shield cooldown should reject new shield, got ${cooldownShield.utilityCommand?.reason}`);
-  assert(cooldownShield.after?.test_alpha?.shieldActive === false, 'shield cooldown attempt should not reactivate shield');
+  assert(cooldownShield.attackResult?.reason === 'ability_cooldown', `shield cooldown should reject new shield, got ${cooldownShield.attackResult?.reason}`);
+  assert(Number(cooldownShield.after?.test_alpha?.shield) <= 25, 'shield cooldown attempt should not stack above the existing barrier');
 
   const devModeOffRes = await request('/api/dev/test-mode', {
     method: 'POST',
@@ -766,18 +786,22 @@ try {
     primaryOverlay,
     'socialBoost',
     payload => payload?.type === 'share' &&
+      payload?.rewardLabel === 'Squad Signal' &&
       payload?.fullHeal === true &&
-      payload?.selfFullHeal > 0 &&
-      Number(payload.hp) > 0 &&
-      Number(payload.hp) === Number(payload.maxHp),
+      Number(payload.hp) === V1_RULES.maxHp &&
+      Number(payload.maxHp) === V1_RULES.maxHp &&
+      Number.isFinite(Number(payload.energy)),
     10000
   );
-  const shareFullHealStatePromise = waitForEvent(
+  const shareEngagementStatePromise = waitForEvent(
     primaryOverlay,
     'gameState',
     payload => {
       const player = payload?.arena_nova;
-      return player?.alive && Number(player.hp) > 0 && Number(player.hp) === Number(player.maxHp);
+      return player?.alive &&
+        Number(player.maxHp) === V1_RULES.maxHp &&
+        Number(player.hp) === V1_RULES.maxHp &&
+        Number.isFinite(Number(player.energy));
     },
     10000
   );
@@ -787,14 +811,12 @@ try {
   });
   assert(shareOverlayTestRes.status === 200, `overlay share test should return 200, got ${shareOverlayTestRes.status}`);
   const shareOverlayTest = await shareOverlayTestRes.json();
-  assert(shareOverlayTest.reward?.fullHeal === true, 'share overlay test should mark fullHeal');
-  assert(shareOverlayTest.reward?.selfFullHeal > 0, 'share overlay test should heal the sharer to full');
-  assert(
-    Number(shareOverlayTest.reward?.hp) > 0 && Number(shareOverlayTest.reward?.hp) === Number(shareOverlayTest.reward?.maxHp),
-    'share overlay test should return final hp equal to maxHp'
-  );
+  assert(shareOverlayTest.reward?.type === 'share', 'share overlay test should report share engagement');
+  assert(shareOverlayTest.reward?.fullHeal === true, 'share overlay test should full-heal the sharer');
+  assert(Number(shareOverlayTest.reward?.hp) === V1_RULES.maxHp, 'share overlay test should refill HP to max');
+  assert(Number.isFinite(Number(shareOverlayTest.reward?.energy)), 'share overlay test should return current energy');
   await shareSocialBoostPromise;
-  await shareFullHealStatePromise;
+  await shareEngagementStatePromise;
 
   const overlayTestPowerStartedPromise = waitForEvent(primaryOverlay, 'arenaPowerUp', payload => payload.type === 'started' && payload.active === true, 10000);
   const overlayTestLeaderboardPromise = waitForEvent(
@@ -812,7 +834,7 @@ try {
   const overlayTestAttackPromise = waitForEvent(
     primaryOverlay,
     'attack',
-    payload => payload?.poweredAttack === true && payload?.powerLabel && payload?.powerMultiplier >= 3,
+    payload => payload?.poweredAttack === true && payload?.powerLabel && payload?.powerMultiplier >= 1.2,
     10000
   );
   const powerOverlayTestRes = await request('/api/overlay/test/power-up', {

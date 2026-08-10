@@ -46,6 +46,8 @@ assert.match(adminRoute, /router\.get\('\/users\/export\.csv', requireAdminAuth/
 assert.match(adminRoute, /router\.get\('\/live-activity\/export\.csv', requireAdminAuth/);
 assert.match(adminRoute, /Admin Command Center/);
 assert.match(adminRoute, /data-admin-filter/);
+assert.match(adminRoute, /data-live-action="end"/);
+assert.match(adminRoute, /\/api\/admin\/rooms\/' \+ encodeURIComponent\(roomId\) \+ '\/reset-live/);
 assert.match(adminRoute, /renderOpsSummary\(opsSummaryData\)/);
 
 console.log('Admin dashboard smoke checks passed');

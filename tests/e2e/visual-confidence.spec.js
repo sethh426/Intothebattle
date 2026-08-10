@@ -17,7 +17,7 @@ const harness = createServerHarness({
   roomId: 'visual-gate-room',
   diskPrefix: 'intothebattle-visual-gate-',
 });
-const NEW_ATTACK_EFFECTS = ['prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard'];
+const NEW_ATTACK_EFFECTS = ['prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard', 'nova', 'tempest', 'rift'];
 
 test.describe.configure({ mode: 'serial' });
 
@@ -150,8 +150,10 @@ function assertHordeProminence(layout, label) {
   expect(horde.right, `${label} horde right outside frame`).toBeLessThanOrEqual(frameRight + 1.5);
   expect(horde.top, `${label} horde top outside frame`).toBeGreaterThanOrEqual(frameTop - 1.5);
   expect(horde.bottom, `${label} horde bottom outside frame`).toBeLessThanOrEqual(frameBottom + 1.5);
-  expect(horde.width, `${label} horde width`).toBeGreaterThanOrEqual(frame.w * 0.9);
-  expect(horde.height, `${label} horde height`).toBeGreaterThanOrEqual(frame.h * 0.1);
+  expect(horde.width, `${label} horde width readability`).toBeGreaterThanOrEqual(frame.w * 0.9);
+  expect(horde.width, `${label} horde width should stay framed`).toBeLessThanOrEqual(frame.w * 0.965);
+  expect(horde.height, `${label} horde height readability`).toBeGreaterThanOrEqual(frame.h * 0.105);
+  expect(horde.height, `${label} horde height should stay framed`).toBeLessThanOrEqual(frame.h * 0.135);
 }
 
 function assertPlayerCardSlots(layout, label, options = {}) {

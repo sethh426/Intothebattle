@@ -304,6 +304,14 @@
     },
     {
       "method": "POST",
+      "path": "/api/admin/rooms/:roomId/reset-live",
+      "category": "admin-mutation",
+      "access": "admin-session-and-same-origin-mutation",
+      "unauthenticated": 401,
+      "production": "enabled"
+    },
+    {
+      "method": "POST",
       "path": "/api/growth/events",
       "category": "public-growth",
       "access": "same-origin-consent-gated-rate-limited",

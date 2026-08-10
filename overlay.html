@@ -69,6 +69,9 @@
   --text-dim:    #8899bb;              /* more contrast */
   --danger:      #ff5566;
   --warn:        #ffcc44;
+  --violet:      #9d7cff;
+  --rose:        #ff78b2;
+  --electric:    #99ffda;
 }
 
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -86,16 +89,20 @@ body {
   position:relative;
   width:min(94vw,167vh,1920px);
   aspect-ratio:16/9;
-  background:rgba(4,8,18,0.94);
-  border:2px solid rgba(246,201,91,0.52); border-radius:18px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(85,231,255,0.12), transparent 43%),
+    radial-gradient(circle at 20% 18%, rgba(246,201,91,0.12), transparent 28%),
+    rgba(4,8,18,0.94);
+  border:2px solid rgba(246,201,91,0.56); border-radius:18px;
   box-shadow:
     inset 0 0 0 1px rgba(255,255,255,0.11),
     inset 0 0 0 9px rgba(3,7,15,0.28),
-    inset 0 0 48px rgba(246,201,91,0.1),
+    inset 0 0 54px rgba(246,201,91,0.12),
+    inset 0 0 120px rgba(85,231,255,0.055),
     0 0 0 1px rgba(255,255,255,0.04),
     0 18px 70px rgba(0,0,0,0.62),
-    0 0 70px rgba(246,201,91,0.12),
-    0 0 130px rgba(122,252,255,0.09);
+    0 0 76px rgba(246,201,91,0.14),
+    0 0 136px rgba(122,252,255,0.11);
   overflow:hidden;
 }
 #overlay-container::before {
@@ -108,9 +115,10 @@ body {
 #overlay-container::after {
   content:""; position:absolute; inset:0; z-index:19; pointer-events:none;
   background:
+    linear-gradient(135deg, rgba(255,255,255,0.12), transparent 12%, transparent 88%, rgba(246,201,91,0.1)),
     linear-gradient(90deg, rgba(246,201,91,0.14), transparent 10%, transparent 90%, rgba(246,201,91,0.08)),
     repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px);
-  opacity:0.34; mix-blend-mode:screen;
+  opacity:0.38; mix-blend-mode:screen;
 }
 #canvas { position:absolute; inset:0; width:100%; height:100%; display:block; border-radius:inherit; }
 body.signed-overlay { display:grid; place-items:center; padding:clamp(14px,2vw,34px); }
@@ -275,16 +283,24 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 /* ── Status / damage / banners ── */
 #status-badge {
   position:absolute; bottom:12px; left:50%; transform:translateX(-50%);
-  background:rgba(0,0,0,0.75); backdrop-filter:blur(8px);
-  border-radius:24px; padding:4px 16px; font-size:11px; font-weight:bold;
-  letter-spacing:1px; color:#aaa; pointer-events:none; z-index:26;
+  background:
+    linear-gradient(90deg, rgba(2,6,14,0.96), rgba(12,22,34,0.9), rgba(2,6,14,0.96));
+  backdrop-filter:blur(10px) saturate(1.08);
+  border-radius:5px; padding:5px 17px; font-size:11px; font-weight:900;
+  letter-spacing:1.05px; color:#aaa; pointer-events:none; z-index:26;
   line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:center;
-  font-family:'Rajdhani',monospace; border:1px solid rgba(255,255,255,0.07);
-  transition:color .2s,border-color .2s;
+  font-family:'Rajdhani',monospace; border:1px solid rgba(255,255,255,0.12);
+  clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px);
+  box-shadow:0 10px 24px rgba(0,0,0,0.42),inset 0 1px 0 rgba(255,255,255,0.16);
+  transition:color .2s,border-color .2s,box-shadow .2s;
 }
-#status-badge.connected    { color:#7aff87; text-shadow:0 0 4px #2eff5e; border-color:rgba(122,255,135,0.2); }
-#status-badge.disconnected { color:#ff8866; border-color:rgba(255,136,102,0.2); }
-#status-badge.demo         { color:#ffd84f; text-shadow:0 0 4px #ffaa00; border-color:rgba(255,216,79,0.2); }
+#status-badge::before {
+  content:""; display:inline-block; width:7px; height:7px; margin-right:8px; border-radius:50%;
+  background:currentColor; box-shadow:0 0 12px currentColor; vertical-align:1px;
+}
+#status-badge.connected    { color:#99ffda; text-shadow:0 0 7px rgba(153,255,218,0.58); border-color:rgba(153,255,218,0.34); box-shadow:0 10px 24px rgba(0,0,0,0.42),0 0 18px rgba(153,255,218,0.13),inset 0 1px 0 rgba(255,255,255,0.16); }
+#status-badge.disconnected { color:#ff8866; border-color:rgba(255,136,102,0.28); }
+#status-badge.demo         { color:#ffd84f; text-shadow:0 0 6px rgba(255,170,0,0.66); border-color:rgba(255,216,79,0.3); }
 #status-badge.is-compact { padding:3px 12px; font-size:10px; letter-spacing:.8px; }
 #status-badge.is-micro { padding:2px 9px; font-size:9px; letter-spacing:.55px; }
 
@@ -370,8 +386,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   --banner-accent-soft:rgba(122,252,255,0.18);
   --banner-duration:3200ms;
   position:absolute; left:50%; top:50%; transform:translate(-50%,0); z-index:26; pointer-events:none;
-  min-height:66px; max-height:76px; padding:0 16px; box-sizing:border-box; overflow:hidden;
-  display:grid; grid-template-columns:50px minmax(0,1fr) 7px; align-items:center; gap:11px;
+  min-height:70px; max-height:82px; padding:0 16px; box-sizing:border-box; overflow:hidden;
+  display:grid; grid-template-columns:52px minmax(0,1fr) 6px; align-items:center; gap:11px;
   font-family:'Rajdhani','Segoe UI',sans-serif; color:#f8fbff;
   background:
     linear-gradient(90deg, rgba(3,5,11,0.99), rgba(13,22,36,0.97) 38%, rgba(3,8,16,0.985)),
@@ -406,7 +422,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.transition-signal,
 .banner.transition-surge { animation:cyberBannerIn 420ms cubic-bezier(.16,1,.3,1) both; }
 .banner-signal {
-  position:relative; width:48px; height:40px; display:grid; place-items:center; flex:0 0 auto;
+  position:relative; width:50px; height:42px; display:grid; place-items:center; flex:0 0 auto;
   color:var(--banner-accent); border-right:1px solid rgba(255,255,255,0.1);
 }
 .banner-code {
@@ -417,27 +433,27 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   font-size:12px; font-weight:950; letter-spacing:.9px; text-transform:uppercase;
 }
 .banner-pulse {
-  position:absolute; width:30px; height:30px; border:1px solid rgba(var(--banner-accent-rgb),0.34);
+  position:absolute; width:31px; height:31px; border:1px solid rgba(var(--banner-accent-rgb),0.34);
   transform:rotate(45deg); opacity:.68; animation:cyberSignalPulse 1200ms ease-in-out infinite;
 }
 .banner-copy { min-width:0; position:relative; z-index:1; display:grid; gap:2px; }
 .banner-kicker {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:var(--banner-accent); font-size:11px; line-height:1; font-weight:900; letter-spacing:1.35px; text-transform:uppercase;
+  color:var(--banner-accent); font-size:11px; line-height:1; font-weight:900; letter-spacing:1.25px; text-transform:uppercase;
   text-shadow:0 0 12px rgba(var(--banner-accent-rgb),0.48);
 }
 .banner-title {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#fff; font-size:26px; line-height:1.02; font-weight:950; letter-spacing:.15px; text-transform:uppercase;
+  color:#fff; font-size:27px; line-height:1.02; font-weight:950; letter-spacing:.12px; text-transform:uppercase;
   text-shadow:0 0 26px rgba(255,255,255,0.42),0 2px 9px rgba(0,0,0,0.94);
 }
 .banner-title strong { color:var(--banner-accent); font-weight:900; }
 .banner-meta {
   display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#aebcd0; font-size:10px; line-height:1; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
+  color:#aebcd0; font-size:10px; line-height:1; font-weight:800; letter-spacing:.45px; text-transform:uppercase;
 }
 .banner-meter {
-  position:relative; z-index:1; width:6px; height:40px; border:1px solid rgba(255,255,255,0.12);
+  position:relative; z-index:1; width:6px; height:42px; border:1px solid rgba(255,255,255,0.12);
   background:rgba(255,255,255,0.05); overflow:hidden; align-self:center;
 }
 .banner-meter-fill {
@@ -459,8 +475,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.event-reward { --banner-accent:#f6c95b; --banner-accent-rgb:246,201,91; --banner-accent-soft:rgba(246,201,91,0.18); }
 .banner.commands {
   --banner-accent:#55e7ff; --banner-accent-rgb:85,231,255; --banner-accent-soft:rgba(246,201,91,0.15);
-  min-height:70px; max-height:82px; padding:0 16px;
-  grid-template-columns:52px minmax(0,1fr) 7px;
+  min-height:72px; max-height:86px; padding:0 16px;
+  grid-template-columns:54px minmax(0,1fr) 6px;
   background:
     linear-gradient(90deg, rgba(4,6,12,0.98), rgba(9,22,33,0.96) 42%, rgba(18,7,12,0.96)),
     radial-gradient(circle at 18% 52%, rgba(85,231,255,0.18), transparent 36%),
@@ -471,10 +487,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     0 0 54px rgba(246,201,91,0.08),
     inset 0 1px 0 rgba(255,255,255,0.16);
 }
-.banner.commands .banner-signal { width:52px; height:46px; }
+.banner.commands .banner-signal { width:54px; height:48px; }
 .banner.commands .banner-copy { justify-items:stretch; text-align:left; gap:0; }
 .banner-command-strip {
-  display:grid; grid-template-columns:minmax(146px,0.18fr) minmax(0,1fr); align-items:stretch; width:100%; min-width:0; min-height:50px; overflow:hidden;
+  display:grid; grid-template-columns:minmax(226px,0.22fr) minmax(0,1fr); align-items:stretch; width:100%; min-width:0; min-height:54px; overflow:hidden;
   border:1px solid rgba(var(--banner-accent-rgb),0.32);
   background:linear-gradient(90deg, rgba(0,0,0,0.38), rgba(var(--banner-accent-rgb),0.08), rgba(0,0,0,0.3));
   box-shadow:inset 0 1px 0 rgba(255,255,255,0.13),0 0 18px rgba(var(--banner-accent-rgb),0.12);
@@ -505,7 +521,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   animation:commandTickerScroll var(--command-ticker-duration,24s) linear infinite;
 }
 .banner-command-run {
-  display:flex; align-items:center; gap:18px; height:46px; padding:0 18px; white-space:nowrap;
+  display:flex; align-items:center; gap:18px; height:50px; padding:0 18px; white-space:nowrap;
 }
 .banner-command-run span {
   display:inline-flex; align-items:center; gap:7px;
@@ -535,9 +551,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner-command-chip span { display:block; min-width:0; overflow:hidden; text-align:center; text-overflow:ellipsis; white-space:nowrap; }
 .banner-command-chip strong { width:100%; color:var(--banner-accent); font-size:12.5px; font-weight:950; }
 .banner-command-chip span { width:100%; color:#c6cedd; font-size:8px; font-weight:800; }
-.banner-command-rail .banner-command-chip { min-height:40px; padding:5px 6px; }
-.banner-command-rail .banner-command-chip strong { font-size:13px; letter-spacing:0; text-transform:none; }
-.banner-command-rail .banner-command-chip span { font-size:8.5px; text-transform:uppercase; letter-spacing:0; }
+.banner-command-rail .banner-command-chip { min-height:44px; padding:5px 7px; }
+.banner-command-rail .banner-command-chip strong { font-size:14px; letter-spacing:0; text-transform:none; }
+.banner-command-rail .banner-command-chip span { font-size:9px; text-transform:uppercase; letter-spacing:0; }
 .banner.legendary {
   --banner-accent:#ffe36f; --banner-accent-rgb:255,227,111; --banner-accent-soft:rgba(255,174,41,0.24);
   box-shadow:
@@ -550,7 +566,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner:not(.commands).event-info { --banner-accent:#55e7ff; --banner-accent-rgb:85,231,255; --banner-accent-soft:rgba(85,231,255,0.16); }
 .banner:not(.commands).event-support { --banner-accent:#8fffd2; --banner-accent-rgb:143,255,210; --banner-accent-soft:rgba(143,255,210,0.16); }
 .banner:not(.commands).event-reward { --banner-accent:#f6c95b; --banner-accent-rgb:246,201,91; --banner-accent-soft:rgba(246,201,91,0.18); }
-.banner.legendary .banner-title { font-size:24px; text-shadow:0 0 22px rgba(255,227,111,0.38),0 2px 8px rgba(0,0,0,0.9); }
+.banner.legendary .banner-title { font-size:27px; text-shadow:0 0 22px rgba(255,227,111,0.38),0 2px 8px rgba(0,0,0,0.9); }
 .banner.is-compact {
   min-height:58px; max-height:68px; padding:0 12px; gap:9px;
   grid-template-columns:42px minmax(0,1fr) 5px;
@@ -628,26 +644,26 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.commands.is-nano .banner-command-chip span { display:none; }
 .banner.is-nano .banner-meter { width:3px; height:20px; }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) {
-  min-height:66px; max-height:78px; padding:0 15px; gap:10px;
-  grid-template-columns:50px minmax(0,1fr) 6px;
+  min-height:70px; max-height:80px; padding:0 16px; gap:11px;
+  grid-template-columns:52px minmax(0,1fr) 6px;
 }
-.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-signal { width:50px; height:40px; }
+.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-signal { width:52px; height:42px; }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-code {
-  min-width:36px; padding:5px 6px; font-size:11px; letter-spacing:.85px;
+  min-width:38px; padding:5px 6px; font-size:12px; letter-spacing:.85px;
 }
-.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-pulse { width:30px; height:30px; }
+.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-pulse { width:31px; height:31px; }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-kicker {
-  font-size:10.5px; letter-spacing:1.18px;
+  font-size:11px; letter-spacing:1.18px;
 }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-title,
 .banner.legendary[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-title {
-  font-size:24px; line-height:1.02; letter-spacing:.12px;
+  font-size:26px; line-height:1.02; letter-spacing:.1px;
 }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-meta {
-  font-size:9.5px; letter-spacing:.44px;
+  font-size:10px; letter-spacing:.42px;
 }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-meter {
-  width:6px; height:38px;
+  width:6px; height:40px;
 }
 @keyframes cyberBannerIn {
   0% { opacity:0; transform:translate(-50%,0) scale(1); filter:blur(6px) brightness(1.45); box-shadow:0 10px 22px rgba(0,0,0,0.42),0 0 0 rgba(var(--banner-accent-rgb),0); }
@@ -1781,7 +1797,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       <div class="sponsor-outro-title" id="sponsorOutroTitle">BACK TO THE BATTLE</div>
     </div>
   </div>
-  <div id="status-badge" class="disconnected">⚡ CONNECTING...</div>
+  <div id="status-badge" class="disconnected">CONNECTING...</div>
 </div>
 
 <!-- CONTROL PANEL -->
@@ -1871,6 +1887,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
               <button class="shot-btn" data-shot="arc">Arc</button>
               <button class="shot-btn" data-shot="sphere">Sphere</button>
               <button class="shot-btn" data-shot="pulse">Pulse</button>
+              <button class="shot-btn" data-shot="nova">Nova</button>
+              <button class="shot-btn" data-shot="tempest">Tempest</button>
+              <button class="shot-btn" data-shot="rift">Rift</button>
               <button class="shot-btn" data-shot="void">Void</button>
               <button class="shot-btn" data-shot="prism">Prism</button>
               <button class="shot-btn" data-shot="plasma">Plasma</button>
@@ -1901,10 +1920,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/vendor/three/three.min.js"></script>
+<script src="/vendor/gsap/gsap.min.js"></script>
 <script src="/js/overlay/stage-config.js"></script>
 <script src="/js/overlay/overlay-normalizers.js"></script>
 <script src="/js/overlay/overlay-diagnostics.js"></script>
 <script src="/js/overlay/overlay-audio.js"></script>
+<script src="/js/overlay/full_screen_particles.js"></script>
 <script src="/js/overlay/video-agent.js"></script>
 
 <script>
@@ -1916,6 +1938,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const overlayNormalizers = window.IntoTheBattleOverlayNormalizers;
   const overlayDiagnostics = window.IntoTheBattleOverlayDiagnostics;
   const overlayAudio = window.IntoTheBattleOverlayAudio;
+  const fullScreenParticlesModule = window.IntoTheBattleFullScreenParticles;
   const overlayVideoAgent = window.IntoTheBattleOverlayVideoAgent;
 
   const canvas    = document.getElementById('canvas');
@@ -1928,6 +1951,25 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   supportUnitEl.setAttribute('aria-hidden', 'true');
   supportUnitEl.style.visibility = 'hidden';
   container.appendChild(supportUnitEl);
+  const fullScreenParticles = fullScreenParticlesModule?.createFullScreenParticles
+    ? fullScreenParticlesModule.createFullScreenParticles({
+      host: container,
+      THREE: window.THREE,
+      gsap: window.gsap,
+      particleCount: 960,
+      reducedParticleCount: 240,
+      maxQueued: 8,
+    })
+    : null;
+  fullScreenParticles?.registerTrigger?.({
+    trigger: 'likes',
+    threshold: 1000,
+    effect: 'particleForm',
+    shape: 'heart',
+    text: '+1,000 LIKES',
+    duration: 2800,
+    cooldown: 5000,
+  });
   const sponsorScene = document.getElementById('sponsorScene');
   const sponsorVideo = document.getElementById('sponsorVideo');
   const sponsorPoster = document.getElementById('sponsorPoster');
@@ -1982,7 +2024,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let offsetY         = 0;
   let layoutZoom      = 1;
   const hordeThreshold = 5;      // now fixed
-  const HORDE_SIZE_SCALE = 1.44;
+  const HORDE_SIZE_SCALE = 1.55;
   const WAITING_FOR_PLAYERS_BACKGROUND_URL = '/waiting-for-players-bg.jpg';
   let backgroundImg   = null;
   let waitingForPlayersBackgroundImg = null;
@@ -2036,7 +2078,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1, backgroundFit: 'contain' };
   const APPROVED_EFFECTS = overlayNormalizers.approvedEffects;
   const DEFAULT_EFFECT = overlayNormalizers.defaultEffect;
-  const NEW_ATTACK_EFFECTS = Object.freeze(['prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard']);
+  const NEW_ATTACK_EFFECTS = Object.freeze(['prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard', 'nova', 'tempest', 'rift']);
   let isDemoMode      = false;
   let streamModeState = {
     mode: 'connecting',
@@ -2128,7 +2170,35 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let bossWaveState = null;
   let bossCoreAnchorCache = null;
   let bossAttackSweepAnchor = null;
+  const BOSS_WAVE_EXPIRE_GRACE_MS = 2200;
+  const BOSS_WAVE_STALE_MS = 110000;
   const BOSS_ATTACK_ANCHOR_TTL_MS = 4200;
+
+  function bossWaveEndTime(data = {}, now = Date.now()) {
+    const explicitEndsAt = Number(data.endsAt);
+    if (Number.isFinite(explicitEndsAt) && explicitEndsAt > 0) return explicitEndsAt;
+    const remainingMs = Number(data.remainingMs);
+    if (Number.isFinite(remainingMs) && remainingMs > 0) return now + remainingMs;
+    return null;
+  }
+
+  function clearBossWaveState() {
+    bossWaveState = null;
+    bossCoreAnchorCache = null;
+    bossAttackSweepAnchor = null;
+  }
+
+  function expireBossWaveIfNeeded(now = Date.now()) {
+    if (!bossWaveState?.active) return false;
+    const endsAt = Number(bossWaveState.endsAt);
+    const updatedAt = Number(bossWaveState.updatedAt) || 0;
+    const timedOut = Number.isFinite(endsAt) && endsAt > 0 && now > endsAt + BOSS_WAVE_EXPIRE_GRACE_MS;
+    const stale = updatedAt > 0 && now - updatedAt > BOSS_WAVE_STALE_MS;
+    if (!timedOut && !stale) return false;
+    clearBossWaveState();
+    return true;
+  }
+
   let stateFetchInFlight = false;
   let registerAcked = false;
   let registerRetryTimer = null;
@@ -3532,7 +3602,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     clearTransientEffectsForProbe();
     resetFrameHealth();
     const baseSeq = Math.max(lastVisualEventSeq + 4000, Date.now());
-    const effects = ['laser', 'pulse', 'arc', 'explosion', 'plasma', 'ion'];
+    const effects = ['laser', 'nova', 'tempest', 'rift', 'arc', 'plasma', 'ion'];
     for (let i = 0; i < requested; i += 1) {
       const attacker = roster[i % roster.length];
       const target = roster[(i + 1) % roster.length] || attacker;
@@ -3670,6 +3740,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       sponsorMedia: currentSponsorMediaStatus(),
       background: currentBackgroundStatus(),
       audio: currentAudioStatus(),
+      fullScreenParticles: fullScreenParticles?.getStatus ? fullScreenParticles.getStatus() : { ready: false },
       motion: currentOverlayMotionStatus(),
       frame: currentFrameHealthStatus(),
     }),
@@ -3701,6 +3772,31 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     testEventStorm: (count = 132) => runVisualEventStorm(count),
     testEffectOwnership: () => runEffectOwnershipProbe(),
     testEffectCatalog: effects => runEffectCatalogProbe(effects),
+    testFullScreenParticles: () => {
+      const queued = queueFullScreenLikeEffects({
+        uniqueId: 'p1',
+        nickname: 'NebulaX',
+        milestone: 1000,
+        milestoneTier: 'mega',
+        totalLikes: 1000,
+        fullScreenEffects: [{
+          id: `test-likes:${Date.now()}`,
+          trigger: 'likes',
+          threshold: 1000,
+          effect: 'particleForm',
+          shape: 'heart',
+          text: '+1,000 LIKES',
+          duration: 1800,
+          cooldown: 250,
+          milestone: 1000,
+          totalLikes: 1000,
+        }],
+      });
+      return {
+        queued,
+        status: fullScreenParticles?.getStatus ? fullScreenParticles.getStatus() : { ready: false },
+      };
+    },
     testOrbitalTracking: () => runOrbitalTrackingProbe(),
     testAttackGeometry: () => runAttackGeometryProbe(),
     testHotAttackStorm: (count = 180) => runHotAttackStorm(count),
@@ -3747,6 +3843,32 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         nextAttackAt: Date.now() + 2400,
         attackIntervalMs: 11000,
       });
+    },
+    testBossExpiry: () => {
+      handleBossWave({
+        type: 'started',
+        active: true,
+        hp: 420,
+        maxHp: 1000,
+        remainingMs: 40,
+        durationMs: 1000,
+        nextAttackAt: Date.now() + 40,
+        attackIntervalMs: 11000,
+      });
+      return currentOverlayMotionStatus();
+    },
+    testNestedGameState: () => {
+      receiveGameState({
+        round: { phase: 'battle' },
+        players: {
+          nested_alpha: { nickname: 'nested_alpha', hp: 300, maxHp: 300, alive: true, iconEmoji: '⚡', kills: 2 },
+          nested_blaze: { handle: 'nested_blaze', hp: 250, maxHp: 300, alive: true, iconEmoji: '🔥', kills: 1 },
+          nested_guard: { displayName: 'nested_guard', hp: 210, maxHp: 300, alive: true, iconEmoji: '🛡️', kills: 0 },
+        },
+        boss: { hp: 1000 },
+        horde: { pressure: 50 },
+      });
+      return currentOverlayMotionStatus();
     },
     testMotionImpact: () => {
       const owner = resolveEffectEntity(HORDE_ID, 'horde', 'owner');
@@ -4362,22 +4484,22 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const bossZone = stage.zones.boss;
     const ui = canvasUiScale();
     const hordeLayout = getHordeLayout();
-    const cardH = Math.max(64 * ui, Math.min(106 * ui, bossZone.h * 0.42, frame.h * 0.098));
-    const cardW = Math.max(300 * ui, Math.min(bossZone.w * 0.98, 520 * ui));
+    const cardH = Math.max(78 * ui, Math.min(126 * ui, bossZone.h * 0.88, frame.h * 0.125));
+    const cardW = Math.max(420 * ui, Math.min(bossZone.w * 0.98, 660 * ui, frame.w * 0.5));
     const bossPlayers = topPlayers().slice(0, 5);
     const playerBottom = bossPlayers.reduce((bottom, _player, index) => {
       const pos = getPlayerPosition(index, bossPlayers.length);
       return Math.max(bottom, getPlayerCardDrawMetrics(pos, bossPlayers.length).bottom);
     }, bossZone.y);
-    let minCardY = Math.max(bossZone.y, playerBottom + stage.gap * 0.58);
+    let minCardY = Math.max(bossZone.y, playerBottom + stage.gap * 0.78);
     let maxCardY = Math.min(bossZone.bottom - cardH, hordeLayout.barY - stage.gap * 0.62 - cardH);
     if (maxCardY < minCardY) {
-      minCardY = Math.max(bossZone.y, Math.min(bossZone.bottom - cardH, playerBottom + stage.gap * 0.24));
+      minCardY = Math.max(bossZone.y, Math.min(bossZone.bottom - cardH, playerBottom + stage.gap * 0.72));
       maxCardY = Math.max(minCardY, bossZone.bottom - cardH);
     }
     const cardX = clampNumber(bossZone.x + bossZone.w / 2 - cardW / 2, bossZone.x, bossZone.right - cardW);
     const cardY = clampNumber(bossZone.y + bossZone.h * 0.43 - cardH / 2, minCardY, maxCardY);
-    const r = Math.max(24 * ui, Math.min(42 * ui, cardH * 0.36, frame.h * 0.05));
+    const r = Math.max(32 * ui, Math.min(54 * ui, cardH * 0.42, frame.h * 0.062));
     const x = clampNumber(cardX + cardH * 0.52, cardX + r * 1.25, cardX + cardW - r * 1.4);
     const y = cardY + cardH * 0.5;
     const contentX = Math.min(cardX + cardW - cardH * 0.62, x + r + Math.max(14 * ui, cardH * 0.16));
@@ -4427,7 +4549,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function getBossCoreAnchor() {
-    if (bossWaveState?.active) return snapshotBossCoreAnchor();
+    if (bossWaveState?.active && !expireBossWaveIfNeeded()) return snapshotBossCoreAnchor();
     if (bossCoreAnchorCache && Date.now() - bossCoreAnchorCache.ts <= BOSS_ATTACK_ANCHOR_TTL_MS) {
       return bossCoreAnchorCache;
     }
@@ -5392,7 +5514,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       supportUnitState.lastName = '';
     }
     const type = String(data.type || '').toLowerCase();
-    if (type === 'like') supportUnitState.likes += Math.max(1, Math.round(Number(data.hearts) || 1));
+    if (type === 'like') {
+      supportUnitState.likes += Math.max(1, Math.round(Number(data.hearts) || 1));
+      const likeHeal = Math.max(0, Math.round(Number(data.hpRestored ?? data.amount ?? data.heal) || 0));
+      if (likeHeal > 0) supportUnitState.heal += likeHeal;
+    }
     if (type === 'heal') supportUnitState.heal += Math.max(1, Math.round(Number(data.amount) || Number(data.heal) || 0));
     if (type === 'shield') supportUnitState.shields += 1;
     supportUnitState.likes = Math.min(99, supportUnitState.likes);
@@ -5527,9 +5653,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         ? options.commands
         : [
           { command: 'engage', detail: 'enter arena' },
-          { command: '@name', detail: 'hit a player' },
-          { command: 'chat', detail: 'weak random attack' },
-          { command: '!attack @name', detail: 'stronger player hit' },
+          { command: 'chat', detail: '+2 energy' },
+          { command: '!attack @name', detail: 'basic strike' },
+          { command: '!laser @name', detail: 'pierce shield' },
+          { command: '!plasma @name', detail: 'break shield' },
+          { command: '!fire @name', detail: 'burn target' },
+          { command: '!nova', detail: 'area blast' },
           { command: '!attack @horde', detail: 'hit The Horde' },
           { command: '!attack @boss', detail: 'hit the boss' },
           { command: '!shield', detail: 'block damage' },
@@ -5541,11 +5670,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         : [
           'Any comment, like, follow, share, or gift enters you',
           'Targets: @name | @horde | @boss',
-          'Regular chat: enters you and sends a random 5-damage attack',
-          'Attacks: @name | @horde | @boss | !laser @name | !fire @name',
-          'Icon: !emoji <emoji> or !<emoji>',
-          'Effects: !laser @name | !fire @name | !prism @name | !plasma @name',
-          'Teams/help: !team red / !commands or !comments',
+          'Regular chat charges energy; attacks require commands',
+          'Attacks: !attack @name | !laser @name | !plasma @name | !fire @name | !nova',
+          'Objectives: !attack @horde | !laser @boss | !fire @boss',
+          'Support: !shield | !heal @name | !team red | !commands',
         ];
       base.meta = '';
       base.kicker = '';
@@ -5592,10 +5720,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const targetRatio = isCommandBanner ? 0.88 : 0.62;
     const laneW = Math.min(maxLaneW, Math.max(bannerZone.w, frame.w * targetRatio));
     const desiredLaneH = Math.min(
-      frame.h * 0.12,
-      Math.max(bannerZone.h, frame.h * (isCommandBanner ? 0.096 : 0.105))
+      frame.h * 0.118,
+      Math.max(bannerZone.h, frame.h * (isCommandBanner ? 0.102 : 0.096))
     );
-    const minReadableLaneH = Math.max(24, frame.h * (isCommandBanner ? 0.045 : 0.04));
+    const minReadableLaneH = Math.max(32, frame.h * (isCommandBanner ? 0.058 : 0.052));
     const centeredX = frame.x + frame.w / 2 - laneW / 2;
     const laneX = clampNumber(centeredX, innerLeft, innerRight - laneW);
     const staticLaneBottom = isCommandBanner
@@ -5637,8 +5765,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     if (!Number.isFinite(playerBottom) || !Number.isFinite(hordeTop)) return staticLane;
 
-    const playerClearance = isCommandBanner ? Math.max(2, gapY * 0.12) : Math.max(5, gapY * 0.34);
-    const hordeClearance = isCommandBanner ? Math.max(2, gapY * 0.12) : Math.max(8, gapY * 0.62);
+    const playerClearance = isCommandBanner ? Math.max(4, gapY * 0.18) : Math.max(7, gapY * 0.42);
+    const hordeClearance = isCommandBanner ? Math.max(5, gapY * 0.22) : Math.max(10, gapY * 0.66);
     let laneTopLimit = playerBottom + playerClearance;
     let laneBottomLimit = hordeTop - hordeClearance;
     const fullAvailableGap = laneBottomLimit - laneTopLimit;
@@ -5681,7 +5809,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     const availableGap = laneBottomLimit - laneTopLimit;
-    const cssReadableLaneH = isCommandBanner ? 54 : 78;
+    const cssReadableLaneH = isCommandBanner ? 76 : 78;
     const laneH = Math.min(availableGap, Math.max(desiredLaneH, Math.min(cssReadableLaneH, availableGap)));
     const laneY = laneTopLimit + Math.max(0, (availableGap - laneH) * (isCommandBanner ? 0.5 : 0.88));
     const combatLane = makeRect(laneX, laneY, laneW, laneH);
@@ -5819,15 +5947,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const forceNano = stage.frame.h < 260 || stage.frame.w < 430 || placementZone.h < 36;
     const availableWidth = Math.max(1, placementZone.w);
     const largeMomentBanner = el.classList.contains('legendary') || el.classList.contains('kill') || el.classList.contains('streak');
-    const frameWidthRatio = isCommandBanner ? 0.88 : largeMomentBanner ? 0.68 : 0.62;
+    const frameWidthRatio = isCommandBanner ? 0.9 : largeMomentBanner ? 0.72 : 0.64;
     const frameMaxWidth = Math.min(availableWidth, Math.max(220, frame.w * frameWidthRatio));
-    const readableMinWidth = Math.min(frameMaxWidth, Math.max(isCommandBanner ? 440 : 280, frame.w * (isCommandBanner ? 0.58 : 0.36)));
+    const readableMinWidth = Math.min(frameMaxWidth, Math.max(isCommandBanner ? 520 : 340, frame.w * (isCommandBanner ? 0.66 : 0.42)));
     const maxWidth = Math.min(availableWidth, Math.max(readableMinWidth, frameMaxWidth));
     const preferredWidth = isCommandBanner
       ? maxWidth
       : Math.min(maxWidth, Math.max(Math.min(readableMinWidth, maxWidth), availableWidth * (laneIsCombat ? 0.86 : 0.94)));
-    const forceCompact = placementZone.h <= (isCommandBanner ? 58 : 72) || preferredWidth < (isCommandBanner ? 640 : 620);
-    const forceMicro = placementZone.h <= (isCommandBanner ? 46 : 50) || preferredWidth < (isCommandBanner ? 500 : 460);
+    const forceCompact = placementZone.h <= (isCommandBanner ? 66 : 70) || preferredWidth < (isCommandBanner ? 720 : 680);
+    const forceMicro = placementZone.h <= (isCommandBanner ? 52 : 56) || preferredWidth < (isCommandBanner ? 560 : 520);
     el.classList.remove('is-compact', 'is-micro', 'is-nano');
     if (forceCompact) el.classList.add('is-compact');
     if (forceMicro) el.classList.add('is-micro');
@@ -6895,7 +7023,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const speed = Math.max(0.5, options.shotSpeed || overlaySettings.shotSpeed || 1);
       const durations = {
         static:1800, beam:430, laser:520, railgun:480, comet:820, arc:620, sphere:700, pulse:680, void:760, projectile:760, neon:640, fire:780, explosion:680, bullet:620,
-        prism:720, plasma:820, cryo:760, ion:560, sonic:700, gravity:820, glitch:620, orbital:780, drone:840, shard:720,
+        prism:720, plasma:820, cryo:760, ion:560, sonic:700, gravity:820, glitch:620, orbital:780, drone:840, shard:720, nova:760, tempest:740, rift:700,
       };
       this.duration = Math.round((durations[type] || 500) / speed);
 
@@ -6929,7 +7057,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     draw() {
       ctx.save();
       this.drawAnchorCues();
-      if (!['bullet', 'sphere', 'pulse', 'void', 'prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard'].includes(this.type)) this.drawVectorRail();
+      if (!['bullet', 'sphere', 'pulse', 'void', 'prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard', 'nova', 'tempest', 'rift'].includes(this.type)) this.drawVectorRail();
       switch (this.type) {
         case 'laser':      this.drawLaser();      break;
         case 'beam':       this.drawBeam();       break;
@@ -6954,6 +7082,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         case 'orbital':    this.drawOrbital();    break;
         case 'drone':      this.drawDrone();      break;
         case 'shard':      this.drawShard();      break;
+        case 'nova':       this.drawNova();       break;
+        case 'tempest':    this.drawTempest();    break;
+        case 'rift':       this.drawRift();       break;
         case 'static':     break;
         default:           this.drawLaser();
       }
@@ -7576,6 +7707,304 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         ctx.lineWidth = Math.max(1.4, 2.4 * ui);
         ctx.beginPath();
         ctx.arc(t.x, t.y, (18 + impactT * (74 + this.intensity * 24)) * ui, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    drawNova() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const nx = -uy, ny = ux;
+      const ui = canvasUiScale();
+      const now = Date.now();
+      const x = f.x + dx * p;
+      const y = f.y + dy * p;
+      const fade = pg < 0.8 ? 1 : Math.max(0, 1 - (pg - 0.8) / 0.2);
+      const impactT = clamp01((pg - 0.66) / 0.34);
+      const impactAlpha = Math.sin(impactT * Math.PI);
+      const radius = (12 + this.intensity * 9) * ui;
+      const tail = Math.max(52 * ui, Math.min(dist * 0.4, (118 + this.intensity * 42) * ui));
+      const phase = prefersReducedMotion() ? 0 : now * 0.004;
+
+      this.trail.push({ x, y, p: pg, r: radius });
+      while (this.trail.length > 10) this.trail.shift();
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      const tailGrad = ctx.createLinearGradient(x - ux * tail, y - uy * tail, x, y);
+      tailGrad.addColorStop(0, 'rgba(246,201,91,0)');
+      tailGrad.addColorStop(0.38, 'rgba(255,120,178,0.2)');
+      tailGrad.addColorStop(0.72, 'rgba(246,201,91,0.5)');
+      tailGrad.addColorStop(1, 'rgba(255,255,255,0.94)');
+      ctx.globalAlpha = fade * 0.8;
+      ctx.strokeStyle = tailGrad;
+      ctx.lineWidth = Math.max(7 * ui, (12 + this.intensity * 5) * ui);
+      ctx.beginPath();
+      ctx.moveTo(x - ux * tail, y - uy * tail);
+      ctx.quadraticCurveTo(
+        x - ux * tail * 0.54 + nx * Math.sin(phase * 4) * radius * 0.7,
+        y - uy * tail * 0.54 + ny * Math.sin(phase * 4) * radius * 0.7,
+        x,
+        y
+      );
+      ctx.stroke();
+
+      this.trail.forEach((point, index) => {
+        const age = (index + 1) / this.trail.length;
+        ctx.globalAlpha = fade * age * 0.12;
+        ctx.strokeStyle = index % 2 ? '#ff78b2' : '#f6c95b';
+        ctx.lineWidth = Math.max(1, 1.2 * ui);
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, point.r * (0.9 + age * 1.4), 0, Math.PI * 2);
+        ctx.stroke();
+      });
+
+      const aura = ctx.createRadialGradient(x, y, 0, x, y, radius * 3);
+      aura.addColorStop(0, 'rgba(255,255,255,0.42)');
+      aura.addColorStop(0.24, 'rgba(246,201,91,0.35)');
+      aura.addColorStop(0.56, 'rgba(255,120,178,0.16)');
+      aura.addColorStop(1, 'rgba(246,201,91,0)');
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = aura;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(phase * 2.4);
+      ctx.globalAlpha = fade * 0.92;
+      ctx.fillStyle = '#fff8d7';
+      ctx.strokeStyle = '#f6c95b';
+      ctx.lineWidth = Math.max(1, 1.2 * ui);
+      ctx.beginPath();
+      for (let i = 0; i < 12; i += 1) {
+        const a = i * Math.PI / 6;
+        const r = (i % 2 === 0 ? radius * 1.55 : radius * 0.62);
+        const px = Math.cos(a) * r;
+        const py = Math.sin(a) * r;
+        if (!i) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      ctx.globalAlpha = fade * 0.72;
+      ctx.strokeStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, 0, radius * 1.9, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      if (impactT > 0 && !this._impacted) {
+        this.spawnImpactParticles(['#fff8d7', '#f6c95b', '#ff78b2'], 22, { min: 5, max: 8, speed: 3.6, radius: 1.6 });
+      }
+      if (impactAlpha > 0) {
+        ctx.globalAlpha = impactAlpha * 0.54;
+        ctx.strokeStyle = '#f6c95b';
+        ctx.lineWidth = Math.max(1.4, 2.4 * ui);
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, (24 + impactT * (88 + this.intensity * 26)) * ui, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = impactAlpha * 0.62;
+        ctx.strokeStyle = '#ffffff';
+        for (let i = 0; i < 10; i += 1) {
+          const a = phase + i * Math.PI * 0.2;
+          const inner = (10 + impactT * 12) * ui;
+          const outer = (42 + impactT * (72 + this.intensity * 18)) * ui;
+          ctx.beginPath();
+          ctx.moveTo(t.x + Math.cos(a) * inner, t.y + Math.sin(a) * inner);
+          ctx.lineTo(t.x + Math.cos(a) * outer, t.y + Math.sin(a) * outer);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    drawTempest() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const nx = -uy, ny = ux;
+      const ui = canvasUiScale();
+      const now = Date.now();
+      const fade = pg < 0.76 ? 1 : Math.max(0, 1 - (pg - 0.76) / 0.24);
+      const headX = f.x + dx * p;
+      const headY = f.y + dy * p;
+      const segments = 12;
+      const width = (18 + this.intensity * 12) * ui;
+      const impactT = clamp01((pg - 0.68) / 0.32);
+      const impactAlpha = Math.sin(impactT * Math.PI);
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      for (let lane = -1; lane <= 1; lane += 1) {
+        const points = [{ x: f.x, y: f.y }];
+        for (let i = 1; i <= segments; i += 1) {
+          const local = Math.min(p, i / segments);
+          if (local <= (i - 1) / segments) break;
+          const envelope = Math.sin(local * Math.PI);
+          const braid = Math.sin(i * 1.8 + lane * 2.2 + now * 0.018) * width * envelope;
+          points.push({
+            x: f.x + dx * local + nx * (braid + lane * width * 0.34),
+            y: f.y + dy * local + ny * (braid + lane * width * 0.34),
+          });
+        }
+        if (points.length < 2) continue;
+        ctx.globalAlpha = fade * (lane === 0 ? 0.5 : 0.28);
+        ctx.strokeStyle = lane === 0 ? '#ffffff' : lane > 0 ? '#99ffda' : '#55e7ff';
+        ctx.lineWidth = Math.max(1.2, (lane === 0 ? 3.2 : 2.1) * ui);
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i += 1) ctx.lineTo(points[i].x, points[i].y);
+        ctx.stroke();
+      }
+
+      for (let ring = 0; ring < 4; ring += 1) {
+        const ringT = clamp01(pg * 1.28 - ring * 0.13);
+        if (ringT <= 0 || ringT >= 1) continue;
+        const rx = f.x + dx * Math.min(p, ringT);
+        const ry = f.y + dy * Math.min(p, ringT);
+        ctx.save();
+        ctx.translate(rx, ry);
+        ctx.rotate(Math.atan2(dy, dx) + (ring % 2 ? -0.38 : 0.38));
+        ctx.scale(1, 0.34);
+        ctx.globalAlpha = fade * Math.sin(ringT * Math.PI) * 0.4;
+        ctx.strokeStyle = ring % 2 ? '#f6c95b' : '#99ffda';
+        ctx.lineWidth = Math.max(1, 1.7 * ui);
+        ctx.beginPath();
+        ctx.arc(0, 0, (18 + ringT * (46 + this.intensity * 16)) * ui, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      const headGlow = ctx.createRadialGradient(headX, headY, 0, headX, headY, (26 + this.intensity * 16) * ui);
+      headGlow.addColorStop(0, 'rgba(255,255,255,0.95)');
+      headGlow.addColorStop(0.36, 'rgba(153,255,218,0.52)');
+      headGlow.addColorStop(1, 'rgba(85,231,255,0)');
+      ctx.globalAlpha = fade;
+      ctx.fillStyle = headGlow;
+      ctx.beginPath();
+      ctx.arc(headX, headY, (26 + this.intensity * 16) * ui, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (impactT > 0 && !this._impacted) {
+        this.spawnImpactParticles(['#ffffff', '#99ffda', '#55e7ff'], 20, { min: 5, max: 8, speed: 4.1, radius: 1.1 });
+      }
+      if (impactAlpha > 0) {
+        ctx.globalAlpha = impactAlpha * 0.58;
+        ctx.strokeStyle = '#99ffda';
+        ctx.lineWidth = Math.max(1.3, 2.1 * ui);
+        for (let i = 0; i < 8; i += 1) {
+          const a = i * Math.PI / 4 + now * 0.002;
+          ctx.beginPath();
+          ctx.moveTo(t.x + Math.cos(a) * 12 * ui, t.y + Math.sin(a) * 12 * ui);
+          ctx.lineTo(t.x + Math.cos(a) * (52 + impactT * 44) * ui, t.y + Math.sin(a) * (52 + impactT * 44) * ui);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    drawRift() {
+      const { from: f, to: t, progress: pg } = this;
+      const p = easeOutCubic(pg);
+      const dx = t.x - f.x, dy = t.y - f.y;
+      const dist = Math.max(1, Math.hypot(dx, dy));
+      const ux = dx / dist, uy = dy / dist;
+      const nx = -uy, ny = ux;
+      const ui = canvasUiScale();
+      const now = Date.now();
+      const fade = pg < 0.8 ? 1 : Math.max(0, 1 - (pg - 0.8) / 0.2);
+      const x = f.x + dx * p;
+      const y = f.y + dy * p;
+      const impactT = clamp01((pg - 0.68) / 0.32);
+      const impactAlpha = Math.sin(impactT * Math.PI);
+      const portalR = (16 + this.intensity * 10) * ui;
+
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      const slashLen = Math.max(60 * ui, Math.min(dist * 0.46, (132 + this.intensity * 42) * ui));
+      const slashGrad = ctx.createLinearGradient(x - ux * slashLen, y - uy * slashLen, x + ux * portalR, y + uy * portalR);
+      slashGrad.addColorStop(0, 'rgba(157,124,255,0)');
+      slashGrad.addColorStop(0.38, 'rgba(157,124,255,0.42)');
+      slashGrad.addColorStop(0.76, 'rgba(255,120,178,0.62)');
+      slashGrad.addColorStop(1, 'rgba(255,255,255,0.9)');
+      ctx.globalAlpha = fade * 0.74;
+      ctx.strokeStyle = slashGrad;
+      ctx.lineWidth = Math.max(8 * ui, (13 + this.intensity * 5) * ui);
+      ctx.beginPath();
+      ctx.moveTo(x - ux * slashLen + nx * portalR * 0.35, y - uy * slashLen + ny * portalR * 0.35);
+      ctx.lineTo(x + ux * portalR * 0.8 - nx * portalR * 0.2, y + uy * portalR * 0.8 - ny * portalR * 0.2);
+      ctx.stroke();
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(Math.atan2(dy, dx) + Math.PI / 2 + (prefersReducedMotion() ? 0 : Math.sin(now * 0.011) * 0.12));
+      ctx.scale(0.46, 1);
+      const portal = ctx.createRadialGradient(0, 0, 0, 0, 0, portalR * 2.2);
+      portal.addColorStop(0, 'rgba(255,255,255,0.28)');
+      portal.addColorStop(0.34, 'rgba(255,120,178,0.28)');
+      portal.addColorStop(0.62, 'rgba(157,124,255,0.22)');
+      portal.addColorStop(1, 'rgba(157,124,255,0)');
+      ctx.fillStyle = portal;
+      ctx.beginPath();
+      ctx.arc(0, 0, portalR * 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = fade;
+      ctx.strokeStyle = '#ff78b2';
+      ctx.lineWidth = Math.max(1.4, 2.2 * ui);
+      ctx.beginPath();
+      ctx.arc(0, 0, portalR * 1.1, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = '#ffffff';
+      ctx.globalAlpha = fade * 0.8;
+      ctx.beginPath();
+      ctx.arc(0, 0, portalR * 0.56, Math.PI * 0.15, Math.PI * 1.68);
+      ctx.stroke();
+      ctx.restore();
+
+      for (let i = 0; i < 5; i += 1) {
+        const local = clamp01(pg * 1.24 - i * 0.12);
+        if (local <= 0 || local >= 1) continue;
+        const rx = f.x + dx * local + nx * Math.sin(i * 1.7 + now * 0.01) * portalR * 0.42;
+        const ry = f.y + dy * local + ny * Math.sin(i * 1.7 + now * 0.01) * portalR * 0.42;
+        ctx.globalAlpha = fade * (1 - local) * 0.32;
+        ctx.strokeStyle = i % 2 ? '#9d7cff' : '#ff78b2';
+        ctx.lineWidth = Math.max(1, 1.2 * ui);
+        ctx.beginPath();
+        ctx.arc(rx, ry, (12 + i * 4 + local * 20) * ui, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      if (impactT > 0 && !this._impacted) {
+        this.spawnImpactParticles(['#ffffff', '#ff78b2', '#9d7cff'], 18, { min: 4, max: 7, speed: 3.8, radius: 1.2 });
+      }
+      if (impactAlpha > 0) {
+        ctx.globalAlpha = impactAlpha * 0.5;
+        ctx.strokeStyle = '#ff78b2';
+        ctx.lineWidth = Math.max(1.3, 2.2 * ui);
+        ctx.beginPath();
+        ctx.moveTo(t.x - ux * 46 * ui + nx * 16 * ui, t.y - uy * 46 * ui + ny * 16 * ui);
+        ctx.lineTo(t.x + ux * 46 * ui - nx * 16 * ui, t.y + uy * 46 * ui - ny * 16 * ui);
+        ctx.stroke();
+        ctx.globalAlpha = impactAlpha * 0.36;
+        ctx.strokeStyle = '#9d7cff';
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, (20 + impactT * 74) * ui, 0, Math.PI * 2);
         ctx.stroke();
       }
       ctx.restore();
@@ -8776,14 +9205,30 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     rememberCheer(playerId);
-    if (!['follow', 'gift', 'share', 'repost'].includes(meta.kind)) applyHeal(playerId, hearts * 5);
+    const authoritativeHp = Number.isFinite(Number(meta.hp)) && Number.isFinite(Number(meta.maxHp));
+    if (authoritativeHp) {
+      applyPlayerHealthSnapshot(playerId, Number(meta.hp), Number(meta.maxHp));
+    } else if (!['follow', 'gift', 'share', 'repost'].includes(meta.kind)) {
+      applyHeal(playerId, hearts * 5);
+    }
     return true;
+  }
+
+  function queueFullScreenLikeEffects(data) {
+    if (!fullScreenParticles?.handleEngagementEvent) return 0;
+    try {
+      return fullScreenParticles.handleEngagementEvent('likes', data || {});
+    } catch (err) {
+      console.warn('Full-screen particle effect failed to queue', err);
+      return 0;
+    }
   }
 
   function fireLikeMilestoneEffect(data) {
     const milestone = Number(data?.milestone) || 0;
     if (!milestone) return;
     const isMega = data.milestoneTier === 'mega' || milestone % 1000 === 0;
+    if (isMega) queueFullScreenLikeEffects(data);
     const owner = resolveEffectEntity(data.uniqueId, data.scope || data.targetScope, 'owner');
     if (owner?.unresolved) return dropUnresolvedEntity(owner, 'missing_owner', { type: 'like_milestone' });
     const frame = arenaFrame();
@@ -9047,6 +9492,37 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.fillStyle = spotlight;
     ctx.fillRect(0, 0, W, H);
 
+    const frameRight = frame.x + frame.w;
+    const frameBottom = frame.y + frame.h;
+    const aurora = ctx.createLinearGradient(frame.x, frame.y, frameRight, frameBottom);
+    aurora.addColorStop(0, 'rgba(85,231,255,0.06)');
+    aurora.addColorStop(0.38, 'rgba(157,124,255,0.05)');
+    aurora.addColorStop(0.68, 'rgba(255,120,178,0.045)');
+    aurora.addColorStop(1, 'rgba(246,201,91,0.055)');
+    ctx.fillStyle = aurora;
+    ctx.fillRect(frame.x, frame.y, frame.w, frame.h);
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.globalAlpha = 0.34;
+    const railGrad = ctx.createLinearGradient(frame.x, 0, frameRight, 0);
+    railGrad.addColorStop(0, 'rgba(85,231,255,0.36)');
+    railGrad.addColorStop(0.18, 'rgba(85,231,255,0)');
+    railGrad.addColorStop(0.82, 'rgba(246,201,91,0)');
+    railGrad.addColorStop(1, 'rgba(246,201,91,0.32)');
+    ctx.strokeStyle = railGrad;
+    ctx.lineWidth = Math.max(1.2, H * 0.0022);
+    for (let i = 0; i < 4; i += 1) {
+      const inset = frame.w * (0.035 + i * 0.018);
+      ctx.beginPath();
+      ctx.moveTo(frame.x + inset, frame.y + frame.h * (0.16 + i * 0.06));
+      ctx.lineTo(frame.x + inset * 0.42, frame.y + frame.h * (0.88 - i * 0.03));
+      ctx.moveTo(frameRight - inset, frame.y + frame.h * (0.16 + i * 0.06));
+      ctx.lineTo(frameRight - inset * 0.42, frame.y + frame.h * (0.88 - i * 0.03));
+      ctx.stroke();
+    }
+    ctx.restore();
+
     const horizon = H * 0.58;
     ctx.save();
     ctx.globalCompositeOperation = 'screen';
@@ -9124,6 +9600,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     roundedRectPath(ctx, frame.x + frame.w * 0.035, playerBandY, frame.w * 0.93, frame.h * 0.74, Math.max(16 * ui, frame.r * 0.7));
     ctx.fill();
 
+    const playerShelf = ctx.createLinearGradient(frame.x, 0, frame.x + frame.w, 0);
+    playerShelf.addColorStop(0, 'rgba(85,231,255,0)');
+    playerShelf.addColorStop(0.16, 'rgba(85,231,255,0.12)');
+    playerShelf.addColorStop(0.5, 'rgba(255,255,255,0.035)');
+    playerShelf.addColorStop(0.84, 'rgba(246,201,91,0.12)');
+    playerShelf.addColorStop(1, 'rgba(246,201,91,0)');
+    ctx.fillStyle = playerShelf;
+    roundedRectPath(ctx, frame.x + frame.w * 0.07, playerBandY + playerBandH * 0.12, frame.w * 0.86, Math.max(22 * ui, playerBandH * 0.2), Math.max(10 * ui, frame.r * 0.42));
+    ctx.fill();
+
     ctx.globalAlpha = 0.22;
     ctx.strokeStyle = 'rgba(85,231,255,0.48)';
     ctx.lineWidth = Math.max(1, 1.2 * ui);
@@ -9173,10 +9659,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const horde = getHordeLayout();
       const halo = ctx.createLinearGradient(horde.barX, 0, horde.barX + horde.barW, 0);
       halo.addColorStop(0, 'rgba(232,59,95,0.035)');
-      halo.addColorStop(0.5, 'rgba(232,59,95,0.18)');
-      halo.addColorStop(1, 'rgba(246,201,91,0.07)');
+      halo.addColorStop(0.5, 'rgba(232,59,95,0.16)');
+      halo.addColorStop(1, 'rgba(246,201,91,0.065)');
       ctx.fillStyle = halo;
-      roundedRectPath(ctx, horde.barX - 28 * ui, horde.barY - 22 * ui, horde.barW + 56 * ui, horde.barH + 42 * ui, horde.radius + 16 * ui);
+      roundedRectPath(ctx, horde.barX - 24 * ui, horde.barY - 16 * ui, horde.barW + 48 * ui, horde.barH + 32 * ui, horde.radius + 13 * ui);
       ctx.fill();
     }
 
@@ -10455,7 +10941,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function drawBossWave() {
-    if (!bossWaveState?.active) return;
+    if (!bossWaveState?.active || expireBossWaveIfNeeded()) return;
     const layout = getBossLayout();
     const nowMs = Date.now();
     const now = nowMs * 0.001;
@@ -10962,7 +11448,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.fillStyle = 'rgba(255,255,255,0.76)';
     const helpSize = Math.max(9, Math.min(13 * ui, boxH * 0.13));
     ctx.font = `800 ${helpSize}px DM Sans, sans-serif`;
-    const help = fitCanvasText(ctx, 'Commands still work: !emoji, !shield, !laser @name', boxW * 0.82, size => `800 ${size}px DM Sans, sans-serif`, helpSize, Math.max(8, 9 * ui));
+    const help = fitCanvasText(ctx, 'Commands still work: !shield, !laser @name, !nova @name', boxW * 0.82, size => `800 ${size}px DM Sans, sans-serif`, helpSize, Math.max(8, 9 * ui));
     ctx.fillText(help, x + boxW / 2, y + boxH * 0.84);
     ctx.restore();
   }
@@ -10976,6 +11462,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     clipArenaFrame();
     const shake = currentArenaShake();
     if (shake.x || shake.y) ctx.translate(shake.x, shake.y);
+    expireBossWaveIfNeeded();
     const top = topPlayers();
     const horde = hordePlayer();
     drawArenaDepth(top.length, Boolean(horde), Boolean(bossWaveState?.active));
@@ -11140,7 +11627,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
     if (isDemoMode) return;
     isDemoMode = true;
-    statusDiv.textContent = '🟡 DEMO MODE · no server';
+    statusDiv.textContent = 'DEMO MODE - NO SERVER';
     statusDiv.className   = 'demo';
     showBattlePrompt('Demo battle preview', '', 2200, true);
     if (disableDemoAutoplay) return;
@@ -11155,14 +11642,46 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function normalizePlayers(state) {
     const out = {};
     if (!state || typeof state !== 'object') return out;
-    for (const key in state) {
-      const value = state[key];
-      if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
-      if (value.alive === false) continue;
+    const playerCollections = ['players', 'roster', 'activePlayers', 'playerStates'];
+    const reservedKeys = new Set([
+      ...playerCollections,
+      'arenaPower',
+      'boss',
+      'bossWave',
+      'eventSeq',
+      'horde',
+      'meta',
+      'recentEvents',
+      'round',
+      'roundState',
+      'settings',
+      'snapshot',
+    ]);
+    const hasOwn = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
+    const addCandidate = (value, key = '') => {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) return;
+      if (value.alive === false) return;
+      const hasIdentity = value.uniqueId || value.id || value.userId || value.platformId || value.nickname || value.handle || value.displayName;
+      const hasBattleShape = ['hp', 'maxHp', 'shield', 'energy', 'kills', 'score', 'team', 'iconEmoji', 'alive'].some(prop => hasOwn(value, prop));
+      if (!hasIdentity && !hasBattleShape) return;
       const p = { ...value };
-      p.uniqueId = p.uniqueId || p.id || key;
+      const id = p.uniqueId || p.id || p.userId || p.platformId || p.handle || p.nickname || key;
+      if (!id || reservedKeys.has(String(id))) return;
+      p.uniqueId = String(id);
       out[p.uniqueId] = p;
-    }
+    };
+    const addCollection = collection => {
+      if (Array.isArray(collection)) {
+        collection.forEach((value, index) => addCandidate(value, String(index)));
+      } else if (collection && typeof collection === 'object') {
+        Object.entries(collection).forEach(([key, value]) => addCandidate(value, key));
+      }
+    };
+    playerCollections.forEach(key => addCollection(state[key]));
+    Object.entries(state).forEach(([key, value]) => {
+      if (reservedKeys.has(key)) return;
+      addCandidate(value, key);
+    });
     return out;
   }
 
@@ -11523,9 +12042,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function handleLikeEvent(data) {
     if (!data) return;
     const hearts = Math.max(1, Math.min(2, Number(data.hearts) || 1));
+    const hpRestored = Math.max(0, Math.round(Number(data.hpRestored) || 0));
+    if (data.uniqueId && Number.isFinite(Number(data.hp)) && Number.isFinite(Number(data.maxHp))) {
+      applyPlayerHealthSnapshot(data.uniqueId, Number(data.hp), Number(data.maxHp));
+    }
     showSupportUnit({
       type: 'like',
       hearts,
+      hpRestored,
       name: data.nickname || data.uniqueId,
     });
     fireHeartEffect(data.uniqueId, hearts, Math.min(0.28, Number(data.intensity) || 0.12), {
@@ -11830,14 +12354,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const maxHp = Math.max(1, Math.round(Number(data.maxHp) || 1));
     const pct = Math.max(0, Math.min(100, Math.round((hp / maxHp) * 100)));
     const mergeBossState = () => {
+      const now = Date.now();
+      const active = data.active !== false && !['defeated', 'stopped', 'ended', 'expired', 'restarted'].includes(type);
+      const nextEndsAt = bossWaveEndTime(data, now) || (active ? Number(bossWaveState?.endsAt) || null : null);
       bossWaveState = {
         ...(bossWaveState || {}),
         ...data,
         type,
-        active: data.active !== false && !['defeated', 'stopped', 'ended', 'expired', 'restarted'].includes(type),
+        active,
+        endsAt: nextEndsAt,
         hp,
         maxHp,
-        updatedAt: Date.now(),
+        updatedAt: now,
       };
     };
     if (type === 'started') {
@@ -11885,7 +12413,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       if (bossWaveState) bossWaveState.active = false;
       pulseBoss('kill', THEME.gold, 1800);
       setTimeout(() => {
-        if (bossWaveState && bossWaveState.active === false) bossWaveState = null;
+        if (bossWaveState && bossWaveState.active === false) clearBossWaveState();
       }, 2600);
       handleRoundEvent({ type: 'boss_defeated', title: 'Boss wave defeated', message: data.finalHitBy?.nickname ? `${data.finalHitBy.nickname} landed the final hit` : '' });
       return;
@@ -11894,7 +12422,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       mergeBossState();
       if (bossWaveState) bossWaveState.active = false;
       setTimeout(() => {
-        if (bossWaveState && bossWaveState.active === false) bossWaveState = null;
+        if (bossWaveState && bossWaveState.active === false) clearBossWaveState();
       }, 1800);
       showBattlePrompt('Boss wave ended', 'return', 1800);
     }
@@ -11915,6 +12443,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         connectionHealthStats.registerAcks += 1;
         connectionHealthStats.lastRegisterAckAt = Date.now();
         connectionHealthStats.lastError = '';
+        if (!isLiveWaitingForPlayers()) {
+          statusDiv.textContent = 'LIVE - REGISTERED';
+          statusDiv.className = 'connected';
+        }
         if (Number.isFinite(Number(ack.eventSeq))) lastVisualEventSeq = Math.max(lastVisualEventSeq, Number(ack.eventSeq));
         fetch(withOverlayAuth('/state')).then(r => (r.ok ? r.json() : null)).then(s => { if (s) receiveGameState(s); }).catch(() => {});
       } else {
@@ -11942,9 +12474,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         connectionHealthStats.lastConnectAt = Date.now();
         connectionHealthStats.lastReason = '';
         connectionHealthStats.lastError = '';
-        statusDiv.textContent = '🟢 LIVE · CONNECTED';
-        statusDiv.className   = 'connected';
         statusDiv.textContent = isLiveWaitingForPlayers() ? 'LIVE - WAITING FOR PLAYERS' : 'LIVE - CONNECTED';
+        statusDiv.className   = 'connected';
         registerAcked = false;
         registerOverlaySocket();
       });
@@ -11958,7 +12489,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           clearTimeout(registerRetryTimer);
           registerRetryTimer = null;
         }
-        statusDiv.textContent = '🔴 DISCONNECTED · waiting...';
+        statusDiv.textContent = 'DISCONNECTED - WAITING';
         statusDiv.className   = 'disconnected';
       });
 
@@ -11966,7 +12497,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         connectionHealthStats.connectErrorCount += 1;
         connectionHealthStats.lastConnectErrorAt = Date.now();
         connectionHealthStats.lastError = String(err?.message || err || 'connect error').slice(0, 160);
-        statusDiv.textContent = '⚠️ SERVER ERROR · retrying';
+        statusDiv.textContent = 'SERVER ERROR - RETRYING';
         statusDiv.className   = 'disconnected';
         if (Object.keys(players).length === 0 && canUseDemoFallback()) enterDemoMode();
       });
@@ -12048,7 +12579,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       setTimeout(() => { if (Object.keys(players).length === 0 && canUseDemoFallback()) enterDemoMode(); }, 3000);
 
     } catch (err) {
-      statusDiv.textContent = '❌ SOCKET ERROR · no live data';
+      statusDiv.textContent = 'SOCKET ERROR - NO LIVE DATA';
       statusDiv.className   = 'disconnected';
       enterDemoMode();
     }

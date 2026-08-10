@@ -76,9 +76,20 @@ import {
   listCouncilYearBonusClaims,
   listReferralAdminRows,
   getCouncilYearBonusClaim,
+  settleClearedReferralRewards,
   updateCouncilYearBonusClaimStatus,
   updateRecurringReferralRewardStatus,
 } from '../services/referrals.js';
+import {
+  buildCouncilPayoutCsv,
+  councilAdminSummary,
+  createCouncilPayoutBatch,
+  listCouncilMembersForAdmin,
+  listCouncilPayoutBatches,
+  listCouncilPayoutBatchItems,
+  markCouncilPayoutBatchPaid,
+  updateCouncilMemberAdmin,
+} from '../services/councilMembers.js';
 import {
   COUNCIL_CASH_PAYOUT_MINIMUM_CENTS,
   COUNCIL_FOUNDING_RATE_MONTHLY_CENTS,
@@ -629,13 +640,14 @@ function buildUsersCsv(rows = []) {
 }
 
 function buildLiveActivityCsv(rows = []) {
-  const headers = ['roomId', 'owner', 'streamerUsername', 'connected', 'streamStatus', 'overlayCount', 'playerCount', 'lastEventType', 'lastEventAt', 'staleEventsDropped', 'topPlayers'];
+  const headers = ['roomId', 'owner', 'streamerUsername', 'connected', 'streamStatus', 'canEndLive', 'overlayCount', 'playerCount', 'lastEventType', 'lastEventAt', 'staleEventsDropped', 'topPlayers'];
   return csvDocument(headers, rows.map(row => ({
     roomId: row.roomId,
     owner: row.owner?.email || row.owner?.name || 'Unknown owner',
     streamerUsername: row.streamerUsername,
     connected: row.connected ? 'yes' : 'no',
     streamStatus: row.streamStatus,
+    canEndLive: row.canEndLive ? 'yes' : 'no',
     overlayCount: row.overlayCount,
     playerCount: row.playerCount,
     lastEventType: row.lastEventType,
@@ -796,18 +808,32 @@ function buildAdminLiveActivity() {
         tiktok: '',
         plan: 'Unknown',
       };
+      const connected = Boolean(room.tiktokClient && room.tiktokClient.connected);
+      const streamStatus = room.tiktokConnection?.status || (room.tiktokClient?.connected ? 'connected' : 'disconnected');
+      const playerCount = Object.values(room?.players || {}).filter(player => player && player.alive).length;
+      const canEndLive = Boolean(
+        room.tiktokClient ||
+        room.tiktokConnection ||
+        room.streamerUsername ||
+        playerCount > 0
+      );
       return {
         roomId: room.roomId,
         owner,
         streamerUsername: room.streamerUsername || '',
-        connected: Boolean(room.tiktokClient && room.tiktokClient.connected),
-        streamStatus: room.tiktokConnection?.status || (room.tiktokClient?.connected ? 'connected' : 'disconnected'),
+        connected,
+        streamStatus,
         streamConnectionId: room.tiktokConnection?.id || '',
+        streamReason: room.tiktokConnection?.reason || '',
+        streamError: room.tiktokConnection?.error || '',
+        repairCount: Number(room.tiktokRepairCount) || 0,
+        lastRepairAt: room.lastTikTokRepairAt || null,
         lastEventType: room.tiktokConnection?.lastEventType || '',
         lastEventAt: room.tiktokConnection?.lastEventAt || null,
         staleEventsDropped: Number(room.staleTikTokEventsDropped) || 0,
         overlayCount: Number(room.overlayCount) || 0,
-        playerCount: Object.values(room?.players || {}).filter(player => player && player.alive).length,
+        playerCount,
+        canEndLive,
         topPlayers: players,
       };
     })
@@ -981,18 +1007,31 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       .map(player => `${player.name}${player.kills ? ` (${player.kills}K)` : ''}`)
       .join(', ');
     const status = item.streamStatus || (item.connected ? 'connected' : item.streamerUsername ? 'pending' : 'disconnected');
-    const lastEvent = item.lastEventAt
-      ? `${item.lastEventType || 'event'} ${formatSponsorDate(item.lastEventAt)}`
-      : (item.staleEventsDropped ? `${item.staleEventsDropped} stale event(s) dropped` : 'No live events yet');
+    const lastEvent = item.streamError
+      ? `Error: ${item.streamError}`
+      : item.streamReason
+        ? `Reason: ${item.streamReason}`
+        : item.lastEventAt
+          ? `${item.lastEventType || 'event'} ${formatSponsorDate(item.lastEventAt)}`
+          : (item.staleEventsDropped ? `${item.staleEventsDropped} stale event(s) dropped` : 'No live events yet');
+    const repairNote = item.repairCount ? ` - repairs ${item.repairCount}${item.lastRepairAt ? `, last ${formatSponsorDate(item.lastRepairAt)}` : ''}` : '';
+    const preferredUsername = item.streamerUsername || owner.tiktok || '';
     return `<tr data-live-room-row>
       <td data-label="Room"><strong>${escapeHtml(item.roomId)}</strong><br><span class="muted">${escapeHtml(owner.accountType || 'Room')}</span></td>
       <td data-label="Owner"><strong>${escapeHtml(owner.email || owner.name || 'Unknown owner')}</strong><br><span class="muted">${escapeHtml(owner.tiktok ? `@${owner.tiktok}` : owner.plan || '')}</span></td>
-      <td data-label="Stream">${escapeHtml(item.streamerUsername ? `@${item.streamerUsername}` : '')}<br><span class="muted">${escapeHtml(status)} - ${escapeHtml(lastEvent)}</span></td>
+      <td data-label="Stream">${escapeHtml(item.streamerUsername ? `@${item.streamerUsername}` : '')}<br><span class="muted">${escapeHtml(status)} - ${escapeHtml(lastEvent)}${escapeHtml(repairNote)}</span></td>
       <td data-label="Overlays">${escapeHtml(String(item.overlayCount))}</td>
       <td data-label="Players">${escapeHtml(String(item.playerCount))}</td>
       <td data-label="Top players">${escapeHtml(topPlayers || 'No active players')}</td>
+      <td data-label="Actions">
+        <div class="live-actions">
+          <input data-live-username="${escapeAttr(item.roomId)}" value="${escapeAttr(preferredUsername)}" placeholder="tiktok username" />
+          <button type="button" data-live-action="refresh" data-room-id="${escapeAttr(item.roomId)}">Refresh</button>
+          <button class="danger-button" type="button" data-live-action="end" data-room-id="${escapeAttr(item.roomId)}">End Live</button>
+        </div>
+      </td>
     </tr>`;
-  }).join('') || '<tr data-live-empty><td colspan="6">No live room activity right now.</td></tr>';
+  }).join('') || '<tr data-live-empty><td colspan="7">No live room activity right now.</td></tr>';
   const metrics = userMetrics || emptyAdminUserMetrics();
   const metricCards = [
     adminMetricCard('Free accounts', 'accounts.free', metrics.accounts.free, 'Active free creator accounts and free access-code rooms'),
@@ -1072,6 +1111,9 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     .stacked-actions form { display:grid; gap:8px; }
     .stacked-actions input { min-height:36px; padding:8px 10px; border-radius:10px; font-size:12px; }
     .stacked-actions button { margin-top:0; }
+    .live-actions { display:grid; grid-template-columns:minmax(140px,1fr) auto auto; gap:8px; min-width:320px; align-items:center; }
+    .live-actions input { min-height:36px; padding:8px 10px; border-radius:10px; font-size:12px; }
+    .live-actions button { width:auto; min-height:36px; margin-top:0; padding:0 12px; }
     .table-shell { width:100%; overflow-x:auto; }
     table { width: 100%; border-collapse: collapse; margin-top: 12px; overflow:hidden; border-radius:16px; }
     th, td { border-bottom: 1px solid rgba(255,255,255,0.08); padding: 12px; font-size: 13px; vertical-align:top; }
@@ -1203,11 +1245,11 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
     </details>
     <section class="section-grid" aria-label="Admin data sections">
       <details class="card admin-section" id="live-health" open>
-        <summary><span>Live room activity</span><small>Fast room-scoped audit for active overlays and player leakage.</small></summary>
+        <summary><span>Live room activity</span><small>Audit active overlays, suspicious stream connections, and player leakage.</small></summary>
         <div class="section-body table-shell">
           ${renderSectionToolbar({ searchLabel: 'Search live rooms, owners, streamers, or players', exportHref: '/admin/live-activity/export.csv', countLabel: `${liveActivity.length} room(s)` })}
           <table data-admin-table>
-            <thead><tr><th>Room</th><th>Owner</th><th>Stream</th><th>Overlays</th><th>Players</th><th>Top players</th></tr></thead>
+            <thead><tr><th>Room</th><th>Owner</th><th>Stream</th><th>Overlays</th><th>Players</th><th>Top players</th><th>Actions</th></tr></thead>
             <tbody id="liveActivityRows">${liveActivityRows}</tbody>
           </table>
         </div>
@@ -1320,7 +1362,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
       const body = document.getElementById('liveActivityRows');
       if (!body) return;
       if (!Array.isArray(items) || !items.length) {
-        body.innerHTML = '<tr data-live-empty><td colspan="6">No live room activity right now.</td></tr>';
+        body.innerHTML = '<tr data-live-empty><td colspan="7">No live room activity right now.</td></tr>';
         return;
       }
       body.innerHTML = items.map(item => {
@@ -1333,6 +1375,12 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
         const lastEvent = item.lastEventAt
           ? ((item.lastEventType || 'event') + ' ' + new Date(item.lastEventAt).toLocaleString())
           : (item.staleEventsDropped ? item.staleEventsDropped + ' stale event(s) dropped' : 'No live events yet');
+        const preferredUsername = item.streamerUsername || owner.tiktok || '';
+        const actions = '<div class="live-actions">'
+          + '<input data-live-username="' + escapeCell(item.roomId) + '" value="' + escapeCell(preferredUsername) + '" placeholder="tiktok username" />'
+          + '<button type="button" data-live-action="refresh" data-room-id="' + escapeCell(item.roomId) + '">Refresh</button>'
+          + '<button class="danger-button" type="button" data-live-action="end" data-room-id="' + escapeCell(item.roomId) + '">End Live</button>'
+          + '</div>';
         return '<tr data-live-room-row>'
           + '<td data-label="Room"><strong>' + escapeCell(item.roomId) + '</strong><br><span class="muted">' + escapeCell(owner.accountType || 'Room') + '</span></td>'
           + '<td data-label="Owner"><strong>' + escapeCell(owner.email || owner.name || 'Unknown owner') + '</strong><br><span class="muted">' + escapeCell(owner.tiktok ? '@' + owner.tiktok : owner.plan || '') + '</span></td>'
@@ -1340,6 +1388,7 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
           + '<td data-label="Overlays">' + escapeCell(item.overlayCount) + '</td>'
           + '<td data-label="Players">' + escapeCell(item.playerCount) + '</td>'
           + '<td data-label="Top players">' + escapeCell(players) + '</td>'
+          + '<td data-label="Actions">' + actions + '</td>'
           + '</tr>';
       }).join('');
     }
@@ -1394,6 +1443,38 @@ function renderAdminPage({ message = '', error = '', createdCode = '', codes = [
           row.hidden = query && !row.textContent.toLowerCase().includes(query);
         });
       });
+    });
+    document.addEventListener('click', async event => {
+      const button = event.target.closest('[data-live-action]');
+      if (!button) return;
+      const roomId = button.getAttribute('data-room-id') || '';
+      const action = button.getAttribute('data-live-action') || '';
+      if (!roomId || !action) return;
+      const usernameInput = Array.from(document.querySelectorAll('[data-live-username]'))
+        .find(input => input.getAttribute('data-live-username') === roomId);
+      const username = usernameInput ? usernameInput.value.trim() : '';
+      const reconnect = action === 'refresh';
+      if (!reconnect && !confirm('End this live connection, clear active players, and stop it from continuing in this runtime?')) return;
+      button.disabled = true;
+      const previousLabel = button.textContent;
+      button.textContent = reconnect ? 'Refreshing...' : 'Ending...';
+      try {
+        const res = await fetch('/api/admin/rooms/' + encodeURIComponent(roomId) + '/reset-live', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ reconnect, username }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) throw new Error(data.error || 'Live connection action failed');
+        await refreshLiveActivity();
+        await refreshOpsSummary();
+      } catch (err) {
+        alert(err.message || 'Live connection action failed');
+      } finally {
+        button.disabled = false;
+        button.textContent = previousLabel;
+      }
     });
     setInterval(refreshAdminCounts, 15000);
     setInterval(refreshLiveActivity, 10000);
@@ -1681,11 +1762,15 @@ router.get('/email', requireAdminAuth, (_req, res) => {
 router.get('/referrals', requireAdminAuth, (req, res) => {
   try {
     const filters = referralAdminFiltersFromQuery(req.query);
+    const councilMembers = listCouncilMembersForAdmin(db);
+    const payoutBatches = listCouncilPayoutBatches(db);
     res.send(renderReferralAdminPage({
       message: String(req.query.message || ''),
       error: String(req.query.error || ''),
       rows: listReferralAdminRows(db, filters),
       bonusClaims: listCouncilYearBonusClaims(db),
+      councilMembers,
+      payoutBatches,
       filters,
     }));
   } catch (err) {
@@ -1716,6 +1801,68 @@ router.post('/referrals/rewards/:id/status', requireAdminAuth, (req, res) => {
     return res.redirect('/admin/referrals?message=Monthly%20reward%20updated');
   } catch (err) {
     return res.redirect(`/admin/referrals?error=${encodeURIComponent(err.message || 'Unable to update monthly reward')}`);
+  }
+});
+
+router.post('/referrals/settle', requireAdminAuth, (_req, res) => {
+  try {
+    const result = settleClearedReferralRewards(db, { limit: 500 });
+    return res.redirect(`/admin/referrals?message=${encodeURIComponent(`Council settlement checked ${result.checked} referral(s); ${result.settled} active paid referral(s) settled.`)}`);
+  } catch (err) {
+    return res.redirect(`/admin/referrals?error=${encodeURIComponent(err.message || 'Unable to settle Council rewards')}`);
+  }
+});
+
+router.post('/referrals/members/:id/update', requireAdminAuth, (req, res) => {
+  try {
+    updateCouncilMemberAdmin(db, req.params.id, {
+      status: req.body.status,
+      w9Status: req.body.w9Status,
+      elite: req.body.elite,
+      payoutHoldReason: req.body.payoutHoldReason,
+    }, { actorAdminSessionId: req.adminSession?.id || req.adminSession?.session_token || '' });
+    return res.redirect('/admin/referrals?message=Council%20member%20updated');
+  } catch (err) {
+    return res.redirect(`/admin/referrals?error=${encodeURIComponent(err.message || 'Unable to update Council member')}`);
+  }
+});
+
+router.post('/referrals/payouts/create', requireAdminAuth, (req, res) => {
+  try {
+    const result = createCouncilPayoutBatch(db, {
+      notes: req.body.notes,
+      actorAdminSessionId: req.adminSession?.id || req.adminSession?.session_token || '',
+    });
+    if (!result.created) {
+      return res.redirect('/admin/referrals?error=No%20eligible%20Council%20payouts%20met%20the%20minimum');
+    }
+    return res.redirect(`/admin/referrals?message=${encodeURIComponent(`Payout batch ${result.batch.batch_key} created with ${result.items.length} reward item(s).`)}`);
+  } catch (err) {
+    return res.redirect(`/admin/referrals?error=${encodeURIComponent(err.message || 'Unable to create payout batch')}`);
+  }
+});
+
+router.get('/referrals/payouts/:id/export.csv', requireAdminAuth, (req, res) => {
+  try {
+    const rows = listCouncilPayoutBatchItems(db, req.params.id);
+    const batchKey = rows[0]?.batch_key || `council-payout-${req.params.id}`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${String(batchKey).replace(/[^A-Za-z0-9_-]/g, '-')}.csv"`);
+    res.send(buildCouncilPayoutCsv(rows));
+  } catch (err) {
+    console.error('Council payout export failed:', err);
+    res.status(500).send('Unable to export Council payout batch.');
+  }
+});
+
+router.post('/referrals/payouts/:id/paid', requireAdminAuth, (req, res) => {
+  try {
+    const result = markCouncilPayoutBatchPaid(db, req.params.id, {
+      actorAdminSessionId: req.adminSession?.id || req.adminSession?.session_token || '',
+    });
+    return res.redirect(`/admin/referrals?message=${encodeURIComponent(`Payout batch marked paid (${result.itemCount} item(s)).`)}`);
+  } catch (err) {
+    return res.redirect(`/admin/referrals?error=${encodeURIComponent(err.message || 'Unable to mark payout batch paid')}`);
   }
 });
 
@@ -2542,7 +2689,64 @@ function renderReferralAdminRows(rows = []) {
   }).join('');
 }
 
-function renderReferralAdminPage({ message = '', error = '', rows = [], bonusClaims = [], filters = {} } = {}) {
+function councilMemberStatusOptions(selected = '') {
+  return ['active', 'hold', 'suspended']
+    .map(status => `<option value="${status}" ${status === selected ? 'selected' : ''}>${escapeHtml(referralRewardStatusLabel(status))}</option>`)
+    .join('');
+}
+
+function councilW9StatusOptions(selected = '') {
+  return ['needed', 'requested', 'received', 'not_required']
+    .map(status => `<option value="${status}" ${status === selected ? 'selected' : ''}>${escapeHtml(referralRewardStatusLabel(status))}</option>`)
+    .join('');
+}
+
+function renderCouncilMemberRows(members = []) {
+  if (!members.length) return '<tr><td colspan="8">No Council members yet.</td></tr>';
+  return members.map((member) => {
+    const handle = member.tiktok_username ? `@${member.tiktok_username}` : 'TikTok pending';
+    const payoutReady = member.paypal_payout_email && ['received', 'not_required'].includes(String(member.w9_status || ''));
+    return `<tr>
+      <td data-label="Member"><strong>${escapeHtml(handle)}</strong><br><span class="muted">${escapeHtml(member.email || '')}</span></td>
+      <td data-label="Code"><strong>${escapeHtml(member.code || 'No code')}</strong><br><span class="muted">${escapeHtml(member.elite ? 'Council Elite' : referralRewardStatusLabel(member.status || 'active'))}</span></td>
+      <td data-label="Stats">${escapeHtml(String(member.signup_count || 0))} signup(s)<br><span class="muted">${escapeHtml(String(member.active_paid_count || 0))} active paid</span></td>
+      <td data-label="Rewards">Pending ${escapeHtml(centsToUsd(member.pending_cents || 0))}<br><span class="muted">Approved ${escapeHtml(centsToUsd(member.approved_unbatched_cents || 0))}</span><br><span class="muted">Paid ${escapeHtml(centsToUsd(member.paid_cents || 0))}</span></td>
+      <td data-label="Payout">${escapeHtml(payoutReady ? 'Ready' : 'Not ready')}<br><span class="muted">${escapeHtml(member.paypal_payout_email || 'PayPal email missing')}</span><br><span class="muted">W-9: ${escapeHtml(referralRewardStatusLabel(member.w9_status || 'needed'))}</span></td>
+      <td data-label="Joined">${escapeHtml(formatSponsorDate(member.created_at))}<br><span class="muted">${escapeHtml(member.joined_source || 'dashboard')}</span></td>
+      <td data-label="Hold">${escapeHtml(member.payout_hold_reason || '')}</td>
+      <td data-label="Action">
+        <form method="POST" action="/admin/referrals/members/${escapeAttr(member.user_id)}/update" class="mini-form">
+          <select name="status">${councilMemberStatusOptions(String(member.status || 'active'))}</select>
+          <select name="w9Status">${councilW9StatusOptions(String(member.w9_status || 'needed'))}</select>
+          <input name="payoutHoldReason" type="text" value="${escapeAttr(member.payout_hold_reason || '')}" placeholder="Hold reason" />
+          <label class="check-label"><input type="checkbox" name="elite" value="1" ${Number(member.elite || 0) ? 'checked' : ''}> Elite</label>
+          <button type="submit">Update member</button>
+        </form>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderCouncilPayoutBatchRows(batches = []) {
+  if (!batches.length) return '<tr><td colspan="7">No payout batches yet.</td></tr>';
+  return batches.map((batch) => {
+    const exportLink = `/admin/referrals/payouts/${escapeAttr(batch.id)}/export.csv`;
+    const paidAction = String(batch.status || '') === 'paid'
+      ? `<span class="muted">Paid ${escapeHtml(formatSponsorDate(batch.paid_at))}</span>`
+      : `<form method="POST" action="/admin/referrals/payouts/${escapeAttr(batch.id)}/paid" class="stacked-action"><button type="submit">Mark paid</button></form>`;
+    return `<tr>
+      <td data-label="Batch"><strong>${escapeHtml(batch.batch_key || `Batch ${batch.id}`)}</strong><br><span class="muted">${escapeHtml(formatSponsorDate(batch.created_at))}</span></td>
+      <td data-label="Status">${escapeHtml(referralRewardStatusLabel(batch.status || 'created'))}</td>
+      <td data-label="Period">${escapeHtml(formatSponsorDate(batch.period_start))}<br><span class="muted">${escapeHtml(formatSponsorDate(batch.period_end))}</span></td>
+      <td data-label="Members">${escapeHtml(String(batch.member_count || 0))}</td>
+      <td data-label="Items">${escapeHtml(String(batch.item_count || 0))}</td>
+      <td data-label="Total">${escapeHtml(centsToUsd(batch.total_amount_cents || 0))}</td>
+      <td data-label="Actions"><a class="button-link secondary" href="${escapeAttr(exportLink)}">Export PayPal CSV</a>${paidAction}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderReferralAdminPage({ message = '', error = '', rows = [], bonusClaims = [], councilMembers = [], payoutBatches = [], filters = {} } = {}) {
   const totals = rows.reduce((acc, row) => {
     acc.signups += 1;
     if (row.attribution_status === 'qualified' && row.active_paypal_subscription_id) acc.qualified += 1;
@@ -2563,6 +2767,7 @@ function renderReferralAdminPage({ message = '', error = '', rows = [], bonusCla
 
   const exportQuery = referralAdminQueryString(filters);
   const exportHref = `/admin/referrals/export.csv${exportQuery ? `?${exportQuery}` : ''}`;
+  const councilTotals = councilAdminSummary(councilMembers, payoutBatches);
   const rankCards = COUNCIL_RANKS.map(rank => `<div class="rank-card"><strong>${escapeHtml(rank.name)}</strong><span>${escapeHtml(rank.threshold)} active paid referrals - ${escapeHtml(rank.summary)}</span></div>`).join('');
   const programRules = [
     `${centsToUsd(COUNCIL_MONTHLY_REWARD_CENTS)} per month for every active paid referral.`,
@@ -2637,6 +2842,12 @@ function renderReferralAdminPage({ message = '', error = '', rows = [], bonusCla
     button { width:100%; min-height:36px; margin-top:0; border:0; border-radius:10px; background:linear-gradient(135deg,#f6c95b,#fff0b9 52%,#ff6a3d); color:#170c02; cursor:pointer; font-weight:900; }
     .mini-form { display:grid; grid-template-columns:minmax(100px,.8fr) minmax(90px,.7fr) minmax(140px,1fr); gap:8px; min-width:360px; }
     .mini-form button { grid-column:1 / -1; }
+    .check-label { display:flex; align-items:center; gap:8px; min-height:38px; color:#fff8e6; font-size:12px; letter-spacing:0; text-transform:none; }
+    .check-label input { width:auto; min-height:0; }
+    .admin-action-row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:14px; }
+    .admin-action-row form { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .admin-action-row button,.stacked-action button { width:auto; padding:0 14px; }
+    .stacked-action { margin-top:8px; }
     @media(max-width:900px){ body{padding:12px}.admin-hero{align-items:flex-start;flex-direction:column}.admin-nav{width:100%;display:grid;grid-template-columns:1fr 1fr}.metrics-grid,.filter-grid,.program-grid,.rank-grid{grid-template-columns:1fr 1fr}.mini-form{grid-template-columns:1fr;min-width:0} table,thead,tbody,tr,th,td{display:block} thead{display:none} tr{border:1px solid rgba(255,255,255,.08); border-radius:16px; margin-bottom:12px; overflow:hidden} td::before{content:attr(data-label);display:block;margin-bottom:4px;color:#ffdf8a;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em} }
     @media(max-width:420px){ .admin-nav,.metrics-grid,.program-grid,.rank-grid{grid-template-columns:1fr} }
   </style>
@@ -2660,6 +2871,14 @@ function renderReferralAdminPage({ message = '', error = '', rows = [], bonusCla
       <div class="metric-card"><span>Paid</span><strong>${escapeHtml(String(totals.paid))}</strong></div>
       <div class="metric-card"><span>Pending cash</span><strong>${escapeHtml(centsToUsd(totals.pendingCashCents))}</strong></div>
     </section>
+    <section class="metrics-grid">
+      <div class="metric-card"><span>Council members</span><strong>${escapeHtml(String(councilTotals.members))}</strong></div>
+      <div class="metric-card"><span>Active members</span><strong>${escapeHtml(String(councilTotals.active))}</strong></div>
+      <div class="metric-card"><span>On hold</span><strong>${escapeHtml(String(councilTotals.onHold))}</strong></div>
+      <div class="metric-card"><span>Approved unpaid</span><strong>${escapeHtml(centsToUsd(councilTotals.approvedUnbatchedCents))}</strong></div>
+      <div class="metric-card"><span>Paid lifetime</span><strong>${escapeHtml(centsToUsd(councilTotals.paidCents))}</strong></div>
+      <div class="metric-card"><span>Open batches</span><strong>${escapeHtml(String(councilTotals.openBatches))}</strong></div>
+    </section>
     <section class="card program-grid">
       <div>
         <h2>Program Rules</h2>
@@ -2670,6 +2889,33 @@ function renderReferralAdminPage({ message = '', error = '', rows = [], bonusCla
         <h2>Ranks</h2>
         <div class="rank-grid">${rankCards}</div>
       </div>
+    </section>
+    <section class="card table-shell">
+      <h2>Official Council Controls</h2>
+      <p class="muted">Settle active paid referrals into the current monthly ledger, then approve rewards below. Payout batches only include approved rewards for active members with PayPal payout email, W-9 received or not required, no payout hold, and at least ${escapeHtml(centsToUsd(COUNCIL_CASH_PAYOUT_MINIMUM_CENTS))} approved unpaid rewards.</p>
+      <div class="admin-action-row">
+        <form method="POST" action="/admin/referrals/settle"><button type="submit">Accrue / settle current month</button></form>
+        <form method="POST" action="/admin/referrals/payouts/create">
+          <input name="notes" value="Manual PayPal CSV payout batch." />
+          <button type="submit">Create eligible payout batch</button>
+        </form>
+      </div>
+    </section>
+    <section class="card table-shell">
+      <h2>Council Members</h2>
+      <p class="muted">Private operator view. Emails, PayPal payout emails, W-9 state, holds, and Elite appointment are admin-only.</p>
+      <table>
+        <thead><tr><th>Member</th><th>Code</th><th>Stats</th><th>Rewards</th><th>Payout</th><th>Joined</th><th>Hold</th><th>Action</th></tr></thead>
+        <tbody>${renderCouncilMemberRows(councilMembers)}</tbody>
+      </table>
+    </section>
+    <section class="card table-shell">
+      <h2>Payout Batches</h2>
+      <p class="muted">Export CSV for manual PayPal payout. Mark paid only after PayPal transfer is complete.</p>
+      <table>
+        <thead><tr><th>Batch</th><th>Status</th><th>Period</th><th>Members</th><th>Items</th><th>Total</th><th>Actions</th></tr></thead>
+        <tbody>${renderCouncilPayoutBatchRows(payoutBatches)}</tbody>
+      </table>
     </section>
     <section class="card table-shell">
       <h2>Referral Activity</h2>

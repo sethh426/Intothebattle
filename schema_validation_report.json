@@ -21,6 +21,10 @@
       ]
     },
     {
+      "path": "council.html",
+      "blocks": []
+    },
+    {
       "path": "dashboard-welcome.html",
       "blocks": []
     },
@@ -222,7 +226,7 @@
     }
   ],
   "summary": {
-    "total_files": 27,
+    "total_files": 28,
     "files_with_jsonld": 14,
     "total_blocks": 14,
     "errors": 0,

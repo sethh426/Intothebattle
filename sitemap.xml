@@ -39,6 +39,16 @@
     </image:image>
   </url>
   <url>
+    <loc>https://intothebattle.com/council-of-aetheris</loc>
+    <lastmod>2026-07-31</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <image:image>
+      <image:loc>https://intothebattle.com/og-intothebattle.png</image:loc>
+      <image:title>Council of Aetheris referral program</image:title>
+    </image:image>
+  </url>
+  <url>
     <loc>https://intothebattle.com/how-to-play</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Council of Aetheris | IntoTheBattle</title>
+  <meta name="description" content="Join the Council of Aetheris, earn monthly rewards for active paid creator referrals, and help bring more streamers into IntoTheBattle." />
+  <link rel="canonical" href="https://intothebattle.com/council-of-aetheris" />
+  <meta property="og:title" content="Council of Aetheris" />
+  <meta property="og:description" content="Earn $3/month for every active paid creator you bring to IntoTheBattle." />
+  <meta property="og:url" content="https://intothebattle.com/council-of-aetheris" />
+  <meta property="og:image" content="https://intothebattle.com/og-intothebattle.png?v=20260702" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="stylesheet" href="/css/site-refresh.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Inter:wght@400;500;600;700;800;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --void:#05060a;
+      --ink:#0b1020;
+      --panel:rgba(9,13,25,.82);
+      --panel2:rgba(255,255,255,.055);
+      --line:rgba(255,255,255,.12);
+      --gold:#f6c95b;
+      --gold2:#fff0b9;
+      --ember:#ff6a3d;
+      --cyan:#55e7ff;
+      --green:#80ffd2;
+      --text:#fff8e6;
+      --muted:#aeb8cf;
+      --red:#e83b5f;
+      --max:1180px;
+    }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body {
+      margin:0;
+      min-height:100vh;
+      color:var(--text);
+      font-family:Inter,Arial,sans-serif;
+      background:
+        radial-gradient(circle at 16% 8%, rgba(246,201,91,.2), transparent 28%),
+        radial-gradient(circle at 84% 4%, rgba(85,231,255,.18), transparent 26%),
+        radial-gradient(circle at 58% 72%, rgba(232,59,95,.14), transparent 34%),
+        linear-gradient(180deg,#05060a 0%,#081020 44%,#030407 100%);
+      overflow-x:hidden;
+    }
+    body::before {
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      opacity:.34;
+      background-image:
+        linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+      background-size:52px 52px;
+      mask-image:linear-gradient(180deg,rgba(0,0,0,.8),rgba(0,0,0,.18));
+    }
+    a { color:inherit; text-decoration:none; }
+    .nav-wrap { position:sticky; top:0; z-index:20; padding:16px clamp(14px,4vw,38px) 0; }
+    nav {
+      max-width:var(--max);
+      margin:0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      padding:10px;
+      border:1px solid var(--line);
+      border-radius:8px;
+      background:rgba(5,7,14,.78);
+      backdrop-filter:blur(18px);
+      box-shadow:0 20px 80px rgba(0,0,0,.38);
+    }
+    .brand { display:flex; align-items:center; gap:10px; min-width:0; }
+    .brand img { width:42px; height:42px; border-radius:8px; border:1px solid rgba(246,201,91,.34); background:rgba(246,201,91,.08); }
+    .brand strong { display:block; font-family:Rajdhani,Inter,sans-serif; font-size:19px; text-transform:uppercase; letter-spacing:.08em; }
+    .brand span { display:block; margin-top:3px; color:var(--muted); font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; }
+    .nav-links { display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+    .nav-link,.nav-cta { min-height:40px; display:inline-flex; align-items:center; justify-content:center; padding:0 13px; border-radius:8px; font-size:13px; font-weight:900; }
+    .nav-link { color:#d8e2f8; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+    .nav-cta { color:#190d02; background:linear-gradient(135deg,var(--gold),var(--gold2) 52%,var(--ember)); box-shadow:0 16px 40px rgba(246,201,91,.22); }
+    main { width:min(var(--max),calc(100% - 30px)); margin:0 auto; }
+    .hero {
+      min-height:calc(100vh - 72px);
+      display:grid;
+      grid-template-columns:minmax(0,1.05fr) minmax(340px,.72fr);
+      gap:clamp(22px,4vw,44px);
+      align-items:center;
+      padding:clamp(34px,6vw,72px) 0 42px;
+    }
+    .hero-copy { display:grid; gap:20px; align-content:center; }
+    .kicker {
+      width:fit-content;
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      padding:9px 12px;
+      border:1px solid rgba(246,201,91,.32);
+      border-radius:8px;
+      color:var(--gold2);
+      background:rgba(246,201,91,.08);
+      font-size:12px;
+      font-weight:950;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+    .kicker::before { content:""; width:9px; height:9px; border-radius:50%; background:var(--green); box-shadow:0 0 22px rgba(128,255,210,.8); }
+    h1 {
+      margin:0;
+      font-family:"Black Ops One",Rajdhani,sans-serif;
+      font-size:clamp(46px,7.2vw,88px);
+      line-height:.94;
+      letter-spacing:0;
+      text-transform:uppercase;
+    }
+    h1 span {
+      display:block;
+      color:transparent;
+      background:linear-gradient(100deg,#fff9d8,var(--gold),var(--ember));
+      -webkit-background-clip:text;
+      background-clip:text;
+      filter:drop-shadow(0 0 26px rgba(246,201,91,.2));
+    }
+    .lede { max-width:760px; margin:0; color:#d7def0; font-size:clamp(17px,2vw,22px); line-height:1.55; text-wrap:balance; }
+    .hero-actions { display:flex; gap:12px; flex-wrap:wrap; }
+    .btn {
+      min-height:52px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:0 18px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,.12);
+      font-weight:950;
+      text-transform:uppercase;
+      letter-spacing:.02em;
+    }
+    .btn.primary { color:#170c02; background:linear-gradient(135deg,var(--gold),#fff7d4 48%,var(--ember)); border:0; box-shadow:0 24px 54px rgba(246,201,91,.24); }
+    .btn.secondary { color:#f7fbff; background:rgba(255,255,255,.07); }
+    .proof-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; max-width:720px; }
+    .proof { min-height:92px; padding:14px; border:1px solid rgba(255,255,255,.09); border-radius:8px; background:rgba(255,255,255,.045); }
+    .proof strong { display:block; color:#fff; font-size:28px; line-height:1; }
+    .proof span { display:block; margin-top:8px; color:var(--muted); font-size:12px; font-weight:850; line-height:1.35; }
+    .sigil {
+      position:relative;
+      min-height:560px;
+      border:1px solid rgba(246,201,91,.22);
+      border-radius:8px;
+      overflow:hidden;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(246,201,91,.24), transparent 18%),
+        radial-gradient(circle at 50% 45%, rgba(85,231,255,.18), transparent 34%),
+        linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));
+      box-shadow:0 32px 90px rgba(0,0,0,.44), inset 0 1px 0 rgba(255,255,255,.12);
+    }
+    .sigil::before {
+      content:"";
+      position:absolute;
+      inset:11%;
+      border-radius:50%;
+      border:1px solid rgba(246,201,91,.28);
+      background:
+        conic-gradient(from 30deg,rgba(246,201,91,.22),rgba(85,231,255,.1),rgba(232,59,95,.18),rgba(246,201,91,.22)),
+        radial-gradient(circle,rgba(5,7,14,.18),rgba(5,7,14,.82) 66%);
+      box-shadow:0 0 70px rgba(85,231,255,.14), inset 0 0 46px rgba(246,201,91,.12);
+    }
+    .sigil::after {
+      content:"";
+      position:absolute;
+      inset:22%;
+      border-radius:50%;
+      border:1px dashed rgba(255,255,255,.2);
+      animation:spin 28s linear infinite;
+    }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .offer-card {
+      position:absolute;
+      inset:auto 22px 22px;
+      display:grid;
+      gap:12px;
+      padding:18px;
+      border:1px solid rgba(255,255,255,.14);
+      border-radius:8px;
+      background:rgba(5,7,14,.86);
+      backdrop-filter:blur(16px);
+    }
+    .offer-card h2 { margin:0; font-size:22px; text-transform:uppercase; }
+    .offer-line { display:grid; grid-template-columns:auto 1fr; gap:12px; align-items:center; padding:11px; border-radius:8px; background:rgba(255,255,255,.055); }
+    .offer-line b { color:var(--gold2); font-size:24px; }
+    .offer-line span { color:#dbe5fa; font-size:13px; font-weight:850; line-height:1.35; }
+    .section { padding:44px 0; }
+    .section-head { display:flex; justify-content:space-between; gap:18px; align-items:end; margin-bottom:16px; }
+    .section h2 { margin:0; font-size:clamp(28px,4vw,46px); line-height:1; text-transform:uppercase; font-family:Rajdhani,Inter,sans-serif; letter-spacing:.02em; }
+    .section p { color:var(--muted); line-height:1.55; }
+    .rank-grid,.calc-grid,.fine-grid { display:grid; gap:12px; }
+    .rank-grid { grid-template-columns:repeat(5,minmax(0,1fr)); }
+    .rank,.calc,.fine {
+      min-width:0;
+      padding:16px;
+      border:1px solid rgba(255,255,255,.1);
+      border-radius:8px;
+      background:linear-gradient(180deg,rgba(255,255,255,.075),rgba(255,255,255,.032));
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.08);
+    }
+    .rank small { color:var(--cyan); font-weight:950; text-transform:uppercase; letter-spacing:.06em; }
+    .rank strong { display:block; margin-top:9px; color:#fff; font-size:18px; line-height:1.1; }
+    .rank span { display:block; margin-top:8px; color:var(--muted); font-size:12px; line-height:1.4; }
+    .calc-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .calc b { display:block; color:#fff; font-size:34px; line-height:1; }
+    .calc span { display:block; margin-top:8px; color:#dfe7fb; font-weight:850; }
+    .fine-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .fine b { display:block; color:var(--gold2); text-transform:uppercase; font-size:13px; letter-spacing:.06em; }
+    .fine span { display:block; margin-top:7px; color:var(--muted); font-size:13px; line-height:1.45; }
+    .cta-band {
+      margin:50px 0 30px;
+      padding:26px;
+      border:1px solid rgba(246,201,91,.24);
+      border-radius:8px;
+      background:
+        linear-gradient(90deg,rgba(246,201,91,.15),rgba(85,231,255,.07),rgba(232,59,95,.1)),
+        rgba(5,7,14,.7);
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
+      gap:18px;
+      align-items:center;
+    }
+    .cta-band h2 { margin:0; font-family:"Black Ops One",Rajdhani,sans-serif; font-size:clamp(28px,4vw,48px); line-height:1; text-transform:uppercase; }
+    .cta-band p { margin:8px 0 0; color:#d7def0; line-height:1.5; }
+    footer {
+      width:min(var(--max),calc(100% - 30px));
+      margin:0 auto;
+      padding:22px 0 34px;
+      color:#9ea9c2;
+      display:flex;
+      gap:12px;
+      justify-content:space-between;
+      flex-wrap:wrap;
+      font-size:13px;
+    }
+    footer a { color:#dbe7ff; font-weight:800; }
+    @media(max-width:980px) {
+      .hero { grid-template-columns:1fr; min-height:auto; padding-top:34px; }
+      .sigil { min-height:430px; }
+      .rank-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+      .calc-grid,.fine-grid,.cta-band { grid-template-columns:1fr; }
+      .cta-band .btn { width:100%; }
+    }
+    @media(max-width:620px) {
+      .brand span,.nav-link { display:none; }
+      .nav-cta { min-height:38px; padding:0 11px; font-size:12px; }
+      main { width:min(100% - 22px,var(--max)); }
+      .hero { gap:20px; padding-top:24px; }
+      .proof-grid,.rank-grid { grid-template-columns:1fr; }
+      .hero-actions .btn { width:100%; }
+      .sigil { min-height:390px; }
+      .offer-card { inset:auto 12px 12px; padding:14px; }
+      .offer-line { grid-template-columns:1fr; gap:5px; }
+      .section-head { display:grid; }
+      footer { width:min(100% - 22px,var(--max)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-wrap">
+    <nav aria-label="Council navigation">
+      <a class="brand" href="/" aria-label="IntoTheBattle home">
+        <img src="/intothebattlelogo_logo_only.svg" alt="" />
+        <span><strong>IntoTheBattle</strong><span>Council program</span></span>
+      </a>
+      <div class="nav-links">
+        <a class="nav-link" href="/how-to-play">How to play</a>
+        <a class="nav-link" href="/login">Login</a>
+        <a class="nav-cta" href="/council/signup">Claim your seat</a>
+      </div>
+    </nav>
+  </div>
+
+  <main>
+    <section class="hero" aria-labelledby="council-title">
+      <div class="hero-copy">
+        <div class="kicker">Founding members wanted</div>
+        <h1 id="council-title">The Council <span>of Aetheris</span></h1>
+        <p class="lede">Help streamers find IntoTheBattle. Your Council code tracks the creators you bring in, and every active paid subscription can earn you $3 every month while their payments stay active.</p>
+        <div class="hero-actions">
+          <a class="btn primary" href="/council/signup">Start Council signup</a>
+          <a class="btn secondary" href="#fine-print">Read the fine print</a>
+        </div>
+        <div class="proof-grid" aria-label="Council highlights">
+          <div class="proof"><strong>$3/mo</strong><span>For every active paid creator subscription you refer.</span></div>
+          <div class="proof"><strong>$25</strong><span>Minimum PayPal payout until Stripe payouts are connected.</span></div>
+          <div class="proof"><strong>25</strong><span>Paid referrals unlock the Ascendant Warden tier.</span></div>
+        </div>
+      </div>
+      <aside class="sigil" aria-label="Council reward card">
+        <div class="offer-card">
+          <h2>The offer</h2>
+          <div class="offer-line"><b>10</b><span>Active paid referrals equals $30/month.</span></div>
+          <div class="offer-line"><b>50</b><span>Active paid referrals equals $150/month.</span></div>
+          <div class="offer-line"><b>100</b><span>Active paid referrals equals $300/month.</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section" aria-labelledby="rank-title">
+      <div class="section-head">
+        <div>
+          <h2 id="rank-title">Ranks</h2>
+          <p>Ranks are based on active paid referrals. Council Elite is appointed manually.</p>
+        </div>
+      </div>
+      <div class="rank-grid">
+        <div class="rank"><small>0 paid</small><strong>Aspirant</strong><span>Join free, claim your personal Council code, and start referring creators.</span></div>
+        <div class="rank"><small>3 paid</small><strong>Herald of the Aether</strong><span>Unlock the first exclusive overlay skin reward.</span></div>
+        <div class="rank"><small>10 paid</small><strong>Stormcaller</strong><span>Earn early feature access and stronger Council status.</span></div>
+        <div class="rank"><small>25 paid</small><strong>Ascendant Warden</strong><span>Unlock premium cosmetics and a roadmap vote.</span></div>
+        <div class="rank"><small>Appointed</small><strong>Council Elite</strong><span>Aetherarch status is hand-selected for the inner circle.</span></div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="tracking-title">
+      <div class="section-head">
+        <div>
+          <h2 id="tracking-title">Official Tracking</h2>
+          <p>Your account shows your code, link, creator stats, payout progress, and rank progress. Admin sees private payout and compliance data; the public page never exposes member details.</p>
+        </div>
+      </div>
+      <div class="calc-grid">
+        <div class="calc"><b>Clicks</b><span>Referral link visits are counted without public personal information.</span></div>
+        <div class="calc"><b>Paid</b><span>Only active, non-admin-granted paid PayPal subscriptions qualify.</span></div>
+        <div class="calc"><b>Monthly</b><span>Rewards accrue once per UTC monthly payout period.</span></div>
+      </div>
+    </section>
+
+    <section class="section" id="fine-print" aria-labelledby="fine-title">
+      <div class="section-head">
+        <div>
+          <h2 id="fine-title">Fine Print</h2>
+          <p>No confusing magic, just the rules that keep the Council clean.</p>
+        </div>
+      </div>
+      <div class="fine-grid">
+        <div class="fine"><b>Active paid accounts only</b><span>Cancelled, expired, suspended, failed-payment, free, trial, free-forever, or admin-granted accounts do not earn future monthly rewards.</span></div>
+        <div class="fine"><b>Manual PayPal payouts</b><span>Cash payouts require at least $25 approved unpaid rewards and a valid PayPal payout email until Stripe or automated payouts are connected.</span></div>
+        <div class="fine"><b>Compliance review</b><span>IntoTheBattle may hold, reject, or review rewards for fraud, abuse, self-referrals, refund issues, or missing payout/tax information.</span></div>
+        <div class="fine"><b>Disclosure required</b><span>Members must disclose that they can earn a reward when promoting IntoTheBattle, including creator posts, streams, and messages.</span></div>
+      </div>
+    </section>
+
+    <section class="cta-band" aria-label="Join the Council">
+      <div>
+        <h2>Claim your seat.</h2>
+        <p>Create your account, claim your code, and start sending creators into the battle.</p>
+      </div>
+      <a class="btn primary" href="/council/signup">Join the Council</a>
+    </section>
+  </main>
+
+  <footer>
+    <span>IntoTheBattle Council of Aetheris</span>
+    <span><a href="/terms">Terms</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/signup">Creator signup</a></span>
+  </footer>
+</body>
+</html>

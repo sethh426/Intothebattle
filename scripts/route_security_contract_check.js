@@ -64,7 +64,7 @@ assert.match(authRoutes, /function clearCookieVariants/, 'auth routes must clear
 assert.match(authRoutes, /clearSessionCookie\(res\);\s*res\.cookie\('session_token'/, 'session cookie writers must clear old variants before setting a new token');
 assert.match(server, /clearCookieVariants\(res, 'session_token', true\)/, 'server-level auth redirects must clear old session cookie variants');
 assert.doesNotMatch(server, /logger\.error\(\{\s*err,\s*token\s*\}/, 'auth logs must not include raw session tokens');
-assert.match(server, /const TIKTOK_RECENT_PLAYER_RESTORE_ENABLED = process\.env\.TIKTOK_RECENT_PLAYER_RESTORE_ENABLED === 'true'/, 'recent player restore must be opt-in');
+assert.match(server, /const TIKTOK_RECENT_PLAYER_RESTORE_ENABLED = process\.env\.TIKTOK_RECENT_PLAYER_RESTORE_ENABLED == null\s*\?\s*true/, 'recent player restore must be enabled by default for active live overlays');
 assert.match(server, /const TIKTOK_AUTO_RESUME_SAVED_STREAM = process\.env\.TIKTOK_AUTO_RESUME_SAVED_STREAM == null\s*\?\s*false/, 'saved TikTok streams must not auto-resume by default');
 assert.match(server, /restoreRecentPlayers:\s*false/, 'TikTok reconnects must not restore old players by default');
 assert.doesNotMatch(server, /restoreRecentPlayers:\s*true/, 'TikTok reconnects must not opt into stale player restore');
@@ -74,6 +74,10 @@ assert.match(server, /function isTikTokLiveEndedControlEvent/, 'TikTok control e
 assert.match(server, /function handleTikTokLiveEnded/, 'TikTok LIVE-ended events must hard-stop the game runtime');
 assert.match(server, /onTikTok\('control'/, 'TikTok control events must be subscribed directly');
 assert.match(server, /resetRoomLiveRuntime\(room, \{ reason, clearPlayers: true \}\)/, 'LIVE-ended cleanup must clear live game players');
+assert.match(server, /\/api\/admin\/rooms\/:roomId\/reset-live/, 'admin must expose a protected live connection reset endpoint');
+assert.match(server, /function requireAdminApiAccess/, 'admin API mutations must use explicit admin auth and same-origin checks');
+assert.match(server, /admin_live_connection_end/, 'admin live connection termination must be security-audited');
+assert.match(admin, /data-live-action="end"/, 'admin live activity UI must expose an End live connection control');
 assert.doesNotMatch(admin, /DELETE\s+FROM\s+users/i, 'admin routes must not delete user accounts');
 assert.doesNotMatch(admin, /action=["']\/admin\/users\/[^"']*delete/i, 'admin UI must not render user account delete forms');
 assert.match(admin, /function denyAccountDelete/, 'admin routes must explicitly deny user account deletion attempts');

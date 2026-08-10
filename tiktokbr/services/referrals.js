@@ -251,7 +251,7 @@ export function getReferralSummary(database, user, options = {}) {
       a.signup_at,
       a.qualified_at,
       a.created_at,
-      referred.name AS referred_name,
+      NULL AS referred_name,
       referred.tiktok_username AS referred_tiktok,
       rr.status AS reward_status,
       rr.amount_cents,
@@ -882,15 +882,15 @@ export function listCouncilYearBonusClaims(database, options = {}) {
   return database.prepare(`
     SELECT
       claim.*,
-      user.email AS user_email,
-      user.name AS user_name,
-      user.tiktok_username AS user_tiktok,
+      claim_user.email AS user_email,
+      claim_user.name AS user_name,
+      claim_user.tiktok_username AS user_tiktok,
       origin.code_snapshot AS originating_code,
       referrer.email AS originating_referrer_email,
       referrer.name AS originating_referrer_name,
       referrer.tiktok_username AS originating_referrer_tiktok
     FROM council_year_bonus_claims claim
-    LEFT JOIN users user ON user.id = claim.user_id
+    LEFT JOIN users claim_user ON claim_user.id = claim.user_id
     LEFT JOIN referral_attributions origin ON origin.id = claim.originating_attribution_id
     LEFT JOIN users referrer ON referrer.id = claim.originating_referrer_user_id
     ORDER BY claim.created_at DESC
@@ -904,11 +904,11 @@ export function getCouncilYearBonusClaim(database, claimId) {
   const claim = database.prepare(`
     SELECT
       claim.*,
-      user.email AS user_email,
-      user.name AS user_name,
-      user.tiktok_username AS user_tiktok
+      claim_user.email AS user_email,
+      claim_user.name AS user_name,
+      claim_user.tiktok_username AS user_tiktok
     FROM council_year_bonus_claims claim
-    LEFT JOIN users user ON user.id = claim.user_id
+    LEFT JOIN users claim_user ON claim_user.id = claim.user_id
     WHERE claim.id = ?
     LIMIT 1
   `).get(id);

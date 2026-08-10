@@ -138,6 +138,10 @@
       ]
     },
     {
+      "path": "council.html",
+      "blocks": []
+    },
+    {
       "path": "dashboard-welcome.html",
       "blocks": []
     },
@@ -1504,7 +1508,7 @@
     }
   ],
   "summary": {
-    "total_files": 27,
+    "total_files": 28,
     "expanded": 14,
     "errors": 0
   }

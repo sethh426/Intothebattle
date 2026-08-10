@@ -7,6 +7,8 @@ export const PAYPAL_STATUS_MAP = new Map([
   ['CANCELLED', 'cancelled'],
   ['CANCELED', 'cancelled'],
   ['EXPIRED', 'expired'],
+  ['PAYMENT_FAILED', 'payment_failed'],
+  ['FAILED', 'payment_failed'],
 ]);
 
 export const SUBSCRIPTION_BLOCKING_STATUSES = new Set([
@@ -14,6 +16,7 @@ export const SUBSCRIPTION_BLOCKING_STATUSES = new Set([
   'expired',
   'revoked',
   'suspended',
+  'payment_failed',
 ]);
 
 function normalizeEventType(eventType) {
@@ -33,6 +36,8 @@ export function localStatusForPayPalWebhookEvent(eventType, resourceStatus) {
   if (event === 'BILLING.SUBSCRIPTION.CANCELLED') return 'cancelled';
   if (event === 'BILLING.SUBSCRIPTION.CANCELED') return 'cancelled';
   if (event === 'BILLING.SUBSCRIPTION.EXPIRED') return 'expired';
+  if (event === 'BILLING.SUBSCRIPTION.PAYMENT.FAILED') return 'payment_failed';
+  if (event === 'PAYMENT.SALE.DENIED') return 'payment_failed';
   if (event === 'BILLING.SUBSCRIPTION.UPDATED') return normalizePayPalSubscriptionStatus(resourceStatus);
   return normalizePayPalSubscriptionStatus(resourceStatus);
 }

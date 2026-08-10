@@ -783,6 +783,111 @@ async function initDb() {
     await safeExec('CREATE INDEX IF NOT EXISTS council_year_bonus_claims_status_idx ON council_year_bonus_claims(status, created_at)');
 
     await safeExec(`
+      CREATE TABLE IF NOT EXISTS council_members (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL UNIQUE,
+        status TEXT DEFAULT 'active',
+        joined_source TEXT DEFAULT 'dashboard',
+        paypal_payout_email TEXT,
+        w9_status TEXT DEFAULT 'needed',
+        ftc_acknowledged_at TIMESTAMP,
+        fine_print_acknowledged_at TIMESTAMP,
+        elite INTEGER DEFAULT 0,
+        payout_hold_reason TEXT,
+        suspended_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
+    await safeExec("ALTER TABLE council_members ADD COLUMN status TEXT DEFAULT 'active'");
+    await safeExec("ALTER TABLE council_members ADD COLUMN joined_source TEXT DEFAULT 'dashboard'");
+    await safeExec('ALTER TABLE council_members ADD COLUMN paypal_payout_email TEXT');
+    await safeExec("ALTER TABLE council_members ADD COLUMN w9_status TEXT DEFAULT 'needed'");
+    await safeExec('ALTER TABLE council_members ADD COLUMN ftc_acknowledged_at TIMESTAMP');
+    await safeExec('ALTER TABLE council_members ADD COLUMN fine_print_acknowledged_at TIMESTAMP');
+    await safeExec('ALTER TABLE council_members ADD COLUMN elite INTEGER DEFAULT 0');
+    await safeExec('ALTER TABLE council_members ADD COLUMN payout_hold_reason TEXT');
+    await safeExec('ALTER TABLE council_members ADD COLUMN suspended_at TIMESTAMP');
+    await safeExec('ALTER TABLE council_members ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+    await safeExec('CREATE INDEX IF NOT EXISTS council_members_status_idx ON council_members(status, created_at)');
+    await safeExec('CREATE INDEX IF NOT EXISTS council_members_payout_idx ON council_members(status, w9_status, paypal_payout_email)');
+
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS council_payout_batches (
+        id SERIAL PRIMARY KEY,
+        batch_key TEXT UNIQUE NOT NULL,
+        status TEXT DEFAULT 'created',
+        payout_method TEXT DEFAULT 'paypal_csv',
+        period_start TIMESTAMP,
+        period_end TIMESTAMP,
+        total_amount_cents INTEGER DEFAULT 0,
+        member_count INTEGER DEFAULT 0,
+        item_count INTEGER DEFAULT 0,
+        created_by_admin_session_id TEXT,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        paid_at TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await safeExec("ALTER TABLE council_payout_batches ADD COLUMN status TEXT DEFAULT 'created'");
+    await safeExec("ALTER TABLE council_payout_batches ADD COLUMN payout_method TEXT DEFAULT 'paypal_csv'");
+    await safeExec('ALTER TABLE council_payout_batches ADD COLUMN period_start TIMESTAMP');
+    await safeExec('ALTER TABLE council_payout_batches ADD COLUMN period_end TIMESTAMP');
+    await safeExec('ALTER TABLE council_payout_batches ADD COLUMN total_amount_cents INTEGER DEFAULT 0');
+    await safeExec('ALTER TABLE council_payout_batches ADD COLUMN member_count INTEGER DEFAULT 0');
+    await safeExec('ALTER TABLE council_payout_batches ADD COLUMN item_count INTEGER DEFAULT 0');
+    await safeExec('ALTER TABLE council_payout_batches ADD COLUMN created_by_admin_session_id TEXT');
+    await safeExec('ALTER TABLE council_payout_batches ADD COLUMN notes TEXT');
+    await safeExec('ALTER TABLE council_payout_batches ADD COLUMN paid_at TIMESTAMP');
+    await safeExec('ALTER TABLE council_payout_batches ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
+    await safeExec('CREATE INDEX IF NOT EXISTS council_payout_batches_status_idx ON council_payout_batches(status, created_at)');
+
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS council_payout_items (
+        id SERIAL PRIMARY KEY,
+        batch_id INTEGER NOT NULL,
+        member_user_id INTEGER NOT NULL,
+        reward_id INTEGER NOT NULL UNIQUE,
+        paypal_payout_email TEXT NOT NULL,
+        amount_cents INTEGER DEFAULT 0,
+        currency TEXT DEFAULT 'USD',
+        status TEXT DEFAULT 'included',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        paid_at TIMESTAMP,
+        FOREIGN KEY(batch_id) REFERENCES council_payout_batches(id),
+        FOREIGN KEY(member_user_id) REFERENCES users(id),
+        FOREIGN KEY(reward_id) REFERENCES referral_recurring_rewards(id)
+      )
+    `);
+    await safeExec('ALTER TABLE council_payout_items ADD COLUMN paypal_payout_email TEXT');
+    await safeExec('ALTER TABLE council_payout_items ADD COLUMN amount_cents INTEGER DEFAULT 0');
+    await safeExec("ALTER TABLE council_payout_items ADD COLUMN currency TEXT DEFAULT 'USD'");
+    await safeExec("ALTER TABLE council_payout_items ADD COLUMN status TEXT DEFAULT 'included'");
+    await safeExec('ALTER TABLE council_payout_items ADD COLUMN paid_at TIMESTAMP');
+    await safeExec('CREATE UNIQUE INDEX IF NOT EXISTS council_payout_items_reward_unique ON council_payout_items(reward_id)');
+    await safeExec('CREATE INDEX IF NOT EXISTS council_payout_items_batch_idx ON council_payout_items(batch_id, status)');
+    await safeExec('CREATE INDEX IF NOT EXISTS council_payout_items_member_idx ON council_payout_items(member_user_id, status)');
+
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS council_audit_events (
+        id SERIAL PRIMARY KEY,
+        action TEXT NOT NULL,
+        target_user_id INTEGER,
+        actor_admin_session_id TEXT,
+        details TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(target_user_id) REFERENCES users(id)
+      )
+    `);
+    await safeExec('ALTER TABLE council_audit_events ADD COLUMN target_user_id INTEGER');
+    await safeExec('ALTER TABLE council_audit_events ADD COLUMN actor_admin_session_id TEXT');
+    await safeExec('ALTER TABLE council_audit_events ADD COLUMN details TEXT');
+    await safeExec('CREATE INDEX IF NOT EXISTS council_audit_events_action_idx ON council_audit_events(action, created_at)');
+    await safeExec('CREATE INDEX IF NOT EXISTS council_audit_events_target_idx ON council_audit_events(target_user_id, created_at)');
+
+    await safeExec(`
       CREATE TABLE IF NOT EXISTS creator_comments (
         id SERIAL PRIMARY KEY,
         name TEXT,
@@ -1037,6 +1142,69 @@ async function initDb() {
     await safeExec("ALTER TABLE live_sessions ADD COLUMN status TEXT DEFAULT 'active'");
     await safeExec('ALTER TABLE live_sessions ADD COLUMN ended_at TIMESTAMP');
 
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS combat_rounds (
+        id SERIAL PRIMARY KEY,
+        round_id TEXT UNIQUE NOT NULL,
+        session_id TEXT,
+        room_id TEXT NOT NULL,
+        rules_version INTEGER DEFAULT 1,
+        mode TEXT DEFAULT 'horde_survival',
+        phase TEXT DEFAULT 'lobby',
+        started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        ended_at TIMESTAMP,
+        result_json TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await safeExec("ALTER TABLE combat_rounds ADD COLUMN rules_version INTEGER DEFAULT 1");
+    await safeExec("ALTER TABLE combat_rounds ADD COLUMN mode TEXT DEFAULT 'horde_survival'");
+    await safeExec("ALTER TABLE combat_rounds ADD COLUMN phase TEXT DEFAULT 'lobby'");
+    await safeExec('ALTER TABLE combat_rounds ADD COLUMN result_json TEXT');
+    await safeExec('CREATE INDEX IF NOT EXISTS combat_rounds_room_started_idx ON combat_rounds(room_id, started_at)');
+    await safeExec('CREATE INDEX IF NOT EXISTS combat_rounds_session_idx ON combat_rounds(session_id)');
+
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS combat_events (
+        id SERIAL PRIMARY KEY,
+        event_id TEXT UNIQUE NOT NULL,
+        round_id TEXT,
+        session_id TEXT,
+        room_id TEXT NOT NULL,
+        event_type TEXT NOT NULL,
+        actor_id TEXT,
+        target_id TEXT,
+        payload_json TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    await safeExec('CREATE INDEX IF NOT EXISTS combat_events_round_created_idx ON combat_events(round_id, created_at)');
+    await safeExec('CREATE INDEX IF NOT EXISTS combat_events_room_created_idx ON combat_events(room_id, created_at)');
+
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS combat_player_round_stats (
+        id SERIAL PRIMARY KEY,
+        round_id TEXT NOT NULL,
+        room_id TEXT NOT NULL,
+        unique_id TEXT NOT NULL,
+        tiktok_handle TEXT,
+        score INTEGER DEFAULT 0,
+        kills INTEGER DEFAULT 0,
+        assists INTEGER DEFAULT 0,
+        deaths INTEGER DEFAULT 0,
+        damage_dealt INTEGER DEFAULT 0,
+        healing_done INTEGER DEFAULT 0,
+        shielding_done INTEGER DEFAULT 0,
+        objective_score INTEGER DEFAULT 0,
+        engagement_score INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(round_id, unique_id)
+      )
+    `);
+    await safeExec('CREATE INDEX IF NOT EXISTS combat_player_round_stats_room_idx ON combat_player_round_stats(room_id, score)');
+
     await safeExec('ALTER TABLE access_codes ADD COLUMN user_id INTEGER');
     await safeExec("ALTER TABLE access_codes ADD COLUMN code_type TEXT DEFAULT 'trial'");
 
@@ -1077,7 +1245,7 @@ async function initDb() {
         nickname TEXT,
         hp INTEGER DEFAULT 300,
         max_hp INTEGER DEFAULT 300,
-        strength INTEGER DEFAULT 15,
+        strength INTEGER DEFAULT 10,
         kills INTEGER DEFAULT 0,
         kill_streak INTEGER DEFAULT 0,
         last_kill_time BIGINT DEFAULT 0,
@@ -1096,7 +1264,7 @@ async function initDb() {
         nickname TEXT,
         hp INTEGER DEFAULT 300,
         max_hp INTEGER DEFAULT 300,
-        strength INTEGER DEFAULT 15,
+        strength INTEGER DEFAULT 10,
         kills INTEGER DEFAULT 0,
         last_active BIGINT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -1179,6 +1347,8 @@ async function initDb() {
     await safeExec('ALTER TABLE room_player_stats ALTER COLUMN last_kill_time TYPE BIGINT USING last_kill_time::bigint');
     await safeExec('ALTER TABLE room_player_stats ALTER COLUMN last_active TYPE BIGINT USING last_active::bigint');
     await safeExec('ALTER TABLE room_player_stats ALTER COLUMN message_boost_expires TYPE BIGINT USING message_boost_expires::bigint');
+    await safeExec('ALTER TABLE room_player_stats ALTER COLUMN strength SET DEFAULT 10');
+    await safeExec('ALTER TABLE global_player_stats ALTER COLUMN strength SET DEFAULT 10');
     await safeExec('ALTER TABLE global_player_stats ALTER COLUMN last_active TYPE BIGINT USING last_active::bigint');
     await requireColumnType('room_player_stats', 'last_kill_time', 'bigint');
     await requireColumnType('room_player_stats', 'last_active', 'bigint');

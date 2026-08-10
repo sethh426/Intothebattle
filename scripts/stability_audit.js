@@ -161,6 +161,11 @@ function checkOverlayModuleContracts() {
       consumerMarker: 'window.IntoTheBattleOverlayAudio',
     },
     {
+      file: 'js/overlay/full_screen_particles.js',
+      globalName: 'IntoTheBattleFullScreenParticles',
+      consumerMarker: 'window.IntoTheBattleFullScreenParticles',
+    },
+    {
       file: 'js/overlay/video-agent.js',
       globalName: 'IntoTheBattleOverlayVideoAgent',
       consumerMarker: 'window.IntoTheBattleOverlayVideoAgent',

@@ -146,7 +146,7 @@ try {
   assert(blogText.includes('application/ld+json'), '/blog should include JSON-LD structured data');
   const updates = await expectStatus('/updates', 200);
   assert((await updates.text()).includes('IntoTheBattle'), '/updates should render the local blog index');
-  for (const pathname of ['/favicon.ico', '/favicon-48.png', '/apple-touch-icon.png', '/site-icon-512.png', '/site.webmanifest', '/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/clarity-loader.js', '/js/growth-tracker.js', '/js/public-comments.js', '/js/overlay-scene.js', '/js/overlay-v2.js', '/js/overlay/stage-config.js', '/js/overlay/overlay-normalizers.js', '/js/overlay/overlay-diagnostics.js', '/js/overlay/overlay-audio.js', '/js/overlay/video-agent.js', '/vendor/phaser/phaser.min.js']) {
+  for (const pathname of ['/favicon.ico', '/favicon-48.png', '/apple-touch-icon.png', '/site-icon-512.png', '/site.webmanifest', '/intothebattlelogo_logo_only.svg', '/logo.svg', '/og-intothebattle.png', '/brand-identity-square.png', '/robots.txt', '/sitemap.xml', '/css/site-refresh.css', '/js/clarity-loader.js', '/js/growth-tracker.js', '/js/public-comments.js', '/js/overlay-scene.js', '/js/overlay-v2.js', '/js/overlay/stage-config.js', '/js/overlay/overlay-normalizers.js', '/js/overlay/overlay-diagnostics.js', '/js/overlay/overlay-audio.js', '/js/overlay/full_screen_particles.js', '/js/overlay/video-agent.js', '/vendor/phaser/phaser.min.js', '/vendor/three/three.min.js', '/vendor/gsap/gsap.min.js']) {
     await expectStatus(pathname, 200);
   }
   const publicComments = await expectStatus('/api/public/comments', 200);
@@ -251,6 +251,11 @@ try {
   await expectStatus('/api/subscription/status', 401);
   await expectStatus('/api/stream/setup/start', 401, { method: 'POST' });
   await expectStatus('/api/stream/setup/reset', 401, { method: 'POST' });
+  await expectStatus('/api/admin/rooms/smoke-room/reset-live', 401, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', Origin: baseUrl },
+    body: JSON.stringify({ reconnect: false }),
+  });
   await expectStatus('/auth/tiktok/disconnect', 401, { method: 'POST' });
   await expectStatus('/api/tiktok/webhook', 401, {
     method: 'POST',

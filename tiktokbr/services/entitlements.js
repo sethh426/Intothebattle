@@ -34,6 +34,8 @@ const BLOCKING_SUBSCRIPTION_STATUSES = new Set([
   'canceled',
   'suspended',
   'revoked',
+  'payment_failed',
+  'failed',
 ]);
 const PENDING_SUBSCRIPTION_STATUSES = new Set([
   'pending',

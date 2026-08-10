@@ -6,6 +6,7 @@ import {
   DEFAULT_AETHERIS_TERRITORY_ID,
   normalizeAetherisTerritoryId,
 } from './tiktokbr/services/aetherisTerritories.js';
+import { V1_MODES, normalizeV1Mode } from './tiktokbr/game/v1Rules.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Use DISK_PATH env var (Render: /var/data), fallback to local directory for development
@@ -17,6 +18,7 @@ export const DEFAULT_OVERLAY_SETTINGS = {
   shotSpeed:  1,
   backgroundFit: 'contain',
   aetherisTerritoryId: DEFAULT_AETHERIS_TERRITORY_ID,
+  battleMode: V1_MODES.HORDE_SURVIVAL,
 };
 
 export const DEFAULT_AUDIO_MASTER_VOLUME = 0.5;
@@ -89,6 +91,7 @@ export function normalizeOverlaySettings(settings = {}) {
     : DEFAULT_OVERLAY_SETTINGS.shotSpeed;
   normalized.backgroundFit = normalized.backgroundFit === 'cover' ? 'cover' : DEFAULT_OVERLAY_SETTINGS.backgroundFit;
   normalized.aetherisTerritoryId = normalizeAetherisTerritoryId(normalized.aetherisTerritoryId);
+  normalized.battleMode = normalizeV1Mode(normalized.battleMode);
   return normalized;
 }
 

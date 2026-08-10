@@ -30,6 +30,19 @@ import {
   parseArenaPowerCommand,
   rankArenaContributors,
 } from '../tiktokbr/services/arenaPowerUp.js';
+import { V1_MODES, V1_PHASES, V1_RULES } from '../tiktokbr/game/v1Rules.js';
+import {
+  applyV1Damage,
+  applyV1Heal,
+  applyV1Shield,
+  ensureV1Player,
+  ensureV1RoomState,
+  handleV1ChatAction,
+  processV1StatusTicks,
+  recordV1Engagement,
+  setV1Mode,
+  setV1Phase,
+} from '../tiktokbr/game/v1Engine.js';
 import { buildLaunchReadinessReport } from '../tiktokbr/services/launchReadiness.js';
 import { evaluateSponsorMediaQuality } from '../tiktokbr/sponsorMediaProcessor.js';
 import {
@@ -45,6 +58,15 @@ import {
   normalizeAetherisStructures,
   repairAetherisStructures,
 } from '../tiktokbr/services/aetherisStructures.js';
+import {
+  buildAetherisWorldState,
+  currentAetherisWorldStatus,
+  syncAetherisWorldFromStructures,
+} from '../tiktokbr/services/aetherisWorldState.js';
+import {
+  LIKE_BURST_THRESHOLD,
+  updateLikeMilestones,
+} from '../tiktokbr/services/engagementMilestones.js';
 
 function testEntitlements() {
   assert.equal(
@@ -231,12 +253,14 @@ function testEntitlements() {
 
 function testBillingPolicy() {
   assert.equal(normalizePayPalSubscriptionStatus('ACTIVE'), 'active');
-  assert.equal(normalizePayPalSubscriptionStatus('APPROVAL_PENDING'), 'pending');
-  assert.equal(normalizePayPalSubscriptionStatus('SUSPENDED'), 'suspended');
-  assert.equal(localStatusForPayPalWebhookEvent('BILLING.SUBSCRIPTION.ACTIVATED'), 'active');
-  assert.equal(localStatusForPayPalWebhookEvent('BILLING.SUBSCRIPTION.SUSPENDED'), 'suspended');
-  assert.equal(localStatusForPayPalWebhookEvent('BILLING.SUBSCRIPTION.CANCELLED'), 'cancelled');
-  assert.equal(localStatusForPayPalWebhookEvent('BILLING.SUBSCRIPTION.EXPIRED'), 'expired');
+assert.equal(normalizePayPalSubscriptionStatus('APPROVAL_PENDING'), 'pending');
+assert.equal(normalizePayPalSubscriptionStatus('SUSPENDED'), 'suspended');
+assert.equal(normalizePayPalSubscriptionStatus('PAYMENT_FAILED'), 'payment_failed');
+assert.equal(localStatusForPayPalWebhookEvent('BILLING.SUBSCRIPTION.ACTIVATED'), 'active');
+assert.equal(localStatusForPayPalWebhookEvent('BILLING.SUBSCRIPTION.SUSPENDED'), 'suspended');
+assert.equal(localStatusForPayPalWebhookEvent('BILLING.SUBSCRIPTION.CANCELLED'), 'cancelled');
+assert.equal(localStatusForPayPalWebhookEvent('BILLING.SUBSCRIPTION.EXPIRED'), 'expired');
+assert.equal(localStatusForPayPalWebhookEvent('BILLING.SUBSCRIPTION.PAYMENT.FAILED'), 'payment_failed');
   assert.equal(isSubscriptionAccessActive('active'), true);
   assert.equal(isSubscriptionAccessActive('pending'), false);
   assert.equal(isSubscriptionAccessBlocked('suspended'), true);
@@ -272,25 +296,24 @@ function testLiveCommentTextExtraction() {
 }
 
 function testPlayerCommandCatalog() {
-  assert.equal(parseAttackCommand('!attack @nova')?.effect, 'laser');
-  assert.equal(parseAttackCommand('!hit @nova')?.multiplier, 1.5);
-  assert.equal(parseAttackCommand('strike @nova')?.description, 'STRIKE');
-  assert.equal(parseAttackCommand('!fight @boss')?.effect, 'laser');
-  assert.equal(parseAttackCommand('!railgun @boss')?.effect, 'railgun');
-  assert.equal(parseAttackCommand('!nuke @horde')?.effect, 'explosion');
+  assert.equal(parseAttackCommand('!attack @nova')?.abilityKey, 'basic');
+  assert.equal(parseAttackCommand('!hit @nova')?.damage, 10);
+  assert.equal(parseAttackCommand('strike @nova'), null, 'V1 requires explicit command syntax for attacks');
+  assert.equal(parseAttackCommand('!fight @boss')?.abilityKey, 'basic');
+  assert.equal(parseAttackCommand('!railgun @boss'), null, 'railgun is no longer a chat combat command');
+  assert.equal(parseAttackCommand('!nuke @horde'), null, 'nuke is no longer a chat combat command');
   assert.equal(parseAttackCommand('! laser @nova')?.effect, 'laser');
   assert.equal(parseAttackCommand('/ fire @nova')?.effect, 'fire');
   assert.equal(parseAttackCommand('!laser@nova')?.effect, 'laser');
-  assert.equal(parseAttackCommand('@nova ! railgun')?.effect, 'railgun');
-  assert.equal(parseAttackCommand('nova @bravo')?.effect, 'pulse');
-  assert.equal(parseAttackCommand('!nova @bravo')?.effect, 'pulse');
-  assert.equal(parseAttackCommand('!sphere @bravo')?.effect, 'sphere');
-  assert.equal(parseAttackCommand('!projectile @bravo')?.effect, 'projectile');
-  assert.equal(parseAttackCommand('!boom @bravo')?.effect, 'explosion');
-  assert.equal(parseAttackCommand('!nuke @bravo')?.effect, 'explosion');
-  for (const effect of ['prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard']) {
-    assert.equal(parseAttackCommand(`!${effect} @bravo`)?.effect, effect, `${effect} should parse as a direct attack effect`);
-    assert.equal(parseAttackCommand(`${effect} @bravo`)?.effect, effect, `${effect} should parse without a ! prefix when a target exists`);
+  assert.equal(parseAttackCommand('@nova ! railgun'), null);
+  assert.equal(parseAttackCommand('nova @bravo'), null);
+  assert.equal(parseAttackCommand('!nova @bravo')?.effect, 'nova');
+  assert.equal(parseAttackCommand('!plasma @bravo')?.abilityKey, 'plasma');
+  assert.equal(parseAttackCommand('!shield')?.abilityKey, 'shield');
+  assert.equal(parseAttackCommand('!heal@bravo')?.abilityKey, 'heal');
+  for (const effect of ['laser', 'plasma', 'fire', 'nova']) {
+    assert.equal(parseAttackCommand(`!${effect} @bravo`)?.effect, effect, `${effect} should parse as a V1 ability`);
+    assert.equal(parseAttackCommand(`${effect} @bravo`), null, `${effect} should require a ! prefix`);
   }
   assert.equal(parseAttackCommand('@nova'), null, 'bare mention should not parse as a NOVA command');
   assert.equal(parseAttackCommand('hello @nova'), null, 'mention target text should not be scanned as command text');
@@ -302,18 +325,18 @@ function testPlayerCommandCatalog() {
   assert.deepEqual(parseUtilityCommand('! join'), { canonical: 'join', command: 'join', rest: '', prefixed: true });
   assert.deepEqual(parseUtilityCommand('/join'), { canonical: 'join', command: 'join', rest: '', prefixed: true });
   assert.deepEqual(parseUtilityCommand('/ join'), { canonical: 'join', command: 'join', rest: '', prefixed: true });
-  assert.equal(parseUtilityCommand('start')?.canonical, 'join');
-  assert.equal(parseUtilityCommand('enter')?.canonical, 'join');
+  assert.equal(parseUtilityCommand('start'), null, 'bare start should not be a V1 utility command');
+  assert.equal(parseUtilityCommand('enter'), null, 'bare enter should not be a V1 utility command');
   assert.equal(parseUtilityCommand('!commands')?.canonical, 'help');
   assert.equal(parseUtilityCommand('!comments')?.canonical, 'help');
   assert.equal(parseUtilityCommand('! command')?.canonical, 'help');
   assert.deepEqual(parseUtilityCommand('@nova !comments'), { canonical: 'help', command: 'comments', rest: '@nova', prefixed: true });
-  assert.deepEqual(parseUtilityCommand('!heal@nova'), { canonical: 'heal', command: 'heal', rest: '@nova', prefixed: true });
-  assert.deepEqual(parseUtilityCommand('@nova !heal'), { canonical: 'heal', command: 'heal', rest: '@nova', prefixed: true });
-  assert.equal(parseUtilityCommand('! hp @nova')?.canonical, 'heal');
-  assert.equal(parseUtilityCommand('!shield')?.canonical, 'shield');
-  assert.equal(parseUtilityCommand('! guard')?.canonical, 'shield');
-  assert.equal(parseUtilityCommand('!protect')?.canonical, 'shield');
+  assert.equal(parseUtilityCommand('!heal@nova'), null, 'heal is now a V1 ability command');
+  assert.equal(parseUtilityCommand('@nova !heal'), null, 'heal is now a V1 ability command');
+  assert.equal(parseUtilityCommand('! hp @nova'), null);
+  assert.equal(parseUtilityCommand('!shield'), null, 'shield is now a V1 ability command');
+  assert.equal(parseUtilityCommand('! guard'), null);
+  assert.equal(parseUtilityCommand('!protect'), null);
   assert.equal(parseUtilityCommand('!laser@nova'), null, 'attack commands should not parse as utility commands');
 
   for (const command of DEPRECATED_ATTACK_COMMANDS) {
@@ -322,37 +345,154 @@ function testPlayerCommandCatalog() {
   }
 
   const commandText = viewerCommandText();
-  for (const expected of ['Any comment, like, follow, share, or gift enters you', '!attack @name', '@horde', '@boss', '!shield', '!heal @name', '!commands', '!comments']) {
+  for (const expected of ['Any comment, like, follow, share, or gift enters you', 'does not attack randomly', '!attack @name', '@horde', '@boss', '!laser @name', '!plasma @name', '!fire @name', '!nova', '!shield', '!heal @name', '!commands']) {
     assert.ok(commandText.includes(expected), `viewer command text should include ${expected}`);
   }
   assert.equal(commandText.includes('!join'), false, 'viewer command text should not tell viewers to type !join to enter');
-  for (const expected of ['@name', 'enters you and sends a random 5-damage attack', '!prism @name', '!plasma @name', '!orbital @name']) {
-    assert.ok(commandText.includes(expected), `viewer command text should include ${expected}`);
+  for (const unexpected of ['random 5-damage attack', '!tempest @name', '!rift @name', '!orbital @name']) {
+    assert.equal(commandText.includes(unexpected), false, `viewer command text should not include ${unexpected}`);
   }
 
   const payload = commandBannerShowcasePayload();
   assert.equal(payload.banners.length, 1);
   assert.equal(payload.banners[0].kicker, 'PLAYER COMMANDS');
   assert.ok(payload.banners[0].tickerItems.some(item => item.includes('@horde')));
+  assert.equal(payload.banners[0].tickerItems.some(item => /random 5-damage attack/i.test(item)), false);
+}
+
+function makeV1TestRoom(mode = V1_MODES.FREE_FOR_ALL) {
+  const room = { roomId: 'logic_v1_room', players: {}, recentEvents: [] };
+  ensureV1RoomState(room, { mode, now: 1000 });
+  setV1Mode(room, mode);
+  setV1Phase(room, V1_PHASES.BATTLE, { now: 1000 });
+  return room;
+}
+
+function testV1RulesEngine() {
+  const room = makeV1TestRoom();
+  const alpha = ensureV1Player(room, 'alpha', 'Alpha', { now: 1000, source: 'test' });
+  const beta = ensureV1Player(room, 'beta', 'Beta', { now: 1000, source: 'test' });
+  beta.spawnProtectionUntil = 0;
+
+  const plain = handleV1ChatAction(room, 'alpha', 'Alpha', 'hello chat', { now: 5000, source: 'test', disableCrit: true });
+  assert.equal(plain.engagementOnly, true, 'plain chat should only create engagement');
+  assert.equal(beta.hp, V1_RULES.maxHp, 'plain chat must not damage another player');
+  assert.equal(alpha.battleCharges, 1, 'plain chat can add one battle charge');
+
+  const basic = handleV1ChatAction(room, 'alpha', 'Alpha', '!attack @beta', { now: 9000, source: 'test', allowPlayerTargets: true, disableCrit: true });
+  assert.equal(basic.handled, true, 'basic strike should resolve');
+  assert.equal(basic.result.damage, 12, 'basic strike should include one +2 battle charge');
+  assert.equal(beta.hp, V1_RULES.maxHp - 12, 'basic strike should reduce target HP by exact V1 damage');
+  assert.equal(alpha.energy, 7, 'basic strike should grant hit energy after engagement energy');
+
+  const cooldown = handleV1ChatAction(room, 'alpha', 'Alpha', '!attack @beta', { now: 10500, source: 'test', allowPlayerTargets: true, disableCrit: true });
+  assert.equal(cooldown.rejected, true, 'ability cooldown should reject repeated basic strikes');
+  assert.equal(cooldown.reason, 'ability_cooldown');
+
+  alpha.energy = 100;
+  beta.shield = 20;
+  const laser = handleV1ChatAction(room, 'alpha', 'Alpha', '!laser @beta', { now: 10000, source: 'test', allowPlayerTargets: true, disableCrit: true });
+  assert.equal(laser.result.damage, 5, 'laser should apply 25% shield penetration before absorption');
+  assert.equal(laser.result.shieldAbsorbed, 13, 'laser should report shield absorption');
+  assert.equal(beta.shield, 7, 'laser should leave partial shield when it is not fully broken');
+
+  const plasma = applyV1Damage(room, 'alpha', 'beta', 'plasma', { now: 20000, source: 'test', disableCrit: true });
+  assert.equal(plasma.result.damage, 11, 'plasma should deal double shield damage before health damage');
+  assert.equal(beta.shield, 0, 'plasma should remove the remaining shield');
+
+  const fire = applyV1Damage(room, 'alpha', 'beta', 'fire', { now: 31000, source: 'test', disableCrit: true });
+  assert.equal(fire.result.damage, 12, 'fire should deal exact initial damage');
+  assert.ok(beta.statuses.burn, 'fire should apply a burn status');
+  const burnTick = processV1StatusTicks(room, { now: 32000 });
+  assert.equal(burnTick.length, 1, 'burn should produce one tick event');
+  assert.equal(burnTick[0].damage, 4, 'burn tick should deal exact V1 damage');
+
+  alpha.energy = 100;
+  beta.hp = 50;
+  const healOne = applyV1Heal(room, 'alpha', 'Alpha', 'beta', { now: 45000, source: 'test' });
+  assert.equal(healOne.event.amount, 20, 'first ally heal should restore 20 HP');
+  alpha.energy = 100;
+  const healTwo = applyV1Heal(room, 'alpha', 'Alpha', 'beta', { now: 58000, source: 'test' });
+  assert.equal(healTwo.event.amount, 15, 'healing fatigue should reduce the second heal to 75%');
+
+  alpha.energy = 100;
+  const shield = applyV1Shield(room, 'alpha', 'Alpha', { now: 71000, source: 'test' });
+  assert.equal(shield.event.shield, 25, 'shield should add 25 barrier points');
+  assert.equal(alpha.energy, 80, 'shield should cost 20 energy');
+
+  beta.hp = 5;
+  beta.alive = true;
+  beta.shield = 0;
+  alpha.cooldowns = {};
+  const kill = applyV1Damage(room, 'alpha', 'beta', 'laser', { now: 86000, source: 'test', disableCrit: true });
+  assert.equal(kill.result.killed, true, 'fatal hit should mark kill');
+  assert.equal(beta.alive, false, 'fatal hit should mark target dead');
+  assert.equal(beta.respawnAt, 86000 + V1_RULES.respawnDelayMs, 'dead player should get V1 respawn timer');
+
+  const gamma = ensureV1Player(room, 'gamma', 'Gamma', { now: 96000, source: 'test' });
+  gamma.spawnProtectionUntil = 0;
+  alpha.cooldowns = {};
+  alpha.energy = 100;
+  const dupA = applyV1Damage(room, 'alpha', 'gamma', 'laser', { now: 97000, source: 'test', disableCrit: true, idempotencyKey: 'same-event' });
+  const hpAfterDupA = gamma.hp;
+  alpha.cooldowns = {};
+  const dupB = applyV1Damage(room, 'alpha', 'gamma', 'laser', { now: 97001, source: 'test', disableCrit: true, idempotencyKey: 'same-event' });
+  assert.equal(dupA.handled, true, 'first idempotent event should apply');
+  assert.equal(dupB.reason, 'duplicate_event', 'duplicate event IDs should not apply twice');
+  assert.equal(gamma.hp, hpAfterDupA, 'duplicate event should leave target HP unchanged');
+
+  const burstTarget = ensureV1Player(room, 'burst-target', 'Burst Target', { now: 100000, source: 'test' });
+  burstTarget.spawnProtectionUntil = 0;
+  burstTarget.hp = burstTarget.maxHp;
+  burstTarget.shield = 0;
+  alpha.cooldowns = {};
+  alpha.energy = 100;
+  const burst = applyV1Damage(room, 'alpha', 'burst-target', 'laser', {
+    now: 101000,
+    source: 'test',
+    allowPlayerTargets: true,
+    disableCrit: true,
+    damageMultiplier: 20,
+  });
+  const maxSingleHit = Math.round(V1_RULES.maxHp * V1_RULES.maxPlayerHitPct);
+  assert.equal(burst.result.damage, maxSingleHit, 'boosted player hits should be capped to anti-one-shot damage');
+  assert.equal(burst.result.damageCapped, true, 'capped burst should mark the event as damage-capped');
+  assert.equal(burstTarget.hp, V1_RULES.maxHp - maxSingleHit, 'boosted hit should not wipe a full-HP player');
+
+  const support = ensureV1Player(room, 'support', 'Support', { now: 110000, source: 'test' });
+  support.hp = 120;
+  support.energy = 0;
+  const singleLike = recordV1Engagement(room, 'support', 'Support', 'like', { now: 110500, amount: 1, source: 'test' });
+  assert.equal(singleLike.hpRestored, V1_RULES.likeHealMin, 'one accepted like packet should restore visible HP');
+  assert.equal(support.hp, 120 + V1_RULES.likeHealMin, 'single like should immediately move HP by the visible minimum');
+  const like = recordV1Engagement(room, 'support', 'Support', 'like', { now: 111000, amount: 25, source: 'test' });
+  assert.equal(support.maxHp, V1_RULES.maxHp, 'V1 players should use the larger production HP pool');
+  assert.ok(like.hpRestored > 0, 'likes should restore visible HP');
+  assert.ok(support.hp > 120 + V1_RULES.likeHealMin, 'like engagement should keep moving the HP bar');
+  const beforeShareHp = support.hp = 90;
+  const share = recordV1Engagement(room, 'support', 'Support', 'share', { now: 112000, source: 'test' });
+  assert.equal(share.fullHeal, true, 'shares should be marked as full HP refills');
+  assert.equal(support.hp, support.maxHp, 'shares should refill the player to full HP');
+  assert.equal(share.hpRestored, support.maxHp - beforeShareHp, 'share payload should report the refill amount');
 }
 
 function testArenaPowerUpRules() {
   assert.equal(arenaContributionPoints('comment'), 1, 'comments should score one Power-Up point');
   assert.equal(arenaContributionPoints('chat'), 1, 'chat aliases should score one Power-Up point');
-  assert.equal(arenaContributionPoints('like', 20), 5, 'like bursts should cap at five points per event');
-  assert.equal(arenaContributionPoints('follow'), 12, 'follows should score twelve points');
-  assert.equal(arenaContributionPoints('share'), 10, 'shares should score ten points');
-  assert.equal(arenaContributionPoints('repost'), 20, 'reposts should score twenty points');
-  assert.equal(arenaContributionPoints('gift', 900), 500, 'gift scoring should cap at five hundred points');
+  assert.equal(arenaContributionPoints('like', 20), 1, 'like bursts should use diminishing per-event points');
+  assert.equal(arenaContributionPoints('follow'), 10, 'follows should score ten points');
+  assert.equal(arenaContributionPoints('share'), 12, 'shares should score twelve points');
+  assert.equal(arenaContributionPoints('repost'), 12, 'reposts should score twelve points');
+  assert.equal(arenaContributionPoints('gift', 900), 35, 'gift scoring should use capped spectacle tiers');
 
-  assert.equal(parseArenaPowerCommand('!nova @boss'), 'nova');
+  assert.equal(parseArenaPowerCommand('!nova @boss'), null, '!nova belongs to the V1 combat ability catalog');
   assert.equal(parseArenaPowerCommand('please !overdrive @horde'), 'overdrive');
   assert.equal(parseArenaPowerCommand('!overdriveX'), null, 'partial Power-Up commands should not parse');
   assert.equal(parseArenaPowerCommand('overdrive'), null, 'Power-Up commands should require a bang prefix');
 
-  assert.equal(arenaPowerMultiplierForRank(1), 4.25);
-  assert.equal(arenaPowerMultiplierForRank(2), 3.55);
-  assert.equal(arenaPowerMultiplierForRank(3), 3.0);
+  assert.equal(arenaPowerMultiplierForRank(1), 1.5);
+  assert.equal(arenaPowerMultiplierForRank(2), 1.35);
+  assert.equal(arenaPowerMultiplierForRank(3), 1.2);
   assert.equal(arenaPowerMultiplierForRank(4), 0);
 
   assert.equal(nextArenaPowerAttack(0).label, 'NOVA');
@@ -374,8 +514,36 @@ function testArenaPowerUpRules() {
   const ranked = rankArenaContributors(state.contributors, players, 3);
   assert.deepEqual(ranked.map(item => item.uniqueId), ['alpha', 'beta', 'gamma']);
   assert.deepEqual(ranked.map(item => item.rank), [1, 2, 3]);
-  assert.deepEqual(ranked.map(item => item.multiplier), [4.25, 3.55, 3.0]);
+  assert.deepEqual(ranked.map(item => item.multiplier), [1.5, 1.35, 1.2]);
   assert.equal(state.topContributors[0].uniqueId, 'alpha', 'addArenaContribution should refresh top contributors');
+}
+
+function testEngagementMilestones() {
+  let stats = {};
+  let result = updateLikeMilestones(stats, 999);
+  stats = result.stats;
+  assert.equal(result.total, 999);
+  assert.equal(result.fullScreenEffects.length, 0, '999 likes should not trigger a full-screen burst');
+  assert.equal(result.milestone, 900, 'standard milestones should still report the latest crossed hundred');
+
+  result = updateLikeMilestones(stats, 1);
+  stats = result.stats;
+  assert.equal(result.total, 1000);
+  assert.deepEqual(result.fullScreenMilestones, [LIKE_BURST_THRESHOLD], '1,000 likes should trigger the first full-screen burst');
+  assert.equal(result.fullScreenEffects[0].id, 'likes:1000');
+  assert.equal(result.fullScreenEffects[0].effect, 'particleForm');
+  assert.equal(result.fullScreenEffects[0].shape, 'heart');
+  assert.equal(result.fullScreenEffects[0].text, '+1,000 LIKES');
+  assert.equal(result.tier, 'mega');
+
+  result = updateLikeMilestones(stats, 1);
+  stats = result.stats;
+  assert.equal(result.fullScreenEffects.length, 0, 'the same 1,000-like boundary must not replay after state advances');
+
+  stats.total = 1990;
+  result = updateLikeMilestones(stats, 2025);
+  assert.deepEqual(result.fullScreenMilestones, [2000, 3000, 4000], 'jumps should queue each newly crossed 1,000-like burst once');
+  assert.deepEqual(result.fullScreenEffects.map(effect => effect.id), ['likes:2000', 'likes:3000', 'likes:4000']);
 }
 
 function testSponsorMediaQualityGate() {
@@ -462,6 +630,33 @@ function testAetherisStructureState() {
   assert.equal(switched.aggregate.hp, switched.aggregate.maxHp, 'new territory structures should reset to full HP');
 }
 
+function testAetherisWorldState() {
+  const structures = buildAetherisStructures('emberfall-forge');
+  let world = buildAetherisWorldState('emberfall-forge');
+  let status = currentAetherisWorldStatus(world, 'emberfall-forge');
+  assert.equal(status.territories.length, 4);
+  assert.equal(status.activeTerritory.id, 'emberfall-forge');
+
+  const damaged = damageAetherisStructure(structures, { damage: 840, attackerId: 'raider', attackerNick: 'Raider' });
+  world = syncAetherisWorldFromStructures(world, currentAetherisStructureStatus(damaged.state), {
+    type: 'damaged',
+    at: 1000,
+  });
+  status = currentAetherisWorldStatus(world, 'emberfall-forge');
+  assert.ok(status.activeTerritory.control < 100, 'structure damage should reduce territory control');
+  assert.equal(status.activeTerritory.pressure, 100 - status.activeTerritory.control);
+  assert.equal(status.events[0].territoryId, 'emberfall-forge');
+  assert.ok(status.events[0].delta < 0);
+
+  world = syncAetherisWorldFromStructures(world, currentAetherisStructureStatus(buildAetherisStructures('emberfall-forge')), {
+    type: 'reset',
+    at: 2000,
+  });
+  status = currentAetherisWorldStatus(world, 'emberfall-forge');
+  assert.equal(status.activeTerritory.control, 100);
+  assert.ok(status.events[0].delta > 0);
+}
+
 function testLaunchReadinessSponsorMediaGate() {
   const report = buildLaunchReadinessReport({
     env: {
@@ -484,9 +679,12 @@ testBillingPolicy();
 testChatIconCommands();
 testLiveCommentTextExtraction();
 testPlayerCommandCatalog();
+testV1RulesEngine();
 testArenaPowerUpRules();
+testEngagementMilestones();
 testSponsorMediaQualityGate();
 testAetherisTerritoryCatalog();
 testAetherisStructureState();
+testAetherisWorldState();
 testLaunchReadinessSponsorMediaGate();
 console.log('Business logic smoke checks passed');
