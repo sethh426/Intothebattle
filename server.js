@@ -5241,8 +5241,16 @@ function isActiveTikTokRoom(room) {
   return ['connecting', 'reconnecting', 'connected'].includes(status);
 }
 
+function shouldKeepRecentLiveRosterVisible(room) {
+  return Boolean(
+    isActiveTikTokRoom(room) ||
+    Number(room?.overlayCount || 0) > 0 ||
+    room?.liveSession?.status === 'active'
+  );
+}
+
 function liveVisibleRosterRetentionIds(room, now = Date.now()) {
-  if (!TIKTOK_RECENT_PLAYER_RESTORE_ENABLED || !isActiveTikTokRoom(room)) return new Set();
+  if (!TIKTOK_RECENT_PLAYER_RESTORE_ENABLED || !shouldKeepRecentLiveRosterVisible(room)) return new Set();
   if (TIKTOK_RECENT_PLAYER_RESTORE_LIMIT <= 0 || TIKTOK_RECENT_PLAYER_RESTORE_MS <= 0) return new Set();
   return new Set(
     Object.entries(room?.players || {})
@@ -5316,7 +5324,7 @@ function restoreRecentRoomPlayers(room, options = {}) {
 function ensureLiveOverlayRoster(room, reason = 'live_overlay_roster') {
   if (
     !TIKTOK_RECENT_PLAYER_RESTORE_ENABLED ||
-    !isActiveTikTokRoom(room) ||
+    !shouldKeepRecentLiveRosterVisible(room) ||
     TIKTOK_RECENT_PLAYER_RESTORE_LIMIT <= 0 ||
     TIKTOK_RECENT_PLAYER_RESTORE_MS <= 0
   ) {

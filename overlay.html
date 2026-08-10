@@ -2128,7 +2128,35 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let bossWaveState = null;
   let bossCoreAnchorCache = null;
   let bossAttackSweepAnchor = null;
+  const BOSS_WAVE_EXPIRE_GRACE_MS = 2200;
+  const BOSS_WAVE_STALE_MS = 110000;
   const BOSS_ATTACK_ANCHOR_TTL_MS = 4200;
+
+  function bossWaveEndTime(data = {}, now = Date.now()) {
+    const explicitEndsAt = Number(data.endsAt);
+    if (Number.isFinite(explicitEndsAt) && explicitEndsAt > 0) return explicitEndsAt;
+    const remainingMs = Number(data.remainingMs);
+    if (Number.isFinite(remainingMs) && remainingMs > 0) return now + remainingMs;
+    return null;
+  }
+
+  function clearBossWaveState() {
+    bossWaveState = null;
+    bossCoreAnchorCache = null;
+    bossAttackSweepAnchor = null;
+  }
+
+  function expireBossWaveIfNeeded(now = Date.now()) {
+    if (!bossWaveState?.active) return false;
+    const endsAt = Number(bossWaveState.endsAt);
+    const updatedAt = Number(bossWaveState.updatedAt) || 0;
+    const timedOut = Number.isFinite(endsAt) && endsAt > 0 && now > endsAt + BOSS_WAVE_EXPIRE_GRACE_MS;
+    const stale = updatedAt > 0 && now - updatedAt > BOSS_WAVE_STALE_MS;
+    if (!timedOut && !stale) return false;
+    clearBossWaveState();
+    return true;
+  }
+
   let stateFetchInFlight = false;
   let registerAcked = false;
   let registerRetryTimer = null;
@@ -4429,7 +4457,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function getBossCoreAnchor() {
-    if (bossWaveState?.active) return snapshotBossCoreAnchor();
+    if (bossWaveState?.active && !expireBossWaveIfNeeded()) return snapshotBossCoreAnchor();
     if (bossCoreAnchorCache && Date.now() - bossCoreAnchorCache.ts <= BOSS_ATTACK_ANCHOR_TTL_MS) {
       return bossCoreAnchorCache;
     }
@@ -10486,7 +10514,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function drawBossWave() {
-    if (!bossWaveState?.active) return;
+    if (!bossWaveState?.active || expireBossWaveIfNeeded()) return;
     const layout = getBossLayout();
     const nowMs = Date.now();
     const now = nowMs * 0.001;
@@ -11007,6 +11035,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     clipArenaFrame();
     const shake = currentArenaShake();
     if (shake.x || shake.y) ctx.translate(shake.x, shake.y);
+    expireBossWaveIfNeeded();
     const top = topPlayers();
     const horde = hordePlayer();
     drawArenaDepth(top.length, Boolean(horde), Boolean(bossWaveState?.active));
@@ -11876,14 +11905,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const maxHp = Math.max(1, Math.round(Number(data.maxHp) || 1));
     const pct = Math.max(0, Math.min(100, Math.round((hp / maxHp) * 100)));
     const mergeBossState = () => {
+      const now = Date.now();
+      const active = data.active !== false && !['defeated', 'stopped', 'ended', 'expired', 'restarted'].includes(type);
+      const nextEndsAt = bossWaveEndTime(data, now) || (active ? Number(bossWaveState?.endsAt) || null : null);
       bossWaveState = {
         ...(bossWaveState || {}),
         ...data,
         type,
-        active: data.active !== false && !['defeated', 'stopped', 'ended', 'expired', 'restarted'].includes(type),
+        active,
+        endsAt: nextEndsAt,
         hp,
         maxHp,
-        updatedAt: Date.now(),
+        updatedAt: now,
       };
     };
     if (type === 'started') {
@@ -11931,7 +11964,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       if (bossWaveState) bossWaveState.active = false;
       pulseBoss('kill', THEME.gold, 1800);
       setTimeout(() => {
-        if (bossWaveState && bossWaveState.active === false) bossWaveState = null;
+        if (bossWaveState && bossWaveState.active === false) clearBossWaveState();
       }, 2600);
       handleRoundEvent({ type: 'boss_defeated', title: 'Boss wave defeated', message: data.finalHitBy?.nickname ? `${data.finalHitBy.nickname} landed the final hit` : '' });
       return;
@@ -11940,7 +11973,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       mergeBossState();
       if (bossWaveState) bossWaveState.active = false;
       setTimeout(() => {
-        if (bossWaveState && bossWaveState.active === false) bossWaveState = null;
+        if (bossWaveState && bossWaveState.active === false) clearBossWaveState();
       }, 1800);
       showBattlePrompt('Boss wave ended', 'return', 1800);
     }
