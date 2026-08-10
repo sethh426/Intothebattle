@@ -4256,6 +4256,13 @@ function suppressRecentLiveRestore(room, reason = 'live_roster_reset', username 
   room.recentLiveRestoreSuppressedReason = reason;
 }
 
+function clearRecentLiveRestoreSuppression(room) {
+  if (!room?.roomId) return;
+  room.recentLiveRestoreSuppressedUntil = 0;
+  room.recentLiveRestoreSuppressedForUsername = '';
+  room.recentLiveRestoreSuppressedReason = '';
+}
+
 function suppressTikTokAutoResume(room, reason = 'stream_ended', username = '') {
   if (!room?.roomId || TIKTOK_LIVE_ENDED_AUTO_RESUME_SUPPRESSION_MS <= 0) return;
   room.tiktokAutoResumeSuppressedUntil = Date.now() + TIKTOK_LIVE_ENDED_AUTO_RESUME_SUPPRESSION_MS;
@@ -10324,9 +10331,16 @@ app.post('/api/connect', requireRoom, (req, res) => {
   }
   if (!API_KEY)  return res.status(500).json({ success: false, error: 'Missing TikTok API_KEY in .env for the legacy LIVE event adapter' });
   try {
+    const previousUsername = normalizeTikTokUsername(req.room.streamerUsername || req.room.tiktokConnection?.username || '');
+    const preserveVisibleRoster = Boolean(
+      previousUsername &&
+      previousUsername === username &&
+      Number(req.room.overlayCount || 0) > 0
+    );
     const stream = connectToStreamer(username, req.room, {
       resetLiveRuntime: true,
-      restoreRecentPlayers: false,
+      clearPlayersOnConnect: !preserveVisibleRoster,
+      restoreRecentPlayers: preserveVisibleRoster,
     });
     res.json({ success: true, username: stream.username, status: stream.status, stream });
   } catch (err) {
@@ -10369,7 +10383,18 @@ app.post('/api/admin/rooms/:roomId/reset-live', (req, res) => {
   );
   let stream;
   if (reconnect && username) {
-    stream = connectToStreamer(username, room, { repair: true, resetLiveRuntime: true, restoreRecentPlayers: false });
+    const previousUsername = normalizeTikTokUsername(room.streamerUsername || room.tiktokConnection?.username || '');
+    const preserveVisibleRoster = Boolean(
+      previousUsername &&
+      previousUsername === username &&
+      Number(room.overlayCount || 0) > 0
+    );
+    stream = connectToStreamer(username, room, {
+      repair: true,
+      resetLiveRuntime: true,
+      clearPlayersOnConnect: !preserveVisibleRoster,
+      restoreRecentPlayers: preserveVisibleRoster,
+    });
   } else {
     disconnectStreamer(room);
     stream = buildTikTokConnectionStatus(room);
@@ -11375,12 +11400,17 @@ function connectToStreamer(username, room = getDefaultRoom(), options = {}) {
   if (options.autoResume !== true) clearTikTokAutoResumeSuppression(room);
   safeDisconnectClient(room, disconnectReason);
   const resetLiveRuntimeForConnect = options.resetLiveRuntime !== false;
+  const clearPlayersOnConnect = options.clearPlayersOnConnect !== false;
   if (resetLiveRuntimeForConnect) {
-    resetRoomLiveRuntime(room, { reason: disconnectReason, clearPlayers: true });
+    resetRoomLiveRuntime(room, { reason: disconnectReason, clearPlayers: clearPlayersOnConnect });
   }
   if (room.roomId === DEFAULT_ROOM_ID) currentStreamer = normalizedUsername;
   room.streamerUsername = normalizedUsername;
-  if (resetLiveRuntimeForConnect) suppressRecentLiveRestore(room, disconnectReason, normalizedUsername);
+  if (resetLiveRuntimeForConnect && clearPlayersOnConnect) {
+    suppressRecentLiveRestore(room, disconnectReason, normalizedUsername);
+  } else if (options.restoreRecentPlayers === true) {
+    clearRecentLiveRestoreSuppression(room);
+  }
   saveRoomSettings(room.roomId);
   const connection = createTikTokConnection(room, normalizedUsername);
   const tiktokClient = new TikTokLive({
@@ -11404,8 +11434,11 @@ function connectToStreamer(username, room = getDefaultRoom(), options = {}) {
         reason: room.recentLiveRestoreSuppressedReason || 'restore_suppressed',
       }, 'Skipped recent player restore for suppressed live room');
     } else {
+      if (!Object.values(room.players || {}).some(player => player && isRestorableLivePlayer(player))) {
+        loadRoomPlayerStats(room);
+      }
       room.recentLiveRestoreAllowedUntil = Date.now() + TIKTOK_REPAIR_PLAYER_RESTORE_WINDOW_MS;
-      restoreRecentRoomPlayers(room, { reason: disconnectReason, username: normalizedUsername });
+      restoreRecentRoomPlayers(room, { onlyWhenEmpty: false, reason: disconnectReason, username: normalizedUsername });
     }
   } else {
     room.recentLiveRestoreAllowedUntil = 0;
