@@ -514,6 +514,20 @@ async function auditEffectOwnershipViewport(page, testInfo) {
   await assertEffectOwnership(page, testInfo, 'effect-ownership', { minOwnedEffects: 1 });
 }
 
+async function auditOverflowHordeEffectViewport(page, testInfo) {
+  await openPreview(page);
+  await waitForDemoLayout(page, { horde: true });
+  await page.waitForFunction(() => typeof window.overlayEventEngine?.testOverflowHordeEffect === 'function', null, { timeout: 5000 });
+  const result = await page.evaluate(() => window.overlayEventEngine.testOverflowHordeEffect());
+  await attachJson(testInfo, 'overflow-horde-effect', result);
+  expect(result?.fired).toBe(true);
+  expect(result?.droppedDuringProbe).toBe(0);
+  expect(result?.hordeMembers).toContain('overflow_7');
+  expect(result?.status?.unownedEffects).toBe(0);
+  expect(result?.status?.ownedEffects).toBeGreaterThanOrEqual(1);
+  await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'overflow-horde-effect-canvas', minLitRatio: 0.04 });
+}
+
 async function auditEffectCatalogViewport(page, testInfo) {
   await openPreview(page);
   await waitForDemoLayout(page, { horde: true });
@@ -898,6 +912,10 @@ test('@visual overlay diagnostic hooks emit Playwright artifacts for hard failur
 
   await test.step('effect ownership health', async () => {
     await auditEffectOwnershipViewport(page, testInfo);
+  });
+
+  await test.step('overflow horde effect fallback', async () => {
+    await auditOverflowHordeEffectViewport(page, testInfo);
   });
 
   await test.step('new effect catalog health', async () => {
