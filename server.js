@@ -680,7 +680,9 @@ const TIKTOK_AUTO_RESUME_COOLDOWN_MS = Math.max(30000, Number(process.env.TIKTOK
 const TIKTOK_CONNECT_STALE_MS = Math.max(15000, Number(process.env.TIKTOK_CONNECT_STALE_MS || 60000));
 const TIKTOK_CONNECTED_NO_EVENT_STALE_MS = Math.max(30000, Number(process.env.TIKTOK_CONNECTED_NO_EVENT_STALE_MS || 90000));
 const TIKTOK_REPAIR_COOLDOWN_MS = Math.max(30000, Number(process.env.TIKTOK_REPAIR_COOLDOWN_MS || 120000));
-const TIKTOK_RECENT_PLAYER_RESTORE_ENABLED = process.env.TIKTOK_RECENT_PLAYER_RESTORE_ENABLED === 'true';
+const TIKTOK_RECENT_PLAYER_RESTORE_ENABLED = process.env.TIKTOK_RECENT_PLAYER_RESTORE_ENABLED == null
+  ? true
+  : process.env.TIKTOK_RECENT_PLAYER_RESTORE_ENABLED === 'true';
 const TIKTOK_REPAIR_PLAYER_RESTORE_WINDOW_MS = TIKTOK_RECENT_PLAYER_RESTORE_ENABLED
   ? Math.max(0, Number(process.env.TIKTOK_REPAIR_PLAYER_RESTORE_WINDOW_MS || 5 * 60 * 1000))
   : 0;
@@ -951,12 +953,17 @@ function roomEventEnvelope(room, type, payload = {}, meta = {}) {
   };
 }
 
-function playerForOverlayState(room, player, fallbackId = '') {
+function playerForOverlayState(room, player, fallbackId = '', options = {}) {
   if (!player || typeof player !== 'object' || player.alive === false) return null;
   const uniqueId = safePlayerText(player.uniqueId || player.id || fallbackId, '', 80);
   if (!uniqueId) return null;
   const lastActive = safeEpochMs(player.lastActive, Date.now());
-  if (lastActive && Date.now() - lastActive > CFG.IDLE_TIMEOUT_MS && !shouldRetainIdleLivePlayer(room, player)) return null;
+  const retainedLiveIds = options.retainedLiveIds instanceof Set ? options.retainedLiveIds : null;
+  const idle = lastActive && Date.now() - lastActive > CFG.IDLE_TIMEOUT_MS;
+  const canRenderIdle = retainedLiveIds
+    ? retainedLiveIds.has(uniqueId)
+    : shouldRetainIdleLivePlayer(room, player);
+  if (idle && !canRenderIdle) return null;
   const maxHp = safeStatInt(player.maxHp, CFG.BASE_HP, 1, 1_000_000);
   const hp = safeStatInt(player.hp, maxHp, 0, maxHp);
   const safeColor = /^#[0-9a-f]{6}$/i.test(String(player.color || '')) ? player.color : '#55e7ff';
@@ -990,9 +997,10 @@ function playerForOverlayState(room, player, fallbackId = '') {
 
 function buildOverlayGameState(room, payload = room?.players || {}) {
   const source = payload && typeof payload === 'object' ? payload : room?.players || {};
+  const retainedLiveIds = liveVisibleRosterRetentionIds(room);
   const state = {};
   for (const [key, player] of Object.entries(source)) {
-    const clean = playerForOverlayState(room, player, key);
+    const clean = playerForOverlayState(room, player, key, { retainedLiveIds });
     if (clean) state[clean.uniqueId || key] = clean;
   }
   return state;
@@ -3136,10 +3144,26 @@ function currentRoundStatus(room) {
   };
 }
 
+function bossWaveElapsed(room, now = Date.now()) {
+  const boss = room?.bossWave;
+  if (!boss?.active) return false;
+  const explicitEndsAt = safeEpochMs(boss.endsAt, 0);
+  const startedAt = safeEpochMs(boss.startedAt, 0);
+  const derivedEndsAt = startedAt && Number.isFinite(Number(boss.durationMs))
+    ? startedAt + Math.max(0, Math.round(Number(boss.durationMs) || 0))
+    : 0;
+  const endsAt = explicitEndsAt || derivedEndsAt;
+  if (!endsAt || now < endsAt) return false;
+  if (!explicitEndsAt) boss.endsAt = endsAt;
+  completeBossWave(room, null, 'expired');
+  return true;
+}
+
 function currentBossStatus(room) {
   const boss = room?.bossWave;
   if (!boss?.active) return boss?.lastStatus || null;
   const now = Date.now();
+  if (bossWaveElapsed(room, now)) return room?.bossWave?.lastStatus || null;
   return {
     active: true,
     status: boss.status || 'live',
@@ -5212,6 +5236,32 @@ function isRestorableLivePlayer(player) {
   return true;
 }
 
+function isActiveTikTokRoom(room) {
+  const status = String(room?.tiktokConnection?.status || '').toLowerCase();
+  return ['connecting', 'reconnecting', 'connected'].includes(status);
+}
+
+function liveVisibleRosterRetentionIds(room, now = Date.now()) {
+  if (!TIKTOK_RECENT_PLAYER_RESTORE_ENABLED || !isActiveTikTokRoom(room)) return new Set();
+  if (TIKTOK_RECENT_PLAYER_RESTORE_LIMIT <= 0 || TIKTOK_RECENT_PLAYER_RESTORE_MS <= 0) return new Set();
+  return new Set(
+    Object.entries(room?.players || {})
+      .filter(([, player]) => player?.alive && isRestorableLivePlayer(player))
+      .filter(([, player]) => {
+        const lastActive = safeEpochMs(player.lastActive, 0);
+        return lastActive > 0 && now - lastActive <= TIKTOK_RECENT_PLAYER_RESTORE_MS;
+      })
+      .sort(([, a], [, b]) => {
+        const lastActiveDelta = safeEpochMs(b.lastActive, 0) - safeEpochMs(a.lastActive, 0);
+        if (lastActiveDelta) return lastActiveDelta;
+        return safeStatInt(b.kills, 0, 0, 1_000_000) - safeStatInt(a.kills, 0, 0, 1_000_000);
+      })
+      .slice(0, TIKTOK_RECENT_PLAYER_RESTORE_LIMIT)
+      .map(([id, player]) => safePlayerText(player.uniqueId || player.id || id, id, 80))
+      .filter(Boolean)
+  );
+}
+
 function restoreRecentRoomPlayers(room, options = {}) {
   if (
     !TIKTOK_RECENT_PLAYER_RESTORE_ENABLED ||
@@ -5261,6 +5311,43 @@ function restoreRecentRoomPlayers(room, options = {}) {
   }
 
   return candidates.length;
+}
+
+function ensureLiveOverlayRoster(room, reason = 'live_overlay_roster') {
+  if (
+    !TIKTOK_RECENT_PLAYER_RESTORE_ENABLED ||
+    !isActiveTikTokRoom(room) ||
+    TIKTOK_RECENT_PLAYER_RESTORE_LIMIT <= 0 ||
+    TIKTOK_RECENT_PLAYER_RESTORE_MS <= 0
+  ) {
+    return 0;
+  }
+  const username = room?.streamerUsername || room?.tiktokConnection?.username || '';
+  if (isRecentLiveRestoreSuppressed(room, username)) {
+    room.recentLiveRestoreAllowedUntil = 0;
+    return 0;
+  }
+  const minimumVisiblePlayers = Math.min(4, TIKTOK_RECENT_PLAYER_RESTORE_LIMIT);
+  if (countAliveRestorableLivePlayers(room) >= minimumVisiblePlayers) return 0;
+  const now = Date.now();
+  const hasRecentCandidate = Object.values(room?.players || {}).some(player => {
+    if (!player || !isRestorableLivePlayer(player)) return false;
+    const lastActive = safeEpochMs(player.lastActive, 0);
+    return lastActive > 0 && now - lastActive <= TIKTOK_RECENT_PLAYER_RESTORE_MS;
+  });
+  if (!hasRecentCandidate && now - (Number(room.lastLiveRosterReloadAt) || 0) >= 30000) {
+    room.lastLiveRosterReloadAt = now;
+    loadRoomPlayerStats(room);
+  }
+  room.recentLiveRestoreAllowedUntil = Math.max(
+    Number(room.recentLiveRestoreAllowedUntil) || 0,
+    now + Math.max(TIKTOK_REPAIR_PLAYER_RESTORE_WINDOW_MS, 10 * 60 * 1000)
+  );
+  return restoreRecentRoomPlayers(room, {
+    onlyWhenEmpty: false,
+    reason,
+    username,
+  });
 }
 
 function countAliveRestorableLivePlayers(room) {
@@ -9166,6 +9253,7 @@ io.on('connection', (socket) => {
       emitRoomEvent(room, 'overlayCount', { count: room.overlayCount });
       updateOverlayGauge();
       maybeAutoResumeSavedTikTokStream(room, 'overlay_registered');
+      ensureLiveOverlayRoster(room, 'overlay_registered');
 
       socket.emit('gameState',        buildOverlayGameState(room, room.players));
       socket.emit('audioConfig',      room.audioConfig);
@@ -9189,7 +9277,10 @@ io.on('connection', (socket) => {
         emitRoomEvent(room, 'overlayCount', { count: room.overlayCount });
         updateOverlayGauge();
       }
-      if (clientType === 'dashboard') maybeAutoResumeSavedTikTokStream(room, 'dashboard_registered');
+      if (clientType === 'dashboard') {
+        maybeAutoResumeSavedTikTokStream(room, 'dashboard_registered');
+        ensureLiveOverlayRoster(room, 'dashboard_registered');
+      }
       socket.emit('overlayCount',    { count: room.overlayCount });
       socket.emit('overlaySettings', overlaySettingsPayload(room));
       socket.emit('aetherisStructures', aetherisStructuresPayload(room));
@@ -11521,8 +11612,7 @@ function startMarketingAutoPoster() {
 }
 
 function hasDegradedTikTokPlayerEventFeed(room) {
-  const status = String(room?.tiktokConnection?.status || '').toLowerCase();
-  if (!['connecting', 'reconnecting', 'connected'].includes(status)) return false;
+  if (!isActiveTikTokRoom(room)) return false;
   return !(Number(room?.tiktokPlayerEventCount || 0) > 0 || Boolean(room?.lastTikTokPlayerEventAt));
 }
 
@@ -11562,13 +11652,15 @@ function restoreDegradedLiveRoster(room) {
 setInterval(() => {
   const cutoff = Date.now() - CFG.IDLE_TIMEOUT_MS;
   for (const room of getAllRooms().values()) {
+    ensureLiveOverlayRoster(room, 'idle_sweep_live_roster');
     restoreDegradedLiveRoster(room);
     let removed = 0;
     const samples = [];
+    const retainedLiveIds = liveVisibleRosterRetentionIds(room);
     for (const id of Object.keys(room.players)) {
       const player = room.players[id];
       if (player.lastActive < cutoff) {
-        if (shouldRetainIdleLivePlayer(room, player)) {
+        if (retainedLiveIds.has(id) || retainedLiveIds.has(safePlayerText(player?.uniqueId || '', '', 80))) {
           player.lastActive = Date.now();
           continue;
         }

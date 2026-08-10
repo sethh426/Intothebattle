@@ -590,9 +590,10 @@ try {
   });
   assert(restoreAllowedRes.status === 200, `unsuppressed live restore guard should return 200, got ${restoreAllowedRes.status}`);
   const restoreAllowed = await restoreAllowedRes.json();
-  assert(Number(restoreAllowed.directRestore) === 0, `recent player restore should be disabled by default, got ${restoreAllowed.directRestore}`);
-  assert(Number(restoreAllowed.degradedRestore) === 0, `degraded live restore should be disabled by default, got ${restoreAllowed.degradedRestore}`);
-  assert(Number(restoreAllowed.alivePlayers) === 0, `disabled restore should leave no stale alive players, got ${restoreAllowed.alivePlayers}`);
+  assert(restoreAllowed.restoreEnabled === true, 'recent player restore should be enabled for active live overlays by default');
+  assert(Number(restoreAllowed.directRestore) === 1, `recent player restore should revive one recent visible player, got ${restoreAllowed.directRestore}`);
+  assert(Number(restoreAllowed.degradedRestore) === 0, `degraded live restore should not duplicate already restored players, got ${restoreAllowed.degradedRestore}`);
+  assert(Number(restoreAllowed.alivePlayers) === 1, `enabled restore should leave one visible live player, got ${restoreAllowed.alivePlayers}`);
 
   const restoreSuppressedRes = await request('/api/test/live-restore-guard?suppress=1', {
     method: 'POST',
