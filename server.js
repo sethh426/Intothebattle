@@ -8692,6 +8692,20 @@ app.use('/vendor/phaser', express.static(path.join(__dirname, 'node_modules', 'p
 // home.html (the vanilla js/world/* implementation and its /vendor/three route were
 // retired on cutover). Fixed filenames (aetheris.js/.css, see
 // frontend/aetheris/vite.config.ts) so no manifest-reading step is needed here.
+const aetherisAppDistDir = path.join(__dirname, 'frontend', 'aetheris', 'dist');
+app.get(/^\/aetheris-app\/(.+)$/, (req, res, next) => {
+  const requestedPath = String(req.params?.[0] || '').replace(/\\/g, '/');
+  if (!requestedPath || requestedPath.includes('\0')) return res.status(404).send('Not found');
+  const targetPath = path.resolve(aetherisAppDistDir, requestedPath);
+  if (!isSafePath(aetherisAppDistDir, targetPath)) return res.status(404).send('Not found');
+  res.sendFile(targetPath, {
+    dotfiles: 'deny',
+    maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
+  }, err => {
+    if (err) next(err);
+  });
+});
+
 app.use('/aetheris-app', express.static(path.join(__dirname, 'frontend', 'aetheris', 'dist'), {
   dotfiles: 'deny',
   etag: true,
