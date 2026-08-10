@@ -708,6 +708,47 @@ test('command banner shows one static viewer command rail', async ({ context, pa
   expect(errors).toEqual([]);
 });
 
+test('viewer command renders its selected effect against Aetheris structures', async ({ context, page }, testInfo) => {
+  await addAuthCookie(context);
+  const errors = await watchPage(page);
+  const params = new URLSearchParams({
+    room_id: roomId,
+    overlay_token: overlayToken,
+    mode: 'live',
+    controls: '0',
+    debug: '1',
+  });
+  await page.goto(`${baseUrl}/overlay?${params.toString()}`, { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => Boolean(window.overlayEventEngine?.status), null, { timeout: 7000 });
+
+  await expect.poll(async () => {
+    const response = await context.request.get(`${baseUrl}/api/status`);
+    if (!response.ok()) return false;
+    const body = await response.json();
+    return Boolean(body.overlayConnected);
+  }, { timeout: 8000 }).toBe(true);
+
+  const before = await page.evaluate(() => window.overlayEventEngine.status().motion);
+  const response = await context.request.post(`${baseUrl}/api/overlay/test/command`);
+  const result = await parseJsonResponse(response);
+  expect(result.result?.handled).toBe(true);
+  expect(result.result?.result?.effect).toBe('orbital');
+  expect(result.result?.result?.targetScope).toBe('structure');
+
+  await expect.poll(async () => page.evaluate(() => window.overlayEventEngine.status().motion.lastRendered), {
+    timeout: 7000,
+  }).toMatchObject({
+    type: 'orbital',
+    target: { kind: 'horde', scope: 'structure' },
+  });
+
+  const after = await page.evaluate(() => window.overlayEventEngine.status().motion);
+  expect(after.renderedEffects).toBeGreaterThan(before.renderedEffects || 0);
+  expect(after.droppedEffects, JSON.stringify(after, null, 2)).toBe(before.droppedEffects);
+  await capture(page, testInfo, 'qa-overlay-command-structure-effect');
+  expect(errors).toEqual([]);
+});
+
 test('like heal support feedback uses one compact unit', async ({ page }, testInfo) => {
   const errors = await watchPage(page);
   const params = new URLSearchParams({

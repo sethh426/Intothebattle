@@ -6770,6 +6770,9 @@ function dealAetherisStructureDamage(room, attackerId, attackerNick, multiplier 
 
   if (options.powerAttack) applyArenaPowerAttackMeta(attackPayload, options.powerAttack);
 
+  // Structure commands can also spawn the attacker. Publish that combatant
+  // before the effect so both overlay renderers have a valid source anchor.
+  emitRoomEvent(room, 'gameState', room.players);
   emitRoomEvent(room, 'attack', attackPayload);
   emitRoomEvent(room, 'commentDamage', {
     ...attackPayload,
@@ -6789,7 +6792,6 @@ function dealAetherisStructureDamage(room, attackerId, attackerNick, multiplier 
     tier: specialAttackVisual ? 'rare' : 'common',
   });
   emitSessionStatus(room);
-  setRoomRuntimeTimeout(room, () => emitRoomEvent(room, 'gameState', room.players), 40);
 
   const cmdLabel = commandDescription || 'STRUCTURE';
   console.log(`Structure attack: ${attackerNick || attackerId} ${cmdLabel} -> ${target.name} for ${damageResult.damageApplied} hp`);
@@ -7475,13 +7477,15 @@ function emitAttackAndSync(room, result) {
   if ((!attackerIsAggregate && !room.players[result.attacker]) || (!targetIsAggregate && !room.players[result.target])) {
     logger.warn({ attacker: result.attacker, target: result.target, room: room.roomId }, 'Emitting attack for player(s) not present in room state');
   }
+  // Socket.IO preserves ordering. Sync combatants first so a command from a
+  // newly spawned viewer has valid effect anchors when the attack arrives.
+  emitRoomEvent(room, 'gameState', room.players);
   emitRoomEvent(room, 'attack', result);
-  setRoomRuntimeTimeout(room, () => emitRoomEvent(room, 'gameState', room.players), 40);
 }
 
 function emitGiftAttackAndSync(room, result) {
+  emitRoomEvent(room, 'gameState', room.players);
   emitRoomEvent(room, 'giftAttack', result);
-  setRoomRuntimeTimeout(room, () => emitRoomEvent(room, 'gameState', room.players), 40);
 }
 
 const enableRedisAdapter = process.env.ENABLE_REDIS_ADAPTER === 'true';
@@ -9844,7 +9848,7 @@ function runRoomOverlayTest(room, action) {
 
 function runRoomOverlayTestAction(room, normalizedAction) {
   ensureRoomLiveTestPlayers(room, {
-    includeHordeReserve: normalizedAction === 'boss' || normalizedAction === 'burst' || normalizedAction === 'power-up' || normalizedAction === 'comment',
+    includeHordeReserve: normalizedAction === 'boss' || normalizedAction === 'burst' || normalizedAction === 'power-up' || normalizedAction === 'comment' || normalizedAction === 'command',
   });
   const attackerId = 'arena_orion';
   const targetId = 'arena_blaze';
@@ -9858,6 +9862,12 @@ function runRoomOverlayTestAction(room, normalizedAction) {
 
   if (normalizedAction === 'comment') {
     const result = handleBattleAttack(room, attackerId, 'Orion', 'hello arena');
+    emitRoomEvent(room, 'gameState', room.players);
+    return { success: true, action: normalizedAction, result };
+  }
+
+  if (normalizedAction === 'command') {
+    const result = handleBattleAttack(room, attackerId, 'Orion', '!orbital @horde');
     emitRoomEvent(room, 'gameState', room.players);
     return { success: true, action: normalizedAction, result };
   }

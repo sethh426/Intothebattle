@@ -2249,6 +2249,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     droppedEffects: 0,
     droppedByReason: {},
     lastDropped: null,
+    renderedEffects: 0,
+    lastRendered: null,
   };
   const overlayParams = new URLSearchParams(window.location.search);
   const reducedMotionMedia = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -4563,6 +4565,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return scope === 'horde' || wanted === normalizeEntityToken(HORDE_ID) || wanted === '@horde' || wanted === 'horde';
   }
 
+  function isStructureEntityRequest(id, scope) {
+    const wanted = normalizeEntityToken(id);
+    return scope === 'structure' || wanted.startsWith('aetheris:');
+  }
+
   function playerEntityBounds(pos, total) {
     const metrics = getPlayerCardDrawMetrics(pos, total);
     return makeRect(metrics.left, metrics.top, metrics.right - metrics.left, metrics.bottom - metrics.top);
@@ -4622,6 +4629,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
     if (isHordeEntityRequest(id, scope)) {
       const horde = resolveHordeEntity(id, scope || 'horde');
+      return horde || { unresolved: true, reason: 'horde_missing', role, id: id || HORDE_ID, scope };
+    }
+    // Overlay v1 does not draw individual Aetheris structures. Anchor their
+    // command effects to the visible Horde formation instead of dropping them.
+    if (isStructureEntityRequest(id, scope)) {
+      const horde = resolveHordeEntity(id, 'structure');
       return horde || { unresolved: true, reason: 'horde_missing', role, id: id || HORDE_ID, scope };
     }
     if (!wanted) return { unresolved: true, reason: `missing_${role}`, role, id: '', scope };
@@ -6226,8 +6239,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       recordDroppedEffect('unowned_effect', { type: effect.type || effect.kind || 'effect' });
       return null;
     }
-    effect.__effectOwnership = normalizeEffectOwnership(ownership);
+    const normalizedOwnership = normalizeEffectOwnership(ownership);
+    effect.__effectOwnership = normalizedOwnership;
     effect.__effectBounds = effectOwnershipBounds(ownership);
+    effectOwnershipStats.renderedEffects += 1;
+    effectOwnershipStats.lastRendered = {
+      type: String(effect.type || effect.kind || 'effect'),
+      source: normalizedOwnership.source || null,
+      target: normalizedOwnership.target || null,
+      owner: normalizedOwnership.owner || null,
+      at: Date.now(),
+    };
     attacks.push(effect);
     checkOverlayLoad('effect');
     trimVisualEffects();
@@ -6264,6 +6286,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       droppedEffects: effectOwnershipStats.droppedEffects,
       droppedByReason: { ...effectOwnershipStats.droppedByReason },
       lastDropped: effectOwnershipStats.lastDropped ? { ...effectOwnershipStats.lastDropped } : null,
+      renderedEffects: effectOwnershipStats.renderedEffects,
+      lastRendered: effectOwnershipStats.lastRendered ? { ...effectOwnershipStats.lastRendered } : null,
       particles: particleCount,
       impactBursts: impactBursts.length,
       arenaShakeActive: now < arenaShakeUntil && arenaShakeMagnitude > 0,
@@ -8625,8 +8649,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     meta = meta || {};
     const source = resolveEffectEntity(attackerId, meta.attackerScope, 'attacker');
     const target = resolveEffectEntity(targetId, meta.targetScope, 'target');
-    if (source?.unresolved) return dropUnresolvedEntity(source, 'missing_attacker', { type: 'attack' });
-    if (target?.unresolved) return dropUnresolvedEntity(target, 'missing_target', { type: 'attack' });
+    if (source?.unresolved) {
+      if (meta.deferUnresolved) return null;
+      return dropUnresolvedEntity(source, 'missing_attacker', { type: 'attack' });
+    }
+    if (target?.unresolved) {
+      if (meta.deferUnresolved) return null;
+      return dropUnresolvedEntity(target, 'missing_target', { type: 'attack' });
+    }
     const attackerIsBoss = source.kind === 'boss';
     const targetIsBoss = target.kind === 'boss';
     const attackerIsHorde = source.kind === 'horde';
@@ -8704,6 +8734,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     setTimeout(() => {
       if (hasRecentAttack(attackerId, targetId, effect)) return;
+      flushPendingGameState();
       const fired = fireAttack(attackerId, targetId, data.damage, data.killed, data.special, effect, {
         intensity: data.intensity,
         critical: data.critical,
@@ -11228,10 +11259,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     gameStateScheduled = true;
     requestAnimationFrame(() => {
       gameStateScheduled = false;
-      const nextState = pendingGameState;
-      pendingGameState = null;
-      if (nextState) applyGameState(nextState);
+      flushPendingGameState();
     });
+  }
+
+  function flushPendingGameState() {
+    const nextState = pendingGameState;
+    pendingGameState = null;
+    if (nextState) applyGameState(nextState);
   }
 
   function eventSeq(data) {
@@ -11492,7 +11527,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function handleAttackEvent(data) {
     if (!data) return;
     const delayMs = Math.max(0, Math.min(1400, Number(data.impactDelayMs) || 0));
-    const run = () => {
+    const run = (attempt = 0) => {
+      if (hasRecentAttack(data.attacker, data.target, data.effect)) return;
+      // A command can spawn its viewer and attack in the same socket turn.
+      // Resolve the pending roster before looking up effect anchors.
+      flushPendingGameState();
+      const canRetry = attempt < 6;
       const fired = fireAttack(data.attacker, data.target, data.damage, data.killed, data.special, data.effect, {
         intensity: data.intensity, critical: data.critical, streak: data.streak,
         giftBoosted: data.giftBoosted, remainingHpPct: data.remainingHpPct,
@@ -11500,7 +11540,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         attackerScope: data.attackerScope, targetScope: data.targetScope,
         bossSweep: data.bossSweep, bossSweepId: data.bossSweepId, sequenceIndex: data.sequenceIndex, totalTargets: data.totalTargets,
         shielded: data.shielded,
+        deferUnresolved: canRetry,
       });
+      if (fired === null && canRetry) {
+        setTimeout(() => run(attempt + 1), 90);
+        return;
+      }
       if (fired) rememberAttack(data.attacker, data.target, data.effect);
       if (data.shielded) showBattlePrompt(`Shield absorbed ${Math.round(Number(data.shieldAbsorbed) || 0)} damage`, 'return', 1400);
     };
@@ -11510,6 +11555,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function handleGiftAttackEvent(data) {
     if (!data) return;
+    flushPendingGameState();
     const giftEffect = normalizeEffectType(data.effect || data.commandDescription || data.shotType || overlaySettings.shotType);
     const fired = fireAttack(data.attacker, data.target, data.damage, data.killed, true, giftEffect, {
       intensity: data.intensity || 0.5, giftBoosted: true,
