@@ -5748,6 +5748,15 @@ function loadSponsorConfig() {
   }
 }
 
+function hydrateRoomRuntime(room) {
+  if (!room || room.initialized) return;
+  loadRoomPlayerStats(room);
+  loadRoomBackground(room);
+  loadRoomAudioConfig(room);
+  loadRoomSponsorConfig(room);
+  room.initialized = true;
+}
+
 const ALLOWED_BACKGROUND_EXTS  = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp']);
 const ALLOWED_BACKGROUND_MIMES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 const BACKGROUND_UPLOAD_MAX_BYTES = uploadLimitBytes('BACKGROUND_UPLOAD_MAX_MB', 10 * 1024 * 1024);
@@ -8395,9 +8404,7 @@ function requireRoom(req, res, next) {
   }
 
   req.room = getOrCreateRoom(req.roomId);
-  loadRoomPlayerStats(req.room);
-  loadRoomBackground(req.room);
-  loadRoomAudioConfig(req.room);
+  hydrateRoomRuntime(req.room);
   req.planEntitlements = buildPlanEntitlements(auth);
   updatePlatformSponsorSchedule(req.room, req.planEntitlements);
   next();
@@ -9229,13 +9236,7 @@ io.on('connection', (socket) => {
       : null;
   updatePlatformSponsorSchedule(room, buildPlanEntitlements(socketAuthRecord));
 
-  if (!room.initialized) {
-    loadRoomPlayerStats(room);
-    loadRoomBackground(room);
-    loadRoomAudioConfig(room);
-    loadRoomSponsorConfig(room);
-    room.initialized = true;
-  }
+  hydrateRoomRuntime(room);
 
   const initialOverlaySettings = overlaySettingsPayload(room);
   socket.emit('serverReady', {
@@ -9263,7 +9264,14 @@ io.on('connection', (socket) => {
       maybeAutoResumeSavedTikTokStream(room, 'overlay_registered');
       ensureLiveOverlayRoster(room, 'overlay_registered');
 
-      socket.emit('gameState',        buildOverlayGameState(room, room.players));
+      const overlayGameState = buildOverlayGameState(room, room.players);
+      logger.info({
+        roomId: room.roomId,
+        overlayCount: room.overlayCount,
+        sentPlayers: Object.keys(overlayGameState).length,
+        alivePlayers: Object.values(room.players || {}).filter(player => player?.alive).length,
+      }, 'Overlay registered with live game state');
+      socket.emit('gameState',        overlayGameState);
       socket.emit('audioConfig',      room.audioConfig);
       socket.emit('overlaySettings',  overlaySettingsPayload(room));
       socket.emit('aetherisStructures', aetherisStructuresPayload(room));
@@ -9684,15 +9692,16 @@ app.get('/state', (req, res) => {
       });
     }
     const room = getOrCreateRoom(roomId);
-    loadRoomPlayerStats(room);
-    loadRoomBackground(room);
-    loadRoomAudioConfig(room);
-    return res.json(room.players);
+    hydrateRoomRuntime(room);
+    ensureLiveOverlayRoster(room, 'state_request');
+    return res.json(buildOverlayGameState(room, room.players));
   }
   if (!req.room) {
     return res.status(401).json({ success: false, error: 'Unauthorized' });
   }
-  return res.json(req.room.players);
+  hydrateRoomRuntime(req.room);
+  ensureLiveOverlayRoster(req.room, 'state_request');
+  return res.json(buildOverlayGameState(req.room, req.room.players));
 });
 
 app.get('/api/status', requireRoom, (req, res) => {
