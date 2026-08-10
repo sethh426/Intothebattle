@@ -746,6 +746,10 @@ const TIKTOK_RECENT_RESTORE_SUPPRESSION_MS = Math.max(
   Number(process.env.TIKTOK_RECENT_RESTORE_SUPPRESSION_MS || 24 * 60 * 60 * 1000)
 );
 const TIKTOK_RECENT_PLAYER_RESTORE_LIMIT = Math.max(0, Number(process.env.TIKTOK_RECENT_PLAYER_RESTORE_LIMIT || 24));
+const ROOM_PLAYER_HISTORY_LOAD_LIMIT = Math.max(0, Number(process.env.ROOM_PLAYER_HISTORY_LOAD_LIMIT || 500));
+const MAX_LIVE_PLAYERS_PER_ROOM = Math.max(1, Number(process.env.MAX_LIVE_PLAYERS_PER_ROOM || 300));
+const SOCKET_CONNECTION_RATE_LIMIT_PER_MINUTE = Math.max(10, Number(process.env.SOCKET_CONNECTION_RATE_LIMIT_PER_MINUTE || 120));
+const SOCKET_CONNECTION_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const TIKTOK_DIRECT_PLAYER_EVENT_TYPES = new Set(['member', 'chat', 'gift', 'like', 'social', 'follow']);
 const TIKTOK_GENERIC_PLAYER_EVENT_TYPES = new Set(['subscribe', 'emoteChat', 'question', 'liveIntro', 'linkMic']);
 const TIKTOK_PLAYER_EVENT_TYPES = new Set([
@@ -5441,7 +5445,18 @@ function applyV1PersistentCombatStats(player, options = {}) {
 
 function loadRoomPlayerStats(room) {
   try {
-    const rows = db.prepare('SELECT * FROM room_player_stats WHERE room_id = ?').all(room.roomId);
+    const loadLimit = Math.max(TIKTOK_RECENT_PLAYER_RESTORE_LIMIT, ROOM_PLAYER_HISTORY_LOAD_LIMIT);
+    if (loadLimit <= 0) {
+      console.log(`📂 Skipped saved player stats for room ${room.roomId}; ROOM_PLAYER_HISTORY_LOAD_LIMIT=0`);
+      return;
+    }
+    const rows = db.prepare(`
+      SELECT *
+      FROM room_player_stats
+      WHERE room_id = ?
+      ORDER BY alive DESC, COALESCE(last_active, 0) DESC
+      LIMIT ?
+    `).all(room.roomId, loadLimit);
 
     for (const row of rows) {
       const id = safePlayerText(row.unique_id, '', 80);
@@ -5488,7 +5503,7 @@ function loadRoomPlayerStats(room) {
       }
     }
 
-    console.log(`📂 Loaded ${rows.length} saved player stats for room ${room.roomId}`);
+    console.log(`📂 Loaded ${rows.length} saved player stats for room ${room.roomId} (limit ${loadLimit})`);
   } catch (err) {
     console.error('Error loading player stats for room', room.roomId, err);
   }
@@ -6282,9 +6297,10 @@ function enterPlayersFromTikTokEvent(room, eventType, eventPayload, options = {}
     const { id, nickname } = resolveTikTokUser(payload);
     if (!id || seen.has(id)) continue;
     seen.add(id);
-    ensurePlayerEnteredBattle(room, id, nickname, eventType, {
+    const entry = ensurePlayerEnteredBattle(room, id, nickname, eventType, {
       announceExisting: options.announceExisting === true,
     });
+    if (entry?.blocked) continue;
     enteredCount += 1;
   }
 
@@ -6308,8 +6324,33 @@ function updateRoomLikeMilestone(room, increment = 1) {
   return result;
 }
 
+const livePlayerAdmissionBlockLog = new Map();
+
+function roomAlivePlayerCount(room) {
+  return Object.values(room?.players || {}).filter(player => player?.alive).length;
+}
+
+function noteLivePlayerAdmissionBlocked(room, uniqueId, nickname, engagementType) {
+  const roomId = room?.roomId || 'unknown';
+  const now = Date.now();
+  const previous = livePlayerAdmissionBlockLog.get(roomId) || { count: 0, loggedAt: 0 };
+  previous.count += 1;
+  if (!previous.loggedAt || now - previous.loggedAt >= 60_000) {
+    previous.loggedAt = now;
+    logger.warn({
+      roomId,
+      limit: MAX_LIVE_PLAYERS_PER_ROOM,
+      blockedCount: previous.count,
+      samplePlayer: safePlayerText(uniqueId || nickname || '', '', 80),
+      engagementType: String(engagementType || 'engagement').slice(0, 40),
+    }, 'Blocked live player admission because the room player cap was reached');
+    previous.count = 0;
+  }
+  livePlayerAdmissionBlockLog.set(roomId, previous);
+}
+
 function spawnPlayer(room, uniqueId, nickname, options = {}) {
-  if (!room || !uniqueId) return;
+  if (!room || !uniqueId) return false;
   const source = inferPlayerSource(room, options.source);
   const now = Date.now();
   if (room.players[uniqueId]?.alive) {
@@ -6317,7 +6358,11 @@ function spawnPlayer(room, uniqueId, nickname, options = {}) {
     normalizePlayerShieldStatus(room.players[uniqueId]);
     if (nickname) room.players[uniqueId].nickname = nickname;
     if (source === 'real' || !room.players[uniqueId].source) room.players[uniqueId].source = source;
-    return;
+    return true;
+  }
+  if (roomAlivePlayerCount(room) >= MAX_LIVE_PLAYERS_PER_ROOM) {
+    noteLivePlayerAdmissionBlocked(room, uniqueId, nickname, options.engagementType || options.source || 'spawn');
+    return false;
   }
   const ex = room.players[uniqueId];
   room.players[uniqueId] = {
@@ -6364,12 +6409,22 @@ function spawnPlayer(room, uniqueId, nickname, options = {}) {
   };
   ensureV1Player(room, uniqueId, nickname, { source, revive: true, now });
   console.log(`⚔️  Spawned: @${uniqueId} (HP: ${room.players[uniqueId].hp}, STR: ${room.players[uniqueId].strength}, Kills: ${room.players[uniqueId].kills})`);
+  return true;
 }
 
 function ensurePlayerEnteredBattle(room, uniqueId, nickname, engagementType = 'engagement', options = {}) {
   if (!room || !uniqueId || !isPersistablePlayerId(uniqueId)) return { entered: false, wasAlive: false, player: null };
   const wasAlive = Boolean(room.players[uniqueId]?.alive);
-  spawnPlayer(room, uniqueId, nickname, options);
+  const spawned = spawnPlayer(room, uniqueId, nickname, { ...options, engagementType });
+  if (spawned === false) {
+    return {
+      entered: false,
+      wasAlive,
+      player: room.players[uniqueId] || null,
+      blocked: true,
+      reason: 'room_player_limit',
+    };
+  }
   const player = room.players[uniqueId];
   if (!player) return { entered: false, wasAlive, player: null };
 
@@ -7691,6 +7746,40 @@ function hostnameFromUrl(value = '') {
   }
 }
 
+function normalizeClientIp(value = '') {
+  const raw = String(value || '').split(',')[0].trim();
+  if (!raw) return '';
+  return raw.startsWith('::ffff:') ? raw.slice('::ffff:'.length) : raw;
+}
+
+function configuredBlockedClientIps() {
+  return new Set(
+    String(process.env.SECURITY_BLOCKED_IPS || '')
+      .split(',')
+      .map(normalizeClientIp)
+      .filter(Boolean)
+  );
+}
+
+const blockedClientIps = configuredBlockedClientIps();
+
+function requestClientIp(req) {
+  return normalizeClientIp(req?.headers?.['x-forwarded-for'] || req?.ip || req?.socket?.remoteAddress || '');
+}
+
+function socketClientIp(socket) {
+  return normalizeClientIp(
+    socket?.handshake?.headers?.['x-forwarded-for']
+      || socket?.handshake?.address
+      || socket?.request?.socket?.remoteAddress
+      || ''
+  );
+}
+
+function isBlockedClientIp(ip) {
+  return Boolean(ip && blockedClientIps.has(normalizeClientIp(ip)));
+}
+
 function configuredAllowedHosts() {
   const hosts = new Set();
   const add = value => {
@@ -7722,6 +7811,20 @@ app.use((req, res, next) => {
   if (isAllowedHostHeader(req)) return next();
   logger.warn({ host: req.get('host') || null, path: req.path }, 'Blocked request with untrusted Host header');
   return res.status(421).send('Misdirected request');
+});
+
+app.use((req, res, next) => {
+  const ip = requestClientIp(req);
+  if (!isBlockedClientIp(ip)) return next();
+  logger.warn({ ip, path: req.path, method: req.method }, 'Blocked request from configured banned IP');
+  recordSecurityEvent(db, {
+    req,
+    eventType: 'blocked_client_ip',
+    endpoint: req.originalUrl || req.url || req.path,
+    actionTaken: 'http_request_blocked',
+    payloadSummary: `Configured IP block matched ${req.method || 'GET'} ${req.path || ''}`.trim(),
+  });
+  return res.status(403).send('Forbidden');
 });
 
 app.use((req, res, next) => {
@@ -8784,6 +8887,75 @@ function buildSubscriptionStatus(auth) {
   if (auth.type === 'code') return buildAccessCodeSubscriptionStatus(auth.record);
   return buildUserSubscriptionStatus(auth.record, new Date(), auth.subscription || null);
 }
+
+const socketConnectionRateTracker = new Map();
+
+function socketRequestLike(socket, ip = socketClientIp(socket)) {
+  const headers = socket?.handshake?.headers || {};
+  return {
+    headers,
+    ip,
+    socket: { remoteAddress: ip },
+    originalUrl: '/socket.io',
+    url: '/socket.io',
+    get(name = '') {
+      return headers[String(name).toLowerCase()] || headers[name] || '';
+    },
+  };
+}
+
+function consumeSocketConnectionRate(ip, now = Date.now()) {
+  if (!ip || SOCKET_CONNECTION_RATE_LIMIT_PER_MINUTE <= 0) return { limited: false, count: 0 };
+  const current = socketConnectionRateTracker.get(ip);
+  const bucket = current && now - current.startedAt < SOCKET_CONNECTION_RATE_LIMIT_WINDOW_MS
+    ? current
+    : { startedAt: now, count: 0, loggedAt: 0 };
+  bucket.count += 1;
+  socketConnectionRateTracker.set(ip, bucket);
+
+  if (socketConnectionRateTracker.size > 5000) {
+    for (const [key, value] of socketConnectionRateTracker.entries()) {
+      if (now - value.startedAt >= SOCKET_CONNECTION_RATE_LIMIT_WINDOW_MS) socketConnectionRateTracker.delete(key);
+    }
+  }
+
+  const limited = bucket.count > SOCKET_CONNECTION_RATE_LIMIT_PER_MINUTE;
+  const shouldLog = limited && (!bucket.loggedAt || now - bucket.loggedAt >= SOCKET_CONNECTION_RATE_LIMIT_WINDOW_MS);
+  if (shouldLog) bucket.loggedAt = now;
+  return { limited, shouldLog, count: bucket.count };
+}
+
+io.use((socket, next) => {
+  const ip = socketClientIp(socket);
+  if (isBlockedClientIp(ip)) {
+    logger.warn({ ip }, 'Blocked socket connection from configured banned IP');
+    recordSecurityEvent(db, {
+      req: socketRequestLike(socket, ip),
+      eventType: 'blocked_client_ip',
+      endpoint: '/socket.io',
+      actionTaken: 'socket_connection_blocked',
+      payloadSummary: 'Configured IP block matched Socket.IO connection',
+    });
+    return next(new Error('Forbidden'));
+  }
+
+  const rate = consumeSocketConnectionRate(ip);
+  if (rate.limited) {
+    if (rate.shouldLog) {
+      logger.warn({ ip, count: rate.count, limit: SOCKET_CONNECTION_RATE_LIMIT_PER_MINUTE }, 'Blocked excessive Socket.IO connection attempts');
+      recordSecurityEvent(db, {
+        req: socketRequestLike(socket, ip),
+        eventType: 'socket_connection_rate_limit',
+        endpoint: '/socket.io',
+        actionTaken: 'socket_connection_blocked',
+        payloadSummary: `Socket.IO connection rate exceeded ${SOCKET_CONNECTION_RATE_LIMIT_PER_MINUTE}/min`,
+      });
+    }
+    return next(new Error('Too many socket connection attempts'));
+  }
+
+  return next();
+});
 
 io.use(socketAuth);
 

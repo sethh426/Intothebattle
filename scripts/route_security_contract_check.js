@@ -10,6 +10,9 @@ const admin = fs.readFileSync(path.join(root, 'tiktokbr', 'routes', 'admin.js'),
 const paypal = fs.readFileSync(path.join(root, 'tiktokbr', 'routes', 'paypal.js'), 'utf8');
 const authRoutes = fs.readFileSync(path.join(root, 'tiktokbr', 'routes', 'auth.js'), 'utf8');
 const sessionAuth = fs.readFileSync(path.join(root, 'tiktokbr', 'services', 'sessionAuth.js'), 'utf8');
+const overlay = fs.readFileSync(path.join(root, 'overlay.html'), 'utf8');
+const overlayMobile = fs.readFileSync(path.join(root, 'overlay-mobile.html'), 'utf8');
+const socketOverlayHandler = fs.readFileSync(path.join(root, 'js', 'socket-overlay-handler.js'), 'utf8');
 const caddy = fs.readFileSync(path.join(root, 'devops', 'caddy', 'Caddyfile'), 'utf8');
 const composeProd = fs.readFileSync(path.join(root, 'docker-compose.prod.yml'), 'utf8');
 const dockerignore = fs.readFileSync(path.join(root, '.dockerignore'), 'utf8');
@@ -68,6 +71,13 @@ assert.match(server, /const TIKTOK_RECENT_PLAYER_RESTORE_ENABLED = process\.env\
 assert.match(server, /const TIKTOK_AUTO_RESUME_SAVED_STREAM = process\.env\.TIKTOK_AUTO_RESUME_SAVED_STREAM == null\s*\?\s*false/, 'saved TikTok streams must not auto-resume by default');
 assert.match(server, /restoreRecentPlayers:\s*false/, 'TikTok reconnects must not restore old players by default');
 assert.doesNotMatch(server, /restoreRecentPlayers:\s*true/, 'TikTok reconnects must not opt into stale player restore');
+assert.match(server, /ROOM_PLAYER_HISTORY_LOAD_LIMIT/, 'saved player history loaded into runtime must be capped');
+assert.match(server, /MAX_LIVE_PLAYERS_PER_ROOM/, 'rooms must enforce a live player admission cap');
+assert.match(server, /SOCKET_CONNECTION_RATE_LIMIT_PER_MINUTE/, 'Socket.IO handshakes must be rate limited');
+assert.match(server, /SECURITY_BLOCKED_IPS/, 'production must support an emergency blocked IP list');
+assert.doesNotMatch(overlay, /options\.query\s*=\s*\{[^}]*overlay_token/, 'main overlay socket must not put signed overlay tokens in query strings');
+assert.doesNotMatch(overlayMobile, /options\.query\s*=\s*\{[^}]*overlay_token/, 'mobile overlay socket must not put signed overlay tokens in query strings');
+assert.doesNotMatch(socketOverlayHandler, /socketOptions\.query\s*=\s*\{[^}]*overlay_token/, 'shared overlay socket handler must not put signed overlay tokens in query strings');
 assert.match(server, /closeSupersededLiveSessions\(room\.roomId, session\.sessionId/, 'new live sessions must close older active room sessions');
 assert.match(server, /TIKTOK_LIVE_ENDED_AUTO_RESUME_SUPPRESSION_MS/, 'LIVE-ended streams must suppress stale auto-resume');
 assert.match(server, /function isTikTokLiveEndedControlEvent/, 'TikTok control events must detect LIVE-ended actions');

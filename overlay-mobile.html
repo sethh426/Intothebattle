@@ -521,7 +521,6 @@ body[data-attention="burst"] .latest-card {
     };
     if (isSignedOverlay) {
       options.auth = { roomId: overlayRoomId, overlayToken };
-      options.query = { room_id: overlayRoomId, overlay_token: overlayToken };
     }
     return options;
   }

@@ -2168,6 +2168,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let gameStateScheduled = false;
   let lastVisualEventSeq = 0;
   let bossWaveState = null;
+  let dormantBossState = null;
   let bossCoreAnchorCache = null;
   let bossAttackSweepAnchor = null;
   const BOSS_WAVE_EXPIRE_GRACE_MS = 2200;
@@ -2183,6 +2184,12 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function clearBossWaveState() {
+    if (bossWaveState) {
+      dormantBossState = {
+        status: bossWaveState.status || bossWaveState.type || 'dormant',
+        endedAt: Date.now(),
+      };
+    }
     bossWaveState = null;
     bossCoreAnchorCache = null;
     bossAttackSweepAnchor = null;
@@ -2563,7 +2570,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
     if (isSignedOverlay) {
       options.auth = { roomId: overlayRoomId, overlayToken };
-      options.query = { room_id: overlayRoomId, overlay_token: overlayToken };
     }
     return options;
   }
@@ -11042,45 +11048,53 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       layout.y,
       layout.r * 1.2
     );
-    coreGrad.addColorStop(0, '#fff1ba');
-    coreGrad.addColorStop(0.2, '#ff6a3d');
-    coreGrad.addColorStop(0.58, '#481422');
+    coreGrad.addColorStop(0, '#f4ffff');
+    coreGrad.addColorStop(0.16, '#55e7ff');
+    coreGrad.addColorStop(0.48, '#49307b');
     coreGrad.addColorStop(1, '#050711');
-    ctx.shadowColor = 'rgba(255,106,61,0.72)';
-    ctx.shadowBlur = 18;
+    ctx.shadowColor = 'rgba(85,231,255,0.8)';
+    ctx.shadowBlur = 24;
     ctx.fillStyle = coreGrad;
     ctx.beginPath();
-    ctx.arc(layout.x, layout.y, layout.r, 0, Math.PI * 2);
+    for (let i = 0; i < 8; i += 1) {
+      const angle = -Math.PI / 2 + i * Math.PI / 4;
+      const radiusStep = i % 2 ? layout.r * 0.82 : layout.r;
+      const px = layout.x + Math.cos(angle) * radiusStep;
+      const py = layout.y + Math.sin(angle) * radiusStep;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
     ctx.fill();
     ctx.shadowBlur = 0;
 
     ctx.save();
     ctx.translate(layout.x, layout.y);
-    const bossTilt = Math.sin(now * 2.8) * 0.04;
+    const bossTilt = Math.sin(now * 1.8) * 0.025;
     ctx.rotate(bossTilt);
-    ctx.globalCompositeOperation = 'screen';
-    ctx.fillStyle = 'rgba(255,238,166,0.86)';
+    ctx.strokeStyle = 'rgba(184,156,255,0.92)';
+    ctx.lineWidth = Math.max(2 * ui, layout.r * 0.07);
     ctx.beginPath();
-    ctx.moveTo(-layout.r * 0.72, -layout.r * 0.48);
-    ctx.lineTo(-layout.r * 0.32, -layout.r * 0.9);
-    ctx.lineTo(-layout.r * 0.18, -layout.r * 0.38);
-    ctx.lineTo(layout.r * 0.18, -layout.r * 0.38);
-    ctx.lineTo(layout.r * 0.32, -layout.r * 0.9);
-    ctx.lineTo(layout.r * 0.72, -layout.r * 0.48);
-    ctx.closePath();
-    ctx.fill();
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = '#050711';
-    roundedRectPath(ctx, -layout.r * 0.58, -layout.r * 0.15, layout.r * 0.38, layout.r * 0.13, layout.r * 0.04);
-    ctx.fill();
-    roundedRectPath(ctx, layout.r * 0.2, -layout.r * 0.15, layout.r * 0.38, layout.r * 0.13, layout.r * 0.04);
-    ctx.fill();
-    ctx.strokeStyle = colorWithAlpha(nextAttackMs != null && nextAttackMs < 2500 ? THEME.red : THEME.gold, 0.78);
-    ctx.lineWidth = Math.max(2 * ui, layout.r * 0.045);
-    ctx.beginPath();
-    ctx.moveTo(-layout.r * 0.34, layout.r * 0.36);
-    ctx.quadraticCurveTo(0, layout.r * 0.52, layout.r * 0.34, layout.r * 0.36);
+    ctx.moveTo(-layout.r * 0.82, -layout.r * 0.3);
+    ctx.lineTo(-layout.r * 1.2, -layout.r * 1.02);
+    ctx.lineTo(-layout.r * 0.22, -layout.r * 0.7);
+    ctx.moveTo(layout.r * 0.82, -layout.r * 0.3);
+    ctx.lineTo(layout.r * 1.2, -layout.r * 1.02);
+    ctx.lineTo(layout.r * 0.22, -layout.r * 0.7);
     ctx.stroke();
+    const eyePulse = 0.78 + Math.sin(now * 5.2) * 0.22;
+    ctx.shadowColor = nextAttackMs != null && nextAttackMs < 2500 ? THEME.red : THEME.cyan;
+    ctx.shadowBlur = 18 * eyePulse;
+    ctx.fillStyle = nextAttackMs != null && nextAttackMs < 2500 ? '#ff5566' : '#bffbff';
+    ctx.beginPath();
+    ctx.moveTo(-layout.r * 0.58, 0);
+    ctx.quadraticCurveTo(0, -layout.r * 0.34, layout.r * 0.58, 0);
+    ctx.quadraticCurveTo(0, layout.r * 0.34, -layout.r * 0.58, 0);
+    ctx.fill();
+    ctx.fillStyle = '#090817';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, layout.r * 0.11, layout.r * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
     ctx.restore();
 
     const hpStart = -Math.PI / 2;
@@ -11109,7 +11123,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.fillStyle = '#fff7e8';
     ctx.shadowColor = 'rgba(0,0,0,0.82)';
     ctx.shadowBlur = 8;
-    ctx.fillText('BOSS', layout.x, layout.y + layout.r * 0.14);
+    ctx.fillText('RIFT', layout.x, layout.y + layout.r * 0.62);
     ctx.shadowBlur = 0;
 
     const titleY = cardY + cardH * 0.28;
@@ -11190,6 +11204,43 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.fillStyle = '#ffe3ad';
     const timeLabel = fitCanvasText(ctx, formatBossTime(remainingMs), trackW * 0.28, size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`, Math.max(9 * ui, cardH * 0.13), Math.max(6, 7 * ui));
     ctx.fillText(timeLabel, rightX, footerY);
+    ctx.restore();
+  }
+
+  function drawDormantBoss() {
+    if (!dormantBossState || bossWaveState?.active) return;
+    const stage = computeOverlayLayout();
+    const ui = canvasUiScale();
+    const r = Math.max(18 * ui, Math.min(30 * ui, stage.frame.h * 0.032));
+    const x = stage.safe.right - r * 1.35;
+    const y = stage.safe.y + r * 1.45;
+    ctx.save();
+    ctx.globalAlpha = 0.64;
+    ctx.shadowColor = 'rgba(184,156,255,0.34)';
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = 'rgba(9,8,23,0.82)';
+    ctx.strokeStyle = 'rgba(184,156,255,0.58)';
+    ctx.lineWidth = Math.max(1, 1.5 * ui);
+    ctx.beginPath();
+    for (let i = 0; i < 6; i += 1) {
+      const angle = -Math.PI / 2 + i * Math.PI / 3;
+      const px = x + Math.cos(angle) * r;
+      const py = y + Math.sin(angle) * r;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(85,231,255,0.62)';
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * 0.42, r * 0.12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(238,244,255,0.72)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.font = `900 ${Math.max(8, 10 * ui)}px 'Rajdhani','Segoe UI',sans-serif`;
+    ctx.fillText('RIFT DORMANT', x - r * 1.35, y);
     ctx.restore();
   }
 
@@ -11493,6 +11544,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       };
     }
     drawHorde(horde);
+    drawDormantBoss();
     let legacyLayoutBoss = null;
     if (bossWaveState?.active) {
       const bossPos = getBossPosition();
@@ -12369,6 +12421,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       };
     };
     if (type === 'started') {
+      dormantBossState = null;
       mergeBossState();
       snapshotBossCoreAnchor();
       pulseBoss('spawn', THEME.gold, 1600);

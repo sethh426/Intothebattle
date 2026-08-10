@@ -112,7 +112,6 @@ function initSocketOverlay(game) {
   const socketOptions = { transports: ['websocket', 'polling'], timeout: 5000 };
   if (overlayRoomId && overlayToken) {
     socketOptions.auth = { roomId: overlayRoomId, overlayToken };
-    socketOptions.query = { room_id: overlayRoomId, overlay_token: overlayToken };
   }
 
   const socket = io(socketOptions);
