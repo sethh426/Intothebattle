@@ -64,7 +64,7 @@ assert.match(authRoutes, /function clearCookieVariants/, 'auth routes must clear
 assert.match(authRoutes, /clearSessionCookie\(res\);\s*res\.cookie\('session_token'/, 'session cookie writers must clear old variants before setting a new token');
 assert.match(server, /clearCookieVariants\(res, 'session_token', true\)/, 'server-level auth redirects must clear old session cookie variants');
 assert.doesNotMatch(server, /logger\.error\(\{\s*err,\s*token\s*\}/, 'auth logs must not include raw session tokens');
-assert.match(server, /const TIKTOK_RECENT_PLAYER_RESTORE_ENABLED = process\.env\.TIKTOK_RECENT_PLAYER_RESTORE_ENABLED === 'true'/, 'recent player restore must be opt-in');
+assert.match(server, /const TIKTOK_RECENT_PLAYER_RESTORE_ENABLED = process\.env\.TIKTOK_RECENT_PLAYER_RESTORE_ENABLED == null\s*\?\s*true/, 'recent player restore must be enabled by default for active live overlays');
 assert.match(server, /const TIKTOK_AUTO_RESUME_SAVED_STREAM = process\.env\.TIKTOK_AUTO_RESUME_SAVED_STREAM == null\s*\?\s*false/, 'saved TikTok streams must not auto-resume by default');
 assert.match(server, /restoreRecentPlayers:\s*false/, 'TikTok reconnects must not restore old players by default');
 assert.doesNotMatch(server, /restoreRecentPlayers:\s*true/, 'TikTok reconnects must not opt into stale player restore');

@@ -135,6 +135,22 @@ function checkImportantFiles() {
   }
 }
 
+function checkDashboardContracts() {
+  const dashboard = readText('dashboard.html');
+  if (!/id="sponsorReadiness"[^>]*hidden/.test(dashboard)) {
+    addError('Dashboard sponsor playback readiness stepper should stay hidden from creator-facing UI.');
+  }
+  if (!dashboard.includes('Share your videos with chat') || !dashboard.includes('sponsorSelectedSettings')) {
+    addError('Dashboard sponsor selected-video tested bar/setting summary is missing.');
+  }
+  if (!dashboard.includes('Apply & Refresh Preview') || !dashboard.includes('markSponsorSettingsDirty') || !dashboard.includes('refreshSponsorPreview')) {
+    addError('Dashboard sponsor controls are missing the refresh-preview dirty-state workflow.');
+  }
+  if (!dashboard.includes('Stop & Rerun') || !dashboard.includes('Changes apply to the next run')) {
+    addError('Dashboard sponsor controls are missing live-change handling copy.');
+  }
+}
+
 function checkOverlayModuleContracts() {
   const overlayHtml = readText('overlay.html');
   const httpSmoke = readText('scripts/http_smoke.js');
@@ -343,6 +359,7 @@ checkDependencies();
 checkServerRiskSignals();
 checkRequiredScripts();
 checkImportantFiles();
+checkDashboardContracts();
 checkOverlayModuleContracts();
 
 console.log('\nIntoTheBattle stability audit');
