@@ -465,6 +465,13 @@ test('dashboard renders with E2E auth fixture', async ({ context, page }, testIn
   await expect(page.locator('#backgroundFitInput')).toBeAttached();
   await expect(page.getByRole('button', { name: 'Open Live Overlay' })).toBeVisible();
   await expect(page.locator('[data-beta-feature="overlay-v2"]')).toBeHidden();
+  await expect(page.locator('#creatorSponsorCard')).toBeAttached();
+  await expect(page.locator('#sponsorReadiness')).toBeHidden();
+  await expect(page.getByText('Share your videos with chat')).toHaveCount(1);
+  await expect(page.locator('#sponsorSelectedSettings')).toBeAttached();
+  await expect(page.locator('#sponsorFitInput')).toBeAttached();
+  await expect(page.locator('#refreshSponsorPreviewButton')).toBeAttached();
+  await expect(page.getByRole('button', { name: 'Preview Selected' })).toHaveCount(0);
   await page.locator('#liveWorkflow').evaluate(el => { el.open = true; });
   await expect(page.getByText('Live Session Director')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Boss Wave' })).toBeVisible();

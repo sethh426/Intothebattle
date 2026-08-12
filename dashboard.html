@@ -337,6 +337,15 @@
     .sponsor-upgrade[hidden] { display:none; }
     .sponsor-locked { opacity:.58; }
     .sponsor-locked input,.sponsor-locked select,.sponsor-locked button { pointer-events:none; }
+    .sponsor-zone-label { color:var(--cyan); font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px; }
+    .sponsor-selected-settings { margin-top:8px; color:#e7f6ff; font-size:12px; font-weight:900; overflow-wrap:anywhere; }
+    .sponsor-preview-state { min-width:0; border:1px solid rgba(85,231,255,.16); border-radius:22px; background:linear-gradient(135deg,rgba(85,231,255,.075),rgba(0,0,0,.14)); padding:18px; display:grid; gap:10px; }
+    .sponsor-preview-state.changed { border-color:rgba(246,201,91,.38); background:linear-gradient(135deg,rgba(246,201,91,.12),rgba(0,0,0,.16)); }
+    .sponsor-preview-state.live { border-color:rgba(119,240,161,.34); background:linear-gradient(135deg,rgba(119,240,161,.1),rgba(0,0,0,.16)); }
+    .sponsor-preview-title { display:flex; align-items:center; justify-content:space-between; gap:12px; color:#fff8e6; font-size:13px; font-weight:950; text-transform:uppercase; }
+    .sponsor-preview-copy { color:var(--muted); font-size:12px; font-weight:800; line-height:1.35; }
+    .sponsor-preview-actions { display:flex; flex-wrap:wrap; gap:10px; }
+    .sponsor-preview-actions .btn { min-height:40px; }
     .sponsor-readiness { border:1px solid rgba(85,231,255,.18); border-radius:18px; background:linear-gradient(180deg,rgba(85,231,255,.075),rgba(0,0,0,.16)); padding:14px; margin-bottom:14px; display:grid; gap:12px; }
     .sponsor-readiness-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
     .sponsor-readiness-title { color:#fff8e6; font-size:13px; font-weight:900; text-transform:uppercase; }
@@ -1037,15 +1046,15 @@
         </div>
         <div class="sponsor-controls">
           <div class="sponsor-selected" id="sponsorSelectedSummary">
-            <div><div class="sponsor-selected-title">No sponsor video selected</div><div class="sponsor-selected-meta">Upload or select a creative.</div></div>
+            <div><div class="sponsor-zone-label">Share your videos with chat</div><div class="sponsor-selected-title">No sponsor video selected</div><div class="sponsor-selected-meta">Upload or select a creative.</div><div class="sponsor-selected-settings" id="sponsorSelectedSettings">No playback settings yet.</div></div>
             <span class="sponsor-status-pill">Selected</span>
           </div>
           <details class="tool subtool" open>
             <summary>Playback controls</summary>
             <div class="tool-body">
               <div class="sponsor-playback">
-                <div class="section-title">Playback</div>
-                <div class="sponsor-readiness" id="sponsorReadiness">
+                <div class="section-title">Playback settings</div>
+                <div class="sponsor-readiness" id="sponsorReadiness" hidden aria-hidden="true">
                   <div class="sponsor-readiness-head">
                     <div class="sponsor-readiness-title">Playback readiness</div>
                     <span class="sponsor-readiness-pill idle" id="sponsorReadinessPill">Idle</span>
@@ -1060,13 +1069,21 @@
                   </div>
                 </div>
                 <div class="grid" style="gap:12px;">
-                  <div class="col-6"><label class="input-label">Break format</label><select id="sponsorTimingProfileInput"><option value="bumper">6s bumper</option><option value="spotlight" selected>12s spotlight</option><option value="feature">20s feature</option><option value="full">Full creative</option></select></div>
+                  <div class="col-6"><label class="input-label">Break format</label><select id="sponsorTimingProfileInput"><option value="bumper">6s bumper</option><option value="spotlight" selected>12s spotlight</option><option value="feature">20s feature</option><option value="full">Full creative</option></select><p class="muted" style="margin-top:8px;">Controls how long the brand moment runs.</p></div>
                   <div class="col-6"><label class="input-label">Break length</label><select id="sponsorDurationInput"><option value="6000">6 seconds</option><option value="12000" selected>12 seconds</option><option value="20000">20 seconds</option><option value="30000">30 seconds</option><option value="60000">60 seconds</option></select></div>
-                  <div class="col-6"><label class="input-label">Video fit</label><select id="sponsorFitInput"><option value="contain" selected>Show full video</option><option value="cover">Fill screen</option></select></div>
+                  <div class="col-6"><label class="input-label">Screen fit</label><select id="sponsorFitInput"><option value="contain" selected>Show full video</option><option value="cover">Fill screen</option></select><p class="muted" style="margin-top:8px;">Show full avoids cropping. Fill screen removes bars.</p></div>
                   <div class="col-6"><label class="input-label">Audio</label><select id="sponsorMutedInput"><option value="true" selected>Muted autoplay</option><option value="false">Try video audio</option></select></div>
                   <div class="col-6"><label class="input-label">Battle stats</label><select id="sponsorStatsModeInput"><option value="endcap" selected>End-cap stats (recommended)</option><option value="delayed">Side stats after intro</option><option value="hidden">Hide during video</option><option value="always">Always show</option></select></div>
                 </div>
-                <div class="btn-row" style="margin-top:16px;"><button class="btn btn-success" id="runSponsorButton" onclick="playSponsorScene()">Run Selected Moment</button><button class="btn btn-secondary" id="previewSponsorButton" onclick="openSponsorPreview()">Preview Selected</button><button class="btn btn-danger" onclick="stopSponsorScene()">Stop</button></div>
+                <div class="sponsor-preview-state" id="sponsorPreviewState" style="margin-top:16px;">
+                  <div class="sponsor-preview-title"><span id="sponsorPreviewTitle">Preview</span><span class="sponsor-status-pill warn" id="sponsorPreviewPill">Needs preview</span></div>
+                  <div class="sponsor-preview-copy" id="sponsorPreviewMessage">Select a video, then refresh the preview after changing format, screen fit, audio, or stats.</div>
+                  <div class="sponsor-preview-actions">
+                    <button class="btn btn-primary" id="refreshSponsorPreviewButton" onclick="refreshSponsorPreview()">Apply & Refresh Preview</button>
+                    <button class="btn btn-secondary" id="stopRerunSponsorButton" onclick="stopAndRerunSponsorScene()" hidden>Stop & Rerun</button>
+                  </div>
+                </div>
+                <div class="btn-row" style="margin-top:16px;"><button class="btn btn-success" id="runSponsorButton" onclick="playSponsorScene()">Run Selected Moment</button><button class="btn btn-danger" onclick="stopSponsorScene()">Stop</button></div>
               </div>
             </div>
           </details>
@@ -1168,6 +1185,9 @@ let canUseCreatorSponsors = false;
 let activeSponsorBreakId = '';
 let sponsorFileObjectUrl = '';
 let sponsorUploadProbe = null;
+let sponsorPreviewDirty = true;
+let sponsorLastPreviewKey = '';
+let sponsorLiveStatus = 'idle';
 let sessionStatusData = null;
 let dashboardRulesState = { required: false, acknowledgedAt: null };
 const dashboardParams = new URLSearchParams(window.location.search);
@@ -3291,6 +3311,87 @@ function sponsorStatsMode() {
   const value = document.getElementById('sponsorStatsModeInput')?.value || 'endcap';
   return ['endcap','delayed','hidden','always'].includes(value) ? value : 'endcap';
 }
+function sponsorSelectLabel(id) {
+  const input = document.getElementById(id);
+  return input?.selectedOptions?.[0]?.textContent?.trim() || input?.value || '';
+}
+function sponsorSettingsSummary() {
+  return [
+    sponsorSelectLabel('sponsorTimingProfileInput') || '12s spotlight',
+    sponsorSelectLabel('sponsorFitInput') || 'Show full video',
+    sponsorSelectLabel('sponsorStatsModeInput') || 'End-cap stats',
+    sponsorSelectLabel('sponsorMutedInput') || 'Muted autoplay',
+  ].filter(Boolean).join(' - ');
+}
+function sponsorPayloadKey(payload = currentSponsorPayload()) {
+  return JSON.stringify({
+    filename: payload.filename || '',
+    durationMs: payload.durationMs,
+    fit: payload.fit,
+    statsMode: payload.statsMode,
+    timingProfile: payload.timingProfile,
+    muted: payload.muted,
+    volume: payload.volume,
+    title: payload.title,
+    partner: payload.partner,
+    subtitle: payload.subtitle,
+  });
+}
+function markSponsorSettingsDirty(reason = 'settings') {
+  sponsorPreviewDirty = true;
+  if (['live', 'playing', 'starting', 'preparing', 'ready'].includes(sponsorLiveStatus)) {
+    const rerunButton = document.getElementById('stopRerunSponsorButton');
+    if (rerunButton) rerunButton.hidden = false;
+  }
+  updateSponsorSelectedSummary();
+}
+function updateSponsorPreviewState(reason = '') {
+  const box = document.getElementById('sponsorPreviewState');
+  const pill = document.getElementById('sponsorPreviewPill');
+  const message = document.getElementById('sponsorPreviewMessage');
+  const refreshButton = document.getElementById('refreshSponsorPreviewButton');
+  const rerunButton = document.getElementById('stopRerunSponsorButton');
+  if (!box || !pill || !message) return;
+  const file = selectedSponsorFile();
+  const issue = sponsorPlaybackIssue(file);
+  const live = ['preparing','ready','starting','live','playing'].includes(sponsorLiveStatus);
+  box.classList.toggle('changed', sponsorPreviewDirty);
+  box.classList.toggle('live', live);
+  if (!file) {
+    pill.className = 'sponsor-status-pill warn';
+    pill.textContent = 'No video';
+    message.textContent = 'Upload or select a video before previewing or running a brand moment.';
+  } else if (issue) {
+    pill.className = 'sponsor-status-pill warn';
+    pill.textContent = 'Needs attention';
+    message.textContent = issue;
+  } else if (live && sponsorPreviewDirty) {
+    pill.className = 'sponsor-status-pill warn';
+    pill.textContent = 'Next run';
+    message.textContent = `Changes apply to the next run: ${sponsorSettingsSummary()}.`;
+  } else if (live) {
+    pill.className = 'sponsor-status-pill tested';
+    pill.textContent = 'Live current';
+    message.textContent = `Live moment is using current settings: ${sponsorSettingsSummary()}.`;
+  } else if (sponsorPreviewDirty || sponsorPayloadKey() !== sponsorLastPreviewKey) {
+    pill.className = 'sponsor-status-pill warn';
+    pill.textContent = 'Refresh';
+    message.textContent = `Preview needs refresh: ${sponsorSettingsSummary()}.`;
+  } else {
+    pill.className = 'sponsor-status-pill tested';
+    pill.textContent = 'Preview current';
+    message.textContent = `Preview matches current settings: ${sponsorSettingsSummary()}.`;
+  }
+  if (refreshButton) {
+    const previewIssue = !canUseCreatorSponsors
+      ? 'Creator Pro or beta tester access is required.'
+      : issue || (!currentOverlayUrl ? 'Signed overlay URL is still loading.' : '');
+    refreshButton.disabled = Boolean(previewIssue);
+    refreshButton.title = previewIssue || 'Open a signed preview with the current video settings.';
+  }
+  if (rerunButton) rerunButton.hidden = !(live && sponsorPreviewDirty);
+  updateSponsorActionState();
+}
 function sponsorStatusLabel(status) {
   const labels = {
     idle: 'Idle',
@@ -3309,6 +3410,7 @@ function sponsorStatusLabel(status) {
 }
 function updateSponsorBreakStatus(data = {}) {
   const status = String(data.status || 'idle').toLowerCase();
+  sponsorLiveStatus = status;
   if (data.breakId) activeSponsorBreakId = data.breakId;
   if (data.filename) {
     const file = selectedSponsorFile(data.filename);
@@ -3350,7 +3452,16 @@ function updateSponsorBreakStatus(data = {}) {
   document.querySelectorAll('[data-sponsor-step]').forEach((step, index) => {
     step.classList.toggle('active', activeIndex >= index);
   });
+  if (['playing', 'completed'].includes(status)) {
+    sponsorPreviewDirty = false;
+    sponsorLastPreviewKey = sponsorPayloadKey();
+  }
+  if (['completed', 'failed', 'stopped'].includes(status)) {
+    const rerunButton = document.getElementById('stopRerunSponsorButton');
+    if (rerunButton) rerunButton.hidden = true;
+  }
   updateSponsorActionState();
+  updateSponsorPreviewState('playback');
 }
 function inspectSponsorFile(file) {
   const meta = document.getElementById('sponsorUploadMeta');
@@ -3435,36 +3546,43 @@ function updateSponsorSelectedSummary() {
   const file = selectedSponsorFile();
   const title = summary.querySelector('.sponsor-selected-title');
   const meta = summary.querySelector('.sponsor-selected-meta');
+  const settings = document.getElementById('sponsorSelectedSettings');
   const pill = summary.querySelector('.sponsor-status-pill');
   if (!canUseCreatorSponsors) {
     if (title) title.textContent = 'Creator Pro feature';
     if (meta) meta.textContent = 'Upgrade to manage your own brand videos.';
+    if (settings) settings.textContent = 'Brand controls unlock with Creator Pro.';
     if (pill) {
       pill.className = 'sponsor-status-pill blocked';
       pill.textContent = 'Locked';
     }
     updateSponsorActionState();
+    updateSponsorPreviewState('locked');
     return;
   }
   if (!file) {
     if (title) title.textContent = 'No sponsor video selected';
     if (meta) meta.textContent = 'Upload or select a creative.';
+    if (settings) settings.textContent = 'No playback settings yet.';
     if (pill) {
       pill.className = 'sponsor-status-pill warn';
       pill.textContent = 'No video';
     }
     updateSponsorActionState();
+    updateSponsorPreviewState('empty');
     return;
   }
   const dimensions = file.width && file.height ? `${file.width}x${file.height}` : 'metadata pending';
   if (title) title.textContent = file.title || file.originalName || 'Power Moment';
   if (meta) meta.textContent = `${file.partner || 'Partner'} - ${sponsorReadinessLabel(file.readinessStatus)} - ${formatDuration(file.durationSeconds)} - ${dimensions}`;
+  if (settings) settings.textContent = `${sponsorSettingsSummary()} - ${sponsorReadinessLabel(file.readinessStatus)}`;
   if (pill) {
     const issue = sponsorPlaybackIssue(file);
     pill.className = `sponsor-status-pill ${issue ? 'warn' : String(file.readinessStatus || 'ready').toLowerCase()}`;
     pill.textContent = issue ? 'Needs attention' : sponsorReadinessLabel(file.readinessStatus);
   }
   updateSponsorActionState();
+  updateSponsorPreviewState('selected');
 }
 function updateSponsorActionState() {
   const runButton = document.getElementById('runSponsorButton');
@@ -3490,11 +3608,13 @@ function updateSponsorActionState() {
 }
 function setSponsorInputs(file) {
   if (!file) return;
+  const changedFile = selectedSponsorFilename !== file.filename;
   selectedSponsorFilename = file.filename;
   document.getElementById('sponsorPartnerInput').value = file.partner || 'Sponsor';
   document.getElementById('sponsorTitleInput').value = file.title || file.originalName || 'Power Moment';
   document.getElementById('sponsorSubtitleInput').value = file.subtitle || 'Stay locked in. The next fight is loading.';
   if (sponsorTimingProfile() === 'full') applySponsorTimingProfile('full');
+  if (changedFile) sponsorPreviewDirty = true;
   updateSponsorSelectedSummary();
 }
 function renderSponsorLibrary() {
@@ -3641,15 +3761,25 @@ function playSponsorScene(filename = selectedSponsorFilename) {
   const selected = selectedSponsorFile(filename);
   const playbackIssue = sponsorPlaybackIssue(selected);
   if (playbackIssue) return toast(playbackIssue, true);
+  sponsorLastPreviewKey = sponsorPayloadKey(currentSponsorPayload(filename));
+  sponsorPreviewDirty = false;
   updateSponsorBreakStatus({ status:'preparing', message:'Waiting for the overlay to load sponsor media...' });
   apiCall('/api/sponsor/play','POST',currentSponsorPayload(filename)).then(d => {
     if (d.success) {
       updateSponsorBreakStatus({ breakId:d.breakId, status:d.status || 'preparing', message:'Preparing video in the overlay before the break starts.' });
-      toast('Power moment is preparing');
+      toast('Power moment is preparing with current settings');
     }
   });
 }
 function stopSponsorScene() { if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro or beta tester access', true); apiCall('/api/sponsor/stop','POST').then(d => { if (d.success) { updateSponsorBreakStatus({ breakId:activeSponsorBreakId, status:'stopped', message:'Power moment stopped.' }); toast('Power moment stopped'); } }); }
+function stopAndRerunSponsorScene() {
+  if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro or beta tester access', true);
+  apiCall('/api/sponsor/stop','POST').then(d => {
+    if (!d.success) return toast(d.error || 'Stop failed', true);
+    updateSponsorBreakStatus({ breakId:activeSponsorBreakId, status:'stopped', message:'Power moment stopped. Restarting with updated settings...' });
+    setTimeout(() => playSponsorScene(selectedSponsorFilename), 350);
+  }).catch(() => toast('Stop failed', true));
+}
 function deleteSponsorVideo(filename) {
   if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro or beta tester access', true);
   if (!confirm('Delete this sponsor video?')) return;
@@ -3664,6 +3794,7 @@ function deleteSponsorVideo(filename) {
     })
     .catch(() => toast('Delete failed', true));
 }
+function refreshSponsorPreview() { openSponsorPreview(); }
 function openSponsorPreview() {
   if (!canUseCreatorSponsors) return toast('Creator sponsor controls require Creator Pro or beta tester access', true);
   if (!currentOverlayUrl) return toast('Signed overlay URL is still loading', true);
@@ -3680,6 +3811,10 @@ function openSponsorPreview() {
   overlayUrl.searchParams.set('sponsor_stats',payload.statsMode);
   overlayUrl.searchParams.set('sponsor_timing',payload.timingProfile);
   if (payload.filename) overlayUrl.searchParams.set('sponsor_video',payload.filename);
+  sponsorLastPreviewKey = sponsorPayloadKey(payload);
+  sponsorPreviewDirty = false;
+  updateSponsorPreviewState('preview');
+  toast('Preview opened with current settings');
   window.open(overlayUrl.toString(), '_blank');
 }
 function loadSponsors() {
@@ -3739,7 +3874,13 @@ const dropZone=document.getElementById('dropZone'); const audioFileInput=documen
 const sponsorFileInput=document.getElementById('sponsorFileInput');
 if (sponsorFileInput) sponsorFileInput.addEventListener('change',()=>inspectSponsorFile(sponsorFileInput.files[0]));
 const sponsorTimingProfileInput=document.getElementById('sponsorTimingProfileInput');
-if (sponsorTimingProfileInput) sponsorTimingProfileInput.addEventListener('change',()=>applySponsorTimingProfile());
+if (sponsorTimingProfileInput) sponsorTimingProfileInput.addEventListener('change',()=>{ applySponsorTimingProfile(); markSponsorSettingsDirty('format'); });
+['sponsorDurationInput','sponsorFitInput','sponsorMutedInput','sponsorStatsModeInput','sponsorPartnerInput','sponsorTitleInput','sponsorSubtitleInput'].forEach(id => {
+  const input = document.getElementById(id);
+  if (!input) return;
+  const eventName = input.tagName === 'SELECT' ? 'change' : 'input';
+  input.addEventListener(eventName, () => markSponsorSettingsDirty(id));
+});
 audioFileInput.addEventListener('change',()=>{ if(audioFileInput.files[0]) uploadAudioFile(audioFileInput.files[0]); });
 dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('dragover'); });
 dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));
