@@ -12,7 +12,7 @@ export const COUNCIL_RANKS = Object.freeze([
     id: 'aspirant',
     name: 'Aspirant',
     threshold: 0,
-    summary: 'Join free, get your personal link, and start referring streamers.',
+    summary: 'Admin-appointed members receive a personal link and can start referring streamers.',
     rewards: [
       'Personal referral link and code',
       '$3 per month for every active paid referral',
@@ -128,6 +128,7 @@ export function buildCouncilProgramSummary(stats = {}, options = {}) {
     rewardChoiceText: `Earn ${centsToUsd(rewardAmountCents)} every month for every active paid referral.`,
     recruitBonusText: `Creators you sign up can claim a full year free once they refer ${COUNCIL_RECRUIT_YEAR_BONUS_THRESHOLD} paid subscribers of their own.`,
     guardrails: [
+      'Council eligibility requires an active admin appointment',
       'Paid referrals must stay active for monthly rewards to continue',
       `${centsToUsd(COUNCIL_CASH_PAYOUT_MINIMUM_CENTS)} minimum cash payout`,
       'W-9 required before the first cash payout',

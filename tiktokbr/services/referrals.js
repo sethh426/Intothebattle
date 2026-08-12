@@ -6,6 +6,7 @@ import {
   COUNCIL_RECRUIT_YEAR_BONUS_THRESHOLD,
   buildCouncilProgramSummary,
 } from './councilOfAetheris.js';
+import { getActiveCouncilMembership, getCouncilMembershipStatus } from './councilMemberships.js';
 
 export const REFERRAL_CODE_COOLDOWN_HOURS = 234;
 export const REFERRAL_CODE_COOLDOWN_MS = REFERRAL_CODE_COOLDOWN_HOURS * 60 * 60 * 1000;
@@ -198,11 +199,13 @@ export function getReferralCodeForUser(database, userId) {
 
 export function getReferralSummary(database, user, options = {}) {
   if (!user?.id) throw referralError('Unauthorized', 401);
-  if (options.settleRewards !== false) {
+  const membership = getCouncilMembershipStatus(database, user.id);
+  if (membership.eligible && options.settleRewards !== false) {
     settleClearedReferralRewards(database, { referrerUserId: user.id, now: options.now });
   }
   const codeRow = getReferralCodeForUser(database, user.id);
-  const code = codeRow?.code || '';
+  const codeActive = membership.eligible && Number(codeRow?.is_active) === 1;
+  const code = codeActive ? codeRow?.code || '' : '';
   const statusRows = database.prepare(`
     SELECT status, COUNT(*) AS count
     FROM referral_attributions
@@ -316,11 +319,15 @@ export function getReferralSummary(database, user, options = {}) {
 
   stats.clickToSignupRate = stats.clicks > 0 ? Math.round((stats.signups / stats.clicks) * 1000) / 10 : 0;
   stats.signupToQualifiedRate = stats.signups > 0 ? Math.round((stats.qualified / stats.signups) * 1000) / 10 : 0;
-  stats.monthlyProjectedCents = numberValue(projectedRow.amount_cents);
+  stats.monthlyProjectedCents = membership.eligible ? numberValue(projectedRow.amount_cents) : 0;
 
   return {
+    membership,
+    councilEligible: membership.eligible,
+    codeEligible: membership.eligible,
+    codeActive,
     code,
-    hasCode: Boolean(code),
+    hasCode: Boolean(codeActive && code),
     suggestedCode: suggestedReferralCode(user),
     shareUrl: buildReferralShareUrl(options.baseUrl, code),
     chatText: buildReferralChatMessage(options.baseUrl, code),
@@ -341,6 +348,11 @@ export function getReferralSummary(database, user, options = {}) {
 
 export function claimOrResetReferralCode(database, user, requestedCode) {
   if (!user?.id) throw referralError('Unauthorized', 401);
+  if (!getActiveCouncilMembership(database, user.id)) {
+    throw referralError('Council appointment is required to create or activate a referral code.', 403, {
+      code: 'council_appointment_required',
+    });
+  }
   const validation = validateReferralCode(requestedCode);
   if (!validation.ok) throw referralError(validation.error, 400);
   const { code } = validation;
@@ -351,6 +363,12 @@ export function claimOrResetReferralCode(database, user, requestedCode) {
     if (conflict) throw referralError('That code is already taken. Choose another one.', 409);
 
     if (existing && normalizeReferralCode(existing.code) === code) {
+      database.prepare(`
+        UPDATE streamer_referral_codes
+        SET is_active = 1, activated_at = COALESCE(activated_at, CURRENT_TIMESTAMP),
+            disabled_at = NULL, disabled_reason = NULL, updated_at = CURRENT_TIMESTAMP
+        WHERE user_id = ?
+      `).run(user.id);
       return getReferralSummary(database, user);
     }
 
@@ -360,8 +378,9 @@ export function claimOrResetReferralCode(database, user, requestedCode) {
 
     if (!existing) {
       database.prepare(`
-        INSERT INTO streamer_referral_codes (user_id, code, reset_count, last_reset_at, reset_available_at, created_at, updated_at)
-        VALUES (?, ?, 0, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        INSERT INTO streamer_referral_codes (
+          user_id, code, reset_count, last_reset_at, reset_available_at, is_active, activated_at, created_at, updated_at
+        ) VALUES (?, ?, 0, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       `).run(user.id, code, nowSql, resetAvailableSql);
       return getReferralSummary(database, user);
     }
@@ -373,7 +392,9 @@ export function claimOrResetReferralCode(database, user, requestedCode) {
 
     database.prepare(`
       UPDATE streamer_referral_codes
-      SET code = ?, reset_count = COALESCE(reset_count, 0) + 1, last_reset_at = ?, reset_available_at = ?, updated_at = CURRENT_TIMESTAMP
+      SET code = ?, reset_count = COALESCE(reset_count, 0) + 1, last_reset_at = ?, reset_available_at = ?,
+          is_active = 1, activated_at = CURRENT_TIMESTAMP, disabled_at = NULL, disabled_reason = NULL,
+          updated_at = CURRENT_TIMESTAMP
       WHERE user_id = ?
     `).run(code, nowSql, resetAvailableSql, user.id);
     return getReferralSummary(database, user);
@@ -392,7 +413,13 @@ export function recordReferralClick(database, {
   const validation = validateReferralCode(referralCode);
   if (!validation.ok) return { recorded: false, reason: 'invalid_code' };
 
-  const codeRow = database.prepare('SELECT * FROM streamer_referral_codes WHERE UPPER(code) = ? LIMIT 1').get(validation.code);
+  const codeRow = database.prepare(`
+    SELECT src.* FROM streamer_referral_codes src
+    JOIN council_memberships cm ON cm.user_id = src.user_id AND cm.status = 'active'
+    JOIN users u ON u.id = src.user_id AND COALESCE(u.is_active, 0) = 1 AND u.banned_at IS NULL
+    WHERE UPPER(src.code) = ? AND COALESCE(src.is_active, 0) = 1
+    LIMIT 1
+  `).get(validation.code);
   if (!codeRow) return { recorded: false, reason: 'code_not_found' };
 
   const result = database.prepare(`
@@ -440,7 +467,13 @@ export function recordReferralAttribution(database, { referralCode, referredUser
   const validation = validateReferralCode(referralCode);
   if (!validation.ok || !referredUserId) return { recorded: false, reason: validation.ok ? 'missing_user' : 'invalid_code' };
 
-  const codeRow = database.prepare('SELECT * FROM streamer_referral_codes WHERE UPPER(code) = ? LIMIT 1').get(validation.code);
+  const codeRow = database.prepare(`
+    SELECT src.* FROM streamer_referral_codes src
+    JOIN council_memberships cm ON cm.user_id = src.user_id AND cm.status = 'active'
+    JOIN users u ON u.id = src.user_id AND COALESCE(u.is_active, 0) = 1 AND u.banned_at IS NULL
+    WHERE UPPER(src.code) = ? AND COALESCE(src.is_active, 0) = 1
+    LIMIT 1
+  `).get(validation.code);
   if (!codeRow) return { recorded: false, reason: 'code_not_found' };
   if (Number(codeRow.user_id) === Number(referredUserId)) return { recorded: false, reason: 'self_referral' };
 
@@ -530,6 +563,7 @@ function createCouncilMonthlyReward(database, { attribution, subscription, now =
 
 function ensureCouncilYearBonusClaim(database, userId, options = {}) {
   if (!userId) return { created: false, reason: 'missing_user' };
+  if (!getActiveCouncilMembership(database, userId)) return { created: false, reason: 'not_council_member' };
   const origin = database.prepare('SELECT * FROM referral_attributions WHERE referred_user_id = ? LIMIT 1').get(userId);
   if (!origin) return { created: false, reason: 'not_recruited_creator' };
 
@@ -578,6 +612,9 @@ export function qualifyReferralForUser(database, referredUserId, options = {}) {
   if (!referredUserId) return { qualified: false, reason: 'missing_user' };
   const attribution = database.prepare('SELECT * FROM referral_attributions WHERE referred_user_id = ? LIMIT 1').get(referredUserId);
   if (!attribution) return { qualified: false, reason: 'no_attribution' };
+  if (!getActiveCouncilMembership(database, attribution.referrer_user_id)) {
+    return { qualified: false, reason: 'referrer_not_council_member' };
+  }
 
   const activePaidSubscription = database.prepare(`
     SELECT id, paypal_subscription_id, started_at, created_at, updated_at
@@ -652,6 +689,10 @@ export function settleClearedReferralRewards(database, options = {}) {
   const rows = database.prepare(`
     SELECT a.referred_user_id
     FROM referral_attributions a
+    JOIN council_memberships cm ON cm.user_id = a.referrer_user_id AND cm.status = 'active'
+    JOIN users referrer ON referrer.id = a.referrer_user_id
+      AND COALESCE(referrer.is_active, 0) = 1
+      AND referrer.banned_at IS NULL
     JOIN subscriptions s ON s.user_id = a.referred_user_id
       AND LOWER(s.status) = 'active'
       AND COALESCE(s.admin_granted, 0) = 0

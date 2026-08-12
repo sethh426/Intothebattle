@@ -80,6 +80,11 @@ import {
   updateRecurringReferralRewardStatus,
 } from '../services/referrals.js';
 import {
+  appointCouncilMember,
+  listCouncilMembers,
+  removeCouncilMember,
+} from '../services/councilMemberships.js';
+import {
   COUNCIL_CASH_PAYOUT_MINIMUM_CENTS,
   COUNCIL_FOUNDING_RATE_MONTHLY_CENTS,
   COUNCIL_MONTHLY_REWARD_CENTS,
@@ -621,7 +626,7 @@ function buildAccessCodesCsv(rows = []) {
 }
 
 function buildUsersCsv(rows = []) {
-  const headers = ['id', 'email', 'name', 'tiktok_username', 'plan', 'subscription_status', 'access_code', 'email_verified', 'is_active', 'created_at', 'last_login'];
+  const headers = ['id', 'email', 'name', 'tiktok_username', 'plan', 'subscription_status', 'access_code', 'council_status', 'council_code', 'council_code_is_active', 'email_verified', 'is_active', 'created_at', 'last_login'];
   return csvDocument(headers, rows.map(row => ({
     ...row,
     plan: row.plan_type || row.subscription_status || row.access_code_type || 'Free / pending',
@@ -669,7 +674,12 @@ function listRecentAdminUsers(limit = 80) {
         ac.subscription_status AS access_subscription_status,
         ac.tiktok_username AS access_tiktok_username,
         ac.is_revoked AS access_is_revoked,
-        ac.is_promo AS access_is_promo
+        ac.is_promo AS access_is_promo,
+        cm.status AS council_status,
+        cm.appointed_at AS council_appointed_at,
+        cm.removed_at AS council_removed_at,
+        src.code AS council_code,
+        src.is_active AS council_code_is_active
       FROM users u
       LEFT JOIN subscriptions s ON s.id = (
         SELECT id
@@ -686,6 +696,13 @@ function listRecentAdminUsers(limit = 80) {
         ORDER BY ac2.created_at DESC, ac2.id DESC
         LIMIT 1
       )
+      LEFT JOIN council_memberships cm ON cm.id = (
+        SELECT cm2.id FROM council_memberships cm2
+        WHERE cm2.user_id = u.id
+        ORDER BY cm2.appointed_at DESC, cm2.id DESC
+        LIMIT 1
+      )
+      LEFT JOIN streamer_referral_codes src ON src.user_id = u.id
       ORDER BY u.created_at DESC, u.id DESC
       LIMIT ?
     `).all(Math.max(1, Math.min(200, Number(limit) || 80)));
@@ -899,6 +916,18 @@ function renderUserRows(users = [], emptyMessage = 'No users found yet.') {
       : escapeHtml(plan);
     const tiktokUsername = accountTikTokUsername(user);
     const beta = isAdminBetaUser(user);
+    const councilActive = user.council_status === 'active' && !disabled;
+    const councilAction = disabled
+      ? '<span class="muted">Council unavailable while banned</span>'
+      : councilActive
+        ? `<form method="POST" action="/admin/users/${escapeAttr(user.id)}/council/remove" onsubmit="return confirm('Remove this account from the Council and disable its referral link?')">
+            <input name="reason" required placeholder="Removal reason" />
+            <button type="submit" class="danger-button">Remove from Council</button>
+          </form>`
+        : `<form method="POST" action="/admin/users/${escapeAttr(user.id)}/council/appoint" onsubmit="return confirm('Appoint this account to the Council of Aetheris?')">
+            <input name="note" placeholder="Appointment note (optional)" />
+            <button type="submit">Appoint to Council</button>
+          </form>`;
     const grantAction = disabled
       ? '<span class="muted">Banned account</span>'
       : adminGrantActive
@@ -924,10 +953,10 @@ function renderUserRows(users = [], emptyMessage = 'No users found yet.') {
       <td data-label="Email / Name"><strong>${escapeHtml(user.email || '')}</strong><br><span class="muted">${escapeHtml(user.name || '')}</span></td>
       <td data-label="TikTok">${escapeHtml(tiktokUsername ? `@${tiktokUsername}` : '')}</td>
       <td data-label="Plan">${planMarkup}${user.access_code ? `<br><span class="muted">Code ${escapeHtml(user.access_code)}</span>` : ''}</td>
-      <td data-label="Status">${escapeHtml(`${active} / ${verified}`)}${statusNote}</td>
+      <td data-label="Status">${escapeHtml(`${active} / ${verified}`)}${statusNote}<br><span class="muted">${councilActive ? 'Council member' : 'Regular account'}${user.council_code ? ` / ${escapeHtml(user.council_code)}${Number(user.council_code_is_active) === 1 ? ' active' : ' disabled'}` : ''}</span></td>
       <td data-label="Created">${escapeHtml(formatSponsorDate(user.created_at))}</td>
       <td data-label="Last Login">${escapeHtml(formatSponsorDate(user.last_login))}</td>
-      <td data-label="Actions"><div class="stacked-actions">${grantAction}${banAction}</div></td>
+      <td data-label="Actions"><div class="stacked-actions">${councilAction}${grantAction}${banAction}</div></td>
     </tr>`;
   }).join('') || `<tr><td colspan="8">${escapeHtml(emptyMessage)}</td></tr>`;
 }
@@ -1686,6 +1715,7 @@ router.get('/referrals', requireAdminAuth, (req, res) => {
       error: String(req.query.error || ''),
       rows: listReferralAdminRows(db, filters),
       bonusClaims: listCouncilYearBonusClaims(db),
+      members: listCouncilMembers(db),
       filters,
     }));
   } catch (err) {
@@ -1905,6 +1935,7 @@ function banUserFromRequest(req, res) {
 
   const reason = normalizeBanReason(req.body?.reason);
   try {
+    removeCouncilMember(db, user.id, { reason: `Account banned: ${reason}`, removedBy: 'shared_admin' });
     db.prepare(`
       UPDATE users
       SET is_active = 0,
@@ -1922,6 +1953,12 @@ function banUserFromRequest(req, res) {
       WHERE user_id = ?
          OR (email IS NOT NULL AND LOWER(email) = LOWER(?))
     `).run(user.id, user.email || '');
+    db.prepare(`
+      UPDATE streamer_referral_codes
+      SET is_active = 0, disabled_at = CURRENT_TIMESTAMP,
+          disabled_reason = 'Account banned', updated_at = CURRENT_TIMESTAMP
+      WHERE user_id = ?
+    `).run(user.id);
     recordSecurityEvent(db, {
       req,
       eventType: 'admin_user_ban',
@@ -1969,6 +2006,28 @@ function denyAccountDelete(_req, res) {
   return res.status(405).send('User accounts cannot be deleted from admin.');
 }
 
+function appointCouncilFromRequest(req, res) {
+  const user = findAdminUserFromRequest(req);
+  if (!user) return redirectAdmin(res, 'error', 'Account not found');
+  try {
+    const result = appointCouncilMember(db, user.id, { note: req.body?.note, appointedBy: 'shared_admin' });
+    return redirectAdmin(res, 'message', `${result.created ? 'Appointed' : 'Kept'} ${creatorLabel(user)} as a Council member.`);
+  } catch (err) {
+    return redirectAdmin(res, 'error', err?.message || 'Unable to appoint Council member');
+  }
+}
+
+function removeCouncilFromRequest(req, res) {
+  const user = findAdminUserFromRequest(req);
+  if (!user) return redirectAdmin(res, 'error', 'Account not found');
+  try {
+    const result = removeCouncilMember(db, user.id, { reason: req.body?.reason, removedBy: 'shared_admin' });
+    return redirectAdmin(res, 'message', `${result.removed ? 'Removed' : 'Kept'} ${creatorLabel(user)} as a regular account.`);
+  } catch (err) {
+    return redirectAdmin(res, 'error', err?.message || 'Unable to remove Council member');
+  }
+}
+
 router.post('/users/free-pro/grant', requireAdminAuth, grantCreatorProFromRequest);
 router.post('/users/free-pro/remove', requireAdminAuth, removeCreatorProFromRequest);
 router.post('/users/:id/free-pro/grant', requireAdminAuth, grantCreatorProFromRequest);
@@ -1977,6 +2036,8 @@ router.post('/users/free-forever/grant', requireAdminAuth, grantCreatorProFromRe
 router.post('/users/free-forever/remove', requireAdminAuth, removeCreatorProFromRequest);
 router.post('/users/:id/free-forever/grant', requireAdminAuth, grantCreatorProFromRequest);
 router.post('/users/:id/free-forever/remove', requireAdminAuth, removeCreatorProFromRequest);
+router.post('/users/:id/council/appoint', requireAdminAuth, appointCouncilFromRequest);
+router.post('/users/:id/council/remove', requireAdminAuth, removeCouncilFromRequest);
 router.post('/users/ban', requireAdminAuth, banUserFromRequest);
 router.post('/users/unban', requireAdminAuth, unbanUserFromRequest);
 router.post('/users/:id/ban', requireAdminAuth, banUserFromRequest);
@@ -2542,7 +2603,30 @@ function renderReferralAdminRows(rows = []) {
   }).join('');
 }
 
-function renderReferralAdminPage({ message = '', error = '', rows = [], bonusClaims = [], filters = {} } = {}) {
+function renderCouncilMemberRows(members = []) {
+  if (!members.length) return '<tr><td colspan="7">No Council appointments yet.</td></tr>';
+  return members.map(member => {
+    const active = member.membership_status === 'active' && Number(member.is_active) === 1 && !member.banned_at;
+    const action = active
+      ? `<form method="POST" action="/admin/users/${escapeAttr(member.user_id)}/council/remove" class="mini-form" onsubmit="return confirm('Remove this account from the Council?')">
+          <input name="reason" required placeholder="Removal reason" /><button type="submit">Remove</button>
+        </form>`
+      : `<form method="POST" action="/admin/users/${escapeAttr(member.user_id)}/council/appoint" class="mini-form">
+          <input name="note" placeholder="Appointment note" /><button type="submit">Reappoint</button>
+        </form>`;
+    return `<tr>
+      <td data-label="Account"><strong>${escapeHtml(member.name || member.email || 'Account')}</strong><br><span class="muted">${escapeHtml(member.email || '')}</span></td>
+      <td data-label="Status">${escapeHtml(active ? 'Council member' : 'Regular account')}</td>
+      <td data-label="Appointed">${escapeHtml(formatSponsorDate(member.appointed_at))}</td>
+      <td data-label="Code">${escapeHtml(member.code || 'Not created')}<br><span class="muted">${Number(member.code_is_active) === 1 && active ? 'Active' : 'Disabled'}</span></td>
+      <td data-label="Referrals">${escapeHtml(String(member.referral_count || 0))}</td>
+      <td data-label="Rewards">${escapeHtml(centsToUsd(member.reward_cents || 0))}<br><span class="muted">${escapeHtml(member.removal_reason || member.appointment_note || '')}</span></td>
+      <td data-label="Action">${action}</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderReferralAdminPage({ message = '', error = '', rows = [], bonusClaims = [], members = [], filters = {} } = {}) {
   const totals = rows.reduce((acc, row) => {
     acc.signups += 1;
     if (row.attribution_status === 'qualified' && row.active_paypal_subscription_id) acc.qualified += 1;
@@ -2670,6 +2754,14 @@ function renderReferralAdminPage({ message = '', error = '', rows = [], bonusCla
         <h2>Ranks</h2>
         <div class="rank-grid">${rankCards}</div>
       </div>
+    </section>
+    <section class="card table-shell">
+      <h2>Council Roster</h2>
+      <p class="muted">Only active appointments can create referral links and accrue the recurring ${escapeHtml(centsToUsd(COUNCIL_MONTHLY_REWARD_CENTS))} reward. Removal disables the link and stops future accrual without changing historical rewards.</p>
+      <table>
+        <thead><tr><th>Account</th><th>Status</th><th>Appointed</th><th>Code</th><th>Referrals</th><th>Rewards</th><th>Action</th></tr></thead>
+        <tbody>${renderCouncilMemberRows(members)}</tbody>
+      </table>
     </section>
     <section class="card table-shell">
       <h2>Referral Activity</h2>

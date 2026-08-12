@@ -1549,6 +1549,7 @@ router.post('/api/referrals/code', express.json(), (req, res) => {
     return res.status(err.statusCode || 500).json({
       success: false,
       error: err.message || 'Unable to update referral code.',
+      code: err.code || '',
       retryAfterSeconds: err.retryAfterSeconds || 0,
     });
   }

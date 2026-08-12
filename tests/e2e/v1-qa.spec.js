@@ -354,6 +354,9 @@ test('dashboard creator promo code can be created and copied for chat', async ({
   });
 
   let referral = {
+    councilEligible: true,
+    codeEligible: true,
+    membership: { status: 'active', eligible: true, appointedAt: '2026-07-01T00:00:00Z' },
     hasCode: false,
     code: '',
     suggestedCode: 'NEONACE',
@@ -433,6 +436,33 @@ test('dashboard creator promo code can be created and copied for chat', async ({
 
   await expectNoHorizontalOverflow(page);
   expect(errors.filter(error => !/battle-clip net::ERR_ABORTED/.test(error))).toEqual([]);
+});
+
+test('regular accounts cannot create Council referral codes', async ({ context, page }) => {
+  await addAuthCookie(context);
+  await page.route(`${baseUrl}/api/referrals/me`, async route => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        referral: {
+          councilEligible: false,
+          codeEligible: false,
+          membership: { status: 'regular', eligible: false },
+          hasCode: false,
+          stats: { pendingAmountCents: 0, approvedAmountCents: 0, paidAmountCents: 0 },
+          recent: [],
+        },
+      }),
+    });
+  });
+
+  await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
+  await page.locator('#liveWorkflow').evaluate(element => { element.open = true; });
+  const panel = page.getByTestId('creator-referral-panel');
+  await expect(panel.getByText('Regular account', { exact: true }).first()).toBeVisible();
+  await expect(panel.getByText(/available only to accounts appointed by an administrator/i)).toBeVisible();
+  await expect(panel.getByLabel('Choose code')).toHaveCount(0);
 });
 
 test('signup pages visibly preserve creator promo code attribution', async ({ page }) => {

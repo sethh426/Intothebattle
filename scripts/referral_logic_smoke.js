@@ -5,6 +5,7 @@ import {
   buildReferralChatMessage,
   buildReferralShareUrl,
   canResetReferralCode,
+  claimOrResetReferralCode,
   normalizeReferralCode,
   qualifyReferralForUser,
   recordReferralAttribution,
@@ -43,15 +44,29 @@ function createReferralMemoryDb() {
     rewards: [],
     recurringRewards: [],
     subscriptions: [],
-    codes: [{ id: 1, user_id: 101, code: 'NEON_777' }],
+    users: [{ id: 101, is_active: 1, banned_at: null }],
+    memberships: [{ id: 1, user_id: 101, status: 'active', appointed_at: '2026-07-01 00:00:00' }],
+    codes: [{ id: 1, user_id: 101, code: 'NEON_777', is_active: 1 }],
   };
   return {
     state,
     prepare(sql) {
-      if (/SELECT \* FROM streamer_referral_codes WHERE UPPER\(code\)/i.test(sql)) {
+      if (/FROM streamer_referral_codes src[\s\S]*WHERE UPPER\(src\.code\)/i.test(sql)) {
         return {
           get(code) {
-            return state.codes.find(row => row.code.toUpperCase() === String(code || '').toUpperCase()) || null;
+            return state.codes.find(row => {
+              const member = state.memberships.find(item => item.user_id === row.user_id && item.status === 'active');
+              const user = state.users.find(item => item.id === row.user_id && item.is_active && !item.banned_at);
+              return row.is_active && member && user && row.code.toUpperCase() === String(code || '').toUpperCase();
+            }) || null;
+          },
+        };
+      }
+      if (/FROM council_memberships cm[\s\S]*JOIN users u/i.test(sql)) {
+        return {
+          get(userId) {
+            const user = state.users.find(row => Number(row.id) === Number(userId) && row.is_active && !row.banned_at);
+            return user ? state.memberships.find(row => Number(row.user_id) === Number(userId) && row.status === 'active') || null : null;
           },
         };
       }
@@ -202,6 +217,10 @@ function createReferralMemoryDb() {
 }
 
 const memoryDb = createReferralMemoryDb();
+assert.throws(
+  () => claimOrResetReferralCode(memoryDb, { id: 303 }, 'REGULAR_303'),
+  error => error?.statusCode === 403 && error?.code === 'council_appointment_required'
+);
 const click = recordReferralClick(memoryDb, {
   referralCode: 'neon_777',
   anonymousId: 'anon-1',
@@ -249,5 +268,9 @@ const duplicateMonth = qualifyReferralForUser(memoryDb, 202, { now: new Date('20
 assert.equal(duplicateMonth.qualified, true);
 assert.equal(duplicateMonth.monthlyRewardCreated, false);
 assert.equal(memoryDb.state.recurringRewards.length, 1);
+
+memoryDb.state.codes[0].is_active = 0;
+const disabledClick = recordReferralClick(memoryDb, { referralCode: 'NEON_777' });
+assert.deepEqual(disabledClick, { recorded: false, reason: 'code_not_found' });
 
 console.log('Referral logic smoke checks passed');

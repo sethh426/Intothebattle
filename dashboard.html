@@ -1747,9 +1747,10 @@ function renderCreatorReferral(referral = {}) {
   if (!body) return;
   const hasCode = Boolean(referral.hasCode && referral.code);
   const accountRequired = Boolean(referral.accountRequired);
+  const councilEligible = Boolean(referral.councilEligible || referral.membership?.eligible);
   if (badge) {
-    badge.textContent = accountRequired ? 'Account needed' : hasCode ? (referral.program?.currentRank?.name || 'Aspirant') : 'Create code';
-    badge.className = `referral-share-badge ${hasCode ? 'ready' : 'warn'}`;
+    badge.textContent = accountRequired ? 'Account needed' : councilEligible ? (hasCode ? (referral.program?.currentRank?.name || 'Aspirant') : 'Create code') : 'Regular account';
+    badge.className = `referral-share-badge ${councilEligible && hasCode ? 'ready' : 'warn'}`;
   }
   const suggestedCode = String(referral.suggestedCode || '').trim();
   if (accountRequired) {
@@ -1760,6 +1761,22 @@ function renderCreatorReferral(referral = {}) {
         <a class="btn btn-primary" href="/signup">Create account</a>
         <a class="btn btn-secondary" href="/login?next=/dashboard">Log in</a>
       </div>
+    `;
+    return;
+  }
+  if (!councilEligible) {
+    const stats = referral.stats || {};
+    const hasHistory = Number(stats.pendingAmountCents || 0) + Number(stats.approvedAmountCents || 0) + Number(stats.paidAmountCents || 0) > 0;
+    body.innerHTML = `
+      <div class="referral-rank-card">
+        <div class="referral-rank-name">Regular account</div>
+        <div class="referral-rank-copy">Council membership and the $3 recurring referral reward are available only to accounts appointed by an administrator.</div>
+      </div>
+      ${hasHistory ? `<div class="referral-stats" aria-label="Historical Council rewards">
+        <div class="referral-stat"><span>Pending</span><strong>${escapeHtml(formatReferralMoney(stats.pendingAmountCents || 0))}</strong></div>
+        <div class="referral-stat"><span>Approved</span><strong>${escapeHtml(formatReferralMoney(stats.approvedAmountCents || 0))}</strong></div>
+        <div class="referral-stat"><span>Paid</span><strong>${escapeHtml(formatReferralMoney(stats.paidAmountCents || 0))}</strong></div>
+      </div>${renderReferralRecent(referral)}` : '<p class="muted">Your account keeps all standard IntoTheBattle access. Council referral links and earnings are not enabled.</p>'}
     `;
     return;
   }

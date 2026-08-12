@@ -600,8 +600,31 @@ async function initDb() {
     await safeExec('ALTER TABLE streamer_referral_codes ADD COLUMN reset_available_at TIMESTAMP');
     await safeExec('ALTER TABLE streamer_referral_codes ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP');
     await safeExec('ALTER TABLE streamer_referral_codes ADD COLUMN free_forever_notified_at TIMESTAMP');
+    await safeExec('ALTER TABLE streamer_referral_codes ADD COLUMN is_active INTEGER DEFAULT 0');
+    await safeExec('ALTER TABLE streamer_referral_codes ADD COLUMN activated_at TIMESTAMP');
+    await safeExec('ALTER TABLE streamer_referral_codes ADD COLUMN disabled_at TIMESTAMP');
+    await safeExec('ALTER TABLE streamer_referral_codes ADD COLUMN disabled_reason TEXT');
     await safeExec('CREATE UNIQUE INDEX IF NOT EXISTS streamer_referral_codes_user_unique ON streamer_referral_codes(user_id)');
     await safeExec('CREATE UNIQUE INDEX IF NOT EXISTS streamer_referral_codes_code_upper_idx ON streamer_referral_codes(UPPER(code))');
+
+    await safeExec(`
+      CREATE TABLE IF NOT EXISTS council_memberships (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',
+        appointed_by TEXT DEFAULT 'shared_admin',
+        appointment_note TEXT,
+        appointed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        removed_by TEXT,
+        removal_reason TEXT,
+        removed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id)
+      )
+    `);
+    await safeExec("CREATE UNIQUE INDEX IF NOT EXISTS council_memberships_active_user_unique ON council_memberships(user_id) WHERE status = 'active'");
+    await safeExec('CREATE INDEX IF NOT EXISTS council_memberships_user_history_idx ON council_memberships(user_id, appointed_at)');
 
     await safeExec(`
       CREATE TABLE IF NOT EXISTS referral_clicks (
