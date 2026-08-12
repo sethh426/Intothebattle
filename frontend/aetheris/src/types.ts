@@ -169,6 +169,8 @@ export interface CreatorWarStatus {
 // 'live' -- real /aetheris-world socket namespace (production home.html).
 export type DataMode = 'mock' | 'live'
 
+export type WorldConnectionStatus = 'preview' | 'connecting' | 'connected' | 'reconnecting' | 'offline'
+
 export type WorldFraming = 'hero' | 'wide'
 
 // Weather is atmospheric/regional, not viewer-driven -- calm is the "nothing happening"

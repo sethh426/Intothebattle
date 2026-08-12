@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { KINGDOM, mulberry32 } from '../config'
 import { createWorldSocketClient } from './worldSocketClient'
-import type { AetherisWorldState, DataMode, KingdomState, Territory, ViewerTier } from '../types'
+import type { AetherisWorldState, DataMode, KingdomState, Territory, ViewerTier, WorldConnectionStatus } from '../types'
 
 function pickTier(rng: () => number): ViewerTier {
   const r = rng()
@@ -92,12 +92,13 @@ export function useKingdomState(
   territories: Territory[],
   seed: number,
   dataMode: DataMode,
-): { kingdomState: Record<string, KingdomState>; worldState: AetherisWorldState } {
+): { kingdomState: Record<string, KingdomState>; worldState: AetherisWorldState; connectionStatus: WorldConnectionStatus } {
   const rngRef = useRef(mulberry32(seed))
   const [state, setState] = useState<Record<string, KingdomState>>(() =>
     dataMode === 'mock' ? buildInitialMockState(territories, rngRef.current) : {},
   )
   const [worldState, setWorldState] = useState<AetherisWorldState>(() => dataMode === 'mock' ? buildMockWorldState(territories) : EMPTY_WORLD_STATE)
+  const [connectionStatus, setConnectionStatus] = useState<WorldConnectionStatus>(dataMode === 'mock' ? 'preview' : 'connecting')
 
   useEffect(() => {
     if (dataMode !== 'mock') return
@@ -153,13 +154,15 @@ export function useKingdomState(
         shieldUntil: claim.shieldUntil,
       } satisfies KingdomState])))
     })
+    const unsubscribeStatus = client.onConnectionStatus(setConnectionStatus)
     client.connect()
     return () => {
       unsubscribe()
       unsubscribeWorld()
+      unsubscribeStatus()
       client.disconnect()
     }
   }, [dataMode])
 
-  return { kingdomState: state, worldState }
+  return { kingdomState: state, worldState, connectionStatus }
 }

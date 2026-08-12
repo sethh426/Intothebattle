@@ -1,5 +1,5 @@
 import { io, type Socket } from 'socket.io-client'
-import type { AetherisWorldState, KingdomState } from '../types'
+import type { AetherisWorldState, KingdomState, WorldConnectionStatus } from '../types'
 
 // Real client for the `/aetheris-world` Socket.IO namespace. The server sends one
 // full `kingdomStateSnapshot` on connect, then periodic
@@ -8,17 +8,20 @@ import type { AetherisWorldState, KingdomState } from '../types'
 
 export type KingdomStateListener = (territoryId: string, state: KingdomState) => void
 export type WorldStateListener = (state: AetherisWorldState) => void
+export type ConnectionStatusListener = (status: WorldConnectionStatus) => void
 
 export interface WorldSocketClient {
   connect(): void
   disconnect(): void
   onKingdomState(listener: KingdomStateListener): () => void
   onWorldState(listener: WorldStateListener): () => void
+  onConnectionStatus(listener: ConnectionStatusListener): () => void
 }
 
 export function createWorldSocketClient(): WorldSocketClient {
   const listeners = new Set<KingdomStateListener>()
   const worldListeners = new Set<WorldStateListener>()
+  const statusListeners = new Set<ConnectionStatusListener>()
   let socket: Socket | null = null
 
   function emitAll(payload: Record<string, KingdomState>): void {
@@ -47,10 +50,20 @@ export function createWorldSocketClient(): WorldSocketClient {
     emitAll(kingdomStates)
   }
 
+  function emitStatus(status: WorldConnectionStatus): void {
+    statusListeners.forEach((listener) => listener(status))
+  }
+
   return {
     connect() {
       if (socket) return
       socket = io('/aetheris-world', { transports: ['websocket', 'polling'] })
+      emitStatus('connecting')
+      socket.on('connect', () => emitStatus('connected'))
+      socket.on('disconnect', (reason) => emitStatus(reason === 'io client disconnect' ? 'offline' : 'reconnecting'))
+      socket.io.on('reconnect_attempt', () => emitStatus('reconnecting'))
+      socket.io.on('reconnect_failed', () => emitStatus('offline'))
+      socket.on('connect_error', () => emitStatus('reconnecting'))
       socket.on('worldStateSnapshot', emitWorld)
       socket.on('worldStateUpdate', emitWorld)
       socket.on('kingdomStateSnapshot', emitAll)
@@ -59,6 +72,7 @@ export function createWorldSocketClient(): WorldSocketClient {
     disconnect() {
       socket?.disconnect()
       socket = null
+      emitStatus('offline')
     },
     onKingdomState(listener: KingdomStateListener) {
       listeners.add(listener)
@@ -67,6 +81,10 @@ export function createWorldSocketClient(): WorldSocketClient {
     onWorldState(listener: WorldStateListener) {
       worldListeners.add(listener)
       return () => worldListeners.delete(listener)
+    },
+    onConnectionStatus(listener: ConnectionStatusListener) {
+      statusListeners.add(listener)
+      return () => statusListeners.delete(listener)
     },
   }
 }

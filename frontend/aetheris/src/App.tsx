@@ -9,6 +9,7 @@ import { useCreatorWar } from './hooks/useCreatorWar'
 import Scene from './scene/Scene'
 import TerritoryDetailPanel from './ui/TerritoryDetailPanel'
 import WarRoom from './ui/WarRoom'
+import WorldStatus from './ui/WorldStatus'
 import type { DataMode, WorldFraming } from './types'
 
 interface AppProps {
@@ -24,7 +25,7 @@ export default function App({ dataMode, framing, warRoom }: AppProps) {
   const [isVisible, setIsVisible] = useState(true)
   const [tabVisible, setTabVisible] = useState(() => document.visibilityState === 'visible')
   const territories = useMemo(() => generateTerritories(BIOMES, WORLD_SEED), [])
-  const { kingdomState, worldState } = useKingdomState(territories, WORLD_SEED + 1, dataMode)
+  const { kingdomState, worldState, connectionStatus } = useKingdomState(territories, WORLD_SEED + 1, dataMode)
   const creatorWar = useCreatorWar(warRoom && dataMode === 'live')
   const [selectedTerritoryId, setSelectedTerritoryId] = useState<string | null>(null)
 
@@ -109,6 +110,13 @@ export default function App({ dataMode, framing, warRoom }: AppProps) {
           onTerritorySelect={setSelectedTerritoryId}
         />
       </Canvas>
+      <WorldStatus
+        status={connectionStatus}
+        worldState={worldState}
+        territories={territories}
+        selectedTerritoryId={selectedTerritoryId}
+        onSelectTerritory={setSelectedTerritoryId}
+      />
       {warRoom && (
         <WarRoom
           territories={territories}
