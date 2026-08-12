@@ -56,7 +56,7 @@ function randomCandidate(latBand: [number, number], rng: () => number): LatLon {
 
 function formationCandidate(latBand: [number, number], rng: () => number, anchors: LatLon[], index: number): LatLon {
   const anchor = anchors[index % anchors.length]
-  const ring = Math.floor(index / anchors.length) + 1
+  const ring = Math.min(3, Math.floor(index / anchors.length) + 1)
   const theta = rng() * Math.PI * 2 + ring * 0.74 + index * 0.31
   const distanceDegrees = 2.8 + ring * 2.3 + rng() * 4.8
   const chainBias = Math.sin(index * 1.17) * 2.6

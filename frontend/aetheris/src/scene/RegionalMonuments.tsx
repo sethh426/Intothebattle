@@ -4,7 +4,7 @@ import * as THREE from 'three'
 import { BIOME_STRUCTURE_KITS, REGIONAL_PACK_URL, selectRegionalTerritories } from '../data/landmarkCatalog'
 import { getBiomeById } from '../data/biomeData'
 import { PLANET } from '../config'
-import { latLonToVector3 } from './geo'
+import { latLonToVector3, offsetLatLon } from './geo'
 import { createStructureMaterial, mergeStructureNodeGeometry } from './structureModelUtils'
 import { recordStructureAsset } from './structureDiagnostics'
 import type { PerfTier, Territory } from '../types'
@@ -45,9 +45,8 @@ export default function RegionalMonuments({
         if (!source || !territory) {
           throw new Error(`Regional structure contract is missing ${nodeName}.`)
         }
-        const offsetDegrees = THREE.MathUtils.radToDeg(territory.angularRadius) * (index === 1 ? 1.6 : -1.5)
-        const lat = territory.lat + (index - 1) * 0.7
-        const lon = territory.lon + offsetDegrees
+        const offsetDegrees = THREE.MathUtils.radToDeg(territory.angularRadius) * (index === 1 ? 0.62 : -0.58)
+        const { lat, lon } = offsetLatLon(territory.lat, territory.lon, (index - 1) * 0.32, offsetDegrees)
         const position = latLonToVector3(lat, lon, PLANET.radius + 0.014)
         result.push({
           id: `${kit.biomeId}:${index}`,

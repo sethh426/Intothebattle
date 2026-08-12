@@ -3,7 +3,7 @@ import { Instance, Instances, useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import { AMBIENT_PACK_URL, BIOME_STRUCTURE_KITS } from '../data/landmarkCatalog'
 import { PLANET } from '../config'
-import { latLonToVector3 } from './geo'
+import { latLonToVector3, offsetLatLon } from './geo'
 import { createStructureMaterial, mergeStructureNodeGeometry } from './structureModelUtils'
 import { recordStructureAsset } from './structureDiagnostics'
 import type { PerfTier, Territory } from '../types'
@@ -45,9 +45,14 @@ export default function AmbientStructureClusters({
         const territory = biomeTerritories[index % biomeTerritories.length]
         if (!territory) throw new Error(`No ambient placement territory exists for ${kit.biomeId}.`)
         const direction = index % 2 === 0 ? 1 : -1
-        const offset = THREE.MathUtils.radToDeg(territory.angularRadius) * (1.8 + (index % 3) * 0.4)
-        const lat = territory.lat + direction * (0.45 + (index % 3) * 0.32)
-        const lon = territory.lon + direction * offset
+        const offset = THREE.MathUtils.radToDeg(territory.angularRadius) * (0.72 + (index % 3) * 0.16)
+        const local = offsetLatLon(
+          territory.lat,
+          territory.lon,
+          direction * (0.22 + (index % 3) * 0.14),
+          direction * offset,
+        )
+        const { lat, lon } = local
         const position = latLonToVector3(lat, lon, PLANET.radius + 0.012)
         const quaternion = new THREE.Quaternion().setFromUnitVectors(LOCAL_UP, position.clone().normalize())
         quaternion.multiply(new THREE.Quaternion().setFromAxisAngle(LOCAL_UP, territory.rotation + biomeIndex * 0.37 + index * 0.91))

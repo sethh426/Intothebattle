@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "biomes": {
+    "frozen-crown": { "capital": [80, -145], "settlements": [[80, -145], [77, -124]] },
+    "thunder-highlands": { "capital": [66, -108], "settlements": [[66, -108]] },
+    "whispering-desert": { "capital": [50, -74], "settlements": [[50, -74], [54, -52]] },
+    "ancient-jungle": { "capital": [32, -132], "settlements": [[32, -132], [28, -108]] },
+    "emerald-wilds": { "capital": [10, -88], "settlements": [[10, -88], [14, -61], [5, -42]] },
+    "liquid-blu-metal-sea": { "capital": [-9, -20], "settlements": [[-9, -20], [-11, 5]] },
+    "molten-wastes": { "capital": [-22, 38], "settlements": [[-22, 38]] },
+    "toxic-expanse": { "capital": [-34, 92], "settlements": [[-34, 92], [-31, 116]] },
+    "crystal-basin": { "capital": [-47, 150], "settlements": [[-47, 150], [-49, 174]] },
+    "void-scar": { "capital": [-68, -8], "settlements": [[-68, -8], [-72, 27]] }
+  }
+}

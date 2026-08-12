@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const outputPath = path.join(__dirname, '..', 'frontend', 'aetheris', 'src', 'data', 'territoryCatalog.json');
+const geographyPath = path.join(__dirname, '..', 'frontend', 'aetheris', 'src', 'data', 'geographyLayout.json');
+const geography = JSON.parse(fs.readFileSync(geographyPath, 'utf8'));
 const WORLD_SEED = 918273645;
 const MIN_ANGULAR_SEPARATION = 0.09;
 const DEG2RAD = Math.PI / 180;
@@ -79,7 +81,7 @@ function randomCandidate(latBand, rng) {
 
 function formationCandidate(latBand, rng, anchors, index) {
   const anchor = anchors[index % anchors.length];
-  const ring = Math.floor(index / anchors.length) + 1;
+  const ring = Math.min(3, Math.floor(index / anchors.length) + 1);
   const theta = rng() * Math.PI * 2 + ring * 0.74 + index * 0.31;
   const distanceDegrees = 2.8 + ring * 2.3 + rng() * 4.8;
   const chainBias = Math.sin(index * 1.17) * 2.6;
@@ -118,9 +120,13 @@ function placeAnchors(latBand, anchorCount, rng, avoidPoints, minSeparation) {
   return anchors;
 }
 
-function placeInBand(latBand, count, rng, avoidPoints = []) {
+function placeInBand(latBand, count, rng, avoidPoints = [], authoredAnchors = []) {
   const anchorCount = Math.min(count, count >= 14 ? 3 : count >= 8 ? 2 : 1);
-  const anchors = placeAnchors(latBand, anchorCount, rng, avoidPoints, MIN_ANGULAR_SEPARATION);
+  const anchors = authoredAnchors.slice(0, anchorCount).map(([lat, lon]) => ({
+    lat: clampLatInBand(latBand, lat),
+    lon: wrapLon(lon),
+  }));
+  if (!anchors.length) anchors.push(...placeAnchors(latBand, anchorCount, rng, avoidPoints, MIN_ANGULAR_SEPARATION));
   const placed = [];
   for (let index = 0; index < count; index += 1) {
     let best = null;
@@ -168,7 +174,9 @@ function generateTerritories() {
   const territories = [];
   const placedByBiome = [];
   for (const biome of BIOMES) {
-    const points = placeInBand(biome.latBand, biome.landCount, rng, placedByBiome.flat());
+    const layout = geography.biomes[biome.id];
+    if (!layout?.settlements?.length) throw new Error(`Missing geography anchors for ${biome.id}`);
+    const points = placeInBand(biome.latBand, biome.landCount, rng, placedByBiome.flat(), layout.settlements);
     placedByBiome.push(points);
     points.forEach((point, index) => {
       const sizeClass = pickWeighted(rng);
@@ -205,33 +213,55 @@ function addAdjacency(territories) {
     return true;
   };
 
-  const unvisited = new Set(territories.map((_, index) => index));
-  let current = 0;
-  unvisited.delete(current);
-  while (unvisited.size) {
-    const next = [...unvisited].sort((a, b) => angularDistance(territories[current], territories[a]) - angularDistance(territories[current], territories[b]) || a - b)[0];
-    addEdge(current, next);
-    unvisited.delete(next);
-    current = next;
-  }
+  // Establish local roads first. This prevents the old traversal algorithm from
+  // leaving long spokes between whichever regions happened to be visited next.
+  territories.forEach((territory, source) => {
+    territories
+      .map((candidate, index) => ({ index, distance: angularDistance(territory, candidate) }))
+      .filter(entry => entry.index !== source)
+      .sort((a, b) => a.distance - b.distance || a.index - b.index)
+      .some(({ index }) => {
+        addEdge(source, index);
+        return neighbors[source].size >= 3;
+      });
+  });
 
-  let guard = 0;
-  while (neighbors.some(set => set.size < 3) && guard < 2000) {
-    guard += 1;
-    const source = neighbors
-      .map((set, index) => ({ index, degree: set.size }))
-      .filter(entry => entry.degree < 3)
-      .sort((a, b) => a.degree - b.degree || a.index - b.index)[0]?.index;
-    if (source == null) break;
-    const candidate = territories
-      .map((territory, index) => ({
-        index,
-        degree: neighbors[index].size,
-        distance: angularDistance(territories[source], territory),
-      }))
-      .filter(entry => entry.index !== source && entry.degree < 6 && !edgeExists(source, entry.index))
-      .sort((a, b) => (a.distance + a.degree * 0.025) - (b.distance + b.degree * 0.025) || a.index - b.index)[0];
-    if (!candidate || !addEdge(source, candidate.index)) throw new Error(`Unable to satisfy adjacency for ${territories[source].id}`);
+  const components = () => {
+    const unseen = new Set(territories.map((_, index) => index));
+    const result = [];
+    while (unseen.size) {
+      const seed = unseen.values().next().value;
+      const component = [];
+      const queue = [seed];
+      unseen.delete(seed);
+      while (queue.length) {
+        const current = queue.shift();
+        component.push(current);
+        neighbors[current].forEach(next => {
+          if (!unseen.has(next)) return;
+          unseen.delete(next);
+          queue.push(next);
+        });
+      }
+      result.push(component);
+    }
+    return result;
+  };
+
+  let groups = components();
+  while (groups.length > 1) {
+    let bridge = null;
+    for (let leftGroup = 0; leftGroup < groups.length; leftGroup += 1) {
+      for (let rightGroup = leftGroup + 1; rightGroup < groups.length; rightGroup += 1) {
+        for (const left of groups[leftGroup]) for (const right of groups[rightGroup]) {
+          if (neighbors[left].size >= 6 || neighbors[right].size >= 6) continue;
+          const distance = angularDistance(territories[left], territories[right]);
+          if (!bridge || distance < bridge.distance) bridge = { left, right, distance };
+        }
+      }
+    }
+    if (!bridge || !addEdge(bridge.left, bridge.right)) throw new Error('Unable to connect Aetheris road graph');
+    groups = components();
   }
 
   territories.forEach((territory, index) => {

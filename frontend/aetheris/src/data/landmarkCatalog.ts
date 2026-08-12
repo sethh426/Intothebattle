@@ -5,6 +5,7 @@ import type {
   StructureStage,
   Territory,
 } from '../types'
+import geography from './geographyLayout.json'
 
 const MODEL_URLS = import.meta.glob<string>(
   [
@@ -23,13 +24,12 @@ function modelUrl(relativePath: string): string {
 
 function heroSpec(
   biomeId: string,
-  lat: number,
-  lon: number,
   scale: number,
   yaw: number,
   animationProfile: LandmarkAssetSpec['animationProfile'],
   materialProfile: LandmarkAssetSpec['materialProfile'],
 ): LandmarkAssetSpec {
+  const [lat, lon] = geography.biomes[biomeId as keyof typeof geography.biomes].capital
   return {
     biomeId,
     lodUrls: [
@@ -47,16 +47,16 @@ function heroSpec(
 }
 
 export const LANDMARK_CATALOG: readonly LandmarkAssetSpec[] = [
-  heroSpec('frozen-crown', 80, -145, 0.21, 0.24, 'beacon', 'ice'),
-  heroSpec('thunder-highlands', 66, -108, 0.21, -0.4, 'storm', 'storm'),
-  heroSpec('whispering-desert', 50, -74, 0.22, 0.18, 'sand', 'desert'),
-  heroSpec('ancient-jungle', 32, -132, 0.21, -0.3, 'foliage', 'jungle'),
-  heroSpec('emerald-wilds', 10, -88, 0.21, 0.42, 'foliage', 'wilds'),
-  heroSpec('liquid-blu-metal-sea', -9, -20, 0.22, -0.16, 'magnetic', 'metal'),
-  heroSpec('molten-wastes', -22, 38, 0.21, 0.36, 'molten', 'molten'),
-  heroSpec('toxic-expanse', -34, 92, 0.21, -0.22, 'toxic', 'toxic'),
-  heroSpec('crystal-basin', -47, 150, 0.21, 0.28, 'crystal', 'crystal'),
-  heroSpec('void-scar', -68, -8, 0.21, -0.34, 'void', 'void'),
+  heroSpec('frozen-crown', 0.21, 0.24, 'beacon', 'ice'),
+  heroSpec('thunder-highlands', 0.21, -0.4, 'storm', 'storm'),
+  heroSpec('whispering-desert', 0.22, 0.18, 'sand', 'desert'),
+  heroSpec('ancient-jungle', 0.21, -0.3, 'foliage', 'jungle'),
+  heroSpec('emerald-wilds', 0.21, 0.42, 'foliage', 'wilds'),
+  heroSpec('liquid-blu-metal-sea', 0.22, -0.16, 'magnetic', 'metal'),
+  heroSpec('molten-wastes', 0.21, 0.36, 'molten', 'molten'),
+  heroSpec('toxic-expanse', 0.21, -0.22, 'toxic', 'toxic'),
+  heroSpec('crystal-basin', 0.21, 0.28, 'crystal', 'crystal'),
+  heroSpec('void-scar', 0.21, -0.34, 'void', 'void'),
 ]
 
 function nodeSlug(biomeId: string): string {
