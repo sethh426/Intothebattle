@@ -308,13 +308,22 @@
     .volume-value { min-height:38px; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.11); border-radius:12px; background:rgba(255,255,255,.055); color:#fff8e6; font-weight:950; }
     .sponsor-layout { grid-template-columns:minmax(360px,.9fr) minmax(520px,1.1fr); align-items:start; }
     .sponsor-creative,.sponsor-controls { min-width:0; display:grid; gap:14px; }
-    .sponsor-fields,.sponsor-playback,.sponsor-library-panel,.sponsor-selected {
+    .sponsor-fields,.sponsor-playback,.sponsor-library-panel,.sponsor-selected,.sponsor-preview-state {
       min-width:0; border:1px solid rgba(255,255,255,.08); border-radius:22px;
       background:rgba(0,0,0,.18); padding:18px;
     }
     .sponsor-selected { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:14px; align-items:center; }
+    .sponsor-zone-label { color:var(--cyan); font-size:11px; font-weight:950; text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px; }
     .sponsor-selected-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:900; color:#fff8e6; }
     .sponsor-selected-meta { color:var(--muted); font-size:12px; font-weight:800; margin-top:4px; }
+    .sponsor-selected-settings { margin-top:8px; color:#e7f6ff; font-size:12px; font-weight:900; overflow-wrap:anywhere; }
+    .sponsor-preview-state { display:grid; gap:10px; border-color:rgba(85,231,255,.16); background:linear-gradient(135deg,rgba(85,231,255,.075),rgba(0,0,0,.14)); }
+    .sponsor-preview-state.changed { border-color:rgba(246,201,91,.38); background:linear-gradient(135deg,rgba(246,201,91,.12),rgba(0,0,0,.16)); }
+    .sponsor-preview-state.live { border-color:rgba(119,240,161,.34); background:linear-gradient(135deg,rgba(119,240,161,.1),rgba(0,0,0,.16)); }
+    .sponsor-preview-title { display:flex; align-items:center; justify-content:space-between; gap:12px; color:#fff8e6; font-size:13px; font-weight:950; text-transform:uppercase; }
+    .sponsor-preview-copy { color:var(--muted); font-size:12px; font-weight:800; line-height:1.35; }
+    .sponsor-preview-actions { display:flex; flex-wrap:wrap; gap:10px; }
+    .sponsor-preview-actions .btn { min-height:40px; }
     .sponsor-library-panel .audio-files { max-height:312px; overflow:auto; padding-right:4px; }
     .sponsor-row { align-items:flex-start; gap:12px; }
     .sponsor-row.active { border-color:rgba(246,201,91,.55); background:rgba(246,201,91,.08); }

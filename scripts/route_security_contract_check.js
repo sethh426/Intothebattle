@@ -68,6 +68,15 @@ assert.match(server, /const TIKTOK_RECENT_PLAYER_RESTORE_ENABLED = process\.env\
 assert.match(server, /const TIKTOK_AUTO_RESUME_SAVED_STREAM = process\.env\.TIKTOK_AUTO_RESUME_SAVED_STREAM == null\s*\?\s*false/, 'saved TikTok streams must not auto-resume by default');
 assert.match(server, /restoreRecentPlayers:\s*false/, 'TikTok reconnects must not restore old players by default');
 assert.doesNotMatch(server, /restoreRecentPlayers:\s*true/, 'TikTok reconnects must not opt into stale player restore');
+assert.match(server, /ROOM_PLAYER_HISTORY_LOAD_LIMIT/, 'saved player history loaded into runtime must be capped');
+assert.match(server, /MAX_LIVE_PLAYERS_PER_ROOM/, 'rooms must enforce a live player admission cap');
+assert.match(server, /SOCKET_CONNECTION_RATE_LIMIT_PER_MINUTE/, 'Socket.IO handshakes must be rate limited');
+assert.match(server, /SECURITY_BLOCKED_IPS/, 'production must support an emergency blocked IP list');
+assert.match(server, /function hydrateRoomRuntime/, 'room runtime loading must be centralized and idempotent');
+assert.doesNotMatch(server, /req\.room = getOrCreateRoom\(req\.roomId\);\s*loadRoomPlayerStats\(req\.room\)/, 'authenticated API requests must not reload saved players on every request');
+assert.doesNotMatch(overlay, /options\.query\s*=\s*\{[^}]*overlay_token/, 'main overlay socket must not put signed overlay tokens in query strings');
+assert.doesNotMatch(overlayMobile, /options\.query\s*=\s*\{[^}]*overlay_token/, 'mobile overlay socket must not put signed overlay tokens in query strings');
+assert.doesNotMatch(socketOverlayHandler, /socketOptions\.query\s*=\s*\{[^}]*overlay_token/, 'shared overlay socket handler must not put signed overlay tokens in query strings');
 assert.match(server, /closeSupersededLiveSessions\(room\.roomId, session\.sessionId/, 'new live sessions must close older active room sessions');
 assert.match(server, /TIKTOK_LIVE_ENDED_AUTO_RESUME_SUPPRESSION_MS/, 'LIVE-ended streams must suppress stale auto-resume');
 assert.match(server, /function isTikTokLiveEndedControlEvent/, 'TikTok control events must detect LIVE-ended actions');

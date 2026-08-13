@@ -664,6 +664,8 @@ const TIKTOK_LIVE_MODE = ['direct', 'relayed'].includes(String(process.env.TIKTO
   ? String(process.env.TIKTOK_LIVE_MODE).toLowerCase()
   : 'relayed';
 const TIKTOK_MAX_RECONNECT_ATTEMPTS = Math.max(0, Number(process.env.TIKTOK_MAX_RECONNECT_ATTEMPTS || 3));
+const TIKTOK_INITIAL_CONNECT_ATTEMPTS = Math.max(1, Number(process.env.TIKTOK_INITIAL_CONNECT_ATTEMPTS || 4));
+const TIKTOK_INITIAL_RETRY_DELAY_MS = Math.max(500, Number(process.env.TIKTOK_INITIAL_RETRY_DELAY_MS || 1500));
 const TIKTOK_HEARTBEAT_MS = Math.max(5000, Number(process.env.TIKTOK_HEARTBEAT_MS || 10000));
 const TIKTOK_LIVE_REPAIR_ENABLED = process.env.TIKTOK_LIVE_REPAIR_ENABLED == null
   ? true
@@ -8486,9 +8488,7 @@ function getSessionRoom(req) {
   }
 
   const room = getOrCreateRoom(roomId);
-  loadRoomPlayerStats(room);
-  loadRoomBackground(room);
-  loadRoomAudioConfig(room);
+  hydrateRoomRuntime(room);
   return room;
 }
 
@@ -8705,6 +8705,14 @@ app.get(/^\/aetheris-app\/(.+)$/, (req, res, next) => {
     if (err) next(err);
   });
 });
+
+app.use('/aetheris-app', express.static(path.join(__dirname, 'frontend', 'aetheris', 'dist'), {
+  dotfiles: 'deny',
+  etag: true,
+  fallthrough: false,
+  index: false,
+  maxAge: process.env.NODE_ENV === 'production' ? '1h' : 0,
+}));
 
 app.use('/aetheris-app', express.static(path.join(__dirname, 'frontend', 'aetheris', 'dist'), {
   dotfiles: 'deny',
@@ -11113,6 +11121,7 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
       disconnectedAt: null,
       reason: '',
       error: '',
+      connectAttempt: Number(room.tiktokConnection?.connectAttempt) || 1,
     });
     console.log(`✅ Connected to @${room.streamerUsername || 'unknown'}'s LIVE stream for room ${room.roomId}\n`);
   });
@@ -11368,12 +11377,67 @@ function setupTikTokEvents(tiktokClient, room, connectionId) {
   });
 
   onTikTok('error', (err) => {
+    const currentStatus = String(room.tiktokConnection?.status || '');
+    const stillConnecting = currentStatus === 'connecting' || currentStatus === 'reconnecting';
     emitTikTokConnectionStatus(room, {
-      status: isTikTokClientConnected(room) ? 'connected' : 'error',
+      status: isTikTokClientConnected(room) ? 'connected' : (stillConnecting ? 'reconnecting' : 'error'),
       error: err?.message || String(err || 'TikTok connection error'),
     });
     console.error('⚠️  TikTok error:', err?.message || err);
   });
+}
+
+function tiktokInitialRetryDelay(attempt) {
+  return Math.min(TIKTOK_INITIAL_RETRY_DELAY_MS * (2 ** Math.max(0, attempt - 1)), 15000);
+}
+
+function startTikTokInitialConnection(room, tiktokClient, connection) {
+  const runAttempt = async () => {
+    if (!isActiveTikTokConnection(room, tiktokClient, connection.id, connection.sessionId)) return;
+    const attempt = (Number(room.tiktokConnection?.connectAttempt) || 0) + 1;
+    emitTikTokConnectionStatus(room, {
+      status: attempt === 1 ? 'connecting' : 'reconnecting',
+      connectAttempt: attempt,
+      error: '',
+      reason: attempt === 1 ? '' : 'initial_connect_retry',
+    });
+
+    try {
+      await tiktokClient.connect();
+    } catch (err) {
+      if (!isActiveTikTokConnection(room, tiktokClient, connection.id, connection.sessionId)) return;
+      const canRetry = !tiktokClient.intentionalClose && attempt < TIKTOK_INITIAL_CONNECT_ATTEMPTS;
+      const error = err?.message || String(err || 'Could not connect');
+      logger.warn({ roomId: room.roomId, username: connection.username, attempt, error }, 'TikTok initial connection attempt failed');
+
+      if (canRetry) {
+        const retryDelayMs = tiktokInitialRetryDelay(attempt);
+        emitTikTokConnectionStatus(room, {
+          status: 'reconnecting',
+          disconnectedAt: Date.now(),
+          error,
+          reason: 'initial_connect_retry',
+          retryDelayMs,
+        });
+        await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+        return runAttempt();
+      }
+
+      setRoomMatchPhase(room, MATCH_PHASES.IDLE, 'stream_connect_failed', { sessionId: connection.sessionId });
+      emitTikTokConnectionStatus(room, {
+        status: 'error',
+        disconnectedAt: Date.now(),
+        error,
+        reason: 'initial_connect_failed',
+        retryDelayMs: null,
+      });
+      room.tiktokClient = null;
+      if (client === tiktokClient) client = null;
+    }
+  };
+
+  room.tiktokConnectPromise = runAttempt();
+  return room.tiktokConnectPromise;
 }
 
 function safeDisconnectClient(room = getDefaultRoom(), reason = 'operator_disconnect') {
@@ -11457,20 +11521,7 @@ function connectToStreamer(username, room = getDefaultRoom(), options = {}) {
   } else {
     room.recentLiveRestoreAllowedUntil = 0;
   }
-  room.tiktokConnectPromise = tiktokClient.connect().catch(err => {
-    console.error('❌ Could not connect:', err?.message || err);
-    console.error(`   Make sure @${normalizedUsername} is currently LIVE on TikTok`);
-    if (isActiveTikTokConnection(room, tiktokClient, connection.id, connection.sessionId)) {
-      setRoomMatchPhase(room, MATCH_PHASES.IDLE, 'stream_connect_failed', { sessionId: connection.sessionId });
-      emitTikTokConnectionStatus(room, {
-        status: 'error',
-        disconnectedAt: Date.now(),
-        error: err?.message || String(err || 'Could not connect'),
-      });
-      room.tiktokClient = null;
-    }
-    if (client === tiktokClient) client = null;
-  });
+  startTikTokInitialConnection(room, tiktokClient, connection);
   return buildTikTokConnectionStatus(room);
 }
 

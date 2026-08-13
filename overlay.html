@@ -4241,24 +4241,23 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const stage = computeOverlayLayout();
     const frame = stage.frame;
     const playerZone = stage.zones.players;
-    const cardAspect = total >= 5 ? 2.42 : total === 4 ? 2.56 : total === 3 ? 2.72 : 2.88;
-    const requestedCardH = Math.min(
-      frame.h * (isPublicDemo ? 0.205 : 0.192),
-      playerZone.h * (isPublicDemo ? 0.9 : 0.86)
+    const requestedCardD = Math.min(
+      frame.h * (isPublicDemo ? 0.19 : 0.178),
+      playerZone.h * (isPublicDemo ? 0.93 : 0.89)
     ) * layoutZoom;
-    const requestedCardW = requestedCardH * cardAspect;
-    const baseGap = requestedCardW * (total >= 5 ? 0.022 : total === 4 ? 0.034 : total === 3 ? 0.06 : 0.1);
-    const minGap = stage.gap * (total >= 5 ? 0.8 : 1);
-    const maxGap = requestedCardW * (total >= 5 ? 0.07 : total === 4 ? 0.096 : total === 3 ? 0.15 : 0.23);
-    const gapScale = total >= 5 ? 0.055 : total === 4 ? 0.09 : 0.18;
+    const baseGap = requestedCardD * (total >= 5 ? 0.13 : total === 4 ? 0.16 : total === 3 ? 0.22 : 0.3);
+    const minGap = stage.gap * (total >= 5 ? 0.76 : 0.92);
+    const maxGap = requestedCardD * (total >= 5 ? 0.22 : total === 4 ? 0.28 : total === 3 ? 0.38 : 0.5);
+    const gapScale = total >= 5 ? 0.08 : total === 4 ? 0.12 : 0.2;
     const visualGap = clampNumber(baseGap + Math.max(0, layoutGap) * gapScale, minGap, maxGap);
     const availableW = Math.max(240, playerZone.w - stage.gap * 0.82);
     const minFinalGap = total > 1 ? stage.gap * (total >= 5 ? 0.82 : 0.9) : 0;
     const reservedGap = total > 1 ? clampNumber(visualGap, minFinalGap, maxGap) : 0;
-    const availableForCards = Math.max(120, availableW - reservedGap * Math.max(0, total - 1));
-    const fitScale = requestedCardW * total > availableForCards ? availableForCards / (requestedCardW * total) : 1;
-    const cardH = requestedCardH * fitScale;
-    const cardW = requestedCardW * fitScale;
+    const availableForCards = Math.max(48, availableW - reservedGap * Math.max(0, total - 1));
+    const fitScale = requestedCardD * total > availableForCards ? availableForCards / (requestedCardD * total) : 1;
+    const cardD = requestedCardD * fitScale;
+    const cardH = cardD;
+    const cardW = cardD;
     const remainingGap = total > 1 ? Math.max(minFinalGap, (availableW - cardW * total) / (total - 1)) : 0;
     const gap = total > 1 ? clampNumber(reservedGap, minFinalGap, remainingGap) : 0;
     const spacing = cardW + gap;
@@ -4272,43 +4271,32 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const stage = computeOverlayLayout();
     const playerZone = stage.zones.players;
     const { cardH, cardW } = getPlayerCardMetrics(total);
-    const maxPlateH = Math.max(1, playerZone.h - stage.gap * 0.42);
-    const minReadablePlateH = Math.min(maxPlateH, compactDemoCard ? 172 * ui : 180 * ui);
-    const requestedPlateH = Math.max(minReadablePlateH, cardH * 1.84);
-    const plateH = Math.min(requestedPlateH, maxPlateH);
+    const cardD = Math.min(cardW, cardH);
+    const maxPlateH = Math.max(1, playerZone.h - stage.gap * 0.32);
+    const plateH = Math.min(cardD, maxPlateH);
     const plateX = pos.x - cardW / 2;
     const plateY = pos.y - plateH / 2;
-    const radius = Math.max(14 * ui, plateH * 0.12);
-    const padX = clampNumber(cardW * 0.052, 10 * ui, 19 * ui);
-    const padY = clampNumber(plateH * 0.055, 8 * ui, 13 * ui);
-    const slotGap = Math.max(6 * ui, cardW * 0.018);
-    const contentRight = plateX + cardW - padX;
-    const nameH = clampNumber(plateH * 0.25, 40 * ui, 60 * ui);
-    const barH = clampNumber(plateH * 0.22, 34 * ui, 44 * ui);
-    const nameX = plateX + padX;
-    const nameY = plateY + padY;
-    const nameW = Math.max(1, cardW - padX * 2);
-    const bottomPad = Math.max(7 * ui, padY * 0.62);
-    const barY = plateY + plateH - bottomPad - barH;
-    const barW = clampNumber(cardW * 0.39, 76 * ui, 92 * ui);
-    const barX = contentRight - barW;
-    const midTopMin = nameY + nameH + slotGap;
-    const midBottomMax = barY - slotGap * 0.9;
-    const midSpace = Math.max(1, midBottomMax - midTopMin);
-    const badgeMax = Math.max(1, Math.min(midSpace, plateH * 0.36, 66 * ui));
-    const badgeMin = Math.min(badgeMax, 44 * ui);
-    const badgeH = clampNumber(Math.min(midSpace, plateH * 0.34), badgeMin, badgeMax);
-    const midTop = midTopMin + Math.max(0, (midSpace - badgeH) * 0.48);
-    const avatarVerticalRoom = Math.max(1, midBottomMax - midTopMin);
-    const avatarMax = Math.max(1, Math.min(avatarVerticalRoom * 0.49, cardW * 0.22, 46 * ui));
-    const avatarMin = Math.min(avatarMax, Math.max(28 * ui, avatarVerticalRoom * 0.42));
-    const avatarR = clampNumber(Math.min(avatarVerticalRoom * 0.47, cardW * 0.2), avatarMin, avatarMax);
-    const avatarX = plateX + padX + avatarR + Math.max(3 * ui, badgeH * 0.12);
-    const avatarY = midTop + badgeH / 2;
-    const statX = avatarX + avatarR + Math.max(7 * ui, slotGap);
-    const statAreaW = Math.max(1, contentRight - statX);
-    const statusW = Math.max(1, statAreaW);
-    const statusX = statX;
+    const radius = cardD / 2;
+    const padX = clampNumber(cardD * 0.08, 7 * ui, 16 * ui);
+    const padY = clampNumber(cardD * 0.07, 6 * ui, 14 * ui);
+    const slotGap = Math.max(4 * ui, cardD * 0.026);
+    const nameH = clampNumber(cardD * 0.18, 31 * ui, 42 * ui);
+    const nameW = Math.max(1, cardW * 0.78);
+    const nameX = plateX + (cardW - nameW) / 2;
+    const nameY = plateY + plateH * 0.72;
+    const barH = clampNumber(cardD * 0.2, 33 * ui, 40 * ui);
+    const barW = clampNumber(cardW * 0.41, 60 * ui, 80 * ui);
+    const barX = plateX + cardW * 0.11;
+    const barY = plateY + plateH * 0.07;
+    const badgeH = clampNumber(cardD * 0.18, 30 * ui, 38 * ui);
+    const statusW = clampNumber(cardW * 0.35, 52 * ui, 70 * ui);
+    const statusX = plateX + cardW - cardW * 0.11 - statusW;
+    const midTop = barY;
+    const avatarX = plateX + cardW / 2;
+    const avatarTopLimit = barY + barH + slotGap * 0.72;
+    const avatarBottomLimit = nameY - slotGap * 0.72;
+    const avatarY = (avatarTopLimit + avatarBottomLimit) / 2;
+    const avatarR = Math.max(1, Math.min(cardD * 0.205, Math.max(1, (avatarBottomLimit - avatarTopLimit) / 2)));
     const hpTextY = barY + barH / 2;
     const glowPad = 0;
     const slots = {
@@ -9875,7 +9863,597 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     return true;
   }
 
+  function playerCardHealthColor(state) {
+    if (state.isKO) return THEME.red;
+    if (state.healthState === 'critical') return THEME.red;
+    if (state.healthState === 'damaged') return THEME.gold;
+    return THEME.green;
+  }
+
+  function playerCardIconEmoji(player) {
+    const icon = normalizeCanvasText(player?.iconEmoji || '');
+    if (!icon) return '';
+    return splitCanvasGraphemes(icon).slice(0, 1).join('');
+  }
+
+  function drawAngledChipPath(x, y, w, h, cut = h * 0.34) {
+    const safeCut = Math.max(1, Math.min(cut, w * 0.22, h * 0.48));
+    ctx.beginPath();
+    ctx.moveTo(x + safeCut, y);
+    ctx.lineTo(x + w - safeCut * 0.7, y);
+    ctx.lineTo(x + w, y + h * 0.5);
+    ctx.lineTo(x + w - safeCut * 0.7, y + h);
+    ctx.lineTo(x + safeCut, y + h);
+    ctx.lineTo(x, y + h * 0.5);
+    ctx.closePath();
+  }
+
+  function drawCircularPlayerShell(cx, cy, r, state, accent, rank, ui) {
+    const reduced = prefersReducedMotion();
+    const hot = overlayHotModeActive();
+    const pulse = reduced ? 0.58 : state.pulse;
+    const dangerAlpha = state.isCritical ? 0.24 + pulse * 0.18 : 0;
+    ctx.save();
+
+    if (!hot) {
+      ctx.globalCompositeOperation = 'lighter';
+      const outerGlow = ctx.createRadialGradient(cx, cy, r * 0.22, cx, cy, r * 1.22);
+      outerGlow.addColorStop(0, colorWithAlpha(accent, state.isLeader ? 0.16 : 0.11));
+      outerGlow.addColorStop(0.5, colorWithAlpha(accent, state.isLeader ? 0.22 + pulse * 0.08 : 0.14));
+      outerGlow.addColorStop(0.82, colorWithAlpha(state.isCritical ? THEME.red : accent, state.isCritical ? 0.28 : 0.12));
+      outerGlow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = outerGlow;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 1.17, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.shadowColor = colorWithAlpha(state.isCritical ? THEME.red : accent, state.isCritical ? 0.72 : state.isLeader ? 0.58 : 0.42);
+    ctx.shadowBlur = hot ? Math.max(3, r * 0.05) : Math.max(10, r * (state.isCritical ? 0.28 : 0.19));
+    const body = ctx.createRadialGradient(cx - r * 0.34, cy - r * 0.38, 1, cx, cy, r);
+    body.addColorStop(0, state.isKO ? 'rgba(94,101,123,0.44)' : 'rgba(255,255,255,0.18)');
+    body.addColorStop(0.34, state.isKO ? 'rgba(28,31,43,0.98)' : 'rgba(17,27,43,0.99)');
+    body.addColorStop(0.72, state.isKO ? 'rgba(8,9,15,0.99)' : 'rgba(5,11,22,0.995)');
+    body.addColorStop(1, state.isKO ? 'rgba(2,3,8,0.998)' : colorWithAlpha(accent, 0.46));
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.94, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    const rim = ctx.createLinearGradient(cx - r, cy - r, cx + r, cy + r);
+    rim.addColorStop(0, 'rgba(255,255,255,0.72)');
+    rim.addColorStop(0.16, colorWithAlpha(accent, 0.98));
+    rim.addColorStop(0.48, state.isLeader ? THEME.goldBright : 'rgba(255,255,255,0.32)');
+    rim.addColorStop(0.78, colorWithAlpha(state.isCritical ? THEME.red : accent, 0.86));
+    rim.addColorStop(1, 'rgba(255,255,255,0.2)');
+    ctx.strokeStyle = rim;
+    ctx.lineWidth = Math.max(2.2, r * 0.052);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.94, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = `rgba(255,255,255,${state.isKO ? 0.09 : 0.16})`;
+    ctx.lineWidth = Math.max(0.8, r * 0.012);
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.03, cy - r * 0.04, r * 0.73, Math.PI * 1.07, Math.PI * 1.93);
+    ctx.stroke();
+
+    if (!hot) {
+      const topSheen = ctx.createRadialGradient(cx - r * 0.24, cy - r * 0.44, 0, cx - r * 0.18, cy - r * 0.28, r * 0.78);
+      topSheen.addColorStop(0, 'rgba(255,255,255,0.18)');
+      topSheen.addColorStop(0.34, colorWithAlpha(accent, 0.12));
+      topSheen.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = topSheen;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.89, Math.PI * 1.08, Math.PI * 1.92);
+      ctx.arc(cx, cy, r * 0.26, Math.PI * 1.92, Math.PI * 1.08, true);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    if (state.isLeader) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = colorWithAlpha(THEME.goldBright, 0.92);
+      const crownY = cy - r * 1.03;
+      ctx.beginPath();
+      ctx.moveTo(cx - r * 0.2, crownY + r * 0.1);
+      ctx.lineTo(cx - r * 0.08, crownY - r * 0.02);
+      ctx.lineTo(cx, crownY + r * 0.08);
+      ctx.lineTo(cx + r * 0.08, crownY - r * 0.02);
+      ctx.lineTo(cx + r * 0.2, crownY + r * 0.1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    if (dangerAlpha) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = colorWithAlpha(THEME.red, dangerAlpha);
+      ctx.lineWidth = Math.max(1.2, r * 0.025);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.86, -Math.PI * 0.28, Math.PI * 0.86);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function drawPlayerHealthRing(cx, cy, r, hpPct, state, ui) {
+    const healthColor = playerCardHealthColor(state);
+    const hot = overlayHotModeActive();
+    const segments = hot ? 20 : 34;
+    const ringR = r * 0.99;
+    const gap = Math.PI * 2 / segments * 0.22;
+    const start = -Math.PI / 2;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineWidth = Math.max(3.2, r * 0.07);
+    for (let i = 0; i < segments; i += 1) {
+      const segStart = start + (Math.PI * 2 * i) / segments + gap;
+      const segEnd = start + (Math.PI * 2 * (i + 1)) / segments - gap;
+      const segStartPct = i / segments;
+      const segEndPct = (i + 1) / segments;
+      const lit = hpPct >= segEndPct;
+      const partial = hpPct > segStartPct && hpPct < segEndPct;
+      ctx.strokeStyle = lit || partial
+        ? colorWithAlpha(healthColor, state.isKO ? 0.3 : partial ? 0.62 : 0.92)
+        : 'rgba(255,255,255,0.105)';
+      ctx.shadowColor = healthColor;
+      ctx.shadowBlur = !hot && (lit || partial) ? Math.max(3, r * 0.05) : 0;
+      ctx.beginPath();
+      if (partial) {
+        const partialEnd = segStart + (segEnd - segStart) * clamp01((hpPct - segStartPct) * segments);
+        ctx.arc(cx, cy, ringR, segStart, Math.max(segStart + 0.01, partialEnd));
+      } else {
+        ctx.arc(cx, cy, ringR, segStart, segEnd);
+      }
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = Math.max(0.8, r * 0.012);
+    ctx.strokeStyle = `rgba(255,255,255,${state.isKO ? 0.08 : 0.18})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.82, Math.PI * 0.12, Math.PI * 1.88);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPlayerPerimeterLights(cx, cy, r, state, hpPct, accent, ui) {
+    const reduced = prefersReducedMotion();
+    const hot = overlayHotModeActive();
+    const lights = hot ? 8 : 16;
+    const litCount = Math.round(lights * clamp01(hpPct));
+    const orbit = reduced || hot ? 0 : Date.now() / 3400;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < lights; i += 1) {
+      const angle = -Math.PI / 2 + (Math.PI * 2 * i) / lights + (state.hasShield ? orbit * 0.22 : 0);
+      const x = cx + Math.cos(angle) * r * 1.075;
+      const y = cy + Math.sin(angle) * r * 1.075;
+      const isHot = i < litCount;
+      const isSignal = state.hasShield && i % 4 === 0;
+      const color = state.isCritical ? THEME.red : isSignal ? THEME.cyan : accent;
+      const alpha = isHot ? (state.isCritical ? 0.72 + state.pulse * 0.22 : 0.58) : 0.13;
+      const dotR = Math.max(1.6 * ui, r * (isSignal ? 0.022 : 0.018));
+      ctx.shadowColor = color;
+      ctx.shadowBlur = !hot && isHot ? Math.max(3, r * 0.055) : 0;
+      ctx.fillStyle = isHot ? colorWithAlpha(color, alpha) : 'rgba(255,255,255,0.14)';
+      ctx.beginPath();
+      ctx.arc(x, y, dotR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawCircularShieldOverlay(cx, cy, r, state, accent, ui) {
+    if (!state.hasShield) return false;
+    const reduced = prefersReducedMotion();
+    const hot = overlayHotModeActive();
+    const progress = clamp01(Number(state.shieldProgress ?? state.progress) || 0);
+    const intro = clamp01(progress / 0.18);
+    const outro = 1 - clamp01((progress - 0.84) / 0.16);
+    const presence = Math.max(0.22, intro * outro);
+    const pulse = reduced ? 0.62 : (0.58 + Math.sin(Date.now() / 260) * 0.18 + state.pulse * 0.12);
+    const ringAlpha = Math.max(0.18, Math.min(0.58, presence * pulse));
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.88, 0, Math.PI * 2);
+    ctx.clip();
+    const wash = ctx.createRadialGradient(cx - r * 0.25, cy - r * 0.42, 1, cx, cy, r * 0.9);
+    wash.addColorStop(0, `rgba(255,255,255,${0.2 * presence})`);
+    wash.addColorStop(0.42, `rgba(143,255,210,${0.18 * presence})`);
+    wash.addColorStop(0.76, `rgba(85,231,255,${0.09 * presence})`);
+    wash.addColorStop(1, 'rgba(7,16,31,0)');
+    ctx.fillStyle = wash;
+    ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+    ctx.shadowColor = colorWithAlpha(THEME.cyan, 0.72 * presence);
+    ctx.shadowBlur = hot ? Math.max(2, r * 0.04) : Math.max(8, r * 0.13);
+    ctx.lineWidth = Math.max(1.1, r * 0.022);
+    ctx.strokeStyle = `rgba(204,252,255,${0.7 * ringAlpha})`;
+    drawShieldCrestPath(ctx, cx, cy + r * 0.04, r * 0.52, r * 0.66);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.lineCap = 'round';
+    ctx.shadowColor = colorWithAlpha(THEME.cyan, 0.78 * presence);
+    ctx.shadowBlur = hot ? Math.max(2, r * 0.04) : Math.max(8, r * 0.16);
+    ctx.lineWidth = Math.max(2.6, r * 0.062);
+    ctx.strokeStyle = `rgba(143,255,210,${0.55 * presence})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * 0.88, -Math.PI * 0.22, Math.PI * 1.32);
+    ctx.stroke();
+
+    if (!hot) {
+      const sweepStart = reduced ? -Math.PI * 0.08 : -Math.PI * 0.5 + (Date.now() % 1700) / 1700 * Math.PI * 2;
+      ctx.lineWidth = Math.max(1.2, r * 0.026);
+      ctx.strokeStyle = `rgba(255,255,255,${0.44 * presence})`;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r * 0.74, sweepStart, sweepStart + Math.PI * 0.36);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    return true;
+  }
+
+  function drawPlayerEmojiCore(x, y, r, iconEmoji, accent, state, ui) {
+    const hot = overlayHotModeActive();
+    ctx.save();
+    const core = ctx.createRadialGradient(x - r * 0.32, y - r * 0.38, 1, x, y, r);
+    core.addColorStop(0, state.isKO ? 'rgba(205,211,226,0.16)' : 'rgba(255,255,255,0.26)');
+    core.addColorStop(0.45, state.isKO ? 'rgba(47,52,67,0.96)' : 'rgba(8,18,32,0.98)');
+    core.addColorStop(1, state.isKO ? 'rgba(12,13,18,0.98)' : colorWithAlpha(accent, 0.74));
+    ctx.fillStyle = core;
+    ctx.shadowColor = colorWithAlpha(accent, state.hasShield ? 0.7 : 0.44);
+    ctx.shadowBlur = hot ? Math.max(2, r * 0.04) : Math.max(7, r * 0.22);
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.strokeStyle = state.hasShield ? 'rgba(210,253,255,0.92)' : colorWithAlpha(accent, 0.86);
+    ctx.lineWidth = Math.max(1.7, r * 0.07);
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.98, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+    ctx.lineWidth = Math.max(0.8, r * 0.032);
+    ctx.beginPath();
+    ctx.arc(x - r * 0.03, y - r * 0.04, r * 0.73, Math.PI * 1.12, Math.PI * 1.9);
+    ctx.stroke();
+
+    if (iconEmoji) {
+      if (!hot) {
+        const iconGlow = ctx.createRadialGradient(x, y, 0, x, y, r * 1.45);
+        iconGlow.addColorStop(0, 'rgba(255,255,255,0.22)');
+        iconGlow.addColorStop(0.58, colorWithAlpha(accent, 0.28));
+        iconGlow.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = iconGlow;
+        ctx.beginPath();
+        ctx.arc(x, y, r * 1.28, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.font = `${r * 1.72}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(0,0,0,0.9)';
+      ctx.shadowBlur = hot ? Math.max(1, r * 0.04) : Math.max(4, r * 0.2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(iconEmoji, x, y + r * 0.015);
+      ctx.restore();
+      return { rendered: true, source: 'player-icon' };
+    }
+
+    drawBattleInsignia(x, y, r * 0.82, accent);
+    ctx.restore();
+    return { rendered: false, source: 'fallback-insignia' };
+  }
+
+  function drawPlayerNameRibbon(slot, lines, fontSize, lineHeight, fontFactory, state, accent, ui) {
+    const center = rectCenter(slot);
+    ctx.save();
+    ctx.shadowColor = colorWithAlpha(accent, state.isLeader ? 0.48 : 0.28);
+    ctx.shadowBlur = Math.max(4, slot.h * 0.18);
+    const grad = ctx.createLinearGradient(slot.x, slot.y, slot.right, slot.bottom);
+    grad.addColorStop(0, state.isKO ? 'rgba(14,15,23,0.95)' : colorWithAlpha(accent, 0.28));
+    grad.addColorStop(0.26, 'rgba(2,6,14,0.94)');
+    grad.addColorStop(0.72, 'rgba(8,14,27,0.96)');
+    grad.addColorStop(1, state.isLeader ? 'rgba(82,56,10,0.88)' : 'rgba(2,5,12,0.88)');
+    ctx.fillStyle = grad;
+    roundedRectPath(ctx, slot.x, slot.y, slot.w, slot.h, slot.h / 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.strokeStyle = state.isLeader ? colorWithAlpha(THEME.goldBright, 0.92) : colorWithAlpha(accent, 0.76);
+    ctx.lineWidth = Math.max(1.1, 1.45 * ui);
+    roundedRectPath(ctx, slot.x + 0.5, slot.y + 0.5, Math.max(1, slot.w - 1), Math.max(1, slot.h - 1), Math.max(1, slot.h / 2 - 0.5));
+    ctx.stroke();
+    ctx.fillStyle = colorWithAlpha(accent, state.isKO ? 0.22 : 0.54);
+    roundedRectPath(ctx, slot.x + slot.w * 0.14, slot.y + slot.h * 0.12, slot.w * 0.72, Math.max(1, slot.h * 0.11), slot.h * 0.06);
+    ctx.fill();
+
+    const textCenterY = slot.y + slot.h * (lines.length > 1 ? 0.56 : 0.59);
+    const textRect = drawCenteredCanvasTextLines(ctx, lines, center.x, textCenterY, {
+      fontFactory,
+      fontSize,
+      lineHeight,
+      fillStyle: state.isKO ? '#d7dde9' : '#ffffff',
+      strokeStyle: 'rgba(0,0,0,0.9)',
+      lineWidth: Math.max(1.4, 1.95 * ui),
+    });
+    ctx.restore();
+    return textRect;
+  }
+
+  function drawPlayerStatusChip(slot, label, fit, state, accent, ui) {
+    const center = rectCenter(slot);
+    const chipColor = state.isCritical
+      ? THEME.red
+      : state.hasShield
+        ? THEME.cyan
+        : state.hasHeal
+          ? THEME.green
+          : state.isLeader
+            ? THEME.gold
+            : accent;
+    ctx.save();
+    ctx.shadowColor = colorWithAlpha(chipColor, state.isCritical ? 0.54 : 0.34);
+    ctx.shadowBlur = Math.max(4, slot.h * 0.18);
+    const grad = ctx.createLinearGradient(slot.x, slot.y, slot.right, slot.bottom);
+    grad.addColorStop(0, colorWithAlpha(chipColor, state.isKO ? 0.22 : 0.36));
+    grad.addColorStop(0.5, 'rgba(5,12,24,0.96)');
+    grad.addColorStop(1, state.isKO ? 'rgba(42,12,20,0.9)' : 'rgba(1,4,10,0.96)');
+    ctx.fillStyle = grad;
+    drawAngledChipPath(slot.x, slot.y, slot.w, slot.h, slot.h * 0.34);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = colorWithAlpha(chipColor, state.isKO ? 0.78 : 0.92);
+    ctx.lineWidth = Math.max(1, 1.25 * ui);
+    drawAngledChipPath(slot.x + 0.5, slot.y + 0.5, Math.max(1, slot.w - 1), Math.max(1, slot.h - 1), slot.h * 0.32);
+    ctx.stroke();
+    ctx.font = `${state.isLeader && label === 'LEADER' ? 950 : 900} ${fit.size}px ${PLAYER_CARD_STAT_FONT}`;
+    const textRect = drawCenteredCanvasText(ctx, fit.text, center.x, center.y + Math.max(0.1, 0.35 * ui), {
+      fontSize: fit.size,
+      fillStyle: state.isCritical ? '#ffe1dc' : state.hasShield ? '#dffcff' : state.isLeader ? '#fff2b9' : '#e9f3ff',
+      strokeStyle: 'rgba(0,0,0,0.86)',
+      lineWidth: Math.max(0.9, 1.25 * ui),
+    });
+    ctx.restore();
+    return textRect;
+  }
+
+  function drawPlayerHpPill(slot, hpLabel, hpPct, state, ui) {
+    const healthColor = playerCardHealthColor(state);
+    const center = rectCenter(slot);
+    const fit = fitCanvasTextResult(
+      ctx,
+      hpLabel,
+      Math.max(1, slot.w - Math.max(8 * ui, slot.h * 0.42)),
+      size => `950 ${size}px ${PLAYER_CARD_STAT_FONT}`,
+      Math.max(15 * ui, Math.min(slot.h * 0.74, 24 * ui)),
+      Math.max(8, 9.5 * ui)
+    );
+    ctx.save();
+    ctx.shadowColor = colorWithAlpha(healthColor, state.isLowHpWarning ? 0.58 : 0.32);
+    ctx.shadowBlur = state.isLowHpWarning ? Math.max(7, slot.h * 0.26) : Math.max(3, slot.h * 0.13);
+    const grad = ctx.createLinearGradient(slot.x, slot.y, slot.right, slot.bottom);
+    grad.addColorStop(0, colorWithAlpha(healthColor, state.isLowHpWarning ? 0.42 : 0.3));
+    grad.addColorStop(0.44, 'rgba(5,10,19,0.99)');
+    grad.addColorStop(1, 'rgba(1,3,8,0.99)');
+    ctx.fillStyle = grad;
+    drawAngledChipPath(slot.x, slot.y, slot.w, slot.h, slot.h * 0.34);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = colorWithAlpha(healthColor, state.isKO || state.isLowHpWarning ? 1 : 0.84);
+    ctx.lineWidth = Math.max(1, 1.25 * ui);
+    drawAngledChipPath(slot.x + 0.5, slot.y + 0.5, Math.max(1, slot.w - 1), Math.max(1, slot.h - 1), slot.h * 0.32);
+    ctx.stroke();
+
+    ctx.save();
+    drawAngledChipPath(slot.x + 2, slot.y + 2, Math.max(1, slot.w - 4), Math.max(1, slot.h - 4), slot.h * 0.28);
+    ctx.clip();
+    ctx.fillStyle = colorWithAlpha(healthColor, state.isKO ? 0.08 : 0.2);
+    ctx.fillRect(slot.x + slot.h * 0.32, slot.y + 2, Math.max(0, (slot.w - slot.h * 0.7) * clamp01(hpPct)), Math.max(1, slot.h - 4));
+    ctx.restore();
+
+    ctx.font = `950 ${fit.size}px ${PLAYER_CARD_STAT_FONT}`;
+    const measuredTextRect = drawCenteredCanvasText(ctx, fit.text, center.x, center.y + Math.max(0.1, 0.32 * ui), {
+      fontSize: fit.size,
+      fillStyle: state.isCritical ? '#fff2ed' : '#ffffff',
+      strokeStyle: 'rgba(0,0,0,0.92)',
+      lineWidth: Math.max(1.15, 1.7 * ui),
+    });
+    ctx.restore();
+    const targetH = Math.max(measuredTextRect.h, Math.min(Math.max(1, slot.h - 4 * ui), fit.size * 0.82 + Math.max(1, 1.7 * ui)));
+    const targetY = clampNumber(measuredTextRect.y - (targetH - measuredTextRect.h) / 2, slot.y + 2 * ui, slot.bottom - targetH - 2 * ui);
+    return makeRect(measuredTextRect.x, targetY, measuredTextRect.w, targetH);
+  }
+
   function drawPlayerCard(player, pos, rank, total = 1) {
+    const hp = Number(player.hp) || 0;
+    const maxHp = Math.max(1, Number(player.maxHp) || 100);
+    const hpPct = clamp01(hp / maxHp);
+    const metrics = getPlayerCardDrawMetrics(pos, total);
+    const {
+      compactDemoCard,
+      ui,
+      cardW,
+      plateH,
+      plateX,
+      plateY,
+      radius,
+      avatarR,
+      avatarX,
+      avatarY,
+      slots,
+    } = metrics;
+    const cx = plateX + cardW / 2;
+    const cy = plateY + plateH / 2;
+    const cardR = Math.min(cardW, plateH) / 2;
+    const cardAccent = getCardAccent(player);
+    const state = playerCardVisualState(player, rank, hp, hpPct, cardAccent);
+    const accent = state.accent;
+    const identity = playerCardIdentity(player);
+    const displayName = playerCardDisplayNameText(identity.displayName);
+    const nameFontFactory = size => `950 ${size}px ${PLAYER_CARD_NAME_FONT}`;
+    let nameFit = fitCanvasTextLinesResult(
+      ctx,
+      displayName,
+      Math.max(1, slots.name.w - Math.max(10 * ui, slots.name.h * 0.28)),
+      2,
+      nameFontFactory,
+      Math.max(22 * ui, Math.min(slots.name.h * 0.78, cardW * 0.16)),
+      Math.max(9, 10 * ui)
+    );
+    if (nameFit.lines.length > 1) {
+      const twoLineMaxSize = Math.max(8, Math.min(nameFit.size, slots.name.h * 0.38));
+      if (twoLineMaxSize < nameFit.size) {
+        nameFit = fitCanvasTextLinesResult(
+          ctx,
+          displayName,
+          Math.max(1, slots.name.w - Math.max(10 * ui, slots.name.h * 0.28)),
+          2,
+          nameFontFactory,
+          twoLineMaxSize,
+          Math.max(7, 8 * ui)
+        );
+      }
+    }
+
+    const commandLabel = state.commandLabel || '';
+    const statusLabel = state.isKO
+      ? 'KO'
+      : state.hasShield
+        ? 'SHIELD'
+        : state.hasHeal
+          ? '+HP'
+          : state.isCritical
+            ? 'CRIT'
+            : state.isLeader
+              ? 'LEADER'
+              : 'READY';
+    const statusDisplayLabel = commandLabel || statusLabel;
+    const leaderStatusBadge = !commandLabel && statusLabel === 'LEADER';
+    const statusFit = fitCanvasTextResult(
+      ctx,
+      statusDisplayLabel,
+      Math.max(1, slots.statusBadges.w - Math.max(8 * ui, slots.statusBadges.h * 0.34)),
+      size => `${leaderStatusBadge ? 950 : 900} ${size}px ${PLAYER_CARD_STAT_FONT}`,
+      Math.max(9.5 * ui, Math.min(slots.statusBadges.h * (leaderStatusBadge ? 0.72 : 0.68), leaderStatusBadge ? 16.5 * ui : 15.5 * ui)),
+      Math.max(6.5, 7.5 * ui)
+    );
+    const hpLabelText = `${Math.round(hp)} HP`;
+    const iconEmoji = playerCardIconEmoji(player);
+    const hot = overlayHotModeActive();
+
+    if (state.isCritical && !hot) {
+      const redGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, cardR * 1.8);
+      redGlow.addColorStop(0, `rgba(255,30,30,${0.18 + state.pulse * 0.15})`);
+      redGlow.addColorStop(1, 'rgba(255,30,30,0)');
+      ctx.fillStyle = redGlow;
+      ctx.beginPath();
+      ctx.arc(cx, cy, cardR * 1.75, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    if (cardAccent && !hot) {
+      const accentAlpha = Math.sin((1 - state.progress) * Math.PI) * (state.accentType === 'kill' ? 0.48 : 0.34);
+      const accentRadius = cardR * (1.06 + state.progress * 0.34);
+      const accentGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, accentRadius);
+      accentGlow.addColorStop(0, colorWithAlpha(cardAccent.color, accentAlpha));
+      accentGlow.addColorStop(1, colorWithAlpha(cardAccent.color, 0));
+      ctx.fillStyle = accentGlow;
+      ctx.beginPath();
+      ctx.arc(cx, cy, accentRadius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    drawCircularPlayerShell(cx, cy, cardR, state, accent, rank, ui);
+    const shieldOverlayDrawn = drawCircularShieldOverlay(cx, cy, cardR, state, accent, ui);
+    drawPlayerHealthRing(cx, cy, cardR, hpPct, state, ui);
+    drawPlayerPerimeterLights(cx, cy, cardR, state, hpPct, accent, ui);
+
+    const hpTextRect = drawPlayerHpPill(slots.hpBar, hpLabelText, hpPct, state, ui);
+    const statusTextRect = drawPlayerStatusChip(slots.statusBadges, statusDisplayLabel, statusFit, state, accent, ui);
+    const emojiRender = drawPlayerEmojiCore(avatarX, avatarY, avatarR, iconEmoji, accent, state, ui);
+    const nameLineHeight = nameFit.lines.length > 1 ? nameFit.size * 0.76 : nameFit.size * 0.86;
+    const nameTextRect = drawPlayerNameRibbon(slots.name, nameFit.lines, nameFit.size, nameLineHeight, nameFontFactory, state, accent, ui);
+
+    const nameSlotCenter = slots.name.left + slots.name.w / 2;
+    const nameTextCenter = nameTextRect.left + nameTextRect.w / 2;
+    const commandSlot = null;
+    const rankTextRect = null;
+    const handleTextRect = null;
+    const commandTextRect = null;
+    const koTextRect = null;
+    void compactDemoCard;
+
+    return {
+      id: player.uniqueId,
+      rank,
+      x: pos.x,
+      y: pos.y,
+      width: cardW,
+      height: metrics.bottom - metrics.top,
+      left: metrics.left,
+      right: metrics.right,
+      top: metrics.top,
+      bottom: metrics.bottom,
+      text: {
+        rawName: identity.rawName,
+        fittedName: nameFit.lines.join(' '),
+        handle: '',
+        nameTruncated: nameFit.truncated,
+        nameHasReplacement: nameFit.lines.join('').includes('\uFFFD'),
+        nameCenterDelta: Math.abs(nameTextCenter - nameSlotCenter),
+        koLabel: '',
+        hpLabel: hpLabelText,
+        commandLabel,
+        statusLabel: statusFit.text,
+        healthState: state.healthState,
+        accentType: state.accentType,
+        shieldActive: state.hasShield,
+        shieldOverlay: shieldOverlayDrawn ? 'circular-aegis-ring' : '',
+        iconEmoji,
+        emojiRendered: emojiRender.rendered,
+        emojiSource: emojiRender.source,
+        cardDesign: 'circular-holo-player-card',
+      },
+      slots: {
+        card: cloneTelemetryRect(slots.card),
+        rank: null,
+        rankBadge: null,
+        name: cloneTelemetryRect(slots.name),
+        handle: null,
+        ko: cloneTelemetryRect(slots.koBadge),
+        koBadge: cloneTelemetryRect(slots.koBadge),
+        commandBadge: cloneTelemetryRect(commandSlot),
+        avatar: cloneTelemetryRect(slots.avatar),
+        hpBar: cloneTelemetryRect(slots.hpBar),
+        shieldOverlay: shieldOverlayDrawn ? cloneTelemetryRect(slots.card) : null,
+        statusBadges: cloneTelemetryRect(slots.statusBadges),
+        rankText: cloneTelemetryRect(rankTextRect),
+        nameText: cloneTelemetryRect(nameTextRect),
+        handleText: cloneTelemetryRect(handleTextRect),
+        koText: cloneTelemetryRect(koTextRect),
+        commandText: cloneTelemetryRect(commandTextRect),
+        statusText: cloneTelemetryRect(statusTextRect),
+        hpText: cloneTelemetryRect(hpTextRect),
+      },
+    };
+  }
+
+  function drawPremiumRectPlayerCard(player, pos, rank, total = 1) {
     const hp = Number(player.hp) || 0;
     const maxHp = Math.max(1, Number(player.maxHp) || 100);
     const hpPct = clamp01(hp / maxHp);

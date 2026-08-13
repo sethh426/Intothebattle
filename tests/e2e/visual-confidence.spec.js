@@ -160,7 +160,11 @@ function assertPlayerCardSlots(layout, label, options = {}) {
   players.slice(0, options.minPlayers ?? 5).forEach((player, index) => {
     const cardLabel = `${label} player ${index + 1}`;
     const slots = player.slots || {};
+    const isCircular = player.text?.cardDesign === 'circular-holo-player-card';
     expect(slots.card, `${cardLabel} missing card slot`).toBeTruthy();
+    if (isCircular) {
+      expect(Math.abs(slots.card.w - slots.card.h), `${cardLabel} circular card aspect`).toBeLessThanOrEqual(slots.card.h * 0.08);
+    }
     for (const key of ['name', 'avatar', 'hpBar', 'statusBadges']) {
       assertRectInside(slots[key], slots.card, `${cardLabel} ${key} slot`);
     }
@@ -180,23 +184,31 @@ function assertPlayerCardSlots(layout, label, options = {}) {
     assertRectInside(slots.nameText, slots.name, `${cardLabel} name text`, 3);
     assertRectInside(slots.hpText, slots.hpBar, `${cardLabel} hp text`, 3);
     assertRectInside(slots.statusText, slots.statusBadges, `${cardLabel} status text`, 2.5);
-    expect(slots.nameText.h, `${cardLabel} source-scale name readability`).toBeGreaterThanOrEqual(Math.max(16, slots.card.h * 0.13));
+    expect(slots.nameText.h, `${cardLabel} source-scale name readability`).toBeGreaterThanOrEqual(Math.max(15, slots.card.h * (isCircular ? 0.095 : 0.13)));
     expect(slots.avatar.h, `${cardLabel} source-scale avatar readability`).toBeGreaterThanOrEqual(Math.max(56, slots.card.h * 0.34));
     expect(slots.avatar.w, `${cardLabel} source-scale avatar width`).toBeGreaterThanOrEqual(Math.max(56, slots.card.w * 0.25));
     expect(slots.hpBar.h, `${cardLabel} source-scale hp medallion readability`).toBeGreaterThanOrEqual(Math.max(32, slots.card.h * 0.19));
-    expect(slots.hpBar.w, `${cardLabel} hp medallion should stay compact`).toBeLessThanOrEqual(slots.card.w * 0.42);
+    expect(slots.hpBar.w, `${cardLabel} hp medallion should stay compact`).toBeLessThanOrEqual(slots.card.w * (isCircular ? 0.46 : 0.42));
     expect(slots.hpText.h, `${cardLabel} source-scale hp text readability`).toBeGreaterThanOrEqual(Math.max(14, slots.card.h * 0.09));
     assertNoSlotOverlap(slots.name, slots.avatar, `${cardLabel} name/avatar`);
     assertNoSlotOverlap(slots.name, slots.hpBar, `${cardLabel} name/hp`);
     assertNoSlotOverlap(slots.statusBadges, slots.hpBar, `${cardLabel} status/hp`);
     assertNoSlotOverlap(slots.avatar, slots.hpBar, `${cardLabel} avatar/hp`);
-    expect(player.text?.cardDesign, `${cardLabel} card design marker`).toBe('premium-esports-identity-card');
+    expect(player.text?.cardDesign, `${cardLabel} card design marker`).toBe('circular-holo-player-card');
     expect(player.text?.nameHasReplacement, `${cardLabel} name contains replacement glyph`).toBe(false);
     expect(player.text?.fittedName || '', `${cardLabel} missing fitted name`).not.toBe('');
     expect(player.text?.handle || '', `${cardLabel} handle should be hidden by default`).toBe('');
     expect(player.text?.koLabel || '', `${cardLabel} ko label should not render`).toBe('');
     expect(player.text?.hpLabel || '', `${cardLabel} missing hp label`).toMatch(/^\d+\s+HP$/);
     expect(player.text?.statusLabel || '', `${cardLabel} missing status label`).not.toBe('');
+    if (player.text?.emojiSource === 'player-icon') {
+      expect(player.text?.iconEmoji || '', `${cardLabel} missing emoji crest`).not.toBe('');
+      expect(player.text?.emojiRendered, `${cardLabel} emoji should render as the card crest`).toBe(true);
+    } else {
+      expect(player.text?.iconEmoji || '', `${cardLabel} fallback cards should not report an emoji`).toBe('');
+      expect(player.text?.emojiRendered, `${cardLabel} fallback insignia should render when no emoji exists`).toBe(false);
+      expect(player.text?.emojiSource, `${cardLabel} emoji source`).toBe('fallback-insignia');
+    }
     expect(['healthy', 'damaged', 'critical', 'ko'], `${cardLabel} unknown health state`).toContain(player.text?.healthState);
     expect(player.text?.nameCenterDelta ?? 999, `${cardLabel} name center drift`).toBeLessThanOrEqual(2);
   });
@@ -711,8 +723,10 @@ test('@visual player cards keep stats and special-character names aligned', asyn
     healthState: 'healthy',
     commandLabel: 'DEF',
     shieldActive: true,
-    shieldOverlay: 'full-card-aegis-image',
+    shieldOverlay: 'circular-aegis-ring',
   });
+  expect(cardsById.card_plain?.text).toMatchObject({ iconEmoji: '\u2694\ufe0f', emojiRendered: true, emojiSource: 'player-icon' });
+  expect(cardsById.card_fire?.text).toMatchObject({ iconEmoji: '\u{1f525}', emojiRendered: true, emojiSource: 'player-icon' });
   expect(cardsById.card_fire?.slots?.shieldOverlay).toBeTruthy();
   expect(cardsById.card_accent?.text).toMatchObject({ healthState: 'damaged', commandLabel: 'HEAL' });
   expect(cardsById.card_cjk?.text).toMatchObject({ healthState: 'critical', commandLabel: 'CRIT' });
@@ -869,13 +883,13 @@ test('@visual reduced-motion mobile overlay keeps banners and sponsor stats usab
   mobileProjectOnly(testInfo);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   const errors = await watchPage(page, harness.baseUrl);
-  await openPreview(page, {
-    banner_preview: '1',
-    banner_title: 'NeonAce eliminated ShadowByte',
-    banner_meta: '7 total kills | streak x5 | momentum x4',
-    banner_duration: '5200',
-  });
+  await openPreview(page);
   await waitForDemoLayout(page, { horde: true });
+  await page.evaluate(() => window.overlayEventEngine.testBannerPlacement('legendary', {
+    title: 'NeonAce eliminated ShadowByte',
+    meta: '7 total kills | streak x5 | momentum x4',
+    durationMs: 12000,
+  }));
   await page.waitForFunction(() => Boolean(document.querySelector('.banner:not(.closing)')), null, { timeout: 6000 });
   await page.evaluate(() => window.overlayEventEngine.testMotionImpact());
   await page.waitForTimeout(250);
