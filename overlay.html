@@ -5746,13 +5746,13 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (hasBoss) {
       try {
         const bossLayout = getBossLayout();
-        bossTop = bossLayout.panelY * scale.y;
-        bossBottom = (bossLayout.panelY + bossLayout.panelH) * scale.y;
+        bossTop = bossLayout.cardY * scale.y;
+        bossBottom = (bossLayout.cardY + bossLayout.cardH) * scale.y;
       } catch (_err) {}
     }
 
     if (Number.isFinite(bossTop) && Number.isFinite(bossBottom)) {
-      const bossGap = Math.max(4, gapY * 0.32);
+      const bossGap = Math.max(8, gapY * 0.78);
       const segments = [
         { top: laneTopLimit, bottom: Math.min(laneBottomLimit, bossTop - bossGap) },
         { top: Math.max(laneTopLimit, bossBottom + bossGap), bottom: laneBottomLimit },

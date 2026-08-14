@@ -850,6 +850,7 @@ test('@visual premium esports overlay preview keeps the full HUD readable', asyn
   const layout = await readLegacyLayout(page, testInfo, 'premium-esports-preview-layout');
   assertPlayerCardSlots(layout, 'premium-esports-preview', { minPlayers: 5 });
   assertBossHudIntegrated(layout, 'premium-esports-preview');
+  expect(layout.collisions, 'premium-esports-preview static HUD collisions').toEqual([]);
   await assertBannerCombatGap(page, testInfo, 'premium-esports-preview-banner', { avoidBoss: true });
   await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'premium-esports-preview-canvas', minLitRatio: 0.05 });
   await freezeOverlayVisuals(page, testInfo, 'premium-esports-preview-freeze');
@@ -870,6 +871,8 @@ test('@visual boss wave uses one integrated boss HUD and hits all targets', asyn
   await page.waitForFunction(() => Boolean(document.querySelector('.banner:not(.closing)')), null, { timeout: 6000 });
   await assertBannerCombatGap(page, testInfo, 'boss-wave-banner', { avoidBoss: true });
   await assertEffectOwnership(page, testInfo, 'boss-wave-effects', { minOwnedEffects: 1 });
+  const postEffectLayout = await readLegacyLayout(page, testInfo, 'boss-wave-post-effect-layout');
+  expect(postEffectLayout.collisions, 'boss-wave post-effect HUD collisions').toEqual([]);
   await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'boss-wave-canvas' });
   await freezeOverlayVisuals(page, testInfo, 'boss-wave-freeze');
   await expectStableScreenshot(page.getByTestId('overlay-source-frame'), testInfo, 'boss-wave-integrated-hud', { maxDiffPixelRatio: 0.12 });
