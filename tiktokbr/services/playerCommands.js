@@ -68,14 +68,13 @@ const PLAYER_UTILITY_COMMAND_LOOKUP = Object.freeze(
 export const VIEWER_COMMAND_TICKER_ITEMS = Object.freeze([
   'Any comment, like, follow, share, or gift enters you',
   'Targets: @name | @horde | @boss',
-  'Regular chat: enters you and sends a random 5-damage attack',
-  'Attacks: @name | @horde | @boss | !laser @name | !fire @name',
+  'Mention a target anywhere in your comment to attack',
+  'Effects need no prefix: laser @name | fire @horde | orbital @boss',
   'Icon: !emoji <emoji> or !<emoji>',
-  'Basic attacks: !attack @name / !hit @name / !strike @name / !fight @name',
-  'Effects: !laser @name | !fire @name | !prism @name | !plasma @name | !orbital @name',
-  'Defense: !shield / !guard / !block',
-  'Support: !heal or !heal @name',
-  'Teams/help: !team red / !team leave / !commands or !comments',
+  'Defense: shield | guard | block',
+  'Support: heal or heal @name',
+  'Teams/help: team red | team leave | commands',
+  'The ! and / prefixes remain optional and supported',
 ]);
 
 export const VIEWER_COMMAND_SHOWCASE = Object.freeze({
@@ -88,15 +87,13 @@ export const VIEWER_COMMAND_SHOWCASE = Object.freeze({
   priority: 88,
   tickerItems: VIEWER_COMMAND_TICKER_ITEMS,
   commands: Object.freeze([
-    { command: 'engage', detail: 'enter arena' },
-    { command: '@name', detail: 'hit a player' },
-    { command: 'chat', detail: 'weak random attack' },
-    { command: '!attack @name', detail: 'stronger player hit' },
-    { command: '!attack @horde', detail: 'hit The Horde' },
-    { command: '!attack @boss', detail: 'hit the boss' },
-    { command: '!shield', detail: 'block damage' },
-    { command: '!heal @name', detail: 'heal self or ally' },
-    { command: '!commands', detail: 'show help' },
+    { command: '@name', detail: 'attack a player' },
+    { command: '@horde', detail: 'hit The Horde' },
+    { command: '@boss', detail: 'hit the boss' },
+    { command: 'laser @name', detail: 'choose an effect' },
+    { command: 'shield', detail: 'block damage' },
+    { command: 'heal @name', detail: 'heal self or ally' },
+    { command: 'commands', detail: 'show help' },
   ]),
 });
 

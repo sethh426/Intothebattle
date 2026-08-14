@@ -587,7 +587,7 @@ function renderLoginPage({ error = '', message = '' } = {}) {
     </div>
   </div>
   <div class="page-footer">Battle Royale- An Interactive tool for TikTok LIVE.&nbsp;·&nbsp; Beta</div>
-  <script src="https://cdn.jsdelivr.net/npm/fingerprintjs2@2/dist/fingerprint2.min.js"></script>
+  <script src="/vendor/fingerprintjs2/fingerprint2.min.js"></script>
   <script>
     function setFingerprint(fp) {
       const input = document.getElementById('fp');

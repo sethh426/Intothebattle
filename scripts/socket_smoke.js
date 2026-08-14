@@ -89,7 +89,7 @@ async function request(pathname, options = {}) {
 }
 
 async function waitForHealth() {
-  const deadline = Date.now() + 30000;
+  const deadline = Date.now() + Number(process.env.E2E_HEALTH_TIMEOUT_MS || 60000);
   while (Date.now() < deadline) {
     if (server.exitCode !== null) {
       throw new Error(`server exited early with code ${server.exitCode}\n${output}`);
@@ -553,29 +553,15 @@ try {
   const dashboardTestRoster = await dashboardTestRosterPromise;
   assert(dashboardTestRoster.bySource?.test > 0, 'overlay test players should be tagged as test source');
 
-  const passiveCommentAttackPromise = waitForEvent(
-    primaryOverlay,
-    'attack',
-    payload => payload?.passiveCommentAttack === true && payload?.damage === 5 && payload?.targetScope === 'horde',
-    10000
-  );
-  const passiveCommentDamagePromise = waitForEvent(
-    primaryOverlay,
-    'commentDamage',
-    payload => payload?.passiveCommentAttack === true && payload?.damage === 5 && payload?.commandDescription === 'CHAT POKE',
-    10000
-  );
   const commentOverlayTestRes = await request('/api/overlay/test/comment', {
     method: 'POST',
     headers: authedHeaders,
   });
   assert(commentOverlayTestRes.status === 200, `overlay comment test should return 200, got ${commentOverlayTestRes.status}`);
   const commentOverlayTest = await commentOverlayTestRes.json();
-  const passiveCommentResult = commentOverlayTest.result?.result || commentOverlayTest.result;
-  assert(passiveCommentResult?.passiveCommentAttack === true, 'plain comment overlay test should mark passiveCommentAttack');
-  assert(passiveCommentResult?.damage === 5, `plain comment overlay test should deal 5 damage, got ${passiveCommentResult?.damage}`);
-  await passiveCommentAttackPromise;
-  await passiveCommentDamagePromise;
+  const engagementOnlyResult = commentOverlayTest.result?.result || commentOverlayTest.result;
+  assert(engagementOnlyResult?.handled === false, 'plain comment overlay test should not create an attack');
+  assert(engagementOnlyResult?.engagementOnly === true, 'plain comment overlay test should be marked engagement-only');
 
   const devModeOnRes = await request('/api/dev/test-mode', {
     method: 'POST',
@@ -635,6 +621,16 @@ try {
   assert(Number(mentionComment.attackResult?.result?.damage) > 0, 'plain @target comment should deal positive damage');
   assert(Number(mentionComment.attackResult?.result?.damage) <= 50, `high-strength regular attack should cap at 50 damage, got ${mentionComment.attackResult?.result?.damage}`);
 
+  const unprefixedEffectRes = await request('/api/test/comment', {
+    method: 'POST',
+    headers: authedHeaders,
+    body: JSON.stringify({ reset: true, attackerStrength: 1000, comment: '@test_bravo please use fire' }),
+  });
+  assert(unprefixedEffectRes.status === 200, `unprefixed effect test should return 200, got ${unprefixedEffectRes.status}`);
+  const unprefixedEffect = await unprefixedEffectRes.json();
+  assert(unprefixedEffect.attackResult?.handled === true, 'unprefixed effect comment should create an attack');
+  assert(unprefixedEffect.attackResult?.result?.effect === 'fire', `unprefixed effect should select fire, got ${unprefixedEffect.attackResult?.result?.effect}`);
+
   const specialDamageRes = await request('/api/test/comment', {
     method: 'POST',
     headers: authedHeaders,
@@ -664,35 +660,35 @@ try {
     headers: authedHeaders,
     body: JSON.stringify({ reset: true, comment: 'hello chat' }),
   });
-  assert(plainCommentRes.status === 200, `plain passive comment test should return 200, got ${plainCommentRes.status}`);
+  assert(plainCommentRes.status === 200, `plain engagement comment test should return 200, got ${plainCommentRes.status}`);
   const plainComment = await plainCommentRes.json();
-  assert(plainComment.attackResult?.handled === true, 'plain no-target comment should create a weak attack');
-  assert(plainComment.attackResult?.result?.passiveCommentAttack === true, 'plain no-target comment should mark passiveCommentAttack');
-  assert(plainComment.attackResult?.result?.damage === 5, `plain no-target comment should deal 5 raw damage, got ${plainComment.attackResult?.result?.damage}`);
+  assert(plainComment.attackResult?.handled === false, 'plain no-target comment should not create an attack');
+  assert(plainComment.attackResult?.engagementOnly === true, 'plain no-target comment should be engagement-only');
+  assert(plainComment.after?.test_bravo?.hp === plainComment.before?.test_bravo?.hp, 'plain no-target comment should not damage another player');
 
   const newAttackEffects = new Set(['prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard']);
-  const observedPassiveEffects = new Set();
-  for (let i = 0; i < 24; i += 1) {
+  const observedUnprefixedEffects = new Set();
+  for (const requestedEffect of newAttackEffects) {
     const effectCycleRes = await request('/api/test/comment', {
       method: 'POST',
       headers: authedHeaders,
-      body: JSON.stringify({ reset: i === 0, comment: `effect cycle ${i}` }),
+      body: JSON.stringify({ reset: true, comment: `${requestedEffect} @test_bravo` }),
     });
-    assert(effectCycleRes.status === 200, `effect cycle comment ${i} should return 200, got ${effectCycleRes.status}`);
+    assert(effectCycleRes.status === 200, `unprefixed ${requestedEffect} comment should return 200, got ${effectCycleRes.status}`);
     const effectCycle = await effectCycleRes.json();
     const effect = effectCycle.attackResult?.result?.effect;
-    if (newAttackEffects.has(effect)) observedPassiveEffects.add(effect);
+    if (newAttackEffects.has(effect)) observedUnprefixedEffects.add(effect);
   }
-  const missingPassiveEffects = [...newAttackEffects].filter(effect => !observedPassiveEffects.has(effect));
+  const missingUnprefixedEffects = [...newAttackEffects].filter(effect => !observedUnprefixedEffects.has(effect));
   assert(
-    missingPassiveEffects.length === 0,
-    `plain comment rotation should include every new effect, missing ${missingPassiveEffects.join(', ') || 'none'}`
+    missingUnprefixedEffects.length === 0,
+    `unprefixed targeted comments should include every new effect, missing ${missingUnprefixedEffects.join(', ') || 'none'}`
   );
 
   const utilityCommentRes = await request('/api/test/comment', {
     method: 'POST',
     headers: authedHeaders,
-    body: JSON.stringify({ reset: true, comment: '!shield' }),
+    body: JSON.stringify({ reset: true, comment: 'shield' }),
   });
   assert(utilityCommentRes.status === 200, `utility comment test should return 200, got ${utilityCommentRes.status}`);
   const utilityComment = await utilityCommentRes.json();

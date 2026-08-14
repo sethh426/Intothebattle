@@ -488,7 +488,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   background:linear-gradient(90deg, rgba(var(--banner-accent-rgb),0.16), rgba(255,255,255,0.035));
 }
 .banner-command-rail {
-  display:grid; grid-template-columns:repeat(9,minmax(54px,1fr)); align-items:stretch; gap:4px;
+  display:grid; grid-template-columns:repeat(7,minmax(72px,1fr)); align-items:stretch; gap:5px;
   min-width:0; width:100%; padding:5px; overflow:hidden;
 }
 .banner-command-ticker {
@@ -551,6 +551,28 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner:not(.commands).event-support { --banner-accent:#8fffd2; --banner-accent-rgb:143,255,210; --banner-accent-soft:rgba(143,255,210,0.16); }
 .banner:not(.commands).event-reward { --banner-accent:#f6c95b; --banner-accent-rgb:246,201,91; --banner-accent-soft:rgba(246,201,91,0.18); }
 .banner.legendary .banner-title { font-size:24px; text-shadow:0 0 22px rgba(255,227,111,0.38),0 2px 8px rgba(0,0,0,0.9); }
+.banner.is-expanded {
+  min-height:104px; max-height:126px; padding:0 24px; gap:17px;
+  grid-template-columns:68px minmax(0,1fr) 68px;
+}
+.banner.is-expanded .banner-signal { width:68px; height:62px; }
+.banner.is-expanded .banner-code { min-width:48px; padding:7px 8px; font-size:15px; letter-spacing:1.1px; }
+.banner.is-expanded .banner-pulse { width:44px; height:44px; }
+.banner.is-expanded .banner-copy { gap:5px; }
+.banner.is-expanded:not(.commands) .banner-copy { align-content:center; justify-items:center; text-align:center; }
+.banner.is-expanded:not(.commands) .banner-meter { justify-self:end; }
+.banner.is-expanded .banner-kicker { font-size:14px; letter-spacing:1.55px; }
+.banner.is-expanded .banner-title,
+.banner.legendary.is-expanded .banner-title { font-size:34px; line-height:1; }
+.banner.is-expanded .banner-meta { font-size:12px; letter-spacing:.65px; }
+.banner.is-expanded .banner-meter { width:8px; height:62px; }
+.banner.commands.is-expanded { min-height:112px; max-height:132px; padding:0 22px; grid-template-columns:68px minmax(0,1fr) 8px; }
+.banner.commands.is-expanded .banner-command-strip { min-height:88px; grid-template-columns:minmax(150px,0.17fr) minmax(0,1fr); }
+.banner.commands.is-expanded .banner-command-label { padding:0 18px; font-size:25px; line-height:.96; white-space:normal; }
+.banner.commands.is-expanded .banner-command-rail { grid-template-columns:repeat(7,minmax(0,1fr)); gap:5px; padding:7px; }
+.banner.commands.is-expanded .banner-command-chip { min-height:68px; padding:7px 5px; gap:4px; }
+.banner.commands.is-expanded .banner-command-chip strong { font-size:clamp(12px,1.25vw,15px); line-height:1.14; overflow:visible; text-overflow:clip; }
+.banner.commands.is-expanded .banner-command-chip span { font-size:8.5px; line-height:1.12; overflow:visible; text-overflow:clip; }
 .banner.is-compact {
   min-height:58px; max-height:68px; padding:0 12px; gap:9px;
   grid-template-columns:42px minmax(0,1fr) 5px;
@@ -572,7 +594,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.commands.is-compact .banner-command-label { padding:0 12px; }
 .banner.commands.is-compact .banner-command-run { height:40px; padding:0 14px; gap:14px; }
 .banner.commands.is-compact .banner-command-grid { grid-template-columns:repeat(auto-fit,minmax(84px,1fr)); max-height:24px; gap:3px; }
-.banner.commands.is-compact .banner-command-rail { grid-template-columns:repeat(8,minmax(86px,1fr)); gap:5px; padding:5px; }
+.banner.commands.is-compact .banner-command-rail { grid-template-columns:repeat(7,minmax(86px,1fr)); gap:5px; padding:5px; }
 .banner.commands.is-compact .banner-command-chip.banner-command-secondary { display:none; }
 .banner.commands.is-compact .banner-command-chip { min-height:34px; padding:3px 7px; font-size:10px; letter-spacing:0; }
 .banner.commands.is-compact .banner-command-chip strong { display:flex; align-items:center; justify-content:center; min-height:24px; font-size:12.2px; line-height:1; white-space:normal; overflow:visible; overflow-wrap:anywhere; text-overflow:clip; }
@@ -2279,6 +2301,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     lastDropped: null,
     renderedEffects: 0,
     lastRendered: null,
+    deferredRetries: 0,
+    resolvedAfterRetry: 0,
+    lastDeferred: null,
   };
   const overlayParams = new URLSearchParams(window.location.search);
   const reducedMotionMedia = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
@@ -2523,7 +2548,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     };
     if (isSignedOverlay) {
       options.auth = { roomId: overlayRoomId, overlayToken };
-      options.query = { room_id: overlayRoomId, overlay_token: overlayToken };
     }
     return options;
   }
@@ -3673,6 +3697,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const duration = Math.max(900, Number(item?.cardAccentDurationMs || item?.accentDurationMs || 6500) || 6500);
       setCardAccent(uniqueId, type, color, duration, { label });
     });
+    if (activeBanner?.el) placeBannerAbovePlayers(activeBanner.el);
+    if (supportUnitEl?.style.visibility !== 'hidden') placeSupportUnit();
     requestAnimationFrame(draw);
     return { ok: true, count: Object.keys(players).length, ids: Object.keys(players) };
   }
@@ -4242,8 +4268,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const frame = stage.frame;
     const playerZone = stage.zones.players;
     const requestedCardD = Math.min(
-      frame.h * (isPublicDemo ? 0.19 : 0.178),
-      playerZone.h * (isPublicDemo ? 0.93 : 0.89)
+      frame.h * (isPublicDemo ? 0.238 : 0.23),
+      playerZone.h * 0.94
     ) * layoutZoom;
     const baseGap = requestedCardD * (total >= 5 ? 0.13 : total === 4 ? 0.16 : total === 3 ? 0.22 : 0.3);
     const minGap = stage.gap * (total >= 5 ? 0.76 : 0.92);
@@ -4251,7 +4277,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const gapScale = total >= 5 ? 0.08 : total === 4 ? 0.12 : 0.2;
     const visualGap = clampNumber(baseGap + Math.max(0, layoutGap) * gapScale, minGap, maxGap);
     const availableW = Math.max(240, playerZone.w - stage.gap * 0.82);
-    const minFinalGap = total > 1 ? stage.gap * (total >= 5 ? 0.82 : 0.9) : 0;
+    const minFinalGap = total > 1
+      ? Math.max(18 * canvasUiScale(), stage.gap * (total >= 5 ? 0.88 : 0.94))
+      : 0;
     const reservedGap = total > 1 ? clampNumber(visualGap, minFinalGap, maxGap) : 0;
     const availableForCards = Math.max(48, availableW - reservedGap * Math.max(0, total - 1));
     const fitScale = requestedCardD * total > availableForCards ? availableForCards / (requestedCardD * total) : 1;
@@ -4281,9 +4309,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const padY = clampNumber(cardD * 0.07, 6 * ui, 14 * ui);
     const slotGap = Math.max(4 * ui, cardD * 0.026);
     const nameH = clampNumber(cardD * 0.18, 31 * ui, 42 * ui);
-    const nameW = Math.max(1, cardW * 0.78);
+    const nameW = Math.max(1, cardW * 0.86);
     const nameX = plateX + (cardW - nameW) / 2;
-    const nameY = plateY + plateH * 0.72;
+    const nameY = plateY + plateH * 0.745;
     const barH = clampNumber(cardD * 0.2, 33 * ui, 40 * ui);
     const barW = clampNumber(cardW * 0.41, 60 * ui, 80 * ui);
     const barX = plateX + cardW * 0.11;
@@ -5142,6 +5170,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const bannerMomentum = { killer: '', lastKillAt: 0, chain: 0 };
   let activeBanner = null;
   let activeBannerTimer = null;
+  let bannerTransitioning = false;
 
   function clampBannerNumber(value, min, max, fallback) {
     const num = Number(value);
@@ -5188,10 +5217,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         .map(item => String(item || '').trim().slice(0, 640))
         .filter(Boolean)
       : [];
+    const extendedDebugDuration = isPreviewMode || overlayParams.get('debug') === '1';
     const duration = clampBannerNumber(
       durationMs || (objectContent && objectContent.durationMs) || (options && options.durationMs),
       1400,
-      cls === 'commands' ? 24000 : 5200,
+      cls === 'commands' ? 24000 : extendedDebugDuration ? 60000 : 12000,
       config.duration
     );
     const priority = clampBannerNumber(
@@ -5255,10 +5285,19 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const closing = activeBanner;
     activeBanner = null;
     if (closing.el) {
+      bannerTransitioning = true;
       closing.el.classList.add('closing');
-      setTimeout(() => closing.el && closing.el.remove(), 240);
+      const finishClose = () => {
+        if (closing.el) closing.el.remove();
+        bannerTransitioning = false;
+        if (renderNext) renderNextBanner();
+      };
+      if (prefersReducedMotion()) finishClose();
+      else setTimeout(finishClose, 220);
+      return;
     }
-    if (renderNext) setTimeout(renderNextBanner, 280);
+    bannerTransitioning = false;
+    if (renderNext) renderNextBanner();
   }
 
   function bannerCommandGridHtml(commands) {
@@ -5277,9 +5316,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function bannerCommandRailHtml(commands) {
     if (!Array.isArray(commands) || !commands.length) return '';
-    const nanoPrimaryCommands = new Set(['engage', '@name', '!shield', '!commands']);
-    const compactHiddenCommands = new Set(['chat']);
-    const microHiddenCommands = new Set(['chat', '!attack @name', '!heal @name']);
+    const nanoPrimaryCommands = new Set(['@name', '@horde', 'shield', 'commands']);
+    const compactHiddenCommands = new Set(['heal @name']);
+    const microHiddenCommands = new Set(['laser @name', 'heal @name']);
     return `
         <span class="banner-command-rail" data-testid="command-banner-rail">
           ${commands.map(entry => {
@@ -5385,7 +5424,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 
   function renderNextBanner() {
-    if (activeBanner || !bannerQueue.length) return;
+    if (activeBanner || bannerTransitioning || !bannerQueue.length) return;
     bannerQueue.sort((a, b) => (b.priority - a.priority) || (a.createdAt - b.createdAt));
     renderBannerItem(bannerQueue.shift());
   }
@@ -5463,7 +5502,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     supportUnitState.shields = Math.min(9, supportUnitState.shields);
     supportUnitState.lastName = supportUnitName(data) || supportUnitState.lastName;
     supportUnitState.updatedAt = now;
-    supportUnitState.visibleUntil = now + (prefersReducedMotion() ? 2600 : 3200);
+    supportUnitState.visibleUntil = now + (prefersReducedMotion() ? 5200 : 6000);
     renderSupportUnit();
     supportUnitEl.style.visibility = '';
     requestAnimationFrame(placeSupportUnit);
@@ -5589,26 +5628,24 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       base.commands = Array.isArray(options.commands) && options.commands.length
         ? options.commands
         : [
-          { command: 'engage', detail: 'enter arena' },
-          { command: '@name', detail: 'hit a player' },
-          { command: 'chat', detail: 'weak random attack' },
-          { command: '!attack @name', detail: 'stronger player hit' },
-          { command: '!attack @horde', detail: 'hit The Horde' },
-          { command: '!attack @boss', detail: 'hit the boss' },
-          { command: '!shield', detail: 'block damage' },
-          { command: '!heal @name', detail: 'heal ally' },
-          { command: '!commands', detail: 'show help' },
+          { command: '@name', detail: 'attack a player' },
+          { command: '@horde', detail: 'hit The Horde' },
+          { command: '@boss', detail: 'hit the boss' },
+          { command: 'laser @name', detail: 'choose an effect' },
+          { command: 'shield', detail: 'block damage' },
+          { command: 'heal @name', detail: 'heal ally' },
+          { command: 'commands', detail: 'show help' },
         ];
       base.tickerItems = Array.isArray(options.tickerItems) && options.tickerItems.length
         ? options.tickerItems
         : [
           'Any comment, like, follow, share, or gift enters you',
           'Targets: @name | @horde | @boss',
-          'Regular chat: enters you and sends a random 5-damage attack',
-          'Attacks: @name | @horde | @boss | !laser @name | !fire @name',
+          'Mention a target anywhere in your comment to attack',
+          'Effects need no prefix: laser @name | fire @horde | orbital @boss',
           'Icon: !emoji <emoji> or !<emoji>',
-          'Effects: !laser @name | !fire @name | !prism @name | !plasma @name',
-          'Teams/help: !team red / !commands or !comments',
+          'Defense/support: shield | heal @name',
+          'Teams/help: team red | commands',
         ];
       base.meta = '';
       base.kicker = '';
@@ -5623,7 +5660,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       activeBannerTimer = null;
     }
     activeBanner = null;
+    bannerTransitioning = false;
     bannerQueue.length = 0;
+    recentBannerSignatures.clear();
     container.querySelectorAll('.banner').forEach(el => el.remove());
     showBanner(normalized, bannerPlacementProbePayload(normalized, options), Number(options.durationMs) || 12000);
     return currentBannerStatus();
@@ -5638,6 +5677,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     showSupportUnit({ type: 'like', hearts: 3, name: nickname });
     handlePlayerCommand({ type: 'heal', uniqueId, sourceNick: nickname, amount: 25 });
     handlePlayerCommand({ type: 'shield', uniqueId, nickname });
+    supportUnitState.visibleUntil = Math.max(supportUnitState.visibleUntil, Date.now() + 120000);
     placeSupportUnit();
     return currentSupportUnitStatus();
   }
@@ -5648,15 +5688,19 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const bannerZone = canvasRectToOverlay(stage.zones.banner);
     const gapX = stage.gap * scale.x;
     const gapY = stage.gap * scale.y;
-    const laneAnchor = isCommandBanner ? 'center' : 'horde-side';
+    const hasBoss = Boolean(bossWaveState?.active);
+    const top = topPlayers();
+    const horde = hordePlayer();
+    const openSpace = !hasBoss && !horde;
+    const laneAnchor = isCommandBanner || openSpace ? 'center' : 'horde-side';
     const innerLeft = frame.x + gapX;
     const innerRight = frame.right - gapX;
     const maxLaneW = Math.max(1, innerRight - innerLeft);
-    const targetRatio = isCommandBanner ? 0.88 : 0.62;
+    const targetRatio = isCommandBanner ? 0.9 : openSpace ? 0.76 : 0.62;
     const laneW = Math.min(maxLaneW, Math.max(bannerZone.w, frame.w * targetRatio));
     const desiredLaneH = Math.min(
-      frame.h * 0.12,
-      Math.max(bannerZone.h, frame.h * (isCommandBanner ? 0.096 : 0.105))
+      frame.h * (openSpace ? 0.17 : 0.12),
+      Math.max(bannerZone.h, frame.h * (openSpace ? (isCommandBanner ? 0.155 : 0.145) : (isCommandBanner ? 0.096 : 0.105)))
     );
     const minReadableLaneH = Math.max(24, frame.h * (isCommandBanner ? 0.045 : 0.04));
     const centeredX = frame.x + frame.w / 2 - laneW / 2;
@@ -5680,8 +5724,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     staticLane.playerClearance = null;
     staticLane.hordeClearance = null;
 
-    const top = topPlayers();
-    const horde = hordePlayer();
     if (!top.length || !horde) return staticLane;
 
     let playerBottom = null;
@@ -5716,7 +5758,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     let bossTop = null;
     let bossBottom = null;
-    if (bossWaveState?.active) {
+    if (hasBoss) {
       try {
         const bossLayout = getBossLayout();
         bossTop = bossLayout.panelY * scale.y;
@@ -5744,7 +5786,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     }
 
     const availableGap = laneBottomLimit - laneTopLimit;
-    const cssReadableLaneH = isCommandBanner ? 54 : 78;
+    const cssReadableLaneH = openSpace ? (isCommandBanner ? 122 : 112) : (isCommandBanner ? 54 : 78);
     const laneH = Math.min(availableGap, Math.max(desiredLaneH, Math.min(cssReadableLaneH, availableGap)));
     const laneY = laneTopLimit + Math.max(0, (availableGap - laneH) * (isCommandBanner ? 0.5 : 0.88));
     const combatLane = makeRect(laneX, laneY, laneW, laneH);
@@ -5891,7 +5933,14 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       : Math.min(maxWidth, Math.max(Math.min(readableMinWidth, maxWidth), availableWidth * (laneIsCombat ? 0.86 : 0.94)));
     const forceCompact = placementZone.h <= (isCommandBanner ? 58 : 72) || preferredWidth < (isCommandBanner ? 640 : 620);
     const forceMicro = placementZone.h <= (isCommandBanner ? 46 : 50) || preferredWidth < (isCommandBanner ? 500 : 460);
-    el.classList.remove('is-compact', 'is-micro', 'is-nano');
+    const shouldExpand = !bossWaveState?.active
+      && !hordePlayer()
+      && !forceNano
+      && !forceCompact
+      && placementZone.h >= (isCommandBanner ? 112 : 104)
+      && preferredWidth >= (isCommandBanner ? 760 : 680);
+    el.classList.remove('is-expanded', 'is-compact', 'is-micro', 'is-nano');
+    if (shouldExpand) el.classList.add('is-expanded');
     if (forceCompact) el.classList.add('is-compact');
     if (forceMicro) el.classList.add('is-micro');
     if (forceNano) el.classList.add('is-nano');
@@ -5899,6 +5948,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     el.style.maxWidth = `${maxWidth}px`;
 
     let rect = elementLayoutSize(el);
+    if (rect.height > placementZone.h && el.classList.contains('is-expanded')) {
+      el.classList.remove('is-expanded');
+      rect = elementLayoutSize(el);
+    }
     if (rect.height > placementZone.h && !el.classList.contains('is-compact')) {
       el.classList.add('is-compact');
       rect = elementLayoutSize(el);
@@ -5915,7 +5968,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const centerX = clampNumber(frame.x + frame.w / 2, placementZone.x + halfWidth, placementZone.right - halfWidth);
     const maxTop = Math.max(placementZone.y, placementZone.bottom - rect.height);
     const minTop = laneIsCombat ? placementZone.y : frame.y + gapY * 0.35;
-    const verticalBias = isCommandBanner ? 0 : laneIsCombat && placementZone.anchor === 'horde-side' ? 0.84 : 0.5;
+    const verticalBias = el.classList.contains('is-expanded')
+      ? 0.5
+      : isCommandBanner ? 0 : laneIsCombat && placementZone.anchor === 'horde-side' ? 0.84 : 0.5;
     const top = clampNumber(placementZone.y + Math.max(0, placementZone.h - rect.height) * verticalBias, minTop, maxTop);
     el.style.left = `${centerX}px`;
     el.style.top = `${top}px`;
@@ -6338,6 +6393,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       lastDropped: effectOwnershipStats.lastDropped ? { ...effectOwnershipStats.lastDropped } : null,
       renderedEffects: effectOwnershipStats.renderedEffects,
       lastRendered: effectOwnershipStats.lastRendered ? { ...effectOwnershipStats.lastRendered } : null,
+      deferredRetries: effectOwnershipStats.deferredRetries,
+      resolvedAfterRetry: effectOwnershipStats.resolvedAfterRetry,
+      lastDeferred: effectOwnershipStats.lastDeferred ? { ...effectOwnershipStats.lastDeferred } : null,
       particles: particleCount,
       impactBursts: impactBursts.length,
       arenaShakeActive: now < arenaShakeUntil && arenaShakeMagnitude > 0,
@@ -10108,50 +10166,85 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   function drawPlayerEmojiCore(x, y, r, iconEmoji, accent, state, ui) {
     const hot = overlayHotModeActive();
     ctx.save();
-    const core = ctx.createRadialGradient(x - r * 0.32, y - r * 0.38, 1, x, y, r);
-    core.addColorStop(0, state.isKO ? 'rgba(205,211,226,0.16)' : 'rgba(255,255,255,0.26)');
-    core.addColorStop(0.45, state.isKO ? 'rgba(47,52,67,0.96)' : 'rgba(8,18,32,0.98)');
-    core.addColorStop(1, state.isKO ? 'rgba(12,13,18,0.98)' : colorWithAlpha(accent, 0.74));
-    ctx.fillStyle = core;
-    ctx.shadowColor = colorWithAlpha(accent, state.hasShield ? 0.7 : 0.44);
-    ctx.shadowBlur = hot ? Math.max(2, r * 0.04) : Math.max(7, r * 0.22);
+    const medallionPath = (radius, rotation = Math.PI / 6) => {
+      ctx.beginPath();
+      for (let index = 0; index < 6; index += 1) {
+        const angle = rotation + index * Math.PI / 3;
+        const pointX = x + Math.cos(angle) * radius;
+        const pointY = y + Math.sin(angle) * radius;
+        if (index === 0) ctx.moveTo(pointX, pointY);
+        else ctx.lineTo(pointX, pointY);
+      }
+      ctx.closePath();
+    };
+    const outer = ctx.createRadialGradient(x - r * 0.36, y - r * 0.42, 1, x, y, r);
+    outer.addColorStop(0, state.isKO ? 'rgba(205,211,226,0.17)' : 'rgba(255,255,255,0.3)');
+    outer.addColorStop(0.42, state.isKO ? 'rgba(42,47,61,0.98)' : colorWithAlpha(accent, 0.55));
+    outer.addColorStop(0.7, 'rgba(5,11,22,0.995)');
+    outer.addColorStop(1, state.isKO ? 'rgba(12,13,18,0.99)' : colorWithAlpha(accent, 0.88));
+    ctx.fillStyle = outer;
+    ctx.shadowColor = colorWithAlpha(accent, state.hasShield ? 0.72 : 0.5);
+    ctx.shadowBlur = hot ? Math.max(2, r * 0.04) : Math.max(8, r * 0.24);
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    ctx.strokeStyle = state.hasShield ? 'rgba(210,253,255,0.92)' : colorWithAlpha(accent, 0.86);
-    ctx.lineWidth = Math.max(1.7, r * 0.07);
+    ctx.strokeStyle = state.hasShield ? 'rgba(210,253,255,0.96)' : colorWithAlpha(accent, 0.94);
+    ctx.lineWidth = Math.max(1.8, r * 0.075);
     ctx.beginPath();
     ctx.arc(x, y, r * 0.98, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-    ctx.lineWidth = Math.max(0.8, r * 0.032);
-    ctx.beginPath();
-    ctx.arc(x - r * 0.03, y - r * 0.04, r * 0.73, Math.PI * 1.12, Math.PI * 1.9);
+
+    const inset = ctx.createLinearGradient(x - r, y - r, x + r, y + r);
+    inset.addColorStop(0, state.isKO ? 'rgba(70,75,89,0.88)' : colorWithAlpha(accent, 0.34));
+    inset.addColorStop(0.38, 'rgba(5,11,21,0.98)');
+    inset.addColorStop(1, state.isKO ? 'rgba(11,12,18,0.99)' : colorWithAlpha(accent, 0.16));
+    ctx.fillStyle = inset;
+    medallionPath(r * 0.73);
+    ctx.fill();
+    ctx.strokeStyle = state.isLeader ? colorWithAlpha(THEME.goldBright, 0.82) : 'rgba(220,247,255,0.34)';
+    ctx.lineWidth = Math.max(0.9, r * 0.032);
+    medallionPath(r * 0.73);
     ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.lineWidth = Math.max(0.8, r * 0.027);
+    ctx.beginPath();
+    ctx.arc(x - r * 0.025, y - r * 0.035, r * 0.84, Math.PI * 1.12, Math.PI * 1.88);
+    ctx.stroke();
+
+    for (let index = 0; index < 4; index += 1) {
+      const angle = Math.PI * 0.25 + index * Math.PI * 0.5;
+      const boltX = x + Math.cos(angle) * r * 0.84;
+      const boltY = y + Math.sin(angle) * r * 0.84;
+      ctx.fillStyle = index === 0 && state.isLeader ? THEME.goldBright : colorWithAlpha(accent, 0.92);
+      ctx.beginPath();
+      ctx.arc(boltX, boltY, Math.max(1.1 * ui, r * 0.038), 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     if (iconEmoji) {
       if (!hot) {
-        const iconGlow = ctx.createRadialGradient(x, y, 0, x, y, r * 1.45);
-        iconGlow.addColorStop(0, 'rgba(255,255,255,0.22)');
-        iconGlow.addColorStop(0.58, colorWithAlpha(accent, 0.28));
+        const iconGlow = ctx.createRadialGradient(x, y, 0, x, y, r * 0.82);
+        iconGlow.addColorStop(0, 'rgba(255,255,255,0.17)');
+        iconGlow.addColorStop(0.58, colorWithAlpha(accent, 0.18));
         iconGlow.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = iconGlow;
         ctx.beginPath();
-        ctx.arc(x, y, r * 1.28, 0, Math.PI * 2);
+        ctx.arc(x, y, r * 0.79, 0, Math.PI * 2);
         ctx.fill();
       }
 
-      ctx.font = `${r * 1.72}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif`;
+      ctx.font = `${r * 1.34}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", Arial, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.shadowColor = 'rgba(0,0,0,0.9)';
-      ctx.shadowBlur = hot ? Math.max(1, r * 0.04) : Math.max(4, r * 0.2);
+      ctx.shadowBlur = hot ? Math.max(1, r * 0.04) : Math.max(3, r * 0.14);
       ctx.fillStyle = '#ffffff';
-      ctx.fillText(iconEmoji, x, y + r * 0.015);
+      ctx.fillText(iconEmoji, x, y + r * 0.02);
       ctx.restore();
-      return { rendered: true, source: 'player-icon' };
+      return { rendered: true, source: 'player-icon-medallion' };
     }
 
     drawBattleInsignia(x, y, r * 0.82, accent);
@@ -10183,7 +10276,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.fill();
 
     const textCenterY = slot.y + slot.h * (lines.length > 1 ? 0.56 : 0.59);
-    const textRect = drawCenteredCanvasTextLines(ctx, lines, center.x, textCenterY, {
+    const textClip = insetRect(slot, Math.max(2, 2 * ui));
+    ctx.save();
+    roundedRectPath(ctx, textClip.x, textClip.y, textClip.w, textClip.h, Math.max(1, textClip.h / 2));
+    ctx.clip();
+    const rawTextRect = drawCenteredCanvasTextLines(ctx, lines, center.x, textCenterY, {
       fontFactory,
       fontSize,
       lineHeight,
@@ -10191,6 +10288,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       strokeStyle: 'rgba(0,0,0,0.9)',
       lineWidth: Math.max(1.4, 1.95 * ui),
     });
+    ctx.restore();
+    const textRect = intersectRect(rawTextRect, textClip);
     ctx.restore();
     return textRect;
   }
@@ -10306,29 +10405,15 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const identity = playerCardIdentity(player);
     const displayName = playerCardDisplayNameText(identity.displayName);
     const nameFontFactory = size => `950 ${size}px ${PLAYER_CARD_NAME_FONT}`;
-    let nameFit = fitCanvasTextLinesResult(
+    const nameFit = fitCanvasTextResult(
       ctx,
       displayName,
       Math.max(1, slots.name.w - Math.max(10 * ui, slots.name.h * 0.28)),
-      2,
       nameFontFactory,
-      Math.max(22 * ui, Math.min(slots.name.h * 0.78, cardW * 0.16)),
-      Math.max(9, 10 * ui)
+      Math.max(23 * ui, Math.min(slots.name.h * 0.8, cardW * 0.16)),
+      Math.max(14, 17 * ui)
     );
-    if (nameFit.lines.length > 1) {
-      const twoLineMaxSize = Math.max(8, Math.min(nameFit.size, slots.name.h * 0.38));
-      if (twoLineMaxSize < nameFit.size) {
-        nameFit = fitCanvasTextLinesResult(
-          ctx,
-          displayName,
-          Math.max(1, slots.name.w - Math.max(10 * ui, slots.name.h * 0.28)),
-          2,
-          nameFontFactory,
-          twoLineMaxSize,
-          Math.max(7, 8 * ui)
-        );
-      }
-    }
+    const nameLines = [nameFit.text];
 
     const commandLabel = state.commandLabel || '';
     const statusLabel = state.isKO
@@ -10386,8 +10471,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const hpTextRect = drawPlayerHpPill(slots.hpBar, hpLabelText, hpPct, state, ui);
     const statusTextRect = drawPlayerStatusChip(slots.statusBadges, statusDisplayLabel, statusFit, state, accent, ui);
     const emojiRender = drawPlayerEmojiCore(avatarX, avatarY, avatarR, iconEmoji, accent, state, ui);
-    const nameLineHeight = nameFit.lines.length > 1 ? nameFit.size * 0.76 : nameFit.size * 0.86;
-    const nameTextRect = drawPlayerNameRibbon(slots.name, nameFit.lines, nameFit.size, nameLineHeight, nameFontFactory, state, accent, ui);
+    const nameLineHeight = nameFit.size * 0.86;
+    const nameTextRect = drawPlayerNameRibbon(slots.name, nameLines, nameFit.size, nameLineHeight, nameFontFactory, state, accent, ui);
 
     const nameSlotCenter = slots.name.left + slots.name.w / 2;
     const nameTextCenter = nameTextRect.left + nameTextRect.w / 2;
@@ -10411,10 +10496,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       bottom: metrics.bottom,
       text: {
         rawName: identity.rawName,
-        fittedName: nameFit.lines.join(' '),
+        fittedName: nameFit.text,
         handle: '',
         nameTruncated: nameFit.truncated,
-        nameHasReplacement: nameFit.lines.join('').includes('\uFFFD'),
+        nameHasReplacement: nameFit.text.includes('\uFFFD'),
         nameCenterDelta: Math.abs(nameTextCenter - nameSlotCenter),
         koLabel: '',
         hpLabel: hpLabelText,
@@ -10427,7 +10512,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         iconEmoji,
         emojiRendered: emojiRender.rendered,
         emojiSource: emojiRender.source,
-        cardDesign: 'circular-holo-player-card',
+        cardDesign: 'circular-crest-player-card',
       },
       slots: {
         card: cloneTelemetryRect(slots.card),
@@ -11633,7 +11718,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.fillStyle = 'rgba(255,255,255,0.76)';
     const helpSize = Math.max(9, Math.min(13 * ui, boxH * 0.13));
     ctx.font = `800 ${helpSize}px DM Sans, sans-serif`;
-    const help = fitCanvasText(ctx, 'Commands still work: !emoji, !shield, !laser @name', boxW * 0.82, size => `800 ${size}px DM Sans, sans-serif`, helpSize, Math.max(8, 9 * ui));
+    const help = fitCanvasText(ctx, 'Attack with @name or laser @name. Use shield, heal, or commands.', boxW * 0.82, size => `800 ${size}px DM Sans, sans-serif`, helpSize, Math.max(8, 9 * ui));
     ctx.fillText(help, x + boxW / 2, y + boxH * 0.84);
     ctx.restore();
   }
@@ -11653,6 +11738,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     drawArenaDepth(top.length, Boolean(horde), Boolean(bossWaveState?.active));
     drawWaitingForPlayers(computeOverlayLayout());
     drawImpactBursts();
+    // Combat motion belongs behind the readable HUD. Damage numbers remain a
+    // constrained DOM foreground layer, while beams and particles cannot cover
+    // player names, HP, boss, or Horde labels.
+    attacks = attacks.filter(updateAndDrawAttackEffect);
+    trimVisualEffects();
     const legacyLayoutPlayers = [];
     top.forEach((p, i) => {
       const pos = getPlayerPosition(i, top.length);
@@ -11712,6 +11802,8 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       || !window.__overlayLegacyLayout
       || auditNow - legacyLayoutAuditAt >= LEGACY_LAYOUT_AUDIT_INTERVAL_MS
       || supportVisibleForAudit
+      || Boolean(activeBanner?.el)
+      || bannerTransitioning
       || attacks.length > 0
       || impactBursts.length > 0;
     if (shouldRefreshLayoutAudit) {
@@ -11724,7 +11816,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         .filter(Boolean);
       const domLayerLeaks = overlayDiagnostics.domLayerLeakLabels(domObjects);
       const damageObjects = domObjects.filter(item => item.type === 'damage');
-      const collisionDomObjects = domObjects.filter(item => item.type === 'status' || item.type === 'support');
+      const collisionDomObjects = domObjects.filter(item => item.type === 'banner' || item.type === 'status' || item.type === 'support');
       const supportChip = domObjects.find(item => item.type === 'support') || null;
       const containedObjects = legacyLayoutPlayers
         .concat(legacyLayoutHorde ? [legacyLayoutHorde] : [])
@@ -11758,8 +11850,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       window.__overlayLegacyLayout.boss = legacyLayoutBoss;
     }
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-    attacks = attacks.filter(updateAndDrawAttackEffect);
-    trimVisualEffects();
     ctx.restore();
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
     drawArenaFrame();
@@ -11815,7 +11905,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     statusDiv.textContent = '🟡 DEMO MODE · no server';
     statusDiv.className   = 'demo';
     showBattlePrompt('Demo battle preview', '', 2200, true);
-    if (disableDemoAutoplay) return;
+    if (disableDemoAutoplay || isPreviewMode) return;
     if (isPublicDemo) setTimeout(fireDemoAttack, 900);
     else fireDemoAttack();
     _demoTimer = setInterval(fireDemoAttack, isPublicDemo ? 2400 : 1500);
@@ -11840,6 +11930,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function applyGameState(state) {
     players = normalizePlayers(state);
+    requestAnimationFrame(() => {
+      if (activeBanner?.el) placeBannerAbovePlayers(activeBanner.el);
+      if (supportUnitEl?.style.visibility !== 'hidden') placeSupportUnit();
+    });
     if (isSetupMode && Object.keys(players).length === 0) {
       enterDemoMode();
       if (!stateFetchInFlight) {
@@ -12184,10 +12278,21 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         deferUnresolved: canRetry,
       });
       if (fired === null && canRetry) {
+        effectOwnershipStats.deferredRetries += 1;
+        effectOwnershipStats.lastDeferred = {
+          type: String(data.effect || 'attack'),
+          attacker: String(data.attacker || '').slice(0, 80),
+          target: String(data.target || '').slice(0, 80),
+          attempt: attempt + 1,
+          at: Date.now(),
+        };
         setTimeout(() => run(attempt + 1), 90);
         return;
       }
-      if (fired) rememberAttack(data.attacker, data.target, data.effect);
+      if (fired) {
+        if (attempt > 0) effectOwnershipStats.resolvedAfterRetry += 1;
+        rememberAttack(data.attacker, data.target, data.effect);
+      }
       if (data.shielded) showBattlePrompt(`Shield absorbed ${Math.round(Number(data.shieldAbsorbed) || 0)} damage`, 'return', 1400);
     };
     if (delayMs) setTimeout(run, delayMs);
@@ -12196,15 +12301,35 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function handleGiftAttackEvent(data) {
     if (!data) return;
-    flushPendingGameState();
     const giftEffect = normalizeEffectType(data.effect || data.commandDescription || data.shotType || overlaySettings.shotType);
-    const fired = fireAttack(data.attacker, data.target, data.damage, data.killed, true, giftEffect, {
-      intensity: data.intensity || 0.5, giftBoosted: true,
-      remainingHpPct: data.killed ? 0 : 1,
-      killingBlow: !!data.killed, laserColor: data.giftColor,
-      attackerScope: data.attackerScope, targetScope: data.targetScope,
-    });
-    if (fired) rememberAttack(data.attacker, data.target, giftEffect);
+    const run = (attempt = 0) => {
+      flushPendingGameState();
+      const canRetry = attempt < 6;
+      const fired = fireAttack(data.attacker, data.target, data.damage, data.killed, true, giftEffect, {
+        intensity: data.intensity || 0.5, giftBoosted: true,
+        remainingHpPct: data.killed ? 0 : 1,
+        killingBlow: !!data.killed, laserColor: data.giftColor,
+        attackerScope: data.attackerScope, targetScope: data.targetScope,
+        deferUnresolved: canRetry,
+      });
+      if (fired === null && canRetry) {
+        effectOwnershipStats.deferredRetries += 1;
+        effectOwnershipStats.lastDeferred = {
+          type: giftEffect,
+          attacker: String(data.attacker || '').slice(0, 80),
+          target: String(data.target || '').slice(0, 80),
+          attempt: attempt + 1,
+          at: Date.now(),
+        };
+        setTimeout(() => run(attempt + 1), 90);
+        return;
+      }
+      if (fired) {
+        if (attempt > 0) effectOwnershipStats.resolvedAfterRetry += 1;
+        rememberAttack(data.attacker, data.target, giftEffect);
+      }
+    };
+    run();
   }
 
   function handleLikeEvent(data) {
@@ -12421,7 +12546,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       return;
     }
     if (data.type === 'help') {
-      showBattlePrompt('Comment or tap like to enter. Try @name, !emoji, !shield, !laser @name', 'return', 3600);
+      showBattlePrompt('Comment or tap like to enter. Attack with @name or laser @name.', 'return', 3600);
       return;
     }
     if (data.type === 'join') {
@@ -12775,7 +12900,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
   if (overlayParams.get('banner_preview') === '1') {
     setTimeout(() => {
-      const previewBannerDuration = clampBannerNumber(Number(overlayParams.get('banner_duration')), 1400, 5200, 4600);
+      const previewBannerDuration = clampBannerNumber(Number(overlayParams.get('banner_duration')), 45000, 60000, 50000);
       showBanner('legendary', {
         code: overlayParams.get('banner_code') || 'X7',
         kicker: overlayParams.get('banner_kicker') || 'Arena takeover',

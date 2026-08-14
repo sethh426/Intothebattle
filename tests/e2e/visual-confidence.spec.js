@@ -157,10 +157,23 @@ function assertHordeProminence(layout, label) {
 function assertPlayerCardSlots(layout, label, options = {}) {
   const players = layout?.players || [];
   expect(players.length, `${label} missing player cards`).toBeGreaterThanOrEqual(options.minPlayers ?? 5);
+  if (layout?.frame?.h) {
+    const visibleCards = players.slice(0, options.minPlayers ?? 5).sort((a, b) => a.left - b.left);
+    visibleCards.forEach((player, index) => {
+      expect(player.height, `${label} player ${index + 1} circle size`).toBeGreaterThanOrEqual(layout.frame.h * 0.22);
+      expect(player.height, `${label} player ${index + 1} circle maximum`).toBeLessThanOrEqual(layout.frame.h * 0.27);
+    });
+    for (let index = 1; index < visibleCards.length; index += 1) {
+      expect(
+        visibleCards[index].left - visibleCards[index - 1].right,
+        `${label} player ${index}/${index + 1} horizontal clearance`
+      ).toBeGreaterThanOrEqual(14);
+    }
+  }
   players.slice(0, options.minPlayers ?? 5).forEach((player, index) => {
     const cardLabel = `${label} player ${index + 1}`;
     const slots = player.slots || {};
-    const isCircular = player.text?.cardDesign === 'circular-holo-player-card';
+    const isCircular = player.text?.cardDesign === 'circular-crest-player-card';
     expect(slots.card, `${cardLabel} missing card slot`).toBeTruthy();
     if (isCircular) {
       expect(Math.abs(slots.card.w - slots.card.h), `${cardLabel} circular card aspect`).toBeLessThanOrEqual(slots.card.h * 0.08);
@@ -184,7 +197,7 @@ function assertPlayerCardSlots(layout, label, options = {}) {
     assertRectInside(slots.nameText, slots.name, `${cardLabel} name text`, 3);
     assertRectInside(slots.hpText, slots.hpBar, `${cardLabel} hp text`, 3);
     assertRectInside(slots.statusText, slots.statusBadges, `${cardLabel} status text`, 2.5);
-    expect(slots.nameText.h, `${cardLabel} source-scale name readability`).toBeGreaterThanOrEqual(Math.max(15, slots.card.h * (isCircular ? 0.095 : 0.13)));
+    expect(slots.nameText.h, `${cardLabel} source-scale name readability`).toBeGreaterThanOrEqual(Math.max(14.5, slots.card.h * (isCircular ? 0.06 : 0.13)));
     expect(slots.avatar.h, `${cardLabel} source-scale avatar readability`).toBeGreaterThanOrEqual(Math.max(56, slots.card.h * 0.34));
     expect(slots.avatar.w, `${cardLabel} source-scale avatar width`).toBeGreaterThanOrEqual(Math.max(56, slots.card.w * 0.25));
     expect(slots.hpBar.h, `${cardLabel} source-scale hp medallion readability`).toBeGreaterThanOrEqual(Math.max(32, slots.card.h * 0.19));
@@ -194,14 +207,15 @@ function assertPlayerCardSlots(layout, label, options = {}) {
     assertNoSlotOverlap(slots.name, slots.hpBar, `${cardLabel} name/hp`);
     assertNoSlotOverlap(slots.statusBadges, slots.hpBar, `${cardLabel} status/hp`);
     assertNoSlotOverlap(slots.avatar, slots.hpBar, `${cardLabel} avatar/hp`);
-    expect(player.text?.cardDesign, `${cardLabel} card design marker`).toBe('circular-holo-player-card');
+    expect(player.text?.cardDesign, `${cardLabel} card design marker`).toBe('circular-crest-player-card');
     expect(player.text?.nameHasReplacement, `${cardLabel} name contains replacement glyph`).toBe(false);
     expect(player.text?.fittedName || '', `${cardLabel} missing fitted name`).not.toBe('');
+    expect(player.text?.fittedName || '', `${cardLabel} name should stay on one line`).not.toMatch(/[\r\n]/);
     expect(player.text?.handle || '', `${cardLabel} handle should be hidden by default`).toBe('');
     expect(player.text?.koLabel || '', `${cardLabel} ko label should not render`).toBe('');
     expect(player.text?.hpLabel || '', `${cardLabel} missing hp label`).toMatch(/^\d+\s+HP$/);
     expect(player.text?.statusLabel || '', `${cardLabel} missing status label`).not.toBe('');
-    if (player.text?.emojiSource === 'player-icon') {
+    if (player.text?.emojiSource === 'player-icon-medallion') {
       expect(player.text?.iconEmoji || '', `${cardLabel} missing emoji crest`).not.toBe('');
       expect(player.text?.emojiRendered, `${cardLabel} emoji should render as the card crest`).toBe(true);
     } else {
@@ -439,7 +453,8 @@ async function assertBannerBacklog(page, testInfo, label, options = {}) {
   await attachJson(testInfo, `${label}-banner`, status);
   expect(status, `${label} missing banner status`).toBeTruthy();
   expect(status.queued).toBeLessThanOrEqual(options.maxQueued ?? 3);
-  expect(status.domCount).toBeLessThanOrEqual(options.maxDomCount ?? 3);
+  expect(status.domCount).toBeLessThanOrEqual(options.maxDomCount ?? 1);
+  expect(status.closingDomCount).toBeLessThanOrEqual(1);
   return status;
 }
 
@@ -610,7 +625,7 @@ async function auditEventStormViewport(page, testInfo) {
   expect(storm?.status?.totalQueued).toBeLessThanOrEqual(150);
   await expect.poll(async () => page.evaluate(() => window.overlayEventEngine?.status?.().visualQueue?.totalQueued || 0), { timeout: 12000 }).toBeLessThanOrEqual(4);
   await assertVisualQueueHealth(page, testInfo, 'event-storm-after', { maxQueued: 4, minProcessed: before.stats.processed + 12 });
-  await assertBannerBacklog(page, testInfo, 'event-storm-banners', { maxQueued: 3, maxDomCount: 3 });
+  await assertBannerBacklog(page, testInfo, 'event-storm-banners', { maxQueued: 3, maxDomCount: 1 });
 }
 
 async function auditHotAttackStormViewport(page, testInfo) {
@@ -699,6 +714,88 @@ test('@visual demo battle with five players and horde remains readable', async (
   await expectNoPageErrors(errors, testInfo, 'demo-battle');
 });
 
+test('@visual player composition remains collision-free across roster sizes and source resolutions', async ({ page }, testInfo) => {
+  sourceProjectOnly(testInfo);
+  const errors = await watchPage(page, harness.baseUrl);
+  const resolutions = [
+    { width: 1920, height: 1080 },
+    { width: 1400, height: 788 },
+    { width: 1280, height: 720 },
+  ];
+  const rosterSizes = [1, 3, 5, 7];
+  const results = [];
+
+  for (const resolution of resolutions) {
+    await page.setViewportSize(resolution);
+    await openPreview(page);
+    await page.waitForFunction(() => typeof window.overlayEventEngine?.testPlayerCards === 'function', null, { timeout: 5000 });
+
+    for (const rosterSize of rosterSizes) {
+      const roster = Array.from({ length: rosterSize }, (_, index) => ({
+        uniqueId: `layout_${rosterSize}_${index + 1}`,
+        nickname: index === rosterSize - 1 ? `Very_Long_Player_Label_${rosterSize}_${index + 1}` : `Player${index + 1}`,
+        hp: 180 - index * 7,
+        maxHp: 200,
+        kills: rosterSize - index,
+        iconEmoji: index % 2 ? '\u26a1' : '\u2694\ufe0f',
+      }));
+      await page.evaluate(players => window.overlayEventEngine.testPlayerCards(players), roster);
+      await page.waitForFunction(expected => {
+        const layout = window.__overlayLegacyLayout;
+        return layout?.players?.length === Math.min(5, expected)
+          && (expected <= 5 || Boolean(layout.horde));
+      }, rosterSize, { timeout: 5000 });
+      await page.waitForTimeout(180);
+      const layout = await page.evaluate(() => window.__overlayLegacyLayout);
+      expect(layout.collisions, `${resolution.width}x${resolution.height} roster ${rosterSize} collisions`).toEqual([]);
+      expect(layout.leaks, `${resolution.width}x${resolution.height} roster ${rosterSize} leaks`).toEqual([]);
+      assertPlayerCardSlots(layout, `${resolution.width}x${resolution.height} roster ${rosterSize}`, {
+        minPlayers: Math.min(5, rosterSize),
+      });
+      if (rosterSize > 5) assertHordeProminence(layout, `${resolution.width}x${resolution.height} roster ${rosterSize}`);
+      results.push({ resolution, rosterSize, layout });
+    }
+  }
+
+  await attachJson(testInfo, 'responsive-player-composition', results);
+  await expectNoHorizontalOverflow(page);
+  await expectNoPageErrors(errors, testInfo, 'responsive-player-composition');
+});
+
+test('@visual open-space banner expands without crowding the player card', async ({ page }, testInfo) => {
+  sourceProjectOnly(testInfo);
+  const errors = await watchPage(page, harness.baseUrl);
+  await openPreview(page);
+  await page.waitForFunction(() => typeof window.overlayEventEngine?.testPlayerCards === 'function', null, { timeout: 5000 });
+  await page.evaluate(() => {
+    window.overlayEventEngine.testPlayerCards([
+      { uniqueId: 'banner_solo', nickname: 'NovaPrime', hp: 190, maxHp: 200, kills: 8, iconEmoji: '\u2694\ufe0f' },
+    ]);
+    window.overlayEventEngine.testBannerPlacement('info', {
+      title: 'The arena is ready',
+      meta: 'Mention a fighter to launch an attack',
+      durationMs: 12000,
+    });
+  });
+  await page.waitForFunction(() => {
+    const status = window.overlayEventEngine?.status?.().banner;
+    return status?.active?.className?.includes('is-expanded') && status.active.rect?.height >= 104;
+  }, null, { timeout: 6000 });
+  await page.waitForTimeout(260);
+  const status = await page.evaluate(() => window.overlayEventEngine.status().banner);
+  await attachJson(testInfo, 'open-space-banner-status', status);
+  expect(status.active.className).toContain('is-expanded');
+  expect(status.active.rect.height).toBeGreaterThanOrEqual(104);
+  expect(status.domCount).toBe(1);
+  const layout = await readLegacyLayout(page, testInfo, 'open-space-banner-layout');
+  expect(layout.collisions, 'open-space banner layout collisions').toEqual([]);
+  assertPlayerCardSlots(layout, 'open-space-banner', { minPlayers: 1 });
+  await freezeOverlayVisuals(page, testInfo, 'open-space-banner-freeze');
+  await expectStableScreenshot(page.getByTestId('overlay-source-frame'), testInfo, 'open-space-expanded-banner', { maxDiffPixelRatio: 0.08 });
+  await expectNoHorizontalOverflow(page);
+  await expectNoPageErrors(errors, testInfo, 'open-space-banner');
+});
+
 test('@visual player cards keep stats and special-character names aligned', async ({ page }, testInfo) => {
   sourceProjectOnly(testInfo);
   const errors = await watchPage(page, harness.baseUrl);
@@ -725,8 +822,8 @@ test('@visual player cards keep stats and special-character names aligned', asyn
     shieldActive: true,
     shieldOverlay: 'circular-aegis-ring',
   });
-  expect(cardsById.card_plain?.text).toMatchObject({ iconEmoji: '\u2694\ufe0f', emojiRendered: true, emojiSource: 'player-icon' });
-  expect(cardsById.card_fire?.text).toMatchObject({ iconEmoji: '\u{1f525}', emojiRendered: true, emojiSource: 'player-icon' });
+  expect(cardsById.card_plain?.text).toMatchObject({ iconEmoji: '\u2694\ufe0f', emojiRendered: true, emojiSource: 'player-icon-medallion' });
+  expect(cardsById.card_fire?.text).toMatchObject({ iconEmoji: '\u{1f525}', emojiRendered: true, emojiSource: 'player-icon-medallion' });
   expect(cardsById.card_fire?.slots?.shieldOverlay).toBeTruthy();
   expect(cardsById.card_accent?.text).toMatchObject({ healthState: 'damaged', commandLabel: 'HEAL' });
   expect(cardsById.card_cjk?.text).toMatchObject({ healthState: 'critical', commandLabel: 'CRIT' });

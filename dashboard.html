@@ -661,7 +661,8 @@
     @media(max-width:700px){.launch-action{grid-template-columns:32px minmax(0,1fr); gap:3px 10px; padding:12px}.launch-action b{grid-row:1 / span 2}.launch-action strong{font-size:14px}.launch-action span{font-size:11px}.secondary-launch-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.secondary-launch-actions .btn:last-child{grid-column:1 / -1}}
     @media(max-width:700px){.quick-step-track{grid-template-columns:1fr}.quick-setup-primary{justify-content:stretch}.quick-setup-primary .btn{width:100%}.quick-setup-tip{text-align:left}.aetheris-territory-options{grid-template-columns:1fr}.aetheris-territory-badge{max-width:100%}.aetheris-structure-row{grid-template-columns:1fr}.aetheris-structure-actions{grid-template-columns:1fr}}
     @media(max-width:700px){.audio-row{display:grid;grid-template-columns:minmax(0,1fr);align-items:start}.audio-name{white-space:normal;overflow-wrap:anywhere}.audio-size{font-size:12px}.audio-actions,.assign-actions,.sponsor-row-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;padding-left:0;justify-content:stretch}.audio-actions .btn,.assign-actions .btn,.sponsor-row-actions .btn{width:100%}.assign-table,.assign-table tbody,.assign-table tr,.assign-table td{display:block;width:100%}.assign-table tr{padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)}.assign-table td{padding:6px 0;border-bottom:0}.assign-select-cell{padding-left:0}.event-pill{width:100%;justify-content:center}.sponsor-row{display:grid;grid-template-columns:1fr}.sponsor-thumb{width:100%;max-width:260px}.sponsor-selected,.sponsor-upgrade,.sponsor-readiness-head,.sponsor-step-track{grid-template-columns:1fr}.sponsor-step-track{display:grid}}
-  </style>
+</style>
+<link rel="stylesheet" href="/css/dashboard-command-center.css">
 </head>
 <body>
 <div id="toast"></div>
@@ -696,19 +697,19 @@
     </div>
   </header>
 
-  <section class="hero">
-    <div class="hero-card">
+  <section class="command-overview" aria-labelledby="commandOverviewTitle">
+    <div class="command-overview-main">
       <div class="welcome-setup-panel" id="welcomeSetupPanel" data-testid="welcome-setup-panel" hidden>
         <span>Welcome to the Command Center</span>
         <strong>Your room is ready. Start with the setup demo.</strong>
         <p>The signed setup flow gives you motion, demo players, and a safe source URL before your real TikTok LIVE connects.</p>
       </div>
-      <div class="kicker">Creator command center</div>
-      <h2>Stream room <span id="room-id-title">loading</span></h2>
+      <div class="kicker">Active creator room</div>
+      <h2 id="commandOverviewTitle">Room <span id="room-id-title">loading</span></h2>
       <p id="dashboard-summary">Checking stream, overlay, and media readiness.</p>
       <div class="stream-coach" id="streamCoach">
         <div class="coach-copy">
-          <span class="coach-label">Do this next</span>
+          <span class="coach-label">Recommended action</span>
           <strong id="heroNextActionTitle">Preparing your stream path</strong>
           <p id="heroNextActionCopy">The Command Center is checking your room, overlay URL, and setup status.</p>
         </div>
@@ -716,7 +717,7 @@
           <button class="btn btn-primary" onclick="startSetupRehearsal()">Start Setup Demo</button>
         </div>
       </div>
-      <div class="launch-row secondary-launch-actions">
+      <div class="launch-row secondary-launch-actions overview-shortcuts">
         <button class="btn btn-secondary" onclick="copySetupOverlayUrl()">Copy TikTok Studio Source</button>
         <button class="btn btn-secondary" onclick="openSetupOverlay()">Open Setup Preview</button>
         <button class="btn btn-secondary" onclick="copyMobileOverlayUrl()">Copy Streamer Rail</button>
@@ -740,7 +741,7 @@
         <div class="blocker-list" id="streamBlockers"></div>
       </div>
     </div>
-    <aside class="hero-card readiness-panel">
+    <aside class="readiness-panel command-readiness">
       <div class="readiness-head">
         <div><div class="card-title">Launch readiness</div><h3 id="readiness-title">Checking room</h3><p class="muted" id="readiness-summary">Connection status is loading.</p></div>
         <div class="readiness-score" id="readiness-score">0/5</div>
@@ -755,17 +756,15 @@
     </aside>
   </section>
 
-  <nav class="dashboard-nav" aria-label="Command Center sections">
-    <a href="#launchWorkflow">Launch</a>
-    <a href="#liveWorkflow">Live</a>
-    <a href="#overlayWorkflow">Overlay</a>
-    <a href="#brandWorkflow">Brand</a>
-    <a href="#audioWorkflow">Audio</a>
-    <a href="#toolsWorkflow">Tools</a>
+  <nav class="dashboard-nav" role="tablist" aria-label="Command Center modes">
+    <button type="button" role="tab" id="dashboard-tab-setup" aria-controls="launchWorkflow" aria-selected="true" tabindex="0" data-dashboard-tab="setup"><span class="tab-signal" aria-hidden="true"></span><span>Setup</span><small>Get connected</small></button>
+    <button type="button" role="tab" id="dashboard-tab-live" aria-controls="liveWorkflow" aria-selected="false" tabindex="-1" data-dashboard-tab="live"><span class="tab-signal" aria-hidden="true"></span><span>Live Control</span><small>Run the battle</small></button>
+    <button type="button" role="tab" id="dashboard-tab-customize" aria-controls="overlayWorkflow" aria-selected="false" tabindex="-1" data-dashboard-tab="customize"><span class="tab-signal" aria-hidden="true"></span><span>Customize</span><small>Scene, brand, sound</small></button>
+    <button type="button" role="tab" id="dashboard-tab-advanced" aria-controls="toolsWorkflow" aria-selected="false" tabindex="-1" data-dashboard-tab="advanced"><span class="tab-signal" aria-hidden="true"></span><span>Advanced</span><small>Test and recover</small></button>
   </nav>
 
   <section class="dashboard-workflows">
-    <details class="workflow" id="launchWorkflow" data-workflow-key="launch" open>
+    <details class="workflow" id="launchWorkflow" data-workflow-key="launch" data-dashboard-view="setup" data-section-tone="cyan" role="tabpanel" aria-labelledby="dashboard-tab-setup" open>
       <summary class="workflow-summary">
         <span><span class="workflow-kicker">Launch setup</span><span class="workflow-title">10-minute TikTok Studio setup</span><span class="workflow-copy">Start the demo, add one browser source, verify one test event, then connect TikTok LIVE.</span></span>
         <span class="workflow-status warn" id="launchWorkflowStatus">Setup</span>
@@ -873,7 +872,7 @@
       </div>
     </details>
 
-    <details class="workflow" id="overlayWorkflow" data-workflow-key="overlay">
+    <details class="workflow" id="overlayWorkflow" data-workflow-key="overlay" data-dashboard-view="customize" data-section-tone="violet" role="tabpanel" aria-labelledby="dashboard-tab-customize">
       <summary class="workflow-summary">
         <span><span class="workflow-kicker">Overlay look</span><span class="workflow-title">Scene, background, and visual polish</span><span class="workflow-copy">Keep appearance controls separate from launch controls so creators can get live first, then tune the look.</span></span>
         <span class="workflow-status warn" id="overlayWorkflowStatus">Optional</span>
@@ -914,7 +913,7 @@
       </div>
     </details>
 
-    <details class="workflow" id="liveWorkflow" data-workflow-key="live">
+    <details class="workflow" id="liveWorkflow" data-workflow-key="live" data-dashboard-view="live" data-section-tone="green" role="tabpanel" aria-labelledby="dashboard-tab-live">
       <summary class="workflow-summary">
         <span><span class="workflow-kicker">Live controls</span><span class="workflow-title">Rounds, boss waves, commands, and recap</span><span class="workflow-copy">Everything for running the battle during a stream lives here, away from setup and media management.</span></span>
         <span class="workflow-status warn" id="liveWorkflowStatus">Idle</span>
@@ -977,18 +976,6 @@
               <button class="btn btn-primary" onclick="showCommandBanners()">Show Command Banners</button>
             </div>
           </div>
-          <div class="referral-share-panel" id="creatorReferralPanel" data-testid="creator-referral-panel">
-            <div class="referral-share-head">
-              <div class="referral-share-title">
-                <strong>Council of Aetheris</strong>
-                <span>Share your link, climb ranks, and earn $3 monthly for every active paid creator you bring.</span>
-              </div>
-              <span class="referral-share-badge" id="creatorReferralBadge">Loading</span>
-            </div>
-            <div class="referral-share-body" id="creatorReferralBody">
-              <p class="muted">Loading creator promo code...</p>
-            </div>
-          </div>
           <textarea id="viewerCommandText" readonly>Loading viewer commands...</textarea>
           <div class="live-grid">
             <div class="live-panel">
@@ -1024,7 +1011,7 @@
       </div>
     </details>
 
-    <details class="workflow" id="brandWorkflow" data-workflow-key="brand">
+    <details class="workflow" id="brandWorkflow" data-workflow-key="brand" data-dashboard-view="customize" data-section-tone="amber" role="tabpanel" aria-labelledby="dashboard-tab-customize">
       <summary class="workflow-summary">
         <span><span class="workflow-kicker">Brand moments</span><span class="workflow-title">Sponsor videos and broadcast breaks</span><span class="workflow-copy">Upload, test, and run full-screen power moments without mixing those controls into the core stream setup.</span></span>
         <span class="workflow-status warn" id="brandWorkflowStatus">Managed</span>
@@ -1110,7 +1097,7 @@
       </div>
     </details>
 
-    <details class="workflow" id="audioWorkflow" data-workflow-key="audio">
+    <details class="workflow" id="audioWorkflow" data-workflow-key="audio" data-dashboard-view="customize" data-section-tone="violet" role="tabpanel" aria-labelledby="dashboard-tab-customize">
       <summary class="workflow-summary">
         <span><span class="workflow-kicker">Sound effects</span><span class="workflow-title">Audio library and event assignments</span><span class="workflow-copy">Upload sounds and map them to overlay events after the core stream is ready.</span></span>
         <span class="workflow-status warn" id="audioWorkflowStatus">Optional</span>
@@ -1156,22 +1143,32 @@
       </div>
     </details>
 
-    <details class="workflow" id="toolsWorkflow" data-workflow-key="tools">
+    <details class="workflow" id="toolsWorkflow" data-workflow-key="tools" data-dashboard-view="advanced" data-section-tone="slate" role="tabpanel" aria-labelledby="dashboard-tab-advanced">
       <summary class="workflow-summary">
         <span><span class="workflow-kicker">Advanced tools</span><span class="workflow-title">Manual events, cleanup, and diagnostics</span><span class="workflow-copy">Keep setup-only and maintenance controls collapsed until the creator needs them.</span></span>
         <span class="workflow-status warn" id="toolsWorkflowStatus">Tools</span>
         <span class="workflow-toggle" aria-hidden="true"></span>
       </summary>
       <div class="workflow-body compact">
-    <aside class="col-4" id="toolsRail" style="display:grid;gap:20px;">
+    <aside class="col-12 advanced-tools-grid" id="toolsRail">
       <details class="tool" open><summary>Live testing controls</summary><div class="tool-body"><p class="muted" style="margin-bottom:14px;">Use these during setup only. They trigger test overlay events.</p><div class="btn-row"><button class="btn btn-success" onclick="testOverlayAttack()">Attack</button><button class="btn btn-warning" onclick="testOverlayGift()">Gift</button><button class="btn btn-purple" onclick="testOverlayHeal()">Heal</button><button class="btn btn-danger" onclick="testOverlayKill()">Kill</button><button class="btn btn-primary" onclick="testStreak()">Streak</button><button class="btn btn-secondary" onclick="testOverlayFollow()">Follow</button><button class="btn btn-secondary" onclick="testOverlayShare()">Share</button><button class="btn btn-secondary" onclick="testOverlayRepost()">Repost</button></div></div></details>
       <details class="tool danger-zone"><summary>Maintenance safety</summary><div class="tool-body"><p class="danger-note">These controls can change room state or expose raw diagnostics. Use them during setup, QA, or incident recovery only.</p><div class="btn-row danger-actions"><button class="btn btn-danger" data-control-risk="destructive" onclick="clearPlayers()">Clear Players</button><button class="btn btn-secondary" id="toggleDevModeButton" data-control-risk="diagnostic" onclick="toggleDevMode()">Enable Dev Mode</button><button class="btn btn-secondary" data-control-risk="diagnostic" onclick="window.open('/api/status','_blank')">Raw JSON</button></div></div></details>
+      <details class="tool"><summary>Creator referral tools</summary><div class="tool-body"><div class="referral-share-panel" id="creatorReferralPanel" data-testid="creator-referral-panel"><div class="referral-share-head"><div class="referral-share-title"><strong>Council of Aetheris</strong><span>Share your link, climb ranks, and earn $3 monthly for every active paid creator you bring.</span></div><span class="referral-share-badge" id="creatorReferralBadge">Loading</span></div><div class="referral-share-body" id="creatorReferralBody"><p class="muted">Loading creator promo code...</p></div></div></div></details>
+      <details class="tool"><summary>Resources and account</summary><div class="tool-body"><div class="btn-row"><a class="btn btn-secondary" href="/world">Open Aetheris World</a><a class="btn btn-secondary" href="/stats" target="_blank" rel="noopener">View Stats</a><a class="btn btn-secondary" href="/blog">Creator Blog</a><a class="btn btn-secondary" href="/profile">Account Settings</a></div></div></details>
     </aside>
       </div>
     </details>
   </section>
 
-  <div class="footer" aria-label="Quick creator actions"><button class="footer-btn primary" id="footerOpenOverlayButton" onclick="openOverlay()" disabled>Open Overlay</button><button class="footer-btn" id="footerStartVideoButton" onclick="startSponsorVideoWhenReady()" disabled>Start Video</button><button class="footer-btn" onclick="connectTikTokShortcut()">Connect TikTok</button><button class="footer-btn" onclick="focusAudioWorkflow()">Sounds</button><a class="footer-btn" href="/world">Aetheris</a><a class="footer-btn" href="/blog">Blog</a></div>
+  <div class="footer command-dock" aria-label="Quick creator actions">
+    <div class="command-dock-status"><span class="dot"></span><span>Command dock</span><strong id="commandDockMode">Setup</strong></div>
+    <button class="footer-btn primary" id="footerOpenOverlayButton" onclick="openOverlay()" disabled>Open Overlay</button>
+    <button class="footer-btn mobile-primary" onclick="connectTikTokShortcut()">Connect TikTok</button>
+    <button class="footer-btn live-action" onclick="sessionAction('/api/session/start','Session started')">Start Battle</button>
+    <button class="footer-btn live-action" onclick="sessionAction('/api/session/end','Session ended')">End Battle</button>
+    <button class="footer-btn customize-action" id="footerStartVideoButton" onclick="startSponsorVideoWhenReady()" disabled>Start Video</button>
+    <button class="footer-btn customize-action" onclick="focusAudioWorkflow()">Sounds</button>
+  </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -1247,6 +1244,8 @@ const FALLBACK_AETHERIS_TERRITORIES = [
   { id:'umbral-bastion', name:'Umbral Bastion', faction:'Night Vow', battlefield:'Moonlit fortress breach', oath:'Hold the dark. Strike from silence.', palette:{ primary:'#b89cff', secondary:'#ff8bc2' } },
 ];
 const WORKFLOW_STORAGE_KEY = 'intothebattle.dashboard.workflows';
+const DASHBOARD_VIEW_STORAGE_KEY = 'intothebattle.dashboard.activeView';
+const DASHBOARD_VIEWS = ['setup', 'live', 'customize', 'advanced'];
 const OVERLAY_V2_BETA_KEY = 'intothebattle.beta.overlayV2';
 const MOBILE_OVERLAY_LAYOUT_KEY = 'intothebattle.mobileOverlay.layout';
 const QUICK_SETUP_COMPLETE_KEY = 'intothebattle.dashboard.quickSetupComplete';
@@ -1261,6 +1260,72 @@ function trackGrowthEvent(eventName, properties = {}, seed = '') {
 }
 function workflowDetails() {
   return Array.from(document.querySelectorAll('details.workflow[data-workflow-key]'));
+}
+function normalizedDashboardView(value = '') {
+  const clean = String(value || '').trim().toLowerCase().replace(/^#/, '');
+  return DASHBOARD_VIEWS.includes(clean) ? clean : '';
+}
+function currentDashboardView() {
+  return normalizedDashboardView(document.body.dataset.dashboardView) || 'setup';
+}
+function setDashboardView(view, options = {}) {
+  const nextView = normalizedDashboardView(view) || 'setup';
+  document.body.dataset.dashboardView = nextView;
+  document.querySelectorAll('[data-dashboard-tab]').forEach(tab => {
+    const selected = tab.dataset.dashboardTab === nextView;
+    tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+    tab.tabIndex = selected ? 0 : -1;
+  });
+  const selectedPanels = [];
+  document.querySelectorAll('[data-dashboard-view]').forEach(panel => {
+    const selected = panel.dataset.dashboardView === nextView;
+    panel.hidden = !selected;
+    panel.setAttribute('aria-hidden', selected ? 'false' : 'true');
+    if (selected) {
+      panel.open = true;
+      panel.setAttribute('open', '');
+      selectedPanels.push(panel);
+    }
+  });
+  if (selectedPanels.length) selectedPanels[0].open = true;
+  requestAnimationFrame(() => {
+    if (currentDashboardView() === nextView && selectedPanels[0]) selectedPanels[0].open = true;
+  });
+  const dockMode = document.getElementById('commandDockMode');
+  if (dockMode) dockMode.textContent = ({ setup:'Setup', live:'Live Control', customize:'Customize', advanced:'Advanced' })[nextView];
+  if (options.remember !== false) {
+    try { localStorage.setItem(DASHBOARD_VIEW_STORAGE_KEY, nextView); } catch (_err) {}
+  }
+  if (options.updateHash !== false && window.location.hash !== `#${nextView}`) {
+    history.replaceState(null, '', `${window.location.pathname}${window.location.search}#${nextView}`);
+  }
+  if (options.focus === true) document.querySelector(`[data-dashboard-tab="${nextView}"]`)?.focus();
+  if (options.scroll === true) document.querySelector('.dashboard-nav')?.scrollIntoView({ behavior:'smooth', block:'start' });
+  return nextView;
+}
+function initDashboardViews() {
+  let savedView = '';
+  try { savedView = normalizedDashboardView(localStorage.getItem(DASHBOARD_VIEW_STORAGE_KEY)); } catch (_err) {}
+  const initialView = initialWelcomeMode ? 'setup' : normalizedDashboardView(window.location.hash) || savedView || 'setup';
+  const tabs = Array.from(document.querySelectorAll('[data-dashboard-tab]'));
+  tabs.forEach((tab, index) => {
+    tab.addEventListener('click', () => setDashboardView(tab.dataset.dashboardTab));
+    tab.addEventListener('keydown', event => {
+      let targetIndex = null;
+      if (event.key === 'ArrowRight' || event.key === 'ArrowDown') targetIndex = (index + 1) % tabs.length;
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') targetIndex = (index - 1 + tabs.length) % tabs.length;
+      if (event.key === 'Home') targetIndex = 0;
+      if (event.key === 'End') targetIndex = tabs.length - 1;
+      if (targetIndex == null) return;
+      event.preventDefault();
+      setDashboardView(tabs[targetIndex].dataset.dashboardTab, { focus:true });
+    });
+  });
+  window.addEventListener('hashchange', () => {
+    const hashView = normalizedDashboardView(window.location.hash);
+    if (hashView) setDashboardView(hashView, { updateHash:false });
+  });
+  setDashboardView(initialView, { updateHash:true, remember:true });
 }
 function savedWorkflowState() {
   try { return JSON.parse(localStorage.getItem(WORKFLOW_STORAGE_KEY) || '{}'); } catch (_err) { return {}; }
@@ -1397,10 +1462,6 @@ function quickSetupActiveIndex(steps = quickSetupSteps()) {
 function collapseOptionalWorkflowsForQuickSetup(active) {
   document.body.classList.toggle('quick-setup-active', active);
   if (!active || quickSetupWorkflowsCollapsed) return;
-  workflowDetails().forEach(details => {
-    if (details.id === 'launchWorkflow') details.open = true;
-    else details.open = false;
-  });
   quickSetupWorkflowsCollapsed = true;
 }
 function renderQuickSetup(titleText = '', copyText = '', actions = []) {
@@ -2721,7 +2782,7 @@ async function startBossWaveFromDashboard(successMessage = 'Boss wave started') 
   return result;
 }
 function copyViewerCommands() {
-  const value = document.getElementById('viewerCommandText')?.value || 'PLAY BY ENGAGING:\nAny comment, like, follow, share, or gift enters you\nTargets: @name | @horde | @boss\nRegular chat: enters you and sends a random 5-damage attack\nAttacks: @name | @horde | @boss | !laser @name | !fire @name\nIcon: !emoji <emoji> or !<emoji>\nTeams/help: !team red / !team leave / !commands';
+  const value = document.getElementById('viewerCommandText')?.value || 'PLAY BY ENGAGING:\nAny comment, like, follow, share, or gift enters you\nMention a target to attack: @name | @horde | @boss\nEffects need no prefix: laser @name | fire @horde | orbital @boss\nDefense/support: shield | heal @name\nIcon: !emoji <emoji>\nHelp: commands';
   navigator.clipboard?.writeText(value).then(() => toast('Viewer commands copied')).catch(() => toast('Copy failed', true));
 }
 async function showCommandBanners() {
@@ -2884,6 +2945,7 @@ function setTikTokStatus(state, username) {
     chip.className = 'status-chip offline';
     label.textContent = 'Connection error';
     text('tiktok-username-copy', displayUsername || 'Connection error');
+    if (currentDashboardView() === 'live') setDashboardView('setup', { scroll:true });
   } else {
     chip.className = 'status-chip offline';
     label.textContent = 'Disconnected';
@@ -3085,6 +3147,7 @@ function startSponsorVideoWhenReady() {
   playSponsorScene(selectedSponsorFilename);
 }
 function focusAudioWorkflow() {
+  setDashboardView('customize', { scroll:true });
   const workflow = document.getElementById('audioWorkflow');
   const card = document.getElementById('audioManagerCard');
   if (workflow) {
@@ -3115,6 +3178,7 @@ function copyOverlayUrl() {
 function focusTikTokUsername() {
   const input = document.getElementById('username');
   if (!input) return;
+  setDashboardView('setup', { scroll:true });
   document.getElementById('launchWorkflow')?.setAttribute('open', '');
   setTimeout(() => {
     input.focus();
@@ -3318,7 +3382,7 @@ async function startWeeklyBossEvent() {
   await startBossWaveFromDashboard('Weekly boss wave started');
 }
 function copyWeeklyBossPromo() {
-  const text = 'Tonight: IntoTheBattle boss wave. Join the LIVE, comment or tap like to enter, use !emoji to pick your icon, then attack with @boss, !laser @boss, or !fire @boss.';
+  const text = 'Tonight: IntoTheBattle boss wave. Join the LIVE, comment or tap like to enter, use !emoji to pick your icon, then attack with @boss, laser @boss, or fire @boss.';
   navigator.clipboard?.writeText(text).then(() => toast('Weekly boss promo copied')).catch(() => toast('Copy failed', true));
 }
 
@@ -3914,6 +3978,7 @@ dropZone.addEventListener('drop', e=>{ e.preventDefault(); dropZone.classList.re
 renderAudioVolumeControl();
 fetch('/api/audio').then(r=>r.json()).then(d=>{ if(d.success){ audioLibraryData=d.library || []; mergeAudioConfig(d.config || {}); if (d.settings?.aetherisTerritoryId) applyAetherisTerritory(d.settings.aetherisTerritoryId); renderAudioLibrary(); renderAudioVolumeControl(); renderAssignTable(); }}).catch(()=>{});
 initDashboardWorkflows();
+initDashboardViews();
 initBetaFeatureVisibility();
 initMobileOverlayControls();
 syncWelcomeSetupPanel();

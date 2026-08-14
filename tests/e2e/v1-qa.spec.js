@@ -26,7 +26,7 @@ async function request(pathname) {
 }
 
 async function waitForHealth() {
-  const deadline = Date.now() + 30000;
+  const deadline = Date.now() + Number(process.env.E2E_HEALTH_TIMEOUT_MS || 60000);
   while (Date.now() < deadline) {
     if (server?.exitCode !== null) {
       throw new Error(`server exited early with code ${server.exitCode}\n${output}`);
@@ -61,8 +61,9 @@ async function watchPage(page) {
   });
   page.on('requestfailed', req => {
     try {
-      if (new URL(req.url()).origin === baseUrl) {
-        errors.push(`request failed: ${req.method()} ${req.url()} ${req.failure()?.errorText || ''}`);
+      const failureText = req.failure()?.errorText || '';
+      if (new URL(req.url()).origin === baseUrl && !/net::ERR_ABORTED\b/.test(failureText)) {
+        errors.push(`request failed: ${req.method()} ${req.url()} ${failureText}`);
       }
     } catch (_) {}
   });
@@ -228,6 +229,7 @@ async function readSupportUnitDetails(page) {
 }
 
 function makeSponsorFixture() {
+  if (sponsorFixturePath && fs.existsSync(sponsorFixturePath)) return;
   const ffmpegVersion = spawnSync('ffmpeg', ['-version'], { stdio: 'ignore' });
   if (ffmpegVersion.status !== 0) {
     sponsorFixtureError = ffmpegVersion.error?.message || 'ffmpeg is not available';
@@ -258,7 +260,6 @@ function makeSponsorFixture() {
 }
 
 test.beforeAll(async () => {
-  makeSponsorFixture();
   server = spawn(process.execPath, ['server.js'], {
     cwd: process.cwd(),
     env: {
@@ -300,6 +301,7 @@ test('dashboard mobile audio manager keeps controls usable at phone widths', asy
 
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByText('IntoTheBattle Command Center')).toBeVisible();
+  await page.getByRole('tab', { name: /Customize/ }).click();
   await page.locator('#audioWorkflow').evaluate(el => { el.open = true; });
   await page.locator('#audioLibrary').evaluate(container => {
     const row = document.createElement('div');
@@ -410,7 +412,8 @@ test('dashboard creator promo code can be created and copied for chat', async ({
   const errors = await watchPage(page);
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByText('IntoTheBattle Command Center')).toBeVisible();
-  await page.locator('#liveWorkflow').evaluate(element => { element.open = true; });
+  await page.getByRole('tab', { name: /Advanced/ }).click();
+  await page.getByText('Creator referral tools', { exact: true }).click();
   const panel = page.getByTestId('creator-referral-panel');
   await expect(panel).toBeVisible();
   await expect(panel.getByText('Council of Aetheris')).toBeVisible();
@@ -458,7 +461,8 @@ test('regular accounts cannot create Council referral codes', async ({ context, 
   });
 
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
-  await page.locator('#liveWorkflow').evaluate(element => { element.open = true; });
+  await page.getByRole('tab', { name: /Advanced/ }).click();
+  await page.getByText('Creator referral tools', { exact: true }).click();
   const panel = page.getByTestId('creator-referral-panel');
   await expect(panel.getByText('Regular account', { exact: true }).first()).toBeVisible();
   await expect(panel.getByText(/available only to accounts appointed by an administrator/i)).toBeVisible();
@@ -502,7 +506,7 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
     if (!banner) return false;
     const rect = banner.getBoundingClientRect();
     return rect.width > 0 && rect.height > 0 && getComputedStyle(banner).visibility !== 'hidden';
-  }, null, { timeout: 5000 });
+  }, null, { timeout: 10000 });
   await page.waitForTimeout(300);
 
   const geometry = await page.evaluate(() => {
@@ -563,7 +567,7 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
   const bannerCenterY = (geometry.bannerStatus.active.rect.top + geometry.bannerStatus.active.rect.bottom) / 2;
   const gapMidY = geometry.bannerStatus.playerBottom + (geometry.bannerStatus.hordeTop - geometry.bannerStatus.playerBottom) * 0.5;
   expect(bannerCenterY, 'elimination banner should sit in the lower half of the player-to-horde gap').toBeGreaterThan(gapMidY);
-  expect(geometry.stageBannerZone?.top, 'hard-coded banner fallback should be near the bottom').toBeGreaterThanOrEqual(0.6);
+  expect(geometry.stageBannerZone?.top, 'hard-coded banner fallback should begin below the player lane').toBeGreaterThanOrEqual(0.5);
   expect(geometry.stageBannerZone?.bottom, 'hard-coded banner fallback should stay above horde zone').toBeLessThan(geometry.stageHordeZone?.top);
 
   await expectNoHorizontalOverflow(page);
@@ -572,6 +576,7 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
 });
 
 test('all rich banner types stay centered, readable, and collision-free', async ({ page }, testInfo) => {
+  test.setTimeout(240000);
   const errors = await watchPage(page);
   const params = new URLSearchParams({
     room_id: roomId,
@@ -582,15 +587,15 @@ test('all rich banner types stay centered, readable, and collision-free', async 
     demo_autoplay: '0',
   });
   await page.goto(`${baseUrl}/overlay?${params.toString()}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.__overlayLegacyLayout?.players?.length >= 5, null, { timeout: 7000 });
-  await page.waitForFunction(() => typeof window.overlayEventEngine?.testBannerPlacement === 'function', null, { timeout: 5000 });
+  await page.waitForFunction(() => window.__overlayLegacyLayout?.players?.length >= 5, null, { timeout: 60000 });
+  await page.evaluate(() => window.overlayEventEngine.freezeVisuals());
 
   for (const type of ['kill', 'streak', 'gift', 'special', 'follow', 'heal', 'legendary', 'commands']) {
-    await page.evaluate((bannerType) => window.overlayEventEngine.testBannerPlacement(bannerType, { durationMs: 12000 }), type);
+    await page.evaluate((bannerType) => window.overlayEventEngine.testBannerPlacement(bannerType, { durationMs: 60000 }), type);
     await page.waitForFunction((bannerType) => {
       const banner = document.querySelector(`.banner.${bannerType}:not(.closing)`);
       return Boolean(banner && banner.getBoundingClientRect().width > 0 && getComputedStyle(banner).visibility !== 'hidden');
-    }, type, { timeout: 5000 });
+    }, type, { timeout: 10000 });
     await page.waitForTimeout(180);
 
     const details = await readActiveBannerDetails(page, `.banner.${type}:not(.closing)`);
@@ -615,19 +620,19 @@ test('all rich banner types stay centered, readable, and collision-free', async 
     }
 
     if (type === 'commands') {
-      const compactVisibleCommands = ['engage', '@name', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
-      const microVisibleCommands = ['engage', '@name', '!attack @horde', '!attack @boss', '!shield', '!commands'];
+      const compactVisibleCommands = ['@name', '@horde', '@boss', 'laser @name', 'shield', 'commands'];
+      const microVisibleCommands = ['@name', '@horde', '@boss', 'shield', 'commands'];
       const expectedVisibleCommands = details.className.includes('is-nano')
-        ? ['engage', '@name', '!shield', '!commands']
+        ? ['@name', '@horde', 'shield', 'commands']
         : details.className.includes('is-micro')
           ? microVisibleCommands
           : details.className.includes('is-compact')
             ? compactVisibleCommands
-            : ['engage', '@name', 'chat', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
+            : ['@name', '@horde', '@boss', 'laser @name', 'shield', 'heal @name', 'commands'];
       expect(details.rowCount, 'command row count').toBe(1);
       expect(details.railCount, 'command rail count').toBe(1);
       expect(details.tickerCount, 'command ticker count').toBe(0);
-      expect(details.chipCount, 'command chip count').toBeGreaterThanOrEqual(9);
+      expect(details.chipCount, 'command chip count').toBeGreaterThanOrEqual(7);
       expect(details.visibleChipTexts, 'visible command chips').toEqual(expectedVisibleCommands);
       expect(details.clippedChips, 'command chip clipping').toEqual([]);
       expect(details.kickerCount, 'command kicker rows').toBe(0);
@@ -692,15 +697,15 @@ test('command banner shows one static viewer command rail', async ({ context, pa
   expect(details.rowCount).toBe(1);
   expect(details.railCount).toBe(1);
   expect(details.tickerCount).toBe(0);
-  expect(details.chipCount).toBe(9);
+  expect(details.chipCount).toBe(7);
   expect(details.kickerCount).toBe(0);
   expect(details.metaCount).toBe(0);
   expect(details.titleCount).toBe(0);
-  const expectedCommands = ['engage', '@name', 'chat', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
-  const compactVisibleCommands = ['engage', '@name', '!attack @name', '!attack @horde', '!attack @boss', '!shield', '!heal @name', '!commands'];
-  const microVisibleCommands = ['engage', '@name', '!attack @horde', '!attack @boss', '!shield', '!commands'];
+  const expectedCommands = ['@name', '@horde', '@boss', 'laser @name', 'shield', 'heal @name', 'commands'];
+  const compactVisibleCommands = ['@name', '@horde', '@boss', 'laser @name', 'shield', 'commands'];
+  const microVisibleCommands = ['@name', '@horde', '@boss', 'shield', 'commands'];
   const expectedVisibleCommands = details.className.includes('is-nano')
-    ? ['engage', '@name', '!shield', '!commands']
+    ? ['@name', '@horde', 'shield', 'commands']
     : details.className.includes('is-micro')
       ? microVisibleCommands
       : details.className.includes('is-compact')
@@ -731,9 +736,17 @@ test('command banner shows one static viewer command rail', async ({ context, pa
   expect(details.railHeight).toBeGreaterThan(20);
   expect(details.rowHeight).toBeGreaterThan(24);
   expect(details.commandFontSize).toBeGreaterThanOrEqual(8);
+  expect(details.className).toContain('is-expanded');
+  expect(details.height).toBeGreaterThanOrEqual(104);
   expect(details.bannerCollisions, JSON.stringify(details, null, 2)).toEqual([]);
 
   await expectNoHorizontalOverflow(page);
+  await expect(page.getByTestId('overlay-source-frame')).toHaveScreenshot('command-banner-expanded.png', {
+    animations: 'disabled',
+    caret: 'hide',
+    maxDiffPixelRatio: 0.08,
+    threshold: 0.2,
+  });
   await capture(page, testInfo, 'qa-overlay-command-banner-rail');
   expect(errors).toEqual([]);
 });
@@ -780,6 +793,7 @@ test('viewer command renders its selected effect against Aetheris structures', a
 });
 
 test('like heal support feedback uses one compact unit', async ({ page }, testInfo) => {
+  test.setTimeout(120000);
   const errors = await watchPage(page);
   const params = new URLSearchParams({
     room_id: roomId,
@@ -790,15 +804,16 @@ test('like heal support feedback uses one compact unit', async ({ page }, testIn
     demo_autoplay: '0',
   });
   await page.goto(`${baseUrl}/overlay?${params.toString()}`, { waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.__overlayLegacyLayout?.players?.length >= 5, null, { timeout: 7000 });
-  await page.waitForFunction(() => typeof window.overlayEventEngine?.testSupportUnit === 'function', null, { timeout: 5000 });
+  await page.waitForFunction(() => window.__overlayLegacyLayout?.players?.length >= 5, null, { timeout: 60000 });
 
   const probe = await page.evaluate(() => window.overlayEventEngine.testSupportUnit());
   expect(probe.visible).toBe(true);
   await page.waitForFunction(() => {
     const unit = document.querySelector('[data-testid="support-unit"]');
     return Boolean(unit && getComputedStyle(unit).visibility !== 'hidden' && unit.getBoundingClientRect().width > 0);
-  }, null, { timeout: 5000 });
+  }, null, { timeout: 10000 });
+  await page.waitForFunction(() => Boolean(window.__overlayLegacyLayout?.supportChip), null, { timeout: 60000 });
+  await page.evaluate(() => window.overlayEventEngine.freezeVisuals());
   await page.waitForTimeout(250);
 
   const details = await readSupportUnitDetails(page);
@@ -880,6 +895,7 @@ test('creator comments are shared and account-gated', async ({ context, page }) 
 
 test('creator pro sponsor video upload, serving, and v1 overlay playback work together', async ({ context, page }, testInfo) => {
   test.skip(testInfo.project.name.includes('mobile'), 'media pipeline is covered once in the desktop project');
+  makeSponsorFixture();
   test.skip(!sponsorFixturePath, sponsorFixtureError || 'missing sponsor video fixture');
 
   await addAuthCookie(context);

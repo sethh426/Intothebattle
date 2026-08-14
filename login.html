@@ -644,7 +644,7 @@
       document.cookie = 'fp=' + fp + '; path=/; sameSite=lax;' + (location.protocol === 'https:' ? ' secure;' : '');
     }
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/fingerprintjs2@2/dist/fingerprint2.min.js"></script>
+  <script src="/vendor/fingerprintjs2/fingerprint2.min.js"></script>
   <script>
     if (window.Fingerprint2) {
       Fingerprint2.get(function (components) {

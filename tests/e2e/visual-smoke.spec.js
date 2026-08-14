@@ -22,7 +22,7 @@ async function request(pathname) {
 }
 
 async function waitForHealth() {
-  const deadline = Date.now() + 30000;
+  const deadline = Date.now() + Number(process.env.E2E_HEALTH_TIMEOUT_MS || 60000);
   while (Date.now() < deadline) {
     if (server?.exitCode !== null) {
       throw new Error(`server exited early with code ${server.exitCode}\n${output}`);
@@ -457,11 +457,14 @@ test('profile redirects unauthenticated users to login', async ({ page }, testIn
 test('dashboard renders with E2E auth fixture', async ({ context, page }, testInfo) => {
   await context.addCookies([{ name: 'session_token', value: e2eSessionToken, url: baseUrl }]);
   const errors = await watchPage(page);
-  await page.goto(`${baseUrl}/dashboard?welcome=1`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${baseUrl}/dashboard?welcome=1#setup`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByText('IntoTheBattle Command Center')).toBeVisible();
   await expect(page.getByTestId('welcome-setup-panel')).toBeVisible();
   await expect(page.locator('#subscription-chip')).toBeVisible();
   await expect(page.locator('#nextActionPanel')).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Setup/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#launchWorkflow')).toBeVisible();
+  await expect(page.locator('#liveWorkflow')).toBeHidden();
   await expect(page.locator('#backgroundFitInput')).toBeAttached();
   await expect(page.getByRole('button', { name: 'Open Live Overlay' })).toBeVisible();
   await expect(page.locator('[data-beta-feature="overlay-v2"]')).toBeHidden();
@@ -472,11 +475,37 @@ test('dashboard renders with E2E auth fixture', async ({ context, page }, testIn
   await expect(page.locator('#sponsorFitInput')).toBeAttached();
   await expect(page.locator('#refreshSponsorPreviewButton')).toBeAttached();
   await expect(page.getByRole('button', { name: 'Preview Selected' })).toHaveCount(0);
-  await page.locator('#liveWorkflow').evaluate(el => { el.open = true; });
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'dashboard-setup');
+
+  await page.getByRole('tab', { name: /Live Control/ }).click();
+  await expect(page).toHaveURL(/#live$/);
+  await expect(page.getByRole('tab', { name: /Live Control/ })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByText('Live Session Director')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Boss Wave' })).toBeVisible();
   await expectNoHorizontalOverflow(page);
-  await capture(page, testInfo, 'dashboard');
+  await capture(page, testInfo, 'dashboard-live');
+
+  await page.getByRole('tab', { name: /Customize/ }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('tab', { name: /Advanced/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#toolsWorkflow')).toBeVisible();
+  await page.getByRole('tab', { name: /Customize/ }).click();
+  await expect(page.locator('#overlayWorkflow')).toBeVisible();
+  await expect(page.locator('#brandWorkflow')).toBeVisible();
+  await expect(page.locator('#audioWorkflow')).toBeVisible();
+  await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
+  await expect(page).toHaveURL(/#customize$/);
+  await expect(page.getByRole('tab', { name: /Customize/ })).toHaveAttribute('aria-selected', 'true');
+  const consent = page.locator('#itb-growth-consent');
+  if (await consent.count()) {
+    await expect(page.locator('.command-dock')).toBeHidden();
+    await consent.getByRole('button', { name: 'No thanks' }).click();
+    await expect(page.locator('.command-dock')).toBeVisible();
+    if (testInfo.project.name.includes('mobile')) {
+      await expect(page.locator('.command-dock .footer-btn:visible')).toHaveCount(2);
+    }
+  }
   expect(errors).toEqual([]);
 });
 

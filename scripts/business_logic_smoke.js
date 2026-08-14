@@ -294,6 +294,8 @@ function testPlayerCommandCatalog() {
   }
   assert.equal(parseAttackCommand('@nova'), null, 'bare mention should not parse as a NOVA command');
   assert.equal(parseAttackCommand('hello @nova'), null, 'mention target text should not be scanned as command text');
+  assert.equal(parseAttackCommand('@bravo please use laser')?.effect, 'laser', 'an effect word anywhere outside the mention should select that effect');
+  assert.equal(parseAttackCommand('please fire @horde now')?.effect, 'fire', 'unprefixed natural effect comments should support aggregate targets');
   assert.equal(parseAttackCommand('this is fire', { explicitOnly: true }), null, 'plain comments should not become full-power commands');
   assert.equal(parseAttackCommand('!fire', { explicitOnly: true })?.effect, 'fire');
   assert.equal(parseAttackCommand('! fire', { explicitOnly: true })?.effect, 'fire');
@@ -312,6 +314,9 @@ function testPlayerCommandCatalog() {
   assert.deepEqual(parseUtilityCommand('@nova !heal'), { canonical: 'heal', command: 'heal', rest: '@nova', prefixed: true });
   assert.equal(parseUtilityCommand('! hp @nova')?.canonical, 'heal');
   assert.equal(parseUtilityCommand('!shield')?.canonical, 'shield');
+  assert.equal(parseUtilityCommand('shield')?.canonical, 'shield');
+  assert.equal(parseUtilityCommand('heal @nova')?.canonical, 'heal');
+  assert.equal(parseUtilityCommand('commands')?.canonical, 'help');
   assert.equal(parseUtilityCommand('! guard')?.canonical, 'shield');
   assert.equal(parseUtilityCommand('!protect')?.canonical, 'shield');
   assert.equal(parseUtilityCommand('!laser@nova'), null, 'attack commands should not parse as utility commands');
@@ -322,11 +327,11 @@ function testPlayerCommandCatalog() {
   }
 
   const commandText = viewerCommandText();
-  for (const expected of ['Any comment, like, follow, share, or gift enters you', '!attack @name', '@horde', '@boss', '!shield', '!heal @name', '!commands', '!comments']) {
+  for (const expected of ['Any comment, like, follow, share, or gift enters you', '@name', '@horde', '@boss', 'laser @name', 'shield', 'heal @name', 'commands']) {
     assert.ok(commandText.includes(expected), `viewer command text should include ${expected}`);
   }
   assert.equal(commandText.includes('!join'), false, 'viewer command text should not tell viewers to type !join to enter');
-  for (const expected of ['@name', 'enters you and sends a random 5-damage attack', '!prism @name', '!plasma @name', '!orbital @name']) {
+  for (const expected of ['Mention a target anywhere', 'Effects need no prefix', 'fire @horde', 'orbital @boss']) {
     assert.ok(commandText.includes(expected), `viewer command text should include ${expected}`);
   }
 

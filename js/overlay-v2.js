@@ -2053,7 +2053,7 @@
         this.showBanner(`${name} raised a shield`, 'heal');
         this.pulseCard(data.uniqueId, 0x7afcff);
       } else if (data.type === 'help') {
-        this.showBanner('Comment or tap like to enter. Try @name, !emoji, !shield, !laser @name', 'event');
+        this.showBanner('Comment or tap like to enter. Attack with @name or laser @name.', 'event');
       } else if (data.type === 'join') {
         this.showBanner(`${name} entered the arena`, 'follow');
       }

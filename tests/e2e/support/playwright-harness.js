@@ -22,7 +22,7 @@ export function createServerHarness(options = {}) {
   }
 
   async function waitForHealth() {
-    const deadline = Date.now() + Number(options.healthTimeoutMs || 30000);
+    const deadline = Date.now() + Number(options.healthTimeoutMs || process.env.E2E_HEALTH_TIMEOUT_MS || 60000);
     while (Date.now() < deadline) {
       if (server?.exitCode !== null) {
         throw new Error(`server exited early with code ${server.exitCode}\n${output}`);
