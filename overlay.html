@@ -432,10 +432,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   text-shadow:0 0 26px rgba(255,255,255,0.42),0 2px 9px rgba(0,0,0,0.94);
 }
 .banner-title strong { color:var(--banner-accent); font-weight:900; }
-.banner-meta {
-  display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  color:#aebcd0; font-size:10px; line-height:1; font-weight:800; letter-spacing:.5px; text-transform:uppercase;
-}
 .banner-meter {
   position:relative; z-index:1; width:6px; height:40px; border:1px solid rgba(255,255,255,0.12);
   background:rgba(255,255,255,0.05); overflow:hidden; align-self:center;
@@ -564,7 +560,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.is-expanded .banner-kicker { font-size:14px; letter-spacing:1.55px; }
 .banner.is-expanded .banner-title,
 .banner.legendary.is-expanded .banner-title { font-size:34px; line-height:1; }
-.banner.is-expanded .banner-meta { font-size:12px; letter-spacing:.65px; }
 .banner.is-expanded .banner-meter { width:8px; height:62px; }
 .banner.commands.is-expanded { min-height:112px; max-height:132px; padding:0 22px; grid-template-columns:68px minmax(0,1fr) 8px; }
 .banner.commands.is-expanded .banner-command-strip { min-height:88px; grid-template-columns:minmax(150px,0.17fr) minmax(0,1fr); }
@@ -583,7 +578,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.is-compact .banner-kicker { font-size:9px; letter-spacing:1px; }
 .banner.is-compact .banner-title,
 .banner.legendary.is-compact .banner-title { font-size:19px; letter-spacing:.28px; }
-.banner.is-compact .banner-meta { font-size:9px; letter-spacing:.4px; }
 .banner.is-compact .banner-meter { width:5px; height:32px; }
 .banner.commands.is-compact { min-height:54px; max-height:62px; padding:0 10px; grid-template-columns:1fr; }
 .banner.commands.is-compact .banner-signal,
@@ -609,7 +603,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner.is-micro .banner-kicker { font-size:8px; letter-spacing:.78px; }
 .banner.is-micro .banner-title,
 .banner.legendary.is-micro .banner-title { font-size:15px; letter-spacing:.18px; }
-.banner.is-micro .banner-meta { display:block; font-size:8px; letter-spacing:.32px; }
 .banner.is-micro .banner-meter { width:4px; height:26px; }
 .banner.commands.is-micro { min-height:44px; max-height:52px; grid-template-columns:1fr; }
 .banner.commands.is-micro .banner-signal,
@@ -632,8 +625,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
 }
 .banner.is-nano .banner-signal,
-.banner.is-nano .banner-kicker,
-.banner.is-nano .banner-meta { display:none; }
+.banner.is-nano .banner-kicker { display:none; }
 .banner.is-nano .banner-copy { gap:0; }
 .banner.is-nano .banner-title,
 .banner.legendary.is-nano .banner-title { font-size:13px; line-height:1; letter-spacing:.1px; }
@@ -664,9 +656,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-title,
 .banner.legendary[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-title {
   font-size:24px; line-height:1.02; letter-spacing:.12px;
-}
-.banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-meta {
-  font-size:9.5px; letter-spacing:.44px;
 }
 .banner[data-placement="combat-gap"]:not(.commands):not(.is-micro):not(.is-nano) .banner-meter {
   width:6px; height:38px;
@@ -726,7 +715,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   .banner-pulse { width:25px; height:25px; }
   .banner-kicker { font-size:9px; letter-spacing:1px; }
   .banner-title,.banner.legendary .banner-title { font-size:18px; letter-spacing:.22px; }
-  .banner-meta { font-size:9px; }
   .banner-meter { height:30px; }
   .banner.commands:not(.is-nano) { height:40px; min-height:40px; max-height:40px; padding:0 9px; grid-template-columns:1fr; }
   .banner.commands:not(.is-nano) .banner-signal,
@@ -4435,28 +4423,27 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const bossZone = stage.zones.boss;
     const ui = canvasUiScale();
     const hordeLayout = getHordeLayout();
-    const cardH = Math.max(64 * ui, Math.min(106 * ui, bossZone.h * 0.42, frame.h * 0.098));
-    const cardW = Math.max(300 * ui, Math.min(bossZone.w * 0.98, 520 * ui));
     const bossPlayers = topPlayers().slice(0, 5);
     const playerBottom = bossPlayers.reduce((bottom, _player, index) => {
       const pos = getPlayerPosition(index, bossPlayers.length);
       return Math.max(bottom, getPlayerCardDrawMetrics(pos, bossPlayers.length).bottom);
     }, bossZone.y);
-    let minCardY = Math.max(bossZone.y, playerBottom + stage.gap * 0.58);
-    let maxCardY = Math.min(bossZone.bottom - cardH, hordeLayout.barY - stage.gap * 0.62 - cardH);
-    if (maxCardY < minCardY) {
-      minCardY = Math.max(bossZone.y, Math.min(bossZone.bottom - cardH, playerBottom + stage.gap * 0.24));
-      maxCardY = Math.max(minCardY, bossZone.bottom - cardH);
-    }
+    const topLimit = Math.max(bossZone.y, playerBottom + stage.gap * 0.42);
+    const bottomLimit = Math.min(bossZone.bottom, hordeLayout.barY - stage.gap * 0.54);
+    const availableH = Math.max(1, bottomLimit - topLimit);
+    const cardH = Math.min(availableH, Math.max(78 * ui, Math.min(132 * ui, bossZone.h * 0.96)));
+    const maxCardW = Math.max(1, Math.min(bossZone.w * 0.88, frame.w * 0.34, 320 * ui));
+    const cardW = Math.min(maxCardW, Math.max(178 * ui, cardH * 2.34));
     const cardX = clampNumber(bossZone.x + bossZone.w / 2 - cardW / 2, bossZone.x, bossZone.right - cardW);
-    const cardY = clampNumber(bossZone.y + bossZone.h * 0.43 - cardH / 2, minCardY, maxCardY);
-    const r = Math.max(24 * ui, Math.min(42 * ui, cardH * 0.36, frame.h * 0.05));
-    const x = clampNumber(cardX + cardH * 0.52, cardX + r * 1.25, cardX + cardW - r * 1.4);
-    const y = cardY + cardH * 0.5;
-    const contentX = Math.min(cardX + cardW - cardH * 0.62, x + r + Math.max(14 * ui, cardH * 0.16));
-    const pad = Math.max(12 * ui, cardH * 0.16);
-    const trackX = contentX;
-    const trackW = Math.max(84 * ui, cardX + cardW - pad - trackX);
+    const cardY = clampNumber(
+      topLimit + Math.max(0, (availableH - cardH) * 0.46),
+      topLimit,
+      Math.max(topLimit, bottomLimit - cardH)
+    );
+    const r = Math.max(24 * ui, Math.min(48 * ui, cardH * 0.34, cardW * 0.15));
+    const x = cardX + cardW / 2;
+    const y = cardY + cardH * 0.48;
+    const pad = Math.max(8 * ui, cardH * 0.08);
     return {
       x,
       y,
@@ -4469,10 +4456,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       cardY,
       cardW,
       cardH,
-      contentX,
-      trackX,
-      trackW,
       pad,
+      form: 'rift-tyrant-entity',
+      healthDisplay: 'radial-ring',
     };
   }
 
@@ -5409,7 +5395,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           <span class="banner-kicker">${item.kickerHtml}</span>
           <span class="banner-title">${item.titleHtml}</span>
           ${bannerCommandGridHtml(item.commands)}
-          ${item.metaHtml ? `<span class="banner-meta">${item.metaHtml}</span>` : ''}
         </span>
         <span class="banner-meter" aria-hidden="true"><span class="banner-meter-fill"></span></span>
       `;
@@ -5743,7 +5728,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     if (!Number.isFinite(playerBottom) || !Number.isFinite(hordeTop)) return staticLane;
 
     const playerClearance = isCommandBanner ? Math.max(2, gapY * 0.12) : Math.max(5, gapY * 0.34);
-    const hordeClearance = isCommandBanner ? Math.max(2, gapY * 0.12) : Math.max(8, gapY * 0.62);
+    const hordeClearance = isCommandBanner ? Math.max(2, gapY * 0.12) : Math.max(14, gapY * 0.82);
     let laneTopLimit = playerBottom + playerClearance;
     let laneBottomLimit = hordeTop - hordeClearance;
     const fullAvailableGap = laneBottomLimit - laneTopLimit;
@@ -11210,7 +11195,247 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     ctx.restore();
   }
 
+  function drawBossEntityChip(centerX, centerY, width, height, text, accent, ui) {
+    const left = centerX - width / 2;
+    const top = centerY - height / 2;
+    const cut = Math.max(5 * ui, height * 0.2);
+    ctx.save();
+    ctx.shadowColor = colorWithAlpha(accent, 0.42);
+    ctx.shadowBlur = 12 * ui;
+    const fill = ctx.createLinearGradient(left, top, left + width, top + height);
+    fill.addColorStop(0, 'rgba(5,8,16,0.96)');
+    fill.addColorStop(0.55, colorWithAlpha(accent, 0.16));
+    fill.addColorStop(1, 'rgba(2,4,10,0.98)');
+    ctx.fillStyle = fill;
+    cutCornerPanelPath(ctx, left, top, width, height, cut, Math.max(5 * ui, height * 0.22));
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = colorWithAlpha(accent, 0.72);
+    ctx.lineWidth = Math.max(1, 1.2 * ui);
+    cutCornerPanelPath(ctx, left, top, width, height, cut, Math.max(5 * ui, height * 0.22));
+    ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#f8fbff';
+    ctx.font = `900 ${Math.max(11, 13 * ui)}px 'Rajdhani','Segoe UI',sans-serif`;
+    const fitted = fitCanvasText(
+      ctx,
+      text,
+      width - cut * 1.4,
+      size => `900 ${size}px 'Rajdhani','Segoe UI',sans-serif`,
+      Math.max(11, 13 * ui),
+      Math.max(9, 10 * ui)
+    );
+    ctx.fillText(fitted, centerX, centerY + 0.5 * ui);
+    ctx.restore();
+  }
+
   function drawBossWave() {
+    if (!bossWaveState?.active || expireBossWaveIfNeeded()) return;
+    const layout = getBossLayout();
+    const nowMs = Date.now();
+    const now = nowMs * 0.001;
+    const hp = Math.max(0, Number(bossWaveState.hp) || 0);
+    const maxHp = Math.max(1, Number(bossWaveState.maxHp) || 1);
+    const hpPct = clamp01(hp / maxHp);
+    const remainingMs = bossWaveState.endsAt
+      ? Math.max(0, Number(bossWaveState.endsAt) - nowMs)
+      : Math.max(0, Number(bossWaveState.remainingMs) || 0);
+    const nextAttackMs = bossWaveState.nextAttackAt
+      ? Math.max(0, Number(bossWaveState.nextAttackAt) - nowMs)
+      : null;
+    const nextAttackPct = nextAttackMs == null
+      ? 0
+      : clamp01(1 - nextAttackMs / Math.max(1, Number(bossWaveState.attackIntervalMs) || 11000));
+    const strikeSoon = nextAttackMs != null && nextAttackMs < 2600;
+    const accent = strikeSoon ? THEME.red : THEME.ember;
+    const ui = canvasUiScale();
+    const { x, y, r, cardX, cardY, cardW, cardH } = layout;
+    const pulse = prefersReducedMotion() ? 0.5 : 0.5 + Math.sin(now * 4.6) * 0.5;
+    const wingBeat = prefersReducedMotion() ? 0 : Math.sin(now * 2.4) * r * 0.06;
+    const bossZone = computeOverlayLayout().zones.boss;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    roundedRectPath(ctx, bossZone.x, bossZone.y, bossZone.w, bossZone.h, Math.max(16 * ui, r * 0.5));
+    ctx.clip();
+    drawBossTargetWarnings(layout, nextAttackMs, nextAttackPct);
+
+    const aura = ctx.createRadialGradient(x, y, r * 0.12, x, y, r * 4.1);
+    aura.addColorStop(0, colorWithAlpha(accent, 0.28 + pulse * 0.08));
+    aura.addColorStop(0.38, 'rgba(246,201,91,0.1)');
+    aura.addColorStop(1, 'rgba(232,59,95,0)');
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 4.1, 0, Math.PI * 2);
+    ctx.fill();
+
+    for (let i = bossPulses.length - 1; i >= 0; i -= 1) {
+      const item = bossPulses[i];
+      const progress = clamp01((nowMs - item.startedAt) / item.duration);
+      if (progress >= 1) {
+        bossPulses.splice(i, 1);
+        continue;
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = Math.sin(progress * Math.PI) * (item.type === 'kill' ? 0.62 : 0.42);
+      ctx.strokeStyle = item.color || accent;
+      ctx.lineWidth = Math.max(2, r * (0.07 + progress * 0.04));
+      ctx.beginPath();
+      ctx.arc(x, y, r * (1.42 + progress * 1.3), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    const wingGradient = ctx.createLinearGradient(-r * 2.7, -r, r * 2.7, r);
+    wingGradient.addColorStop(0, 'rgba(29,8,35,0.94)');
+    wingGradient.addColorStop(0.46, 'rgba(115,19,46,0.9)');
+    wingGradient.addColorStop(0.54, 'rgba(115,19,46,0.9)');
+    wingGradient.addColorStop(1, 'rgba(29,8,35,0.94)');
+    ctx.fillStyle = wingGradient;
+    ctx.strokeStyle = colorWithAlpha(accent, 0.58 + pulse * 0.16);
+    ctx.lineWidth = Math.max(1.2, 1.8 * ui);
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(side * r * 0.48, -r * 0.22);
+      ctx.lineTo(side * r * 1.22, -r * (0.82 + wingBeat / Math.max(1, r)));
+      ctx.lineTo(side * r * 2.52, -r * 0.52 + wingBeat);
+      ctx.lineTo(side * r * 1.9, r * 0.08);
+      ctx.lineTo(side * r * 2.26, r * 0.78 - wingBeat * 0.4);
+      ctx.lineTo(side * r * 0.72, r * 0.63);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.globalAlpha = 0.48;
+      ctx.beginPath();
+      ctx.moveTo(side * r * 0.75, 0);
+      ctx.lineTo(side * r * 2.08, -r * 0.34 + wingBeat * 0.4);
+      ctx.moveTo(side * r * 0.8, r * 0.22);
+      ctx.lineTo(side * r * 1.86, r * 0.54 - wingBeat * 0.25);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.fillStyle = 'rgba(8,9,18,0.98)';
+    ctx.strokeStyle = colorWithAlpha(THEME.gold, 0.56);
+    ctx.lineWidth = Math.max(1.4, 2 * ui);
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(side * r * 0.48, r * 0.25);
+      ctx.lineTo(side * r * 1.18, r * 0.28);
+      ctx.lineTo(side * r * 1.5, r * 0.72);
+      ctx.lineTo(side * r * 0.72, r * 0.86);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(255,255,255,0.13)';
+    ctx.lineWidth = Math.max(5 * ui, r * 0.14);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.19, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = hpPct <= 0.25 ? THEME.gold : hpPct <= 0.5 ? THEME.ember : THEME.cyan;
+    ctx.shadowColor = ctx.strokeStyle;
+    ctx.shadowBlur = 12 * ui;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.19, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * hpPct);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.save();
+    ctx.setLineDash([Math.max(4, 6 * ui), Math.max(3, 5 * ui)]);
+    ctx.lineDashOffset = prefersReducedMotion() ? 0 : -nowMs * 0.025;
+    ctx.strokeStyle = colorWithAlpha(strikeSoon ? THEME.red : THEME.gold, 0.28 + nextAttackPct * 0.64);
+    ctx.lineWidth = Math.max(1.5, 2 * ui);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 1.4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Math.max(0.08, nextAttackPct));
+    ctx.stroke();
+    ctx.restore();
+
+    const faceGradient = ctx.createLinearGradient(-r, -r, r, r);
+    faceGradient.addColorStop(0, '#6a2032');
+    faceGradient.addColorStop(0.42, '#210d20');
+    faceGradient.addColorStop(1, '#060711');
+    ctx.shadowColor = colorWithAlpha(accent, 0.72);
+    ctx.shadowBlur = 20 * ui;
+    ctx.fillStyle = faceGradient;
+    ctx.strokeStyle = colorWithAlpha(THEME.gold, 0.68);
+    ctx.lineWidth = Math.max(1.6, 2.2 * ui);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.7, -r * 0.62);
+    ctx.lineTo(-r * 0.95, -r * 0.08);
+    ctx.lineTo(-r * 0.62, r * 0.7);
+    ctx.lineTo(0, r * 0.98);
+    ctx.lineTo(r * 0.62, r * 0.7);
+    ctx.lineTo(r * 0.95, -r * 0.08);
+    ctx.lineTo(r * 0.7, -r * 0.62);
+    ctx.lineTo(0, -r * 0.92);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    const hornGradient = ctx.createLinearGradient(0, -r * 1.6, 0, -r * 0.34);
+    hornGradient.addColorStop(0, '#ffe18a');
+    hornGradient.addColorStop(0.28, '#ff6a3d');
+    hornGradient.addColorStop(1, '#3c1023');
+    ctx.fillStyle = hornGradient;
+    ctx.strokeStyle = colorWithAlpha(THEME.gold, 0.7);
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(side * r * 0.5, -r * 0.5);
+      ctx.quadraticCurveTo(side * r * 0.92, -r * 1.2, side * r * 0.52, -r * 1.42);
+      ctx.quadraticCurveTo(side * r * 0.22, -r * 1.04, side * r * 0.12, -r * 0.56);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = strikeSoon ? '#fff0f2' : '#ffcf62';
+    ctx.shadowColor = strikeSoon ? THEME.red : THEME.gold;
+    ctx.shadowBlur = 12 * ui;
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(side * r * 0.62, -r * 0.2);
+      ctx.lineTo(side * r * 0.16, -r * 0.34);
+      ctx.lineTo(side * r * 0.3, -r * 0.02);
+      ctx.lineTo(side * r * 0.66, r * 0.02);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
+    ctx.strokeStyle = colorWithAlpha(accent, 0.88);
+    ctx.lineWidth = Math.max(2, r * 0.07);
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.36, r * 0.38);
+    ctx.lineTo(-r * 0.13, r * 0.58);
+    ctx.lineTo(0, r * 0.42);
+    ctx.lineTo(r * 0.13, r * 0.58);
+    ctx.lineTo(r * 0.36, r * 0.38);
+    ctx.stroke();
+    ctx.restore();
+
+    const chipH = Math.max(22, 25 * ui);
+    const chipW = Math.min(cardW * 0.28, Math.max(66, 82 * ui));
+    const chipY = cardY + cardH * 0.55;
+    const chipOffset = cardW * 0.34;
+    drawBossEntityChip(x - chipOffset, chipY, chipW, chipH, `${Math.round(hp)} HP`, hpPct <= 0.25 ? THEME.gold : THEME.cyan, ui);
+    const strikeText = nextAttackMs == null ? 'STRIKE' : strikeSoon ? 'STRIKE!' : `NEXT ${formatBossTime(nextAttackMs)}`;
+    drawBossEntityChip(x + chipOffset, chipY, chipW, chipH, strikeText, strikeSoon ? THEME.red : THEME.gold, ui);
+    const nameW = Math.min(cardW * 0.5, Math.max(108, 128 * ui));
+    drawBossEntityChip(x, cardY + cardH * 0.88, nameW, Math.max(22, 24 * ui), 'RIFT TYRANT', accent, ui);
+    ctx.restore();
+  }
+
+  function drawBossWaveLegacy() {
     if (!bossWaveState?.active || expireBossWaveIfNeeded()) return;
     const layout = getBossLayout();
     const nowMs = Date.now();
@@ -11776,12 +12001,17 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       const bossBounds = bossEntityBounds();
       legacyLayoutBoss = {
         id: BOSS_ID,
+        form: bossLayout.form,
+        healthDisplay: bossLayout.healthDisplay,
+        horizontalHealthBars: 0,
         x: bossLayout.x,
         y: bossLayout.y,
         left: bossBounds.left,
         right: bossBounds.right,
         top: bossBounds.top,
         bottom: bossBounds.bottom,
+        width: bossBounds.w,
+        height: bossBounds.h,
         panel: {
           left: bossLayout.panelX,
           right: bossLayout.panelX + bossLayout.panelW,

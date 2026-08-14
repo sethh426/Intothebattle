@@ -549,16 +549,10 @@ test('v1 overlay banner stays centered, bounded, and readable', async ({ page },
   if (smallBanner) {
     expect(geometry.height).toBeGreaterThanOrEqual(26);
     expect(geometry.height).toBeLessThanOrEqual(36);
-    if (nanoBanner) {
-      expect(geometry.metaHeight).toBe(0);
-    } else {
-      expect(geometry.metaHeight).toBeGreaterThan(4);
-      expect(geometry.metaHeight).toBeLessThanOrEqual(10);
-    }
   } else {
     expect(geometry.height).toBeGreaterThanOrEqual(42);
-    expect(geometry.metaHeight).toBeGreaterThan(7);
   }
+  expect(geometry.metaHeight, 'banner metadata row should not render').toBe(0);
   expect(geometry.centerDelta).toBeLessThanOrEqual(Math.max(18, geometry.viewport.width * 0.035));
   expect(geometry.titleHeight).toBeGreaterThan(12);
   expect(geometry.bannerStatus?.laneSource).toBe('combat-gap');
@@ -642,6 +636,7 @@ test('all rich banner types stay centered, readable, and collision-free', async 
       expect(details.commandHeight, 'command text readable height').toBeGreaterThan(10);
       expect(details.commandFontSize, 'command chip font size').toBeGreaterThanOrEqual(8);
     } else {
+      expect(details.metaCount, `${type} metadata rows`).toBe(0);
       expect(details.titleCount, `${type} title row`).toBe(1);
       expect(details.titleHeight, `${type} title readable height`).toBeGreaterThan(12);
       expect(details.titleFontSize, `${type} title stream font`).toBeGreaterThanOrEqual(13);

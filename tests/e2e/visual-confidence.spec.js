@@ -109,7 +109,11 @@ function assertBossHudIntegrated(layout, label) {
   const boss = layout?.boss;
   const panel = boss?.panel;
   expect(boss, `${label} missing boss layout`).toBeTruthy();
-  expect(panel, `${label} missing boss HUD panel layout`).toBeTruthy();
+  expect(panel, `${label} missing boss entity bounds`).toBeTruthy();
+  expect(boss.form, `${label} should render a distinct boss entity`).toBe('rift-tyrant-entity');
+  expect(boss.healthDisplay, `${label} should use radial health`).toBe('radial-ring');
+  expect(boss.horizontalHealthBars, `${label} should not render a horizontal boss health bar`).toBe(0);
+  expect(boss.width / Math.max(1, boss.height), `${label} should read as an entity instead of a bar`).toBeLessThan(3);
   const tolerance = 2;
   expect(Math.abs(boss.left - panel.left), `${label} boss left edge is split from panel`).toBeLessThanOrEqual(tolerance);
   expect(Math.abs(boss.right - panel.right), `${label} boss right edge is split from panel`).toBeLessThanOrEqual(tolerance);
