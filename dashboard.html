@@ -3105,7 +3105,7 @@ async function fetchStatus() {
     });
     renderStreamEvents(data.recentEvents || []);
     if (initialLoad) {
-      document.getElementById('username').value = data.username || '';
+      document.getElementById('username').value = data.connectUsername || data.username || '';
       initialLoad = false;
     }
     dashboardState.playerCount = Number(data.playerCount || 0);

@@ -9908,6 +9908,13 @@ app.get('/api/status', requireRoom, (req, res) => {
   const stream = buildTikTokConnectionStatus(req.room);
   const streamMode = buildStreamModeStatus(req.room);
   const playerRoster = buildRoomPlayerRoster(req.room);
+  const tiktokOfficial = publicTikTokOfficialStatus(req.user?.id || null);
+  const connectUsername = normalizeTikTokUsername(
+    stream.username ||
+    tiktokOfficial.account?.username ||
+    req.user?.tiktok_username ||
+    ''
+  );
   const dashboardRulesRequired = req.auth?.type === 'user' && !req.user?.dashboard_rules_acknowledged_at;
   res.json({
     roomId:           req.room.roomId,
@@ -9919,9 +9926,10 @@ app.get('/api/status', requireRoom, (req, res) => {
     setupMobileOverlayUrl: buildOverlayUrl(req, req.room.roomId, '/overlay/mobile', { setup: '1', source: '1', transparent: '1', layout: 'pip-corner' }),
     plan:             buildPlanEntitlements(req.auth),
     username:         req.room.streamerUsername || '',
+    connectUsername,
     connected:        stream.connected,
     stream,
-    tiktokOfficial:   publicTikTokOfficialStatus(req.user?.id || null),
+    tiktokOfficial,
     mode:             streamMode.mode,
     streamMode,
     playerSource:     streamMode.playerSource,

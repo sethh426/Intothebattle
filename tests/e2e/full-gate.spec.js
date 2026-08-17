@@ -256,6 +256,20 @@ test('@dashboard connect uses linked TikTok handle when username is omitted', as
   await parseJsonResponse(await context.request.post(`${harness.baseUrl}/api/reset`));
 });
 
+test('@dashboard restores the saved TikTok handle after room reset', async ({ context, page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-desktop', 'saved LIVE handle recovery only needs one browser pass');
+  await context.addCookies([{ name: 'session_token', value: 'full-gate-linked-tiktok-user', url: harness.baseUrl }]);
+  await parseJsonResponse(await context.request.post(`${harness.baseUrl}/api/reset`));
+
+  const status = await parseJsonResponse(await context.request.get(`${harness.baseUrl}/api/status`));
+  expect(status.username).toBe('');
+  expect(status.connectUsername).toBe('e2e_creator');
+  expect(status.connected).toBe(false);
+
+  await page.goto(`${harness.baseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#username')).toHaveValue('e2e_creator');
+});
+
 test('@dashboard signed overlay state does not leak secrets in debug status', async ({ context, page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-desktop', 'signed overlay confidence runs once in desktop Chromium');
   await addAuthCookie(context, harness);
