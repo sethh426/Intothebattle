@@ -27,7 +27,7 @@ services:
       - ALL
     pids_limit: 512
     env_file:
-      - .env.production
+      - ${PRODUCTION_ENV_FILE:-.env.production}
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0

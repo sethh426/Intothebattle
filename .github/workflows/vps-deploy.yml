@@ -1,0 +1,261 @@
+name: Production VPS Deploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-vps
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      VPS_HOST: ${{ vars.VPS_HOST }}
+      VPS_PORT: ${{ vars.VPS_PORT || '22' }}
+      VPS_USER: ${{ vars.VPS_USER || 'root' }}
+
+    steps:
+      - name: Check deployment configuration
+        id: deploy_config
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_SSH_HOST_FINGERPRINT: ${{ secrets.VPS_SSH_HOST_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -n "$VPS_HOST" ] || missing+=(VPS_HOST)
+          [ -n "$VPS_PORT" ] || missing+=(VPS_PORT)
+          [ -n "$VPS_USER" ] || missing+=(VPS_USER)
+          [ -n "$VPS_SSH_KEY" ] || missing+=(VPS_SSH_KEY)
+          [ -n "$VPS_SSH_HOST_FINGERPRINT" ] || missing+=(VPS_SSH_HOST_FINGERPRINT)
+
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::notice::Production deploy is disabled until these repository settings are configured: ${missing[*]}"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          case "$VPS_SSH_HOST_FINGERPRINT" in
+            SHA256:*) ;;
+            *)
+              echo "::error::VPS_SSH_HOST_FINGERPRINT must use the SHA256:... format shown by ssh-keygen."
+              exit 1
+              ;;
+          esac
+
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "Target: ${VPS_USER}@${VPS_HOST}:${VPS_PORT}"
+
+      - name: Checkout
+        if: steps.deploy_config.outputs.ready == 'true'
+        uses: actions/checkout@v4
+
+      - name: Pin and verify the VPS host key
+        if: steps.deploy_config.outputs.ready == 'true'
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_SSH_HOST_FINGERPRINT: ${{ secrets.VPS_SSH_HOST_FINGERPRINT }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/production_vps_key
+          chmod 600 ~/.ssh/production_vps_key
+          ssh-keygen -y -f ~/.ssh/production_vps_key >/dev/null
+
+          for attempt in $(seq 1 6); do
+            if ssh-keyscan -T 10 -p "$VPS_PORT" "$VPS_HOST" > ~/.ssh/scanned_host_keys 2>/tmp/keyscan.err; then
+              break
+            fi
+            if [ "$attempt" -eq 6 ]; then
+              echo "::error::Unable to retrieve an SSH host key from ${VPS_HOST}:${VPS_PORT}."
+              cat /tmp/keyscan.err || true
+              exit 1
+            fi
+            sleep 5
+          done
+
+          if ! ssh-keygen -lf ~/.ssh/scanned_host_keys -E sha256 | awk '{print $2}' | grep -Fxq "$VPS_SSH_HOST_FINGERPRINT"; then
+            echo "::error::The server host key does not match VPS_SSH_HOST_FINGERPRINT. Refusing to connect."
+            echo "Presented fingerprints:"
+            ssh-keygen -lf ~/.ssh/scanned_host_keys -E sha256 | awk '{print $2, $4}'
+            exit 1
+          fi
+
+          mv ~/.ssh/scanned_host_keys ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Test SSH authentication
+        if: steps.deploy_config.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" -i ~/.ssh/production_vps_key \
+            -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            "${VPS_USER}@${VPS_HOST}" 'printf "SSH authentication succeeded as %s@%s\n" "$(whoami)" "$(hostname)"'
+
+      - name: Package release and production environment
+        if: steps.deploy_config.outputs.ready == 'true'
+        env:
+          VPS_PRODUCTION_ENV: ${{ secrets.VPS_PRODUCTION_ENV }}
+        run: |
+          set -euo pipefail
+          git archive --format=tar.gz -o "/tmp/intothebattle-${GITHUB_SHA}.tar.gz" "$GITHUB_SHA"
+          install -m 600 /dev/null /tmp/intothebattle.env.production
+          if [ -n "$VPS_PRODUCTION_ENV" ]; then
+            printf '%s\n' "$VPS_PRODUCTION_ENV" > /tmp/intothebattle.env.production
+          fi
+
+      - name: Upload release
+        if: steps.deploy_config.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          scp -P "$VPS_PORT" -i ~/.ssh/production_vps_key \
+            -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            "/tmp/intothebattle-${GITHUB_SHA}.tar.gz" \
+            /tmp/intothebattle.env.production \
+            "${VPS_USER}@${VPS_HOST}:/tmp/"
+
+      - name: Deploy release
+        if: steps.deploy_config.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" -i ~/.ssh/production_vps_key \
+            -o BatchMode=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes \
+            "${VPS_USER}@${VPS_HOST}" 'bash -s' -- "$GITHUB_SHA" <<'REMOTE'
+          set -euo pipefail
+          commit="$1"
+          archive="/tmp/intothebattle-$commit.tar.gz"
+          uploaded_env=/tmp/intothebattle.env.production
+          app_dir=/opt/intothebattle
+          release_backup="/opt/intothebattle.previous-$(date -u +%Y%m%dT%H%M%SZ)"
+
+          if [ "$(id -u)" -eq 0 ]; then
+            SUDO=()
+          else
+            SUDO=(sudo)
+          fi
+
+          test -s "$archive"
+          if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
+            echo "Docker Engine with Compose v2 is required. Run docs/vps-deployment.md bootstrap steps on the server."
+            exit 1
+          fi
+
+          if [ ! -s "$uploaded_env" ] && [ ! -f "$app_dir/.env.production" ]; then
+            echo "No production environment is available. Configure the VPS_PRODUCTION_ENV repository secret."
+            exit 1
+          fi
+
+          if [ -d "$app_dir" ] && [ -f "$app_dir/.env.production" ]; then
+            echo "Creating verified pre-deployment backup..."
+            (cd "$app_dir" && bash ./scripts/vps_backup.sh)
+          fi
+
+          rollback_release() {
+            status=$?
+            trap - ERR
+            if [ -d "$release_backup" ]; then
+              failed_release="/opt/intothebattle.failed-$(date -u +%Y%m%dT%H%M%SZ)"
+              echo "Deployment failed; restoring the previous source release."
+              if [ -d "$app_dir" ]; then
+                "${SUDO[@]}" mv "$app_dir" "$failed_release"
+              fi
+              "${SUDO[@]}" mv "$release_backup" "$app_dir"
+              "${SUDO[@]}" chown -R "$(id -u):$(id -g)" "$app_dir"
+              if [ -f "$app_dir/.env.production" ]; then
+                (cd "$app_dir" && docker compose --env-file .env.production -f docker-compose.prod.yml up -d --remove-orphans) || true
+              fi
+            fi
+            exit "$status"
+          }
+          trap rollback_release ERR
+
+          if [ -d "$app_dir" ]; then
+            "${SUDO[@]}" mv "$app_dir" "$release_backup"
+          fi
+          "${SUDO[@]}" mkdir -p "$app_dir"
+          "${SUDO[@]}" tar -xzf "$archive" -C "$app_dir"
+
+          if [ -s "$uploaded_env" ]; then
+            "${SUDO[@]}" install -m 600 "$uploaded_env" "$app_dir/.env.production"
+          elif [ -f "$release_backup/.env.production" ]; then
+            "${SUDO[@]}" install -m 600 "$release_backup/.env.production" "$app_dir/.env.production"
+          fi
+
+          printf '%s\n' "$commit" | "${SUDO[@]}" tee "$app_dir/.deployed-github-commit" >/dev/null
+          "${SUDO[@]}" chown -R "$(id -u):$(id -g)" "$app_dir"
+          rm -f "$archive" "$uploaded_env"
+
+          cd "$app_dir"
+          docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build --remove-orphans
+
+          app_container="$(docker compose --env-file .env.production -f docker-compose.prod.yml ps -q app)"
+          postgres_container="$(docker compose --env-file .env.production -f docker-compose.prod.yml ps -q postgres)"
+          test -n "$app_container"
+          test -n "$postgres_container"
+
+          for attempt in $(seq 1 60); do
+            health="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$app_container")"
+            if [ "$health" = healthy ]; then
+              break
+            fi
+            if [ "$attempt" -eq 60 ]; then
+              docker compose --env-file .env.production -f docker-compose.prod.yml logs --tail=200 app
+              echo "Application container did not become healthy."
+              exit 1
+            fi
+            sleep 2
+          done
+
+          docker exec "$postgres_container" psql -U intothebattle -d intothebattle -v ON_ERROR_STOP=1 \
+            -c "UPDATE room_player_stats SET alive = 0, force_spawn = 0 WHERE alive <> 0 OR force_spawn <> 0;"
+
+          started_iso="$(docker inspect -f '{{.State.StartedAt}}' "$app_container")"
+          cutoff="$(date -u -d "$started_iso" '+%Y-%m-%d %H:%M:%S')"
+          docker exec "$postgres_container" psql -U intothebattle -d intothebattle -v ON_ERROR_STOP=1 \
+            -c "UPDATE live_sessions SET status = 'ended', ended_at = CURRENT_TIMESTAMP, summary_json = COALESCE(summary_json, '{\"reason\":\"github_auto_deploy_cleanup\"}'), updated_at = CURRENT_TIMESTAMP WHERE status = 'active' AND started_at < TIMESTAMP '$cutoff';"
+
+          caddy_container="$(docker compose --env-file .env.production -f docker-compose.prod.yml ps -q caddy)"
+          test -n "$caddy_container"
+          test "$(docker inspect -f '{{.State.Status}}' "$caddy_container")" = running
+
+          trap - ERR
+          if [ -d "$release_backup" ]; then
+            while IFS= read -r -d '' old_release; do
+              resolved_release="$(realpath -m "$old_release")"
+              case "$resolved_release" in
+                /opt/intothebattle.previous-*) "${SUDO[@]}" rm -rf -- "$resolved_release" ;;
+                *) echo "Skipping unexpected cleanup path: $resolved_release" >&2 ;;
+              esac
+            done < <(find /opt -maxdepth 1 -type d -name 'intothebattle.previous-*' -mtime +7 -print0)
+          fi
+          REMOTE
+
+      - name: Verify public production health
+        if: steps.deploy_config.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          mapfile -t production_ips < <(getent ahostsv4 intothebattle.com 2>/dev/null | awk '{print $1}' | sort -u)
+          mapfile -t target_ips < <(getent ahostsv4 "$VPS_HOST" 2>/dev/null | awk '{print $1}' | sort -u)
+          dns_matches=false
+          for production_ip in "${production_ips[@]}"; do
+            for target_ip in "${target_ips[@]}"; do
+              if [ "$production_ip" = "$target_ip" ]; then
+                dns_matches=true
+              fi
+            done
+          done
+          if [ "$dns_matches" != true ]; then
+            echo "::notice::The application is healthy on the new VPS, but public DNS does not point there yet. Skipping the public check."
+            exit 0
+          fi
+          curl -fsS --retry 18 --retry-delay 10 --retry-all-errors --max-time 20 \
+            https://intothebattle.com/healthz
