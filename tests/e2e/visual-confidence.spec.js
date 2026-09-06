@@ -211,6 +211,9 @@ function assertPlayerCardSlots(layout, label, options = {}) {
     assertNoSlotOverlap(slots.name, slots.hpBar, `${cardLabel} name/hp`);
     assertNoSlotOverlap(slots.statusBadges, slots.hpBar, `${cardLabel} status/hp`);
     assertNoSlotOverlap(slots.avatar, slots.hpBar, `${cardLabel} avatar/hp`);
+    expect(slots.name.bottom, `${cardLabel} name should lead the card hierarchy`).toBeLessThan(slots.avatar.top);
+    expect(slots.avatar.bottom, `${cardLabel} health and status should sit below the fighter`).toBeLessThan(slots.hpBar.top);
+    expect(slots.avatar.bottom, `${cardLabel} status should sit below the fighter`).toBeLessThan(slots.statusBadges.top);
     expect(player.text?.cardDesign, `${cardLabel} card design marker`).toBe('circular-crest-player-card');
     expect(player.text?.nameHasReplacement, `${cardLabel} name contains replacement glyph`).toBe(false);
     expect(player.text?.fittedName || '', `${cardLabel} missing fitted name`).not.toBe('');

@@ -4299,18 +4299,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const nameH = clampNumber(cardD * 0.18, 31 * ui, 42 * ui);
     const nameW = Math.max(1, cardW * 0.86);
     const nameX = plateX + (cardW - nameW) / 2;
-    const nameY = plateY + plateH * 0.745;
+    const nameY = plateY + plateH * 0.065;
     const barH = clampNumber(cardD * 0.2, 33 * ui, 40 * ui);
     const barW = clampNumber(cardW * 0.41, 60 * ui, 80 * ui);
     const barX = plateX + cardW * 0.11;
-    const barY = plateY + plateH * 0.07;
+    const barY = plateY + plateH * 0.755;
     const badgeH = clampNumber(cardD * 0.18, 30 * ui, 38 * ui);
     const statusW = clampNumber(cardW * 0.35, 52 * ui, 70 * ui);
     const statusX = plateX + cardW - cardW * 0.11 - statusW;
     const midTop = barY;
     const avatarX = plateX + cardW / 2;
-    const avatarTopLimit = barY + barH + slotGap * 0.72;
-    const avatarBottomLimit = nameY - slotGap * 0.72;
+    const avatarTopLimit = nameY + nameH + slotGap * 0.72;
+    const avatarBottomLimit = barY - slotGap * 0.72;
     const avatarY = (avatarTopLimit + avatarBottomLimit) / 2;
     const avatarR = Math.max(1, Math.min(cardD * 0.205, Math.max(1, (avatarBottomLimit - avatarTopLimit) / 2)));
     const hpTextY = barY + barH / 2;
@@ -11962,12 +11962,6 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const horde = hordePlayer();
     drawArenaDepth(top.length, Boolean(horde), Boolean(bossWaveState?.active));
     drawWaitingForPlayers(computeOverlayLayout());
-    drawImpactBursts();
-    // Combat motion belongs behind the readable HUD. Damage numbers remain a
-    // constrained DOM foreground layer, while beams and particles cannot cover
-    // player names, HP, boss, or Horde labels.
-    attacks = attacks.filter(updateAndDrawAttackEffect);
-    trimVisualEffects();
     const legacyLayoutPlayers = [];
     top.forEach((p, i) => {
       const pos = getPlayerPosition(i, top.length);
@@ -12021,6 +12015,11 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       };
       drawBossWave();
     }
+    // Combat effects are foreground action: beams, impacts, and particles must
+    // visibly connect with fighters instead of disappearing behind their cards.
+    drawImpactBursts();
+    attacks = attacks.filter(updateAndDrawAttackEffect);
+    trimVisualEffects();
     const stage = computeOverlayLayout();
     placeStatusBadge();
     placeSupportUnit();
