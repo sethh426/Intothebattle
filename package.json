@@ -24,6 +24,7 @@
     "test:e2e:visual": "playwright test tests/e2e/visual-confidence.spec.js --project=chromium-source-1080p --project=chromium-mobile",
     "test:e2e:media": "playwright test tests/e2e/media-quality.spec.js --project=chromium-desktop",
     "test:overlay:visual": "node scripts/overlay_visual_audit.js",
+    "test:overlay:cinematic-assets": "node scripts/overlay_cinematic_asset_contract.js",
     "test:qa:contracts": "node scripts/qa_entitlement_contract.js",
     "test:qa:e2e": "playwright test tests/e2e/v1-qa.spec.js",
     "test:qa": "npm run test:qa:contracts && npm run test:qa:e2e",

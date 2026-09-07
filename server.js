@@ -119,6 +119,7 @@ import {
   normalizeAudioVolume,
   normalizeOverlaySettings,
   DEFAULT_OVERLAY_SETTINGS,
+  OVERLAY_HERO_IDS,
 } from './roomManager.js';
 
 const DEFAULT_ROOM_ID = 'default';
@@ -8842,6 +8843,11 @@ app.use('/vendor/microsoft-clarity', express.static(path.join(__dirname, 'node_m
   maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0,
 }));
 
+app.use('/assets/overlay-cinematic', express.static(path.join(__dirname, 'public', 'assets', 'overlay-cinematic'), {
+  dotfiles: 'deny', etag: true, fallthrough: false, index: false,
+  maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
+}));
+
 app.use('/vendor/fingerprintjs2', express.static(path.join(__dirname, 'node_modules', 'fingerprintjs2', 'dist'), {
   dotfiles: 'deny',
   etag: true,
@@ -8855,6 +8861,11 @@ app.use('/vendor/phaser', express.static(path.join(__dirname, 'node_modules', 'p
   etag: true,
   fallthrough: false,
   index: false,
+  maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
+}));
+
+app.use('/vendor/three', express.static(path.join(__dirname, 'node_modules', 'three'), {
+  dotfiles: 'deny', etag: true, fallthrough: false, index: false,
   maxAge: process.env.NODE_ENV === 'production' ? '7d' : 0,
 }));
 
@@ -10459,7 +10470,7 @@ app.post('/api/dev/laser-color', requireRoom, (req, res) => {
 });
 
 app.post('/api/dev/overlay-settings', requireRoom, (req, res) => {
-  const { shotType, shotSpeed, color, backgroundFit, aetherisTerritoryId } = req.body || {};
+  const { shotType, shotSpeed, color, backgroundFit, aetherisTerritoryId, hostHeroId } = req.body || {};
   req.room.overlaySettings = normalizeOverlaySettings(req.room.overlaySettings);
   const previousTerritoryId = req.room.overlaySettings.aetherisTerritoryId;
   let territoryChanged = false;
@@ -10490,6 +10501,10 @@ app.post('/api/dev/overlay-settings', requireRoom, (req, res) => {
     req.room.overlaySettings.aetherisTerritoryId = normalizedTerritoryId;
     territoryChanged = previousTerritoryId !== normalizedTerritoryId;
     if (territoryChanged) resetAetherisStructures(req.room, normalizedTerritoryId);
+  }
+  if (typeof hostHeroId === 'string' && hostHeroId) {
+    if (!OVERLAY_HERO_IDS.includes(hostHeroId)) return res.status(400).json({ success: false, error: 'Invalid overlay hero.' });
+    req.room.overlaySettings.hostHeroId = hostHeroId;
   }
   saveRoomAudioConfig(req.room);
   const settings = overlaySettingsPayload(req.room);

@@ -112,7 +112,41 @@ body {
     repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 1px, transparent 1px 5px);
   opacity:0.34; mix-blend-mode:screen;
 }
-#canvas { position:absolute; inset:0; width:100%; height:100%; display:block; border-radius:inherit; }
+#canvas { position:absolute; inset:0; z-index:3; width:100%; height:100%; display:block; border-radius:inherit; pointer-events:none; }
+#cinematic-canvas { position:absolute; inset:0; z-index:2; width:100%; height:100%; display:block; border-radius:inherit; pointer-events:none; opacity:0; transition:opacity .35s ease; }
+.cinematic-ready #cinematic-canvas { opacity:1; }
+#cinematic-hud { position:absolute; inset:0; z-index:4; pointer-events:none; opacity:0; }
+.cinematic-ready #cinematic-hud { opacity:1; }
+.cinematic-fighter-hud { --slot:50%; --hp:100%; --accent:#8fdcff; position:absolute; left:var(--slot); top:17%; width:14.2%; height:58%; transform:translateX(-50%); color:#f8fbff; font-family:'Rajdhani','Segoe UI',sans-serif; text-shadow:0 2px 4px #000; }
+.cinematic-name { position:absolute; top:0; left:5%; width:90%; min-height:27px; display:flex; align-items:center; justify-content:space-between; padding:3px 10px; box-sizing:border-box; background:linear-gradient(90deg,rgba(5,9,18,.94),rgba(20,25,43,.78),rgba(5,9,18,.94)); border:1px solid color-mix(in srgb,var(--accent) 58%,#cfd8ef); clip-path:polygon(7% 0,93% 0,100% 50%,93% 100%,7% 100%,0 50%); font-size:clamp(9px,1.05vw,18px); letter-spacing:0; }
+.cinematic-name span { color:var(--accent); font-weight:900; }
+.cinematic-health { position:absolute; bottom:25px; left:3%; width:94%; height:22px; padding:4px 8px; box-sizing:border-box; background:rgba(4,8,16,.9); border:1px solid rgba(210,224,255,.54); clip-path:polygon(5% 0,95% 0,100% 50%,95% 100%,5% 100%,0 50%); overflow:hidden; }
+.cinematic-health i { position:absolute; inset:3px auto 3px 5px; width:calc(var(--hp) - 10px); background:linear-gradient(90deg,var(--accent),#fff); opacity:.82; }
+.cinematic-health strong { position:relative; z-index:1; display:block; text-align:center; font-size:clamp(8px,.78vw,13px); }
+.cinematic-meta { position:absolute; bottom:0; left:4%; width:92%; display:flex; justify-content:space-between; color:#d7deef; font-size:clamp(7px,.62vw,11px); font-weight:800; }
+.cinematic-fighter-hud.solar .cinematic-name { border-color:#f2bd5f; }
+.cinematic-takeover { position:absolute; inset:8% 16%; z-index:30; pointer-events:none; opacity:0; transform:scale(.94); transition:opacity .22s ease,transform .38s cubic-bezier(.2,.8,.2,1); background:#060b16 center/cover no-repeat; border:1px solid rgba(202,218,255,.8); box-shadow:0 0 55px rgba(126,184,255,.34),inset 0 0 90px rgba(7,10,24,.72); overflow:hidden; }
+.cinematic-takeover.active { opacity:1; transform:scale(1); }
+.cinematic-takeover::after { content:""; position:absolute; inset:0; background:radial-gradient(circle at 70% 48%,rgba(255,190,92,.08),rgba(135,107,255,.15) 28%,rgba(3,7,16,.82) 82%); }
+.cinematic-takeover-copy { position:absolute; z-index:1; left:6%; bottom:8%; max-width:78%; padding-left:16px; border-left:3px solid #bcaeff; text-shadow:0 3px 12px #000; }
+.cinematic-takeover-copy small,.cinematic-takeover-copy strong { display:block; }
+.cinematic-takeover-copy small { color:#c8d8ff; font:800 clamp(10px,.9vw,15px) 'DM Sans',sans-serif; text-transform:uppercase; }
+.cinematic-takeover-copy strong { color:#fff; font:900 clamp(22px,2.4vw,42px) 'Rajdhani',sans-serif; }
+@media (max-width:700px){
+  .cinematic-fighter-hud{width:15.4%;top:18%;height:56%}
+  .cinematic-meta span:first-child{display:none}
+  .cinematic-name{min-height:21px;padding-inline:4px;font-size:8px}
+  .cinematic-name span{display:none}
+  .cinematic-health{bottom:18px;height:14px;padding:2px 4px}
+  .cinematic-health strong{font-size:7px}
+  .cinematic-meta{font-size:6px;justify-content:space-around}
+  .cinematic-takeover{inset:9% 5%}
+  .cinematic-ready .banner:not(.commands){max-width:46%;min-height:38px;max-height:46px;padding:0 7px;grid-template-columns:30px minmax(0,1fr) 4px}
+  .cinematic-ready .banner:not(.commands) .banner-signal{width:30px;height:27px}
+  .cinematic-ready .banner:not(.commands) .banner-kicker{font-size:7px}
+  .cinematic-ready .banner:not(.commands) .banner-title{font-size:12px;line-height:1.05}
+  .cinematic-ready .banner:not(.commands) .banner-meter{height:24px}
+}
 body.signed-overlay { display:grid; place-items:center; padding:clamp(14px,2vw,34px); }
 body.signed-overlay #overlay-container {
   position:fixed;
@@ -1707,6 +1741,23 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   }
 }
 
+/* Source frames become very small inside portrait preview windows. Keep event
+   alerts in the lower safe lane so they never cover fighter names or faces. */
+.cinematic-ready.stage-nano .banner:not(.commands) {
+  top:54% !important;
+  left:50% !important;
+  width:44% !important;
+  max-width:44% !important;
+  min-height:28px !important;
+  max-height:32px !important;
+}
+.cinematic-ready.stage-nano .banner:not(.commands) .banner-title {
+  font-size:10px !important;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
 .reload-overlay {
   position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:99999;
   display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:auto;
@@ -1719,7 +1770,10 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 <body>
 
 <div id="overlay-container" data-testid="overlay-source-frame">
+  <canvas id="cinematic-canvas" data-testid="cinematic-canvas"></canvas>
   <canvas id="canvas" data-testid="overlay-canvas"></canvas>
+  <div id="cinematic-hud" aria-hidden="true"></div>
+  <div id="cinematic-takeover" class="cinematic-takeover" aria-hidden="true"><div class="cinematic-takeover-copy"><small>Realm surge</small><strong>AREA TAKEOVER</strong></div></div>
   <div id="sponsorScene" class="sponsor-scene" role="region" aria-label="Sponsor scene" aria-hidden="true" data-testid="sponsor-scene">
     <video id="sponsorVideo" playsinline preload="metadata"></video>
     <div id="sponsorPoster" class="sponsor-poster" aria-hidden="true"></div>
@@ -1793,6 +1847,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   </div>
   <div id="status-badge" class="disconnected">⚡ CONNECTING...</div>
 </div>
+
+<script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/examples/jsm/"}}</script>
+<script type="module" src="/js/overlay-cinematic-3d.js"></script>
 
 <!-- CONTROL PANEL -->
 <div class="panel-wrapper">
@@ -1991,7 +2048,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   let offsetX         = 0;
   let offsetY         = 0;
   let layoutZoom      = 1;
-  const hordeThreshold = 5;      // now fixed
+  const hordeThreshold = 6;
   const HORDE_SIZE_SCALE = 1.44;
   const WAITING_FOR_PLAYERS_BACKGROUND_URL = '/waiting-for-players-bg.jpg';
   let backgroundImg   = null;
@@ -2043,7 +2100,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
   const DEFAULT_OVERLAY_MASTER_VOLUME = Math.max(0, Math.min(1, Math.round((Number(overlayAudio.defaultMasterVolume) || 0.5) * 100) / 100));
   let audioConfig     = { ...DEFAULT_OVERLAY_AUDIO_CONFIG, masterVolume: DEFAULT_OVERLAY_MASTER_VOLUME };
   let audioCache      = {};
-  let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1, backgroundFit: 'contain' };
+  let overlaySettings = { shotType: 'beam', laserColor: '#7afcff', shotSpeed: 1, backgroundFit: 'contain', hostHeroId: 'solar-vanguard' };
   const APPROVED_EFFECTS = overlayNormalizers.approvedEffects;
   const DEFAULT_EFFECT = overlayNormalizers.defaultEffect;
   const NEW_ATTACK_EFFECTS = Object.freeze(['prism', 'plasma', 'cryo', 'ion', 'sonic', 'gravity', 'glitch', 'orbital', 'drone', 'shard']);
@@ -2474,6 +2531,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     const token = backgroundLoadToken;
     if (!filename && !source) {
       backgroundImg = null;
+      container.style.removeProperty('background-image');
+      container.style.removeProperty('background-size');
+      container.style.removeProperty('background-position');
       backgroundAssetStatus.state = 'cleared';
       backgroundAssetStatus.filename = '';
       backgroundAssetStatus.source = '';
@@ -2510,6 +2570,9 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
       backgroundAssetStatus.loadCount += 1;
       backgroundAssetStatus.lastError = '';
       backgroundAssetStatus.usingPrevious = false;
+      container.style.backgroundImage = `linear-gradient(rgba(2,5,12,.22),rgba(2,5,12,.48)),url(${JSON.stringify(String(source))})`;
+      container.style.backgroundSize = 'cover';
+      container.style.backgroundPosition = 'center';
     };
     img.onerror = () => {
       if (token !== backgroundLoadToken) return;
@@ -5431,6 +5494,16 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
   function showBanner(cls, content, dur, options = {}) {
     richBannerLastShown = Date.now();
+    const cinematic = Boolean(window.overlayCinematic3D?.active?.());
+    const signal = `${content?.kicker || ''} ${content?.title || ''}`.toLowerCase();
+    if (cinematic && signal.includes('takeover')) {
+      window.overlayCinematic3D.showTakeover?.(content, dur);
+      return;
+    }
+    if (cinematic && signal.includes('horde')) {
+      window.overlayCinematic3D.pulseHorde?.();
+      return;
+    }
     enqueueBanner(normalizeBannerPayload(cls, content, dur, options));
   }
 
@@ -11952,21 +12025,28 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     recordFrameHealth();
     ctx.clearRect(0, 0, cw(), ch());
     ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-    drawBackground();
+    const top = topPlayers();
+    const horde = hordePlayer();
+    const cinematic = Boolean(window.overlayCinematic3D?.active?.()) && Boolean(top.length || horde || bossWaveState?.active);
+    if (!cinematic) drawBackground();
     ctx.save();
     clipArenaFrame();
     const shake = currentArenaShake();
     if (shake.x || shake.y) ctx.translate(shake.x, shake.y);
     expireBossWaveIfNeeded();
-    const top = topPlayers();
-    const horde = hordePlayer();
-    drawArenaDepth(top.length, Boolean(horde), Boolean(bossWaveState?.active));
-    drawWaitingForPlayers(computeOverlayLayout());
+    if (!cinematic) {
+      drawArenaDepth(top.length, Boolean(horde), Boolean(bossWaveState?.active));
+      drawWaitingForPlayers(computeOverlayLayout());
+    }
     const legacyLayoutPlayers = [];
     top.forEach((p, i) => {
       const pos = getPlayerPosition(i, top.length);
       rememberPosition(p.uniqueId, pos, 'top');
-      legacyLayoutPlayers.push(drawPlayerCard(p, pos, i + 1, top.length));
+      if (!cinematic) legacyLayoutPlayers.push(drawPlayerCard(p, pos, i + 1, top.length));
+      else {
+        const bounds = getPlayerCardDrawMetrics(pos, top.length);
+        legacyLayoutPlayers.push({ id:p.uniqueId, x:pos.x, y:pos.y, left:bounds.left, right:bounds.right, top:bounds.top, bottom:bounds.bottom, width:bounds.right-bounds.left, height:bounds.bottom-bounds.top });
+      }
     });
     let legacyLayoutHorde = null;
     if (horde) {
@@ -11986,7 +12066,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
         height: layout.barH,
       };
     }
-    drawHorde(horde);
+    if (!cinematic) drawHorde(horde);
     let legacyLayoutBoss = null;
     if (bossWaveState?.active) {
       const bossPos = getBossPosition();
@@ -12013,7 +12093,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
           bottom: bossLayout.panelY + bossLayout.panelH,
         },
       };
-      drawBossWave();
+      if (!cinematic) drawBossWave();
+    }
+    if (cinematic) {
+      window.overlayCinematic3D.sync({
+        players: top.map(player => {
+          const accent = cardAccents.get(player.uniqueId);
+          return { ...player, cardAccentType: accent?.type || '', cardAccentLabel: accent?.label || '' };
+        }),
+        horde,
+        boss: bossWaveState,
+        hostHeroId: overlaySettings.hostHeroId,
+      });
     }
     // Combat effects are foreground action: beams, impacts, and particles must
     // visibly connect with fighters instead of disappearing behind their cards.

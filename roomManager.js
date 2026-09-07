@@ -17,7 +17,13 @@ export const DEFAULT_OVERLAY_SETTINGS = {
   shotSpeed:  1,
   backgroundFit: 'contain',
   aetherisTerritoryId: DEFAULT_AETHERIS_TERRITORY_ID,
+  hostHeroId: 'solar-vanguard',
 };
+
+export const OVERLAY_HERO_IDS = Object.freeze([
+  'solar-vanguard', 'prism-arcanist', 'tempest-lancer',
+  'verdant-oracle', 'moonveil-huntress', 'emberforged-colossus',
+]);
 
 export const DEFAULT_AUDIO_MASTER_VOLUME = 0.5;
 export const AUDIO_EVENT_KEYS = Object.freeze([
@@ -89,6 +95,9 @@ export function normalizeOverlaySettings(settings = {}) {
     : DEFAULT_OVERLAY_SETTINGS.shotSpeed;
   normalized.backgroundFit = normalized.backgroundFit === 'cover' ? 'cover' : DEFAULT_OVERLAY_SETTINGS.backgroundFit;
   normalized.aetherisTerritoryId = normalizeAetherisTerritoryId(normalized.aetherisTerritoryId);
+  normalized.hostHeroId = OVERLAY_HERO_IDS.includes(normalized.hostHeroId)
+    ? normalized.hostHeroId
+    : DEFAULT_OVERLAY_SETTINGS.hostHeroId;
   return normalized;
 }
 

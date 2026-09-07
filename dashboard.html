@@ -276,6 +276,19 @@
     .background-preview.empty img { display:none; }
     .background-preview span { color:var(--muted); font-size:13px; font-weight:800; text-align:center; padding:20px; }
     .aetheris-territory-panel { display:grid; gap:10px; margin:14px 0; padding:14px; border-radius:18px; border:1px solid rgba(119,240,161,.18); background:linear-gradient(135deg,rgba(119,240,161,.06),rgba(85,231,255,.045),rgba(0,0,0,.14)); }
+    .hero-selector-panel { display:grid; gap:10px; margin:14px 0; padding:14px; border:1px solid rgba(194,180,255,.22); background:linear-gradient(120deg,rgba(107,160,255,.08),rgba(255,185,90,.06),rgba(0,0,0,.14)); }
+    .hero-selector-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+    .hero-selector-option { min-height:126px; padding:0; border:1px solid rgba(207,216,239,.16); background:#0a101d; color:#eef4ff; text-align:left; cursor:pointer; position:relative; overflow:hidden; }
+    .hero-selector-option::before { content:""; position:absolute; inset:0 auto 0 0; width:4px; background:var(--hero-color); box-shadow:0 0 18px var(--hero-color); }
+    .hero-selector-option img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 20%; opacity:.74; transition:opacity .16s ease,transform .16s ease; }
+    .hero-selector-copy { position:absolute; inset:auto 0 0; padding:28px 10px 9px 13px; background:linear-gradient(transparent,rgba(4,7,14,.94) 44%); }
+    .hero-selector-option strong,.hero-selector-option span { display:block; position:relative; text-shadow:0 2px 5px #000; }
+    .hero-selector-option strong { font-size:13px; }
+    .hero-selector-option span { margin-top:4px; color:#d4ddf1; font-size:11px; }
+    .hero-selector-option:hover img { opacity:.9; transform:scale(1.025); }
+    .hero-selector-option[aria-selected="true"] { border-color:var(--hero-color); box-shadow:inset 0 0 22px color-mix(in srgb,var(--hero-color) 16%,transparent); }
+    .hero-selector-option[aria-selected="true"] img { opacity:1; }
+    @media(max-width:760px){.hero-selector-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
     .aetheris-territory-head { display:flex; align-items:center; justify-content:space-between; gap:10px; }
     .aetheris-territory-badge { max-width:52%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-height:26px; display:inline-flex; align-items:center; padding:4px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.12); color:#fff8e6; background:rgba(255,255,255,.055); font-size:10px; font-weight:950; text-transform:uppercase; letter-spacing:.06em; }
     .aetheris-territory-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
@@ -892,6 +905,11 @@
         <p class="aetheris-territory-meta" id="aetherisTerritoryMeta">Loading territory map.</p>
         <a class="btn btn-secondary" data-lock-exempt data-testid="territory-aetheris-link" href="/world">Open Aetheris World</a>
       </div>
+      <div class="hero-selector-panel" id="heroSelectorPanel">
+        <div class="aetheris-territory-head"><label class="input-label" style="margin-bottom:0;">Host champion</label><span class="aetheris-territory-badge" id="heroSelectorBadge">Selected</span></div>
+        <div class="hero-selector-grid" id="heroSelectorGrid" role="listbox" aria-label="Host champion"></div>
+        <p class="aetheris-territory-meta" id="heroSelectorMeta">Choose the champion assigned to the first fighter slot.</p>
+      </div>
       <div class="aetheris-war-room" id="aetherisWarRoom">
         <div class="aetheris-structure-head">
           <label class="input-label" style="margin-bottom:0;">Territory structures</label>
@@ -1229,6 +1247,7 @@ const dashboardState = {
   backgroundFit: 'contain',
   aetherisTerritories: [],
   aetherisTerritoryId: 'emberfall-forge',
+  hostHeroId: 'solar-vanguard',
   aetherisStructures: null,
   growth: {
     overlayUrlCopiedTracked: false,
@@ -1237,6 +1256,14 @@ const dashboardState = {
   },
 };
 const DEFAULT_AETHERIS_TERRITORY_ID = 'emberfall-forge';
+const OVERLAY_HEROES = [
+  { id:'solar-vanguard', name:'Solar Vanguard', role:'Vanguard', faction:'Prismatic', color:'#8fdcff' },
+  { id:'prism-arcanist', name:'Prism Arcanist', role:'Arcanist', faction:'Prismatic', color:'#d8b7ff' },
+  { id:'tempest-lancer', name:'Tempest Lancer', role:'Lancer', faction:'Prismatic', color:'#68bfff' },
+  { id:'verdant-oracle', name:'Verdant Oracle', role:'Oracle', faction:'Solar', color:'#ffd06f' },
+  { id:'moonveil-huntress', name:'Moonveil Huntress', role:'Huntress', faction:'Solar', color:'#ffad75' },
+  { id:'emberforged-colossus', name:'Emberforged Colossus', role:'Colossus', faction:'Solar', color:'#ff744d' },
+];
 const FALLBACK_AETHERIS_TERRITORIES = [
   { id:'emberfall-forge', name:'Emberfall Forge', faction:'Forgeguard', battlefield:'Molten foundry front', oath:'Hold the forge. Break the siege.', palette:{ primary:'#ff6a3d', secondary:'#f6c95b' } },
   { id:'stormglass-coast', name:'Stormglass Coast', faction:'Tidecallers', battlefield:'Shattered glass shoreline', oath:'Bend the storm. Guard the coast.', palette:{ primary:'#55e7ff', secondary:'#9ff5ff' } },
@@ -2347,6 +2374,29 @@ function cssHexToRgba(hex, alpha = 0.14) {
   const b = Number.parseInt(color.slice(4, 6), 16);
   return `rgba(${r},${g},${b},${Math.max(0, Math.min(1, alpha))})`;
 }
+function renderHeroSelector() {
+  const grid = document.getElementById('heroSelectorGrid');
+  if (!grid) return;
+  grid.innerHTML = OVERLAY_HEROES.map(hero => `<button type="button" class="hero-selector-option" style="--hero-color:${hero.color}" role="option" aria-selected="${hero.id === dashboardState.hostHeroId}" onclick="saveHostHero('${hero.id}')"><img src="/assets/overlay-cinematic/portraits/${hero.id}.webp" alt="" loading="lazy"><span class="hero-selector-copy"><strong>${hero.name}</strong><span>${hero.faction} / ${hero.role}</span></span></button>`).join('');
+  const selected = OVERLAY_HEROES.find(hero => hero.id === dashboardState.hostHeroId) || OVERLAY_HEROES[0];
+  text('heroSelectorBadge', selected.faction);
+  text('heroSelectorMeta', `${selected.name} leads the first fighter slot. Viewer heroes fill the remaining roster automatically.`);
+}
+
+async function saveHostHero(heroId) {
+  if (!OVERLAY_HEROES.some(hero => hero.id === heroId)) return;
+  const result = await apiCall('/api/dev/overlay-settings', 'POST', { hostHeroId: heroId });
+  if (!result?.success) return showToast(result?.error || 'Could not save champion.', 'error');
+  dashboardState.hostHeroId = result.settings?.hostHeroId || heroId;
+  renderHeroSelector();
+  showToast('Host champion saved.', 'success');
+}
+
+function applyHostHero(heroId) {
+  if (OVERLAY_HEROES.some(hero => hero.id === heroId)) dashboardState.hostHeroId = heroId;
+  renderHeroSelector();
+}
+
 function aetherisTerritoryList() {
   return Array.isArray(dashboardState.aetherisTerritories) && dashboardState.aetherisTerritories.length
     ? dashboardState.aetherisTerritories
@@ -2879,6 +2929,7 @@ socket.on('audioConfig', cfg => { mergeAudioConfig(cfg); renderAudioVolumeContro
 socket.on('overlaySettings', settings => {
   if (!settings || typeof settings !== 'object') return;
   if (settings.backgroundFit) applyBackgroundFit(settings.backgroundFit);
+  if (settings.hostHeroId) applyHostHero(settings.hostHeroId);
   if (settings.aetherisTerritoryId) applyAetherisTerritory(settings.aetherisTerritoryId);
 });
 socket.on('sponsorBreakStatus', data => updateSponsorBreakStatus(data || {}));
@@ -3115,6 +3166,7 @@ async function fetchStatus() {
     dashboardState.devTestMode = !!data.devTestMode;
     text('player-count', dashboardState.playerCount);
     applyBackgroundFit(data.overlaySettings?.backgroundFit || dashboardState.backgroundFit);
+    applyHostHero(data.overlaySettings?.hostHeroId || dashboardState.hostHeroId);
     applyAetherisTerritory(data.overlaySettings?.aetherisTerritoryId || data.aetherisTerritory?.id || dashboardState.aetherisTerritoryId, data.aetherisTerritories || null);
     if (data.aetherisStructures) applyAetherisStructures(data.aetherisStructures);
     updateBackgroundPreview(data.background?.filename || '', data.background?.originalName || data.background?.filename || '', data.background?.url || '');
