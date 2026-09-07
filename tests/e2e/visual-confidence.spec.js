@@ -921,6 +921,7 @@ test('@visual premium esports overlay preview keeps the full HUD readable', asyn
   if (!cinematic) expect(layout.collisions, 'premium-esports-preview static HUD collisions').toEqual([]);
   if (cinematic) await expect(page.locator('#cinematic-takeover')).toHaveClass(/active/);
   else await assertBannerCombatGap(page, testInfo, 'premium-esports-preview-banner', { avoidBoss: true });
+  if (cinematic) await expect(page.locator('.banner', { hasText: 'broke the frontline' })).toHaveCount(0);
   if (!cinematic) await expectCanvasQuality(page, testInfo, '[data-testid="overlay-canvas"]', { name: 'premium-esports-preview-canvas', minLitRatio: 0.05 });
   await freezeOverlayVisuals(page, testInfo, 'premium-esports-preview-freeze');
   await expectStableScreenshot(page.getByTestId('overlay-source-frame'), testInfo, 'premium-esports-preview', { maxDiffPixelRatio: 0.16 });

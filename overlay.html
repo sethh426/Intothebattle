@@ -5496,8 +5496,18 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     richBannerLastShown = Date.now();
     const cinematic = Boolean(window.overlayCinematic3D?.active?.());
     const signal = `${content?.kicker || ''} ${content?.title || ''}`.toLowerCase();
-    if (cinematic && signal.includes('takeover')) {
-      window.overlayCinematic3D.showTakeover?.(content, dur);
+    if (signal.includes('takeover') && document.getElementById('cinematic-canvas')) {
+      if (cinematic) {
+        window.overlayCinematic3D.showTakeover?.(content, dur);
+        return;
+      }
+      const pending = { content, duration: dur, cls, options, createdAt: Date.now() };
+      window.__pendingCinematicTakeover = pending;
+      setTimeout(() => {
+        if (window.__pendingCinematicTakeover !== pending) return;
+        delete window.__pendingCinematicTakeover;
+        enqueueBanner(normalizeBannerPayload(cls, content, dur, options));
+      }, 2500);
       return;
     }
     if (cinematic && signal.includes('horde')) {

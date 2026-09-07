@@ -73,7 +73,14 @@ const ready = Promise.all([
   ...HEROES.map((hero,index) => loadArt(`/assets/overlay-cinematic/portraits/${hero.id}.webp`,hero.id,new THREE.Vector3(slots[index],2.35,.15),[3.05,4.88],4)),
   loadArt('/assets/overlay-cinematic/portraits/prismatic-horde-portal.webp','portal-art',new THREE.Vector3(0,3.8,-2.8),[5.7,3.2],1),
   loadArt('/assets/overlay-cinematic/portraits/celestial-rift-regent.webp','boss-art',new THREE.Vector3(0,2.55,-1.4),[3.55,5.35],2),
-]).then(() => { if (active) container.classList.add('cinematic-ready'); });
+]).then(() => {
+  if (active) container.classList.add('cinematic-ready');
+  const pending=window.__pendingCinematicTakeover;
+  if(active&&pending){
+    delete window.__pendingCinematicTakeover;
+    showTakeover(pending.content,pending.duration);
+  }
+});
 
 function play(key, clipName) {
   const record = models.get(key); const mixer = mixers.get(key);
