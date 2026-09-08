@@ -5,12 +5,19 @@ import { HEROES, stableHeroForPlayer, modelUrl } from './overlay-hero-catalog.js
 const container = document.getElementById('overlay-container');
 const canvas = document.getElementById('cinematic-canvas');
 const hud = document.getElementById('cinematic-hud');
+const chrome = document.getElementById('cinematic-chrome');
+const threat = document.getElementById('cinematic-threat');
 const takeover = document.getElementById('cinematic-takeover');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const query = new URLSearchParams(location.search);
 const perfTier = query.get('perf') || (innerWidth < 900 ? 'low' : 'high');
 const lod = perfTier === 'high' ? 0 : perfTier === 'medium' ? 1 : 2;
-const slots = [-5.25, -3.15, -1.05, 1.05, 3.15, 5.25];
+const slots = [-5.25, -3.75, -2.25, 2.25, 3.75, 5.25];
+const hudSlots = [10.5, 22.5, 34.5, 65.5, 77.5, 89.5];
+const factionSlots = {
+  prismatic: { 1: [2], 2: [1, 2], 3: [0, 1, 2] },
+  solar: { 1: [3], 2: [3, 4], 3: [3, 4, 5] },
+};
 const loader = new GLTFLoader();
 const models = new Map();
 const artPlanes = new Map();
@@ -43,7 +50,7 @@ const warm = new THREE.DirectionalLight(0xffb45f, 2.7); warm.position.set(5, 6, 
 
 const floor = new THREE.Mesh(new THREE.CircleGeometry(8.2, 64), new THREE.MeshStandardMaterial({ color: 0x07101e, metalness: .72, roughness: .34, transparent: true, opacity: .88 }));
 floor.rotation.x = -Math.PI / 2; floor.position.set(0, -.03, 0); scene.add(floor);
-const grid = new THREE.GridHelper(16, 20, 0x738dca, 0x24304f); grid.material.transparent = true; grid.material.opacity = .24; scene.add(grid);
+const grid = new THREE.GridHelper(16, 20, 0x738dca, 0x24304f); grid.material.transparent = true; grid.material.opacity = .13; scene.add(grid);
 
 function loadScene(url, key, position, scale = 1) {
   return new Promise(resolve => loader.load(url, gltf => {
@@ -70,9 +77,9 @@ const ready = Promise.all([
   loadScene(`/assets/overlay-cinematic/models/prismatic-portal-lod${lod}.glb`, 'portal', new THREE.Vector3(0, 1.5, -3.2), .82),
   ...[1,2,3].map((n, i) => loadScene(`/assets/overlay-cinematic/models/rift-creature-${n}-lod${lod}.glb`, `horde-${n}`, new THREE.Vector3((i-1)*1.2, .25, -2.2), .72)),
   loadScene(`/assets/overlay-cinematic/models/celestial-regent-lod${lod}.glb`, 'boss', new THREE.Vector3(0, .1, -1.6), .8),
-  ...HEROES.map((hero,index) => loadArt(`/assets/overlay-cinematic/portraits/${hero.id}.webp`,hero.id,new THREE.Vector3(slots[index],2.35,.15),[3.05,4.88],4)),
-  loadArt('/assets/overlay-cinematic/portraits/prismatic-horde-portal.webp','portal-art',new THREE.Vector3(0,3.8,-2.8),[5.7,3.2],1),
-  loadArt('/assets/overlay-cinematic/portraits/celestial-rift-regent.webp','boss-art',new THREE.Vector3(0,2.55,-1.4),[3.55,5.35],2),
+  ...HEROES.map((hero,index) => loadArt(`/assets/overlay-cinematic/portraits/${hero.id}.webp`,hero.id,new THREE.Vector3(slots[index],2.25,.15),[2.42,4],4)),
+  loadArt('/assets/overlay-cinematic/portraits/prismatic-horde-portal.webp','portal-art',new THREE.Vector3(0,3.55,-2.8),[4.45,2.5],1),
+  loadArt('/assets/overlay-cinematic/portraits/celestial-rift-regent.webp','boss-art',new THREE.Vector3(0,2.42,-1.4),[2.35,3.54],2),
 ]).then(() => {
   if (active) container.classList.add('cinematic-ready');
   const pending=window.__pendingCinematicTakeover;
@@ -101,11 +108,15 @@ function layoutRoster(players) {
     used.add(id);
     return {player,hero:HEROES.find(hero=>hero.id===id)||HEROES[index],sourceIndex:index};
   });
-  const factionSlot={prismatic:0,solar:3};
-  return assigned.sort((a,b)=>(a.hero.faction===b.hero.faction ? a.sourceIndex-b.sourceIndex : a.hero.faction==='prismatic' ? -1 : 1)).map(entry=>({
-    ...entry,
-    slotIndex:factionSlot[entry.hero.faction]++,
-  }));
+  const grouped = {
+    prismatic: assigned.filter(entry => entry.hero.faction === 'prismatic').sort((a,b) => a.sourceIndex-b.sourceIndex),
+    solar: assigned.filter(entry => entry.hero.faction === 'solar').sort((a,b) => a.sourceIndex-b.sourceIndex),
+  };
+  return ['prismatic','solar'].flatMap(faction => {
+    const entries = grouped[faction];
+    const available = factionSlots[faction][entries.length] || factionSlots[faction][3];
+    return entries.map((entry,index) => ({ ...entry, slotIndex: available[index] }));
+  });
 }
 
 function reactionFor(type, alive) {
@@ -127,17 +138,38 @@ function triggerReaction(id, type, slotX) {
 
 function syncHud(players) {
   const roster=layoutRoster(players);
-  const signature = JSON.stringify(roster.map(({player,hero,slotIndex}) => [hero.id,slotIndex,player.uniqueId,player.nickname,player.hp,player.maxHp,player.kills,player.alive,player.cardAccentLabel]));
+  const signature = JSON.stringify(roster.map(({player,hero,slotIndex,sourceIndex}) => [hero.id,slotIndex,sourceIndex,player.uniqueId,player.nickname,player.hp,player.maxHp,player.kills,player.alive,player.cardAccentLabel]));
   if (signature === hudSignature) return;
   hudSignature = signature;
   hud.replaceChildren();
-  roster.forEach(({player,hero,slotIndex}) => {
+  roster.forEach(({player,hero,slotIndex,sourceIndex}) => {
     const hp = Math.max(0, Number(player.hp) || 0); const max = Math.max(1, Number(player.maxHp) || 1);
     const item = document.createElement('div'); item.className = `cinematic-fighter-hud ${hero.faction}`;
-    item.style.setProperty('--slot', `${(slotIndex + .5) / 6 * 100}%`); item.style.setProperty('--hp', `${hp / max * 100}%`); item.style.setProperty('--accent', hero.accent);
-    item.innerHTML = `<div class="cinematic-name"><b>${escapeText(player.nickname || player.uniqueId || hero.name)}</b><span>#${slotIndex + 1}</span></div><div class="cinematic-health"><i></i><strong>${Math.round(hp)} HP</strong></div><div class="cinematic-meta"><span>${hero.role}</span><span>${Math.max(0, Number(player.kills)||0)} KILLS</span><span>${escapeText(player.cardAccentLabel || (player.alive === false ? 'KO' : 'READY'))}</span></div>`;
+    item.dataset.playerId = String(player.uniqueId || player.id || '');
+    item.style.setProperty('--slot', `${hudSlots[slotIndex]}%`); item.style.setProperty('--hp', `${hp / max * 100}%`); item.style.setProperty('--accent', hero.accent);
+    item.innerHTML = `<div class="cinematic-name"><b>${escapeText(player.nickname || player.uniqueId || hero.name)}</b><span>#${sourceIndex + 1}</span></div><div class="cinematic-health"><i></i><strong>${Math.round(hp)} / ${Math.round(max)} HP</strong></div><div class="cinematic-meta"><span>${hero.role} / ${Math.max(0, Number(player.kills)||0)} KILLS</span><span>${escapeText(player.cardAccentLabel || (player.alive === false ? 'KO' : 'READY'))}</span></div>`;
     hud.appendChild(item);
   });
+}
+
+function syncChrome(players, horde, boss) {
+  if (chrome) chrome.classList.toggle('has-roster', players.length > 0);
+  container.classList.toggle('cinematic-boss-active', Boolean(boss?.active));
+  if (!threat) return;
+  const activeBoss = boss?.active ? boss : null;
+  const state = activeBoss || horde;
+  threat.classList.toggle('active', Boolean(state));
+  threat.classList.toggle('boss', Boolean(activeBoss));
+  if (!state) return;
+  const hp = Math.max(0, Number(state.hp) || 0);
+  const maxHp = Math.max(1, Number(state.maxHp) || 1);
+  const pct = Math.max(0, Math.min(100, hp / maxHp * 100));
+  threat.style.setProperty('--threat', `${pct}%`);
+  threat.querySelector('strong').textContent = activeBoss ? String(state.name || 'Celestial Regent') : 'Rift pressure';
+  threat.querySelector('.cinematic-threat-head span').textContent = activeBoss ? 'Boss wave' : 'Horde';
+  const foot = threat.querySelectorAll('.cinematic-threat-foot span');
+  foot[0].textContent = activeBoss ? `${Math.round(pct)}% integrity` : `${Math.max(0, Number(state.hordeCount) || 0)} swarm`;
+  foot[1].textContent = `${Math.round(hp)} / ${Math.round(maxHp)} HP`;
 }
 
 function escapeText(value) { const el=document.createElement('span'); el.textContent=String(value); return el.innerHTML; }
@@ -160,6 +192,7 @@ function sync(next = {}) {
   const bossArt=artPlanes.get('boss-art'); if(bossArt) bossArt.visible=Boolean(latest.boss?.active);
   const boss=models.get('boss'); if(boss) boss.root.visible=false;
   syncHud(latest.players);
+  syncChrome(latest.players, latest.horde, latest.boss);
   return true;
 }
 
@@ -198,7 +231,7 @@ function render() {
     const wave=Math.sin(age*Math.PI);
     let sx=1,sy=1,dx=0,rotation=0,opacity=1;
     if(!reducedMotion){
-      plane.position.y=2.35+Math.sin(t*1.25+(reaction.slotX||0))*.035;
+      plane.position.y=2.25+Math.sin(t*1.25+(reaction.slotX||0))*.035;
       if(reaction.type==='attack'){sx=1+.09*wave;sy=1+.04*wave;dx=((reaction.slotX||0)<0?1:-1)*.18*wave;}
       if(reaction.type==='hit'){sx=1-.07*wave;sy=1-.03*wave;rotation=((reaction.slotX||0)<0?-1:1)*.035*wave;}
       if(reaction.type==='heal') sy=1+.07*wave;
@@ -214,7 +247,7 @@ function render() {
     const portal=artPlanes.get('portal-art');
     if(portal) portal.material.opacity=.92+Math.sin(t*1.8)*.06;
     const boss=artPlanes.get('boss-art');
-    if(boss) boss.position.y=2.55+Math.sin(t*.9)*.025;
+    if(boss) boss.position.y=2.42+Math.sin(t*.9)*.025;
   }
   renderer.render(scene,camera);
   frames++;
@@ -222,4 +255,36 @@ function render() {
 }
 render();
 
-window.overlayCinematic3D = { active: () => active && container.classList.contains('cinematic-ready'), ready, sync, showTakeover, pulseHorde, diagnostics: () => ({ active, perfTier, lod, fps: Math.round(fps), drawCalls: renderer?.info.render.calls || 0, triangles: renderer?.info.render.triangles || 0, loadedAssets: models.size + artPlanes.size, loadFailures: [...loadFailures], bossVisible: Boolean(artPlanes.get('boss-art')?.visible), portalVisible: Boolean(artPlanes.get('portal-art')?.visible), visibleHeroes: HEROES.filter(hero=>artPlanes.get(hero.id)?.visible).map(hero=>hero.id) }) };
+function projectedAnchor(kind, id) {
+  const rect = container.getBoundingClientRect();
+  if (!rect.width || !rect.height) return null;
+  let object = null;
+  let widthRatio = .12;
+  let heightRatio = .38;
+  if (kind === 'player') {
+    const item = hud?.querySelector(`[data-player-id="${CSS.escape(String(id || ''))}"]`);
+    const slot = item ? Number.parseFloat(item.style.getPropertyValue('--slot')) : NaN;
+    const rosterEntry = layoutRoster(latest.players).find(entry => String(entry.player.uniqueId || entry.player.id || '') === String(id || ''));
+    if (rosterEntry) object = artPlanes.get(rosterEntry.hero.id) || models.get(rosterEntry.hero.id)?.root;
+    if (!object && Number.isFinite(slot)) {
+      const x = rect.width * slot / 100;
+      return { point:{ x, y:rect.height*.43 }, bounds:{ x:x-rect.width*.06, y:rect.height*.2, w:rect.width*.12, h:rect.height*.5 } };
+    }
+  } else if (kind === 'horde') {
+    object = artPlanes.get('portal-art') || models.get('portal')?.root;
+    widthRatio = .2; heightRatio = .28;
+  } else if (kind === 'boss') {
+    object = artPlanes.get('boss-art') || models.get('boss')?.root;
+    widthRatio = .13; heightRatio = .42;
+  }
+  if (!object?.visible) return null;
+  const world = new THREE.Vector3(); object.getWorldPosition(world); world.project(camera);
+  if (![world.x, world.y, rect.width, rect.height].every(Number.isFinite)) return null;
+  const point = { x:(world.x + 1) * .5 * rect.width, y:(1 - world.y) * .5 * rect.height };
+  const bounds = { x:point.x-rect.width*widthRatio/2, y:point.y-rect.height*heightRatio/2, w:rect.width*widthRatio, h:rect.height*heightRatio };
+  bounds.left = bounds.x; bounds.right = bounds.x + bounds.w; bounds.top = bounds.y; bounds.bottom = bounds.y + bounds.h;
+  if (![point.x, point.y, bounds.x, bounds.y, bounds.w, bounds.h, bounds.left, bounds.right, bounds.top, bounds.bottom].every(Number.isFinite)) return null;
+  return { point, bounds };
+}
+
+window.overlayCinematic3D = { active: () => active && container.classList.contains('cinematic-ready'), ready, sync, showTakeover, pulseHorde, entityAnchor: projectedAnchor, diagnostics: () => ({ active, perfTier, lod, fps: Math.round(fps), drawCalls: renderer?.info.render.calls || 0, triangles: renderer?.info.render.triangles || 0, loadedAssets: models.size + artPlanes.size, loadFailures: [...loadFailures], bossVisible: Boolean(artPlanes.get('boss-art')?.visible), portalVisible: Boolean(artPlanes.get('portal-art')?.visible), visibleHeroes: HEROES.filter(hero=>artPlanes.get(hero.id)?.visible).map(hero=>hero.id) }) };

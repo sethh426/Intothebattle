@@ -914,6 +914,28 @@ test('@visual premium esports overlay preview keeps the full HUD readable', asyn
     expect(diagnostics?.loadFailures).toEqual([]);
     expect(diagnostics?.drawCalls).toBeLessThanOrEqual(160);
     expect(new Set(diagnostics?.visibleHeroes || []).size).toBe(6);
+    const cinematicLayout = await page.evaluate(() => {
+      const rectOf = element => {
+        const rect = element.getBoundingClientRect();
+        return { left:rect.left, right:rect.right, top:rect.top, bottom:rect.bottom };
+      };
+      const overlaps = (a,b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+      const plaques = [...document.querySelectorAll('.cinematic-fighter-hud')];
+      const threat = document.querySelector('#cinematic-threat.active');
+      const plaqueRects = plaques.map(rectOf);
+      const threatRect = threat ? rectOf(threat) : null;
+      const anchors = plaques.map(plaque => window.overlayCinematic3D.entityAnchor('player', plaque.dataset.playerId));
+      anchors.push(window.overlayCinematic3D.entityAnchor('horde', '__horde__'));
+      anchors.push(window.overlayCinematic3D.entityAnchor('boss', '__boss__'));
+      return {
+        adjacentOverlaps: plaqueRects.slice(1).filter((rect,index) => overlaps(plaqueRects[index],rect)).length,
+        threatOverlaps: threatRect ? plaqueRects.filter(rect => overlaps(rect,threatRect)).length : -1,
+        factionRails: [...document.querySelectorAll('.cinematic-team-rail')].filter(element => getComputedStyle(element).opacity === '1').length,
+        anchorsFinite: anchors.every(anchor => anchor && [anchor.point.x,anchor.point.y,anchor.bounds.left,anchor.bounds.right,anchor.bounds.top,anchor.bounds.bottom].every(Number.isFinite)),
+      };
+    });
+    await attachJson(testInfo, 'premium-esports-cinematic-layout', cinematicLayout);
+    expect(cinematicLayout).toEqual({ adjacentOverlaps:0, threatOverlaps:0, factionRails:2, anchorsFinite:true });
   } else {
     assertPlayerCardSlots(layout, 'premium-esports-preview', { minPlayers: 5 });
     assertBossHudIntegrated(layout, 'premium-esports-preview');
