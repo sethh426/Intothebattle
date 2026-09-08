@@ -854,7 +854,6 @@
         <div><strong>Pre-live setup rehearsal</strong><p>Use this signed demo before TikTok connects. Paste the setup source into TikTok Studio, test motion, then connect the real stream.</p></div>
         <div class="status-chip idle" id="setup-rehearsal-chip"><span class="pulse-dot"></span><span id="setup-rehearsal-label">Ready to rehearse</span></div>
         <div class="setup-rehearsal-grid">
-          <button class="btn btn-success" onclick="startSetupRehearsal()">Start Setup Demo</button>
           <button class="btn btn-secondary" onclick="openSetupOverlay()">Open Setup Preview</button>
           <button class="btn btn-secondary" onclick="copySetupOverlayUrl()">Copy Studio Source</button>
           <button class="btn btn-danger" onclick="resetSetupRehearsal()">Reset Demo</button>
@@ -892,40 +891,62 @@
         <span class="workflow-toggle" aria-hidden="true"></span>
       </summary>
       <div class="workflow-body grid">
-    <article class="card col-4" id="sceneCard">
-      <div class="card-head"><div><div class="card-title">Step 3</div><h3>Visual polish</h3></div><span class="card-badge">Look & feel</span></div>
-      <div class="form-group"><label class="input-label">Background</label><input type="file" id="bgUpload" accept="image/jpeg,image/png,image/gif,image/webp"></div>
-      <div class="form-group"><label class="input-label">Background fit</label><select id="backgroundFitInput" onchange="saveBackgroundFit()"><option value="contain">Show full image</option><option value="cover">Fill overlay frame</option></select><p class="muted" style="margin-top:8px;">Show full image prevents cropping. Fill overlay frame removes empty bars.</p></div>
-      <div class="aetheris-territory-panel" id="aetherisTerritoryPanel">
-        <div class="aetheris-territory-head">
-          <label class="input-label" style="margin-bottom:0;">Aetheris territory</label>
-          <span class="aetheris-territory-badge" id="aetherisTerritoryBadge">Loading</span>
-        </div>
-        <div class="aetheris-territory-options" id="aetherisTerritoryOptions" role="listbox" aria-label="Aetheris territory"></div>
-        <p class="aetheris-territory-meta" id="aetherisTerritoryMeta">Loading territory map.</p>
-        <a class="btn btn-secondary" data-lock-exempt data-testid="territory-aetheris-link" href="/world">Open Aetheris World</a>
-      </div>
-      <div class="hero-selector-panel" id="heroSelectorPanel">
-        <div class="aetheris-territory-head"><label class="input-label" style="margin-bottom:0;">Host champion</label><span class="aetheris-territory-badge" id="heroSelectorBadge">Selected</span></div>
-        <div class="hero-selector-grid" id="heroSelectorGrid" role="listbox" aria-label="Host champion"></div>
-        <p class="aetheris-territory-meta" id="heroSelectorMeta">Choose the champion assigned to the first fighter slot.</p>
-      </div>
-      <div class="aetheris-war-room" id="aetherisWarRoom">
-        <div class="aetheris-structure-head">
-          <label class="input-label" style="margin-bottom:0;">Territory structures</label>
-          <span class="aetheris-structure-badge" id="aetherisStructureBadge">Loading</span>
-        </div>
-        <div class="aetheris-structure-list" id="aetherisStructureList"></div>
-        <div class="aetheris-structure-actions">
-          <button class="btn btn-secondary" id="aetherisRepairButton" type="button" onclick="repairAetherisStructureState()">Repair Weakest</button>
-          <button class="btn btn-warning" id="aetherisResetButton" type="button" onclick="resetAetherisStructureState()">Reset Structures</button>
-        </div>
-      </div>
-      <div class="btn-row"><button class="btn btn-primary" onclick="uploadBackground()">Upload</button><button class="btn btn-warning" onclick="clearBackground()">Clear</button></div>
-      <p id="bgStatus" class="muted" style="margin-top:12px;">No background set</p>
-      <div class="background-preview empty" id="backgroundPreview">
-        <img id="backgroundPreviewImage" alt="Current overlay background preview">
-        <span id="backgroundPreviewEmpty">No background preview loaded</span>
+    <article class="card col-12" id="sceneCard">
+      <div class="card-head"><div><div class="card-title">Overlay scene</div><h3>Build the broadcast look</h3><p class="muted">Champion, background, and Aetheris territory in one workspace.</p></div><span class="card-badge">Live room preview</span></div>
+      <div class="overlay-customizer-layout">
+        <section class="overlay-preview-workbench" aria-labelledby="overlayPreviewHeading">
+          <div class="customizer-section-head">
+            <div><div class="section-title">Arena preview</div><h4 id="overlayPreviewHeading">Current room composition</h4></div>
+            <span class="status-chip idle" id="dashboardOverlayPreviewStatus"><span class="pulse-dot"></span><span>Waiting for source</span></span>
+          </div>
+          <div class="dashboard-overlay-preview" id="dashboardOverlayPreviewStage" data-preview-state="empty">
+            <iframe id="dashboardOverlayPreview" title="Read-only overlay preview" src="about:blank" loading="lazy" tabindex="-1"></iframe>
+            <div class="overlay-preview-empty" id="dashboardOverlayPreviewEmpty">The room preview will load when the signed source is ready.</div>
+            <span class="overlay-preview-format" aria-hidden="true">16:9 COMPOSITE</span>
+          </div>
+          <div class="overlay-preview-actions">
+            <button class="btn btn-primary" type="button" onclick="openDashboardOverlayPreview()">Open Preview</button>
+            <button class="btn btn-success" type="button" onclick="testOverlayBurst()">Test Effects</button>
+            <button class="btn btn-secondary" type="button" onclick="refreshDashboardOverlayPreview(true)">Refresh</button>
+          </div>
+          <div class="hero-selector-panel" id="heroSelectorPanel">
+            <div class="aetheris-territory-head"><label class="input-label" style="margin-bottom:0;">Host champion</label><span class="aetheris-territory-badge" id="heroSelectorBadge">Selected</span></div>
+            <div class="hero-selector-grid" id="heroSelectorGrid" role="listbox" aria-label="Host champion"></div>
+            <p class="aetheris-territory-meta" id="heroSelectorMeta">Choose the champion assigned to the first fighter slot.</p>
+          </div>
+        </section>
+        <aside class="scene-control-rail" aria-label="Overlay appearance controls">
+          <section class="scene-control-section">
+            <div class="customizer-section-head"><div><div class="section-title">Scene media</div><h4>Background</h4></div><span id="bgStatus" class="scene-control-status">No background set</span></div>
+            <div class="form-group"><label class="input-label" for="bgUpload">Image file</label><input type="file" id="bgUpload" accept="image/jpeg,image/png,image/gif,image/webp"></div>
+            <div class="form-group"><label class="input-label" for="backgroundFitInput">Background fit</label><select id="backgroundFitInput" onchange="saveBackgroundFit()"><option value="contain">Show full image</option><option value="cover">Fill overlay frame</option></select></div>
+            <div class="btn-row"><button class="btn btn-primary" onclick="uploadBackground()">Upload</button><button class="btn btn-warning" onclick="clearBackground()">Clear</button></div>
+            <div class="background-preview empty" id="backgroundPreview">
+              <img id="backgroundPreviewImage" alt="Current overlay background preview">
+              <span id="backgroundPreviewEmpty">No background preview loaded</span>
+            </div>
+          </section>
+          <section class="aetheris-territory-panel" id="aetherisTerritoryPanel">
+            <div class="aetheris-territory-head">
+              <label class="input-label" style="margin-bottom:0;">Aetheris territory</label>
+              <span class="aetheris-territory-badge" id="aetherisTerritoryBadge">Loading</span>
+            </div>
+            <div class="aetheris-territory-options" id="aetherisTerritoryOptions" role="listbox" aria-label="Aetheris territory"></div>
+            <p class="aetheris-territory-meta" id="aetherisTerritoryMeta">Loading territory map.</p>
+            <a class="btn btn-secondary" data-lock-exempt data-testid="territory-aetheris-link" href="/world">Open Aetheris World</a>
+          </section>
+          <section class="aetheris-war-room" id="aetherisWarRoom">
+            <div class="aetheris-structure-head">
+              <label class="input-label" style="margin-bottom:0;">Territory structures</label>
+              <span class="aetheris-structure-badge" id="aetherisStructureBadge">Loading</span>
+            </div>
+            <div class="aetheris-structure-list" id="aetherisStructureList"></div>
+            <div class="aetheris-structure-actions">
+              <button class="btn btn-secondary" id="aetherisRepairButton" type="button" onclick="repairAetherisStructureState()">Repair Weakest</button>
+              <button class="btn btn-warning" id="aetherisResetButton" type="button" onclick="resetAetherisStructureState()">Reset Structures</button>
+            </div>
+          </section>
+        </aside>
       </div>
     </article>
       </div>
@@ -1304,15 +1325,11 @@ function setDashboardView(view, options = {}) {
     tab.tabIndex = selected ? 0 : -1;
   });
   const selectedPanels = [];
-  document.querySelectorAll('[data-dashboard-view]').forEach(panel => {
+  document.querySelectorAll('.dashboard-workflows > [data-dashboard-view]').forEach(panel => {
     const selected = panel.dataset.dashboardView === nextView;
     panel.hidden = !selected;
     panel.setAttribute('aria-hidden', selected ? 'false' : 'true');
-    if (selected) {
-      panel.open = true;
-      panel.setAttribute('open', '');
-      selectedPanels.push(panel);
-    }
+    if (selected) selectedPanels.push(panel);
   });
   if (selectedPanels.length) selectedPanels[0].open = true;
   requestAnimationFrame(() => {
@@ -1328,6 +1345,8 @@ function setDashboardView(view, options = {}) {
   }
   if (options.focus === true) document.querySelector(`[data-dashboard-tab="${nextView}"]`)?.focus();
   if (options.scroll === true) document.querySelector('.dashboard-nav')?.scrollIntoView({ behavior:'smooth', block:'start' });
+  if (nextView === 'customize') requestAnimationFrame(() => refreshDashboardOverlayPreview());
+  else suspendDashboardOverlayPreview();
   return nextView;
 }
 function initDashboardViews() {
@@ -2300,6 +2319,63 @@ function setupOverlayUrl() {
   url.searchParams.set('debug', '1');
   return url.toString();
 }
+function dashboardOverlayPreviewUrl() {
+  const base = currentSetupOverlayUrl || currentOverlayUrl;
+  if (!base) return '';
+  const url = new URL(base, window.location.origin);
+  url.pathname = url.pathname.replace(/\/overlay-v2$/, '/overlay');
+  url.searchParams.set('setup', '1');
+  url.searchParams.set('mode', 'setup');
+  url.searchParams.set('controls', '0');
+  url.searchParams.set('debug', '0');
+  url.searchParams.set('dashboard_preview', '1');
+  url.searchParams.set('embedded', '1');
+  url.searchParams.set('demo_autoplay', '0');
+  return url.toString();
+}
+function setDashboardOverlayPreviewState(state, label) {
+  const stage = document.getElementById('dashboardOverlayPreviewStage');
+  const status = document.getElementById('dashboardOverlayPreviewStatus');
+  if (stage) stage.dataset.previewState = state;
+  if (status) {
+    status.className = `status-chip ${state === 'ready' ? 'online' : state === 'error' ? 'offline' : 'idle'}`;
+    const labelNode = status.querySelector('span:last-child');
+    if (labelNode) labelNode.textContent = label;
+  }
+}
+function refreshDashboardOverlayPreview(force = false) {
+  if (currentDashboardView() !== 'customize' && !force) return;
+  const frame = document.getElementById('dashboardOverlayPreview');
+  if (!frame) return;
+  const source = dashboardOverlayPreviewUrl();
+  if (!source) {
+    setDashboardOverlayPreviewState('empty', 'Waiting for source');
+    return;
+  }
+  const nextUrl = new URL(source);
+  if (force) nextUrl.searchParams.set('preview_v', String(Date.now()));
+  const resolved = nextUrl.toString();
+  if (!force && frame.dataset.previewUrl === resolved) return;
+  frame.dataset.previewUrl = resolved;
+  setDashboardOverlayPreviewState('loading', 'Loading preview');
+  frame.onload = () => setDashboardOverlayPreviewState('ready', 'Room preview');
+  frame.onerror = () => setDashboardOverlayPreviewState('error', 'Preview unavailable');
+  frame.src = resolved;
+}
+function suspendDashboardOverlayPreview() {
+  const frame = document.getElementById('dashboardOverlayPreview');
+  if (!frame || !frame.dataset.previewUrl) return;
+  frame.onload = null;
+  frame.onerror = null;
+  frame.src = 'about:blank';
+  delete frame.dataset.previewUrl;
+  setDashboardOverlayPreviewState('empty', 'Preview paused');
+}
+function openDashboardOverlayPreview() {
+  const url = dashboardOverlayPreviewUrl();
+  if (!url) return showToast('Signed overlay URL is still loading.', 'error');
+  window.open(url, '_blank', 'noopener');
+}
 function setupOverlayV2Url(render = '1080p') {
   const base = currentSetupOverlayV2Url || currentOverlayV2Url || currentOverlayUrl;
   if (!base) return '';
@@ -2341,6 +2417,7 @@ function setOverlayUrl(url, v2Url = null, setupUrl = null, setupV2Url = null, mo
   const display = displayUrl ? (preferredSetupUrl ? 'Setup source ready' : 'Signed URL ready') : 'URL unavailable';
   if (field) field.value = displayUrl || 'Signed overlay URL unavailable';
   if (label) label.textContent = display;
+  refreshDashboardOverlayPreview();
   renderNextAction();
 }
 function setRoomLabel(roomId) {
@@ -2389,6 +2466,7 @@ async function saveHostHero(heroId) {
   if (!result?.success) return showToast(result?.error || 'Could not save champion.', 'error');
   dashboardState.hostHeroId = result.settings?.hostHeroId || heroId;
   renderHeroSelector();
+  refreshDashboardOverlayPreview(true);
   showToast('Host champion saved.', 'success');
 }
 

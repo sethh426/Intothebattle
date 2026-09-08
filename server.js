@@ -9497,7 +9497,7 @@ io.on('connection', (socket) => {
       if (arenaPowerStatus?.active) socket.emit('arenaPowerUp', { type: 'started', ...arenaPowerStatus });
       const background = buildBackgroundPayload(room, { v: Date.now() });
       if (background) socket.emit('backgroundChanged', background);
-    } else if (clientType === 'dashboard' || clientType === 'stats') {
+    } else if (clientType === 'dashboard' || clientType === 'stats' || clientType === 'preview') {
       if (previousType === 'overlay') {
         room.overlayCount = Math.max(0, room.overlayCount - 1);
         emitRoomEvent(room, 'overlayCount', { count: room.overlayCount });

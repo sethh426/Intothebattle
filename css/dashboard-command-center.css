@@ -243,6 +243,186 @@ textarea { border-radius: 8px; font-size: 12px; }
 .advanced-tools-grid .tool { min-width: 0; }
 .advanced-tools-grid .referral-share-panel { margin: 0; }
 
+/* Setup is one guided path: progress, current action, then compact source controls. */
+#launchWorkflow .launch-checklist-copy,
+#launchWorkflow .setup-steps { display: none; }
+#launchWorkflow .quick-setup-panel {
+  grid-template-columns: minmax(260px, .72fr) minmax(0, 1.28fr);
+  padding: 0 0 12px;
+}
+#launchWorkflow .quick-setup-tip { text-align: left; }
+#launchWorkflow .next-action-panel {
+  grid-template-columns: 1fr;
+  margin-top: 0;
+  padding: 11px 12px;
+  border-color: rgba(76, 201, 232, .24);
+  background: rgba(76, 201, 232, .055);
+}
+#launchWorkflow .next-action-title { font-size: 13px; }
+#launchWorkflow .next-action-copy { margin-top: 2px; font-size: 10px; }
+#launchWorkflow .next-action-actions { display: none; }
+#launchWorkflow .launch-action-grid { margin-top: 0; }
+#launchWorkflow .launch-action {
+  min-height: 64px;
+  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-rows: auto;
+  gap: 8px;
+  align-content: center;
+  align-items: center;
+  padding: 9px;
+}
+#launchWorkflow .launch-action b { width: 24px; height: 24px; }
+#launchWorkflow .launch-action strong { font-size: 11px; }
+#launchWorkflow .launch-action span { display: none; }
+#launchWorkflow #connectCard { grid-column: span 5; }
+#launchWorkflow #overlayCard { grid-column: span 7; }
+#overlayCard .setup-rehearsal-panel,
+#overlayCard .mobile-overlay-panel { border-radius: 9px; }
+#overlayCard .setup-rehearsal-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* The scene editor uses the overlay as its primary object, with controls alongside it. */
+.overlay-customizer-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(340px, .72fr);
+  gap: 18px;
+  align-items: start;
+}
+.overlay-preview-workbench,
+.scene-control-rail { min-width: 0; }
+.overlay-preview-workbench { display: grid; gap: 12px; }
+.customizer-section-head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.customizer-section-head h4 {
+  margin: 3px 0 0;
+  color: var(--command-text);
+  font-size: 14px;
+  line-height: 1.2;
+}
+.dashboard-overlay-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid rgba(169, 149, 239, .32);
+  border-radius: 8px;
+  background: #030509;
+  box-shadow: 0 20px 52px rgba(0, 0, 0, .32);
+  isolation: isolate;
+}
+.dashboard-overlay-preview::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .04), inset 0 -44px 70px rgba(0, 0, 0, .18);
+}
+.dashboard-overlay-preview iframe {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .2s ease;
+}
+.dashboard-overlay-preview[data-preview-state="loading"] iframe { opacity: .42; }
+.dashboard-overlay-preview[data-preview-state="ready"] iframe { opacity: 1; }
+.overlay-preview-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: var(--command-muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+.dashboard-overlay-preview[data-preview-state="loading"] .overlay-preview-empty,
+.dashboard-overlay-preview[data-preview-state="ready"] .overlay-preview-empty { display: none; }
+.overlay-preview-format {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 3;
+  padding: 4px 6px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 4px;
+  background: rgba(3, 5, 9, .8);
+  color: rgba(243, 247, 251, .68);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+.overlay-preview-actions {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) auto;
+  gap: 8px;
+}
+#sceneCard .hero-selector-panel {
+  margin: 2px 0 0;
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--command-line);
+  border-radius: 0;
+  background: transparent;
+}
+#sceneCard .hero-selector-grid { gap: 9px; }
+#sceneCard .hero-selector-option {
+  min-height: 150px;
+  border-radius: 7px;
+  background: #080d16;
+}
+#sceneCard .hero-selector-copy { padding: 34px 11px 10px 14px; }
+#sceneCard .hero-selector-option strong { font-size: 12px; }
+#sceneCard .hero-selector-option span { font-size: 9px; }
+.scene-control-rail {
+  display: grid;
+  gap: 0;
+  padding-left: 18px;
+  border-left: 1px solid var(--command-line);
+}
+.scene-control-section,
+#sceneCard .aetheris-territory-panel,
+#sceneCard .aetheris-war-room {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 15px 0;
+  border: 0;
+  border-top: 1px solid var(--command-line);
+  border-radius: 0;
+  background: transparent;
+}
+.scene-control-section:first-child { padding-top: 0; border-top: 0; }
+.scene-control-status {
+  max-width: 48%;
+  overflow: hidden;
+  color: var(--command-muted);
+  font-size: 9px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#sceneCard .background-preview {
+  max-height: 180px;
+  margin-top: 0;
+  border-radius: 7px;
+}
+#sceneCard .aetheris-territory-option { min-height: 70px; padding: 8px; border-radius: 7px; }
+#sceneCard .aetheris-territory-badge,
+#sceneCard .aetheris-structure-badge { border-radius: 5px; }
+
 .command-dock {
   z-index: 45;
   bottom: 10px;
@@ -277,6 +457,10 @@ body:has(#itb-growth-consent) .command-dock { visibility: hidden; pointer-events
   .command-readiness .readiness-list { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .command-readiness .readiness-head { align-items: center; }
   .sponsor-layout { grid-template-columns: 1fr; }
+  #launchWorkflow #connectCard,
+  #launchWorkflow #overlayCard { grid-column: span 12; }
+  .overlay-customizer-layout { grid-template-columns: 1fr; }
+  .scene-control-rail { padding: 2px 0 0; border-left: 0; border-top: 1px solid var(--command-line); }
 }
 
 @media (max-width: 700px) {
@@ -329,6 +513,11 @@ body:has(#itb-growth-consent) .command-dock { visibility: hidden; pointer-events
   .card h3 { font-size: 15px; }
   .quick-setup-panel,
   .next-action-panel { padding: 11px; }
+  #launchWorkflow .quick-setup-panel { grid-template-columns: 1fr; }
+  #launchWorkflow .quick-step-track { grid-template-columns: repeat(5, minmax(92px, 1fr)); overflow-x: auto; padding-bottom: 3px; }
+  #launchWorkflow .next-action-panel { grid-template-columns: 1fr; }
+  #launchWorkflow .launch-action-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #launchWorkflow .launch-action { min-height: 60px; }
   .quick-setup-copy strong { font-size: 16px; }
   .btn,
   .copy-field,
@@ -336,6 +525,12 @@ body:has(#itb-growth-consent) .command-dock { visibility: hidden; pointer-events
   .session-control-grid,
   .btn-row { gap: 7px; }
   .advanced-tools-grid { grid-template-columns: 1fr; }
+  .overlay-preview-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .overlay-preview-actions .btn:last-child { grid-column: 1 / -1; }
+  #sceneCard .hero-selector-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #sceneCard .hero-selector-option { min-height: 130px; }
+  .scene-control-status { max-width: 44%; }
+  #overlayCard .setup-rehearsal-grid { grid-template-columns: 1fr; }
   .command-dock {
     position: fixed;
     left: 8px;

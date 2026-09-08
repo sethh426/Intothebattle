@@ -2414,6 +2414,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
     || overlayModeParam === 'demo'
     || /^\/overlay-(demo|preview)(?:\.html)?\/?$/i.test(window.location.pathname);
   const isPreviewMode = overlayParams.get('sponsor_preview') === '1' || overlayParams.get('banner_preview') === '1';
+  const isDashboardPreview = overlayParams.get('dashboard_preview') === '1';
   const disableDemoAutoplay = overlayParams.get('demo_autoplay') === '0';
   const allowLayoutCustomization = !isSignedOverlay
     || isSetupMode
@@ -13119,7 +13120,7 @@ input[type=color] { opacity:0; position:absolute; width:0; height:0; pointer-eve
 
     connectionHealthStats.registerAttempts += 1;
     connectionHealthStats.lastRegisterAttemptAt = Date.now();
-    socket.emit('register', { type: 'overlay' }, ack => {
+    socket.emit('register', { type: isDashboardPreview ? 'preview' : 'overlay' }, ack => {
       if (ack && ack.success) {
         registerAcked = true;
         connectionHealthStats.registerAcks += 1;

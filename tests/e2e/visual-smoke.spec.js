@@ -47,8 +47,10 @@ async function watchPage(page) {
   });
   page.on('requestfailed', req => {
     try {
+      const failureText = req.failure()?.errorText || '';
+      if (/ERR_ABORTED/.test(failureText) && req.frame().parentFrame()) return;
       if (new URL(req.url()).origin === baseUrl) {
-        errors.push(`request failed: ${req.method()} ${req.url()} ${req.failure()?.errorText || ''}`);
+        errors.push(`request failed: ${req.method()} ${req.url()} ${failureText}`);
       }
     } catch (_) {}
   });
@@ -458,6 +460,8 @@ test('dashboard renders with E2E auth fixture', async ({ context, page }, testIn
   await context.addCookies([{ name: 'session_token', value: e2eSessionToken, url: baseUrl }]);
   const errors = await watchPage(page);
   await page.goto(`${baseUrl}/dashboard?welcome=1#setup`, { waitUntil: 'domcontentloaded' });
+  const initialConsent = page.locator('#itb-growth-consent');
+  if (await initialConsent.count()) await initialConsent.getByRole('button', { name: 'No thanks' }).click();
   await expect(page.getByText('IntoTheBattle Command Center')).toBeVisible();
   await expect(page.getByTestId('welcome-setup-panel')).toBeVisible();
   await expect(page.locator('#subscription-chip')).toBeVisible();
@@ -494,9 +498,29 @@ test('dashboard renders with E2E auth fixture', async ({ context, page }, testIn
   await expect(page.locator('#overlayWorkflow')).toBeVisible();
   await expect(page.locator('#brandWorkflow')).toBeVisible();
   await expect(page.locator('#audioWorkflow')).toBeVisible();
+  await expect(page.locator('#sceneCard')).toBeVisible();
+  await expect(page.locator('#heroSelectorGrid .hero-selector-option')).toHaveCount(6);
+  await expect(page.locator('#heroSelectorGrid .hero-selector-option[aria-selected="true"]')).toHaveCount(1);
+  await expect(page.locator('#dashboardOverlayPreview')).toHaveAttribute('src', /dashboard_preview=1/);
+  await expect(page.locator('#dashboardOverlayPreviewStatus')).toContainText('Room preview', { timeout: 15000 });
+  const customizePreviewFrame = page.frames().find(frame => frame.url().includes('dashboard_preview=1'));
+  expect(customizePreviewFrame).toBeTruthy();
+  await customizePreviewFrame.waitForLoadState('networkidle', { timeout: 15000 });
+  await expect(page.locator('#overlay-label')).toHaveText('No overlay connected');
+  const customizeWidths = await page.evaluate(() => ({
+    scene: document.getElementById('sceneCard')?.getBoundingClientRect().width || 0,
+    workflow: document.querySelector('#overlayWorkflow .workflow-body')?.getBoundingClientRect().width || 0,
+  }));
+  expect(customizeWidths.scene).toBeGreaterThan(customizeWidths.workflow * 0.9);
+  await expectNoHorizontalOverflow(page);
+  await capture(page, testInfo, 'dashboard-customize');
   await page.goto(`${baseUrl}/dashboard`, { waitUntil: 'domcontentloaded' });
   await expect(page).toHaveURL(/#customize$/);
   await expect(page.getByRole('tab', { name: /Customize/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#dashboardOverlayPreviewStatus')).toContainText('Room preview', { timeout: 15000 });
+  const rememberedPreviewFrame = page.frames().find(frame => frame.url().includes('dashboard_preview=1'));
+  expect(rememberedPreviewFrame).toBeTruthy();
+  await rememberedPreviewFrame.waitForLoadState('networkidle', { timeout: 15000 });
   const consent = page.locator('#itb-growth-consent');
   if (await consent.count()) {
     await expect(page.locator('.command-dock')).toBeHidden();
